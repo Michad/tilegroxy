@@ -4,47 +4,30 @@ import (
 	"fmt"
 	"log"
 
-	"gopkg.in/yaml.v3"
+	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/internal/providers"
+	"github.com/mitchellh/mapstructure"
 )
 
-var sample = `
-cache:
-    name: Test
-    verbose: true
-layers:
-    -
-        id: test
-        provider:
-            name: url template
-            template: http://example.com/?bbox=$xmin,$ymin,$xmax,$ymax
-    -
-        id: test2
-        provider:
-            name: url template
-            template: http://example.com/?bbox=$xmin,$ymin,$xmax,$ymax
-`
-
-type Config struct {
-	Cache struct {
-		Name    string
-		Verbose bool
-	}
-	Layers []struct {
-		Id       string
-		Provider struct {
-			Name     string
-			Template string
-		}
-	}
-}
-
 func main() {
-	t := Config{}
+	t := config.Config{}
+	err := config.LoadConfigFromFile("./examples/configurations/simple.yml", &t)
 
-	err := yaml.Unmarshal([]byte(sample), &t)
 	if err != nil {
 		log.Fatalf("error: %v", err)
 	}
 
 	fmt.Printf("--- t:\n%v\n\n", t)
+
+	var inter providers.Provider
+	var result providers.UrlTemplate
+	err = mapstructure.Decode(t.Layers[0].Provider, &result)
+
+	if err != nil {
+		log.Fatalf("error: %v", err)
+	}
+
+	inter = result
+
+	fmt.Printf("--- t:\n%v\n\n", inter)
 }
