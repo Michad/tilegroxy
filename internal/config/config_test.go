@@ -7,9 +7,7 @@ import (
 )
 
 func TestSimpleYml(t *testing.T) {
-	c := Config{}
-
-	err := LoadConfigFromFile("../../examples/configurations/simple.yml", &c)
+	c, err := LoadConfigFromFile("../../examples/configurations/simple.yml")
 
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "Test", c.Cache["name"])
