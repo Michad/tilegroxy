@@ -1,20 +1,33 @@
-package internal
+package layers
 
 import (
 	"errors"
 	"sync"
 	"time"
 
+	"github.com/Michad/tilegroxy/internal/caches"
 	"github.com/Michad/tilegroxy/internal/config"
 	"github.com/Michad/tilegroxy/internal/providers"
+	"github.com/Michad/tilegroxy/pkg"
 )
 
 type Layer struct {
 	Id          string
 	Config      config.Layer
 	Provider    providers.Provider
+	Cache       *caches.Cache
 	authContext *providers.AuthContext
 	authMutex   sync.Mutex
+}
+
+func ConstructLayer(rawConfig config.Layer) (*Layer, error) {
+	provider, error := providers.ConstructProvider(rawConfig.Provider)
+
+	if error != nil {
+		return nil, error
+	}
+
+	return &Layer{rawConfig.Id, rawConfig, provider, nil, nil, sync.Mutex{}}, nil
 }
 
 func (l *Layer) authWithProvider() error {
@@ -29,8 +42,8 @@ func (l *Layer) authWithProvider() error {
 	return err
 }
 
-func (l *Layer) RenderTile(z int, x int, y int) (*providers.Image, error) {
-	var img *providers.Image
+func (l *Layer) RenderTile(z int, x int, y int) (*pkg.Image, error) {
+	var img *pkg.Image
 	var err error
 	if l.authContext == nil || l.authContext.Expiration.Before(time.Now()) {
 		err = l.authWithProvider()

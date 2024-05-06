@@ -20,8 +20,8 @@ type LogConfig struct {
 type Config struct {
 	Server         ServerConfig
 	Logging        LogConfig
-	Authentication map[string]any
-	Cache          map[string]any
+	Authentication map[string]interface{}
+	Cache          map[string]interface{}
 	Layers         []Layer
 }
 
@@ -42,10 +42,10 @@ func defaultConfig() Config {
 			AccessLog: true,
 			Path: "STDOUT",
 		},
-		Authentication: map[string]any{
+		Authentication: map[string]interface{}{
 			"name": "None",
 		},
-		Cache: map[string]any{
+		Cache: map[string]interface{}{
 			"name": "None",
 		},
 		Layers: []Layer{},

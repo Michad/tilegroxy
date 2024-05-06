@@ -1,7 +1,7 @@
 server:
   production: true
 cache:
-  name: Test
+  name: None
   verbose: true
 layers:
   -

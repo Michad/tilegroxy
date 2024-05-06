@@ -8,7 +8,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Michad/tilegroxy/internal/authentication"
 	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/internal/layers"
 
 	"github.com/gorilla/handlers"
 )
@@ -52,7 +54,7 @@ func handleTile(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func ListenAndServe(config config.Config) {
+func ListenAndServe(config config.Config, layers []*layers.Layer, auth *authentication.Authentication, ) {
 	r := http.NewServeMux()
 
 	r.HandleFunc(config.Server.ContextRoot+"/tile/{z}/{x}/{y}", handleTile)

@@ -5,9 +5,10 @@ import (
 	"log"
 
 	"github.com/Michad/tilegroxy/internal"
+	"github.com/Michad/tilegroxy/internal/authentication"
+	"github.com/Michad/tilegroxy/internal/caches"
 	"github.com/Michad/tilegroxy/internal/config"
-	"github.com/Michad/tilegroxy/internal/providers"
-	"github.com/mitchellh/mapstructure"
+	"github.com/Michad/tilegroxy/internal/layers"
 )
 
 func main() {
@@ -19,17 +20,31 @@ func main() {
 
 	fmt.Printf("--- t:\n%v\n\n", c)
 
-	var inter providers.Provider
-	var result providers.UrlTemplate
-	err = mapstructure.Decode(c.Layers[0].Provider, &result)
+	fmt.Printf("--- t:\n%v\n\n", c.Cache)
+
+	cache, err := caches.ConstructCache(c.Cache)
+	if err != nil {
+		log.Fatalf("error: %v", err)
+	}
+
+	fmt.Printf("--- c:\n%v\n\n", cache)
+
+	auth, err := authentication.ConstructAuth(c.Authentication)
+	if err != nil {
+		log.Fatalf("error: %v", err)
+	}
+
+	fmt.Printf("--- a:\n%v\n\n", auth)
+
+	layer, err := layers.ConstructLayer(c.Layers[0])
 
 	if err != nil {
 		log.Fatalf("error: %v", err)
 	}
 
-	inter = result
+	fmt.Printf("--- l:\n%v\n\n", layer)
 
-	fmt.Printf("--- t:\n%v\n\n", inter)
+	layer.Cache = &cache
 
-	internal.ListenAndServe(c)
+	internal.ListenAndServe(c, []*layers.Layer{layer}, &auth)
 }
