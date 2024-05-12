@@ -1,5 +1,5 @@
 server:
-  production: true
+  production: false
 cache:
   name: None
   verbose: true

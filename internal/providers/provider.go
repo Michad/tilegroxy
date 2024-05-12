@@ -11,7 +11,7 @@ import (
 
 type Provider interface {
 	Preauth(authContext *AuthContext) error
-	GenerateTile(authContext AuthContext, z int, x int, y int) (*pkg.Image, error)
+	GenerateTile(authContext *AuthContext, tileRequest pkg.TileRequest) (*pkg.Image, error)
 }
 
 func ConstructProvider(rawConfig map[string]interface{}) (Provider, error) {

@@ -1,7 +1,7 @@
 package pkg
 
 type TileRequest struct {
-	LayerName int
+	LayerName string
 	Z         int
 	X         int
 	Y         int

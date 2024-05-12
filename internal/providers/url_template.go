@@ -10,6 +10,6 @@ func (t UrlTemplate) Preauth(authContext *AuthContext) error {
 	return nil
 }
 
-func (t UrlTemplate) GenerateTile(authContext AuthContext, z int, x int, y int) (*pkg.Image, error) {
+func (t UrlTemplate) GenerateTile(authContext *AuthContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	return nil, nil
 }

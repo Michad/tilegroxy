@@ -11,19 +11,29 @@ import (
 	"github.com/Michad/tilegroxy/internal/authentication"
 	"github.com/Michad/tilegroxy/internal/config"
 	"github.com/Michad/tilegroxy/internal/layers"
+	"github.com/Michad/tilegroxy/pkg"
 
 	"github.com/gorilla/handlers"
 )
 
-func defaultHandler(w http.ResponseWriter, req *http.Request) {
+type defaultHandler struct {
+	config   config.Config
+	layerMap map[string]*layers.Layer
+	auth     *authentication.Authentication
+}
 
+type tileHandler struct {
+	defaultHandler
+}
+
+func (h *defaultHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
-	fmt.Println("server: hello handler started")
-	defer fmt.Println("server: hello handler ended")
+	fmt.Println("server: default handler started")
+	defer fmt.Println("server: default handler ended")
 
 	select {
-	case <-time.After(10 * time.Second):
-		fmt.Fprintf(w, "hello\n")
+	case <-time.After(1 * time.Second):
+		fmt.Fprintf(w, req.RequestURI+"\n")
 	case <-ctx.Done():
 
 		err := ctx.Err()
@@ -32,42 +42,104 @@ func defaultHandler(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, err.Error(), internalError)
 	}
 }
+
 func handleNoContent(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func handleTile(w http.ResponseWriter, req *http.Request) {
+func writeError(w http.ResponseWriter, cfg config.ErrorConfig, status int, message string, params ...any) {
+	w.WriteHeader(status)
 
-	ctx := req.Context()
-	fmt.Println("server: hello handler started")
-	defer fmt.Println("server: hello handler ended")
+	fullMessage := fmt.Sprintf(message, params...)
 
-	select {
-	case <-time.After(10 * time.Second):
-		fmt.Fprintf(w, "hello\n")
-	case <-ctx.Done():
-
-		err := ctx.Err()
-		fmt.Println("server:", err)
-		internalError := http.StatusInternalServerError
-		http.Error(w, err.Error(), internalError)
+	if cfg.Mode == config.ErrorPlainText {
+		w.Write([]byte(fullMessage))
+	} else {
+		panic("TODO: other error modes")
 	}
 }
 
-func ListenAndServe(config config.Config, layers []*layers.Layer, auth *authentication.Authentication, ) {
-	r := http.NewServeMux()
+func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	// ctx := req.Context()
+	fmt.Println("server: tile handler started")
+	defer fmt.Println("server: tile handler ended")
 
-	r.HandleFunc(config.Server.ContextRoot+"/tile/{z}/{x}/{y}", handleTile)
+	layerName := req.PathValue("layer")
+	zStr := req.PathValue("z")
+	xStr := req.PathValue("x")
+	yStr := req.PathValue("y")
+
+	z, err := strconv.Atoi(zStr)
+
+	if err != nil {
+		writeError(w, h.config.Error, http.StatusBadRequest, h.config.Error.Messages.InvalidParam, "z", zStr)
+		return
+	}
+
+	x, err := strconv.Atoi(xStr)
+
+	if err != nil {
+		writeError(w, h.config.Error, http.StatusBadRequest, h.config.Error.Messages.InvalidParam, "x", xStr)
+		return
+	}
+
+	y, err := strconv.Atoi(yStr)
+
+	if err != nil {
+		writeError(w, h.config.Error, http.StatusBadRequest, h.config.Error.Messages.InvalidParam, "y", yStr)
+		return
+	}
+
+	tileReq := pkg.TileRequest{LayerName: layerName,
+		Z: z, X: x, Y: y}
+
+	if h.layerMap[layerName] == nil {
+		writeError(w, h.config.Error, http.StatusBadRequest, h.config.Error.Messages.InvalidParam, "layer", layerName)
+		return
+	}
+
+	layer := h.layerMap[layerName]
+
+	img, err := layer.RenderTile(tileReq)
+
+	if err != nil {
+		writeError(w, h.config.Error, http.StatusInternalServerError, h.config.Error.Messages.ServerError, err)
+		return
+	}
+
+	if img == nil {
+		writeError(w, h.config.Error, http.StatusInternalServerError, h.config.Error.Messages.ProviderError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+
+	for h, v := range h.config.Server.StaticHeaders {
+		w.Header().Add(h, v)
+	}
+
+	w.Write(*img)
+}
+
+func ListenAndServe(config config.Config, layerList []*layers.Layer, auth *authentication.Authentication) {
+	r := http.ServeMux{}
+
+	layerMap := make(map[string]*layers.Layer)
+	for _, l := range layerList {
+		layerMap[l.Id] = l
+	}
+
 	if config.Server.Production {
 		r.HandleFunc("/", handleNoContent)
 	} else {
-		r.HandleFunc("/", defaultHandler)
-		r.HandleFunc("/documentation", defaultHandler)
+		r.Handle("/", &defaultHandler{config, layerMap, auth})
+		// r.HandleFunc("/documentation", defaultHandler)
 	}
+	r.Handle(config.Server.ContextRoot+"/{layer}/{z}/{x}/{y}", &tileHandler{defaultHandler{config, layerMap, auth}})
 
 	var rootHandler http.Handler
 
-	rootHandler = r
+	rootHandler = &r
 
 	if config.Server.Gzip {
 		rootHandler = handlers.CompressHandler(rootHandler)
@@ -75,7 +147,7 @@ func ListenAndServe(config config.Config, layers []*layers.Layer, auth *authenti
 
 	if config.Logging.AccessLog {
 		var out io.Writer
-		if(config.Logging.Path == "STDOUT") {
+		if config.Logging.Path == "STDOUT" {
 			out = os.Stdout
 		} else {
 			panic("TODO: access log in files")

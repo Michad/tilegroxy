@@ -1,3 +1,3 @@
 package pkg
 
-type Image []byte
+type Image = []byte

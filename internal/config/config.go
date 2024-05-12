@@ -12,6 +12,22 @@ type ServerConfig struct {
 	Gzip          bool
 }
 
+const (
+	ErrorPlainText = "TEXT"
+)
+
+type ErrorMessages struct {
+	InvalidParam  string
+	RangeError    string
+	ServerError   string
+	ProviderError string
+}
+
+type ErrorConfig struct {
+	Mode     string //How errors should be returned.  See the consts above for options TODO: support returning an image in case of error and putting error in the header, also support JSON
+	Messages ErrorMessages
+}
+
 type LogConfig struct {
 	AccessLog bool
 	Path      string
@@ -20,27 +36,37 @@ type LogConfig struct {
 type Config struct {
 	Server         ServerConfig
 	Logging        LogConfig
+	Error          ErrorConfig
 	Authentication map[string]interface{}
 	Cache          map[string]interface{}
 	Layers         []Layer
 }
 
 func defaultConfig() Config {
-	return Config {
+	return Config{
 		Server: ServerConfig{
-			BindHost: "127.0.0.1",
-			Port: 8080,
-			ContextRoot: "/tiles",
+			BindHost:    "127.0.0.1",
+			Port:        8080,
+			ContextRoot: "/tile",
 			StaticHeaders: map[string]string{
 				"x-test": "true",
 			},
 			Production: false,
-			Timeout: 60,
-			Gzip: false,
+			Timeout:    60,
+			Gzip:       false,
 		},
 		Logging: LogConfig{
 			AccessLog: true,
-			Path: "STDOUT",
+			Path:      "STDOUT",
+		},
+		Error: ErrorConfig{
+			Mode: ErrorPlainText,
+			Messages: ErrorMessages{
+				InvalidParam:  "Invalid value supplied for parameter %v: %v",
+				RangeError:    "Parameter %v must be between %v and %v",
+				ServerError:   "Unexpected server error: %v",
+				ProviderError: "Provider failed to return image",
+			},
 		},
 		Authentication: map[string]interface{}{
 			"name": "None",
@@ -50,7 +76,6 @@ func defaultConfig() Config {
 		},
 		Layers: []Layer{},
 	}
-
 
 }
 

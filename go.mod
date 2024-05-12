@@ -1,6 +1,6 @@
 module github.com/Michad/tilegroxy
 
-go 1.21
+go 1.22
 
 require (
 	github.com/gorilla/handlers v1.5.2

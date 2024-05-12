@@ -21,11 +21,11 @@ We want the ability to provide custom providers that don't live inside this main
 
 ## Considered Options
 
-* Require providers written in Go
-* Offer a Lua scripting solution
-* Callout to Python scripts
-* Offer a Javascript scripting solution
-* … <!-- numbers of options can vary -->
+* Go - precompilation only
+* Go - scripting solution
+* Lua - scripting solution
+* Python - scripting solution
+* Javascript - scripting solution
 
 ## Decision Outcome
 
@@ -48,19 +48,43 @@ Chosen option: "{title of option 1}", because
 <!-- This is an optional element. Feel free to remove. -->
 ## Pros and Cons of the Options
 
-### {title of option 1}
+### Go - precompilation only 
 
-<!-- This is an optional element. Feel free to remove. -->
+The null option, don't support anything beyond the core interface used for built-in providers.  Instead focus on making it as easy
+as possible to compile this software so if a group needs to add a custom provider, they write it as a native provider in their own
+fork of this repo.
+
+* Pro: Easiest option, no extra coding required
+* Con: Users of this software need to maintain their own forks and build processes
+* Con: Changes to the core provider interface will break things for users
+
+### Go - scripting solution
+
 {example | description | pointer to more information | …}
 
-* Good, because {argument a}
-* Good, because {argument b}
-<!-- use "neutral" if the given argument weights neither for good nor bad -->
-* Neutral, because {argument c}
-* Bad, because {argument d}
-* … <!-- numbers of pros and cons can vary -->
+* Pro: follows the pattern of traefik, which is a well known and similar tool
+* Con: Go is less accessible than other options
+* Con: 
 
-### {title of other option}
+### Lua - scripting solution
+
+{example | description | pointer to more information | …}
+
+* Pro: Lua is very popular for providing scripting/plugin functionality
+* Con: 
+
+### Python - scripting solution
+
+
+
+* Pro: Very well-known language
+* Pro: Can provide easiest transition path for custom providers written for tilestache
+* Neutral, because {argument c}
+* Bad: Python can be environmentally temperamental. Requiring cpython complicates installation/container maintenance
+* Bad: Tools to support go/python interop mostly either aren't mature or aren't well maintained
+
+
+### Javascript - scripting solution
 
 {example | description | pointer to more information | …}
 
