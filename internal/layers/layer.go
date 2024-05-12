@@ -14,14 +14,14 @@ import (
 
 type Layer struct {
 	Id          string
-	Config      config.Layer
+	Config      config.LayerConfig
 	Provider    providers.Provider
 	Cache       *caches.Cache
 	authContext *providers.AuthContext
 	authMutex   sync.Mutex
 }
 
-func ConstructLayer(rawConfig config.Layer) (*Layer, error) {
+func ConstructLayer(rawConfig config.LayerConfig) (*Layer, error) {
 	provider, error := providers.ConstructProvider(rawConfig.Provider)
 
 	if error != nil {
@@ -65,7 +65,7 @@ func (l *Layer) RenderTile(tileRequest pkg.TileRequest) (*pkg.Image, error) {
 		return nil, err
 	}
 
-	img, err = l.Provider.GenerateTile(l.authContext, tileRequest)
+	img, err = l.Provider.GenerateTile(l.authContext, *l.Config.OverrideClient, tileRequest)
 
 	var authError *providers.AuthError
 	if errors.As(err, &authError) {
@@ -75,7 +75,7 @@ func (l *Layer) RenderTile(tileRequest pkg.TileRequest) (*pkg.Image, error) {
 			return nil, err
 		}
 
-		img, err = l.Provider.GenerateTile(l.authContext, tileRequest)
+		img, err = l.Provider.GenerateTile(l.authContext, *l.Config.OverrideClient, tileRequest)
 
 		if err != nil {
 			return nil, err

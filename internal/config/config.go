@@ -12,6 +12,15 @@ type ServerConfig struct {
 	Gzip          bool
 }
 
+type ClientConfig struct {
+	UserAgent           string            //The user agent to include in outgoing http requests. Separate from StaticHeaders to avoid ommitting this.
+	MaxResponseLength   int               //The maximum Content-Length to allow incoming responses. Default: 10 Megabytes
+	AllowUnknownLength  bool              //If true, allow responses that are missing a Content-Length header, this could lead to memory overruns. Default: false
+	AllowedContentTypes []string          //The content-types to allow servers to return. Anything else will be interpreted as an error
+	AllowedStatusCodes  []int             //The status codes from the remote server to consider successful.  Defaults to just 200
+	StaticHeaders       map[string]string //Include these headers in requests. Defaults to none
+}
+
 const (
 	ErrorPlainText = "TEXT"
 )
@@ -33,13 +42,20 @@ type LogConfig struct {
 	Path      string
 }
 
+type LayerConfig struct {
+	Id             string
+	Provider       map[string]any
+	OverrideClient *ClientConfig //If specified, all of the default Client is overridden. TODO: re-apply default
+}
+
 type Config struct {
 	Server         ServerConfig
+	Client         ClientConfig
 	Logging        LogConfig
 	Error          ErrorConfig
 	Authentication map[string]interface{}
 	Cache          map[string]interface{}
-	Layers         []Layer
+	Layers         []LayerConfig
 }
 
 func defaultConfig() Config {
@@ -54,6 +70,14 @@ func defaultConfig() Config {
 			Production: false,
 			Timeout:    60,
 			Gzip:       false,
+		},
+		Client: ClientConfig{
+			UserAgent:           "tilegroxy/0.0.1", //TODO: make version number dynamic
+			MaxResponseLength:   1024 * 1024 * 10,
+			AllowUnknownLength:  false,
+			AllowedContentTypes: []string{"image/png", "image/jpg"},
+			AllowedStatusCodes:  []int{200},
+			StaticHeaders:       map[string]string{},
 		},
 		Logging: LogConfig{
 			AccessLog: true,
@@ -74,7 +98,7 @@ func defaultConfig() Config {
 		Cache: map[string]interface{}{
 			"name": "None",
 		},
-		Layers: []Layer{},
+		Layers: []LayerConfig{},
 	}
 
 }

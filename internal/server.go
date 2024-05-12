@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -90,8 +91,19 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	tileReq := pkg.TileRequest{LayerName: layerName,
-		Z: z, X: x, Y: y}
+	tileReq := pkg.TileRequest{LayerName: layerName, Z: z, X: x, Y: y}
+
+	_, err = tileReq.GetBounds()
+
+	if err != nil {
+		var re pkg.RangeError
+		if errors.As(err, &re) {
+			writeError(w, h.config.Error, http.StatusBadRequest, h.config.Error.Messages.RangeError, re.ParamName, re.MinValue, re.MaxValue)
+		} else {
+			writeError(w, h.config.Error, http.StatusInternalServerError, h.config.Error.Messages.ServerError, err)
+		}
+		return
+	}
 
 	if h.layerMap[layerName] == nil {
 		writeError(w, h.config.Error, http.StatusBadRequest, h.config.Error.Messages.InvalidParam, "layer", layerName)

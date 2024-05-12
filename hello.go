@@ -45,6 +45,9 @@ func main() {
 	fmt.Printf("--- l:\n%v\n\n", layer)
 
 	layer.Cache = &cache
+	if layer.Config.OverrideClient == nil {
+		layer.Config.OverrideClient = &c.Client
+	}
 
 	internal.ListenAndServe(c, []*layers.Layer{layer}, &auth)
 }
