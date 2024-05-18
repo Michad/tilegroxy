@@ -1,18 +1,20 @@
 server:
   production: false
   port: 8081
+authentication:
+  name: static key
 cache:
-  name: Multi
-  Tiers:
+  name: multi
+  tiers:
     -
-      name: Memory
+      name: memory
       MaxSize: 1000
       Ttl: 1000
     -
-      name: Disk
+      name: disk
       path: "./disK_tile_cache"
     -
-      name: Disk
+      name: disk
       path: "./disK_tile_cache2"
 layers:
   -

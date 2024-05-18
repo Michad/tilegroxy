@@ -29,7 +29,7 @@ func main() {
 
 	fmt.Printf("--- c:\n%v\n\n", cache)
 
-	auth, err := authentication.ConstructAuth(c.Authentication)
+	auth, err := authentication.ConstructAuth(c.Authentication, &c.Error.Messages)
 	if err != nil {
 		log.Fatalf("error: %v", err)
 	}

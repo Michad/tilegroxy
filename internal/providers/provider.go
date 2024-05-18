@@ -1,7 +1,6 @@
 package providers
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -19,7 +18,7 @@ type Provider interface {
 	GenerateTile(authContext *AuthContext, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, tileRequest pkg.TileRequest) (*pkg.Image, error)
 }
 
-func ConstructProvider(rawConfig map[string]interface{}) (Provider, error) {
+func ConstructProvider(rawConfig map[string]interface{}, errorMessages *config.ErrorMessages) (Provider, error) {
 
 	if rawConfig["name"] == "url template" {
 		var result UrlTemplate
@@ -33,7 +32,7 @@ func ConstructProvider(rawConfig map[string]interface{}) (Provider, error) {
 	}
 
 	name := fmt.Sprintf("%#v", rawConfig["name"])
-	return nil, errors.New("Unsupported provider " + name)
+	return nil, fmt.Errorf(errorMessages.InvalidParam, "authentication.name", name)
 }
 
 type AuthContext struct {

@@ -23,7 +23,7 @@ type Layer struct {
 }
 
 func ConstructLayer(rawConfig config.LayerConfig, errorMessages *config.ErrorMessages) (*Layer, error) {
-	provider, error := providers.ConstructProvider(rawConfig.Provider)
+	provider, error := providers.ConstructProvider(rawConfig.Provider, errorMessages)
 
 	if error != nil {
 		return nil, error

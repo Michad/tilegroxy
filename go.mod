@@ -3,6 +3,7 @@ module github.com/Michad/tilegroxy
 go 1.22
 
 require (
+	github.com/google/uuid v1.4.0
 	github.com/gorilla/handlers v1.5.2
 	github.com/maypok86/otter v1.2.1
 	github.com/mitchellh/mapstructure v1.5.0

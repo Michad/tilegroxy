@@ -65,6 +65,11 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	fmt.Println("server: tile handler started")
 	defer fmt.Println("server: tile handler ended")
 
+	if !(*h.auth).Preauth(req) {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
 	layerName := req.PathValue("layer")
 	zStr := req.PathValue("z")
 	xStr := req.PathValue("x")

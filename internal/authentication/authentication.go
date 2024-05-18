@@ -1,20 +1,29 @@
 package authentication
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
+
+	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/mitchellh/mapstructure"
 )
 
 type Authentication interface {
 	Preauth(req *http.Request) bool
 }
 
-func ConstructAuth(rawConfig map[string]interface{}) (Authentication, error) {
-	if rawConfig["name"] == "None" {
+func ConstructAuth(rawConfig map[string]interface{}, errorMessages *config.ErrorMessages) (Authentication, error) {
+	if rawConfig["name"] == "none" {
 		return NoopAuth{}, nil
+	} else if rawConfig["name"] == "static key" {
+		var config StaticKeyConfig
+		err := mapstructure.Decode(rawConfig, &config)
+		if err != nil {
+			return nil, err
+		}
+		return ConstructStaticKey(&config, errorMessages)
 	}
 
 	name := fmt.Sprintf("%#v", rawConfig["name"])
-	return nil, errors.New("Unsupported auth " + name)
+	return nil, fmt.Errorf(errorMessages.InvalidParam, "authentication.name", name)
 }

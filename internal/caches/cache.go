@@ -1,7 +1,6 @@
 package caches
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/Michad/tilegroxy/internal/config"
@@ -14,24 +13,24 @@ type Cache interface {
 	Save(t pkg.TileRequest, img *pkg.Image) error
 }
 
-func ConstructCache(rawConfig map[string]interface{}, ErrorMessages *config.ErrorMessages) (Cache, error) {
-	if rawConfig["name"] == "None" || rawConfig["name"] == "Test" {
+func ConstructCache(rawConfig map[string]interface{}, errorMessages *config.ErrorMessages) (Cache, error) {
+	if rawConfig["name"] == "none" || rawConfig["name"] == "test" {
 		return Noop{}, nil
-	} else if rawConfig["name"] == "Disk" {
+	} else if rawConfig["name"] == "disk" {
 		var config DiskConfig
 		err := mapstructure.Decode(rawConfig, &config)
 		if err != nil {
 			return nil, err
 		}
-		return ConstructDisk(config, ErrorMessages)
-	} else if rawConfig["name"] == "Memory" {
+		return ConstructDisk(config, errorMessages)
+	} else if rawConfig["name"] == "memory" {
 		var config MemoryConfig
 		err := mapstructure.Decode(rawConfig, &config)
 		if err != nil {
 			return nil, err
 		}
-		return ConstructMemory(config, ErrorMessages)
-	} else if rawConfig["name"] == "Multi" {
+		return ConstructMemory(config, errorMessages)
+	} else if rawConfig["name"] == "multi" {
 		var config MultiConfig
 		err := mapstructure.Decode(rawConfig, &config)
 		if err != nil {
@@ -40,7 +39,7 @@ func ConstructCache(rawConfig map[string]interface{}, ErrorMessages *config.Erro
 		tierCaches := make([]Cache, len(config.Tiers))
 
 		for i, tierRawConfig := range config.Tiers {
-			tierCache, err := ConstructCache(tierRawConfig, ErrorMessages)
+			tierCache, err := ConstructCache(tierRawConfig, errorMessages)
 
 			if err != nil {
 				return nil, err
@@ -53,5 +52,5 @@ func ConstructCache(rawConfig map[string]interface{}, ErrorMessages *config.Erro
 	}
 
 	name := fmt.Sprintf("%#v", rawConfig["name"])
-	return nil, errors.New("Unsupported cache " + name)
+	return nil, fmt.Errorf(errorMessages.InvalidParam, "cache.name", name)
 }

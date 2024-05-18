@@ -47,9 +47,11 @@ The configuration in tilegroxy is meant to be highly compatible with the configu
 
 The following are the known steps to transition a configuration from tilestache to tilegroxy:
 
-* 
-* 
-* 
+* Unsupported providers:
+* Unsupported params url template
+* moved params client params
+* Names are always in all lowercase
+* Disk cache umode to filemode changes
 * 
 
 
