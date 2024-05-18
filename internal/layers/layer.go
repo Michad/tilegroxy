@@ -13,22 +13,23 @@ import (
 )
 
 type Layer struct {
-	Id          string
-	Config      config.LayerConfig
-	Provider    providers.Provider
-	Cache       *caches.Cache
-	authContext *providers.AuthContext
-	authMutex   sync.Mutex
+	Id            string
+	Config        config.LayerConfig
+	Provider      providers.Provider
+	Cache         *caches.Cache
+	ErrorMessages *config.ErrorMessages
+	authContext   *providers.AuthContext
+	authMutex     sync.Mutex
 }
 
-func ConstructLayer(rawConfig config.LayerConfig) (*Layer, error) {
+func ConstructLayer(rawConfig config.LayerConfig, errorMessages *config.ErrorMessages) (*Layer, error) {
 	provider, error := providers.ConstructProvider(rawConfig.Provider)
 
 	if error != nil {
 		return nil, error
 	}
 
-	return &Layer{rawConfig.Id, rawConfig, provider, nil, nil, sync.Mutex{}}, nil
+	return &Layer{rawConfig.Id, rawConfig, provider, nil, errorMessages, nil, sync.Mutex{}}, nil
 }
 
 func (l *Layer) authWithProvider() error {
@@ -65,7 +66,7 @@ func (l *Layer) RenderTile(tileRequest pkg.TileRequest) (*pkg.Image, error) {
 		return nil, err
 	}
 
-	img, err = l.Provider.GenerateTile(l.authContext, *l.Config.OverrideClient, tileRequest)
+	img, err = l.Provider.GenerateTile(l.authContext, l.Config.OverrideClient, l.ErrorMessages, tileRequest)
 
 	var authError *providers.AuthError
 	if errors.As(err, &authError) {
@@ -75,11 +76,13 @@ func (l *Layer) RenderTile(tileRequest pkg.TileRequest) (*pkg.Image, error) {
 			return nil, err
 		}
 
-		img, err = l.Provider.GenerateTile(l.authContext, *l.Config.OverrideClient, tileRequest)
+		img, err = l.Provider.GenerateTile(l.authContext, l.Config.OverrideClient, l.ErrorMessages, tileRequest)
 
 		if err != nil {
 			return nil, err
 		}
+	} else if err != nil {
+		return nil, err
 	}
 
 	err = (*l.Cache).Save(tileRequest, img)

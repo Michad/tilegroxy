@@ -3,6 +3,10 @@ package providers
 import (
 	"errors"
 	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"slices"
 	"time"
 
 	"github.com/Michad/tilegroxy/internal/config"
@@ -12,13 +16,18 @@ import (
 
 type Provider interface {
 	Preauth(authContext *AuthContext) error
-	GenerateTile(authContext *AuthContext, clientConfig config.ClientConfig, tileRequest pkg.TileRequest) (*pkg.Image, error)
+	GenerateTile(authContext *AuthContext, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, tileRequest pkg.TileRequest) (*pkg.Image, error)
 }
 
 func ConstructProvider(rawConfig map[string]interface{}) (Provider, error) {
 
 	if rawConfig["name"] == "url template" {
 		var result UrlTemplate
+		err := mapstructure.Decode(rawConfig, &result)
+		return result, err
+	}
+	if rawConfig["name"] == "proxy" {
+		var result Proxy
 		err := mapstructure.Decode(rawConfig, &result)
 		return result, err
 	}
@@ -64,4 +73,62 @@ type RemoteServerError struct {
 
 func (e *RemoteServerError) Error() string {
 	return fmt.Sprintf("Remote server returned status code %v", e.StatusCode)
+}
+
+/**
+ * Performs a GET operation against a given URL. Implementing providers should call this when possible. It has
+ * standard reusable logic around various config options
+ */
+func getTile(clientConfig *config.ClientConfig, url string, authHeaders map[string]string) (*pkg.Image, error) {
+	log.Printf("Calling url %v\n", url)
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("User-Agent", clientConfig.UserAgent)
+
+	for h, v := range clientConfig.StaticHeaders {
+		req.Header.Set(h, v)
+	}
+
+	for h, v := range authHeaders {
+		req.Header.Set(h, v)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	log.Printf("Response status: %v", resp.StatusCode)
+
+	if !slices.Contains(clientConfig.AllowedStatusCodes, resp.StatusCode) {
+		return nil, &RemoteServerError{StatusCode: resp.StatusCode}
+	}
+
+	if resp.ContentLength == -1 {
+
+	} else {
+		if resp.ContentLength > int64(clientConfig.MaxResponseLength) {
+			return nil, &InvalidContentLengthError{uint(resp.ContentLength)}
+		}
+	}
+
+	img, err := io.ReadAll(resp.Body)
+
+	if err != nil {
+		return nil, &RemoteServerError{StatusCode: resp.StatusCode}
+	}
+
+	if len(img) > int(clientConfig.MaxResponseLength) {
+		return nil, &InvalidContentLengthError{uint(len(img))}
+	}
+
+	return &img, nil
 }

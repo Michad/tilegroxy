@@ -1,8 +1,19 @@
 server:
   production: false
+  port: 8081
 cache:
-  name: None
-  verbose: true
+  name: Multi
+  Tiers:
+    -
+      name: Memory
+      MaxSize: 1000
+      Ttl: 1000
+    -
+      name: Disk
+      path: "./disK_tile_cache"
+    -
+      name: Disk
+      path: "./disK_tile_cache2"
 layers:
   -
     id: test
@@ -14,3 +25,8 @@ layers:
     provider:
       name: url template
       template: http://example.com/?bbox=$xmin,$ymin,$xmax,$ymax
+  -
+    id: osm
+    provider:
+        name: proxy
+        url: https://tile.openstreetmap.org/{z}/{x}/{y}.png

@@ -22,7 +22,7 @@ func main() {
 
 	fmt.Printf("--- t:\n%v\n\n", c.Cache)
 
-	cache, err := caches.ConstructCache(c.Cache)
+	cache, err := caches.ConstructCache(c.Cache, &c.Error.Messages)
 	if err != nil {
 		log.Fatalf("error: %v", err)
 	}
@@ -36,18 +36,24 @@ func main() {
 
 	fmt.Printf("--- a:\n%v\n\n", auth)
 
-	layer, err := layers.ConstructLayer(c.Layers[0])
+	layerObjs := make([]*layers.Layer, len(c.Layers))
+
+	for i, l := range c.Layers {
+		layerObjs[i], err = layers.ConstructLayer(l, &c.Error.Messages)
+		if err != nil {
+			log.Fatalf("error: %v", err)
+		}
+
+		layerObjs[i].Cache = &cache
+		if layerObjs[i].Config.OverrideClient == nil {
+			layerObjs[i].Config.OverrideClient = &c.Client
+		}
+		fmt.Printf("--- l:\n%v\n\n", layerObjs[i])
+	}
 
 	if err != nil {
 		log.Fatalf("error: %v", err)
 	}
 
-	fmt.Printf("--- l:\n%v\n\n", layer)
-
-	layer.Cache = &cache
-	if layer.Config.OverrideClient == nil {
-		layer.Config.OverrideClient = &c.Client
-	}
-
-	internal.ListenAndServe(c, []*layers.Layer{layer}, &auth)
+	internal.ListenAndServe(c, layerObjs, &auth)
 }

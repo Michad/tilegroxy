@@ -63,7 +63,7 @@ func defaultConfig() Config {
 		Server: ServerConfig{
 			BindHost:    "127.0.0.1",
 			Port:        8080,
-			ContextRoot: "/tile",
+			ContextRoot: "/tiles",
 			StaticHeaders: map[string]string{
 				"x-test": "true",
 			},

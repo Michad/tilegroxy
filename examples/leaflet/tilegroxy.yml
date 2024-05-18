@@ -1,0 +1,11 @@
+server:
+    production: false
+    port: 8081
+cache:
+    name: None
+layers:
+    -
+        id: osm
+        provider:
+            name: proxy
+            url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
