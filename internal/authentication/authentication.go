@@ -14,7 +14,7 @@ type Authentication interface {
 
 func ConstructAuth(rawConfig map[string]interface{}, errorMessages *config.ErrorMessages) (Authentication, error) {
 	if rawConfig["name"] == "none" {
-		return NoopAuth{}, nil
+		return Noop{}, nil
 	} else if rawConfig["name"] == "static key" {
 		var config StaticKeyConfig
 		err := mapstructure.Decode(rawConfig, &config)
@@ -22,6 +22,13 @@ func ConstructAuth(rawConfig map[string]interface{}, errorMessages *config.Error
 			return nil, err
 		}
 		return ConstructStaticKey(&config, errorMessages)
+	} else if rawConfig["name"] == "jwt" {
+		var config JwtConfig
+		err := mapstructure.Decode(rawConfig, &config)
+		if err != nil {
+			return nil, err
+		}
+		return ConstructJwt(&config, errorMessages)
 	}
 
 	name := fmt.Sprintf("%#v", rawConfig["name"])

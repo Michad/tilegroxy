@@ -35,6 +35,6 @@ func ConstructStaticKey(config *StaticKeyConfig, errorMessages *config.ErrorMess
 }
 
 func (c StaticKey) Preauth(req *http.Request) bool {
-	h := req.Header["Authentication"]
+	h := req.Header["Authorization"]
 	return len(h) > 0 && h[0] == "Bearer "+c.Config.Key
 }

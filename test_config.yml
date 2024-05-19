@@ -2,7 +2,10 @@ server:
   production: false
   port: 8081
 authentication:
-  name: static key
+  name: jwt
+  algorithm: HS256
+  verificationKey: askfasklfj
+  CacheSize: 100
 cache:
   name: multi
   tiers:

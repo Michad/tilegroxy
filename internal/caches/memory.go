@@ -16,7 +16,7 @@ type MemoryConfig struct {
 
 type Memory struct {
 	Config MemoryConfig
-	Cache  interface{}
+	Cache  otter.Cache[string, []byte]
 }
 
 func ConstructMemory(config MemoryConfig, ErrorMessages *config.ErrorMessages) (*Memory, error) {
