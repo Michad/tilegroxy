@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/authentication"
 	"github.com/Michad/tilegroxy/internal/caches"
 	"github.com/Michad/tilegroxy/internal/config"
 	"github.com/Michad/tilegroxy/internal/layers"
+	"github.com/Michad/tilegroxy/internal/server"
 )
 
 func main() {
@@ -55,5 +55,10 @@ func main() {
 		log.Fatalf("error: %v", err)
 	}
 
-	internal.ListenAndServe(c, layerObjs, &auth)
+	err = server.ListenAndServe(c, layerObjs, &auth)
+
+	if err != nil {
+		log.Fatalf("error: %v", err)
+	}
+
 }

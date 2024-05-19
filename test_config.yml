@@ -1,11 +1,17 @@
 server:
   production: false
   port: 8081
-authentication:
-  name: jwt
-  algorithm: HS256
-  verificationKey: askfasklfj
-  CacheSize: 100
+logging:
+  mainlog:
+    format: json
+    level: debug
+  accesslog:
+    format: combined
+# authentication:
+#   name: jwt
+#   algorithm: HS256
+#   verificationKey: askfasklfj
+#   CacheSize: 100
 cache:
   name: multi
   tiers:

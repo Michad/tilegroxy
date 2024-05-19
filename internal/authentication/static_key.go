@@ -1,7 +1,8 @@
 package authentication
 
 import (
-	"log"
+	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -27,7 +28,7 @@ func ConstructStaticKey(config *StaticKeyConfig, errorMessages *config.ErrorMess
 
 		keyStr := strings.ReplaceAll(keyUuid.String(), "-", "")
 
-		log.Printf("Generated authentication key: %v\n", keyStr)
+		slog.Warn(fmt.Sprintf("Generated authentication key: %v\n", keyStr))
 		config.Key = keyStr
 	}
 

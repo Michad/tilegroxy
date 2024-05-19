@@ -37,9 +37,32 @@ type ErrorConfig struct {
 	Messages ErrorMessages
 }
 
+const (
+	AccessLogFormatCommon   = "common"
+	AccessLogFormatCombined = "combined"
+)
+
+type AccessLogConfig struct {
+	EnableStandardOut bool   //If true, write access logs to standard out. Defaults to true
+	Path              string //The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth. Defaults to none
+	Format            string //The format to output access logs in. Applies to both standard out and file out. Possible values: common, combined. Defaults to common
+}
+
+const (
+	MainLogFormatPlain = "plain"
+	MainLogFormatJson  = "json"
+)
+
+type MainLogConfig struct {
+	EnableStandardOut bool   //If true, write access logs to standard out. Defaults to true
+	Path              string //The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth. Defaults to none
+	Format            string //The format to output access logs in. Applies to both standard out and file out. Possible values: plain, json. Defaults to plain
+	Level             string
+}
+
 type LogConfig struct {
-	AccessLog bool
-	Path      string
+	AccessLog AccessLogConfig
+	MainLog   MainLogConfig
 }
 
 type LayerConfig struct {
@@ -80,8 +103,17 @@ func defaultConfig() Config {
 			StaticHeaders:       map[string]string{},
 		},
 		Logging: LogConfig{
-			AccessLog: true,
-			Path:      "STDOUT",
+			MainLog: MainLogConfig{
+				EnableStandardOut: true,
+				Path:              "",
+				Format:            MainLogFormatPlain,
+				Level:             "info",
+			},
+			AccessLog: AccessLogConfig{
+				EnableStandardOut: true,
+				Path:              "",
+				Format:            AccessLogFormatCombined,
+			},
 		},
 		Error: ErrorConfig{
 			Mode: ErrorPlainText,
@@ -93,10 +125,10 @@ func defaultConfig() Config {
 			},
 		},
 		Authentication: map[string]interface{}{
-			"name": "None",
+			"name": "none",
 		},
 		Cache: map[string]interface{}{
-			"name": "None",
+			"name": "none",
 		},
 		Layers: []LayerConfig{},
 	}

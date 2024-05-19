@@ -3,7 +3,7 @@ package providers
 import (
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"slices"
 	"time"
@@ -79,7 +79,7 @@ func (e *RemoteServerError) Error() string {
  * standard reusable logic around various config options
  */
 func getTile(clientConfig *config.ClientConfig, url string, authHeaders map[string]string) (*pkg.Image, error) {
-	log.Printf("Calling url %v\n", url)
+	slog.Debug(fmt.Sprintf("Calling url %v\n", url))
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
@@ -105,7 +105,7 @@ func getTile(clientConfig *config.ClientConfig, url string, authHeaders map[stri
 		return nil, err
 	}
 
-	log.Printf("Response status: %v", resp.StatusCode)
+	slog.Debug(fmt.Sprintf("Response status: %v", resp.StatusCode))
 
 	if !slices.Contains(clientConfig.AllowedStatusCodes, resp.StatusCode) {
 		return nil, &RemoteServerError{StatusCode: resp.StatusCode}

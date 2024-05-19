@@ -2,7 +2,8 @@ package layers
 
 import (
 	"errors"
-	"log"
+	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -55,7 +56,7 @@ func (l *Layer) RenderTile(tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	}
 
 	if err != nil {
-		log.Printf("Cache read error %v\n", err)
+		slog.Warn(fmt.Sprintf("Cache read error %v\n", err))
 	}
 
 	if l.authContext == nil || l.authContext.Expiration.Before(time.Now()) {
@@ -88,7 +89,7 @@ func (l *Layer) RenderTile(tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	err = (*l.Cache).Save(tileRequest, img)
 
 	if err != nil {
-		log.Printf("Cache save error %v\n", err)
+		slog.Warn(fmt.Sprintf("Cache save error %v\n", err))
 	}
 
 	return img, nil

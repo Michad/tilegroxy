@@ -2,7 +2,7 @@ package authentication
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"slices"
 	"strings"
@@ -82,7 +82,7 @@ func (c Jwt) Preauth(req *http.Request) bool {
 		date, ok := c.Cache.Get(tokenStr)
 
 		if ok {
-			log.Printf("JWT Cache hit")
+			slog.Debug("JWT Cache hit")
 			if date.After(time.Now()) {
 				return true
 			} else {
@@ -127,7 +127,7 @@ func (c Jwt) Preauth(req *http.Request) bool {
 	}, parserOptions...)
 
 	if error != nil {
-		log.Printf("JWT parsing error: %v\n", error) //TODO: info
+		slog.Info("JWT parsing error: ", error)
 		return false
 	}
 
