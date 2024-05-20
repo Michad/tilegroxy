@@ -13,7 +13,7 @@ type ServerConfig struct {
 }
 
 type ClientConfig struct {
-	UserAgent           string            //The user agent to include in outgoing http requests. Separate from StaticHeaders to avoid ommitting this.
+	UserAgent           string            //The user agent to include in outgoing http requests. Separate from StaticHeaders to avoid omitting this.
 	MaxResponseLength   int               //The maximum Content-Length to allow incoming responses. Default: 10 Megabytes
 	AllowUnknownLength  bool              //If true, allow responses that are missing a Content-Length header, this could lead to memory overruns. Default: false
 	AllowedContentTypes []string          //The content-types to allow servers to return. Anything else will be interpreted as an error
