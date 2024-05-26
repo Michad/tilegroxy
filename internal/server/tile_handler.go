@@ -31,21 +31,21 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	z, err := strconv.Atoi(zStr)
 
 	if err != nil {
-		writeError(w, h.config.Error, http.StatusBadRequest, h.config.Error.Messages.InvalidParam, "z", zStr)
+		writeError(w, &h.config.Error, http.StatusBadRequest, h.config.Error.Messages.InvalidParam, "z", zStr)
 		return
 	}
 
 	x, err := strconv.Atoi(xStr)
 
 	if err != nil {
-		writeError(w, h.config.Error, http.StatusBadRequest, h.config.Error.Messages.InvalidParam, "x", xStr)
+		writeError(w, &h.config.Error, http.StatusBadRequest, h.config.Error.Messages.InvalidParam, "x", xStr)
 		return
 	}
 
 	y, err := strconv.Atoi(yStr)
 
 	if err != nil {
-		writeError(w, h.config.Error, http.StatusBadRequest, h.config.Error.Messages.InvalidParam, "y", yStr)
+		writeError(w, &h.config.Error, http.StatusBadRequest, h.config.Error.Messages.InvalidParam, "y", yStr)
 		return
 	}
 
@@ -56,15 +56,15 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		var re pkg.RangeError
 		if errors.As(err, &re) {
-			writeError(w, h.config.Error, http.StatusBadRequest, h.config.Error.Messages.RangeError, re.ParamName, re.MinValue, re.MaxValue)
+			writeError(w, &h.config.Error, http.StatusBadRequest, h.config.Error.Messages.RangeError, re.ParamName, re.MinValue, re.MaxValue)
 		} else {
-			writeError(w, h.config.Error, http.StatusInternalServerError, h.config.Error.Messages.ServerError, err)
+			writeError(w, &h.config.Error, http.StatusInternalServerError, h.config.Error.Messages.ServerError, err)
 		}
 		return
 	}
 
 	if h.layerMap[layerName] == nil {
-		writeError(w, h.config.Error, http.StatusBadRequest, h.config.Error.Messages.InvalidParam, "layer", layerName)
+		writeError(w, &h.config.Error, http.StatusBadRequest, h.config.Error.Messages.InvalidParam, "layer", layerName)
 		return
 	}
 
@@ -73,12 +73,12 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	img, err := layer.RenderTile(tileReq)
 
 	if err != nil {
-		writeError(w, h.config.Error, http.StatusInternalServerError, h.config.Error.Messages.ServerError, err)
+		writeError(w, &h.config.Error, http.StatusInternalServerError, h.config.Error.Messages.ServerError, err)
 		return
 	}
 
 	if img == nil {
-		writeError(w, h.config.Error, http.StatusInternalServerError, h.config.Error.Messages.ProviderError)
+		writeError(w, &h.config.Error, http.StatusInternalServerError, h.config.Error.Messages.ProviderError)
 		return
 	}
 

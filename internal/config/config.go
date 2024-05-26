@@ -81,7 +81,7 @@ type Config struct {
 	Layers         []LayerConfig
 }
 
-func defaultConfig() Config {
+func DefaultConfig() Config {
 	return Config{
 		Server: ServerConfig{
 			BindHost:    "127.0.0.1",
@@ -132,11 +132,10 @@ func defaultConfig() Config {
 		},
 		Layers: []LayerConfig{},
 	}
-
 }
 
 func LoadConfigFromFile(filename string) (Config, error) {
-	c := defaultConfig()
+	c := DefaultConfig()
 	var viper = viper.New()
 	viper.SetConfigFile(filename)
 

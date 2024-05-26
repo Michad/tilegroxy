@@ -3,6 +3,10 @@ package cmd
 import (
 	"os"
 
+	"github.com/Michad/tilegroxy/internal/authentication"
+	"github.com/Michad/tilegroxy/internal/caches"
+	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/spf13/cobra"
 )
 
@@ -26,5 +30,56 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.Flags().StringP("config", "c", "./tilegroxy.yml", "A file path to the configuration file to use. The file should have an extension of either json or yml/yaml and be readable.")
+	rootCmd.PersistentFlags().StringP("config", "c", "./tilegroxy.yml", "A file path to the configuration file to use. The file should have an extension of either json or yml/yaml and be readable.")
+}
+
+func parseConfigIntoStructs(cmd *cobra.Command) (*config.Config, []*layers.Layer, *authentication.Authentication, error) {
+
+	configPath, err := cmd.Flags().GetString("config")
+
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	var cfg config.Config
+
+	if configPath != "" {
+		cfg, err = config.LoadConfigFromFile(configPath)
+
+		if err != nil {
+			return nil, nil, nil, err
+		}
+	} else {
+		panic("No configuration supplied")
+	}
+
+	cache, err := caches.ConstructCache(cfg.Cache, &cfg.Error.Messages)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	auth, err := authentication.ConstructAuth(cfg.Authentication, &cfg.Error.Messages)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	layerObjects := make([]*layers.Layer, len(cfg.Layers))
+
+	for i, l := range cfg.Layers {
+		layerObjects[i], err = layers.ConstructLayer(l, &cfg.Error.Messages)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+
+		layerObjects[i].Cache = &cache
+		if layerObjects[i].Config.OverrideClient == nil {
+			layerObjects[i].Config.OverrideClient = &cfg.Client
+		}
+	}
+
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return &cfg, layerObjects, &auth, err
 }

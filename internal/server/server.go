@@ -19,7 +19,7 @@ func handleNoContent(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func writeError(w http.ResponseWriter, cfg config.ErrorConfig, status int, message string, params ...any) {
+func writeError(w http.ResponseWriter, cfg *config.ErrorConfig, status int, message string, params ...any) {
 	w.WriteHeader(status)
 
 	fullMessage := fmt.Sprintf(message, params...)
@@ -31,7 +31,7 @@ func writeError(w http.ResponseWriter, cfg config.ErrorConfig, status int, messa
 	}
 }
 
-func configureMainLogging(cfg config.Config) error {
+func configureMainLogging(cfg *config.Config) error {
 	if cfg.Logging.MainLog.EnableStandardOut || len(cfg.Logging.MainLog.Path) > 0 {
 		var out io.Writer
 		if len(cfg.Logging.MainLog.Path) > 0 {
@@ -113,7 +113,7 @@ func configureAccessLogging(cfg config.AccessLogConfig, errorMessages config.Err
 	return rootHandler, nil
 }
 
-func ListenAndServe(config config.Config, layerList []*layers.Layer, auth *authentication.Authentication) error {
+func ListenAndServe(config *config.Config, layerList []*layers.Layer, auth *authentication.Authentication) error {
 	r := http.ServeMux{}
 
 	layerMap := make(map[string]*layers.Layer)

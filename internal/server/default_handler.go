@@ -12,7 +12,7 @@ import (
 )
 
 type defaultHandler struct {
-	config   config.Config
+	config   *config.Config
 	layerMap map[string]*layers.Layer
 	auth     *authentication.Authentication
 }
