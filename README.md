@@ -82,7 +82,24 @@ TODO: example unit file
 
 ### Docker
 
-TODO. Not yet implemented.
+Tilegroxy is available as a container image on TODO
+
+You can build the docker image yourself with
+
+```
+docker build -f build/dockerfile . -t tilegroxy
+```
+
+To run tilegroxy from within a container:
+
+```
+docker run -it --rm -v ./test_config.yml:/tilegroxy/tilegroxy.yml:Z localhost/tilegroxy seed -l osm -z 0 -v
+```
+
+To run it through docker compose:
+
+TODO
+
 
 ### Kubernetes
 
