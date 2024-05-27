@@ -17,7 +17,11 @@ var seedCmd = &cobra.Command{
 	Short: "Pre-populate (seed) the cache",
 	Long: `Pre-populates the cache for a given layer for a given area (bounding box) for a range of zoom levels. 
 	
-	Be mindful that the higher the zoom level (the more you "zoom in"), exponentially more tiles will need to be seeded for a given area. For instance, while zoom level 1 only requires 4 tiles to cover the planet, zoom level 10 requires over a million tiles.`,
+Be mindful that the higher the zoom level (the more you "zoom in"), exponentially more tiles will need to be seeded for a given area. For instance, while zoom level 1 only requires 4 tiles to cover the planet, zoom level 10 requires over a million tiles.
+
+Example:
+
+	tilegroxy seed -c test_config.yml -l osm -z 2 -v -t 7 -z 0 -z 1 -z 3 -z 4`,
 	Run: func(cmd *cobra.Command, args []string) {
 		layerName, err1 := cmd.Flags().GetString("layer")
 		zoom, err2 := cmd.Flags().GetUintSlice("zoom")
