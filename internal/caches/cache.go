@@ -30,6 +30,13 @@ func ConstructCache(rawConfig map[string]interface{}, errorMessages *config.Erro
 			return nil, err
 		}
 		return ConstructMemory(config, errorMessages)
+	} else if rawConfig["name"] == "group" {
+		var config GroupConfig
+		err := mapstructure.Decode(rawConfig, &config)
+		if err != nil {
+			return nil, err
+		}
+		return ConstructGroupCache(config, errorMessages)
 	} else if rawConfig["name"] == "multi" {
 		var config MultiConfig
 		err := mapstructure.Decode(rawConfig, &config)
