@@ -1,12 +1,20 @@
 # tilegroxy
 
-A map tile proxy and cache service.
 
-🎨 Designed to live between your map and mapping services.  
+[![Docker Image CI](https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml/badge.svg)](https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml)
+[![Go Report Card](https://goreportcard.com/badge/michad/tilegroxy)](https://goreportcard.com/report/michad/tilegroxy)
+[![CodeQL](https://github.com/Michad/tilegroxy/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/Michad/tilegroxy/actions/workflows/github-code-scanning/codeql)
+
+A map tile proxy and cache service. Lives between your webmap and your mapping engines to provide a simple, consistent interface and improved performance.
+
 💡 Inspired by [tilestache](https://github.com/tilestache/tilestache) and mostly compatible with tilestache configurations.   
 🚀 Built in Go for speed.  
 🔌 Features a flexible plugin system for custom providers written in TODO.  
+🪪 Licensed with a permissive Unlicense   
 🛠️ BUT DO NOT USE YET! STILL A WORK IN PROGRESS!
+
+
+
 
 ## Features
 
