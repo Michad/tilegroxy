@@ -4,7 +4,7 @@ go 1.22
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.2.1
-	github.com/google/uuid v1.4.0
+	github.com/google/uuid v1.6.0
 	github.com/gorilla/handlers v1.5.2
 	github.com/maypok86/otter v1.2.1
 	github.com/mitchellh/mapstructure v1.5.0
