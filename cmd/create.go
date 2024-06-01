@@ -39,9 +39,7 @@ Example:
 
 			if ext == ".json" {
 				forceJson = true
-			} else if ext == ".yml" || ext == ".yaml" {
-				forceYml = true
-			}
+			} //Check for extension being yaml isn't needed because we default to yaml
 		}
 
 		//TODO: populate example config here
