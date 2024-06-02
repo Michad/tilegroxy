@@ -191,6 +191,37 @@ Global Flags:
   -c, --config string   A file path to the configuration file to use. The file should have an extension of either json or yml/yaml and be readable. (default "./tilegroxy.yml")
 ```
 
+### Test
+
+Tests your layers and cache are correctly configured and working by performing end-to-end tests.
+
+Full, up-to-date usage information can be found with `tilegroxy test -h`.
+
+```
+Tests that everything is working end-to-end for all or some layers including caching. This goes further than 'config check' and instead of just validating the configuration can be parsed it actually makes sample request(s) and populates the result in the cache. This is similar to running 'seed' for a single tile or standing up the server and making a cURL request for each layer. The output will list each layer and the status, with any error encountered if applicable.
+
+This test uses an arbitrary tile coordinate to test with. The default coordinate might be outside the bounds of your map layer, there is currently no logic to consider the bounds configured for each layer; you will need to specify an applicable tile to use.  It is not recommended to use 0,0,0 due to potential performance issues when dealing with large data. If your cache is configured to prevent overwriting existing items you might need to pick a distinct tile each time you run the test or run with cache disabled (--no-cache).
+
+Example:
+
+        tilegroxy test -c test_config.yml -l osm -z 10 -x 123 -y 534
+
+Usage:
+  tilegroxy test [flags]
+
+Flags:
+  -h, --help                help for test
+  -l, --layer strings       The ID(s) of the layer to test. Tests all layers by default
+      --no-cache            Don't write to the cache. The Cache configuration must still be syntactically valid
+  -t, --threads uint16      How many layers to test at once. Be mindful of spamming upstream providers (default 1)
+  -x, --x-coordinate uint   The x coordinate to use to test (default 123)
+  -y, --y-coordinate uint   The y coordinate to use to test (default 534)
+  -z, --z-coordinate uint   The z coordinate to use to test (default 10)
+
+Global Flags:
+  -c, --config string   A file path to the configuration file to use. The file should have an extension of either json or yml/yaml and be readable. (default "./tilegroxy.yml")
+  ```
+
 
 ## Custom Providers
 

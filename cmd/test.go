@@ -130,7 +130,9 @@ Example:
 					if layerErr != nil {
 						resultStr += "No\tN/A\t\xff" + layerErr.Error() + "\xff\t"
 					} else {
-						if cacheError != nil {
+						if noCache {
+							resultStr += "Yes\tN/A\tNone\t"
+						} else if cacheError != nil {
 							resultStr += "Yes\tNo\t\xff" + cacheError.Error() + "\xff\t"
 						} else {
 							resultStr += "Yes\tYes\tNone\t"
@@ -167,7 +169,7 @@ func init() {
 	testCmd.Flags().UintP("z-coordinate", "z", 10, "The z coordinate to use to test")
 	testCmd.Flags().UintP("x-coordinate", "x", 123, "The x coordinate to use to test")
 	testCmd.Flags().UintP("y-coordinate", "y", 534, "The y coordinate to use to test")
-	testCmd.Flags().Bool("no-cache", false, "Only validate the layer and not the cache")
+	testCmd.Flags().Bool("no-cache", false, "Don't write to the cache. The Cache configuration must still be syntactically valid")
 	testCmd.Flags().Uint16P("threads", "t", 1, "How many layers to test at once. Be mindful of spamming upstream providers")
-	//TODO: output in custom format
+	//TODO: output in custom format or write to file
 }
