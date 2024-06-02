@@ -3,6 +3,7 @@ module github.com/Michad/tilegroxy
 go 1.22.3
 
 require (
+	github.com/aws/aws-sdk-go v1.53.14
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/handlers v1.5.2
@@ -22,6 +23,7 @@ require (
 	github.com/gammazero/deque v0.2.1 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.2 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect

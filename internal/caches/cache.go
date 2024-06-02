@@ -49,6 +49,13 @@ func ConstructCache(rawConfig map[string]interface{}, errorMessages *config.Erro
 		}
 
 		return Multi{tierCaches}, nil
+	} else if rawConfig["name"] == "s3" {
+		var config S3Config
+		err := mapstructure.Decode(rawConfig, &config)
+		if err != nil {
+			return nil, err
+		}
+		return ConstructS3(&config, errorMessages)
 	}
 
 	name := fmt.Sprintf("%#v", rawConfig["name"])
