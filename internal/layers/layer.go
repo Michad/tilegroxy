@@ -38,7 +38,7 @@ func (l *Layer) authWithProvider() error {
 
 	l.authMutex.Lock()
 	if l.authContext == nil || l.authContext.Expiration.Before(time.Now()) {
-		err = l.Provider.Preauth(l.authContext)
+		err = l.Provider.PreAuth(l.authContext)
 	}
 	l.authMutex.Unlock()
 
@@ -59,6 +59,25 @@ func (l *Layer) RenderTile(tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	if err != nil {
 		slog.Warn(fmt.Sprintf("Cache read error %v\n", err))
 	}
+
+	img, err = l.RenderTileNoCache(tileRequest)
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = (*l.Cache).Save(tileRequest, img)
+
+	if err != nil {
+		slog.Warn(fmt.Sprintf("Cache save error %v\n", err))
+	}
+
+	return img, nil
+}
+
+func (l *Layer) RenderTileNoCache(tileRequest pkg.TileRequest) (*pkg.Image, error) {
+	var img *pkg.Image
+	var err error
 
 	if l.authContext == nil || l.authContext.Expiration.Before(time.Now()) {
 		err = l.authWithProvider()
@@ -85,12 +104,6 @@ func (l *Layer) RenderTile(tileRequest pkg.TileRequest) (*pkg.Image, error) {
 		}
 	} else if err != nil {
 		return nil, err
-	}
-
-	err = (*l.Cache).Save(tileRequest, img)
-
-	if err != nil {
-		slog.Warn(fmt.Sprintf("Cache save error %v\n", err))
 	}
 
 	return img, nil

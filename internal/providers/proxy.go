@@ -13,7 +13,7 @@ type Proxy struct {
 	Url string
 }
 
-func (t Proxy) Preauth(authContext *AuthContext) error {
+func (t Proxy) PreAuth(authContext *AuthContext) error {
 	return nil
 }
 

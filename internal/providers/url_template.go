@@ -13,7 +13,7 @@ type UrlTemplate struct {
 	Template string
 }
 
-func (t UrlTemplate) Preauth(authContext *AuthContext) error {
+func (t UrlTemplate) PreAuth(authContext *AuthContext) error {
 	return nil
 }
 

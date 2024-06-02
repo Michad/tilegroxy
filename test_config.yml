@@ -40,7 +40,7 @@ layers:
     id: test2
     provider:
       name: url template
-      template: http://example.com/?bbox=$xmin,$ymin,$xmax,$ymax
+      template: http://safasfasfasf.com/?bbox=$xmin,$ymin,$xmax,$ymax
   -
     id: osm
     provider:
