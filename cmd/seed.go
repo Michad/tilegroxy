@@ -35,14 +35,14 @@ Example:
 
 		if err := errors.Join(err1, err2, err3, err4, err5, err6, err7, err8, err9); err != nil {
 			fmt.Printf("Error: %v", err)
-			return
+			os.Exit(1)
 		}
 
 		_, layerObjects, _, err := parseConfigIntoStructs(cmd)
 
 		if err != nil {
 			fmt.Printf("Error: %v", err)
-			return
+			os.Exit(1)
 		}
 
 		var layer *layers.Layer
@@ -55,12 +55,12 @@ Example:
 
 		if layer == nil {
 			fmt.Println("Error: Invalid layer")
-			return
+			os.Exit(1)
 		}
 
 		if numThread == 0 {
 			fmt.Println("Error: threads cannot be 0")
-			return
+			os.Exit(1)
 		}
 
 		b := pkg.Bounds{MinLat: float64(minLat), MinLong: float64(minLon), MaxLat: float64(maxLat), MaxLong: float64(maxLon)}
@@ -70,20 +70,20 @@ Example:
 		for _, z := range zoom {
 			if z > pkg.MaxZoom {
 				fmt.Printf("Error: zoom must be less than %v\n", pkg.MaxZoom)
-				return
+				os.Exit(1)
 			}
 			newTiles, err := b.FindTiles(layerName, uint(z), force)
 
 			if err != nil {
 				fmt.Printf("Error: %v\n", err.Error())
-				return
+				os.Exit(1)
 			}
 
 			tileRequests = append(tileRequests, (*newTiles)...)
 
 			if len(tileRequests) > 10000 && !force {
 				fmt.Println("Too many tiles to seed. Run with --force if you're sure you want to generate this many tiles")
-				return
+				os.Exit(1)
 			}
 		}
 
@@ -118,7 +118,7 @@ Example:
 
 		for t := int(0); t < len(reqSplit); t++ {
 			wg.Add(1)
-			go func(myReqs []pkg.TileRequest) {
+			go func(t int, myReqs []pkg.TileRequest) {
 				if verbose {
 					fmt.Printf("Created thread %v with %v tiles\n", t, len(myReqs))
 				}
@@ -140,7 +140,7 @@ Example:
 					fmt.Printf("Finished thread %v\n", t)
 				}
 				wg.Done()
-			}(reqSplit[t])
+			}(t, reqSplit[t])
 		}
 
 		wg.Wait()
@@ -161,7 +161,7 @@ func init() {
 	seedCmd.Flags().Float32P("max-latitude", "n", 90, "The maximum latitude to seed. The north side of the bounding box")
 	seedCmd.Flags().Float32P("min-longitude", "w", -180, "The minimum longitude to seed. The west side of the bounding box")
 	seedCmd.Flags().Float32P("max-longitude", "e", 180, "The maximum longitude to seed. The east side of the bounding box")
-	seedCmd.Flags().Bool("force", false, "Perform the seeding even if it'll produce an excessive number of tiles. Normally seeds over 10k tiles will error out. \nWarning: Overriding this protection absolutely can cause an Out-of-Memory error")
+	seedCmd.Flags().Bool("force", false, "Perform the seeding even if it'll produce an excessive number of tiles. Without this flag seeds over 10k tiles will error out. \nWarning: Overriding this protection absolutely can cause an Out-of-Memory error")
 	seedCmd.Flags().Uint16P("threads", "t", 1, "How many concurrent requests to use to perform seeding. Be mindful of spamming upstream providers")
 	// TODO: support some way to support writing just to a specific cache when Multi cache is being used
 }
