@@ -52,6 +52,7 @@ func (l *Layer) RenderTile(tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	img, err = (*l.Cache).Lookup(tileRequest)
 
 	if img != nil {
+		slog.Debug("Cache hit")
 		return img, err
 	}
 
