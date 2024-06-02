@@ -1,6 +1,6 @@
 module github.com/Michad/tilegroxy
 
-go 1.22.2
+go 1.22.3
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.2.1
