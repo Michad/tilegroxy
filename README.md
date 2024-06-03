@@ -78,7 +78,8 @@ docker build -f build/dockerfile . -t tilegroxy
 To run tilegroxy from within a container:
 
 ```
-docker run -it --rm -v ./test_config.yml:/tilegroxy/tilegroxy.yml:Z localhost/tilegroxy seed -l osm -z 0 -v
+docker run -it --rm -v ./test_config.yml:/tilegroxy/tilegroxy.yml:Z \
+tilegroxy seed -l osm -z 0 -v
 ```
 
 To run it through docker compose:
@@ -110,9 +111,13 @@ A helper command to allow you to prepopulate your cache with prerendered tiles. 
 Full, up-to-date usage information can be found with `tilegroxy seed -h`.
 
 ```
-Pre-populates the cache for a given layer for a given area (bounding box) for a range of zoom levels. 
+Pre-populates the cache for a given layer for a given area (bounding box) 
+for a range of zoom levels. 
 
-Be mindful that the higher the zoom level (the more you "zoom in"), exponentially more tiles will need to be seeded for a given area. For instance, while zoom level 1 only requires 4 tiles to cover the planet, zoom level 10 requires over a million tiles.
+Be mindful that the higher the zoom level (the more you "zoom in"), 
+exponentially more tiles will need to be seeded for a given area. For 
+instance, while zoom level 1 only requires 4 tiles to cover the planet, 
+zoom level 10 requires over a million tiles.
 
 Example:
 
@@ -122,20 +127,34 @@ Usage:
   tilegroxy seed [flags]
 
 Flags:
-      --force                   Perform the seeding even if it'll produce an excessive number of tiles. Normally seeds over 10k tiles will error out. 
-                                Warning: Overriding this protection absolutely can cause an Out-of-Memory error
+      --force                   Perform the seeding even if it'll produce 
+                                an excessive number of tiles. Normally 
+                                seeds over 10k tiles will error out. 
+                                Warning: Overriding this protection 
+                                absolutely can cause an Out-of-Memory error
   -h, --help                    help for seed
   -l, --layer string            The ID of the layer to seed
-  -n, --max-latitude float32    The maximum latitude to seed. The north side of the bounding box (default 90)
-  -e, --max-longitude float32   The maximum longitude to seed. The east side of the bounding box (default 180)
-  -s, --min-latitude float32    The minimum latitude to seed. The south side of the bounding box (default -90)
-  -w, --min-longitude float32   The minimum longitude to seed. The west side of the bounding box (default -180)
-  -t, --threads uint16          How many concurrent requests to use to perform seeding. Be mindful of spamming upstream providers (default 1)
-  -v, --verbose                 Output verbose information including every tile being requested and success or error status
-  -z, --zoom uints              The zoom level(s) to seed (default [0,1,2,3,4,5])
+  -n, --max-latitude float32    The maximum latitude to seed. The north 
+                                side of the bounding box (default 90)
+  -e, --max-longitude float32   The maximum longitude to seed. The east 
+                                side of the bounding box (default 180)
+  -s, --min-latitude float32    The minimum latitude to seed. The south 
+                                side of the bounding box (default -90)
+  -w, --min-longitude float32   The minimum longitude to seed. The west 
+                                side of the bounding box (default -180)
+  -t, --threads uint16          How many concurrent requests to use to 
+                                perform seeding. Be mindful of spamming 
+                                upstream providers (default 1)
+  -v, --verbose                 Output verbose information including every 
+                                tile being requested and success or error status
+  -z, --zoom uints              The zoom level(s) to seed (default [0,1,2,
+                                3,4,5])
 
 Global Flags:
-  -c, --config string   A file path to the configuration file to use. The file should have an extension of either json or yml/yaml and be readable. (default "./tilegroxy.yml")
+  -c, --config string           A file path to the configuration file to 
+                                use. The file should have an extension of 
+                                either json or yml/yaml and be readable. 
+                                (default "./tilegroxy.yml")
 ```
 
 ### Config
@@ -149,17 +168,24 @@ Validates your supplied configuration.
 Full, up-to-date usage information can be found with `tilegroxy config check -h`.
 
 ```
-Checks the validity of the configuration you supplied and then exits. If everything is valid the program displays "Valid" and exits with a code of 0. If the configuration is invalid then a descriptive error is outputted and it exits with a non-zero status code.
+Checks the validity of the configuration you supplied and then exits. If 
+everything is valid the program displays "Valid" and exits with a code of 
+0. If the configuration is invalid then a descriptive error is outputted 
+and it exits with a non-zero status code.
 
 Usage:
   tilegroxy config check [flags]
 
 Flags:
-  -e, --echo   Echos back the full parsed configuration including default values if the configuration is valid
+  -e, --echo   Echos back the full parsed configuration including default 
+               values if the configuration is valid
   -h, --help   help for check
 
 Global Flags:
-  -c, --config string   A file path to the configuration file to use. The file should have an extension of either json or yml/yaml and be readable. (default "./tilegroxy.yml")
+  -c, --config string   A file path to the configuration file to use. The 
+                        file should have an extension of either json or 
+                        yml/yaml and be readable. 
+                        (default "./tilegroxy.yml")
 ```
 
 #### Create
@@ -169,9 +195,13 @@ Helps create an initial configuration file. Still a work in progress.
 Full, up-to-date usage information can be found with `tilegroxy config create -h`.
 
 ```
-Creates either a JSON or YAML configuration with a skeleton you can use as a starting point for creating your configuration. 
+Creates either a JSON or YAML configuration with a skeleton you can use as 
+a starting point for creating your configuration. 
 
-Defaults to outputting to standard out, specify --output/-o to write to a file. Does not utilize --config/-c to avoid accidentally overwriting a configuration. If a file is specified this defaults to auto-detecting the format to use based on the file extension and ultimately defaults to YAML.
+Defaults to outputting to standard out, specify --output/-o to write to a 
+file. Does not utilize --config/-c to avoid accidentally overwriting a 
+configuration. If a file is specified this defaults to auto-detecting the 
+format to use based on the file extension and ultimately defaults to YAML.
 
 Example:
         tilegroxy config create --default --json -o tilegroxy.json
@@ -180,15 +210,20 @@ Usage:
   tilegroxy config create [flags]
 
 Flags:
-  -d, --default         Include all default configuration. TODO: make this non-mandatory (default true)
+  -d, --default         Include all default configuration. TODO: make 
+                        non-mandatory (default true)
   -h, --help            help for create
       --json            Output the configuration in JSON
       --no-pretty       Disable pretty printing JSON
-  -o, --output string   Write the configuration to a file. This will overwrite anything already in the file
+  -o, --output string   Write the configuration to a file. This will 
+                        overwrite anything already in the file
       --yaml            Output the configuration in YAML
 
 Global Flags:
-  -c, --config string   A file path to the configuration file to use. The file should have an extension of either json or yml/yaml and be readable. (default "./tilegroxy.yml")
+  -c, --config string   A file path to the configuration file to use. The 
+                        file should have an extension of either json or 
+                        yml/yaml and be readable. 
+                        (default "./tilegroxy.yml")
 ```
 
 ### Test
@@ -197,10 +232,23 @@ Tests your layers and cache are correctly configured and working by performing e
 
 Full, up-to-date usage information can be found with `tilegroxy test -h`.
 
-```
-Tests that everything is working end-to-end for all or some layers including caching. This goes further than 'config check' and instead of just validating the configuration can be parsed it actually makes sample request(s) and populates the result in the cache. This is similar to running 'seed' for a single tile or standing up the server and making a cURL request for each layer. The output will list each layer and the status, with any error encountered if applicable.
+``` 
+Tests that everything is working end-to-end for all or some layers 
+including caching. This goes further than 'config check' and instead of 
+just validating the configuration can be parsed it actually makes sample 
+request(s) and populates the result in the cache. This is similar to 
+running 'seed' for a single tile or standing up the server and making a 
+cURL request for each layer. The output will list each layer and the 
+status, with any error encountered if applicable.
 
-This test uses an arbitrary tile coordinate to test with. The default coordinate might be outside the bounds of your map layer, there is currently no logic to consider the bounds configured for each layer; you will need to specify an applicable tile to use.  It is not recommended to use 0,0,0 due to potential performance issues when dealing with large data. If your cache is configured to prevent overwriting existing items you might need to pick a distinct tile each time you run the test or run with cache disabled (--no-cache).
+This test uses an arbitrary tile coordinate to test with. The default 
+coordinate might be outside the bounds of your map layer, there is 
+currently no logic to consider the bounds configured for each layer; you 
+will need to specify an applicable tile to use.  It is not recommended to 
+use 0,0,0 due to potential performance issues when dealing with large 
+data. If your cache is configured to prevent overwriting existing items 
+you might need to pick a distinct tile each time you run the test or run 
+with cache disabled (--no-cache).
 
 Example:
 
@@ -211,16 +259,22 @@ Usage:
 
 Flags:
   -h, --help                help for test
-  -l, --layer strings       The ID(s) of the layer to test. Tests all layers by default
-      --no-cache            Don't write to the cache. The Cache configuration must still be syntactically valid
-  -t, --threads uint16      How many layers to test at once. Be mindful of spamming upstream providers (default 1)
+  -l, --layer strings       The ID(s) of the layer to test. Tests all 
+                            layers by default
+      --no-cache            Don't write to the cache. The Cache 
+                            configuration must still be syntactically valid
+  -t, --threads uint16      How many layers to test at once. Be mindful of 
+                            spamming upstream providers (default 1)
   -x, --x-coordinate uint   The x coordinate to use to test (default 123)
   -y, --y-coordinate uint   The y coordinate to use to test (default 534)
   -z, --z-coordinate uint   The z coordinate to use to test (default 10)
 
 Global Flags:
-  -c, --config string   A file path to the configuration file to use. The file should have an extension of either json or yml/yaml and be readable. (default "./tilegroxy.yml")
-  ```
+  -c, --config string   A file path to the configuration file to use. The 
+                        file should have an extension of either json or 
+                        yml/yaml and be readable. 
+                        (default "./tilegroxy.yml")
+```
 
 
 ## Custom Providers
