@@ -22,7 +22,7 @@ A provider represents the underlying functionality that "provides" the tiles tha
 
 ### Proxy
 
-Proxy providers are the simplest option that simply forward tile requests to another HTTP(s) endpoint. The endpoints should return raster image tiles in the same standard ZXY tiling scheme. 
+Proxy providers are the simplest option that simply forward tile requests to another HTTP(s) endpoint. This provider is primarily used for map layers that already return imagery in tiles: ZXY, TMS, or WMTS.  TMS inverts the y coordinate compared to ZXY and WMTS formats, which is handled by the InvertY parameter
 
 Name should be "proxy"
 
@@ -31,11 +31,12 @@ Configuration options:
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
 | url | string | Yes | None | A URL pointing to the tile server. Should contain placeholders `{z}` `{x}` and `{y}` for tile coordinates |
+| inverty | bool | No | false | Changes tile numbering to be South-to-North instead of North-to-South. |
 
 
 ### URL Template
 
-URL Template providers are similar to the Proxy provider but are meant for endpoints that return mapping imagery via other schemes such as WMS. Instead of merely supplying tile coordinates, the URL Template provider will supply the bounding box.
+URL Template providers are similar to the Proxy provider but are meant for endpoints that return mapping imagery via other schemes, primarily WMS. Instead of merely supplying tile coordinates, the URL Template provider will supply the bounding box.
 
 Currently only supports EPSG:4326
 

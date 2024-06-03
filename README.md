@@ -21,7 +21,7 @@ A map tile proxy and cache service. Lives between your webmap and your mapping e
 The following features are currently available:
 
 * Provide a uniform ZXY mapping interface for incoming requests.
-* Proxy map tiles to ZXY, WMS, WMTS backed map layers
+* Proxy map tiles to ZXY, WMS, TMS, or WMTS backed map layers
 * Cache map tiles in disk, memory, s3 ...
 * Generic support for any content type 
 * Incoming authentication using a static key or JWT
@@ -29,11 +29,10 @@ The following features are currently available:
 
 The following are on the roadmap:
 
-* Proxy map layers to TMS, QuadKey map layers
-* Specific support for vector tile formats such as [MVT](https://github.com/mapbox/vector-tile-spec) or tiled GeoJSON
-* Proxy map layers directly to providers such as Mapnik, Mapserver 
 * Support for raster image reprocessing/combination on the fly
 * Custom providers
+* Proxy map layers directly to providers such as Mapnik, Mapserver 
+* Specific support for vector tile formats such as [MVT](https://github.com/mapbox/vector-tile-spec) or tiled GeoJSON
 * OpenTelemetry support
 
 
