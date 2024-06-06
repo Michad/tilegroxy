@@ -122,6 +122,11 @@ Cache tiles as objects in an AWS S3 bucket.
 
 Ensure the user you're using has proper permissions for reading and writing objects in the bucket.  The permissions required are the minimal set you'd expect: GetObject and PutObject.  It's highly recommended to also grant ListBucket permissions, otherwise the log will contain misleading 403 error messages for every cache miss.  Also ensure the user has access to the KMS key if using bucket encryption.
 
+If you're using a Directory Bucket AKA Express One Zone there's a few things to configure:
+* Ensure `storageclass` is set to "EXPRESS_ONEZONE" 
+* The bucket contains the full name including suffix. For example: `my-tilegroxy-cache--use1-az6--x-s3`
+* An endpoint is configured in the format "https://s3express-{az_id}.{region}.amazonaws.com" For example: "https://s3express-use1-az6.us-east-1.amazonaws.com"
+
 Name should be "s3"
 
 Configuration options:
@@ -134,13 +139,14 @@ Configuration options:
 | access | string | No | None | The AWS Access Key ID to authenticate with. This is not recommended; it is offered as a fallback authentication method only. Consult [AWS documentation](https://docs.aws.amazon.com/cli/v1/userguide/cli-chap-authentication.html) for better options |
 | secret | string | No | None | The AWS Secret Key to authenticate with. This is not recommended; it is offered as a fallback authentication method only. Consult [AWS documentation](https://docs.aws.amazon.com/cli/v1/userguide/cli-chap-authentication.html) for better options |
 | profile | string | No | None | The profile to use to authenticate against the AWS API. Consult [AWS documentation for specifics](https://docs.aws.amazon.com/sdkref/latest/guide/file-format.html#file-format-profile) |
-| storageclass | string | No | STANDARD | The storage class to use for the object. You probably can leave this blank and use the bucket default. Consult [AWS documentation](https://aws.amazon.com/s3/storage-classes/) for an overview of options, the specific values to use here can be found by running `aws s3 cp help` |
+| storageclass | string | No | STANDARD | The storage class to use for the object. You probably can leave this blank and use the bucket default. Consult [AWS documentation](https://aws.amazon.com/s3/storage-classes/) for an overview of options. The following are currently valid: STANDARD REDUCED_REDUNDANCY STANDARD_IA ONEZONE_IA INTELLIGENT_TIERING GLACIER DEEP_ARCHIVE OUTPOSTS GLACIER_IR SNOW EXPRESS_ONEZONE |
+| endpoint | string | No | AWS Auto | Override the S3 API Endpoint we talk to. Useful if you're using S3 outside AWS or using a directory bucket |
 
 ## Authentication
 
 Implements incoming authentication schemes. 
 
-These authentication options are not comprehensive and do not support role-based authentication. For complex use cases it is recommended to implement authentication and authorization in compliance with your business logic as a proxy/gateway before tilegroxy.
+These authentication options are not comprehensive and do not support authorization. That is, anyone who authenticates can access all layers. For complex use cases it is recommended to implement authentication and authorization in compliance with your business logic as a proxy/gateway before tilegroxy.
 
 Requests that do not comply with authentication requirements will receive a 401 Unauthorized HTTP status code.
 
