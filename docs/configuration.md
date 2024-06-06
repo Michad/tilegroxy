@@ -75,6 +75,18 @@ Configuration options:
 | --- | --- | --- | --- | --- |
 | tiers | Cache[] | Yes | None | An array of Cache configurations. Multi should not be nested inside a Multi |
 
+Example:
+
+```yaml
+cache:
+  name: multi
+  tiers:
+    - name: memory
+      maxsize: 1000
+      ttl: 1000
+    - name: disk
+      path: "./disk_tile_cache"
+```
 
 ### Disks
 
@@ -92,6 +104,15 @@ Configuration options:
 | --- | --- | --- | --- | --- |
 | path | string | Yes | None | The absolute path to the directory to store cache entries within. Directory (and tree) will be created if it does not already exist |
 | filemode | uint32 | No | 0777 | A [Go filemode](https://pkg.go.dev/io/fs#FileMode) as an integer to use for all created files/directories. This might change in the future to support a more conventional unix permission notation |
+
+Example:
+
+```json
+"cache": {
+  "name": "disk",
+  "path": "./disk_tile_cache"
+}
+```
 
 ### Memcache
 
@@ -111,6 +132,15 @@ Configuration options:
 | --- | --- | --- | --- | --- |
 | maxsize | uint16 | No | 100 | Maximum number of tiles to hold in the cache. Setting this too high can cause out-of-memory panics |
 | ttl | uint32 | No | 3600 | Maximum time to live for cache entries in seconds |
+
+Example:
+
+```yaml
+cache:
+  name: memory
+  maxsize: 1000
+  ttl: 1000
+```
 
 ### Redis
 
@@ -177,6 +207,17 @@ Configuration options:
 | profile | string | No | None | The profile to use to authenticate against the AWS API. Consult [AWS documentation for specifics](https://docs.aws.amazon.com/sdkref/latest/guide/file-format.html#file-format-profile) |
 | storageclass | string | No | STANDARD | The storage class to use for the object. You probably can leave this blank and use the bucket default. Consult [AWS documentation](https://aws.amazon.com/s3/storage-classes/) for an overview of options. The following are currently valid: STANDARD REDUCED_REDUNDANCY STANDARD_IA ONEZONE_IA INTELLIGENT_TIERING GLACIER DEEP_ARCHIVE OUTPOSTS GLACIER_IR SNOW EXPRESS_ONEZONE |
 | endpoint | string | No | AWS Auto | Override the S3 API Endpoint we talk to. Useful if you're using S3 outside AWS or using a directory bucket |
+
+Example:
+```yaml
+cache:
+  name: s3
+  bucket: my-cache--use1-az6--x-s3
+  endpoint: "https://s3express-use1-az6.us-east-1.amazonaws.com"
+  storageclass: EXPRESS_ONEZONE
+  region: us-east-1
+  profile: tilegroxy_s3_user
+```
 
 ## Authentication
 
