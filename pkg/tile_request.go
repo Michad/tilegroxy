@@ -3,6 +3,7 @@ package pkg
 import (
 	"fmt"
 	"math"
+	"strconv"
 )
 
 type TileRequest struct {
@@ -125,4 +126,8 @@ func (t TileRequest) GetBounds() (*Bounds, error) {
 	minLat := 180 / math.Pi * math.Atan(math.Sinh(math.Pi*(1-2*(y-1)/n)))
 
 	return &Bounds{minLat, maxLat, minLong, maxLong}, nil
+}
+
+func (t TileRequest) String() string {
+	return t.LayerName + "/" + strconv.Itoa(t.Z) + "/" + strconv.Itoa(t.X) + "/" + strconv.Itoa(t.Y)
 }

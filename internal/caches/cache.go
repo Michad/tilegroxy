@@ -56,6 +56,13 @@ func ConstructCache(rawConfig map[string]interface{}, errorMessages *config.Erro
 			return nil, err
 		}
 		return ConstructS3(&config, errorMessages)
+	} else if rawConfig["name"] == "redis" {
+		var config RedisConfig
+		err := mapstructure.Decode(rawConfig, &config)
+		if err != nil {
+			return nil, err
+		}
+		return ConstructRedis(&config, errorMessages)
 	}
 
 	name := fmt.Sprintf("%#v", rawConfig["name"])

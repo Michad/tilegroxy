@@ -114,7 +114,43 @@ Configuration options:
 
 ### Redis
 
-TODO. Not yet implemented.
+Cache tiles using redis or another redis-compatible key-value store.  
+
+Name should be "redis"
+
+Configuration options:
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| host | String | No | 127.0.0.1 | The host of the redis server. A convenience equivalent to supplying `servers` with a single entry. Do not supply both this and `servers` |
+| port | int | No | 6379 | The port of the redis server. A convenience equivalent to supplying `servers` with a single entry. Do not supply both this and `servers` |
+| db | int | No | 0 | Database number, defaults to 0. Unused in cluster mode |
+| keyprefix | string | No | None | A prefix to use for keys stored in cache. Serves a similar purpose as `db` in avoiding collisions when multiple applications use the same redis |
+| username | string | No | None | Username to use to authenticate with redis |
+| password | string | No | None | Password to use to authenticate with redis |
+| mode | string | No | standalone | Controls operating mode of redis. Can be `standalone`, `ring` or `cluster`. Standalone is a single redis server. Ring distributes entries to multiple servers without any replication [(more details)](https://redis.uptrace.dev/guide/ring.html). Cluster is a proper redis cluster. |
+| ttl | uint32 | No | 1 day | How long cache entries should persist for in seconds. Cannot be disabled. |
+| servers | Array of `host` and `port` | No | host and port | The list of servers to connect to supplied as an array of objects, each with a host and key parameter. This should only have a single entry when operating in standalone mode. If this is unspecified it uses the standalone `host` and `port` parameters as a default, therefore this shouldn't be specified at the same time as those |
+
+Example:
+
+```json
+{
+    "name": "redis"
+    "mode": "ring",
+    "servers": [
+        {
+            "host": "127.0.0.1",
+            "port": 6379
+        },
+        {
+            "host": "127.0.0.1",
+            "port": 6380
+        }
+    ],
+    "ttl": 3600
+}
+```
 
 ### S3
 

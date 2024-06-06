@@ -22,7 +22,7 @@ The following features are currently available:
 
 * Provide a uniform ZXY mapping interface for incoming requests.
 * Proxy map tiles to ZXY, WMS, TMS, or WMTS backed map layers
-* Cache map tiles in disk, memory, s3 ...
+* Cache map tiles in disk, memory, s3, redis ...
 * Generic support for any content type 
 * Incoming authentication using a static key or JWT
 * Configurable timeout, logging, and error handling rules
@@ -34,6 +34,7 @@ The following are on the roadmap:
 * Proxy map layers directly to providers such as Mapnik, Mapserver 
 * Specific support for vector tile formats such as [MVT](https://github.com/mapbox/vector-tile-spec) or tiled GeoJSON
 * OpenTelemetry support
+* Support for external secret stores such as AWS Secrets Manager to avoid secrets in the configuration
 
 
 ## Configuration
