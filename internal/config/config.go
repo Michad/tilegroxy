@@ -31,6 +31,7 @@ type ErrorMessages struct {
 	ServerError         string
 	ProviderError       string
 	ParamsBothOrNeither string
+	EnumError           string
 }
 
 type ErrorConfig struct {
@@ -124,6 +125,7 @@ func DefaultConfig() Config {
 				ServerError:         "Unexpected server error: %v",
 				ProviderError:       "Provider failed to return image",
 				ParamsBothOrNeither: "Parameters %v and %v must be either both or neither supplied",
+				EnumError:           "Invalid value supplied for %v: '%v'. It must be one of: %v",
 			},
 		},
 		Authentication: map[string]interface{}{

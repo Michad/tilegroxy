@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -25,6 +26,7 @@ type S3Config struct {
 	Path         string
 	Profile      string
 	StorageClass string //STANDARD | REDUCED_REDUNDANCY | STANDARD_IA | ONEZONE_IA | INTELLIGENT_TIERING | GLACIER |  DEEP_ARCHIVE  |  GLACIER_IR
+	Endpoint     string
 }
 
 type S3 struct {
@@ -61,6 +63,23 @@ func ConstructS3(config *S3Config, errorMessages *config.ErrorMessages) (*S3, er
 		awsConfig.WithCredentials(credentials.NewStaticCredentials(config.Access, config.Secret, ""))
 	}
 
+	if config.Endpoint != "" {
+		awsConfig.WithEndpoint(config.Endpoint)
+	}
+
+	if config.StorageClass != "" {
+		validValues := s3.StorageClass_Values()
+
+		if !slices.Contains(validValues, config.StorageClass) {
+			return nil, fmt.Errorf(errorMessages.EnumError, "cache.s3.storageclass", config.StorageClass, validValues)
+		}
+
+		if strings.Contains(config.StorageClass, "ONEZONE") {
+			//Directory AKA Express One Zone fails if an MD5 header set. The Go SDK requires you find this obscure flag to disable that
+			awsConfig.WithS3DisableContentMD5Validation(true)
+		}
+	}
+
 	sessionOptions.Config = awsConfig
 
 	if config.Profile != "" {
@@ -74,7 +93,7 @@ func ConstructS3(config *S3Config, errorMessages *config.ErrorMessages) (*S3, er
 	}
 
 	downloader := s3manager.NewDownloader(awsSession)
-	uploader := s3manager.NewUploader(awsSession)
+	uploader := s3manager.NewUploader(awsSession, s3manager.WithUploaderRequestOptions())
 
 	return &S3{config, downloader, uploader}, nil
 }
@@ -109,6 +128,7 @@ func (c S3) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
 }
 
 func (c S3) Save(t pkg.TileRequest, img *pkg.Image) error {
+
 	uploadConfig := &s3manager.UploadInput{
 		Bucket: &c.Bucket,
 		Key:    aws.String(calcKey(&c, &t)),
