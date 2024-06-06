@@ -24,7 +24,7 @@ func writeError(w http.ResponseWriter, cfg *config.ErrorConfig, status int, mess
 
 	fullMessage := fmt.Sprintf(message, params...)
 
-	if cfg.Mode == config.ErrorPlainText {
+	if cfg.Mode == config.ModeErrorPlainText {
 		w.Write([]byte(fullMessage))
 	} else {
 		panic("TODO: other error modes")
