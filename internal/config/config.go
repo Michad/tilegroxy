@@ -21,17 +21,22 @@ type ClientConfig struct {
 	StaticHeaders       map[string]string //Include these headers in requests. Defaults to none
 }
 
+// Modes for error reporting
 const (
-	ErrorPlainText = "TEXT"
+	ModeErrorPlainText = "TEXT"
 )
 
+// This is a poor-man's i8n solution. It allows replacing the error messages our app generates in the main `serve` mode.
+// It's questionable if anyone will ever want to make use of it, but it at least helps avoid magic strings and can be
+// replaced with fully static constants later if it does turn out nobody ever sees value in it
 type ErrorMessages struct {
-	InvalidParam        string
-	RangeError          string
-	ServerError         string
-	ProviderError       string
-	ParamsBothOrNeither string
+	InvalidParam            string
+	RangeError              string
+	ServerError             string
+	ProviderError           string
+	ParamsBothOrNeither     string
 	ParamsMutuallyExclusive string
+	EnumError               string
 }
 
 type ErrorConfig struct {
@@ -39,6 +44,7 @@ type ErrorConfig struct {
 	Messages ErrorMessages
 }
 
+//Formats for outputting the access log
 const (
 	AccessLogFormatCommon   = "common"
 	AccessLogFormatCombined = "combined"
@@ -50,6 +56,7 @@ type AccessLogConfig struct {
 	Format            string //The format to output access logs in. Applies to both standard out and file out. Possible values: common, combined. Defaults to common
 }
 
+//Formats for outputting the main log
 const (
 	MainLogFormatPlain = "plain"
 	MainLogFormatJson  = "json"
@@ -118,14 +125,14 @@ func DefaultConfig() Config {
 			},
 		},
 		Error: ErrorConfig{
-			Mode: ErrorPlainText,
+			Mode: ModeErrorPlainText,
 			Messages: ErrorMessages{
-				InvalidParam:        "Invalid value supplied for parameter %v: %v",
-				RangeError:          "Parameter %v must be between %v and %v",
-				ServerError:         "Unexpected server error: %v",
-				ProviderError:       "Provider failed to return image",
-				ParamsBothOrNeither: "Parameters %v and %v must be either both or neither supplied",
-				EnumError:           "Invalid value supplied for %v: '%v'. It must be one of: %v",
+				InvalidParam:            "Invalid value supplied for parameter %v: %v",
+				RangeError:              "Parameter %v must be between %v and %v",
+				ServerError:             "Unexpected server error: %v",
+				ProviderError:           "Provider failed to return image",
+				ParamsBothOrNeither:     "Parameters %v and %v must be either both or neither supplied",
+				EnumError:               "Invalid value supplied for %v: '%v'. It must be one of: %v",
 				ParamsMutuallyExclusive: "Parameters %v and %v cannot both be set",
 			},
 		},
