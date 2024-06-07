@@ -14,7 +14,10 @@
 
 package config
 
-import "github.com/spf13/viper"
+import (
+	"github.com/Michad/tilegroxy/internal/images"
+	"github.com/spf13/viper"
+)
 
 type ServerConfig struct {
 	BindHost      string            //IP address to bind HTTP server to
@@ -37,13 +40,17 @@ type ClientConfig struct {
 
 // Modes for error reporting
 const (
-	ModeErrorPlainText = "TEXT"
+	ModeErrorPlainText   = "text"         //Response will be text/plain with the error message in the body
+	ModeErrorNoError     = "none"         //Response will not include any data but wil return status code.
+	ModeErrorImage       = "image"        //Response will return an image but not the error itself
+	ModeErrorImageHeader = "image+header" //Response will return an image and include the error inside x-error-message
 )
 
 // This is a poor-man's i8n solution. It allows replacing the error messages our app generates in the main `serve` mode.
 // It's questionable if anyone will ever want to make use of it, but it at least helps avoid magic strings and can be
 // replaced with fully static constants later if it does turn out nobody ever sees value in it
 type ErrorMessages struct {
+	NotAuthorized           string
 	InvalidParam            string
 	RangeError              string
 	ServerError             string
@@ -53,12 +60,21 @@ type ErrorMessages struct {
 	EnumError               string
 }
 
-type ErrorConfig struct {
-	Mode     string //How errors should be returned.  See the consts above for options TODO: support returning an image in case of error and putting error in the header, also support JSON
-	Messages ErrorMessages
+// Selects what image to return when various errors occur. These should either be an embedded:XXX value reflecting an image in `internal/layers/images` or the path to an image in the runtime filesystem
+type ErrorImages struct {
+	OutOfBounds    string //A request for a zoom level or tile coordinate that's invalid for the requested layer
+	Authentication string //Auth failed
+	Provider       string //Provider specific errors
+	Other          string //Catch-all for unexpected system errors
 }
 
-//Formats for outputting the access log
+type ErrorConfig struct {
+	Mode     string        //How errors should be returned.  See the consts above for options
+	Messages ErrorMessages //Patterns to use for error messages in logs and responses. Not used for utility commands.
+	Images   ErrorImages   //Only used if Mode is image or image+header
+}
+
+// Formats for outputting the access log
 const (
 	AccessLogFormatCommon   = "common"
 	AccessLogFormatCombined = "combined"
@@ -70,7 +86,7 @@ type AccessLogConfig struct {
 	Format            string //The format to output access logs in. Applies to both standard out and file out. Possible values: common, combined. Defaults to common
 }
 
-//Formats for outputting the main log
+// Formats for outputting the main log
 const (
 	MainLogFormatPlain = "plain"
 	MainLogFormatJson  = "json"
@@ -139,8 +155,9 @@ func DefaultConfig() Config {
 			},
 		},
 		Error: ErrorConfig{
-			Mode: ModeErrorPlainText,
+			Mode: ModeErrorImage,
 			Messages: ErrorMessages{
+				NotAuthorized:           "Not authorized",
 				InvalidParam:            "Invalid value supplied for parameter %v: %v",
 				RangeError:              "Parameter %v must be between %v and %v",
 				ServerError:             "Unexpected server error: %v",
@@ -148,6 +165,12 @@ func DefaultConfig() Config {
 				ParamsBothOrNeither:     "Parameters %v and %v must be either both or neither supplied",
 				EnumError:               "Invalid value supplied for %v: '%v'. It must be one of: %v",
 				ParamsMutuallyExclusive: "Parameters %v and %v cannot both be set",
+			},
+			Images: ErrorImages{
+				OutOfBounds:    images.KeyImageTransparent,
+				Authentication: images.KeyImageUnauthorized,
+				Provider:       images.KeyImageError,
+				Other:          images.KeyImageError,
 			},
 		},
 		Authentication: map[string]interface{}{
