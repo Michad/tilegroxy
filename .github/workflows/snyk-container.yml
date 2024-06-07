@@ -29,6 +29,13 @@ jobs:
       with:
         image: michad/tilegroxy
         args: --file=build/dockerfile
+      # Snyk sometimes generates invalid severity scores that tank the upload step. And they're insistent on not fixing the bug. So we need to post-process it to avoid build failures
+      # See https://github.com/github/codeql-action/issues/2187 for more context.
+    - name: Post-process sarif output
+      run: |
+        sed -i 's/"security-severity": null/"security-severity": "0"/g' snyk.sarif
+        sed -i 's/"security-severity": "null"/"security-severity": "0"/g' snyk.sarif
+        sed -i 's/"security-severity": "undefined"/"security-severity": "0"/g' snyk.sarif
     - name: Upload result to GitHub Code Scanning
       uses: github/codeql-action/upload-sarif@v3
       with:
