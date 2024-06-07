@@ -7,8 +7,8 @@ import (
 	"os"
 	"sync"
 
+	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/layers"
-	"github.com/Michad/tilegroxy/pkg"
 	"github.com/spf13/cobra"
 )
 
@@ -63,13 +63,13 @@ Example:
 			os.Exit(1)
 		}
 
-		b := pkg.Bounds{MinLat: float64(minLat), MinLong: float64(minLon), MaxLat: float64(maxLat), MaxLong: float64(maxLon)}
+		b := internal.Bounds{MinLat: float64(minLat), MinLong: float64(minLon), MaxLat: float64(maxLat), MaxLong: float64(maxLon)}
 
-		tileRequests := make([]pkg.TileRequest, 0)
+		tileRequests := make([]internal.TileRequest, 0)
 
 		for _, z := range zoom {
-			if z > pkg.MaxZoom {
-				fmt.Printf("Error: zoom must be less than %v\n", pkg.MaxZoom)
+			if z > internal.MaxZoom {
+				fmt.Printf("Error: zoom must be less than %v\n", internal.MaxZoom)
 				os.Exit(1)
 			}
 			newTiles, err := b.FindTiles(layerName, uint(z), force)
@@ -100,7 +100,7 @@ Example:
 
 		chunkSize := int(math.Floor(float64(numReq) / float64(numThread)))
 
-		var reqSplit [][]pkg.TileRequest
+		var reqSplit [][]internal.TileRequest
 
 		for i := 0; i < int(numThread); i++ {
 			chunkStart := i * chunkSize
@@ -118,7 +118,7 @@ Example:
 
 		for t := int(0); t < len(reqSplit); t++ {
 			wg.Add(1)
-			go func(t int, myReqs []pkg.TileRequest) {
+			go func(t int, myReqs []internal.TileRequest) {
 				if verbose {
 					fmt.Printf("Created thread %v with %v tiles\n", t, len(myReqs))
 				}

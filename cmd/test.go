@@ -9,10 +9,11 @@ import (
 	"sync"
 	"text/tabwriter"
 
-	"github.com/Michad/tilegroxy/internal/layers"
-	"github.com/Michad/tilegroxy/pkg"
-	"github.com/spf13/cobra"
 	"sync/atomic"
+
+	"github.com/Michad/tilegroxy/internal"
+	"github.com/Michad/tilegroxy/internal/layers"
+	"github.com/spf13/cobra"
 )
 
 var testCmd = &cobra.Command{
@@ -57,10 +58,10 @@ Example:
 		}
 
 		//Generate the full list of requests to process
-		tileRequests := make([]pkg.TileRequest, 0)
+		tileRequests := make([]internal.TileRequest, 0)
 
 		for _, layerName := range layerNames {
-			req := pkg.TileRequest{LayerName: layerName, Z: int(z), X: int(x), Y: int(y)}
+			req := internal.TileRequest{LayerName: layerName, Z: int(z), X: int(x), Y: int(y)}
 			_, err := req.GetBounds()
 
 			if err != nil {
@@ -87,7 +88,7 @@ Example:
 
 		//Split up all the requests for N threads
 		numReqPerThread := int(math.Floor(float64(numReq) / float64(numThread)))
-		var reqSplit [][]pkg.TileRequest
+		var reqSplit [][]internal.TileRequest
 
 		for i := 0; i < int(numThread); i++ {
 			chunkStart := i * numReqPerThread
@@ -110,7 +111,7 @@ Example:
 
 		for t := int(0); t < len(reqSplit); t++ {
 			wg.Add(1)
-			go func(t int, myReqs []pkg.TileRequest) {
+			go func(t int, myReqs []internal.TileRequest) {
 
 				for _, req := range myReqs {
 					layer := layerMap[req.LayerName]

@@ -14,17 +14,15 @@
 
 package caches
 
-import (
-	"github.com/Michad/tilegroxy/pkg"
-)
+import "github.com/Michad/tilegroxy/internal"
 
 type Memcache struct {
 }
 
-func (c Memcache) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
+func (c Memcache) Lookup(t internal.TileRequest) (*internal.Image, error) {
 	return nil, nil
 }
 
-func (c Memcache) Save(t pkg.TileRequest, img *pkg.Image) error {
+func (c Memcache) Save(t internal.TileRequest, img *internal.Image) error {
 	return nil
 }

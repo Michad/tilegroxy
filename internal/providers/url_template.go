@@ -19,8 +19,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/config"
-	"github.com/Michad/tilegroxy/pkg"
 )
 
 type UrlTemplate struct {
@@ -31,7 +31,7 @@ func (t UrlTemplate) PreAuth(authContext *AuthContext) error {
 	return nil
 }
 
-func (t UrlTemplate) GenerateTile(authContext *AuthContext, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t UrlTemplate) GenerateTile(authContext *AuthContext, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, tileRequest internal.TileRequest) (*internal.Image, error) {
 	if t.Template == "" {
 		return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.url template.url", "")
 	}

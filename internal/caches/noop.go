@@ -14,17 +14,15 @@
 
 package caches
 
-import (
-	"github.com/Michad/tilegroxy/pkg"
-)
+import "github.com/Michad/tilegroxy/internal"
 
 type Noop struct {
 }
 
-func (c Noop) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
+func (c Noop) Lookup(t internal.TileRequest) (*internal.Image, error) {
 	return nil, nil
 }
 
-func (c Noop) Save(t pkg.TileRequest, img *pkg.Image) error {
+func (c Noop) Save(t internal.TileRequest, img *internal.Image) error {
 	return nil
 }

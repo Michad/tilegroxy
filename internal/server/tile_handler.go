@@ -20,7 +20,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/internal"
 )
 
 type tileHandler struct {
@@ -63,12 +63,12 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	tileReq := pkg.TileRequest{LayerName: layerName, Z: z, X: x, Y: y}
+	tileReq := internal.TileRequest{LayerName: layerName, Z: z, X: x, Y: y}
 
 	_, err = tileReq.GetBounds()
 
 	if err != nil {
-		var re pkg.RangeError
+		var re internal.RangeError
 		if errors.As(err, &re) {
 			writeError(w, &h.config.Error, http.StatusBadRequest, h.config.Error.Messages.RangeError, re.ParamName, re.MinValue, re.MaxValue)
 		} else {

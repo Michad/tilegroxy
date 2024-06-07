@@ -22,14 +22,14 @@ import (
 	"slices"
 	"time"
 
+	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/config"
-	"github.com/Michad/tilegroxy/pkg"
 	"github.com/mitchellh/mapstructure"
 )
 
 type Provider interface {
 	PreAuth(authContext *AuthContext) error
-	GenerateTile(authContext *AuthContext, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, tileRequest pkg.TileRequest) (*pkg.Image, error)
+	GenerateTile(authContext *AuthContext, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, tileRequest internal.TileRequest) (*internal.Image, error)
 }
 
 func ConstructProvider(rawConfig map[string]interface{}, errorMessages *config.ErrorMessages) (Provider, error) {
@@ -92,7 +92,7 @@ func (e *RemoteServerError) Error() string {
  * Performs a GET operation against a given URL. Implementing providers should call this when possible. It has
  * standard reusable logic around various config options
  */
-func getTile(clientConfig *config.ClientConfig, url string, authHeaders map[string]string) (*pkg.Image, error) {
+func getTile(clientConfig *config.ClientConfig, url string, authHeaders map[string]string) (*internal.Image, error) {
 	slog.Debug(fmt.Sprintf("Calling url %v\n", url))
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)

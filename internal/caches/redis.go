@@ -21,8 +21,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/config"
-	"github.com/Michad/tilegroxy/pkg"
 
 	"github.com/go-redis/cache/v9"
 	"github.com/redis/go-redis/v9"
@@ -49,7 +49,7 @@ type RedisConfig struct {
 	Password    string        //Password to use to authenticate
 	Mode        string        //Controls operating mode. One of AllModes. Defaults to standalone
 	Ttl         uint32        //Cache expiration in seconds. Default to 1 day
-	Servers     []RedisServer //The list of servers to use.  
+	Servers     []RedisServer //The list of servers to use.
 }
 
 type Redis struct {
@@ -80,7 +80,7 @@ func ConstructRedis(config *RedisConfig, errorMessages *config.ErrorMessages) (*
 	} else {
 		if config.Host != "" {
 			return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "config.redis.host", "config.redis.servers")
-		}	
+		}
 	}
 	if config.Ttl == 0 {
 		config.Ttl = 60 * 60 * 24
@@ -148,18 +148,18 @@ func ConstructRedis(config *RedisConfig, errorMessages *config.ErrorMessages) (*
 	return &r, nil
 }
 
-func (c Redis) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
+func (c Redis) Lookup(t internal.TileRequest) (*internal.Image, error) {
 	ctx := context.TODO()
 
 	key := c.KeyPrefix + t.String()
-	var obj pkg.Image
+	var obj internal.Image
 
 	err := c.cache.Get(ctx, key, &obj)
 
 	return &obj, err
 }
 
-func (c Redis) Save(t pkg.TileRequest, img *pkg.Image) error {
+func (c Redis) Save(t internal.TileRequest, img *internal.Image) error {
 	ctx := context.TODO()
 
 	key := c.KeyPrefix + t.String()
