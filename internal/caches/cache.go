@@ -17,14 +17,14 @@ package caches
 import (
 	"fmt"
 
+	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/config"
-	"github.com/Michad/tilegroxy/pkg"
 	"github.com/mitchellh/mapstructure"
 )
 
 type Cache interface {
-	Lookup(t pkg.TileRequest) (*pkg.Image, error)
-	Save(t pkg.TileRequest, img *pkg.Image) error
+	Lookup(t internal.TileRequest) (*internal.Image, error)
+	Save(t internal.TileRequest, img *internal.Image) error
 }
 
 func ConstructCache(rawConfig map[string]interface{}, errorMessages *config.ErrorMessages) (Cache, error) {

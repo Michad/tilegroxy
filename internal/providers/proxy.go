@@ -20,20 +20,20 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/config"
-	"github.com/Michad/tilegroxy/pkg"
 )
 
 type Proxy struct {
 	Url     string
-	InvertY bool		//Used for TMS
+	InvertY bool //Used for TMS
 }
 
 func (t Proxy) PreAuth(authContext *AuthContext) error {
 	return nil
 }
 
-func (t Proxy) GenerateTile(authContext *AuthContext, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t Proxy) GenerateTile(authContext *AuthContext, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, tileRequest internal.TileRequest) (*internal.Image, error) {
 	if t.Url == "" {
 		return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.proxy.url", "")
 	}

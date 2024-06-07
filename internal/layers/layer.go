@@ -21,10 +21,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/caches"
 	"github.com/Michad/tilegroxy/internal/config"
 	"github.com/Michad/tilegroxy/internal/providers"
-	"github.com/Michad/tilegroxy/pkg"
 )
 
 type Layer struct {
@@ -59,8 +59,8 @@ func (l *Layer) authWithProvider() error {
 	return err
 }
 
-func (l *Layer) RenderTile(tileRequest pkg.TileRequest) (*pkg.Image, error) {
-	var img *pkg.Image
+func (l *Layer) RenderTile(tileRequest internal.TileRequest) (*internal.Image, error) {
+	var img *internal.Image
 	var err error
 
 	img, err = (*l.Cache).Lookup(tileRequest)
@@ -89,8 +89,8 @@ func (l *Layer) RenderTile(tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	return img, nil
 }
 
-func (l *Layer) RenderTileNoCache(tileRequest pkg.TileRequest) (*pkg.Image, error) {
-	var img *pkg.Image
+func (l *Layer) RenderTileNoCache(tileRequest internal.TileRequest) (*internal.Image, error) {
+	var img *internal.Image
 	var err error
 
 	if l.authContext == nil || l.authContext.Expiration.Before(time.Now()) {

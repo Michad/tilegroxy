@@ -22,8 +22,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/config"
-	"github.com/Michad/tilegroxy/pkg"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -112,11 +112,11 @@ func ConstructS3(config *S3Config, errorMessages *config.ErrorMessages) (*S3, er
 	return &S3{config, downloader, uploader}, nil
 }
 
-func calcKey(config *S3, t *pkg.TileRequest) string {
+func calcKey(config *S3, t *internal.TileRequest) string {
 	return config.Path + t.LayerName + "/" + strconv.Itoa(t.Z) + "/" + strconv.Itoa(t.X) + "/" + strconv.Itoa(t.Y)
 }
 
-func (c S3) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
+func (c S3) Lookup(t internal.TileRequest) (*internal.Image, error) {
 	writer := aws.NewWriteAtBuffer([]byte{})
 
 	_, err := c.downloader.Download(
@@ -136,12 +136,12 @@ func (c S3) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
 		return nil, err
 	}
 
-	img := pkg.Image(writer.Bytes())
+	img := internal.Image(writer.Bytes())
 
 	return &img, nil
 }
 
-func (c S3) Save(t pkg.TileRequest, img *pkg.Image) error {
+func (c S3) Save(t internal.TileRequest, img *internal.Image) error {
 
 	uploadConfig := &s3manager.UploadInput{
 		Bucket: &c.Bucket,

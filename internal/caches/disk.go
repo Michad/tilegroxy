@@ -22,8 +22,8 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/config"
-	"github.com/Michad/tilegroxy/pkg"
 )
 
 type DiskConfig struct {
@@ -35,7 +35,7 @@ type Disk struct {
 	config DiskConfig
 }
 
-func requestToFilename(t pkg.TileRequest) string {
+func requestToFilename(t internal.TileRequest) string {
 	return t.LayerName + "_" + strconv.Itoa(t.Z) + "_" + strconv.Itoa(t.X) + "_" + strconv.Itoa(t.Y)
 }
 
@@ -55,7 +55,7 @@ func ConstructDisk(config DiskConfig, ErrorMessages *config.ErrorMessages) (*Dis
 	return &Disk{config}, nil
 }
 
-func (c Disk) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
+func (c Disk) Lookup(t internal.TileRequest) (*internal.Image, error) {
 	filename := requestToFilename(t)
 
 	img, err := os.ReadFile(filepath.Join(c.config.Path, filename))
@@ -67,7 +67,7 @@ func (c Disk) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
 	return &img, err
 }
 
-func (c Disk) Save(t pkg.TileRequest, img *pkg.Image) error {
+func (c Disk) Save(t internal.TileRequest, img *internal.Image) error {
 	filename := requestToFilename(t)
 
 	return os.WriteFile(filepath.Join(c.config.Path, filename), *img, fs.FileMode(c.config.FileMode))

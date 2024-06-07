@@ -17,8 +17,8 @@ package caches
 import (
 	"time"
 
+	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/config"
-	"github.com/Michad/tilegroxy/pkg"
 
 	"github.com/maypok86/otter"
 )
@@ -42,8 +42,8 @@ func ConstructMemory(config MemoryConfig, ErrorMessages *config.ErrorMessages) (
 		config.Ttl = 3600
 	}
 
-	cache, err := otter.MustBuilder[string, pkg.Image](int(config.MaxSize)).
-		Cost(func(key string, value pkg.Image) uint32 {
+	cache, err := otter.MustBuilder[string, internal.Image](int(config.MaxSize)).
+		Cost(func(key string, value internal.Image) uint32 {
 			return uint32(len(value))
 		}).
 		WithTTL(time.Duration(config.Ttl * uint32(time.Second))).
@@ -55,10 +55,10 @@ func ConstructMemory(config MemoryConfig, ErrorMessages *config.ErrorMessages) (
 	return &Memory{config, cache}, nil
 }
 
-func (c Memory) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
+func (c Memory) Lookup(t internal.TileRequest) (*internal.Image, error) {
 	return nil, nil
 }
 
-func (c Memory) Save(t pkg.TileRequest, img *pkg.Image) error {
+func (c Memory) Save(t internal.TileRequest, img *internal.Image) error {
 	return nil
 }

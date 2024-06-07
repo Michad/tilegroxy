@@ -1,3 +1,3 @@
-package pkg
+package internal
 
 type Image = []byte
