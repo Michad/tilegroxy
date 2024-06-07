@@ -310,11 +310,11 @@ The following are the known incompatibilities with tilestache configurations:
     * Most parameters unavailable. Some can be configured via the `Client` configuration and others will be added in future versions.
 * URL Template provider:
     * No `referer` parameter - instead specify the referer header via the `Client` configuration
-    * No `timeout` parameter - instead specify the timeout via the `Client` configuraiton
+    * No `timeout` parameter - instead specify the timeout via the `Client` configuration
     * No `source projection` parameter - Might be added in the future
 * Proxy provider:
     * No `provider` parameter 
-    * No `timeout` parameter - instead specify the timeout via the `Client` configuraiton
+    * No `timeout` parameter - instead specify the timeout via the `Client` configuration
 * Test cache:
     * It's recommended but not required to change the `name` to "none" instead of "test"
     * No 'verbose' parameter - Instead use the `Logging` configuration to turn on debug logging if needed
