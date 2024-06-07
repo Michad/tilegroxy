@@ -4,14 +4,14 @@
 [![Docker Image CI](https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml/badge.svg)](https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml)
 [![Go Report Card](https://goreportcard.com/badge/michad/tilegroxy)](https://goreportcard.com/report/michad/tilegroxy)
 [![CodeQL](https://github.com/Michad/tilegroxy/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/Michad/tilegroxy/actions/workflows/github-code-scanning/codeql)
-[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md) 
+
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md) 
 
 A map tile proxy and cache service. Lives between your webmap and your mapping engines to provide a simple, consistent interface and improved performance.
 
 💡 Inspired by [tilestache](https://github.com/tilestache/tilestache) and mostly compatible with tilestache configurations.   
 🚀 Built in Go for speed.  
 🔌 Features a flexible plugin system for custom providers written in TODO.  
-🪪 Licensed with a permissive Unlicense   
 🛠️ BUT DO NOT USE YET! STILL A WORK IN PROGRESS!
 
 
