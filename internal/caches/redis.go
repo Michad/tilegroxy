@@ -156,19 +156,26 @@ func (c Redis) Lookup(t internal.TileRequest) (*internal.Image, error) {
 
 	err := c.cache.Get(ctx, key, &obj)
 
-	return &obj, err
+	if err == cache.ErrCacheMiss {
+		return nil, nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &obj, nil
 }
 
 func (c Redis) Save(t internal.TileRequest, img *internal.Image) error {
 	ctx := context.TODO()
 
 	key := c.KeyPrefix + t.String()
-	obj := img
 
 	err := c.cache.Set(&cache.Item{
 		Ctx:   ctx,
 		Key:   key,
-		Value: obj,
+		Value: *img,
 		TTL:   time.Duration(c.Ttl) * time.Second,
 	})
 
