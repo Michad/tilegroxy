@@ -333,3 +333,67 @@ Configuration options:
 | Path | string | No | None | The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth |
 | Format | string | No | common | The format to output access logs in. Applies to both standard out and file out. Possible values: common, combined |
 
+## Error
+
+Configures how errors are returned to users.  
+
+There are four primary operating modes:
+
+**None**: Errors are logged but not returned to users.  In fact, nothing is returned to the users besides a relevant HTTP status code.
+
+**Text**: Errors are returned in plain text in the HTTP response body
+
+**Image**: The error message itself isn't returned but the user receives an image indicating the general category of error.  The images can be customized.
+
+**Image with Header** : The same images are returned but the error message itself is returned as a special header: x-error-message.
+
+It is highly recommended you use the Image mode for production usage.  Returning an Image provides the most user friendly experience as it provides feedback to the user in the map they're looking at that something is wrong.  More importantly, it avoids exposing the specific error message to the end user, which could contain information you don't want exposed to end users.  "Image with error" is useful for development workflows, it gives the same user experience but allows you to easily get to the error messages.
+
+
+Configuration options:
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| Mode | string | No | image | The error mode as described above.  One of: text none image image+header |
+| Messages | ErrorMessages | No | Various | Controls the error messages returned as described below |
+| Images | ErrorImages | No | Various | Controls the images returned for errors as described below |
+
+### Error Images
+
+When using the image or image+header modes you can configure the images you want to be returned to the user.  Either use a built-in image or an image provided yourself on the local filesystem via relative or absolute file path.
+
+Configuration options:
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| OutOfBounds | string | No | embedded:transparent.png | The image to display for requests outside the extent of the layer |
+| Authentication | string | No | embedded:unauthorized.png | The image to display for auth errors |
+| Provider | string | No | embedded:error.png | The image to display for errors returned by the layer's provider |
+| Other | string | No | embedded:error.png | The image to display for all other errors |
+
+
+There are currently 4 built-in images available:
+
+| Image name | Description | Preview |
+| --- | --- | --- |
+| transparent.png | A fully transparent image meant to be used for requests outside the valid range of a layer | ![](../internal/images/transparent.png) |
+| red.png | A semi-transparent solid red image | ![](../internal/images/red.png) |
+| error.png | A semi-transparent solid red image with the word "Error" in white | ![](../internal/images/error.png) |
+| unauthorized.png | A semi-transparent solid red image with the words "Not Authorized" in white | ![](../internal/images/unauthorized.png) |
+
+To utilize them prepend "embedded:" before the name.  For example `embedded:transparent.png`
+
+### Error Messages
+
+The templates used for error messages for the majority of errors can be configured.  Since tilegroxy is a backend service the main time you see words coming from it is in error messages, so it's all the more important to be flexible with those words.  This is most useful for those whose primary language is not English and want to decrease how often they need to deal with translating. Unfortunately, many lower-level errors can return messages not covered by these string.
+
+The following are currently supported:
+
+	NotAuthorized           
+	InvalidParam            
+	RangeError              
+	ServerError             
+	ProviderError           
+	ParamsBothOrNeither     
+	ParamsMutuallyExclusive 
+	EnumError               
