@@ -4,6 +4,7 @@
 [![Docker Image CI](https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml/badge.svg)](https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml)
 [![Go Report Card](https://goreportcard.com/badge/michad/tilegroxy)](https://goreportcard.com/report/michad/tilegroxy)
 [![CodeQL](https://github.com/Michad/tilegroxy/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/Michad/tilegroxy/actions/workflows/github-code-scanning/codeql)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md) 
 
 A map tile proxy and cache service. Lives between your webmap and your mapping engines to provide a simple, consistent interface and improved performance.
 
@@ -35,6 +36,8 @@ The following are on the roadmap:
 * Specific support for vector tile formats such as [MVT](https://github.com/mapbox/vector-tile-spec) or tiled GeoJSON
 * OpenTelemetry support
 * Support for external secret stores such as AWS Secrets Manager to avoid secrets in the configuration
+* Support for external configuration sources 
+* Support for HTTPS server w/ Let's Encrypt or static certs
 
 
 ## Configuration
@@ -283,21 +286,60 @@ TODO. Not yet implemented.
 
 ## Migrating from tilestache
 
+An important difference between tilegroxy and tilestache is that tilegroxy can only be run as a standalone executable rather than running as a module in another webserver.  
+
 The configuration in tilegroxy is meant to be highly compatible with the configuration of tilestache, however there are significant differences.  The tilegroxy configuration supports a variety of options that are not available in tilestache and while we try to keep most parameters optional and have sane and safe defaults, it is highly advised you familiarize yourself with the various options documented above.
 
-The following are the known steps to transition a configuration from tilestache to tilegroxy:
+The following are the known incompatibilities with tilestache configurations:
 
 * Unsupported providers:
-* Unsupported params url template
-* moved params client params
-* Names are always in all lowercase
-* Disk cache umode to filemode changes
-* 
+    * Mapnik
+    * Vector
+    * MBTiles
+    * Mapnik Grid
+    * Sandwich
+    * Goodies providers
+* Unsupported caches:
+    * LimitedDisk
+* "Names" are always in all lowercase 
+* Configuration keys are case insensitive and have no spaces
+* Configuring projections is currently unsupported
+* Cache contents are not guaranteed to be transferrable
+* Layers:
+    * Layers are supplied as a flat array of layer objects with an `id` parameter for the URL-safe layer name instead of them being supplied as an Object with the id being a key. 
+    * Most parameters unavailable. Some can be configured via the `Client` configuration and others will be added in future versions.
+* URL Template provider:
+    * No `referer` parameter - instead specify the referer header via the `Client` configuration
+    * No `timeout` parameter - instead specify the timeout via the `Client` configuraiton
+    * No `source projection` parameter - Might be added in the future
+* Proxy provider:
+    * No `provider` parameter 
+    * No `timeout` parameter - instead specify the timeout via the `Client` configuraiton
+* Test cache:
+    * It's recommended but not required to change the `name` to "none" instead of "test"
+    * No 'verbose' parameter - Instead use the `Logging` configuration to turn on debug logging if needed
+* Disk cache:
+    * No `umode` parameter - Instead use `filemode` with Go numerics instead of unix numerics. Might be added in the future
+    * No `dirs` parameter - Files are currently stored in a flat structure rather than creating separate directories
+    * No `gzip` parameter - Might be added in the future
+    * The `path` parameter must be supplied as a file path, not a URI
+* Redis cache supports a wider variety of configuration options. It's recommended but not required that you consider utilizing a Cluster or Ring deployment if you previously used a single server.
+* S3 cache:
+    * No `use_locks` parameter - Caches are currently lockless
+    * No `reduced_redundancy` parameter - Instead use the more flexible `storageclass` parameter with the "REDUCED_REDUNDANCY" option
+    * While supported, it's recommended you don't use the `access` and `secret` parameters. All standard methods of supplying AWS credentials are supported.
 
 
 
 
 ## Troubleshooting
 
+Please submit an [Issue](https://github.com/Michad/tilegroxy/issues/new) for any trouble you run into so we can build out this section.
+
 ## Contributing
 
+As this is a young project any contribution via an Issue or Pull Request is very welcome without too much process.
+
+Please try to follow go conventions and the patterns you see elsewhere in the codebase.  Also, please use [semantic](https://gist.github.com/joshbuchea/6f47e86d2510bce28f8e7f42ae84c716) or [conventional](https://www.conventionalcommits.org/en/v1.0.0/) commit messages. If you want to make a fundamental change/refactor please open an Issue for discussion first.  
+
+Very specific providers might be declined if it seems highly unlikely they can/will be reused. Those are best suited as custom providers outside the core platform.
