@@ -24,5 +24,24 @@ func TestSimpleYml(t *testing.T) {
 	c, err := LoadConfigFromFile("../../examples/configurations/simple.yml")
 
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "Test", c.Cache["name"])
+	assert.Equal(t, "none", c.Cache["name"])
+}
+
+func TestSimpleJson(t *testing.T) {
+	c, err := LoadConfigFromFile("../../examples/configurations/simple.json")
+
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "none", c.Cache["name"])
+}
+
+func TestComplexYml(t *testing.T) {
+	_, err := LoadConfigFromFile("../../examples/configurations/complex.yml")
+
+	assert.Equal(t, nil, err)
+}
+
+func TestTwoTierYml(t *testing.T) {
+	_, err := LoadConfigFromFile("../../examples/configurations/two_tier_cache.yml")
+
+	assert.Equal(t, nil, err)
 }
