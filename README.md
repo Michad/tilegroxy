@@ -11,7 +11,7 @@ A map tile proxy and cache service. Lives between your webmap and your mapping e
 
 💡 Inspired by [tilestache](https://github.com/tilestache/tilestache) and mostly compatible with tilestache configurations.   
 🚀 Built in Go for speed.  
-🔌 Features a flexible plugin system for custom providers written in TODO.  
+<!--🔌 Features a flexible plugin system for custom providers written in TODO.  -->
 🛠️ BUT DO NOT USE YET! STILL A WORK IN PROGRESS!
 
 
@@ -56,7 +56,7 @@ Tilegroxy is recommended to be installed and run through a container with the on
 
 ### Standalone
 
-Tilegroxy builds as a standalone executable that can be placed inside `/usr/local/bin` to install. Prebuilt binaries are available at TODO.
+Tilegroxy builds as a standalone executable that can be placed inside `/usr/local/bin` to install. Prebuilt binaries are available from [Github](https://github.com/Michad/tilegroxy/releases).
 
 Building it yourself requires go 1.22+ and is quite simple:
 
@@ -70,30 +70,32 @@ Once built, tilegroxy can be run directly as an HTTP server via the `tilegroxy s
 
 ### Docker
 
-Tilegroxy is available as a container image on TODO
+Tilegroxy is available as a container image on the Github container repository.  
 
-You can build the docker image yourself with
+You can pull the very latest versioned release with the `latest` tag and the very latest (maybe buggy) build with the `edge` tag. Tags are also available for version numbers.  [See here for a list of tags](https://github.com/Michad/tilegroxy/pkgs/container/tilegroxy).
+
+For example: 
+
+```
+docker pull ghcr.io/michad/tilegroxy:latest
+```
+
+To then run tilegroxy:
+
+```
+docker run --rm -v ./test_config.yml:/tilegroxy/tilegroxy.yml:Z ghcr.io/michad/tilegroxy seed -l osm -z 0 -v
+```
+
+You can of course build the docker image yourself:
 
 ```
 docker build . -t tilegroxy
 ```
 
-To run tilegroxy from within a container:
-
-```
-docker run -it --rm -v ./test_config.yml:/tilegroxy/tilegroxy.yml:Z \
-tilegroxy seed -l osm -z 0 -v
-```
-
-To run it through docker compose:
-
-TODO
-
 
 ### Kubernetes
 
-TODO. Not yet implemented.
-
+Coming soon. Not yet implemented.
 
 ## Commands
 
@@ -282,7 +284,7 @@ Global Flags:
 
 ## Custom Providers
 
-TODO. Not yet implemented.
+Coming soon. 
 
 ## Migrating from tilestache
 
