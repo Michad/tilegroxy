@@ -20,7 +20,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Build a Docker image
-      run: docker build -f build/dockerfile -t michad/tilegroxy .
+      run: docker build -t michad/tilegroxy .
     - name: Run Snyk to check Docker image for vulnerabilities
       continue-on-error: true
       uses: snyk/actions/docker@d406fd286b663eb8c6f8adcced4f7bcd199c0a3f
@@ -28,7 +28,6 @@ jobs:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       with:
         image: michad/tilegroxy
-        args: --file=build/dockerfile
       # Snyk sometimes generates invalid severity scores that tank the upload step. And they're insistent on not fixing the bug. So we need to post-process it to avoid build failures
       # See https://github.com/github/codeql-action/issues/2187 for more context.
     - name: Post-process sarif output

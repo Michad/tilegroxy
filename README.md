@@ -75,7 +75,7 @@ Tilegroxy is available as a container image on TODO
 You can build the docker image yourself with
 
 ```
-docker build -f build/dockerfile . -t tilegroxy
+docker build . -t tilegroxy
 ```
 
 To run tilegroxy from within a container:
