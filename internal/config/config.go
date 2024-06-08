@@ -137,7 +137,7 @@ func DefaultConfig() Config {
 			UserAgent:           "tilegroxy/0.0.1", //TODO: make version number dynamic
 			MaxResponseLength:   1024 * 1024 * 10,
 			AllowUnknownLength:  false,
-			AllowedContentTypes: []string{"image/png", "image/jpg"},
+			AllowedContentTypes: []string{"image/png", "image/jpg", "image/jpeg"},
 			AllowedStatusCodes:  []int{200},
 			StaticHeaders:       map[string]string{},
 		},
