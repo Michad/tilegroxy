@@ -3,18 +3,18 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "daily"
     commit-message:
       prefix: "security(actions): "
   - package-ecosystem: "gomod" 
     directory: "/" 
     schedule:
-      interval: "weekly"
+      interval: "daily"
     commit-message:
       prefix: "security(go): "
   - package-ecosystem: "docker"
-    directory: "/build"
+    directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "daily"
     commit-message:
       prefix: "security(docker): "
