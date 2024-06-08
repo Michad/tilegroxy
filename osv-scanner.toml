@@ -1,0 +1,3 @@
+[[IgnoredVulns]]
+id = "GO-2022-0646"
+reason = "No version considered fixed after 2+ years and doesn't meaningfully impact this service"
