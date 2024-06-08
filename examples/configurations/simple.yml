@@ -1,14 +1,7 @@
 cache:
-    name: Test
-    verbose: true
+    name: none
 layers:
-    -
-        id: test
-        provider:
-            name: url template
-            template: http://example.com/?bbox=$xmin,$ymin,$xmax,$ymax
-    -
-        id: test2
-        provider:
-            name: url template
-            template: http://example.com/?bbox=$xmin,$ymin,$xmax,$ymax
+  - id: osm
+    provider:
+        name: proxy
+        url: https://tile.openstreetmap.org/{z}/{x}/{y}.png

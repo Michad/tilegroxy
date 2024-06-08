@@ -1,0 +1,15 @@
+cache:
+  name: multi
+  tiers:
+    - name: memcache
+      maxsize: 1000
+      ttl: 1000
+    - name: s3
+      bucket: tilegroxy-demo-cache
+      region: us-east-1
+      profile: tilegroxy
+layers:
+  - id: osm
+    provider:
+        name: proxy
+        url: https://tile.openstreetmap.org/{z}/{x}/{y}.png

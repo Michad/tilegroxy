@@ -1,0 +1,63 @@
+Server:
+    BindHost: 0.0.0.0
+    ContextRoot: /my-app/tiles
+    Gzip: true
+    Port: 8081
+    Production: true
+    StaticHeaders:
+        x-test: "true"
+    Timeout: 6
+Logging:
+    AccessLog:
+        EnableStandardOut: false
+        Format: common
+        Path: "my-access.log"
+    MainLog:
+        EnableStandardOut: false
+        Format: json
+        Level: debug
+        Path: "my-main.log"
+Authentication:
+  name: jwt
+  algorithm: HS256
+  verificationkey: some_secret_key
+Client:
+    AllowUnknownLength: false
+    AllowedContentTypes:
+        - image/png
+        - image/jpeg
+        - image/gif
+        - image/webp
+    AllowedStatusCodes:
+        - 200
+        - 201
+    MaxResponseLength: 100000000
+    StaticHeaders: 
+      x-custom-header: hello
+    UserAgent: my_app_name/1.0
+error:
+    images:
+        authentication: embedded:red.png
+        other: embedded:red.png
+        outofbounds: embedded:red.png
+        provider: embedded:red.png
+    messages:
+        notauthorized: Not allowed - check your auth token
+    Mode: image+header
+cache:
+  name: multi
+  tiers:
+    - name: memory
+      maxsize: 1000
+      ttl: 1000
+    - name: disk
+      path: "./disk_tile_cache"
+layers: 
+  - id: test
+    provider:
+      name: url template
+      template: http://example.com/?bbox=$xmin,$ymin,$xmax,$ymax
+  - id: osm
+    provider:
+        name: proxy
+        url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
