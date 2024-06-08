@@ -23,7 +23,7 @@ The following features are currently available:
 
 * Provide a uniform ZXY mapping interface for incoming requests.
 * Proxy map tiles to ZXY, WMS, TMS, or WMTS backed map layers
-* Cache map tiles in disk, memory, s3, redis ...
+* Cache map tiles in disk, memory, s3, redis, or memcache
 * Generic support for any content type 
 * Incoming authentication using a static key or JWT
 * Configurable timeout, logging, and error handling rules
@@ -323,7 +323,13 @@ The following are the known incompatibilities with tilestache configurations:
     * No `dirs` parameter - Files are currently stored in a flat structure rather than creating separate directories
     * No `gzip` parameter - Might be added in the future
     * The `path` parameter must be supplied as a file path, not a URI
-* Redis cache supports a wider variety of configuration options. It's recommended but not required that you consider utilizing a Cluster or Ring deployment if you previously used a single server.
+* Memcache cache:
+    * No `revision` parameter - Put the revision inside the key prefix
+    * The `key prefix` parameter is replaced with `keyprefix`
+    * The `servers` array is now an array of objects containing `host` and `port` instead of an array of strings with those combined
+* Redis cache:
+    * Supports a wider variety of configuration options. It's recommended but not required that you consider utilizing a Cluster or Ring deployment if you previously used a single server.
+    * The `key prefix` parameter is replaced with `keyprefix`
 * S3 cache:
     * No `use_locks` parameter - Caches are currently lockless
     * No `reduced_redundancy` parameter - Instead use the more flexible `storageclass` parameter with the "REDUCED_REDUNDANCY" option

@@ -4,6 +4,7 @@ go 1.22.3
 
 require (
 	github.com/aws/aws-sdk-go v1.53.14
+	github.com/bradfitz/gomemcache v0.0.0-20230905024940-24af94b03874
 	github.com/go-redis/cache/v9 v9.0.0
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.6.0

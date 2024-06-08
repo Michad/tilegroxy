@@ -36,8 +36,9 @@ authentication:
 #   region: us-east-1
 #   profile: tilegroxy
 cache:
-  name: redis
-  mode: standalone
+  name: memcache
+  host: 127.0.0.1
+  port: 11211
 layers:
   -
     id: test

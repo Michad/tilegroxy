@@ -16,6 +16,7 @@ package caches
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/config"
@@ -77,8 +78,35 @@ func ConstructCache(rawConfig map[string]interface{}, errorMessages *config.Erro
 			return nil, err
 		}
 		return ConstructRedis(&config, errorMessages)
+	} else if rawConfig["name"] == "memcache" {
+		var config MemcacheConfig
+		err := mapstructure.Decode(rawConfig, &config)
+		if err != nil {
+			return nil, err
+		}
+		return ConstructMemcache(&config, errorMessages)
 	}
 
 	name := fmt.Sprintf("%#v", rawConfig["name"])
 	return nil, fmt.Errorf(errorMessages.InvalidParam, "cache.name", name)
+}
+
+// Utility type used in a couple caches
+type HostAndPort struct {
+	Host string
+	Port uint16
+}
+
+func (hp HostAndPort) String() string {
+	return hp.Host + ":" + strconv.Itoa(int(hp.Port))
+}
+
+func HostAndPortArrayToStringArray(servers []HostAndPort) []string {
+	addrs := make([]string, len(servers))
+
+	for i, addr := range servers {
+		addrs[i] = addr.String()
+	}
+
+	return addrs
 }

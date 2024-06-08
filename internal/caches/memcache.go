@@ -14,15 +14,77 @@
 
 package caches
 
-import "github.com/Michad/tilegroxy/internal"
+import (
+	"fmt"
+
+	"github.com/Michad/tilegroxy/internal"
+	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/bradfitz/gomemcache/memcache"
+)
+
+type MemcacheConfig struct {
+	HostAndPort `mapstructure:",squash"`
+	Servers     []HostAndPort //The list of servers to use.
+	KeyPrefix   string        //Prefix to keynames stored in cache
+	Ttl         uint32        //Cache expiration in seconds. Max of 30 days. Default to 1 day
+}
+
+const (
+	memcacheDefaultHost = "127.0.0.1"
+	memcacheDefaultPort = 11211
+	memcacheDefaultTtl  = 60 * 60 * 24
+	memcacheMaxTtl      = 30 * 60 * 60 * 24
+)
 
 type Memcache struct {
+	*MemcacheConfig
+	client *memcache.Client
+}
+
+func ConstructMemcache(config *MemcacheConfig, errorMessages *config.ErrorMessages) (*Memcache, error) {
+	if config.Servers == nil || len(config.Servers) == 0 {
+		if config.Host == "" {
+			config.Host = memcacheDefaultHost
+		}
+		if config.Port == 0 {
+			config.Port = memcacheDefaultPort
+		}
+
+		config.Servers = []HostAndPort{{config.Host, config.Port}}
+	} else {
+		if config.Host != "" {
+			return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "config.memcache.host", "config.memcache.servers")
+		}
+	}
+
+	if config.Ttl == 0 {
+		config.Ttl = memcacheDefaultTtl
+	}
+	if config.Ttl > memcacheMaxTtl {
+		config.Ttl = memcacheMaxTtl
+	}
+
+	addrs := HostAndPortArrayToStringArray(config.Servers)
+	mc := memcache.New(addrs...)
+
+	err := mc.Ping()
+
+	return &Memcache{config, mc}, err
+
 }
 
 func (c Memcache) Lookup(t internal.TileRequest) (*internal.Image, error) {
-	return nil, nil
+	it, err := c.client.Get(c.KeyPrefix + t.String())
+
+	if err != nil {
+		return nil, err
+	}
+
+	result := internal.Image(it.Value)
+
+	return &result, nil
 }
 
 func (c Memcache) Save(t internal.TileRequest, img *internal.Image) error {
-	return nil
+	return c.client.Set(&memcache.Item{Key: c.KeyPrefix + t.String(), Value: *img, Expiration: int32(c.Ttl)})
 }
