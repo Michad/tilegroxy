@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"slices"
 	"strconv"
 	"sync"
 	"text/tabwriter"
@@ -107,7 +108,7 @@ Example:
 		errCount := uint32(0)
 
 		writer := tabwriter.NewWriter(os.Stdout, 1, 4, 4, ' ', tabwriter.StripEscape)
-		fmt.Fprintln(writer, "Thread\tLayer\tGenerated\tCached\tError\t")
+		fmt.Fprintln(writer, "Thread\tLayer\tGenerated\tCache Write\tCache Read\tError\t")
 
 		for t := int(0); t < len(reqSplit); t++ {
 			wg.Add(1)
@@ -116,27 +117,39 @@ Example:
 				for _, req := range myReqs {
 					layer := layerMap[req.LayerName]
 					img, layerErr := layer.RenderTileNoCache(req)
-					var cacheError error
+					var cacheWriteError error
+					var cacheReadError error
 
 					if !noCache && layerErr == nil {
-						cacheError = (*layer.Cache).Save(req, img)
+						cacheWriteError = (*layer.Cache).Save(req, img)
+						if cacheWriteError == nil {
+							var img2 *internal.Image
+							img2, cacheReadError = (*layer.Cache).Lookup(req)
+							if cacheReadError == nil {
+								if !slices.Equal(*img, *img2) {
+									cacheReadError = errors.New("cache result doesn't match what we put into cache")
+								}
+							}
+						}
 					}
 
-					if layerErr != nil || cacheError != nil {
+					if layerErr != nil || cacheWriteError != nil || cacheReadError != nil {
 						atomic.AddUint32(&errCount, 1)
 					}
 
 					//Output the result into the table
 					resultStr := strconv.Itoa(t) + "\t" + req.LayerName + "\t"
 					if layerErr != nil {
-						resultStr += "No\tN/A\t\xff" + layerErr.Error() + "\xff\t"
+						resultStr += "No\tN/A\tN/A\t\xff" + layerErr.Error() + "\xff\t"
 					} else {
 						if noCache {
-							resultStr += "Yes\tN/A\tNone\t"
-						} else if cacheError != nil {
-							resultStr += "Yes\tNo\t\xff" + cacheError.Error() + "\xff\t"
+							resultStr += "Yes\tN/A\tN/A\tNone\t"
+						} else if cacheWriteError != nil {
+							resultStr += "Yes\tNo\tN/A\t\xff" + cacheWriteError.Error() + "\xff\t"
+						} else if cacheReadError != nil {
+							resultStr += "Yes\tYes\tNo\t\xff" + cacheReadError.Error() + "\xff\t"
 						} else {
-							resultStr += "Yes\tYes\tNone\t"
+							resultStr += "Yes\tYes\tYes\tNone\t"
 						}
 					}
 					fmt.Fprintln(writer, resultStr)
