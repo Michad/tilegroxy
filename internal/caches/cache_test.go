@@ -30,27 +30,38 @@ func makeImg(seed int) internal.Image {
 	return make([]byte, seed)
 }
 
-func validateSaveAndLookup(t *testing.T, c Cache) {
+func validateSaveAndLookup(t *testing.T, c Cache) bool {
 	//TODO: reconsider use of rand
 	tile := makeReq(rand.Intn(10000))
 	img := makeImg(rand.Intn(100))
 
 	err := c.Save(tile, &img)
-	assert.Nil(t, err, "Cache save returned an error")
+	if !assert.Nil(t, err, "Cache save returned an error") {
+		return false
+	}
 
-	validateLookup(t, c, tile, &img)
+	return validateLookup(t, c, tile, &img)
 }
 
-func validateLookup(t *testing.T, c Cache, tile internal.TileRequest, expected *internal.Image) {
+func validateLookup(t *testing.T, c Cache, tile internal.TileRequest, expected *internal.Image) bool {
 	img2, err := c.Lookup(tile)
-	assert.Nil(t, err, "Cache lookup returned an error")
-	assert.NotNil(t, img2, "Cache lookup didn't return an image")
+	if !assert.Nil(t, err, "Cache lookup returned an error") {
+		return false
+	}
+	if !assert.NotNil(t, img2, "Cache lookup didn't return an image") {
+		return false
+	}
 
-	assert.True(t, slices.Equal(*expected, *img2), "Result before and after cache don't match")
+	return assert.True(t, slices.Equal(*expected, *img2), "Result before and after cache don't match")
 }
 
-func validateNoLookup(t *testing.T, c Cache, tile internal.TileRequest) {
+func validateNoLookup(t *testing.T, c Cache, tile internal.TileRequest) bool {
 	img2, err := c.Lookup(tile)
-	assert.Nil(t, err, "Cache lookup returned an error")
-	assert.Nil(t, img2, "Cache lookup returned a result when it shouldn't")
+	if !assert.Nil(t, err, "Cache lookup returned an error") {
+		return false
+	}
+	if !assert.Nil(t, img2, "Cache lookup returned a result when it shouldn't") {
+		return false
+	}
+	return true
 }
