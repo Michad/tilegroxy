@@ -29,8 +29,6 @@ func setupMemcacheContainer(ctx context.Context, t *testing.T) (testcontainers.C
 	req := testcontainers.ContainerRequest{
 		Image:        "memcached:latest",
 		ExposedPorts: []string{"11211/tcp"},
-		
-
 		WaitingFor:   wait.ForExposedPort(),
 	}
 	memcacheC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
