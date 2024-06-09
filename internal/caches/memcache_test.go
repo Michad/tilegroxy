@@ -20,6 +20,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 func setupMemcacheContainer(ctx context.Context, t *testing.T) (testcontainers.Container, func(t *testing.T)) {
@@ -28,7 +29,9 @@ func setupMemcacheContainer(ctx context.Context, t *testing.T) (testcontainers.C
 	req := testcontainers.ContainerRequest{
 		Image:        "memcached:latest",
 		ExposedPorts: []string{"11211/tcp"},
-		// WaitingFor:   wait.ForLog("Ready to accept connections"),
+		
+
+		WaitingFor:   wait.ForExposedPort(),
 	}
 	memcacheC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: req,
