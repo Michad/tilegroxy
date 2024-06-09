@@ -152,7 +152,7 @@ Configuration options:
 
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| maxsize | uint16 | No | 100 | Maximum number of tiles to hold in the cache. Setting this too high can cause out-of-memory panics |
+| maxsize | uint16 | No | 100 | Maximum number of tiles to hold in the cache. Must be at least 10. Setting this too high can cause out-of-memory panics. This is not a guaranteed FIFO setting, which entry is evicted when exceeding this size is an implementation detail. |
 | ttl | uint32 | No | 3600 | Maximum time to live for cache entries in seconds |
 
 Example:

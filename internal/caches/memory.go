@@ -25,7 +25,7 @@ import (
 
 type MemoryConfig struct {
 	MaxSize uint16 //Maximum number of tiles to hold in the cache. Defaults to 100
-	Ttl     uint32 //Maximum time to live of a tile in seconds. Defaultss to 3600 (1 hour)
+	Ttl     uint32 //Maximum time to live of a tile in seconds. Defaults to 3600 (1 hour)
 }
 
 type Memory struct {
@@ -37,13 +37,16 @@ func ConstructMemory(config MemoryConfig, ErrorMessages *config.ErrorMessages) (
 	if config.MaxSize < 1 {
 		config.MaxSize = 100
 	}
+	if config.MaxSize < 10 {
+		config.MaxSize = 10
+	}
 
 	if config.Ttl < 1 {
 		config.Ttl = 3600
 	}
 
 	cache, err := otter.MustBuilder[string, internal.Image](int(config.MaxSize)).
-		WithTTL(time.Duration(config.Ttl * uint32(time.Second))).
+		WithTTL(time.Duration(config.Ttl) * time.Second).
 		Build()
 	if err != nil {
 		return nil, err
