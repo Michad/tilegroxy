@@ -22,7 +22,7 @@ The following features are currently available:
 
 * Provide a uniform ZXY mapping interface for incoming requests.
 * Proxy map tiles to ZXY, WMS, WMTS backed map layers
-* Cache map tiles in disk, memory, ...
+* Cache map tiles in disk, memory, s3 ...
 * Generic support for any content type 
 * Incoming authentication using a static key or JWT
 * Configurable timeout, logging, and error handling rules

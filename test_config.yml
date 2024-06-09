@@ -12,19 +12,24 @@ logging:
 #   algorithm: HS256
 #   verificationKey: askfasklfj
 #   CacheSize: 100
+# cache:
+#   name: multi
+#   tiers:
+#     -
+#       name: memory
+#       MaxSize: 1000
+#       Ttl: 1000
+#     -
+#       name: disk
+#       path: "./disK_tile_cache"
+#     -
+#       name: disk
+#       path: "./disK_tile_cache2"
 cache:
-  name: multi
-  tiers:
-    -
-      name: memory
-      MaxSize: 1000
-      Ttl: 1000
-    -
-      name: disk
-      path: "./disK_tile_cache"
-    -
-      name: disk
-      path: "./disK_tile_cache2"
+  name: s3
+  bucket: tilegroxy-demo-cache
+  region: us-east-1
+  profile: tilegroxy
 layers:
   -
     id: test

@@ -26,10 +26,11 @@ const (
 )
 
 type ErrorMessages struct {
-	InvalidParam  string
-	RangeError    string
-	ServerError   string
-	ProviderError string
+	InvalidParam        string
+	RangeError          string
+	ServerError         string
+	ProviderError       string
+	ParamsBothOrNeither string
 }
 
 type ErrorConfig struct {
@@ -118,10 +119,11 @@ func DefaultConfig() Config {
 		Error: ErrorConfig{
 			Mode: ErrorPlainText,
 			Messages: ErrorMessages{
-				InvalidParam:  "Invalid value supplied for parameter %v: %v",
-				RangeError:    "Parameter %v must be between %v and %v",
-				ServerError:   "Unexpected server error: %v",
-				ProviderError: "Provider failed to return image",
+				InvalidParam:        "Invalid value supplied for parameter %v: %v",
+				RangeError:          "Parameter %v must be between %v and %v",
+				ServerError:         "Unexpected server error: %v",
+				ProviderError:       "Provider failed to return image",
+				ParamsBothOrNeither: "Parameters %v and %v must be either both or neither supplied",
 			},
 		},
 		Authentication: map[string]interface{}{
