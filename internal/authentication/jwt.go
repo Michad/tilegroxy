@@ -30,14 +30,14 @@ import (
 type JwtConfig struct {
 	//TODO: Performance profile if the cache is actually worthwhile
 	CacheSize             uint16 //Configures the size of the cache of already verified JWTs to avoid re-verifying keys for every token. Expiration still applies. Set to 0 to disable. Defaults to 0
-	VerificationKey       string //The key for verifying the signature. The public key if using asymetric signing. Required
+	VerificationKey       string //The key for verifying the signature. The public key if using asymmetric signing. Required
 	Algorithm             string //Algorithm to allow for JWT signature. Required
 	HeaderName            string //The header to extract the JWT from. If this is "Authorization" it removes the "Bearer " from the start. Defaults to "Authorization"
 	MaxExpirationDuration uint32 //How many seconds from now can the expiration be. JWTs more than X seconds from now will result in a 401. Defaults to 1 day
 	ExpectedAudience      string //If specified, require the "aud" grant to be this string
 	ExpectedSubject       string //If specified, require the "sub" grant to be this string
 	ExpectedIssuer        string //If specified, require the "iss" grant to be this string
-	ExpectedScope         string //If specified, require the "scope" grant to contain this string
+	ExpectedScope         string //If specified, require the "scope" grant to contain this string. TODO: implement this check
 }
 
 type Jwt struct {
@@ -152,6 +152,10 @@ func (c Jwt) Preauth(req *http.Request) bool {
 	}
 
 	if exp.Before(time.Now()) {
+		return false
+	}
+
+	if time.Until(exp.Time) > time.Duration(c.Config.MaxExpirationDuration)*time.Second {
 		return false
 	}
 
