@@ -346,7 +346,7 @@ The following are the known incompatibilities with tilestache configurations:
 
 Please submit an [Issue](https://github.com/Michad/tilegroxy/issues/new) for any trouble you run into so we can build out this section.
 
-** I have trouble running tests due to an error referencing docker or permissions**
+**I have trouble running tests due to an error referencing docker or permissions**
 
 This is most likely an issue due to your Docker installation.  There can be a number of issues at play depending on your OS and setup.  Some suggestions:
 
