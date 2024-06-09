@@ -12,7 +12,7 @@ import (
 	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/spf13/cobra"
-	"go.uber.org/atomic"
+	"sync/atomic"
 )
 
 var testCmd = &cobra.Command{
@@ -103,7 +103,7 @@ Example:
 
 		//Start processing all the tile requests over N threads
 		var wg sync.WaitGroup
-		var errCounter = atomic.NewUint32(0)
+		errCount := uint32(0)
 
 		writer := tabwriter.NewWriter(os.Stdout, 1, 4, 4, ' ', tabwriter.StripEscape)
 		fmt.Fprintln(writer, "Thread\tLayer\tGenerated\tCached\tError\t")
@@ -122,7 +122,7 @@ Example:
 					}
 
 					if layerErr != nil || cacheError != nil {
-						errCounter.Inc()
+						atomic.AddUint32(&errCount, 1)
 					}
 
 					//Output the result into the table
@@ -150,7 +150,6 @@ Example:
 
 		writer.Flush()
 
-		errCount := errCounter.Load()
 		fmt.Printf("Completed with %v failures\n", errCount)
 
 		if errCount > 0 {
