@@ -327,7 +327,8 @@ The following are the known incompatibilities with tilestache configurations:
     * No `dirs` parameter - Files are currently stored in a flat structure rather than creating separate directories
     * No `gzip` parameter - Might be added in the future
     * The `path` parameter must be supplied as a file path, not a URI
-* Memcache cache:
+* Memcached cache:
+    * The `name` parameter should be `memcached` not `memcache` (note the "d" at the end)
     * No `revision` parameter - Put the revision inside the key prefix
     * The `key prefix` parameter is replaced with `keyprefix`
     * The `servers` array is now an array of objects containing `host` and `port` instead of an array of strings with those combined

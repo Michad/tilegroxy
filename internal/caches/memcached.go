@@ -22,7 +22,7 @@ import (
 	"github.com/bradfitz/gomemcache/memcache"
 )
 
-type MemcacheConfig struct {
+type MemcachedConfig struct {
 	HostAndPort `mapstructure:",squash"`
 	Servers     []HostAndPort //The list of servers to use.
 	KeyPrefix   string        //Prefix to keynames stored in cache
@@ -30,38 +30,38 @@ type MemcacheConfig struct {
 }
 
 const (
-	memcacheDefaultHost = "127.0.0.1"
-	memcacheDefaultPort = 11211
-	memcacheDefaultTtl  = 60 * 60 * 24
-	memcacheMaxTtl      = 30 * 60 * 60 * 24
+	memcachedDefaultHost = "127.0.0.1"
+	memcachedDefaultPort = 11211
+	memcachedDefaultTtl  = 60 * 60 * 24
+	memcachedMaxTtl      = 30 * 60 * 60 * 24
 )
 
-type Memcache struct {
-	*MemcacheConfig
+type Memcached struct {
+	*MemcachedConfig
 	client *memcache.Client
 }
 
-func ConstructMemcache(config *MemcacheConfig, errorMessages *config.ErrorMessages) (*Memcache, error) {
+func ConstructMemcached(config *MemcachedConfig, errorMessages *config.ErrorMessages) (*Memcached, error) {
 	if config.Servers == nil || len(config.Servers) == 0 {
 		if config.Host == "" {
-			config.Host = memcacheDefaultHost
+			config.Host = memcachedDefaultHost
 		}
 		if config.Port == 0 {
-			config.Port = memcacheDefaultPort
+			config.Port = memcachedDefaultPort
 		}
 
 		config.Servers = []HostAndPort{{config.Host, config.Port}}
 	} else {
 		if config.Host != "" {
-			return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "config.memcache.host", "config.memcache.servers")
+			return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "config.memcached.host", "config.memcached.servers")
 		}
 	}
 
 	if config.Ttl == 0 {
-		config.Ttl = memcacheDefaultTtl
+		config.Ttl = memcachedDefaultTtl
 	}
-	if config.Ttl > memcacheMaxTtl {
-		config.Ttl = memcacheMaxTtl
+	if config.Ttl > memcachedMaxTtl {
+		config.Ttl = memcachedMaxTtl
 	}
 
 	addrs := HostAndPortArrayToStringArray(config.Servers)
@@ -69,11 +69,11 @@ func ConstructMemcache(config *MemcacheConfig, errorMessages *config.ErrorMessag
 
 	err := mc.Ping()
 
-	return &Memcache{config, mc}, err
+	return &Memcached{config, mc}, err
 
 }
 
-func (c Memcache) Lookup(t internal.TileRequest) (*internal.Image, error) {
+func (c Memcached) Lookup(t internal.TileRequest) (*internal.Image, error) {
 	it, err := c.client.Get(c.KeyPrefix + t.String())
 
 	if err != nil {
@@ -85,6 +85,6 @@ func (c Memcache) Lookup(t internal.TileRequest) (*internal.Image, error) {
 	return &result, nil
 }
 
-func (c Memcache) Save(t internal.TileRequest, img *internal.Image) error {
+func (c Memcached) Save(t internal.TileRequest, img *internal.Image) error {
 	return c.client.Set(&memcache.Item{Key: c.KeyPrefix + t.String(), Value: *img, Expiration: int32(c.Ttl)})
 }

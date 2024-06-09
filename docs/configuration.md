@@ -114,19 +114,19 @@ Example:
 }
 ```
 
-### Memcache
+### Memcached
 
-Cache tiles using memcache.
+Cache tiles using memcached.
 
-Name should be "memcache"
+Name should be "memcached"
 
 Configuration options:
 
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| host | String | No | 127.0.0.1 | The host of the memcache server. A convenience equivalent to supplying `servers` with a single entry. Do not supply both this and `servers` |
-| port | int | No | 6379 | The port of the memcache server. A convenience equivalent to supplying `servers` with a single entry. Do not supply both this and `servers` |
-| keyprefix | string | No | None | A prefix to use for keys stored in cache. Helps avoid collisions when multiple applications use the same memcache |
+| host | String | No | 127.0.0.1 | The host of the memcached server. A convenience equivalent to supplying `servers` with a single entry. Do not supply both this and `servers` |
+| port | int | No | 6379 | The port of the memcached server. A convenience equivalent to supplying `servers` with a single entry. Do not supply both this and `servers` |
+| keyprefix | string | No | None | A prefix to use for keys stored in cache. Helps avoid collisions when multiple applications use the same memcached |
 | ttl | uint32 | No | 1 day | How long cache entries should persist for in seconds. Cannot be disabled. |
 | servers | Array of `host` and `port` | No | host and port | The list of servers to connect to supplied as an array of objects, each with a host and key parameter. This should only have a single entry when operating in standalone mode. If this is unspecified it uses the standalone `host` and `port` parameters as a default, therefore this shouldn't be specified at the same time as those |
 
@@ -134,7 +134,7 @@ Example:
 
 ```yaml
 cache:
-  name: memcache
+  name: memcached
   host: 127.0.0.1
   port: 11211
 ```
