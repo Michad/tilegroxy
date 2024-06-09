@@ -14,6 +14,7 @@ type GroupConfig group.Config
 // GroupCache is a caches.Cache to use a groupcache as a cache.
 type GroupCache struct {
 	*group.Cache
+	conf group.Config
 }
 
 // Lookup takes a TileRequest and returns an Image or an error.
@@ -29,6 +30,12 @@ func (g *GroupCache) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
 // Save takes a TileRequest and an Image, and returns an error if it cannot be set.
 func (g *GroupCache) Save(t pkg.TileRequest, img *pkg.Image) error {
 	file := fmt.Sprintf("%d/%d/%d", t.Z, t.X, t.Y) // TODO
+	if !g.Exists(t.LayerName) {
+		// Add the cache if it doesn't exist
+		conf := g.conf
+		conf.Name = t.LayerName
+		g.Add(conf, nil)
+	}
 	return g.Cache.Set(t.LayerName, file, *img)
 }
 
@@ -40,11 +47,13 @@ func ConstructGroupCache(conf GroupConfig, errorMessages *config.ErrorMessages) 
 	//
 	// This feature isn't compatible with the []Cache concept, as is, so we set the backfill to nil, and
 	// instead will manually "Save()"
-	gc, err := group.NewCache(group.Config(conf), nil)
+	gconf := group.Config(conf)
+	gc, err := group.NewCache(gconf, nil)
 	if err != nil {
 		return nil, err
 	}
 	return &GroupCache{
 		Cache: gc,
+		conf:  gconf,
 	}, nil
 }
