@@ -120,6 +120,17 @@ func (gc *Cache) Names() []string {
 	return list
 }
 
+// Exists returns true if the named cache exists.
+func (gc *Cache) Exists(name string) bool {
+	gc.regLock.Lock()
+	defer gc.regLock.Unlock()
+
+	if _, ok := gc.caches[name]; ok {
+		return true
+	}
+	return false
+}
+
 // Close calls the listener close function
 func (gc *Cache) Close() error {
 	return gc.close()

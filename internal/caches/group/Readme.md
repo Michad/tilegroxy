@@ -17,6 +17,7 @@
   * [func NewCache(config Config, fillfunc BackFillFunc) (*Cache, error)](#NewCache)
   * [func (gc *Cache) Add(config Config, fillfunc BackFillFunc) error](#Cache.Add)
   * [func (gc *Cache) Close() error](#Cache.Close)
+  * [func (gc *Cache) Exists(name string) bool](#Cache.Exists)
   * [func (gc *Cache) Get(cacheName, key string) (value interface{}, ok bool)](#Cache.Get)
   * [func (gc *Cache) GetContext(ctx context.Context, cacheName, key string) (value interface{}, ok bool)](#Cache.GetContext)
   * [func (gc *Cache) Names() []string](#Cache.Names)
@@ -106,7 +107,7 @@ Add creates new caches in the cluster. Config.ListenAddress and Config.PeerList 
 
 
 
-### <a name="Cache.Close">func</a> (\*Cache) [Close](https://github.com/Michad/tilegroxy/tree/master/internal/caches/group/group.go?s=3240:3270#L124)
+### <a name="Cache.Close">func</a> (\*Cache) [Close](https://github.com/Michad/tilegroxy/tree/master/internal/caches/group/group.go?s=3450:3480#L135)
 ``` go
 func (gc *Cache) Close() error
 ```
@@ -115,7 +116,16 @@ Close calls the listener close function
 
 
 
-### <a name="Cache.Get">func</a> (\*Cache) [Get](https://github.com/Michad/tilegroxy/tree/master/internal/caches/group/group.go?s=3407:3479#L130)
+### <a name="Cache.Exists">func</a> (\*Cache) [Exists](https://github.com/Michad/tilegroxy/tree/master/internal/caches/group/group.go?s=3247:3288#L124)
+``` go
+func (gc *Cache) Exists(name string) bool
+```
+Exists returns true if the named cache exists.
+
+
+
+
+### <a name="Cache.Get">func</a> (\*Cache) [Get](https://github.com/Michad/tilegroxy/tree/master/internal/caches/group/group.go?s=3617:3689#L141)
 ``` go
 func (gc *Cache) Get(cacheName, key string) (value interface{}, ok bool)
 ```
@@ -125,7 +135,7 @@ backfilling as necessary.
 
 
 
-### <a name="Cache.GetContext">func</a> (\*Cache) [GetContext](https://github.com/Michad/tilegroxy/tree/master/internal/caches/group/group.go?s=3695:3795#L136)
+### <a name="Cache.GetContext">func</a> (\*Cache) [GetContext](https://github.com/Michad/tilegroxy/tree/master/internal/caches/group/group.go?s=3905:4005#L147)
 ``` go
 func (gc *Cache) GetContext(ctx context.Context, cacheName, key string) (value interface{}, ok bool)
 ```
@@ -144,7 +154,7 @@ Names returns the names of the current caches
 
 
 
-### <a name="Cache.Remove">func</a> (\*Cache) [Remove](https://github.com/Michad/tilegroxy/tree/master/internal/caches/group/group.go?s=6079:6131#L187)
+### <a name="Cache.Remove">func</a> (\*Cache) [Remove](https://github.com/Michad/tilegroxy/tree/master/internal/caches/group/group.go?s=6289:6341#L198)
 ``` go
 func (gc *Cache) Remove(cacheName, key string) error
 ```
@@ -153,7 +163,7 @@ Remove makes a best effort to remove an item from the cache
 
 
 
-### <a name="Cache.RemoveContext">func</a> (\*Cache) [RemoveContext](https://github.com/Michad/tilegroxy/tree/master/internal/caches/group/group.go?s=6302:6382#L192)
+### <a name="Cache.RemoveContext">func</a> (\*Cache) [RemoveContext](https://github.com/Michad/tilegroxy/tree/master/internal/caches/group/group.go?s=6512:6592#L203)
 ``` go
 func (gc *Cache) RemoveContext(ctx context.Context, cacheName, key string) error
 ```
@@ -162,7 +172,7 @@ RemoveContext makes a best effort to remove an item from the cache, honoring the
 
 
 
-### <a name="Cache.Set">func</a> (\*Cache) [Set](https://github.com/Michad/tilegroxy/tree/master/internal/caches/group/group.go?s=4308:4371#L155)
+### <a name="Cache.Set">func</a> (\*Cache) [Set](https://github.com/Michad/tilegroxy/tree/master/internal/caches/group/group.go?s=4518:4581#L166)
 ``` go
 func (gc *Cache) Set(cacheName, key string, value []byte) error
 ```
@@ -171,7 +181,7 @@ Set forces an item into the cache, following the configured expiration policy
 
 
 
-### <a name="Cache.SetContext">func</a> (\*Cache) [SetContext](https://github.com/Michad/tilegroxy/tree/master/internal/caches/group/group.go?s=4658:4771#L161)
+### <a name="Cache.SetContext">func</a> (\*Cache) [SetContext](https://github.com/Michad/tilegroxy/tree/master/internal/caches/group/group.go?s=4868:4981#L172)
 ``` go
 func (gc *Cache) SetContext(ctx context.Context, cacheName, key string, value []byte, expiration time.Time) error
 ```
@@ -181,7 +191,7 @@ then falling back to the configured expiration policy) honoring the provided con
 
 
 
-### <a name="Cache.SetDebugOut">func</a> (\*Cache) [SetDebugOut](https://github.com/Michad/tilegroxy/tree/master/internal/caches/group/group.go?s=6616:6664#L201)
+### <a name="Cache.SetDebugOut">func</a> (\*Cache) [SetDebugOut](https://github.com/Michad/tilegroxy/tree/master/internal/caches/group/group.go?s=6826:6874#L212)
 ``` go
 func (gc *Cache) SetDebugOut(logger *log.Logger)
 ```
@@ -190,7 +200,7 @@ SetDebugOut wires in the debug logger to the specified logger
 
 
 
-### <a name="Cache.SetPeers">func</a> (\*Cache) [SetPeers](https://github.com/Michad/tilegroxy/tree/master/internal/caches/group/group.go?s=6751:6793#L206)
+### <a name="Cache.SetPeers">func</a> (\*Cache) [SetPeers](https://github.com/Michad/tilegroxy/tree/master/internal/caches/group/group.go?s=6961:7003#L217)
 ``` go
 func (gc *Cache) SetPeers(peers ...string)
 ```
@@ -199,7 +209,7 @@ SetPeers allows the dynamic [re]setting of the peerlist
 
 
 
-### <a name="Cache.SetToExpireAt">func</a> (\*Cache) [SetToExpireAt](https://github.com/Michad/tilegroxy/tree/master/internal/caches/group/group.go?s=5768:5861#L181)
+### <a name="Cache.SetToExpireAt">func</a> (\*Cache) [SetToExpireAt](https://github.com/Michad/tilegroxy/tree/master/internal/caches/group/group.go?s=5978:6071#L192)
 ``` go
 func (gc *Cache) SetToExpireAt(cacheName, key string, expireAt time.Time, value []byte) error
 ```
@@ -209,7 +219,7 @@ SetContext if you need to set the expiration and a context.
 
 
 
-### <a name="Cache.Stats">func</a> (\*Cache) [Stats](https://github.com/Michad/tilegroxy/tree/master/internal/caches/group/group.go?s=6890:6954#L211)
+### <a name="Cache.Stats">func</a> (\*Cache) [Stats](https://github.com/Michad/tilegroxy/tree/master/internal/caches/group/group.go?s=7100:7164#L222)
 ``` go
 func (gc *Cache) Stats(w http.ResponseWriter, req *http.Request)
 ```

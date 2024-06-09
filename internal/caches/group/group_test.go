@@ -79,6 +79,9 @@ func Test_GroupCache(t *testing.T) {
 		names := c.Names()
 		So(names, ShouldContain, "passwd")
 		So(names, ShouldContain, "group")
+		So(c.Exists("passwd"), ShouldBeTrue)
+		So(c.Exists("group"), ShouldBeTrue)
+		So(c.Exists("nope"), ShouldBeFalse)
 
 		Convey("... Asking for existing and non-existing items works as expected.", func() {
 
