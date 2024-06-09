@@ -25,11 +25,17 @@ logging:
 #     -
 #       name: disk
 #       path: "./disK_tile_cache2"
+# cache:
+#   name: s3
+#   bucket: tilegroxy-directory-cache--use1-az6--x-s3
+#   endpoint: "https://s3express-use1-az6.us-east-1.amazonaws.com"
+#   storageclass: EXPRESS_ONEZONE
+#   # bucket: tilegroxy-demo-cache
+#   region: us-east-1
+#   profile: tilegroxy
 cache:
-  name: s3
-  bucket: tilegroxy-demo-cache
-  region: us-east-1
-  profile: tilegroxy
+  name: redis
+  mode: standalone
 layers:
   -
     id: test
@@ -40,7 +46,7 @@ layers:
     id: test2
     provider:
       name: url template
-      template: http://safasfasfasf.com/?bbox=$xmin,$ymin,$xmax,$ymax
+      template: http://example.com/?bbox=$xmin,$ymin,$xmax,$ymax
   -
     id: osm
     provider:
