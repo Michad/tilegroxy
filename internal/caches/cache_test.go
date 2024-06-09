@@ -11,6 +11,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestHostAndPortToString(t *testing.T) {
+	hp := HostAndPort{"127.0.0.1", uint16(1234)}
+	assert.Equal(t, "127.0.0.1:1234", hp.String())
+}
+
+func TestHostAndPortToStringArr(t *testing.T) {
+	hp := HostAndPort{"127.0.0.1", uint16(1234)}
+	hp2 := HostAndPort{"10.0.0.1", uint16(5678)}
+
+	assert.Equal(t, []string{"127.0.0.1:1234", "10.0.0.1:5678"}, HostAndPortArrayToStringArray([]HostAndPort{hp, hp2}))
+}
+
+/*** Utility methods used in most other cache tests ***/
+
 func extractHostAndPort(t *testing.T, endpoint string) HostAndPort {
 	split := strings.Split(endpoint, ":")
 	port, err := strconv.Atoi(split[1])

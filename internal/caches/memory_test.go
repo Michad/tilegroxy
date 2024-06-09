@@ -25,7 +25,7 @@ func TestTtl(t *testing.T) {
 	tile := makeReq(53)
 	img := makeImg(53)
 
-	// r.Save(tile, &img)
+	r.Save(tile, &img)
 
 	if !validateLookup(t, r, tile, &img) {
 		return
