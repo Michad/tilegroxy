@@ -1,7 +1,6 @@
 package caches
 
 import (
-	"math"
 	"math/rand"
 	"slices"
 	"strconv"
@@ -20,22 +19,38 @@ func extractHostAndPort(t *testing.T, endpoint string) HostAndPort {
 	return HostAndPort{Host: split[0], Port: uint16(port)}
 }
 
-func validateSaveAndLookup(t *testing.T, r Cache) {
+func makeReq(seed int) internal.TileRequest {
+	z := 20
+	x := seed
+	y := seed
+	return internal.TileRequest{LayerName: "test", Z: int(z), X: x, Y: y}
+}
+
+func makeImg(seed int) internal.Image {
+	return make([]byte, seed)
+}
+
+func validateSaveAndLookup(t *testing.T, c Cache) {
 	//TODO: reconsider use of rand
-	z := rand.Float64()*10 + 5
-	x := int(rand.Float64() * math.Exp2(z))
-	y := int(rand.Float64() * math.Exp2(z))
-	tile := internal.TileRequest{LayerName: "test", Z: int(z), X: x, Y: y}
+	tile := makeReq(rand.Intn(10000))
+	img := makeImg(rand.Intn(100))
 
-	imgLen := rand.Int31n(100)
-	img := make([]byte, imgLen)
+	err := c.Save(tile, &img)
+	assert.Nil(t, err, "Cache save returned an error")
 
-	err := r.Save(tile, &img)
-	assert.Nil(t, err)
+	validateLookup(t, c, tile, &img)
+}
 
-	img2, err := r.Lookup(tile)
-	assert.Nil(t, err)
-	assert.NotNil(t, img2)
+func validateLookup(t *testing.T, c Cache, tile internal.TileRequest, expected *internal.Image) {
+	img2, err := c.Lookup(tile)
+	assert.Nil(t, err, "Cache lookup returned an error")
+	assert.NotNil(t, img2, "Cache lookup didn't return an image")
 
-	assert.True(t, slices.Equal(img, *img2), "Result before and after cache don't match")
+	assert.True(t, slices.Equal(*expected, *img2), "Result before and after cache don't match")
+}
+
+func validateNoLookup(t *testing.T, c Cache, tile internal.TileRequest) {
+	img2, err := c.Lookup(tile)
+	assert.Nil(t, err, "Cache lookup returned an error")
+	assert.Nil(t, img2, "Cache lookup returned a result when it shouldn't")
 }
