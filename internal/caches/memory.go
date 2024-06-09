@@ -29,8 +29,8 @@ type MemoryConfig struct {
 }
 
 type Memory struct {
-	Config MemoryConfig
-	Cache  otter.Cache[string, []byte]
+	MemoryConfig
+	Cache otter.Cache[string, []byte]
 }
 
 func ConstructMemory(config MemoryConfig, ErrorMessages *config.ErrorMessages) (*Memory, error) {
@@ -43,9 +43,6 @@ func ConstructMemory(config MemoryConfig, ErrorMessages *config.ErrorMessages) (
 	}
 
 	cache, err := otter.MustBuilder[string, internal.Image](int(config.MaxSize)).
-		Cost(func(key string, value internal.Image) uint32 {
-			return uint32(len(value))
-		}).
 		WithTTL(time.Duration(config.Ttl * uint32(time.Second))).
 		Build()
 	if err != nil {
@@ -56,9 +53,16 @@ func ConstructMemory(config MemoryConfig, ErrorMessages *config.ErrorMessages) (
 }
 
 func (c Memory) Lookup(t internal.TileRequest) (*internal.Image, error) {
+	img, ok := c.Cache.Get(t.String())
+
+	if ok {
+		return &img, nil
+	}
+
 	return nil, nil
 }
 
 func (c Memory) Save(t internal.TileRequest, img *internal.Image) error {
+	c.Cache.Set(t.String(), *img)
 	return nil
 }
