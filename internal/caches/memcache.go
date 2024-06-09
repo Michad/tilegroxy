@@ -15,7 +15,11 @@
 package caches
 
 import (
+	"errors"
 	"fmt"
+	"log"
+	"net"
+	"os"
 
 	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/config"
@@ -68,6 +72,19 @@ func ConstructMemcache(config *MemcacheConfig, errorMessages *config.ErrorMessag
 	mc := memcache.New(addrs...)
 
 	err := mc.Ping()
+	if err != nil {
+		log.Println("Error pinging memcache!")
+		log.Printf("Hosts: %v\n", addrs)
+		log.Printf("Error: %v\n", err)
+		var ne *net.OpError
+		if errors.As(err, &ne) {
+			log.Printf("addr %v net %v op %v source %v\n", ne.Addr.String(), ne.Net, ne.Op, ne.Source)
+			var se *os.SyscallError
+			if errors.As(ne.Err, &se) {
+				log.Printf("nested error: %v in call %v\n", se.Syscall, se.Err)
+			}
+		}
+	}
 
 	return &Memcache{config, mc}, err
 
