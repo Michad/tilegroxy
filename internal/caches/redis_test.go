@@ -21,7 +21,9 @@ func setupRedisContainer(ctx context.Context, t *testing.T) (testcontainers.Cont
 		ContainerRequest: req,
 		Started:          true,
 	})
-	assert.Nil(t, err)
+	if !assert.Nil(t, err) {
+		return nil, nil
+	}
 
 	return redisC, func(t *testing.T) {
 		t.Log("teardown container")
@@ -31,22 +33,28 @@ func setupRedisContainer(ctx context.Context, t *testing.T) (testcontainers.Cont
 	}
 }
 
-
 func TestRedisWithContainerHostAndPort(t *testing.T) {
 	ctx := context.Background()
 	redisC, cleanupF := setupRedisContainer(ctx, t)
+	if !assert.NotNil(t, redisC) {
+		return
+	}
 
 	defer cleanupF(t)
 
 	endpoint, err := redisC.Endpoint(ctx, "")
-	assert.Nil(t, err)
+	if !assert.Nil(t, err) {
+		return
+	}
 
 	config := RedisConfig{
 		HostAndPort: extractHostAndPort(t, endpoint),
 	}
 
 	r, err := ConstructRedis(&config, nil)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err) {
+		return
+	}
 
 	validateSaveAndLookup(t, r)
 }
@@ -54,18 +62,25 @@ func TestRedisWithContainerHostAndPort(t *testing.T) {
 func TestRedisWithContainerSingleServersArr(t *testing.T) {
 	ctx := context.Background()
 	redisC, cleanupF := setupRedisContainer(ctx, t)
+	if !assert.NotNil(t, redisC) {
+		return
+	}
 
 	defer cleanupF(t)
 
 	endpoint, err := redisC.Endpoint(ctx, "")
-	assert.Nil(t, err)
+	if !assert.Nil(t, err) {
+		return
+	}
 
 	config := RedisConfig{
 		Servers: []HostAndPort{extractHostAndPort(t, endpoint)},
 	}
 
 	r, err := ConstructRedis(&config, nil)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err) {
+		return
+	}
 
 	validateSaveAndLookup(t, r)
 }
@@ -74,14 +89,21 @@ func TestRedisWithContainerRing(t *testing.T) {
 	ctx := context.Background()
 	redisC, cleanupF := setupRedisContainer(ctx, t)
 	redisC2, cleanupF2 := setupRedisContainer(ctx, t)
+	if !assert.NotNil(t, redisC) || !assert.NotNil(t, redisC2) {
+		return
+	}
 
 	defer cleanupF(t)
 	defer cleanupF2(t)
 
 	endpoint, err := redisC.Endpoint(ctx, "")
-	assert.Nil(t, err)
+	if !assert.Nil(t, err) {
+		return
+	}
 	endpoint2, err := redisC2.Endpoint(ctx, "")
-	assert.Nil(t, err)
+	if !assert.Nil(t, err) {
+		return
+	}
 
 	config := RedisConfig{
 		Mode:    ModeRing,
@@ -89,7 +111,9 @@ func TestRedisWithContainerRing(t *testing.T) {
 	}
 
 	r, err := ConstructRedis(&config, nil)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err) {
+		return
+	}
 
 	validateSaveAndLookup(t, r)
 }
@@ -97,11 +121,16 @@ func TestRedisWithContainerRing(t *testing.T) {
 func TestRedisWithContainerDiffPrefix(t *testing.T) {
 	ctx := context.Background()
 	redisC, cleanupF := setupRedisContainer(ctx, t)
+	if !assert.NotNil(t, redisC) {
+		return
+	}
 
 	defer cleanupF(t)
 
 	endpoint, err := redisC.Endpoint(ctx, "")
-	assert.Nil(t, err)
+	if !assert.Nil(t, err) {
+		return
+	}
 
 	config := RedisConfig{
 		HostAndPort: extractHostAndPort(t, endpoint),
@@ -109,7 +138,9 @@ func TestRedisWithContainerDiffPrefix(t *testing.T) {
 	}
 
 	r, err := ConstructRedis(&config, nil)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err) {
+		return
+	}
 
 	config2 := RedisConfig{
 		HostAndPort: extractHostAndPort(t, endpoint),
@@ -117,19 +148,26 @@ func TestRedisWithContainerDiffPrefix(t *testing.T) {
 	}
 
 	r2, err := ConstructRedis(&config2, nil)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err) {
+		return
+	}
 
-	validateSaveAndLookup(t, r)
-	validateSaveAndLookup(t, r2)
+	_ = validateSaveAndLookup(t, r) &&
+		validateSaveAndLookup(t, r2)
 }
 func TestRedisWithContainerDiffDb(t *testing.T) {
 	ctx := context.Background()
 	redisC, cleanupF := setupRedisContainer(ctx, t)
+	if !assert.NotNil(t, redisC) {
+		return
+	}
 
 	defer cleanupF(t)
 
 	endpoint, err := redisC.Endpoint(ctx, "")
-	assert.Nil(t, err)
+	if !assert.Nil(t, err) {
+		return
+	}
 
 	config := RedisConfig{
 		HostAndPort: extractHostAndPort(t, endpoint),
@@ -137,7 +175,9 @@ func TestRedisWithContainerDiffDb(t *testing.T) {
 	}
 
 	r, err := ConstructRedis(&config, nil)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err) {
+		return
+	}
 
 	config2 := RedisConfig{
 		HostAndPort: extractHostAndPort(t, endpoint),
@@ -145,8 +185,7 @@ func TestRedisWithContainerDiffDb(t *testing.T) {
 	}
 
 	r2, err := ConstructRedis(&config2, nil)
-	assert.Nil(t, err)
-
-	validateSaveAndLookup(t, r)
-	validateSaveAndLookup(t, r2)
+	_ = assert.Nil(t, err) &&
+		validateSaveAndLookup(t, r) &&
+		validateSaveAndLookup(t, r2)
 }

@@ -15,7 +15,9 @@ func TestMultiSaveAndLookup(t *testing.T) {
 	memConfig2 := MemoryConfig{}
 
 	mem2, err := ConstructMemory(memConfig2, nil)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err) {
+		return
+	}
 
 	multi := Multi{Tiers: []Cache{mem1, mem2}}
 
@@ -23,9 +25,9 @@ func TestMultiSaveAndLookup(t *testing.T) {
 	img := makeImg(24)
 	multi.Save(tile, &img)
 
-	validateLookup(t, multi, tile, &img)
-	validateLookup(t, mem1, tile, &img)
-	validateLookup(t, mem2, tile, &img)
+	_ = validateLookup(t, multi, tile, &img) &&
+		validateLookup(t, mem1, tile, &img) &&
+		validateLookup(t, mem2, tile, &img)
 }
 
 func TestMultiIn1(t *testing.T) {
@@ -37,7 +39,9 @@ func TestMultiIn1(t *testing.T) {
 	memConfig2 := MemoryConfig{}
 
 	mem2, err := ConstructMemory(memConfig2, nil)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err) {
+		return
+	}
 
 	multi := Multi{Tiers: []Cache{mem1, mem2}}
 
@@ -57,7 +61,9 @@ func TestMultiIn2(t *testing.T) {
 	memConfig2 := MemoryConfig{}
 
 	mem2, err := ConstructMemory(memConfig2, nil)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err) {
+		return
+	}
 
 	multi := Multi{Tiers: []Cache{mem1, mem2}}
 

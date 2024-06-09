@@ -20,7 +20,9 @@ func setupMemcacheContainer(ctx context.Context, t *testing.T) (testcontainers.C
 		ContainerRequest: req,
 		Started:          true,
 	})
-	assert.Nil(t, err)
+	if !assert.Nil(t, err) {
+		return nil, nil
+	}
 
 	return memcacheC, func(t *testing.T) {
 		t.Log("teardown container")
@@ -33,49 +35,62 @@ func setupMemcacheContainer(ctx context.Context, t *testing.T) (testcontainers.C
 func TestMemcacheWithContainerHostAndPort(t *testing.T) {
 	ctx := context.Background()
 	memcacheC, cleanupF := setupMemcacheContainer(ctx, t)
+	if !assert.NotNil(t, memcacheC) {
+		return
+	}
 
 	defer cleanupF(t)
 
 	endpoint, err := memcacheC.Endpoint(ctx, "")
-	assert.Nil(t, err)
+	if !assert.Nil(t, err) {
+		return
+	}
 
 	config := MemcacheConfig{
 		HostAndPort: extractHostAndPort(t, endpoint),
 	}
 
 	r, err := ConstructMemcache(&config, nil)
-	assert.Nil(t, err)
-
-	validateSaveAndLookup(t, r)
+	_ = assert.Nil(t, err) &&
+		validateSaveAndLookup(t, r)
 }
 
 func TestMemcacheWithContainerSingleServersArr(t *testing.T) {
 	ctx := context.Background()
 	memcacheC, cleanupF := setupMemcacheContainer(ctx, t)
+	if !assert.NotNil(t, memcacheC) {
+		return
+	}
 
 	defer cleanupF(t)
 
 	endpoint, err := memcacheC.Endpoint(ctx, "")
-	assert.Nil(t, err)
+	if !assert.Nil(t, err) {
+		return
+	}
 
 	config := MemcacheConfig{
 		Servers: []HostAndPort{extractHostAndPort(t, endpoint)},
 	}
 
 	r, err := ConstructMemcache(&config, nil)
-	assert.Nil(t, err)
-
-	validateSaveAndLookup(t, r)
+	_ = assert.Nil(t, err) &&
+		validateSaveAndLookup(t, r)
 }
 
 func TestMemcacheWithContainerDiffPrefix(t *testing.T) {
 	ctx := context.Background()
 	memcacheC, cleanupF := setupMemcacheContainer(ctx, t)
+	if !assert.NotNil(t, memcacheC) {
+		return
+	}
 
 	defer cleanupF(t)
 
 	endpoint, err := memcacheC.Endpoint(ctx, "")
-	assert.Nil(t, err)
+	if !assert.Nil(t, err) {
+		return
+	}
 
 	config := MemcacheConfig{
 		HostAndPort: extractHostAndPort(t, endpoint),
@@ -83,7 +98,9 @@ func TestMemcacheWithContainerDiffPrefix(t *testing.T) {
 	}
 
 	r, err := ConstructMemcache(&config, nil)
-	assert.Nil(t, err)
+	if !assert.Nil(t, err) {
+		return
+	}
 
 	config2 := MemcacheConfig{
 		HostAndPort: extractHostAndPort(t, endpoint),
@@ -91,8 +108,7 @@ func TestMemcacheWithContainerDiffPrefix(t *testing.T) {
 	}
 
 	r2, err := ConstructMemcache(&config2, nil)
-	assert.Nil(t, err)
-
-	validateSaveAndLookup(t, r)
-	validateSaveAndLookup(t, r2)
+	_ = assert.Nil(t, err) &&
+		validateSaveAndLookup(t, r) &&
+		validateSaveAndLookup(t, r2)
 }
