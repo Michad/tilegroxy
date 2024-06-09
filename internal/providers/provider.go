@@ -14,7 +14,7 @@ import (
 )
 
 type Provider interface {
-	Preauth(authContext *AuthContext) error
+	PreAuth(authContext *AuthContext) error
 	GenerateTile(authContext *AuthContext, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, tileRequest pkg.TileRequest) (*pkg.Image, error)
 }
 
