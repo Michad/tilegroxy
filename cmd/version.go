@@ -14,7 +14,7 @@ var versionCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		short, _ := cmd.Flags().GetBool("short")
 
-		version := "0.0.1" //TODO: Make tilegroxy version dynamic
+		version := "0.0.2" //TODO: Make tilegroxy version dynamic
 
 		if short {
 			fmt.Println(version)

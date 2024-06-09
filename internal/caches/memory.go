@@ -25,17 +25,20 @@ import (
 
 type MemoryConfig struct {
 	MaxSize uint16 //Maximum number of tiles to hold in the cache. Defaults to 100
-	Ttl     uint32 //Maximum time to live of a tile in seconds. Defaultss to 3600 (1 hour)
+	Ttl     uint32 //Maximum time to live of a tile in seconds. Defaults to 3600 (1 hour)
 }
 
 type Memory struct {
-	Config MemoryConfig
-	Cache  otter.Cache[string, []byte]
+	MemoryConfig
+	Cache otter.Cache[string, []byte]
 }
 
 func ConstructMemory(config MemoryConfig, ErrorMessages *config.ErrorMessages) (*Memory, error) {
 	if config.MaxSize < 1 {
 		config.MaxSize = 100
+	}
+	if config.MaxSize < 10 {
+		config.MaxSize = 10
 	}
 
 	if config.Ttl < 1 {
@@ -43,10 +46,7 @@ func ConstructMemory(config MemoryConfig, ErrorMessages *config.ErrorMessages) (
 	}
 
 	cache, err := otter.MustBuilder[string, internal.Image](int(config.MaxSize)).
-		Cost(func(key string, value internal.Image) uint32 {
-			return uint32(len(value))
-		}).
-		WithTTL(time.Duration(config.Ttl * uint32(time.Second))).
+		WithTTL(time.Duration(config.Ttl) * time.Second).
 		Build()
 	if err != nil {
 		return nil, err
@@ -56,9 +56,16 @@ func ConstructMemory(config MemoryConfig, ErrorMessages *config.ErrorMessages) (
 }
 
 func (c Memory) Lookup(t internal.TileRequest) (*internal.Image, error) {
+	img, ok := c.Cache.Get(t.String())
+
+	if ok {
+		return &img, nil
+	}
+
 	return nil, nil
 }
 
 func (c Memory) Save(t internal.TileRequest, img *internal.Image) error {
+	c.Cache.Set(t.String(), *img)
 	return nil
 }

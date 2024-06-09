@@ -66,6 +66,8 @@ go build
 ./tilegroxy version
 ```
 
+The tests make use of [testcontainers](https://golang.testcontainers.org/) which requires you have either docker or podman installed.
+
 Once built, tilegroxy can be run directly as an HTTP server via the `tilegroxy serve` command documented below. It's recommended to create a systemd unit file to allow it to run as a daemon as an appropriate user.
 
 ### Docker
@@ -343,6 +345,15 @@ The following are the known incompatibilities with tilestache configurations:
 ## Troubleshooting
 
 Please submit an [Issue](https://github.com/Michad/tilegroxy/issues/new) for any trouble you run into so we can build out this section.
+
+**I have trouble running tests due to an error referencing docker or permissions**
+
+This is most likely an issue due to your Docker installation.  There can be a number of issues at play depending on your OS and setup.  Some suggestions:
+
+Make sure you have docker installed, the daemon is running, and your user has permission to use docker (is in the docker group).  If using Podman, ensure `podman.socket` is enabled both globally and for your `--user`.  If using Docker on Linux try temporarily setting `/var/run/docker.sock` world-writeable. If using Docker on a Mac, make sure colima is running. On Windows, ensure Docker Desktop is running.
+
+If using a system with SELinux try temporarily disabling SELinux with `sudo setenforce 0` or running with "Ryuk" disabled by setting the env var `TESTCONTAINERS_RYUK_DISABLED=true`.
+
 
 ## Contributing
 

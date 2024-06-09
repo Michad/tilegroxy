@@ -1,23 +1,22 @@
 ---
-# These are optional elements. Feel free to remove any of them.
-status: "{proposed | rejected | accepted | deprecated | … | superseded by [ADR-0005](0005-example.md)}"
-date: {YYYY-MM-DD when the decision was last updated}
-deciders: {list everyone involved in the decision}
-consulted: {list everyone whose opinions are sought (typically subject-matter experts); and with whom there is a two-way communication}
-informed: {list everyone who is kept up-to-date on progress; and with whom there is a one-way communication}
+status: "proposed"
+date: 2024-06-XX
 ---
-# {short title of solved problem and solution}
+# Scripting Engine for Custom Providers and Auth
 
 ## Context and Problem Statement
 
-We want the ability to provide custom providers that don't live inside this main repository. This allows groups that utilize this project to implement tile layers that involve very domain specific logic. For example, many companies provide map layers as part of their product offering that is integrated behind their own authentication methodology, often this doesn't follow any standard scheme. Another use case is integrating with inhouse software systems that don't provide an HTTP API.
+We want the ability to provide custom providers that don't live inside this main repository. This allows groups that utilize this project to implement tile layers that involve very domain specific logic. For example, many companies provide map layers as part of their product offering that is integrated behind their own authentication methodology, often this doesn't follow any standard scheme. 
 
-<!-- This is an optional element. Feel free to remove. -->
+Additionally, we'd like to be able to allow the same system for custom authentication solutions and maybe caches down the road.
+
 ## Decision Drivers
 
-* {decision driver 1, e.g., a force, facing concern, …}
-* {decision driver 2, e.g., a force, facing concern, …}
-* … <!-- numbers of drivers can vary -->
+* Developer experience
+* Ease to invoke from the main application
+* Maturity and stability of the engine
+* Reasonably low additional latency for a typical invocation
+* Safety to call in parallel from multiple threads
 
 ## Considered Options
 
@@ -32,35 +31,20 @@ We want the ability to provide custom providers that don't live inside this main
 Chosen option: "{title of option 1}", because
 {justification. e.g., only option, which meets k.o. criterion decision driver | which resolves force {force} | … | comes out best (see below)}.
 
-<!-- This is an optional element. Feel free to remove. -->
-### Consequences
-
-* Good, because {positive consequence, e.g., improvement of one or more desired qualities, …}
-* Bad, because {negative consequence, e.g., compromising one or more desired qualities, …}
-* … <!-- numbers of consequences can vary -->
-
-<!-- This is an optional element. Feel free to remove. -->
-### Confirmation
-
-{Describe how the implementation of/compliance with the ADR is confirmed. E.g., by a review or an ArchUnit test.
- Although we classify this element as optional, it is included in most ADRs.}
-
-<!-- This is an optional element. Feel free to remove. -->
 ## Pros and Cons of the Options
 
 ### Go - precompilation only 
 
-The null option, don't support anything beyond the core interface used for built-in providers.  Instead focus on making it as easy
-as possible to compile this software so if a group needs to add a custom provider, they write it as a native provider in their own
-fork of this repo.
+The null option, don't support anything beyond the core interface used for built-in providers.  Instead focus on making it as easy as possible to build on this software so if a group needs to add a custom provider, they write it as a native provider either in their own fork of this repo or in their own project that pulls this in as a dependency.
 
 * Pro: Easiest option, no extra coding required
 * Con: Users of this software need to maintain their own forks and build processes
 * Con: Changes to the core provider interface will break things for users
+* Con: Go is less accessible than other options
 
 ### Go - scripting solution
 
-{example | description | pointer to more information | …}
+Utilize [Yaegi](https://github.com/traefik/yaegi) to allow custom providers to be written in Go but interpreted at runtime.
 
 * Pro: follows the pattern of traefik, which is a well known and similar tool
 * Con: Go is less accessible than other options
@@ -68,36 +52,31 @@ fork of this repo.
 
 ### Lua - scripting solution
 
-{example | description | pointer to more information | …}
+Utilize either [go-lua](https://github.com/Shopify/go-lua) or [gopher-lua](https://github.com/yuin/gopher-lua) to provide Lua scripting.
 
 * Pro: Lua is very popular for providing scripting/plugin functionality
-* Con: 
+* Con: Specific to gopher-lua: it's mature but not very well maintained
 
 ### Python - scripting solution
 
-
+Utilize a library that helps Go be able to call Python. This would require separate executables.
 
 * Pro: Very well-known language
 * Pro: Can provide easiest transition path for custom providers written for tilestache
-* Neutral, because {argument c}
+* Neutral: That easy transition path makes it more difficult to change the interface since tilegroxy isn't a tilestache port
 * Bad: Python can be environmentally temperamental. Requiring cpython complicates installation/container maintenance
 * Bad: Tools to support go/python interop mostly either aren't mature or aren't well maintained
 
 
 ### Javascript - scripting solution
 
-{example | description | pointer to more information | …}
+Allow custom providers to be written in javascript. This can either be via an interpreter written in Go such as [otto](https://github.com/robertkrimen/otto) or a v8 binding such as [v8go](https://github.com/rogchap/v8go).
 
-* Good, because {argument a}
-* Good, because {argument b}
-* Neutral, because {argument c}
-* Bad, because {argument d}
-* …
+* Pro: Javascript is currently probably the most universal language 
+* 
 
-<!-- This is an optional element. Feel free to remove. -->
 ## More Information
 
-{You might want to provide additional evidence/confidence for the decision outcome here and/or
- document the team agreement on the decision and/or
- define when/how this decision the decision should be realized and if/when it should be re-visited.
-Links to other decisions and resources might appear here as well.}
+It's possible multiple options could be offered. However the maintenance cost of that makes it particularly unappealing.  
+
+The main driver of this decision is from proving out a sample implementation for each option that simply reads a static file from the file system and returns that as the tile.
