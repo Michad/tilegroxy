@@ -21,6 +21,7 @@ func extractHostAndPort(t *testing.T, endpoint string) HostAndPort {
 }
 
 func validateSaveAndLookup(t *testing.T, r Cache) {
+	//TODO: reconsider use of rand
 	z := rand.Float64()*10 + 5
 	x := int(rand.Float64() * math.Exp2(z))
 	y := int(rand.Float64() * math.Exp2(z))
@@ -34,6 +35,7 @@ func validateSaveAndLookup(t *testing.T, r Cache) {
 
 	img2, err := r.Lookup(tile)
 	assert.Nil(t, err)
+	assert.NotNil(t, img2)
 
 	assert.True(t, slices.Equal(img, *img2), "Result before and after cache don't match")
 }
