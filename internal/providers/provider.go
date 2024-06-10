@@ -38,15 +38,21 @@ func ConstructProvider(rawConfig map[string]interface{}, errorMessages *config.E
 		var result UrlTemplate
 		err := mapstructure.Decode(rawConfig, &result)
 		return result, err
-	}
-	if rawConfig["name"] == "proxy" {
+	} else if rawConfig["name"] == "proxy" {
 		var result Proxy
 		err := mapstructure.Decode(rawConfig, &result)
 		return result, err
+	} else if rawConfig["name"] == "custom" {
+		var config CustomConfig
+		err := mapstructure.Decode(rawConfig, &config)
+		if err != nil {
+			return nil, err
+		}
+		return ConstructCustom(config, errorMessages)
 	}
 
 	name := fmt.Sprintf("%#v", rawConfig["name"])
-	return nil, fmt.Errorf(errorMessages.InvalidParam, "authentication.name", name)
+	return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.name", name)
 }
 
 type AuthContext struct {
