@@ -1,0 +1,16 @@
+version: '3'
+services:
+  tilegroxy:
+    container_name: tilegroxy
+    image: ghcr.io/michad/tilegroxy:latest
+    command: serve -c /tilegroxy/tilegroxy.yml
+    security_opt:
+      - label:disable
+    ports:
+      - 8080:8080
+    volumes:
+      - type: bind
+        source: ./test_config.yml
+        target: /tilegroxy/tilegroxy.yml
+        bind: 
+          selinux: Z
