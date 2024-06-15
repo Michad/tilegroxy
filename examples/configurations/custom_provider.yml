@@ -1,0 +1,8 @@
+cache:
+    name: none
+layers:
+  - id: custom
+    provider:
+        name: custom
+        file: /repos/tilegroxy/examples/providers/provider_static.js
+        url: https://tile.openstreetmap.org/{z}/{x}/{y}.png

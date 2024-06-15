@@ -18,6 +18,7 @@ import (
 	// "errors"
 	"log"
 	"os"
+
 	// "time"
 
 	"github.com/Michad/tilegroxy/internal"
@@ -27,7 +28,8 @@ import (
 )
 
 type CustomConfig struct {
-	File string
+	File   string
+	Params map[string]interface{} `mapstructure:",remain"`
 }
 
 type Custom struct {
@@ -89,7 +91,7 @@ func (t Custom) PreAuth(authContext *AuthContext) error {
 }
 
 func (t Custom) GenerateTile(authContext *AuthContext, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, tileRequest internal.TileRequest) (*internal.Image, error) {
-	val, err := t.vm.Call("GenerateTile", nil, authContext, clientConfig, errorMessages, tileRequest)
+	val, err := t.vm.Call("GenerateTile", nil, authContext, t.CustomConfig.Params, clientConfig, errorMessages, tileRequest)
 
 	if err != nil {
 		return nil, err
