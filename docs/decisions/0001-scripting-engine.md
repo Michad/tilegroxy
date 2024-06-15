@@ -73,7 +73,11 @@ Utilize a library that helps Go be able to call Python. This would require separ
 Allow custom providers to be written in javascript. This can either be via an interpreter written in Go such as [otto](https://github.com/robertkrimen/otto) or a v8 binding such as [v8go](https://github.com/rogchap/v8go).
 
 * Pro: Javascript is currently probably the most universal language 
-* 
+* Con: The options don't include any built-in HTTP client, requiring implementing a custom wrapper 
+* Con: The options aren't well maintained
+* Con: Otto has a lack of documentation
+* Con: v8go has gone a year since last release and PRs offering support for []byte have been pending for years. []byte support is mandatory for our usage
+* Con: v8go has problematic and inconsistent interfaces for interop leading to frail implementation
 
 ## More Information
 
