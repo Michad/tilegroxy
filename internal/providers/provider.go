@@ -46,7 +46,7 @@ func ConstructProvider(rawConfig map[string]interface{}, errorMessages *config.E
 	}
 
 	name := fmt.Sprintf("%#v", rawConfig["name"])
-	return nil, fmt.Errorf(errorMessages.InvalidParam, "authentication.name", name)
+	return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.name", name)
 }
 
 type AuthContext struct {

@@ -10,11 +10,8 @@
 A map tile proxy and cache service. Lives between your webmap and your mapping engines to provide a simple, consistent interface and improved performance.
 
 💡 Inspired by [tilestache](https://github.com/tilestache/tilestache) and mostly compatible with tilestache configurations.   
-🚀 Built in Go for speed.  
-<!--🔌 Features a flexible plugin system for custom providers written in TODO.  -->
-🛠️ BUT DO NOT USE YET! STILL A WORK IN PROGRESS!
-
-
+🚀 Built in Go for speed.  <!--🔌 Features a flexible plugin system for custom providers written in TODO.  -->
+🛠️ This project is still a work in progress. It's not recommended for serious production use yet. Non-backwards compatible changes will still occur prior to the 1.0 release.
 
 
 ## Features
@@ -52,29 +49,37 @@ Example configurations are located under [examples](./examples/configurations/).
 
 ## How to get
 
-Tilegroxy is recommended to be installed and run through a container with the only requirement being a mapped configuration file. It can also be run directly for the old-school approach.  It is primarily meant for use in \*nix environments. Building and running on Windows should work but is currently untested.
+Tilegroxy is recommended to be installed and run through a container with the only requirement being a mapped configuration file. It can also be run directly for the old-school approach.  It is primarily meant for use in Linux environments. Building and running on Windows should work but is currently untested, you will need a bash-compatible shell to run the Makefile.
 
 ### Standalone
 
-Tilegroxy builds as a standalone executable that can be placed inside `/usr/local/bin` to install. Prebuilt binaries are available from [Github](https://github.com/Michad/tilegroxy/releases).
+Tilegroxy builds as a statically linked executable. Prebuilt binaries are available from [Github](https://github.com/Michad/tilegroxy/releases).
 
-Building it yourself requires go 1.22+ and is quite simple:
+Building tilegroxy yourself requires `go` 1.22+, `git`, `make`, and `date`.  It uses a standard Makefile workflow:
 
 ```
-go test ./... 
-go build
-./tilegroxy version
+make
 ```
 
-The tests make use of [testcontainers](https://golang.testcontainers.org/) which requires you have either docker or podman installed.
+The tests utilize [testcontainers](https://golang.testcontainers.org/) which requires you have either docker or podman installed. If you don't have them installed it's recommended you use a prebuilt binary.  That said, you can bypass tests by running:
 
-Once built, tilegroxy can be run directly as an HTTP server via the `tilegroxy serve` command documented below. It's recommended to create a systemd unit file to allow it to run as a daemon as an appropriate user.
+```
+make clean build
+```
+
+Installing it after it's built is of course:
+
+```
+sudo make install
+```
+
+Once installed, tilegroxy can be run directly as an HTTP server via the `tilegroxy serve` command documented below. It's recommended to create a systemd unit file to allow it to run as a daemon as an appropriate user.
 
 ### Docker
 
 Tilegroxy is available as a container image on the Github container repository.  
 
-You can pull the very latest versioned release with the `latest` tag and the very latest (maybe buggy) build with the `edge` tag. Tags are also available for version numbers.  [See here for a list of tags](https://github.com/Michad/tilegroxy/pkgs/container/tilegroxy).
+You can pull the most recent versioned release with the `latest` tag and the very latest (and maybe buggy) build with the `edge` tag. Tags are also available for version numbers.  [See here for a list of tags](https://github.com/Michad/tilegroxy/pkgs/container/tilegroxy).
 
 For example: 
 
@@ -94,6 +99,7 @@ You can of course build the docker image yourself:
 docker build . -t tilegroxy
 ```
 
+An [example docker-compose.yml file](./docker-compose.yml) is included that can be used to start the tilegroxy server using a configuration file named "test_config.yml" in the current working directory.
 
 ### Kubernetes
 
