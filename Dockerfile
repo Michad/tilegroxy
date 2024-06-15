@@ -13,7 +13,7 @@ ENV GID 1000
 
 COPY --from=build_stage /go/tilegroxy /usr/local/bin/tilegroxy
 
-RUN mkdir /tilegroxy && mkdir /tilegroxy/cache && mkdir /tilegroxy/work && chown -R 1000 /tilegroxy
+RUN apk update && apk upgrade --no-cache && mkdir /tilegroxy && mkdir /tilegroxy/cache && mkdir /tilegroxy/work && chown -R 1000 /tilegroxy
 
 EXPOSE 8080
 WORKDIR /tilegroxy
