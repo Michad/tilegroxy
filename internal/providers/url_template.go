@@ -23,17 +23,27 @@ import (
 	"github.com/Michad/tilegroxy/internal/config"
 )
 
-type UrlTemplate struct {
+type UrlTemplateConfig struct {
 	Template string
+}
+
+type UrlTemplate struct {
+	UrlTemplateConfig
+	clientConfig  *config.ClientConfig
+	errorMessages *config.ErrorMessages
+}
+
+func ConstructUrlTemplate(config UrlTemplateConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages) (*UrlTemplate, error) {
+	return &UrlTemplate{config, clientConfig, errorMessages}, nil
 }
 
 func (t UrlTemplate) PreAuth(authContext *AuthContext) error {
 	return nil
 }
 
-func (t UrlTemplate) GenerateTile(authContext *AuthContext, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, tileRequest internal.TileRequest) (*internal.Image, error) {
+func (t UrlTemplate) GenerateTile(authContext *AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
 	if t.Template == "" {
-		return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.url template.url", "")
+		return nil, fmt.Errorf(t.errorMessages.InvalidParam, "provider.url template.url", "")
 	}
 
 	b, err := tileRequest.GetBounds()
@@ -52,5 +62,5 @@ func (t UrlTemplate) GenerateTile(authContext *AuthContext, clientConfig *config
 	url = strings.ReplaceAll(url, "$height", "256")
 	url = strings.ReplaceAll(url, "$srs", "4326") //TODO: decide if I want this to be dynamic
 
-	return getTile(clientConfig, url, make(map[string]string))
+	return getTile(t.clientConfig, url, make(map[string]string))
 }

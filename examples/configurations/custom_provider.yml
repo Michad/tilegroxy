@@ -1,7 +1,7 @@
 cache:
     name: none
 layers:
-  - id: custom
+  - id: osm
     provider:
         name: custom
         file: /repos/tilegroxy/examples/providers/provider_static.js

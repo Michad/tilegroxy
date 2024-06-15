@@ -17,6 +17,7 @@ package providers
 import (
 	// "errors"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -36,12 +37,14 @@ type CustomConfig struct {
 
 type Custom struct {
 	CustomConfig
-	iso    *v8.Isolate
-	global *v8.ObjectTemplate
-	fun    *v8.Function
+	clientConfig     *config.ClientConfig
+	errorMessages    *config.ErrorMessages
+	ctx              *v8.Context
+	preAuthFunc      *v8.Function
+	generateTileFunc *v8.Function
 }
 
-func ConstructCustom(config CustomConfig, ErrorMessages *config.ErrorMessages) (*Custom, error) {
+func ConstructCustom(config CustomConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages) (*Custom, error) {
 	iso := v8.NewIsolate()
 
 	global := v8.NewObjectTemplate(iso)
@@ -50,41 +53,71 @@ func ConstructCustom(config CustomConfig, ErrorMessages *config.ErrorMessages) (
 		fmt.Printf("%+v\n", info.Args())
 		return nil
 	})
-	global.Set("print", printfn, v8.ReadOnly)
+	err := global.Set("print", printfn, v8.ReadOnly)
+	if err != nil {
+		return nil, err
+	}
+
+	fetchfn := v8.NewFunctionTemplate(iso, func(info *v8.FunctionCallbackInfo) *v8.Value {
+		args := info.Args()
+		url := args[0].String()
+		fmt.Printf("URL: %v\n", url)
+
+		img, err := getTile(clientConfig, url, map[string]string{})
+
+		var val *v8.Value
+
+		if err != nil {
+			val, _ = v8.NewValue(iso, err.Error())
+		}
+
+		if img != nil {
+			val, _ = v8.NewValue(iso, *img)
+		}
+
+		return val
+	})
+	err = global.Set("fetch", fetchfn, v8.ReadOnly)
+	if err != nil {
+		return nil, err
+	}
+
 	ctx := v8.NewContext(iso, global)
-	ctx.RunScript("print('foo', 'bar', 0, 1)", "script.js")
 
 	body, err := os.ReadFile(config.File)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = ctx.RunScript("print('foo', 'bar', 0, 1)", "")
-	if err != nil {
-		return nil, err
-	}
-
-	val, err := ctx.RunScript(string(body), "")
-	fmt.Printf("Val: %v\n", val)
+	_, err = ctx.RunScript(string(body), "")
 
 	if err != nil {
 		return nil, err
 	}
 
-	tileFuncObj, err := ctx.Global().Get("GenerateTile2")
-	fmt.Printf("%v\n", tileFuncObj)
+	preAuthFuncObj, err := ctx.Global().Get("PreAuth")
 
+	if err != nil {
+		return nil, err
+	}
+
+	tileFuncObj, err := ctx.Global().Get("GenerateTile")
+
+	if err != nil {
+		return nil, err
+	}
+
+	preAuthFunc, err := preAuthFuncObj.AsFunction()
 	if err != nil {
 		return nil, err
 	}
 
 	tileFunc, err := tileFuncObj.AsFunction()
 	if err != nil {
-		log.Printf("Err0: %v\n", err)
 		return nil, err
 	}
 
-	return &Custom{config, iso, global, tileFunc}, nil
+	return &Custom{config, clientConfig, errorMessages, ctx, preAuthFunc, tileFunc}, nil
 }
 
 func (t Custom) PreAuth(authContext *AuthContext) error {
@@ -123,131 +156,29 @@ func (t Custom) PreAuth(authContext *AuthContext) error {
 	return nil
 }
 
-func (t Custom) GenerateTile(authContext *AuthContext, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, tileRequest internal.TileRequest) (*internal.Image, error) {
+func (t Custom) GenerateTile(authContext *AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+	paramBytes, err1 := json.Marshal(t.CustomConfig.Params)
+	paramVal, err2 := v8.JSONParse(t.ctx, string(paramBytes))
+	authBytes, err3 := json.Marshal(authContext)
+	authVal, err4 := v8.JSONParse(t.ctx, string(authBytes))
+	tileBytes, err5 := json.Marshal(tileRequest)
+	tileVal, err6 := v8.JSONParse(t.ctx, string(tileBytes))
 
-	fetchfn := v8.NewFunctionTemplate(t.iso, func(info *v8.FunctionCallbackInfo) *v8.Value {
-		args := info.Args()
-		url := args[0].String()
-		fmt.Printf("URL: %v\n", url)
-
-		img, err := getTile(clientConfig, url, map[string]string{})
-
-		var val *v8.Value
-
-		if err != nil {
-			val, _ = v8.NewValue(t.iso, err.Error())
-		}
-
-		if img != nil {
-			val, _ = v8.NewValue(t.iso, string(*img))
-		}
-
-		return val
-	})
-	err := t.global.Set("fetch", fetchfn)
-	if err != nil {
+	if err := errors.Join(err1, err2, err3, err4, err5, err6); err != nil {
 		return nil, err
 	}
 
-	ctx := v8.NewContext(t.iso, t.global)
-	ctx.RunScript("print('foo', 'bar', 0, 1)", "")
-
-	body, err := os.ReadFile(t.File)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = ctx.RunScript("print('foo', 'bar', 0, 1)", "")
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = ctx.RunScript(string(body), "")
-	if err != nil {
-		return nil, err
-	}
-
-	paramBytes, err := json.Marshal(t.CustomConfig.Params)
-	if err != nil {
-		log.Printf("Err1: %v\n", err)
-		return nil, err
-	}
-
-	paramVal, err := v8.JSONParse(ctx, string(paramBytes))
-	if err != nil {
-		log.Printf("Err2: %v\n", err)
-		return nil, err
-	}
-
-	authBytes, err := json.Marshal(authContext)
-	if err != nil {
-		log.Printf("Err3: %v\n", err)
-		return nil, err
-	}
-
-	authVal, err := v8.JSONParse(ctx, string(authBytes))
-	if err != nil {
-		log.Printf("Err4: %v\n", err)
-		return nil, err
-	}
-
-	clientBytes, err := json.Marshal(clientConfig)
-	if err != nil {
-		log.Printf("Err5: %v\n", err)
-		return nil, err
-	}
-
-	clientVal, err := v8.JSONParse(ctx, string(clientBytes))
-	if err != nil {
-		log.Printf("Err6: %v\n", err)
-		return nil, err
-	}
-
-	errorBytes, err := json.Marshal(errorMessages)
-	if err != nil {
-		log.Printf("Err7: %v\n", err)
-		return nil, err
-	}
-
-	errorVal, err := v8.JSONParse(ctx, string(errorBytes))
-	if err != nil {
-		log.Printf("Err8: %v\n", err)
-		return nil, err
-	}
-
-	tileBytes, err := json.Marshal(tileRequest)
-	if err != nil {
-		log.Printf("Err9: %v\n", err)
-		return nil, err
-	}
-
-	tileVal, err := v8.JSONParse(ctx, string(tileBytes))
-	if err != nil {
-		log.Printf("Err10: %v\n", err)
-		return nil, err
-	}
-
-	tileFuncObj, err := ctx.Global().Get("GenerateTile2")
-	log.Printf("%v\n", tileFuncObj)
-	if err != nil {
-		log.Printf("Err11: %v\n", err)
-		return nil, err
-	}
-
-	tileFunc, err := tileFuncObj.AsFunction()
-	if err != nil {
-		log.Printf("Err12: %v\n", err)
-		return nil, err
-	}
-
-	val, err := tileFunc.Call(ctx.Global(), authVal, paramVal, clientVal, errorVal, tileVal)
+	val, err := t.generateTileFunc.Call(t.ctx.Global(), authVal, paramVal, tileVal)
 
 	if err != nil {
 		log.Printf("Err: %v\n", err)
 		return nil, err
 	}
+	val.SharedArrayBufferGetContents()
 
-	log.Printf("response: %v\n", val)
+	valStr := []byte(val.String())
 
-	return nil, nil
+	log.Printf("response: %v\n", valStr)
+
+	return &valStr, nil
 }

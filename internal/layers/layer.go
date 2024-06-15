@@ -37,8 +37,11 @@ type Layer struct {
 	authMutex     sync.Mutex
 }
 
-func ConstructLayer(rawConfig config.LayerConfig, errorMessages *config.ErrorMessages) (*Layer, error) {
-	provider, error := providers.ConstructProvider(rawConfig.Provider, errorMessages)
+func ConstructLayer(rawConfig config.LayerConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages) (*Layer, error) {
+	if rawConfig.OverrideClient == nil {
+		rawConfig.OverrideClient = clientConfig
+	}
+	provider, error := providers.ConstructProvider(rawConfig.Provider, rawConfig.OverrideClient, errorMessages)
 
 	if error != nil {
 		return nil, error
@@ -101,7 +104,7 @@ func (l *Layer) RenderTileNoCache(tileRequest internal.TileRequest) (*internal.I
 		return nil, err
 	}
 
-	img, err = l.Provider.GenerateTile(l.authContext, l.Config.OverrideClient, l.ErrorMessages, tileRequest)
+	img, err = l.Provider.GenerateTile(l.authContext, tileRequest)
 
 	var authError *providers.AuthError
 	if errors.As(err, &authError) {
@@ -111,7 +114,7 @@ func (l *Layer) RenderTileNoCache(tileRequest internal.TileRequest) (*internal.I
 			return nil, err
 		}
 
-		img, err = l.Provider.GenerateTile(l.authContext, l.Config.OverrideClient, l.ErrorMessages, tileRequest)
+		img, err = l.Provider.GenerateTile(l.authContext, tileRequest)
 
 		if err != nil {
 			return nil, err

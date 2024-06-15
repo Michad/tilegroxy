@@ -3,7 +3,7 @@ function PreAuth(authContext) {
 }
 
 
-function GenerateTile(authContext, params, clientConfig, errorMessages, tileRequest) {
+function GenerateTile(authContext, params, tileRequest) {
     print(params.url);
 
     var url = params.url;
@@ -18,9 +18,3 @@ function GenerateTile(authContext, params, clientConfig, errorMessages, tileRequ
 }
 
 print("Loaded");
-print(GenerateTile);
-GenerateTile2=GenerateTile;
-print(GenerateTile2);
-
-P=5;
-GenerateTile2

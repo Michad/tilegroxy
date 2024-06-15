@@ -29,26 +29,33 @@ import (
 
 type Provider interface {
 	PreAuth(authContext *AuthContext) error
-	GenerateTile(authContext *AuthContext, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, tileRequest internal.TileRequest) (*internal.Image, error)
+	GenerateTile(authContext *AuthContext, tileRequest internal.TileRequest) (*internal.Image, error)
 }
 
-func ConstructProvider(rawConfig map[string]interface{}, errorMessages *config.ErrorMessages) (Provider, error) {
+func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages) (Provider, error) {
 
 	if rawConfig["name"] == "url template" {
-		var result UrlTemplate
-		err := mapstructure.Decode(rawConfig, &result)
-		return result, err
+		var config UrlTemplateConfig
+		err := mapstructure.Decode(rawConfig, &config)
+		if err != nil {
+			return nil, err
+		}
+
+		return ConstructUrlTemplate(config, clientConfig, errorMessages)
 	} else if rawConfig["name"] == "proxy" {
-		var result Proxy
-		err := mapstructure.Decode(rawConfig, &result)
-		return result, err
+		var config ProxyConfig
+		err := mapstructure.Decode(rawConfig, &config)
+		if err != nil {
+			return nil, err
+		}
+		return ConstructProxy(config, clientConfig, errorMessages)
 	} else if rawConfig["name"] == "custom" {
 		var config CustomConfig
 		err := mapstructure.Decode(rawConfig, &config)
 		if err != nil {
 			return nil, err
 		}
-		return ConstructCustom(config, errorMessages)
+		return ConstructCustom(config, clientConfig, errorMessages)
 	}
 
 	name := fmt.Sprintf("%#v", rawConfig["name"])
