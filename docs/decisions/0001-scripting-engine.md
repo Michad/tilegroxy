@@ -49,7 +49,7 @@ Utilize [Yaegi](https://github.com/traefik/yaegi) to allow custom providers to b
 * Pro: Yaegi makes the interop superbly simple with full type support and a single line to supply functions and types to the scripts
 * Pro: The additional overhead for a custom provider vs a native provider is under 10ms (avg from preliminary test is 5ms) which is gulfed by typical response time
 * Pro: Yaegi is well maintained and documented
-* Pro: There is a trivially transition path for custom providers to be incorporated into mainline or for built-in providers to be tweaked as custom providers
+* Pro: There is a trivial transition path for custom providers to be incorporated into mainline or for built-in providers to be tweaked as custom providers
 * Pro: Documentation can be supplemented by the ability to refer to the main source code and easily see schemas without a complex language translation layer
 * Con: Go is less accessible than other options
 
