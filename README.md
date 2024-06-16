@@ -11,7 +11,7 @@ A map tile proxy and cache service. Lives between your webmap and your mapping e
 
 💡 Inspired by [tilestache](https://github.com/tilestache/tilestache) and mostly compatible with tilestache configurations.   
 🚀 Built in Go for speed.  
-🔌 Features a flexible plugin system for custom providers written in interpreted Go. Powered by [Yaegi](https://github.com/traefik/yaegi).  
+🔌 Features a flexible plugin system. Powered by [Yaegi](https://github.com/traefik/yaegi).  
 🛠️ This project is still a work in progress. Non-backwards compatible changes may occur prior to the 1.0 release.
 
 
@@ -22,6 +22,7 @@ The following features are currently available:
 * Provide a uniform ZXY mapping interface for incoming requests.
 * Proxy map tiles to ZXY, WMS, TMS, or WMTS backed map layers
 * Cache map tiles in disk, memory, s3, redis, or memcache
+* Create your own custom provider to pull in non-standard and proprietary imagery sources
 * Generic support for any content type 
 * Incoming authentication using a static key or JWT
 * Configurable timeout, logging, and error handling rules
@@ -29,7 +30,6 @@ The following features are currently available:
 The following are on the roadmap:
 
 * Support for raster image reprocessing/combination on the fly
-* Custom providers
 * Proxy map layers directly to providers such as Mapnik, Mapserver 
 * Specific support for vector tile formats such as [MVT](https://github.com/mapbox/vector-tile-spec) or tiled GeoJSON
 * OpenTelemetry support
