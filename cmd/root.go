@@ -3,6 +3,7 @@ package cmd
 import (
 	"os"
 
+	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/authentication"
 	"github.com/Michad/tilegroxy/internal/caches"
 	"github.com/Michad/tilegroxy/internal/config"
@@ -33,7 +34,7 @@ func init() {
 	rootCmd.PersistentFlags().StringP("config", "c", "./tilegroxy.yml", "A file path to the configuration file to use. The file should have an extension of either json or yml/yaml and be readable.")
 }
 
-func parseConfigIntoStructs(cmd *cobra.Command) (*config.Config, []*layers.Layer, *authentication.Authentication, error) {
+func parseConfigIntoStructs(cmd *cobra.Command) (*config.Config, *layers.LayerGroup, *authentication.Authentication, error) {
 
 	configPath, err := cmd.Flags().GetString("config")
 
@@ -53,7 +54,13 @@ func parseConfigIntoStructs(cmd *cobra.Command) (*config.Config, []*layers.Layer
 		panic("No configuration supplied")
 	}
 
-	cache, err := caches.ConstructCache(cfg.Cache, &cfg.Error.Messages)
+	layerGroup := layers.ConstructLayerGroup()
+
+	callbackFunc := func(req internal.TileRequest) (*internal.Image, error) {
+		return layerGroup.RenderTileNoCache(req)
+	}
+
+	cache, err := caches.ConstructCache(cfg.Cache, callbackFunc, &cfg.Error.Messages)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -63,23 +70,23 @@ func parseConfigIntoStructs(cmd *cobra.Command) (*config.Config, []*layers.Layer
 		return nil, nil, nil, err
 	}
 
-	layerObjects := make([]*layers.Layer, len(cfg.Layers))
-
-	for i, l := range cfg.Layers {
-		layerObjects[i], err = layers.ConstructLayer(l, &cfg.Error.Messages)
+	for _, l := range cfg.Layers {
+		layerObject, err := layers.ConstructLayer(l, &cfg.Error.Messages)
 		if err != nil {
 			return nil, nil, nil, err
 		}
 
-		layerObjects[i].Cache = &cache
-		if layerObjects[i].Config.OverrideClient == nil {
-			layerObjects[i].Config.OverrideClient = &cfg.Client
+		layerObject.Cache = &cache
+		if layerObject.Config.OverrideClient == nil {
+			layerObject.Config.OverrideClient = &cfg.Client
 		}
+
+		layerGroup.AddLayer(layerObject)
 	}
 
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	return &cfg, layerObjects, &auth, err
+	return &cfg, layerGroup, &auth, err
 }

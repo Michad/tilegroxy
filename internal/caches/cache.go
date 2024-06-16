@@ -15,6 +15,7 @@
 package caches
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -28,7 +29,7 @@ type Cache interface {
 	Save(t internal.TileRequest, img *internal.Image) error
 }
 
-func ConstructCache(rawConfig map[string]interface{}, errorMessages *config.ErrorMessages) (Cache, error) {
+func ConstructCache(rawConfig map[string]interface{}, backfill func(req internal.TileRequest) (*internal.Image, error), errorMessages *config.ErrorMessages) (Cache, error) {
 	if rawConfig["name"] == "none" || rawConfig["name"] == "test" {
 		return Noop{}, nil
 	} else if rawConfig["name"] == "disk" {
@@ -53,8 +54,30 @@ func ConstructCache(rawConfig map[string]interface{}, errorMessages *config.Erro
 		}
 		tierCaches := make([]Cache, len(config.Tiers))
 
-		for i, tierRawConfig := range config.Tiers {
-			tierCache, err := ConstructCache(tierRawConfig, errorMessages)
+		curBackfill := backfill
+
+		for revI := range config.Tiers {
+			i := len(config.Tiers) - revI - 1
+			tierRawConfig := config.Tiers[i]
+
+			if revI > 0 {
+				curBackfill = func(req internal.TileRequest) (*internal.Image, error) {
+					img, err := tierCaches[i+1].Lookup(req)
+					if img != nil && err == nil {
+						return img, nil
+					}
+
+					img, err2 := curBackfill(req)
+
+					if err != nil || err2 != nil {
+						return nil, errors.Join(err, err2)
+					}
+
+					return img, nil
+				}
+			}
+
+			tierCache, err := ConstructCache(tierRawConfig, curBackfill, errorMessages)
 
 			if err != nil {
 				return nil, err
