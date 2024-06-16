@@ -33,7 +33,7 @@ type Layer struct {
 	Provider      providers.Provider
 	Cache         *caches.Cache
 	ErrorMessages *config.ErrorMessages
-	authContext   *providers.AuthContext
+	authContext   providers.AuthContext
 	authMutex     sync.Mutex
 }
 
@@ -47,17 +47,19 @@ func ConstructLayer(rawConfig config.LayerConfig, clientConfig *config.ClientCon
 		return nil, error
 	}
 
-	return &Layer{rawConfig.Id, rawConfig, provider, nil, errorMessages, nil, sync.Mutex{}}, nil
+	return &Layer{rawConfig.Id, rawConfig, provider, nil, errorMessages, providers.AuthContext{}, sync.Mutex{}}, nil
 }
 
 func (l *Layer) authWithProvider() error {
 	var err error
 
-	l.authMutex.Lock()
-	if l.authContext == nil || l.authContext.Expiration.Before(time.Now()) {
-		err = l.Provider.PreAuth(l.authContext)
+	if !l.authContext.Bypass {
+		l.authMutex.Lock()
+		if l.authContext.Expiration.Before(time.Now()) {
+			l.authContext, err = l.Provider.PreAuth(l.authContext)
+		}
+		l.authMutex.Unlock()
 	}
-	l.authMutex.Unlock()
 
 	return err
 }
@@ -96,9 +98,7 @@ func (l *Layer) RenderTileNoCache(tileRequest internal.TileRequest) (*internal.I
 	var img *internal.Image
 	var err error
 
-	if l.authContext == nil || l.authContext.Expiration.Before(time.Now()) {
-		err = l.authWithProvider()
-	}
+	err = l.authWithProvider()
 
 	if err != nil {
 		return nil, err

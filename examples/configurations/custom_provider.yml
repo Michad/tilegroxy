@@ -4,5 +4,9 @@ layers:
   - id: osm
     provider:
         name: custom
-        file: /repos/tilegroxy/examples/providers/provider_static.js
+        file: /repos/tilegroxy/examples/providers/provider_static.goscript
+        url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+  - id: osm2
+    provider:
+        name: proxy
         url: https://tile.openstreetmap.org/{z}/{x}/{y}.png

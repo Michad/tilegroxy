@@ -37,11 +37,11 @@ func ConstructUrlTemplate(config UrlTemplateConfig, clientConfig *config.ClientC
 	return &UrlTemplate{config, clientConfig, errorMessages}, nil
 }
 
-func (t UrlTemplate) PreAuth(authContext *AuthContext) error {
-	return nil
+func (t UrlTemplate) PreAuth(authContext AuthContext) (AuthContext, error) {
+	return AuthContext{Bypass: true}, nil
 }
 
-func (t UrlTemplate) GenerateTile(authContext *AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+func (t UrlTemplate) GenerateTile(authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
 	if t.Template == "" {
 		return nil, fmt.Errorf(t.errorMessages.InvalidParam, "provider.url template.url", "")
 	}

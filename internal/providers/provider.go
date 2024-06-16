@@ -28,8 +28,8 @@ import (
 )
 
 type Provider interface {
-	PreAuth(authContext *AuthContext) error
-	GenerateTile(authContext *AuthContext, tileRequest internal.TileRequest) (*internal.Image, error)
+	PreAuth(authContext AuthContext) (AuthContext, error)
+	GenerateTile(authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error)
 }
 
 func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages) (Provider, error) {
@@ -63,6 +63,7 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.Cl
 }
 
 type AuthContext struct {
+	Bypass     bool
 	Expiration time.Time
 	Token      string
 	Other      map[string]interface{}

@@ -39,11 +39,11 @@ func ConstructProxy(config ProxyConfig, clientConfig *config.ClientConfig, error
 	return &Proxy{config, clientConfig, errorMessages}, nil
 }
 
-func (t Proxy) PreAuth(authContext *AuthContext) error {
-	return nil
+func (t Proxy) PreAuth(authContext AuthContext) (AuthContext, error) {
+	return AuthContext{Bypass: true}, nil
 }
 
-func (t Proxy) GenerateTile(authContext *AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+func (t Proxy) GenerateTile(authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
 	if t.Url == "" {
 		return nil, fmt.Errorf(t.errorMessages.InvalidParam, "provider.proxy.url", "")
 	}
