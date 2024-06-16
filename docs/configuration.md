@@ -48,6 +48,20 @@ Configuration options:
 | --- | --- | --- | --- | --- |
 | template | string | Yes | None | A URL pointing to the tile server. Should contain placeholders `$xmin` `$xmax` `$ymin` and `$ymax` for tile coordinates |
 
+### Custom
+
+Custom providers implement your own custom logic for providing imagery from whatever source you can imagine.  They require a custom Go script file interpreted using [Yaegi](https://github.com/traefik/yaegi).  The main README has more detailed information on implementing custom providers and [examples are available](../examples/providers/).
+
+Name should be "custom"
+
+Configuration options:
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| file | string | Yes | None | An absolute file path to find the Go code implementing the provider |
+| Any | Any | No | None | Any additional parameter you include will be automatically supplied to your custom provider as-is |
+
+
 ## Cache
 
 The cache configuration defines the datastores where tiles should be stored/retrieved. It's recommended when possible to make use of a multi-tiered cache with a smaller, faster "near" cache first followed by a larger, slower "far" cache.  

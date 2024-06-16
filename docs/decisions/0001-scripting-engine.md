@@ -70,8 +70,8 @@ Utilize a library that helps Go be able to call Python. This would require separ
 * Pro: Very well-known language
 * Pro: Can provide easiest transition path for custom providers written for tilestache
 * Neutral: That easy transition path makes it more difficult to change the interface since tilegroxy isn't a tilestache port
-* Bad: Python can be environmentally temperamental. Requiring cpython complicates installation/container maintenance
-* Bad: Tools to support go/python interop mostly either aren't mature or aren't well maintained
+* Con: Python can be environmentally temperamental. Requiring cpython complicates installation/container maintenance
+* Con: Tools to support go/python interop mostly either aren't mature or aren't well maintained
 
 
 ### Javascript - scripting solution
