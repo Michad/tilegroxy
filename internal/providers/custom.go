@@ -40,7 +40,7 @@ type Custom struct {
 }
 
 func ConstructCustom(cfg CustomConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages) (*Custom, error) {
-	i := interp.New(interp.Options{})
+	i := interp.New(interp.Options{Unrestricted: true})
 	i.Use(stdlib.Symbols)
 	i.Use(interp.Exports{
 		"tilegroxy/tilegroxy": map[string]reflect.Value{
@@ -49,6 +49,7 @@ func ConstructCustom(cfg CustomConfig, clientConfig *config.ClientConfig, errorM
 			"ClientConfig":  reflect.ValueOf((*config.ClientConfig)(nil)),
 			"ErrorMessages": reflect.ValueOf((*config.ErrorMessages)(nil)),
 			"Image":         reflect.ValueOf((*internal.Image)(nil)),
+			"AuthError":     reflect.ValueOf((*AuthError)(nil)),
 			"GetTile":       reflect.ValueOf(getTile),
 		}})
 

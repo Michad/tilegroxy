@@ -10,7 +10,8 @@
 A map tile proxy and cache service. Lives between your webmap and your mapping engines to provide a simple, consistent interface and improved performance.
 
 💡 Inspired by [tilestache](https://github.com/tilestache/tilestache) and mostly compatible with tilestache configurations.   
-🚀 Built in Go for speed.  <!--🔌 Features a flexible plugin system for custom providers written in TODO.  -->   
+🚀 Built in Go for speed.  
+🔌 Features a flexible plugin system for custom providers written in interpreted Go. Powered by [Yaegi](https://github.com/traefik/yaegi).  
 🛠️ This project is still a work in progress. Non-backwards compatible changes may occur prior to the 1.0 release.
 
 
@@ -292,13 +293,43 @@ Global Flags:
 
 ## Custom Providers
 
-Coming soon. 
+For cases where the built-in providers don't suffice for your needs you can write your own custom providers with code that is loaded dynamically at runtime.  
+
+Custom providers must be written in Go and are interpreted using [Yaegi](https://github.com/traefik/yaegi).  Yaegi offers a full featured implementation of the Go specification without the need to precompile.  
+
+Example custom providers can be found within [examples/providers](./examples/providers/).  A custom provider must live within a single file and can call the entire standard library.  This includes potentially dangerous function calls such as `exec` and `unsafe`; be as cautious using custom providers from third party as you would be executing any other third party software.  
+
+Custom providers must be within the `custom` package and must import the `tilegroxy/tilegroxy` package for mandatory datatypes. There are two mandatory functions:
+
+```go
+func preAuth(tilegroxy.AuthContext, map[string]interface{}, tilegroxy.ClientConfig, tilegroxy.ErrorMessages) (tilegroxy.AuthContext, error)
+
+func generateTile(tilegroxy.AuthContext, tilegroxy.TileRequest, map[string]interface{}, tilegroxy.ClientConfig,tilegroxy.ErrorMessages) (*tilegroxy.Image, error)
+```
+
+The `preAuth` function is responsible for authenticating outgoing requests and returning a token or whatever else is needed. It is called when needed by the application when either `expiration` is reached or an `AuthError` is returned by `generateTile`. A given instance of tilegroxy will only call this method once at a time and then shares the result among threads. However, AuthContext is not shared between instances of tilegroxy. 
+
+The `generateTile` function is the main function which returns an image for a given tile request. You should never trigger a call to `preAuth` yourself from `generateTile` (instead return an `AuthError`) to prevent excessive calls to the upstream provider from multiple tiles.
+
+The following types are available for custom providers:
+
+| Type | Description |
+| --- | --- |
+| [AuthContext](./internal/providers/provider.go) | A holder struct for authentication information. Shared between goroutines to avoid excessive auth requests. Includes an Expiration field to inform the application when to re-auth via the preAuth method (this should be set before the token actually expires). The intent is for the relevant auth token  to be placed in the Token field, however using that token is an implementation detail left to the provider. Also includes a Bypass field for cases where no authentication is needed which avoids subsequent calls to preAuth |
+| [TileRequest](./internal/tile_request.go) | The parameters from the user indicating the layer being requested as well as the specific tile coordinate |
+| [ClientConfig](./internal/config/config.go) | A struct from the configuration which indicates settings such as static headers and timeouts. See the `Client Config` in [Configuration documentat](./docs/configuration.md) for details |
+| [ErrorMessages](./internal/config/config.go) | A struct from the configuration which indicates common error messages. See `Error Messages` in [Configuration documentat](./docs/configuration.md) for details |
+| [Image](./internal/statics.go) | The imagery for a given tile. Currently type mapped to []byte |
+| [AuthError](./internal/providers/provider.go) | An Error type to indicate an upstream provider returned an auth error that should trigger a new call to preAuth |
+| [GetTile](./internal/providers/provider.go) | A utility method that performs an HTTP GET request to a given URL. Use this when possible to ensure all standard Client configurations are honored |
+
+There is a performance cost of using a custom provider vs a built-in provider. The exact cost depends on the complexity of your provider, however it is typically below 10 milliseconds while tile generation as a whole is usually more than order of magnitude slower. Due to the custom providers being written in Go, it is easy to convert a custom provider to a built-in provider if your use-case is highly performance critical.
 
 ## Migrating from tilestache
 
 An important difference between tilegroxy and tilestache is that tilegroxy can only be run as a standalone executable rather than running as a module in another webserver.  
 
-The configuration in tilegroxy is meant to be highly compatible with the configuration of tilestache, however there are significant differences.  The tilegroxy configuration supports a variety of options that are not available in tilestache and while we try to keep most parameters optional and have sane and safe defaults, it is highly advised you familiarize yourself with the various options documented above.
+The configuration in tilegroxy is meant to be highly compatible with the configuration of tilestache, however there are significant differences. The tilegroxy configuration supports a variety of options that are not available in tilestache and while we try to keep most parameters optional and have sane and safe defaults, it is highly advised you familiarize yourself with the various options documented above.
 
 The following are the known incompatibilities with tilestache configurations:
 

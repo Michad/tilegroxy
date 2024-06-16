@@ -70,12 +70,11 @@ type AuthContext struct {
 }
 
 type AuthError struct {
-	arg     int
-	message string
+	Message string
 }
 
-func (e *AuthError) Error() string {
-	return fmt.Sprintf("%d - %s", e.arg, e.message)
+func (e AuthError) Error() string {
+	return fmt.Sprintf("Auth Error - %s", e.Message)
 }
 
 type InvalidContentLengthError struct {

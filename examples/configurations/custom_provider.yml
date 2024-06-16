@@ -4,9 +4,7 @@ layers:
   - id: osm
     provider:
         name: custom
-        file: /repos/tilegroxy/examples/providers/provider_static.goscript
-        url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
-  - id: osm2
-    provider:
-        name: proxy
+        #You will need to adjust this to match your local filesystem
+        file: /repos/tilegroxy/examples/providers/custom_proxy.goscript
+        #The schema below here is dynamic - whatever you specify will be sent to the script
         url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
