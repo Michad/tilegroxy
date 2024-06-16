@@ -15,6 +15,7 @@
 package config
 
 import (
+	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/spf13/viper"
 )
@@ -121,6 +122,8 @@ type Config struct {
 }
 
 func DefaultConfig() Config {
+	version, _, _ := internal.GetVersionInformation()
+
 	return Config{
 		Server: ServerConfig{
 			BindHost:    "127.0.0.1",
@@ -134,7 +137,7 @@ func DefaultConfig() Config {
 			Gzip:       false,
 		},
 		Client: ClientConfig{
-			UserAgent:           "tilegroxy/0.0.2", //TODO: make version number dynamic
+			UserAgent:           "tilegroxy/" + version,
 			MaxResponseLength:   1024 * 1024 * 10,
 			AllowUnknownLength:  false,
 			AllowedContentTypes: []string{"image/png", "image/jpg", "image/jpeg"},

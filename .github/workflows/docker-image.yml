@@ -20,7 +20,10 @@ jobs:
       id-token: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
       - name: Install cosign
         if: github.event_name != 'pull_request'
         uses: sigstore/cosign-installer@59acb6260d9c0ba8f4a2f9d9b48431a222b68e20 
@@ -48,7 +51,7 @@ jobs:
             type=sha
       - name: Build and push Docker image
         id: build-and-push
-        uses: docker/build-push-action@2cdde995de11925a030ce8070c3d77a52ffcf1c0
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25
         with:
           context: .
           push: ${{ github.event_name != 'pull_request' }}

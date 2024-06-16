@@ -126,7 +126,9 @@ Example:
 							var img2 *internal.Image
 							img2, cacheReadError = (*layer.Cache).Lookup(req)
 							if cacheReadError == nil {
-								if !slices.Equal(*img, *img2) {
+								if img2 == nil {
+									cacheReadError = errors.New("no result from cache lookup")
+								} else if !slices.Equal(*img, *img2) {
 									cacheReadError = errors.New("cache result doesn't match what we put into cache")
 								}
 							}

@@ -8,8 +8,8 @@ github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERo
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
 github.com/Microsoft/hcsshim v0.12.4 h1:Ev7YUMHAHoWNm+aDSPzc5W9s6E2jyL1szpVDJeZ/Rr4=
 github.com/Microsoft/hcsshim v0.12.4/go.mod h1:Iyl1WVpZzr+UkzjekHZbV8o5Z9ZkxNGx6CtY2Qg/JVQ=
-github.com/aws/aws-sdk-go v1.53.19 h1:WEuWc918RXlIaPCyU11F7hH9H1ItK+8m2c/uoQNRUok=
-github.com/aws/aws-sdk-go v1.53.19/go.mod h1:LF8svs817+Nz+DmiMQKTO3ubZ/6IaTpq3TjupRn3Eqk=
+github.com/aws/aws-sdk-go v1.54.1 h1:+ULL7oLC+v3T00fOMIohUarPI3SR3oyDd6FBEvgdhvs=
+github.com/aws/aws-sdk-go v1.54.1/go.mod h1:LF8svs817+Nz+DmiMQKTO3ubZ/6IaTpq3TjupRn3Eqk=
 github.com/bradfitz/gomemcache v0.0.0-20230905024940-24af94b03874 h1:N7oVaKyGp8bttX0bfZGmcGkjz7DLQXhAn3DNd3T0ous=
 github.com/bradfitz/gomemcache v0.0.0-20230905024940-24af94b03874/go.mod h1:r5xuitiExdLAJ09PR7vBVENGvp4ZuTBeWTGtxuX3K+c=
 github.com/bsm/ginkgo/v2 v2.12.0 h1:Ny8MWAHyOepLGlLKYmXG4IEkioBysk6GpaRTLC8zwWs=
