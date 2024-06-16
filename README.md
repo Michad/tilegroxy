@@ -10,8 +10,8 @@
 A map tile proxy and cache service. Lives between your webmap and your mapping engines to provide a simple, consistent interface and improved performance.
 
 💡 Inspired by [tilestache](https://github.com/tilestache/tilestache) and mostly compatible with tilestache configurations.   
-🚀 Built in Go for speed.  <!--🔌 Features a flexible plugin system for custom providers written in TODO.  -->
-🛠️ This project is still a work in progress. It's not recommended for serious production use yet. Non-backwards compatible changes will still occur prior to the 1.0 release.
+🚀 Built in Go for speed.  <!--🔌 Features a flexible plugin system for custom providers written in TODO.  -->   
+🛠️ This project is still a work in progress. Non-backwards compatible changes may occur prior to the 1.0 release.
 
 
 ## Features
