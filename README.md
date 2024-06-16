@@ -317,8 +317,8 @@ The following types are available for custom providers:
 | --- | --- |
 | [AuthContext](./internal/providers/provider.go) | A holder struct for authentication information. Shared between goroutines to avoid excessive auth requests. Includes an Expiration field to inform the application when to re-auth via the preAuth method (this should be set before the token actually expires). The intent is for the relevant auth token  to be placed in the Token field, however using that token is an implementation detail left to the provider. Also includes a Bypass field for cases where no authentication is needed which avoids subsequent calls to preAuth |
 | [TileRequest](./internal/tile_request.go) | The parameters from the user indicating the layer being requested as well as the specific tile coordinate |
-| [ClientConfig](./internal/config/config.go) | A struct from the configuration which indicates settings such as static headers and timeouts. See the `Client Config` in [Configuration documentat](./docs/configuration.md) for details |
-| [ErrorMessages](./internal/config/config.go) | A struct from the configuration which indicates common error messages. See `Error Messages` in [Configuration documentat](./docs/configuration.md) for details |
+| [ClientConfig](./internal/config/config.go) | A struct from the configuration which indicates settings such as static headers and timeouts. See `Client` in [Configuration documentation](./docs/configuration.md) for details |
+| [ErrorMessages](./internal/config/config.go) | A struct from the configuration which indicates common error messages. See `Error Messages` in [Configuration documentation](./docs/configuration.md) for details |
 | [Image](./internal/statics.go) | The imagery for a given tile. Currently type mapped to []byte |
 | [AuthError](./internal/providers/provider.go) | An Error type to indicate an upstream provider returned an auth error that should trigger a new call to preAuth |
 | [GetTile](./internal/providers/provider.go) | A utility method that performs an HTTP GET request to a given URL. Use this when possible to ensure all standard Client configurations are honored |
