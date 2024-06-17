@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/spf13/cobra"
 )
 
@@ -38,23 +37,10 @@ Example:
 			os.Exit(1)
 		}
 
-		_, layerObjects, _, err := parseConfigIntoStructs(cmd)
+		_, layerGroup, _, err := parseConfigIntoStructs(cmd)
 
 		if err != nil {
 			fmt.Printf("Error: %v", err)
-			os.Exit(1)
-		}
-
-		var layer *layers.Layer
-
-		for _, l := range layerObjects {
-			if l.Id == layerName {
-				layer = l
-			}
-		}
-
-		if layer == nil {
-			fmt.Println("Error: Invalid layer")
 			os.Exit(1)
 		}
 
@@ -123,7 +109,7 @@ Example:
 					fmt.Printf("Created thread %v with %v tiles\n", t, len(myReqs))
 				}
 				for _, req := range myReqs {
-					_, tileErr := layer.RenderTile(req)
+					_, tileErr := layerGroup.RenderTile(req)
 
 					if verbose {
 						var status string

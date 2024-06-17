@@ -179,21 +179,16 @@ func configureAccessLogging(cfg config.AccessLogConfig, errorMessages config.Err
 	return rootHandler, nil
 }
 
-func ListenAndServe(config *config.Config, layerList []*layers.Layer, auth *authentication.Authentication) error {
+func ListenAndServe(config *config.Config, layerGroup *layers.LayerGroup, auth *authentication.Authentication) error {
 	r := http.ServeMux{}
-
-	layerMap := make(map[string]*layers.Layer)
-	for _, l := range layerList {
-		layerMap[l.Id] = l
-	}
 
 	if config.Server.Production {
 		r.HandleFunc("/", handleNoContent)
 	} else {
-		r.Handle("/", &defaultHandler{config, layerMap, auth})
+		r.Handle("/", &defaultHandler{config, layerGroup, auth})
 		// r.HandleFunc("/documentation", defaultHandler)
 	}
-	r.Handle(config.Server.ContextRoot+"/{layer}/{z}/{x}/{y}", &tileHandler{defaultHandler{config, layerMap, auth}})
+	r.Handle(config.Server.ContextRoot+"/{layer}/{z}/{x}/{y}", &tileHandler{defaultHandler{config, layerGroup, auth}})
 
 	var rootHandler http.Handler
 

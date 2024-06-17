@@ -55,7 +55,11 @@ func ConstructCache(rawConfig map[string]interface{}, backfill func(req internal
 		tierCaches := make([]Cache, len(config.Tiers))
 
 		curBackfill := backfill
-
+		//tiers: [near, mid, far]
+		//go through backwards so
+		//far backfills from provider
+		//mid backfills from far then provider
+		//near backfills from mid then far then provider
 		for revI := range config.Tiers {
 			i := len(config.Tiers) - revI - 1
 			tierRawConfig := config.Tiers[i]
@@ -114,7 +118,7 @@ func ConstructCache(rawConfig map[string]interface{}, backfill func(req internal
 		if err != nil {
 			return nil, err
 		}
-		return ConstructGroupCache(config, errorMessages)
+		return ConstructGroupCache(config, backfill, errorMessages)
 	}
 
 	name := fmt.Sprintf("%#v", rawConfig["name"])

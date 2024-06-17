@@ -13,7 +13,6 @@ import (
 	"sync/atomic"
 
 	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/spf13/cobra"
 )
 
@@ -40,20 +39,15 @@ Example:
 			os.Exit(1)
 		}
 
-		_, layerObjects, _, err := parseConfigIntoStructs(cmd)
+		_, layerGroup, _, err := parseConfigIntoStructs(cmd)
 
 		if err != nil {
 			fmt.Printf("Error: %v", err)
 			os.Exit(1)
 		}
-		layerMap := make(map[string]*layers.Layer)
-
-		for _, l := range layerObjects {
-			layerMap[l.Id] = l
-		}
 
 		if len(layerNames) == 0 {
-			for _, l := range layerObjects {
+			for _, l := range layerGroup.LayerMap {
 				layerNames = append(layerNames, l.Id)
 			}
 		}
@@ -70,7 +64,7 @@ Example:
 				os.Exit(1)
 			}
 
-			layer := layerMap[layerName]
+			layer := layerGroup.LayerMap[layerName]
 
 			if layer == nil {
 				fmt.Printf("Error: Invalid layer name: %v", layer)
@@ -115,7 +109,7 @@ Example:
 			go func(t int, myReqs []internal.TileRequest) {
 
 				for _, req := range myReqs {
-					layer := layerMap[req.LayerName]
+					layer := layerGroup.LayerMap[req.LayerName]
 					img, layerErr := layer.RenderTileNoCache(req)
 					var cacheWriteError error
 					var cacheReadError error

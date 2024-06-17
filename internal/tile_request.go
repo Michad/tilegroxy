@@ -1,9 +1,11 @@
 package internal
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
+	"strings"
 )
 
 type TileRequest struct {
@@ -130,4 +132,19 @@ func (t TileRequest) GetBounds() (*Bounds, error) {
 
 func (t TileRequest) String() string {
 	return t.LayerName + "/" + strconv.Itoa(t.Z) + "/" + strconv.Itoa(t.X) + "/" + strconv.Itoa(t.Y)
+}
+
+func TileRequestFromString(str string) (TileRequest, error) {
+	splits := strings.Split(str, "/")
+
+	if len(splits) != 4 {
+		return TileRequest{}, fmt.Errorf("invalid tilerequest string %v", str)
+	}
+
+	layerName := splits[0]
+	Z, err1 := strconv.Atoi(splits[1])
+	X, err2 := strconv.Atoi(splits[2])
+	Y, err3 := strconv.Atoi(splits[3])
+
+	return TileRequest{layerName, Z, X, Y}, errors.Join(err1, err2, err3)
 }

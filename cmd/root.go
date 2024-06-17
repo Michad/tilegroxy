@@ -88,5 +88,5 @@ func parseConfigIntoStructs(cmd *cobra.Command) (*config.Config, *layers.LayerGr
 		return nil, nil, nil, err
 	}
 
-	return &cfg, layerGroup, &auth, err
+	return &cfg, &layerGroup, &auth, err
 }

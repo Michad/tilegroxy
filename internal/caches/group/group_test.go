@@ -21,36 +21,36 @@ func Test_GroupCache(t *testing.T) {
 
 	// TIL you can't have multiple groupcache instances in the same running code
 	ports := []string{"http://127.0.0.1:8080"} //, "http://127.0.0.1:8081", "http://127.0.0.1:8082"}
-	f := func(key string) ([]byte, error) {
+	f := func(key string) (*[]byte, error) {
 		v, ok := Store[key]
 		if !ok {
-			return []byte{}, ItemNotFoundError
+			return nil, ItemNotFoundError
 		}
-		return v, nil
+		return &v, nil
 	}
 
-	fp := func(key string) ([]byte, error) {
+	fp := func(key string) (*[]byte, error) {
 		var pStore = map[string][]byte{
 			"black": []byte("#FFFFFF"),
 		}
 
 		v, ok := pStore[key]
 		if !ok {
-			return []byte{}, ItemNotFoundError
+			return nil, ItemNotFoundError
 		}
-		return v, nil
+		return &v, nil
 	}
 
-	fg := func(key string) ([]byte, error) {
+	fg := func(key string) (*[]byte, error) {
 		var gStore = map[string][]byte{
 			"white": []byte("#000000"),
 		}
 
 		v, ok := gStore[key]
 		if !ok {
-			return []byte{}, ItemNotFoundError
+			return nil, ItemNotFoundError
 		}
-		return v, nil
+		return &v, nil
 	}
 
 	port := ports[0]

@@ -24,7 +24,7 @@ const (
 )
 
 // BackFillFunc is a function that can retrieve an uncached item to go into the cache
-type BackFillFunc func(key string) ([]byte, error)
+type BackFillFunc func(key string) (*[]byte, error)
 
 // Cache (group) is a distributed LRU cache where consistent hashing on keynames is used to cut out
 // "who's on first" nonsense, and backfills are linearly distributed to mitigate multiple-member requests.
@@ -91,9 +91,9 @@ func (gc *Cache) Add(config Config, fillfunc BackFillFunc) error {
 			return err
 		}
 		if config.ItemExpiration == 0 {
-			dest.SetBytes(value, time.Time{})
+			dest.SetBytes(*value, time.Time{})
 		} else {
-			dest.SetBytes(value, time.Now().Add(config.ItemExpiration))
+			dest.SetBytes(*value, time.Now().Add(config.ItemExpiration))
 		}
 		return nil
 	}

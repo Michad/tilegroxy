@@ -77,14 +77,14 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if h.layerMap[layerName] == nil {
-		writeError(w, &h.config.Error, TypeOfErrorOtherBadRequest, h.config.Error.Messages.InvalidParam, "layer", layerName)
-		return
-	}
+	// if h.layerMap[layerName] == nil {
+	// 	writeError(w, &h.config.Error, TypeOfErrorOtherBadRequest, h.config.Error.Messages.InvalidParam, "layer", layerName)
+	// 	return
+	// }
 
-	layer := h.layerMap[layerName]
+	// layer := h.layerMap[layerName]
 
-	img, err := layer.RenderTile(tileReq)
+	img, err := h.layerGroup.RenderTile(tileReq)
 
 	if err != nil {
 		writeError(w, &h.config.Error, TypeOfErrorOther, h.config.Error.Messages.ServerError, err)
