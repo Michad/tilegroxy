@@ -24,18 +24,28 @@ import (
 	"github.com/Michad/tilegroxy/internal/config"
 )
 
-type Proxy struct {
+type ProxyConfig struct {
 	Url     string
 	InvertY bool //Used for TMS
 }
 
-func (t Proxy) PreAuth(authContext *AuthContext) error {
-	return nil
+type Proxy struct {
+	ProxyConfig
+	clientConfig  *config.ClientConfig
+	errorMessages *config.ErrorMessages
 }
 
-func (t Proxy) GenerateTile(authContext *AuthContext, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, tileRequest internal.TileRequest) (*internal.Image, error) {
+func ConstructProxy(config ProxyConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages) (*Proxy, error) {
+	return &Proxy{config, clientConfig, errorMessages}, nil
+}
+
+func (t Proxy) PreAuth(authContext AuthContext) (AuthContext, error) {
+	return AuthContext{Bypass: true}, nil
+}
+
+func (t Proxy) GenerateTile(authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
 	if t.Url == "" {
-		return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.proxy.url", "")
+		return nil, fmt.Errorf(t.errorMessages.InvalidParam, "provider.proxy.url", "")
 	}
 
 	y := tileRequest.Y
@@ -50,5 +60,5 @@ func (t Proxy) GenerateTile(authContext *AuthContext, clientConfig *config.Clien
 	url = strings.ReplaceAll(url, "{X}", strconv.Itoa(tileRequest.X))
 	url = strings.ReplaceAll(url, "{x}", strconv.Itoa(tileRequest.X))
 
-	return getTile(clientConfig, url, make(map[string]string))
+	return getTile(t.clientConfig, url, make(map[string]string))
 }

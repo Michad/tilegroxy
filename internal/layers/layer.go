@@ -33,28 +33,33 @@ type Layer struct {
 	Provider      providers.Provider
 	Cache         *caches.Cache
 	ErrorMessages *config.ErrorMessages
-	authContext   *providers.AuthContext
+	authContext   providers.AuthContext
 	authMutex     sync.Mutex
 }
 
-func ConstructLayer(rawConfig config.LayerConfig, errorMessages *config.ErrorMessages) (*Layer, error) {
-	provider, error := providers.ConstructProvider(rawConfig.Provider, errorMessages)
+func ConstructLayer(rawConfig config.LayerConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages) (*Layer, error) {
+	if rawConfig.OverrideClient == nil {
+		rawConfig.OverrideClient = clientConfig
+	}
+	provider, error := providers.ConstructProvider(rawConfig.Provider, rawConfig.OverrideClient, errorMessages)
 
 	if error != nil {
 		return nil, error
 	}
 
-	return &Layer{rawConfig.Id, rawConfig, provider, nil, errorMessages, nil, sync.Mutex{}}, nil
+	return &Layer{rawConfig.Id, rawConfig, provider, nil, errorMessages, providers.AuthContext{}, sync.Mutex{}}, nil
 }
 
 func (l *Layer) authWithProvider() error {
 	var err error
 
-	l.authMutex.Lock()
-	if l.authContext == nil || l.authContext.Expiration.Before(time.Now()) {
-		err = l.Provider.PreAuth(l.authContext)
+	if !l.authContext.Bypass {
+		l.authMutex.Lock()
+		if l.authContext.Expiration.Before(time.Now()) {
+			l.authContext, err = l.Provider.PreAuth(l.authContext)
+		}
+		l.authMutex.Unlock()
 	}
-	l.authMutex.Unlock()
 
 	return err
 }
@@ -93,15 +98,13 @@ func (l *Layer) RenderTileNoCache(tileRequest internal.TileRequest) (*internal.I
 	var img *internal.Image
 	var err error
 
-	if l.authContext == nil || l.authContext.Expiration.Before(time.Now()) {
-		err = l.authWithProvider()
-	}
+	err = l.authWithProvider()
 
 	if err != nil {
 		return nil, err
 	}
 
-	img, err = l.Provider.GenerateTile(l.authContext, l.Config.OverrideClient, l.ErrorMessages, tileRequest)
+	img, err = l.Provider.GenerateTile(l.authContext, tileRequest)
 
 	var authError *providers.AuthError
 	if errors.As(err, &authError) {
@@ -111,7 +114,7 @@ func (l *Layer) RenderTileNoCache(tileRequest internal.TileRequest) (*internal.I
 			return nil, err
 		}
 
-		img, err = l.Provider.GenerateTile(l.authContext, l.Config.OverrideClient, l.ErrorMessages, tileRequest)
+		img, err = l.Provider.GenerateTile(l.authContext, tileRequest)
 
 		if err != nil {
 			return nil, err

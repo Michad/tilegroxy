@@ -16,6 +16,7 @@ require (
 	github.com/spf13/viper v1.19.0
 	github.com/stretchr/testify v1.9.0
 	github.com/testcontainers/testcontainers-go v0.31.0
+	github.com/traefik/yaegi v0.16.1
 	gopkg.in/yaml.v3 v3.0.1
 )
 

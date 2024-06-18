@@ -66,15 +66,12 @@ func parseConfigIntoStructs(cmd *cobra.Command) (*config.Config, []*layers.Layer
 	layerObjects := make([]*layers.Layer, len(cfg.Layers))
 
 	for i, l := range cfg.Layers {
-		layerObjects[i], err = layers.ConstructLayer(l, &cfg.Error.Messages)
+		layerObjects[i], err = layers.ConstructLayer(l, &cfg.Client, &cfg.Error.Messages)
 		if err != nil {
 			return nil, nil, nil, err
 		}
 
 		layerObjects[i].Cache = &cache
-		if layerObjects[i].Config.OverrideClient == nil {
-			layerObjects[i].Config.OverrideClient = &cfg.Client
-		}
 	}
 
 	if err != nil {

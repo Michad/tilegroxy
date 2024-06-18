@@ -28,21 +28,34 @@ import (
 )
 
 type Provider interface {
-	PreAuth(authContext *AuthContext) error
-	GenerateTile(authContext *AuthContext, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, tileRequest internal.TileRequest) (*internal.Image, error)
+	PreAuth(authContext AuthContext) (AuthContext, error)
+	GenerateTile(authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error)
 }
 
-func ConstructProvider(rawConfig map[string]interface{}, errorMessages *config.ErrorMessages) (Provider, error) {
+func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages) (Provider, error) {
 
 	if rawConfig["name"] == "url template" {
-		var result UrlTemplate
-		err := mapstructure.Decode(rawConfig, &result)
-		return result, err
-	}
-	if rawConfig["name"] == "proxy" {
-		var result Proxy
-		err := mapstructure.Decode(rawConfig, &result)
-		return result, err
+		var config UrlTemplateConfig
+		err := mapstructure.Decode(rawConfig, &config)
+		if err != nil {
+			return nil, err
+		}
+
+		return ConstructUrlTemplate(config, clientConfig, errorMessages)
+	} else if rawConfig["name"] == "proxy" {
+		var config ProxyConfig
+		err := mapstructure.Decode(rawConfig, &config)
+		if err != nil {
+			return nil, err
+		}
+		return ConstructProxy(config, clientConfig, errorMessages)
+	} else if rawConfig["name"] == "custom" {
+		var config CustomConfig
+		err := mapstructure.Decode(rawConfig, &config)
+		if err != nil {
+			return nil, err
+		}
+		return ConstructCustom(config, clientConfig, errorMessages)
 	}
 
 	name := fmt.Sprintf("%#v", rawConfig["name"])
@@ -50,18 +63,18 @@ func ConstructProvider(rawConfig map[string]interface{}, errorMessages *config.E
 }
 
 type AuthContext struct {
+	Bypass     bool
 	Expiration time.Time
 	Token      string
 	Other      map[string]interface{}
 }
 
 type AuthError struct {
-	arg     int
-	message string
+	Message string
 }
 
-func (e *AuthError) Error() string {
-	return fmt.Sprintf("%d - %s", e.arg, e.message)
+func (e AuthError) Error() string {
+	return fmt.Sprintf("Auth Error - %s", e.Message)
 }
 
 type InvalidContentLengthError struct {
