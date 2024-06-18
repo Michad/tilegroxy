@@ -32,9 +32,10 @@ Example:
 		x, err3 := cmd.Flags().GetUint("y-coordinate")
 		y, err4 := cmd.Flags().GetUint("x-coordinate")
 		noCache, err5 := cmd.Flags().GetBool("no-cache")
-		numThread, err6 := cmd.Flags().GetUint16("threads")
+		noCacheWrite, err6 := cmd.Flags().GetBool("no-cache-write")
+		numThread, err7 := cmd.Flags().GetUint16("threads")
 
-		if err := errors.Join(err1, err2, err3, err4, err5, err6); err != nil {
+		if err := errors.Join(err1, err2, err3, err4, err5, err6, err7); err != nil {
 			fmt.Printf("Error: %v", err)
 			os.Exit(1)
 		}
@@ -111,7 +112,9 @@ Example:
 					var cacheReadError error
 
 					if !noCache && layerErr == nil {
-						cacheWriteError = (*layer.Cache).Save(req, img)
+						if !noCacheWrite {
+							cacheWriteError = (*layer.Cache).Save(req, img)
+						}
 						if cacheWriteError == nil {
 							var img2 *internal.Image
 							img2, cacheReadError = (*layer.Cache).Lookup(req)
@@ -131,21 +134,42 @@ Example:
 
 					//Output the result into the table
 					resultStr := strconv.Itoa(t) + "\t" + req.LayerName + "\t"
+					const (
+						yes = "Yes"
+						no  = "No"
+						na  = "N/A"
+					)
+
+					var gen string
+					write := na
+					read := na
+					errs := "None"
+
 					if layerErr != nil {
-						resultStr += "No\tN/A\tN/A\t\xff" + layerErr.Error() + "\xff\t"
+						gen = no
+						errs = layerErr.Error()
 					} else {
-						if noCache {
-							resultStr += "Yes\tN/A\tN/A\tNone\t"
-						} else if cacheWriteError != nil {
-							resultStr += "Yes\tNo\tN/A\t\xff" + cacheWriteError.Error() + "\xff\t"
-						} else if cacheReadError != nil {
-							resultStr += "Yes\tYes\tNo\t\xff" + cacheReadError.Error() + "\xff\t"
-						} else {
-							resultStr += "Yes\tYes\tYes\tNone\t"
+						gen = yes
+						if !noCache {
+							write = yes
+							read = yes
+
+							if cacheWriteError != nil {
+								write = no
+								read = na
+								errs = cacheWriteError.Error()
+							} else if cacheReadError != nil {
+								read = no
+								errs = cacheReadError.Error()
+							}
+
+							if noCacheWrite {
+								write = na
+							}
 						}
 					}
+					resultStr += gen + "\t" + write + "\t" + read + "\t\xff" + errs + "\xff\t"
 					fmt.Fprintln(writer, resultStr)
-
 				}
 
 				wg.Done()
@@ -174,7 +198,9 @@ func init() {
 	testCmd.Flags().UintP("z-coordinate", "z", 10, "The z coordinate to use to test")
 	testCmd.Flags().UintP("x-coordinate", "x", 123, "The x coordinate to use to test")
 	testCmd.Flags().UintP("y-coordinate", "y", 534, "The y coordinate to use to test")
-	testCmd.Flags().Bool("no-cache", false, "Don't write to the cache. The Cache configuration must still be syntactically valid")
+	testCmd.Flags().Bool("no-cache", false, "Don't write or read to the cache. The Cache configuration must still be syntactically valid")
+	testCmd.Flags().Bool("no-cache-write", false, "Don't write to the cache. The Cache configuration must still be syntactically valid")
+	testCmd.MarkFlagsMutuallyExclusive("no-cache", "no-cache-write")
 	testCmd.Flags().Uint16P("threads", "t", 1, "How many layers to test at once. Be mindful of spamming upstream providers")
 	//TODO: output in custom format or write to file
 }

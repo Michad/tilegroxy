@@ -1,9 +1,13 @@
 cache:
-    name: group
-    peerlist: 
-      - "http://127.0.0.1:8080"
-    listenaddress: 127.0.0.1:8080
-    CacheSize: 10000
+    name: multi
+    tiers:
+      - name: group
+        peerlist: 
+          - "http://127.0.0.1:8080"
+        listenaddress: 127.0.0.1:8080
+        CacheSize: 10000
+      - name: disk
+        path: ./disk_tile_cache
 layers:
   - id: osm
     provider:
