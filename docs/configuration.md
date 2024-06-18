@@ -49,6 +49,34 @@ Configuration options:
 | --- | --- | --- | --- | --- |
 | template | string | Yes | None | A URL pointing to the tile server. Should contain placeholders `$xmin` `$xmax` `$ymin` and `$ymax` for tile coordinates |
 
+### Fallback
+
+Delegates calls to a Primary provider, then if that returns an error it sends the request to a Secondary provider. This is useful, for example, where you're integrating with a system that returns an error for requests outside of the coverage area, the coverage area isn't a simple bounding box, and you want to return a Static image in those cases without it being logged as an error.  It especially can be useful in conjunction with the Sandwich provider.  
+
+Currently the preAuth method is never called for fallback providers, therefore only authless providers should be used as fallbacks.
+
+Name should be "fallback"
+
+Configuration options:
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| primary | Provider | Yes | None | The provider to delegate to first |
+| secondary | Provider | Yes | None | The provider to delegate to if primary returns an error |
+
+### Static
+
+Generates the same exact image for every single tile. This is most useful when used with either the Fallback or Sandwich providers. 
+
+Name should be "static"
+
+Configuration options:
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| image | string | Yes | None | Either a filepath to an image on the local filesystem or one of the built-in images described under "Error Images" |
+
+
 ### Custom
 
 Custom providers implement your own custom logic for providing imagery from whatever source you can imagine.  They require a custom Go script file interpreted using [Yaegi](https://github.com/traefik/yaegi).  The main README has more detailed information on implementing custom providers and [examples are available](../examples/providers/).

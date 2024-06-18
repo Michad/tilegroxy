@@ -56,6 +56,29 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.Cl
 			return nil, err
 		}
 		return ConstructCustom(config, clientConfig, errorMessages)
+	} else if rawConfig["name"] == "static" {
+		var config StaticConfig
+		err := mapstructure.Decode(rawConfig, &config)
+		if err != nil {
+			return nil, err
+		}
+		return ConstructStatic(config, clientConfig, errorMessages)
+	} else if rawConfig["name"] == "fallback" {
+		var config FallbackConfig
+		err := mapstructure.Decode(rawConfig, &config)
+		if err != nil {
+			return nil, err
+		}
+		primary, err := ConstructProvider(config.Primary, clientConfig, errorMessages)
+		if err != nil {
+			return nil, err
+		}
+		secondary, err := ConstructProvider(config.Secondary, clientConfig, errorMessages)
+		if err != nil {
+			return nil, err
+		}
+
+		return ConstructFallback(config, clientConfig, errorMessages, &primary, &secondary)
 	}
 
 	name := fmt.Sprintf("%#v", rawConfig["name"])
