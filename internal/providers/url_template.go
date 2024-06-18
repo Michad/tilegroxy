@@ -29,12 +29,15 @@ type UrlTemplateConfig struct {
 
 type UrlTemplate struct {
 	UrlTemplateConfig
-	clientConfig  *config.ClientConfig
-	errorMessages *config.ErrorMessages
+	clientConfig *config.ClientConfig
 }
 
 func ConstructUrlTemplate(config UrlTemplateConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages) (*UrlTemplate, error) {
-	return &UrlTemplate{config, clientConfig, errorMessages}, nil
+	if config.Template == "" {
+		return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.url template.url", "")
+	}
+
+	return &UrlTemplate{config, clientConfig}, nil
 }
 
 func (t UrlTemplate) PreAuth(authContext AuthContext) (AuthContext, error) {
@@ -42,10 +45,6 @@ func (t UrlTemplate) PreAuth(authContext AuthContext) (AuthContext, error) {
 }
 
 func (t UrlTemplate) GenerateTile(authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
-	if t.Template == "" {
-		return nil, fmt.Errorf(t.errorMessages.InvalidParam, "provider.url template.url", "")
-	}
-
 	b, err := tileRequest.GetBounds()
 
 	if err != nil {

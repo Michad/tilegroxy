@@ -31,12 +31,15 @@ type ProxyConfig struct {
 
 type Proxy struct {
 	ProxyConfig
-	clientConfig  *config.ClientConfig
-	errorMessages *config.ErrorMessages
+	clientConfig *config.ClientConfig
 }
 
 func ConstructProxy(config ProxyConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages) (*Proxy, error) {
-	return &Proxy{config, clientConfig, errorMessages}, nil
+	if config.Url == "" {
+		return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.proxy.url", "")
+	}
+
+	return &Proxy{config, clientConfig}, nil
 }
 
 func (t Proxy) PreAuth(authContext AuthContext) (AuthContext, error) {
@@ -44,10 +47,6 @@ func (t Proxy) PreAuth(authContext AuthContext) (AuthContext, error) {
 }
 
 func (t Proxy) GenerateTile(authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
-	if t.Url == "" {
-		return nil, fmt.Errorf(t.errorMessages.InvalidParam, "provider.proxy.url", "")
-	}
-
 	y := tileRequest.Y
 	if t.InvertY {
 		y = int(math.Exp2(float64(tileRequest.Z))) - y - 1
