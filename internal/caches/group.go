@@ -1,8 +1,6 @@
 package caches
 
 import (
-	"fmt"
-
 	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/caches/group"
 	"github.com/Michad/tilegroxy/internal/config"
@@ -19,8 +17,8 @@ type GroupCache struct {
 
 // Lookup takes a TileRequest and returns an Image or an error.
 func (g *GroupCache) Lookup(t internal.TileRequest) (*internal.Image, error) {
-	file := fmt.Sprintf("%d/%d/%d", t.Z, t.X, t.Y) // TODO
-	if v, ok := g.Cache.Get(t.LayerName, file); ok {
+	file := t.String()
+	if v, ok := g.Cache.Get(g.conf.Name, file); ok {
 		i := v.(internal.Image)
 		return &i, nil
 	}
@@ -36,7 +34,7 @@ func (g *GroupCache) Save(t internal.TileRequest, img *internal.Image) error {
 		conf.Name = t.LayerName
 		g.Add(conf, nil)
 	}
-	return g.Cache.Set(t.LayerName, key, *img)
+	return g.Cache.Set(g.conf.Name, key, *img)
 }
 
 // NewGroupCache creates a new GroupCache from the specified config and returns it, or returns an error.

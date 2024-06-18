@@ -47,9 +47,7 @@ Example:
 		}
 
 		if len(layerNames) == 0 {
-			for _, l := range layerGroup.LayerMap {
-				layerNames = append(layerNames, l.Id)
-			}
+			layerNames = layerGroup.ListNames()
 		}
 
 		//Generate the full list of requests to process
@@ -64,10 +62,8 @@ Example:
 				os.Exit(1)
 			}
 
-			layer := layerGroup.LayerMap[layerName]
-
-			if layer == nil {
-				fmt.Printf("Error: Invalid layer name: %v", layer)
+			if !layerGroup.Contains(layerName) {
+				fmt.Printf("Error: Invalid layer name: %v", layerName)
 				os.Exit(1)
 			}
 
@@ -109,7 +105,7 @@ Example:
 			go func(t int, myReqs []internal.TileRequest) {
 
 				for _, req := range myReqs {
-					layer := layerGroup.LayerMap[req.LayerName]
+					layer := layerGroup.Get(req.LayerName)
 					img, layerErr := layer.RenderTileNoCache(req)
 					var cacheWriteError error
 					var cacheReadError error

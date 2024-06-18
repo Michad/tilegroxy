@@ -16,8 +16,6 @@ package layers
 
 import (
 	"errors"
-	"fmt"
-	"log/slog"
 	"sync"
 	"time"
 
@@ -57,36 +55,6 @@ func (l *Layer) authWithProvider() error {
 	l.authMutex.Unlock()
 
 	return err
-}
-
-func (l *Layer) RenderTile(tileRequest internal.TileRequest) (*internal.Image, error) {
-	var img *internal.Image
-	var err error
-
-	img, err = (*l.Cache).Lookup(tileRequest)
-
-	if img != nil {
-		slog.Debug("Cache hit")
-		return img, err
-	}
-
-	if err != nil {
-		slog.Warn(fmt.Sprintf("Cache read error %v\n", err))
-	}
-
-	img, err = l.RenderTileNoCache(tileRequest)
-
-	if err != nil {
-		return nil, err
-	}
-
-	err = (*l.Cache).Save(tileRequest, img)
-
-	if err != nil {
-		slog.Warn(fmt.Sprintf("Cache save error %v\n", err))
-	}
-
-	return img, nil
 }
 
 func (l *Layer) RenderTileNoCache(tileRequest internal.TileRequest) (*internal.Image, error) {

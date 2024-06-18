@@ -1,0 +1,11 @@
+cache:
+    name: group
+    peerlist: 
+      - "http://127.0.0.1:8080"
+    listenaddress: 127.0.0.1:8080
+    CacheSize: 10000
+layers:
+  - id: osm
+    provider:
+        name: proxy
+        url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
