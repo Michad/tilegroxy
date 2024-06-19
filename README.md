@@ -24,13 +24,14 @@ The following features are currently available:
 * Cache map tiles in disk, memory, s3, redis, or memcache
 * Create your own custom provider to pull in non-standard and proprietary imagery sources
 * Combine multiple map layers with adjustable blending rules
+* Adjust the appearance of a map layer with 18 effect options
 * Generic support for any content type 
-* Incoming authentication using a static key or JWT
+* Require incoming authentication using a static key or JWT
 * Configurable timeout, logging, and error handling rules
 
 The following are on the roadmap:
 
-* Proxy map layers directly to providers such as Mapnik, Mapserver 
+* Proxy map layers directly to local providers such as Mapnik, Mapserver 
 * Specific support for vector tile formats such as [MVT](https://github.com/mapbox/vector-tile-spec) or tiled GeoJSON
 * OpenTelemetry support
 * Support for external secret stores such as AWS Secrets Manager to avoid secrets in the configuration
