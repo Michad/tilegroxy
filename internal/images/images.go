@@ -54,6 +54,42 @@ const KeyPrefixColor = "color:"
 var dynamicImages = make(map[string]*[]byte, 0)
 var failedImages = make(map[string]error, 0)
 
+func parseColor(fullStr string) (color.Color, error) {
+	col := fullStr[len(KeyPrefixColor):]
+
+	if col[0:0] == "#" {
+		col = col[1:]
+	}
+
+	col = strings.ToLower(col)
+
+	colObj := color.RGBA{R: 255, G: 255, B: 255, A: 255}
+
+	if len(col) == 3 {
+		col = string(col[0]) + string(col[0]) + string(col[1]) + string(col[1]) + string(col[2]) + string(col[2])
+	} else if len(col) == 4 {
+		col = string(col[0]) + string(col[0]) + string(col[1]) + string(col[1]) + string(col[2]) + string(col[2]) + string(col[3]) + string(col[3])
+	}
+
+	if len(col) == 6 {
+		numMatch, err := fmt.Sscanf(col, "%02x%02x%02x", &colObj.R, &colObj.G, &colObj.B)
+		if numMatch != 3 {
+			return colObj, errors.New("mismatch")
+		}
+		return colObj, err
+	}
+
+	if len(col) == 8 {
+		numMatch, err := fmt.Sscanf(col, "%02x%02x%02x%02x", &colObj.R, &colObj.G, &colObj.B, &colObj.A)
+		if numMatch != 4 {
+			return colObj, errors.New("mismatch")
+		}
+		return colObj, err
+	}
+
+	return colObj, errors.New("invalid color")
+}
+
 // Returns the contents of an image. This can be an embedded image if path starts with "embedded:". The path will be treated as a standard filepath otherwise.  The contents of the image will be permanently cached in memory, this should be only used for images that will be reused a lot such as error responses. Errors will also be cached but 1% of the time it will be retried.
 func GetStaticImage(path string) (*[]byte, error) {
 	if path == KeyImageError {
@@ -83,31 +119,10 @@ func GetStaticImage(path string) (*[]byte, error) {
 	}
 
 	if strings.Index(path, KeyPrefixColor) == 0 {
-		col := path[len(KeyPrefixColor):]
-
-		if col[0:0] == "#" {
-			col = col[1:]
-		}
-
-		col = strings.ToLower(col)
-
-		colObj := color.RGBA{R: 255, G: 255, B: 255, A: 255}
-		numMatch, err := fmt.Sscanf(col, "%02x%02x%02x%02x", &colObj.R, &colObj.G, &colObj.B, &colObj.A)
-		if err != nil || numMatch != 4 {
-			numMatch, err = fmt.Sscanf(col, "%02x%02x%02x", &colObj.R, &colObj.G, &colObj.B)
-			if err != nil || numMatch != 3 {
-				numMatch, err = fmt.Sscanf(col, "%1x%1x%1x%1x", &colObj.R, &colObj.G, &colObj.B, &colObj.A)
-				if err != nil || numMatch != 4 {
-					numMatch, err = fmt.Sscanf(col, "%1x%1x%1x", &colObj.R, &colObj.G, &colObj.B)
-					if numMatch != 3 {
-						err = errors.New("Mismatch")
-					}
-				}
-			}
-		}
+		colObj, err := parseColor(path)
 
 		if err != nil {
-			return nil, fmt.Errorf("invalid color %v", col)
+			return nil, fmt.Errorf("invalid color %v", path)
 		}
 
 		img := image.NewRGBA(image.Rect(0, 0, 512, 512))

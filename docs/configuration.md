@@ -68,9 +68,11 @@ Name should be "blend"
 
 ### Fallback
 
-Delegates calls to a Primary provider, then if that returns an error it sends the request to a Secondary provider. This is useful, for example, where you're integrating with a system that returns an error for requests outside of the coverage area, the coverage area isn't a simple bounding box, and you want to return a Static image in those cases without it being logged as an error.  It especially can be useful in conjunction with the Blend provider.  
+Delegates calls to a Primary provider, then falls back Secondary provider when an error is returned or the tile is outside the valid zoom or bounds. This is useful, for example, where you're integrating with a system that returns an error for requests outside of the coverage area and you want to return a Static image in those cases without it being logged as an error.  It especially can be useful in conjunction with the Blend provider.  
 
-Currently the preAuth method is never called for fallback providers, therefore only authless providers should be used as fallbacks.
+Currently the preAuth method is never called for the secondary provider, therefore only authless providers should be used as fallbacks. In the future we may include calls to the preAuth method but only when the fallback logic is triggered.
+
+Currently the bounds parameter is only applied at a per-tile level. That is, the edge where the fallback begins to kick in will visibly change as you zoom in/out. In the future we may add an additional configuration option to make it apply at a per-pixel level instead.
 
 Name should be "fallback"
 
@@ -80,6 +82,27 @@ Configuration options:
 | --- | --- | --- | --- | --- |
 | primary | Provider | Yes | None | The provider to delegate to first |
 | secondary | Provider | Yes | None | The provider to delegate to if primary returns an error |
+| zoom | String | No | 0-21 | Zooming below or above this range will activate the fallback. Can be a single number, a range with a dash between start and end, or a comma separated list of the first two options.  For example "4" "2-3" or "2,3-4" |
+| bounds | Object with north, south, east, west | No | Whole world | Any tiles that don't intersect with this bounds will activate the fallback |
+
+Example:
+
+```
+provider:
+  name: fallback
+  zoom: 4-21
+  bounds: 
+    south: 51
+    north: 63
+    west: -7
+    east: 0.1
+  primary:
+    name: proxy
+    url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+  secondary:
+    name: static
+    color: "0000"
+```
 
 ### Static
 

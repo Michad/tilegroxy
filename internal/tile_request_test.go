@@ -1,3 +1,16 @@
+// Copyright 2024 Michael Davis
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package internal
 
 import (
@@ -56,10 +69,10 @@ func TestTileToBoundsZoom0(t *testing.T) {
 	b, err := r.GetBounds()
 
 	assert.Equal(t, nil, err)
-	assert.InDelta(t, -85.0511, .0001, b.MinLat)
-	assert.InDelta(t, 85.0511, .0001, b.MaxLat)
-	assert.Equal(t, -180.0, b.MinLong)
-	assert.Equal(t, 180.0, b.MaxLong)
+	assert.InDelta(t, -85.0511, b.South, .0001)
+	assert.InDelta(t, 85.0511, b.North, .0001)
+	assert.Equal(t, -180.0, b.West)
+	assert.Equal(t, 180.0, b.East)
 }
 func TestTileToBoundsZoom8(t *testing.T) {
 	r := TileRequest{"layer", 8, 132, 85}
@@ -67,10 +80,10 @@ func TestTileToBoundsZoom8(t *testing.T) {
 	b, err := r.GetBounds()
 
 	assert.Equal(t, nil, err)
-	assert.InDelta(t, 50.736455, .0001, b.MinLat)
-	assert.InDelta(t, 51.618016, .0001, b.MaxLat)
-	assert.InDelta(t, 5.625000, .0001, b.MinLong)
-	assert.InDelta(t, 7.031250, .0001, b.MaxLong)
+	assert.InDelta(t, 50.736455, .0001, b.South)
+	assert.InDelta(t, 51.618016, .0001, b.North)
+	assert.InDelta(t, 5.625000, .0001, b.West)
+	assert.InDelta(t, 7.031250, .0001, b.East)
 }
 
 func TestTileRequestRangeError(t *testing.T) {
@@ -87,4 +100,29 @@ func TestTileRequestRangeError(t *testing.T) {
 	assert.Equal(t, "Y", re.ParamName)
 	assert.Equal(t, 0.0, re.MinValue)
 	assert.Equal(t, 3.0, re.MaxValue)
+}
+
+func TestBoundsIntersect(t *testing.T) {
+	assert.True(t, Bounds{0, 1, 0, 1}.Intersects(Bounds{.9, 1.1, 0.9, 1.1}))
+	assert.True(t, Bounds{0, 1, 0, 1}.Intersects(Bounds{-1, 0.1, -1, 0.1}))
+	assert.True(t, Bounds{0, 1, 0, 1}.Intersects(Bounds{0, 1, 0, 0.1}))
+	assert.True(t, Bounds{0, 1, 0, 1}.Intersects(Bounds{0, 1, 0.9, 2}))
+	assert.True(t, Bounds{.9, 1.1, 0.9, 1.1}.Intersects(Bounds{0, 1, 0, 1}))
+	assert.True(t, Bounds{-1, 0.1, -1, 0.1}.Intersects(Bounds{0, 1, 0, 1}))
+	assert.True(t, Bounds{0, 1, 0, 0.1}.Intersects(Bounds{0, 1, 0, 1}))
+	assert.True(t, Bounds{0, 1, 0.9, 2}.Intersects(Bounds{0, 1, 0, 1}))
+
+	assert.False(t, Bounds{0, 1, 0, 1}.Intersects(Bounds{101, 200, 10, 354}))
+	assert.False(t, Bounds{0, 1, 0, 1}.Intersects(Bounds{0, 1, 1, 2}))
+	assert.False(t, Bounds{0, 1, 0, 1}.Intersects(Bounds{0, 1, -1, 0}))
+	assert.False(t, Bounds{0, 1, 0, 1}.Intersects(Bounds{1, 2, 0, 1}))
+	assert.False(t, Bounds{0, 1, 0, 1}.Intersects(Bounds{-1, 0, 0, 1}))
+
+	assert.True(t, Bounds{0, 10, 0, 10}.Intersects(Bounds{0, 1, 0, 1}))
+	assert.True(t, Bounds{0, 1, 0, 1}.Intersects(Bounds{0, 10, 0, 10}))
+	assert.True(t, Bounds{0, 10, 0, 10}.Intersects(Bounds{3, 4, 3, 4}))
+	assert.True(t, Bounds{3, 4, 3, 4}.Intersects(Bounds{0, 10, 0, 10}))
+
+	assert.True(t, Bounds{-90, 90, -180, 180}.Intersects(Bounds{0, 1, 0, 1}))
+	assert.True(t, Bounds{0, 1, 0, 1}.Intersects(Bounds{-90, 90, -180, 180}))
 }

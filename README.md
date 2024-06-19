@@ -349,6 +349,7 @@ The following are the known incompatibilities with tilestache configurations:
     * Layers are supplied as a flat array of layer objects with an `id` parameter for the URL-safe layer name instead of them being supplied as an Object with the id being a key. 
     * Most parameters unavailable. Some can be configured via the `Client` configuration and others will be added in future versions.
     * The `write cache` parameter is replaced with `skipcache` with inverted value
+    * No `bounds` parameter - instead use the `fallback` provider but note it applies on a per-tile level only (not per-pixel)
 * URL Template provider:
     * No `referer` parameter - instead specify the referer header via the `Client` configuration
     * No `timeout` parameter - instead specify the timeout via the `Client` configuration

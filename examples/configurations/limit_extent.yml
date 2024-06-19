@@ -1,0 +1,20 @@
+logging:
+  mainlog:
+    level: debug
+layers:
+  # Limits the OSM map to the area around the UK and zoom levels 4+
+  - id: osm
+    provider:
+      name: fallback
+      zoom: 4-21
+      bounds: 
+        south: 51
+        north: 63
+        west: -7
+        east: 0.1
+      primary:
+        name: proxy
+        url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+      secondary:
+        name: static
+        color: "0000" 
