@@ -24,6 +24,7 @@ import (
 
 type StaticConfig struct {
 	Image string
+	Color string
 }
 
 type Static struct {
@@ -33,7 +34,11 @@ type Static struct {
 
 func ConstructStatic(config StaticConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages) (*Static, error) {
 	if config.Image == "" {
-		return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.static.image", "")
+		if config.Color != "" {
+			config.Image = images.KeyPrefixColor + config.Color
+		} else {
+			return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "provider.static.image", "")
+		}
 	}
 
 	img, err := images.GetStaticImage(config.Image)

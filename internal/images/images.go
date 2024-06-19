@@ -15,10 +15,18 @@
 package images
 
 import (
+	"bufio"
+	"bytes"
 	_ "embed"
 	"errors"
+	"fmt"
+	"image"
+	"image/color"
+	"image/draw"
+	"image/png"
 	"math/rand"
 	"os"
+	"strings"
 )
 
 //go:embed error.png
@@ -40,6 +48,8 @@ const KeyImageTransparent = "embedded:transparent.png"
 var imageUnauthorized []byte
 
 const KeyImageUnauthorized = "embedded:unauthorized.png"
+
+const KeyPrefixColor = "color:"
 
 var dynamicImages = make(map[string]*[]byte, 0)
 var failedImages = make(map[string]error, 0)
@@ -70,6 +80,53 @@ func GetStaticImage(path string) (*[]byte, error) {
 		if rand.Float32()*100 > 1 {
 			return nil, failedImages[path]
 		}
+	}
+
+	if strings.Index(path, KeyPrefixColor) == 0 {
+		col := path[len(KeyPrefixColor):]
+
+		if col[0:0] == "#" {
+			col = col[1:]
+		}
+
+		col = strings.ToLower(col)
+
+		colObj := color.RGBA{R: 255, G: 255, B: 255, A: 255}
+		numMatch, err := fmt.Sscanf(col, "%02x%02x%02x%02x", &colObj.R, &colObj.G, &colObj.B, &colObj.A)
+		if err != nil || numMatch != 4 {
+			numMatch, err = fmt.Sscanf(col, "%02x%02x%02x", &colObj.R, &colObj.G, &colObj.B)
+			if err != nil || numMatch != 3 {
+				numMatch, err = fmt.Sscanf(col, "%1x%1x%1x%1x", &colObj.R, &colObj.G, &colObj.B, &colObj.A)
+				if err != nil || numMatch != 4 {
+					numMatch, err = fmt.Sscanf(col, "%1x%1x%1x", &colObj.R, &colObj.G, &colObj.B)
+					if numMatch != 3 {
+						err = errors.New("Mismatch")
+					}
+				}
+			}
+		}
+
+		if err != nil {
+			return nil, fmt.Errorf("invalid color %v", col)
+		}
+
+		img := image.NewRGBA(image.Rect(0, 0, 512, 512))
+		draw.Draw(img, img.Rect, image.NewUniform(colObj), img.Rect.Min, draw.Src)
+
+		var buf bytes.Buffer
+		writer := bufio.NewWriter(&buf)
+
+		err = png.Encode(writer, img)
+
+		if err != nil {
+			return nil, err
+		}
+
+		writer.Flush()
+		output := buf.Bytes()
+
+		dynamicImages[path] = &output
+		return &output, nil
 	}
 
 	img, err := os.ReadFile(path)

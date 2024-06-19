@@ -92,6 +92,7 @@ Configuration options:
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
 | image | string | Yes | None | Either a filepath to an image on the local filesystem or one of the built-in images described under "Error Images" |
+| color | string | No | None | A hexcode (RGB or RGBA) of a color to return. Equivalent to specifying `image` with this value with a prefix of "color:" |
 
 
 ### Custom
