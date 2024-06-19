@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"image"
+	_ "image/jpeg"
 	"image/png"
 	"slices"
 	"strconv"
@@ -42,11 +43,11 @@ type Blend struct {
 	providers []*Provider
 }
 
-var allModes = []string{"add", "color burn", "color dodge", "darken", "difference", "divide", "exclusion", "lighten", "linear burn", "linear light", "multiply", "normal", "opacity", "overlay", "screen", "soft light", "subtract"}
+var allBlendModes = []string{"add", "color burn", "color dodge", "darken", "difference", "divide", "exclusion", "lighten", "linear burn", "linear light", "multiply", "normal", "opacity", "overlay", "screen", "soft light", "subtract"}
 
 func ConstructBlend(config BlendConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, providers []*Provider) (*Blend, error) {
-	if !slices.Contains(allModes, config.Mode) {
-		return nil, fmt.Errorf(errorMessages.EnumError, "provider.blend.mode", config.Mode, allModes)
+	if !slices.Contains(allBlendModes, config.Mode) {
+		return nil, fmt.Errorf(errorMessages.EnumError, "provider.blend.mode", config.Mode, allBlendModes)
 	}
 	if config.Mode != "opacity" && config.Opacity != 0 {
 		return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "provider.blend.opacity", config.Mode)

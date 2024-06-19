@@ -100,6 +100,18 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.Cl
 		}
 
 		return ConstructBlend(config, clientConfig, errorMessages, providers)
+	} else if rawConfig["name"] == "effect" {
+		var config EffectConfig
+		err := mapstructure.Decode(rawConfig, &config)
+		if err != nil {
+			return nil, err
+		}
+		child, err := ConstructProvider(config.Provider, clientConfig, errorMessages)
+		if err != nil {
+			return nil, err
+		}
+
+		return ConstructEffect(config, clientConfig, errorMessages, &child)
 	}
 
 	name := fmt.Sprintf("%#v", rawConfig["name"])
