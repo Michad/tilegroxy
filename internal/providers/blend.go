@@ -168,39 +168,39 @@ func (t Blend) GenerateTile(authContext AuthContext, tileRequest internal.TileRe
 		} else {
 			switch t.Mode {
 			case "add":
-				combinedImg = blend.Add(combinedImg, img)
+				combinedImg = blend.Add(img, combinedImg)
 			case "color burn":
-				combinedImg = blend.ColorBurn(combinedImg, img)
+				combinedImg = blend.ColorBurn(img, combinedImg)
 			case "color dodge":
-				combinedImg = blend.ColorDodge(combinedImg, img)
+				combinedImg = blend.ColorDodge(img, combinedImg)
 			case "darken":
-				combinedImg = blend.Darken(combinedImg, img)
+				combinedImg = blend.Darken(img, combinedImg)
 			case "difference":
-				combinedImg = blend.Difference(combinedImg, img)
+				combinedImg = blend.Difference(img, combinedImg)
 			case "divide":
-				combinedImg = blend.Divide(combinedImg, img)
+				combinedImg = blend.Divide(img, combinedImg)
 			case "exclusion":
-				combinedImg = blend.Exclusion(combinedImg, img)
+				combinedImg = blend.Exclusion(img, combinedImg)
 			case "lighten":
-				combinedImg = blend.Lighten(combinedImg, img)
+				combinedImg = blend.Lighten(img, combinedImg)
 			case "linear burn":
-				combinedImg = blend.LinearBurn(combinedImg, img)
+				combinedImg = blend.LinearBurn(img, combinedImg)
 			case "linear light":
-				combinedImg = blend.LinearLight(combinedImg, img)
+				combinedImg = blend.LinearLight(img, combinedImg)
 			case "multiply":
-				combinedImg = blend.Multiply(combinedImg, img)
+				combinedImg = blend.Multiply(img, combinedImg)
 			case "normal":
-				combinedImg = blend.Normal(combinedImg, img)
+				combinedImg = blend.Normal(img, combinedImg)
 			case "opacity":
-				combinedImg = blend.Opacity(combinedImg, img, t.Opacity)
+				combinedImg = blend.Opacity(img, combinedImg, t.Opacity)
 			case "overlay":
-				combinedImg = blend.Overlay(combinedImg, img)
+				combinedImg = blend.Overlay(img, combinedImg)
 			case "screen":
-				combinedImg = blend.Screen(combinedImg, img)
+				combinedImg = blend.Screen(img, combinedImg)
 			case "soft light":
-				combinedImg = blend.SoftLight(combinedImg, img)
+				combinedImg = blend.SoftLight(img, combinedImg)
 			case "subtract":
-				combinedImg = blend.Subtract(combinedImg, img)
+				combinedImg = blend.Subtract(img, combinedImg)
 			}
 		}
 	}
