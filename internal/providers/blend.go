@@ -72,7 +72,7 @@ func (t Blend) PreAuth(authContext AuthContext) (AuthContext, error) {
 
 	for i, p := range t.providers {
 		wg.Add(1)
-		go func(acObj interface{}, index int) {
+		go func(acObj interface{}, index int, p *Provider) {
 			var err error
 			ac, ok := acObj.(AuthContext)
 
@@ -90,13 +90,13 @@ func (t Blend) PreAuth(authContext AuthContext) (AuthContext, error) {
 			errs <- err
 
 			wg.Done()
-		}(authContext.Other[strconv.Itoa(i)], i)
+		}(authContext.Other[strconv.Itoa(i)], i, p)
 	}
 
 	wg.Wait()
 
 	errSlice := make([]error, len(t.providers))
-	for i, _ := range t.providers {
+	for i := range t.providers {
 		errSlice[i] = <-errs
 
 		acStruct := <-acResults
@@ -116,7 +116,7 @@ func (t Blend) GenerateTile(authContext AuthContext, tileRequest internal.TileRe
 
 	for i, p := range t.providers {
 		wg.Add(1)
-		go func(key string, index int) {
+		go func(key string, i int, p *Provider) {
 			var img *internal.Image
 			var err error
 			ac, ok := authContext.Other[key].(AuthContext)
@@ -137,13 +137,13 @@ func (t Blend) GenerateTile(authContext AuthContext, tileRequest internal.TileRe
 			errs <- errors.Join(err, err2)
 
 			wg.Done()
-		}(strconv.Itoa(i), i)
+		}(strconv.Itoa(i), i, p)
 	}
 
 	wg.Wait()
 
 	errSlice := make([]error, len(t.providers))
-	for i, _ := range t.providers {
+	for i := range t.providers {
 		errSlice[i] = <-errs
 	}
 
@@ -154,7 +154,7 @@ func (t Blend) GenerateTile(authContext AuthContext, tileRequest internal.TileRe
 	}
 
 	imgSlice := make([]image.Image, len(t.providers))
-	for _, _ = range t.providers {
+	for range t.providers {
 		imgStruct := <-imgs
 		imgSlice[imgStruct.int] = imgStruct.Image
 	}
