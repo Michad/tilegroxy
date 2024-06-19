@@ -9,7 +9,7 @@ updates:
   - package-ecosystem: "gomod" 
     directory: "/" 
     schedule:
-      interval: "daily"
+      interval: "weekly"
     commit-message:
       prefix: "security(go): "
   - package-ecosystem: "docker"
