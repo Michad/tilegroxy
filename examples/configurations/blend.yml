@@ -1,12 +1,27 @@
 cache:
     name: none
 layers:
-  - id: osm
-    provider: #Makes OpenStreetMap more blueish
+  - id: blue-osm
+    provider: 
       name: blend
       mode: difference
       providers:
-        - name: proxy
-          url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+      - name: static
+        image: embedded:red.png
+      - name: proxy
+        url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+  - id: mark-map-with-demo
+    provider: 
+      name: blend
+      mode: normal
+      providers:
         - name: static
-          image: embedded:red.png
+          image: examples/images/demo.png
+        - name: blend
+          mode: opacity
+          opacity: .5
+          providers:
+          - name: static
+            color: FF0000
+          - name: proxy
+            url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
