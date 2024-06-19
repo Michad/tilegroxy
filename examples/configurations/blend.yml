@@ -1,0 +1,12 @@
+cache:
+    name: none
+layers:
+  - id: osm
+    provider: #Makes OpenStreetMap more blueish
+      name: blend
+      mode: difference
+      providers:
+        - name: proxy
+          url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+        - name: static
+          image: embedded:red.png

@@ -15,6 +15,7 @@
 package providers
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -79,6 +80,26 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.Cl
 		}
 
 		return ConstructFallback(config, clientConfig, errorMessages, &primary, &secondary)
+	} else if rawConfig["name"] == "blend" {
+		var config BlendConfig
+		err := mapstructure.Decode(rawConfig, &config)
+		if err != nil {
+			return nil, err
+		}
+		var providers []*Provider
+		var errorSlice []error
+		for _, p := range config.Providers {
+			provider, err := ConstructProvider(p, clientConfig, errorMessages)
+			providers = append(providers, &provider)
+			errorSlice = append(errorSlice, err)
+		}
+
+		errorsFlat := errors.Join(errorSlice...)
+		if errorsFlat != nil {
+			return nil, errorsFlat
+		}
+
+		return ConstructBlend(config, clientConfig, errorMessages, providers)
 	}
 
 	name := fmt.Sprintf("%#v", rawConfig["name"])

@@ -23,13 +23,13 @@ The following features are currently available:
 * Proxy map tiles to ZXY, WMS, TMS, or WMTS backed map layers
 * Cache map tiles in disk, memory, s3, redis, or memcache
 * Create your own custom provider to pull in non-standard and proprietary imagery sources
+* Combine multiple map layers with adjustable blending rules
 * Generic support for any content type 
 * Incoming authentication using a static key or JWT
 * Configurable timeout, logging, and error handling rules
 
 The following are on the roadmap:
 
-* Support for raster image reprocessing/combination on the fly
 * Proxy map layers directly to providers such as Mapnik, Mapserver 
 * Specific support for vector tile formats such as [MVT](https://github.com/mapbox/vector-tile-spec) or tiled GeoJSON
 * OpenTelemetry support
@@ -338,7 +338,6 @@ The following are the known incompatibilities with tilestache configurations:
     * Vector
     * MBTiles
     * Mapnik Grid
-    * Sandwich
     * Goodies providers
 * Unsupported caches:
     * LimitedDisk
@@ -354,6 +353,8 @@ The following are the known incompatibilities with tilestache configurations:
     * No `referer` parameter - instead specify the referer header via the `Client` configuration
     * No `timeout` parameter - instead specify the timeout via the `Client` configuration
     * No `source projection` parameter - Might be added in the future
+* Sandwich provider:
+    * No direct equivalent to the sandwich provider is available but most if not all functionality is available by combining Blend and Static providers
 * Proxy provider:
     * No `provider` parameter 
     * No `timeout` parameter - instead specify the timeout via the `Client` configuration

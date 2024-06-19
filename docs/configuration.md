@@ -49,9 +49,26 @@ Configuration options:
 | --- | --- | --- | --- | --- |
 | template | string | Yes | None | A URL pointing to the tile server. Should contain placeholders `$xmin` `$xmax` `$ymin` and `$ymax` for tile coordinates |
 
+### Blend
+
+Allows you to combine the imagery from multiple providers.  The simplest use case for this is to "sandwich" or "composite" semi-transparent images on top of each other.  For example you can put county boundaries on top of a flood map or include a watermark on your maps.  Multiple blending modes are available to fine-tune the effect.  
+
+This can only be used with layers that return JPEG or PNG images. Tiles will be scaled down to the lowest resolution to be combined and the combined result always output in PNG format.  
+
+Each downstream provider is called in parallel.
+
+Name should be "blend"
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| providers | Array[Provider] | Yes | None | The providers to blend together.  Order matters |
+| mode | String | No | normal | How to blend the images. [Examples of the modes](https://github.com/anthonynsimon/bild#blend-modes). Possible values: "add", "color burn", "color dodge", "darken", "difference", "divide", "exclusion", "lighten", "linear burn", "linear light", "multiply", "normal", "opacity", "overlay", "screen", "soft light", "subtract" |
+| opacity | Float | No | 0 | Only applicable if mode is "opacity". A value between 0 and 1 controlling the amount of opacity |
+
+
 ### Fallback
 
-Delegates calls to a Primary provider, then if that returns an error it sends the request to a Secondary provider. This is useful, for example, where you're integrating with a system that returns an error for requests outside of the coverage area, the coverage area isn't a simple bounding box, and you want to return a Static image in those cases without it being logged as an error.  It especially can be useful in conjunction with the Sandwich provider.  
+Delegates calls to a Primary provider, then if that returns an error it sends the request to a Secondary provider. This is useful, for example, where you're integrating with a system that returns an error for requests outside of the coverage area, the coverage area isn't a simple bounding box, and you want to return a Static image in those cases without it being logged as an error.  It especially can be useful in conjunction with the Blend provider.  
 
 Currently the preAuth method is never called for fallback providers, therefore only authless providers should be used as fallbacks.
 
@@ -66,7 +83,7 @@ Configuration options:
 
 ### Static
 
-Generates the same exact image for every single tile. This is most useful when used with either the Fallback or Sandwich providers. 
+Generates the same exact image for every single tile. This is most useful when used with either the Fallback or Blend providers. 
 
 Name should be "static"
 
