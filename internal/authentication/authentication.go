@@ -23,7 +23,7 @@ import (
 )
 
 type Authentication interface {
-	Preauth(req *http.Request) bool
+	CheckAuthentication(req *http.Request) bool
 }
 
 func ConstructAuth(rawConfig map[string]interface{}, errorMessages *config.ErrorMessages) (Authentication, error) {

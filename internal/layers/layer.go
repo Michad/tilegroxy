@@ -15,6 +15,7 @@
 package layers
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -50,13 +51,13 @@ func ConstructLayer(rawConfig config.LayerConfig, clientConfig *config.ClientCon
 	return &Layer{rawConfig.Id, rawConfig, provider, nil, errorMessages, providers.AuthContext{}, sync.Mutex{}}, nil
 }
 
-func (l *Layer) authWithProvider() error {
+func (l *Layer) authWithProvider(ctx context.Context) error {
 	var err error
 
 	if !l.authContext.Bypass {
 		l.authMutex.Lock()
 		if l.authContext.Expiration.Before(time.Now()) {
-			l.authContext, err = l.Provider.PreAuth(l.authContext)
+			l.authContext, err = l.Provider.PreAuth(ctx, l.authContext)
 		}
 		l.authMutex.Unlock()
 	}
@@ -64,7 +65,7 @@ func (l *Layer) authWithProvider() error {
 	return err
 }
 
-func (l *Layer) RenderTile(tileRequest internal.TileRequest) (*internal.Image, error) {
+func (l *Layer) RenderTile(ctx context.Context, tileRequest internal.TileRequest) (*internal.Image, error) {
 	if l.Config.SkipCache {
 		return l.RenderTileNoCache(tileRequest)
 	}
@@ -75,15 +76,15 @@ func (l *Layer) RenderTile(tileRequest internal.TileRequest) (*internal.Image, e
 	img, err = (*l.Cache).Lookup(tileRequest)
 
 	if img != nil {
-		slog.Debug("Cache hit")
+		slog.DebugContext(ctx, "Cache hit")
 		return img, err
 	}
 
 	if err != nil {
-		slog.Warn(fmt.Sprintf("Cache read error %v\n", err))
+		slog.WarnContext(ctx, fmt.Sprintf("Cache read error %v\n", err))
 	}
 
-	img, err = l.RenderTileNoCache(tileRequest)
+	img, err = l.RenderTileNoCache(ctx, tileRequest)
 
 	if err != nil {
 		return nil, err
@@ -92,33 +93,33 @@ func (l *Layer) RenderTile(tileRequest internal.TileRequest) (*internal.Image, e
 	err = (*l.Cache).Save(tileRequest, img)
 
 	if err != nil {
-		slog.Warn(fmt.Sprintf("Cache save error %v\n", err))
+		slog.WarnContext(ctx, fmt.Sprintf("Cache save error %v\n", err))
 	}
 
 	return img, nil
 }
 
-func (l *Layer) RenderTileNoCache(tileRequest internal.TileRequest) (*internal.Image, error) {
+func (l *Layer) RenderTileNoCache(ctx context.Context, tileRequest internal.TileRequest) (*internal.Image, error) {
 	var img *internal.Image
 	var err error
 
-	err = l.authWithProvider()
+	err = l.authWithProvider(ctx)
 
 	if err != nil {
 		return nil, err
 	}
 
-	img, err = l.Provider.GenerateTile(l.authContext, tileRequest)
+	img, err = l.Provider.GenerateTile(ctx, l.authContext, tileRequest)
 
 	var authError *providers.AuthError
 	if errors.As(err, &authError) {
-		err = l.authWithProvider()
+		err = l.authWithProvider(ctx)
 
 		if err != nil {
 			return nil, err
 		}
 
-		img, err = l.Provider.GenerateTile(l.authContext, tileRequest)
+		img, err = l.Provider.GenerateTile(ctx, l.authContext, tileRequest)
 
 		if err != nil {
 			return nil, err

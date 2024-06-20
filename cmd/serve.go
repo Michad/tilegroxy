@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/spf13/cobra"
 
 	"github.com/Michad/tilegroxy/internal/server"
@@ -18,13 +21,15 @@ var serveCmd = &cobra.Command{
 		cfg, layerObjects, auth, err := parseConfigIntoStructs(cmd)
 
 		if err != nil {
-			panic(err)
+			fmt.Printf("Error: %v\n", err.Error())
+			os.Exit(1)
 		}
 
 		err = server.ListenAndServe(cfg, layerObjects, auth)
 
 		if err != nil {
-			panic(err)
+			fmt.Printf("Error: %v\n", err.Error())
+			os.Exit(1)
 		}
 	},
 }

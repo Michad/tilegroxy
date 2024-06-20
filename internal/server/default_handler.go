@@ -33,8 +33,8 @@ type defaultHandler struct {
 
 func (h *defaultHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
-	slog.Debug("server: default handler started")
-	defer slog.Debug("server: default handler ended")
+	slog.DebugContext(ctx, "server: default handler started")
+	defer slog.DebugContext(ctx, "server: default handler ended")
 
 	select {
 	case <-time.After(1 * time.Second):
@@ -42,7 +42,7 @@ func (h *defaultHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	case <-ctx.Done():
 
 		err := ctx.Err()
-		slog.Debug("server:", err)
+		slog.DebugContext(ctx, "server:", err)
 		internalError := http.StatusInternalServerError
 		http.Error(w, err.Error(), internalError)
 	}

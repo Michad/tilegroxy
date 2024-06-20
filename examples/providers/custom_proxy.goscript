@@ -19,6 +19,7 @@ package custom
 
 import (
 	//The standard library is available for use
+	"context"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -29,6 +30,8 @@ import (
 
 // This method is responsible for authenticating outgoing requests and returning a token or whatever else is needed. This method is called when needed by the application. A given instance of tilegroxy will only call this method once at a time and then shares the result among threads. However, this is not shared between instances of tilegroxy.
 func preAuth(
+	//Contextual information about the http request at play
+	ctx context.Context,
 	//The previous AuthContext. Will have default/empty values the first time this is called.  Included for use-cases where a refreshToken is available
 	authContext tilegroxy.AuthContext,
 	//The parameters included under the provider in the configuration. In this case it will only contain "url"
@@ -44,6 +47,8 @@ func preAuth(
 
 // This method is responsible for creating a tile
 func generateTile(
+	//Contextual information about the http request at play
+	ctx context.Context,
 	//The Authentication Context returned from the previous call to preAuth
 	authContext tilegroxy.AuthContext,
 	//The main input parameters for the request at hand.  Includes LayerName as well as Z, X, and Y tile coordinates
@@ -75,5 +80,5 @@ func generateTile(
 	//The third parameter is a map containing custom HTTP headers to include, which should be used for Authentication
 	//You can also perform HTTP calls via standard go HTTP library for cases where a GET doesn't suffice. It's recommended
 	//to use GetTile where possible for consistency and ensure the configured rules are followed
-	return tilegroxy.GetTile(&clientConfig, url, make(map[string]string))
+	return tilegroxy.GetTile(ctx, &clientConfig, url, make(map[string]string))
 }

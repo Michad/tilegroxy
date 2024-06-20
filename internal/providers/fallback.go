@@ -15,6 +15,7 @@
 package providers
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -56,15 +57,15 @@ func ConstructFallback(config FallbackConfig, clientConfig *config.ClientConfig,
 	return &Fallback{zoom, config.Bounds, primary, secondary}, nil
 }
 
-func (t Fallback) PreAuth(authContext AuthContext) (AuthContext, error) {
-	return (*t.Primary).PreAuth(authContext)
+func (t Fallback) PreAuth(ctx context.Context, authContext AuthContext) (AuthContext, error) {
+	return (*t.Primary).PreAuth(ctx, authContext)
 }
 
-func (t Fallback) GenerateTile(authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+func (t Fallback) GenerateTile(ctx context.Context, authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
 	ok := true
 
 	if !slices.Contains(t.zoom, tileRequest.Z) {
-		slog.Debug("Fallback provider falling back due to zoom")
+		slog.DebugContext(ctx, "Fallback provider falling back due to zoom")
 		ok = false
 	}
 
@@ -72,23 +73,23 @@ func (t Fallback) GenerateTile(authContext AuthContext, tileRequest internal.Til
 
 	if !intersects || err != nil {
 		b, _ := tileRequest.GetBounds()
-		slog.Debug(fmt.Sprintf("Fallback provider falling back due to bounds - request %v (%v) vs limit %v", tileRequest, b, t.bounds))
+		slog.DebugContext(ctx, fmt.Sprintf("Fallback provider falling back due to bounds - request %v (%v) vs limit %v", tileRequest, b, t.bounds))
 		ok = false
 	}
 
 	var img *internal.Image
 
 	if ok {
-		img, err = (*t.Primary).GenerateTile(authContext, tileRequest)
+		img, err = (*t.Primary).GenerateTile(ctx, authContext, tileRequest)
 
 		if err != nil {
 			ok = false
-			slog.Debug(fmt.Sprintf("Fallback provider falling back due to error: %v", err.Error()))
+			slog.DebugContext(ctx, fmt.Sprintf("Fallback provider falling back due to error: %v", err.Error()))
 		}
 	}
 
 	if !ok {
-		return (*t.Secondary).GenerateTile(authContext, tileRequest)
+		return (*t.Secondary).GenerateTile(ctx, authContext, tileRequest)
 	}
 
 	return img, err

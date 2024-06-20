@@ -75,7 +75,8 @@ func ConstructJwt(config *JwtConfig, errorMessages *config.ErrorMessages) (*Jwt,
 	}
 }
 
-func (c Jwt) Preauth(req *http.Request) bool {
+func (c Jwt) CheckAuthentication(req *http.Request) bool {
+	ctx := req.Context()
 	authHeader := req.Header[c.Config.HeaderName]
 	if len(authHeader) != 1 {
 		return false
@@ -96,7 +97,7 @@ func (c Jwt) Preauth(req *http.Request) bool {
 		date, ok := c.Cache.Get(tokenStr)
 
 		if ok {
-			slog.Debug("JWT Cache hit")
+			slog.DebugContext(ctx, "JWT Cache hit")
 			if date.After(time.Now()) {
 				return true
 			} else {
@@ -141,7 +142,7 @@ func (c Jwt) Preauth(req *http.Request) bool {
 	}, parserOptions...)
 
 	if error != nil {
-		slog.Info("JWT parsing error: ", error)
+		slog.InfoContext(ctx, "JWT parsing error: ", error)
 		return false
 	}
 

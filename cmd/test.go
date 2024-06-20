@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math"
@@ -116,7 +117,7 @@ Example:
 
 				for _, req := range myReqs {
 					layer := layerMap[req.LayerName]
-					img, layerErr := layer.RenderTileNoCache(req)
+					img, layerErr := layer.RenderTileNoCache(context.Background(), req)
 					var cacheWriteError error
 					var cacheReadError error
 

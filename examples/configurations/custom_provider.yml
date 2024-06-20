@@ -1,5 +1,7 @@
-cache:
-    name: none
+logging:
+  mainlog:
+    level: debug
+    format: json
 layers:
   - id: osm
     provider:

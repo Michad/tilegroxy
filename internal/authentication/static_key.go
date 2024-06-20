@@ -15,6 +15,7 @@
 package authentication
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -42,14 +43,14 @@ func ConstructStaticKey(config *StaticKeyConfig, errorMessages *config.ErrorMess
 
 		keyStr := strings.ReplaceAll(keyUuid.String(), "-", "")
 
-		slog.Warn(fmt.Sprintf("Generated authentication key: %v\n", keyStr))
+		slog.WarnContext(context.Background(), fmt.Sprintf("Generated authentication key: %v\n", keyStr))
 		config.Key = keyStr
 	}
 
 	return &StaticKey{config}, nil
 }
 
-func (c StaticKey) Preauth(req *http.Request) bool {
+func (c StaticKey) CheckAuthentication(req *http.Request) bool {
 	h := req.Header["Authorization"]
 	return len(h) > 0 && h[0] == "Bearer "+c.Config.Key
 }
