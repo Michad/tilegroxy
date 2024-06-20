@@ -65,6 +65,10 @@ func (l *Layer) authWithProvider() error {
 }
 
 func (l *Layer) RenderTile(tileRequest internal.TileRequest) (*internal.Image, error) {
+	if l.Config.SkipCache {
+		return l.RenderTileNoCache(tileRequest)
+	}
+
 	var img *internal.Image
 	var err error
 

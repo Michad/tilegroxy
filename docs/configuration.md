@@ -15,6 +15,7 @@ Configuration options:
 | id | string | Yes | None | A url-safe identifier of the layer. Primarily used as a path parameter for incoming tile web requests |
 | provider | Provider | Yes | None | See below |
 | overrideclient | Client | No | None | A Client configuration to use for this layer specifically that overrides the Client from the top-level of the configuration. See below for Client schema | 
+| skipcache | bool | No | false | If true, skip reading and writing to cache |
 
 ## Provider
 

@@ -108,6 +108,7 @@ type LogConfig struct {
 type LayerConfig struct {
 	Id             string
 	Provider       map[string]any
+	SkipCache      bool
 	OverrideClient *ClientConfig //If specified, all of the default Client is overridden. TODO: re-apply default
 }
 
