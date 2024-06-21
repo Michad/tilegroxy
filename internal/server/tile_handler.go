@@ -16,8 +16,10 @@ package server
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"runtime/debug"
 	"strconv"
 
 	"github.com/Michad/tilegroxy/internal"
@@ -45,21 +47,21 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	z, err := strconv.Atoi(zStr)
 
 	if err != nil {
-		writeError(ctx, w, &h.config.Error, TypeOfErrorBounds, h.config.Error.Messages.InvalidParam, "z", zStr)
+		writeError(ctx, w, &h.config.Error, TypeOfErrorBounds, fmt.Sprintf(h.config.Error.Messages.InvalidParam, "z", zStr))
 		return
 	}
 
 	x, err := strconv.Atoi(xStr)
 
 	if err != nil {
-		writeError(ctx, w, &h.config.Error, TypeOfErrorBounds, h.config.Error.Messages.InvalidParam, "x", xStr)
+		writeError(ctx, w, &h.config.Error, TypeOfErrorBounds, fmt.Sprintf(h.config.Error.Messages.InvalidParam, "x", xStr))
 		return
 	}
 
 	y, err := strconv.Atoi(yStr)
 
 	if err != nil {
-		writeError(ctx, w, &h.config.Error, TypeOfErrorBounds, h.config.Error.Messages.InvalidParam, "y", yStr)
+		writeError(ctx, w, &h.config.Error, TypeOfErrorBounds, fmt.Sprintf(h.config.Error.Messages.InvalidParam, "y", yStr))
 		return
 	}
 
@@ -70,15 +72,15 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		var re internal.RangeError
 		if errors.As(err, &re) {
-			writeError(ctx, w, &h.config.Error, TypeOfErrorBounds, h.config.Error.Messages.RangeError, re.ParamName, re.MinValue, re.MaxValue)
+			writeError(ctx, w, &h.config.Error, TypeOfErrorBounds, fmt.Sprintf(h.config.Error.Messages.RangeError, re.ParamName, re.MinValue, re.MaxValue))
 		} else {
-			writeError(ctx, w, &h.config.Error, TypeOfErrorOther, h.config.Error.Messages.ServerError, err)
+			writeError(ctx, w, &h.config.Error, TypeOfErrorOther, fmt.Sprintf(h.config.Error.Messages.ServerError, err), "stack", string(debug.Stack()))
 		}
 		return
 	}
 
 	if h.layerMap[layerName] == nil {
-		writeError(ctx, w, &h.config.Error, TypeOfErrorOtherBadRequest, h.config.Error.Messages.InvalidParam, "layer", layerName)
+		writeError(ctx, w, &h.config.Error, TypeOfErrorOtherBadRequest, fmt.Sprintf(h.config.Error.Messages.InvalidParam, "layer", layerName))
 		return
 	}
 
@@ -87,7 +89,7 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	img, err := layer.RenderTile(ctx, tileReq)
 
 	if err != nil {
-		writeError(ctx, w, &h.config.Error, TypeOfErrorOther, h.config.Error.Messages.ServerError, err)
+		writeError(ctx, w, &h.config.Error, TypeOfErrorOther, fmt.Sprintf(h.config.Error.Messages.ServerError, err), "stack", string(debug.Stack()))
 		return
 	}
 

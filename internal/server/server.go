@@ -21,7 +21,10 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"runtime/debug"
+	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/Michad/tilegroxy/internal/authentication"
 	"github.com/Michad/tilegroxy/internal/config"
@@ -45,31 +48,35 @@ const (
 	TypeOfErrorOther
 )
 
-func writeError(ctx context.Context, w http.ResponseWriter, cfg *config.ErrorConfig, errorType TypeOfError, message string, params ...any) {
+func writeError(ctx context.Context, w http.ResponseWriter, cfg *config.ErrorConfig, errorType TypeOfError, message string, args ...any) {
 	var status int
-	if errorType == TypeOfErrorAuth {
-		status = http.StatusUnauthorized
-	} else if errorType == TypeOfErrorBounds {
-		status = http.StatusBadRequest
-	} else if errorType == TypeOfErrorProvider {
-		status = http.StatusInternalServerError
-	} else if errorType == TypeOfErrorOtherBadRequest {
-		status = http.StatusBadRequest
+	if !cfg.SuppressStatusCode {
+		if errorType == TypeOfErrorAuth {
+			status = http.StatusUnauthorized
+		} else if errorType == TypeOfErrorBounds {
+			status = http.StatusBadRequest
+		} else if errorType == TypeOfErrorProvider {
+			status = http.StatusInternalServerError
+		} else if errorType == TypeOfErrorOtherBadRequest {
+			status = http.StatusBadRequest
+		} else {
+			status = http.StatusInternalServerError
+		}
 	} else {
-		status = http.StatusInternalServerError
+		status = http.StatusOK
 	}
 
-	fullMessage := fmt.Sprintf(message, params...)
-	slog.WarnContext(ctx, "Returning error to response: "+fullMessage)
+	// fullMessage := fmt.Sprintf(message, args...)
+	slog.WarnContext(ctx, message, args...)
 
 	if cfg.Mode == config.ModeErrorPlainText {
 		w.WriteHeader(status)
-		w.Write([]byte(fullMessage))
+		w.Write([]byte(message))
 	} else if cfg.Mode == config.ModeErrorNoError {
 		w.WriteHeader(status)
 	} else if cfg.Mode == config.ModeErrorImageHeader || cfg.Mode == config.ModeErrorImage {
 		if cfg.Mode == config.ModeErrorImageHeader {
-			w.Header().Add("x-error-message", fullMessage)
+			w.Header().Add("x-error-message", message)
 		}
 		w.WriteHeader(status)
 
@@ -105,7 +112,7 @@ type slogContextHandler struct {
 
 func (h slogContextHandler) Handle(ctx context.Context, r slog.Record) error {
 	for _, k := range h.keys {
-		r.AddAttrs(slog.Attr{Key: k, Value: slog.AnyValue(ctx.Value(k))})
+		r.AddAttrs(slog.Attr{Key: strings.ToLower(k), Value: slog.AnyValue(ctx.Value(k))})
 	}
 
 	return h.Handler.Handle(ctx, r)
@@ -139,8 +146,14 @@ func configureMainLogging(cfg *config.Config) error {
 		}
 
 		opt := slog.HandlerOptions{
-			AddSource: !cfg.Server.Production,
+			AddSource: true,
 			Level:     level,
+			ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+				if groups == nil && a.Key == "msg" {
+					return slog.Attr{Key: "message", Value: a.Value}
+				}
+				return a
+			},
 		}
 
 		var logHandler slog.Handler
@@ -152,7 +165,7 @@ func configureMainLogging(cfg *config.Config) error {
 		} else {
 			return fmt.Errorf(cfg.Error.Messages.InvalidParam, "logging.mainlog.format", cfg.Logging.MainLog.Format)
 		}
-		logHandler = slogContextHandler{logHandler, []string{"url"}}
+		logHandler = slogContextHandler{logHandler, slices.Concat([]string{"url"}, cfg.Logging.MainLog.IncludeHeaders)}
 
 		slog.SetDefault(slog.New(logHandler))
 	} else {
@@ -193,21 +206,29 @@ func configureAccessLogging(cfg config.AccessLogConfig, errorMessages config.Err
 	return rootHandler, nil
 }
 
-type sloglogger struct {
-}
-
-func (s sloglogger) Println(i ...interface{}) {
-	slog.Warn("Unexpected panic in request", i...)
-}
-
+// Custom context type. Links back to request so we can pull attrs into the structured log
 type reqCtx struct {
 	context.Context
 	req *http.Request
 }
 
-func (c *reqCtx) Value(key any) any {
+func (c *reqCtx) Value(keyAny any) any {
+	key, ok := keyAny.(string)
+	if !ok {
+		return nil
+	}
+
 	if key == "url" {
 		return c.req.URL.String()
+	}
+
+	h := c.req.Header[key]
+
+	if h != nil {
+		if len(h) == 1 {
+			return h[0]
+		}
+		return h
 	}
 
 	return nil
@@ -215,10 +236,18 @@ func (c *reqCtx) Value(key any) any {
 
 type httpContextHandler struct {
 	http.Handler
+	errCfg config.ErrorConfig
 }
 
 func (h httpContextHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	h.Handler.ServeHTTP(w, req.Clone(&reqCtx{req.Context(), req}))
+	reqC := reqCtx{req.Context(), req}
+	defer func() {
+		if err := recover(); err != nil {
+			writeError(&reqC, w, &h.errCfg, TypeOfErrorOther, "Unexpected Internal Server Error", "stack", string(debug.Stack()))
+		}
+	}()
+
+	h.Handler.ServeHTTP(w, req.WithContext(&reqC))
 }
 
 func ListenAndServe(config *config.Config, layerList []*layers.Layer, auth *authentication.Authentication) error {
@@ -244,10 +273,9 @@ func ListenAndServe(config *config.Config, layerList []*layers.Layer, auth *auth
 	if config.Server.Gzip {
 		rootHandler = handlers.CompressHandler(rootHandler)
 	}
-	rootHandler = httpContextHandler{rootHandler}
-	rootHandler = handlers.RecoveryHandler(handlers.RecoveryLogger(sloglogger{}), handlers.PrintRecoveryStack(true))(rootHandler)
 
 	rootHandler, err := configureAccessLogging(config.Logging.AccessLog, config.Error.Messages, rootHandler)
+	rootHandler = httpContextHandler{rootHandler, config.Error}
 
 	if err != nil {
 		return err

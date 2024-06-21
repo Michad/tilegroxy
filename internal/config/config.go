@@ -70,9 +70,10 @@ type ErrorImages struct {
 }
 
 type ErrorConfig struct {
-	Mode     string        //How errors should be returned.  See the consts above for options
-	Messages ErrorMessages //Patterns to use for error messages in logs and responses. Not used for utility commands.
-	Images   ErrorImages   //Only used if Mode is image or image+header
+	Mode               string        //How errors should be returned.  See the consts above for options
+	Messages           ErrorMessages //Patterns to use for error messages in logs and responses. Not used for utility commands.
+	Images             ErrorImages   //Only used if Mode is image or image+header
+	SuppressStatusCode bool          //If set we always return 200 regardless of what happens
 }
 
 // Formats for outputting the access log
@@ -98,6 +99,7 @@ type MainLogConfig struct {
 	Path              string //The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth. Defaults to none
 	Format            string //The format to output access logs in. Applies to both standard out and file out. Possible values: plain, json. Defaults to plain
 	Level             string
+	IncludeHeaders    []string //Headers to include in the logs. Useful for a transaction/request/trace/correlation ID or user identifiers
 }
 
 type LogConfig struct {
