@@ -1,0 +1,33 @@
+cache:
+    name: none
+layers:
+  - id: osm_b&w
+    provider:
+      name: effect
+      mode: grayscale
+      provider:
+          name: proxy
+          url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+  - id: osm_invert
+    provider:
+      name: effect
+      mode: invert
+      provider:
+          name: proxy
+          url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+  - id: osm_blurry
+    provider:
+      name: effect
+      mode: blur
+      intensity: 1
+      provider:
+          name: proxy
+          url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+  - id: osm_threshold
+    provider:
+      name: effect
+      mode: threshold
+      intensity: 200
+      provider:
+          name: proxy
+          url: https://tile.openstreetmap.org/{z}/{x}/{y}.png

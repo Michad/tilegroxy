@@ -23,14 +23,15 @@ The following features are currently available:
 * Proxy map tiles to ZXY, WMS, TMS, or WMTS backed map layers
 * Cache map tiles in disk, memory, s3, redis, or memcache
 * Create your own custom provider to pull in non-standard and proprietary imagery sources
+* Combine multiple map layers with adjustable blending rules
+* Adjust the appearance of a map layer with 18 effect options
 * Generic support for any content type 
-* Incoming authentication using a static key or JWT
+* Require incoming authentication using a static key or JWT
 * Configurable timeout, logging, and error handling rules
 
 The following are on the roadmap:
 
-* Support for raster image reprocessing/combination on the fly
-* Proxy map layers directly to providers such as Mapnik, Mapserver 
+* Proxy map layers directly to local providers such as Mapnik, Mapserver 
 * Specific support for vector tile formats such as [MVT](https://github.com/mapbox/vector-tile-spec) or tiled GeoJSON
 * OpenTelemetry support
 * Support for external secret stores such as AWS Secrets Manager to avoid secrets in the configuration
@@ -338,7 +339,6 @@ The following are the known incompatibilities with tilestache configurations:
     * Vector
     * MBTiles
     * Mapnik Grid
-    * Sandwich
     * Goodies providers
 * Unsupported caches:
     * LimitedDisk
@@ -350,10 +350,14 @@ The following are the known incompatibilities with tilestache configurations:
     * Layers are supplied as a flat array of layer objects with an `id` parameter for the URL-safe layer name instead of them being supplied as an Object with the id being a key. 
     * Most parameters unavailable. Some can be configured via the `Client` configuration and others will be added in future versions.
     * The `write cache` parameter is replaced with `skipcache` with inverted value
+    * No `bounds` parameter - instead use the `fallback` provider but note it applies on a per-tile level only (not per-pixel)
+    * No `pixel effects` parameter - instead use the `effect` provider
 * URL Template provider:
     * No `referer` parameter - instead specify the referer header via the `Client` configuration
     * No `timeout` parameter - instead specify the timeout via the `Client` configuration
     * No `source projection` parameter - Might be added in the future
+* Sandwich provider:
+    * No direct equivalent to the sandwich provider is available but most if not all functionality is available by combining Blend and Static providers
 * Proxy provider:
     * No `provider` parameter 
     * No `timeout` parameter - instead specify the timeout via the `Client` configuration

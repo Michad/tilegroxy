@@ -15,6 +15,7 @@
 package providers
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -56,6 +57,61 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.Cl
 			return nil, err
 		}
 		return ConstructCustom(config, clientConfig, errorMessages)
+	} else if rawConfig["name"] == "static" {
+		var config StaticConfig
+		err := mapstructure.Decode(rawConfig, &config)
+		if err != nil {
+			return nil, err
+		}
+		return ConstructStatic(config, clientConfig, errorMessages)
+	} else if rawConfig["name"] == "fallback" {
+		var config FallbackConfig
+		err := mapstructure.Decode(rawConfig, &config)
+		if err != nil {
+			return nil, err
+		}
+		primary, err := ConstructProvider(config.Primary, clientConfig, errorMessages)
+		if err != nil {
+			return nil, err
+		}
+		secondary, err := ConstructProvider(config.Secondary, clientConfig, errorMessages)
+		if err != nil {
+			return nil, err
+		}
+
+		return ConstructFallback(config, clientConfig, errorMessages, &primary, &secondary)
+	} else if rawConfig["name"] == "blend" {
+		var config BlendConfig
+		err := mapstructure.Decode(rawConfig, &config)
+		if err != nil {
+			return nil, err
+		}
+		var providers []*Provider
+		var errorSlice []error
+		for _, p := range config.Providers {
+			provider, err := ConstructProvider(p, clientConfig, errorMessages)
+			providers = append(providers, &provider)
+			errorSlice = append(errorSlice, err)
+		}
+
+		errorsFlat := errors.Join(errorSlice...)
+		if errorsFlat != nil {
+			return nil, errorsFlat
+		}
+
+		return ConstructBlend(config, clientConfig, errorMessages, providers)
+	} else if rawConfig["name"] == "effect" {
+		var config EffectConfig
+		err := mapstructure.Decode(rawConfig, &config)
+		if err != nil {
+			return nil, err
+		}
+		child, err := ConstructProvider(config.Provider, clientConfig, errorMessages)
+		if err != nil {
+			return nil, err
+		}
+
+		return ConstructEffect(config, clientConfig, errorMessages, &child)
 	}
 
 	name := fmt.Sprintf("%#v", rawConfig["name"])

@@ -63,7 +63,7 @@ Example:
 			os.Exit(1)
 		}
 
-		b := internal.Bounds{MinLat: float64(minLat), MinLong: float64(minLon), MaxLat: float64(maxLat), MaxLong: float64(maxLon)}
+		b := internal.Bounds{South: float64(minLat), West: float64(minLon), North: float64(maxLat), East: float64(maxLon)}
 
 		tileRequests := make([]internal.TileRequest, 0)
 
