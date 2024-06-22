@@ -23,7 +23,7 @@ A provider represents the underlying functionality that "provides" the tiles tha
 
 ### Proxy
 
-Proxy providers are the simplest option that simply forward tile requests to another HTTP(s) endpoint. This provider is primarily used for map layers that already return imagery in tiles: ZXY, TMS, or WMTS.  TMS inverts the y coordinate compared to ZXY and WMTS formats, which is handled by the InvertY parameter
+The Proxy provider is the simplest option that simply forwards tile requests to another HTTP(s) endpoint. This provider is primarily used for map layers that already return imagery in tiles: ZXY, TMS, or WMTS.  TMS inverts the y coordinate compared to ZXY and WMTS formats, which is handled by the InvertY parameter.
 
 Name should be "proxy"
 
@@ -31,13 +31,35 @@ Configuration options:
 
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| url | string | Yes | None | A URL pointing to the tile server. Should contain placeholders `{z}` `{x}` and `{y}` for tile coordinates |
-| inverty | bool | No | false | Changes tile numbering to be South-to-North instead of North-to-South. |
+| url | string | Yes | None | A URL pointing to the tile server. Should contain placeholders surrounded by "{}" that are replaced on-the-fly |
+| inverty | bool | No | false | Changes Y tile numbering to be South-to-North instead of North-to-South. Only impacts Y/y placeholder |
 
+
+The following placeholders are available in URL:
+
+| Placeholder | Description |
+| ----------- | ----------- |
+| x or X | The X tile coordinate from the incoming request |
+| y or Y | The Y tile coordinate either from the incoming request or the "flipped" equivalent if the `invertY` parameter is specified.  |
+| z or Z | The Z tile coordinate from the incoming request (aka "zoom") |
+| xmin | The "west" coordinate of the bounding box defined by the incoming tile coordinates. |
+| xmax | The "east" coordinate of the bounding box defined by the incoming tile coordinates. |
+| ymin | The "north" coordinate of the bounding box defined by the incoming tile coordinates. Not impacted by the `invertY` parameter. |
+| ymax | The "south" coordinate of the bounding box defined by the incoming tile coordinates. Not impacted by the `invertY` parameter. |
+| env.XXX | An environment variable whose name is XXX |
+| ctx.XXX | An context variable (typically an HTTP header) whose name is XXX |
+
+Example:
+
+```
+provider:
+  name: proxy
+  url: https://tile.openstreetmap.org/{z}/{x}/{y}.png?key={env.key}&agent={ctx.User-Agent}
+```
 
 ### URL Template
 
-URL Template providers are similar to the Proxy provider but are meant for endpoints that return mapping imagery via other schemes, primarily WMS. Instead of merely supplying tile coordinates, the URL Template provider will supply the bounding box.
+The URL Template provider overlaps with the Proxy provider but is meant specifically for WMS endpoints. Instead of merely supplying tile coordinates, the URL Template provider will supply the bounding box. This provider is provided mostly compatibility.
 
 Currently only supports EPSG:4326
 
