@@ -140,10 +140,16 @@ func configureMainLogging(cfg *config.Config) error {
 		}
 
 		var level slog.Level
-		err := level.UnmarshalText([]byte(cfg.Logging.MainLog.Level))
+		custLogLevel, ok := config.CustomLogLevel[strings.ToLower(cfg.Logging.MainLog.Level)]
 
-		if err != nil {
-			return err
+		if ok {
+			level = custLogLevel
+		} else {
+			err := level.UnmarshalText([]byte(cfg.Logging.MainLog.Level))
+
+			if err != nil {
+				return err
+			}
 		}
 
 		opt := slog.HandlerOptions{

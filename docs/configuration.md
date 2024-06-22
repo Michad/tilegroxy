@@ -451,7 +451,7 @@ Configuration options:
 | EnableStandardOut | bool | No | true | Whether to write application logs to standard out |
 | Path | string | No | None | The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth |
 | Format | string | No | plain | The format to output application logs in. Applies to both standard out and file out. Possible values: plain, json |
-| Level | string | No | info | The most-detailed log level that should be included. Possible values: debug, info, warn, error |
+| Level | string | No | info | The most-detailed log level that should be included. Possible values: debug, info, warn, error, trace, absurd |
 | IncludeRequestAttributes | string | No | auto | Whether to include any extra attributes based on request parameters (excluding explicitly requested). If auto (default) it defaults true if format is json, false otherwise |
 | IncludeHeaders | string[] | No | None | Headers to include as attributes in structured log messages. Attribute key will be in all lowercase. | 
 
