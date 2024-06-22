@@ -25,6 +25,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Michad/tilegroxy/internal/authentication"
 	"github.com/Michad/tilegroxy/internal/config"
@@ -162,10 +163,31 @@ func configureMainLogging(cfg *config.Config) error {
 			logHandler = slog.NewTextHandler(out, &opt)
 		} else if cfg.Logging.MainLog.Format == config.MainLogFormatJson {
 			logHandler = slog.NewJSONHandler(out, &opt)
+			if cfg.Logging.MainLog.IncludeRequestAttributes == "auto" {
+				cfg.Logging.MainLog.IncludeRequestAttributes = "true"
+			}
 		} else {
 			return fmt.Errorf(cfg.Error.Messages.InvalidParam, "logging.mainlog.format", cfg.Logging.MainLog.Format)
 		}
-		logHandler = slogContextHandler{logHandler, slices.Concat([]string{"url"}, cfg.Logging.MainLog.IncludeHeaders)}
+
+		var attr []string
+
+		if cfg.Logging.MainLog.IncludeRequestAttributes == "true" || cfg.Logging.MainLog.IncludeRequestAttributes == "1" {
+			attr = slices.Concat(attr, []string{
+				"uri",
+				"path",
+				"query",
+				"proto",
+				"ip",
+				"method",
+				"host",
+				"elapsed",
+			})
+		}
+
+		attr = slices.Concat(attr, cfg.Logging.MainLog.IncludeHeaders)
+
+		logHandler = slogContextHandler{logHandler, attr}
 
 		slog.SetDefault(slog.New(logHandler))
 	} else {
@@ -209,7 +231,8 @@ func configureAccessLogging(cfg config.AccessLogConfig, errorMessages config.Err
 // Custom context type. Links back to request so we can pull attrs into the structured log
 type reqCtx struct {
 	context.Context
-	req *http.Request
+	req       *http.Request
+	startTime time.Time
 }
 
 func (c *reqCtx) Value(keyAny any) any {
@@ -218,8 +241,23 @@ func (c *reqCtx) Value(keyAny any) any {
 		return nil
 	}
 
-	if key == "url" {
-		return c.req.URL.String()
+	switch key {
+	case "uri":
+		return c.req.RequestURI
+	case "path":
+		return c.req.URL.Path
+	case "query":
+		return c.req.URL.Query()
+	case "proto":
+		return c.req.Proto
+	case "ip":
+		return strings.Split(c.req.RemoteAddr, ":")[0]
+	case "method":
+		return c.req.Method
+	case "host":
+		return c.req.Host
+	case "elapsed":
+		return time.Since(c.startTime).Seconds()
 	}
 
 	h := c.req.Header[key]
@@ -240,7 +278,7 @@ type httpContextHandler struct {
 }
 
 func (h httpContextHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	reqC := reqCtx{req.Context(), req}
+	reqC := reqCtx{req.Context(), req, time.Now()}
 	defer func() {
 		if err := recover(); err != nil {
 			writeError(&reqC, w, &h.errCfg, TypeOfErrorOther, "Unexpected Internal Server Error", "stack", string(debug.Stack()))

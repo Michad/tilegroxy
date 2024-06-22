@@ -95,11 +95,12 @@ const (
 )
 
 type MainLogConfig struct {
-	EnableStandardOut bool   //If true, write access logs to standard out. Defaults to true
-	Path              string //The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth. Defaults to none
-	Format            string //The format to output access logs in. Applies to both standard out and file out. Possible values: plain, json. Defaults to plain
-	Level             string
-	IncludeHeaders    []string //Headers to include in the logs. Useful for a transaction/request/trace/correlation ID or user identifiers
+	EnableStandardOut        bool     //If true, write access logs to standard out. Defaults to true
+	Path                     string   //The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth. Defaults to none
+	Format                   string   //The format to output access logs in. Applies to both standard out and file out. Possible values: plain, json. Defaults to plain
+	Level                    string   //logging level. one of: debug, info, warn, error
+	IncludeRequestAttributes string   //Can be "true", "false" or "auto". If false, don't include any extra attributes based on request parameters (excluding the ones requested below). If auto (default) it defaults true if format is json, false otherwise
+	IncludeHeaders           []string //Headers to include in the logs. Useful for a transaction/request/trace/correlation ID or user identifiers
 }
 
 type LogConfig struct {
@@ -149,10 +150,12 @@ func DefaultConfig() Config {
 		},
 		Logging: LogConfig{
 			MainLog: MainLogConfig{
-				EnableStandardOut: true,
-				Path:              "",
-				Format:            MainLogFormatPlain,
-				Level:             "info",
+				EnableStandardOut:        true,
+				Path:                     "",
+				Format:                   MainLogFormatPlain,
+				Level:                    "info",
+				IncludeRequestAttributes: "auto",
+				IncludeHeaders:           []string{},
 			},
 			AccessLog: AccessLogConfig{
 				EnableStandardOut: true,
@@ -178,6 +181,7 @@ func DefaultConfig() Config {
 				Provider:       images.KeyImageError,
 				Other:          images.KeyImageError,
 			},
+			SuppressStatusCode: false,
 		},
 		Authentication: map[string]interface{}{
 			"name": "none",
