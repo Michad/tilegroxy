@@ -59,7 +59,7 @@ provider:
 
 ### URL Template
 
-The URL Template provider overlaps with the Proxy provider but is meant specifically for WMS endpoints. Instead of merely supplying tile coordinates, the URL Template provider will supply the bounding box. This provider is provided mostly compatibility.
+The URL Template provider overlaps with the Proxy provider but is meant specifically for WMS endpoints. Instead of merely supplying tile coordinates, the URL Template provider will supply the bounding box. This provider is available mostly for compatibility, you generally should use Proxy instead.
 
 Currently only supports EPSG:4326
 
