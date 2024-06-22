@@ -1,0 +1,29 @@
+cache:
+    name: memory
+logging:
+  mainlog:
+    level: info #For super slow debugging output of every pixel set to "absurd"
+layers:
+  - id: pressure
+    provider:
+      name: transform
+      threads: 8
+      # Converts elevation into average air pressure
+      formula: |
+        import "math"
+        func transform(r, g, b, a uint8) (uint8, uint8, uint8, uint8) {
+          elevation := -10000 + ((float64(r) * 256 * 256 + float64(g) * 256 + float64(b)) * 0.1)
+          pressure := 101325 * math.Pow(1 - .0000225577 * elevation, 5.25588)
+          c := uint8(pressure / 1000) //kPa to Pa
+          return c,c,c,255
+        }
+      provider:
+        name: fallback
+        primary:
+          name: proxy
+          # This is an elevation layer from Mapbox.  Using it requires you register with Mapbox and create a key, then supply that as MAPBOX_KEY env var
+          url: https://api.mapbox.com/v4/mapbox.terrain-rgb/{z}/{x}/{y}.pngraw?access_token={env.MAPBOX_KEY}
+        # Mapbox elevation layer returns an error over sea. Fallback on typical sea-level color in those cases
+        secondary:
+          name: static
+          color: "0186a0"
