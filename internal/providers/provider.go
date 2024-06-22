@@ -113,6 +113,19 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.Cl
 		}
 
 		return ConstructEffect(config, clientConfig, errorMessages, &child)
+	} else if rawConfig["name"] == "transform" {
+		var config TransformConfig
+		err := mapstructure.Decode(rawConfig, &config)
+		if err != nil {
+			return nil, err
+		}
+
+		child, err := ConstructProvider(config.Provider, clientConfig, errorMessages)
+		if err != nil {
+			return nil, err
+		}
+
+		return ConstructTransform(config, clientConfig, errorMessages, &child)
 	}
 
 	name := fmt.Sprintf("%#v", rawConfig["name"])
