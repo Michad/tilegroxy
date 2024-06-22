@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math"
@@ -123,7 +124,7 @@ Example:
 					fmt.Printf("Created thread %v with %v tiles\n", t, len(myReqs))
 				}
 				for _, req := range myReqs {
-					_, tileErr := layer.RenderTile(req)
+					_, tileErr := layer.RenderTile(context.Background(), req)
 
 					if verbose {
 						var status string

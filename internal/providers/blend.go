@@ -17,6 +17,7 @@ package providers
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"image"
@@ -59,7 +60,7 @@ func ConstructBlend(config BlendConfig, clientConfig *config.ClientConfig, error
 	return &Blend{config, providers}, nil
 }
 
-func (t Blend) PreAuth(authContext AuthContext) (AuthContext, error) {
+func (t Blend) PreAuth(ctx context.Context, authContext AuthContext) (AuthContext, error) {
 	if authContext.Other == nil {
 		authContext.Other = map[string]interface{}{}
 	}
@@ -78,9 +79,9 @@ func (t Blend) PreAuth(authContext AuthContext) (AuthContext, error) {
 			ac, ok := acObj.(AuthContext)
 
 			if ok {
-				ac, err = (*p).PreAuth(ac)
+				ac, err = (*p).PreAuth(ctx, ac)
 			} else {
-				ac, err = (*p).PreAuth(AuthContext{})
+				ac, err = (*p).PreAuth(ctx, AuthContext{})
 			}
 
 			acResults <- struct {
@@ -107,7 +108,7 @@ func (t Blend) PreAuth(authContext AuthContext) (AuthContext, error) {
 	return authContext, errors.Join(errSlice...)
 }
 
-func (t Blend) GenerateTile(authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+func (t Blend) GenerateTile(ctx context.Context, authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
 	wg := sync.WaitGroup{}
 	errs := make(chan error, len(t.providers))
 	imgs := make(chan struct {
@@ -123,9 +124,9 @@ func (t Blend) GenerateTile(authContext AuthContext, tileRequest internal.TileRe
 			ac, ok := authContext.Other[key].(AuthContext)
 
 			if ok {
-				img, err = (*p).GenerateTile(ac, tileRequest)
+				img, err = (*p).GenerateTile(ctx, ac, tileRequest)
 			} else {
-				img, err = (*p).GenerateTile(AuthContext{}, tileRequest)
+				img, err = (*p).GenerateTile(ctx, AuthContext{}, tileRequest)
 			}
 
 			realImage, _, err2 := image.Decode(bytes.NewReader(*img))

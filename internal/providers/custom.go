@@ -15,6 +15,7 @@
 package providers
 
 import (
+	"context"
 	"os"
 	"reflect"
 
@@ -35,8 +36,8 @@ type Custom struct {
 	clientConfig     *config.ClientConfig
 	errorMessages    *config.ErrorMessages
 	interp           *interp.Interpreter
-	preAuthFunc      func(AuthContext, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (AuthContext, error)
-	generateTileFunc func(AuthContext, internal.TileRequest, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (*internal.Image, error)
+	preAuthFunc      func(context.Context, AuthContext, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (AuthContext, error)
+	generateTileFunc func(context.Context, AuthContext, internal.TileRequest, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (*internal.Image, error)
 }
 
 func ConstructCustom(cfg CustomConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages) (*Custom, error) {
@@ -73,19 +74,19 @@ func ConstructCustom(cfg CustomConfig, clientConfig *config.ClientConfig, errorM
 		return nil, err
 	}
 
-	preAuthFunc := preAuthVal.Interface().(func(AuthContext, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (AuthContext, error))
+	preAuthFunc := preAuthVal.Interface().(func(context.Context, AuthContext, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (AuthContext, error))
 
-	generateTileFunc := generateTileVal.Interface().(func(AuthContext, internal.TileRequest, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (*internal.Image, error))
+	generateTileFunc := generateTileVal.Interface().(func(context.Context, AuthContext, internal.TileRequest, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (*internal.Image, error))
 
 	return &Custom{cfg, clientConfig, errorMessages, i, preAuthFunc, generateTileFunc}, nil
 }
 
-func (t Custom) PreAuth(authContext AuthContext) (AuthContext, error) {
-	return t.preAuthFunc(authContext, t.Params, *t.clientConfig, *t.errorMessages)
+func (t Custom) PreAuth(ctx context.Context, authContext AuthContext) (AuthContext, error) {
+	return t.preAuthFunc(ctx, authContext, t.Params, *t.clientConfig, *t.errorMessages)
 }
 
-func (t Custom) GenerateTile(authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
-	img, err := t.generateTileFunc(authContext, tileRequest, t.Params, *t.clientConfig, *t.errorMessages)
+func (t Custom) GenerateTile(ctx context.Context, authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+	img, err := t.generateTileFunc(ctx, authContext, tileRequest, t.Params, *t.clientConfig, *t.errorMessages)
 
 	if err != nil {
 		return nil, err

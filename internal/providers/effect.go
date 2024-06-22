@@ -17,10 +17,11 @@ package providers
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"image"
-	"image/png"
 	_ "image/jpeg"
+	"image/png"
 	"slices"
 
 	"github.com/Michad/tilegroxy/internal"
@@ -58,12 +59,12 @@ func ConstructEffect(config EffectConfig, clientConfig *config.ClientConfig, err
 	return &Effect{config, provider}, nil
 }
 
-func (t Effect) PreAuth(authContext AuthContext) (AuthContext, error) {
-	return (*t.provider).PreAuth(authContext)
+func (t Effect) PreAuth(ctx context.Context, authContext AuthContext) (AuthContext, error) {
+	return (*t.provider).PreAuth(ctx, authContext)
 }
 
-func (t Effect) GenerateTile(authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
-	img, err := (*t.provider).GenerateTile(authContext, tileRequest)
+func (t Effect) GenerateTile(ctx context.Context, authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+	img, err := (*t.provider).GenerateTile(ctx, authContext, tileRequest)
 
 	if err != nil {
 		return img, err

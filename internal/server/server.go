@@ -15,12 +15,17 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"os"
+	"runtime/debug"
+	"slices"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/Michad/tilegroxy/internal/authentication"
 	"github.com/Michad/tilegroxy/internal/config"
@@ -44,31 +49,35 @@ const (
 	TypeOfErrorOther
 )
 
-func writeError(w http.ResponseWriter, cfg *config.ErrorConfig, errorType TypeOfError, message string, params ...any) {
+func writeError(ctx context.Context, w http.ResponseWriter, cfg *config.ErrorConfig, errorType TypeOfError, message string, args ...any) {
 	var status int
-	if errorType == TypeOfErrorAuth {
-		status = http.StatusUnauthorized
-	} else if errorType == TypeOfErrorBounds {
-		status = http.StatusBadRequest
-	} else if errorType == TypeOfErrorProvider {
-		status = http.StatusInternalServerError
-	} else if errorType == TypeOfErrorOtherBadRequest {
-		status = http.StatusBadRequest
+	if !cfg.SuppressStatusCode {
+		if errorType == TypeOfErrorAuth {
+			status = http.StatusUnauthorized
+		} else if errorType == TypeOfErrorBounds {
+			status = http.StatusBadRequest
+		} else if errorType == TypeOfErrorProvider {
+			status = http.StatusInternalServerError
+		} else if errorType == TypeOfErrorOtherBadRequest {
+			status = http.StatusBadRequest
+		} else {
+			status = http.StatusInternalServerError
+		}
 	} else {
-		status = http.StatusInternalServerError
+		status = http.StatusOK
 	}
 
-	fullMessage := fmt.Sprintf(message, params...)
-	slog.Warn("Returning error to response: " + fullMessage)
+	// fullMessage := fmt.Sprintf(message, args...)
+	slog.WarnContext(ctx, message, args...)
 
 	if cfg.Mode == config.ModeErrorPlainText {
 		w.WriteHeader(status)
-		w.Write([]byte(fullMessage))
+		w.Write([]byte(message))
 	} else if cfg.Mode == config.ModeErrorNoError {
 		w.WriteHeader(status)
 	} else if cfg.Mode == config.ModeErrorImageHeader || cfg.Mode == config.ModeErrorImage {
 		if cfg.Mode == config.ModeErrorImageHeader {
-			w.Header().Add("x-error-message", fullMessage)
+			w.Header().Add("x-error-message", message)
 		}
 		w.WriteHeader(status)
 
@@ -89,14 +98,26 @@ func writeError(w http.ResponseWriter, cfg *config.ErrorConfig, errorType TypeOf
 		}
 
 		if err2 != nil {
-			slog.Error(err2.Error())
+			slog.ErrorContext(ctx, err2.Error())
 		}
 	} else {
 		w.WriteHeader(status)
-		slog.Error("Invalid error mode! Falling back to none!")
+		slog.ErrorContext(ctx, "Invalid error mode! Falling back to none!")
 	}
 }
 
+type slogContextHandler struct {
+	slog.Handler
+	keys []string
+}
+
+func (h slogContextHandler) Handle(ctx context.Context, r slog.Record) error {
+	for _, k := range h.keys {
+		r.AddAttrs(slog.Attr{Key: strings.ToLower(k), Value: slog.AnyValue(ctx.Value(k))})
+	}
+
+	return h.Handler.Handle(ctx, r)
+}
 func configureMainLogging(cfg *config.Config) error {
 	if cfg.Logging.MainLog.EnableStandardOut || len(cfg.Logging.MainLog.Path) > 0 {
 		var out io.Writer
@@ -126,8 +147,14 @@ func configureMainLogging(cfg *config.Config) error {
 		}
 
 		opt := slog.HandlerOptions{
-			AddSource: !cfg.Server.Production,
+			AddSource: true,
 			Level:     level,
+			ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+				if groups == nil && a.Key == "msg" {
+					return slog.Attr{Key: "message", Value: a.Value}
+				}
+				return a
+			},
 		}
 
 		var logHandler slog.Handler
@@ -136,9 +163,31 @@ func configureMainLogging(cfg *config.Config) error {
 			logHandler = slog.NewTextHandler(out, &opt)
 		} else if cfg.Logging.MainLog.Format == config.MainLogFormatJson {
 			logHandler = slog.NewJSONHandler(out, &opt)
+			if cfg.Logging.MainLog.IncludeRequestAttributes == "auto" {
+				cfg.Logging.MainLog.IncludeRequestAttributes = "true"
+			}
 		} else {
 			return fmt.Errorf(cfg.Error.Messages.InvalidParam, "logging.mainlog.format", cfg.Logging.MainLog.Format)
 		}
+
+		var attr []string
+
+		if cfg.Logging.MainLog.IncludeRequestAttributes == "true" || cfg.Logging.MainLog.IncludeRequestAttributes == "1" {
+			attr = slices.Concat(attr, []string{
+				"uri",
+				"path",
+				"query",
+				"proto",
+				"ip",
+				"method",
+				"host",
+				"elapsed",
+			})
+		}
+
+		attr = slices.Concat(attr, cfg.Logging.MainLog.IncludeHeaders)
+
+		logHandler = slogContextHandler{logHandler, attr}
 
 		slog.SetDefault(slog.New(logHandler))
 	} else {
@@ -179,6 +228,66 @@ func configureAccessLogging(cfg config.AccessLogConfig, errorMessages config.Err
 	return rootHandler, nil
 }
 
+// Custom context type. Links back to request so we can pull attrs into the structured log
+type reqCtx struct {
+	context.Context
+	req       *http.Request
+	startTime time.Time
+}
+
+func (c *reqCtx) Value(keyAny any) any {
+	key, ok := keyAny.(string)
+	if !ok {
+		return nil
+	}
+
+	switch key {
+	case "uri":
+		return c.req.RequestURI
+	case "path":
+		return c.req.URL.Path
+	case "query":
+		return c.req.URL.Query()
+	case "proto":
+		return c.req.Proto
+	case "ip":
+		return strings.Split(c.req.RemoteAddr, ":")[0]
+	case "method":
+		return c.req.Method
+	case "host":
+		return c.req.Host
+	case "elapsed":
+		return time.Since(c.startTime).Seconds()
+	}
+
+	h := c.req.Header[key]
+
+	if h != nil {
+		if len(h) == 1 {
+			return h[0]
+		}
+		return h
+	}
+
+	return nil
+}
+
+type httpContextHandler struct {
+	http.Handler
+	errCfg config.ErrorConfig
+}
+
+func (h httpContextHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	reqC := reqCtx{req.Context(), req, time.Now()}
+	defer func() {
+		if err := recover(); err != nil {
+			writeError(&reqC, w, &h.errCfg, TypeOfErrorOther, "Unexpected Internal Server Error", "stack", string(debug.Stack()))
+		}
+	}()
+
+	h.Handler.ServeHTTP(w, req.WithContext(&reqC))
+}
+
 func ListenAndServe(config *config.Config, layerList []*layers.Layer, auth *authentication.Authentication) error {
 	r := http.ServeMux{}
 
@@ -204,6 +313,7 @@ func ListenAndServe(config *config.Config, layerList []*layers.Layer, auth *auth
 	}
 
 	rootHandler, err := configureAccessLogging(config.Logging.AccessLog, config.Error.Messages, rootHandler)
+	rootHandler = httpContextHandler{rootHandler, config.Error}
 
 	if err != nil {
 		return err
@@ -215,7 +325,7 @@ func ListenAndServe(config *config.Config, layerList []*layers.Layer, auth *auth
 		return err
 	}
 
-	slog.Info("Binding...")
+	slog.InfoContext(context.Background(), "Binding...")
 
 	return http.ListenAndServe(config.Server.BindHost+":"+strconv.Itoa(config.Server.Port), rootHandler)
 }

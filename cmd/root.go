@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"errors"
+	"fmt"
 	"os"
 
 	"github.com/Michad/tilegroxy/internal/authentication"
@@ -34,7 +36,6 @@ func init() {
 }
 
 func parseConfigIntoStructs(cmd *cobra.Command) (*config.Config, []*layers.Layer, *authentication.Authentication, error) {
-
 	configPath, err := cmd.Flags().GetString("config")
 
 	if err != nil {
@@ -50,17 +51,17 @@ func parseConfigIntoStructs(cmd *cobra.Command) (*config.Config, []*layers.Layer
 			return nil, nil, nil, err
 		}
 	} else {
-		panic("No configuration supplied")
+		return nil, nil, nil, errors.New("no configuration supplied")
 	}
 
 	cache, err := caches.ConstructCache(cfg.Cache, &cfg.Error.Messages)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, fmt.Errorf("error constructing cache: %v", err)
 	}
 
 	auth, err := authentication.ConstructAuth(cfg.Authentication, &cfg.Error.Messages)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, fmt.Errorf("error constructing auth: %v", err)
 	}
 
 	layerObjects := make([]*layers.Layer, len(cfg.Layers))
@@ -68,14 +69,10 @@ func parseConfigIntoStructs(cmd *cobra.Command) (*config.Config, []*layers.Layer
 	for i, l := range cfg.Layers {
 		layerObjects[i], err = layers.ConstructLayer(l, &cfg.Client, &cfg.Error.Messages)
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, nil, nil, fmt.Errorf("error constructing layer %v: %v", i, err)
 		}
 
 		layerObjects[i].Cache = &cache
-	}
-
-	if err != nil {
-		return nil, nil, nil, err
 	}
 
 	return &cfg, layerObjects, &auth, err

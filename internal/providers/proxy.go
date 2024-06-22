@@ -15,6 +15,7 @@
 package providers
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"strconv"
@@ -42,11 +43,11 @@ func ConstructProxy(config ProxyConfig, clientConfig *config.ClientConfig, error
 	return &Proxy{config, clientConfig}, nil
 }
 
-func (t Proxy) PreAuth(authContext AuthContext) (AuthContext, error) {
+func (t Proxy) PreAuth(ctx context.Context, authContext AuthContext) (AuthContext, error) {
 	return AuthContext{Bypass: true}, nil
 }
 
-func (t Proxy) GenerateTile(authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+func (t Proxy) GenerateTile(ctx context.Context, authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
 	y := tileRequest.Y
 	if t.InvertY {
 		y = int(math.Exp2(float64(tileRequest.Z))) - y - 1
@@ -59,5 +60,5 @@ func (t Proxy) GenerateTile(authContext AuthContext, tileRequest internal.TileRe
 	url = strings.ReplaceAll(url, "{X}", strconv.Itoa(tileRequest.X))
 	url = strings.ReplaceAll(url, "{x}", strconv.Itoa(tileRequest.X))
 
-	return getTile(t.clientConfig, url, make(map[string]string))
+	return getTile(ctx, t.clientConfig, url, make(map[string]string))
 }

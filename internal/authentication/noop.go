@@ -20,6 +20,6 @@ type Noop struct {
 	Key string
 }
 
-func (c Noop) Preauth(req *http.Request) bool {
+func (c Noop) CheckAuthentication(req *http.Request) bool {
 	return true
 }

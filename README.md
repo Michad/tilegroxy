@@ -303,9 +303,9 @@ Example custom providers can be found within [examples/providers](./examples/pro
 Custom providers must be within the `custom` package and must import the `tilegroxy/tilegroxy` package for mandatory datatypes. There are two mandatory functions:
 
 ```go
-func preAuth(tilegroxy.AuthContext, map[string]interface{}, tilegroxy.ClientConfig, tilegroxy.ErrorMessages) (tilegroxy.AuthContext, error)
+func preAuth(context.Context, tilegroxy.AuthContext, map[string]interface{}, tilegroxy.ClientConfig, tilegroxy.ErrorMessages) (tilegroxy.AuthContext, error)
 
-func generateTile(tilegroxy.AuthContext, tilegroxy.TileRequest, map[string]interface{}, tilegroxy.ClientConfig,tilegroxy.ErrorMessages) (*tilegroxy.Image, error)
+func generateTile(context.Context, tilegroxy.AuthContext, tilegroxy.TileRequest, map[string]interface{}, tilegroxy.ClientConfig,tilegroxy.ErrorMessages) (*tilegroxy.Image, error)
 ```
 
 The `preAuth` function is responsible for authenticating outgoing requests and returning a token or whatever else is needed. It is called when needed by the application when either `expiration` is reached or an `AuthError` is returned by `generateTile`. A given instance of tilegroxy will only call this method once at a time and then shares the result among threads. However, AuthContext is not shared between instances of tilegroxy. 

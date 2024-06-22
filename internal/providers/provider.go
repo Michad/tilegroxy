@@ -15,6 +15,7 @@
 package providers
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -29,8 +30,8 @@ import (
 )
 
 type Provider interface {
-	PreAuth(authContext AuthContext) (AuthContext, error)
-	GenerateTile(authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error)
+	PreAuth(ctx context.Context, authContext AuthContext) (AuthContext, error)
+	GenerateTile(ctx context.Context, authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error)
 }
 
 func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages) (Provider, error) {
@@ -161,8 +162,8 @@ func (e *RemoteServerError) Error() string {
  * Performs a GET operation against a given URL. Implementing providers should call this when possible. It has
  * standard reusable logic around various config options
  */
-func getTile(clientConfig *config.ClientConfig, url string, authHeaders map[string]string) (*internal.Image, error) {
-	slog.Debug(fmt.Sprintf("Calling url %v\n", url))
+func getTile(ctx context.Context, clientConfig *config.ClientConfig, url string, authHeaders map[string]string) (*internal.Image, error) {
+	slog.DebugContext(ctx, fmt.Sprintf("Calling url %v\n", url))
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
@@ -188,7 +189,7 @@ func getTile(clientConfig *config.ClientConfig, url string, authHeaders map[stri
 		return nil, err
 	}
 
-	slog.Debug(fmt.Sprintf("Response status: %v", resp.StatusCode))
+	slog.DebugContext(ctx, fmt.Sprintf("Response status: %v", resp.StatusCode))
 
 	if !slices.Contains(clientConfig.AllowedStatusCodes, resp.StatusCode) {
 		return nil, &RemoteServerError{StatusCode: resp.StatusCode}

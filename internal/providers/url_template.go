@@ -15,6 +15,7 @@
 package providers
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -40,11 +41,11 @@ func ConstructUrlTemplate(config UrlTemplateConfig, clientConfig *config.ClientC
 	return &UrlTemplate{config, clientConfig}, nil
 }
 
-func (t UrlTemplate) PreAuth(authContext AuthContext) (AuthContext, error) {
+func (t UrlTemplate) PreAuth(ctx context.Context, authContext AuthContext) (AuthContext, error) {
 	return AuthContext{Bypass: true}, nil
 }
 
-func (t UrlTemplate) GenerateTile(authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+func (t UrlTemplate) GenerateTile(ctx context.Context, authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
 	b, err := tileRequest.GetBounds()
 
 	if err != nil {
@@ -61,5 +62,5 @@ func (t UrlTemplate) GenerateTile(authContext AuthContext, tileRequest internal.
 	url = strings.ReplaceAll(url, "$height", "256")
 	url = strings.ReplaceAll(url, "$srs", "4326") //TODO: decide if I want this to be dynamic
 
-	return getTile(t.clientConfig, url, make(map[string]string))
+	return getTile(ctx, t.clientConfig, url, make(map[string]string))
 }

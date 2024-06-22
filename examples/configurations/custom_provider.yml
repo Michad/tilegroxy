@@ -1,5 +1,3 @@
-cache:
-    name: none
 layers:
   - id: osm
     provider:
