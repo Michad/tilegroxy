@@ -194,6 +194,7 @@ func configureMainLogging(cfg *config.Config) error {
 				"method",
 				"host",
 				"elapsed",
+				"user",
 			})
 		}
 
