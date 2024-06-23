@@ -78,13 +78,13 @@ func ConstructCache(rawConfig map[string]interface{}, errorMessages *config.Erro
 			return nil, err
 		}
 		return ConstructRedis(&config, errorMessages)
-	} else if rawConfig["name"] == "memcache" {
-		var config MemcacheConfig
+	} else if rawConfig["name"] == "memcached" {
+		var config MemcachedConfig
 		err := mapstructure.Decode(rawConfig, &config)
 		if err != nil {
 			return nil, err
 		}
-		return ConstructMemcache(&config, errorMessages)
+		return ConstructMemcached(&config, errorMessages)
 	}
 
 	name := fmt.Sprintf("%#v", rawConfig["name"])

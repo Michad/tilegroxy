@@ -1,7 +1,7 @@
 cache:
   name: multi
   tiers:
-    - name: memcache
+    - name: memcached
       maxsize: 1000
       ttl: 1000
     - name: s3
