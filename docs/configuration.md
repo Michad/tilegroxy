@@ -2,7 +2,24 @@
 
 Tilegroxy is heavily configuration driven. This document describes the various configuration options available for defining the map layers you wish to serve up and various aspects about how you want the application to function.
 
-Every configuration option that supports different "types" (such as authentication, provider, and cache) has a "name" parameter for selecting the type. Parameters keys and names should generally be in all lowercase.
+Every configuration option that supports different "types" (such as authentication, provider, and cache) has a "name" parameter for selecting the type. Those names are always all-lowercase. 
+
+Keys are case-insensitive unless indicated otherwise.
+
+The following is the top-level configuration structure. All top-level keys are optional besides layers:
+
+```
+server:  ...
+client:  ...
+logging:  ...
+error:  ...
+authentication:  ...
+cache:  ...
+layers:  
+  - ...
+```
+
+[Examples are available.](../examples/configurations/)
 
 ## Layer
 
