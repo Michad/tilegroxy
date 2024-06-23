@@ -18,10 +18,13 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
+	"reflect"
 	"slices"
 	"strings"
 	"time"
 
+	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/config"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/maypok86/otter"
@@ -37,7 +40,10 @@ type JwtConfig struct {
 	ExpectedAudience      string //If specified, require the "aud" grant to be this string
 	ExpectedSubject       string //If specified, require the "sub" grant to be this string
 	ExpectedIssuer        string //If specified, require the "iss" grant to be this string
-	ExpectedScope         string //If specified, require the "scope" grant to contain this string. TODO: implement this check
+	ExpectedScope         string //If specified, require the "scope" grant to contain this string.
+	LayerScope            bool   //If specified, the "scope" grant is used to limit access to layer
+	LayerScopePrefix      string //If LayerScope is true, this prefix indicates scopes to use
+	UserIdentifierGrant   string //Use the specified grant as the user identifier. Defaults to sub
 }
 
 type Jwt struct {
@@ -63,6 +69,15 @@ func ConstructJwt(config *JwtConfig, errorMessages *config.ErrorMessages) (*Jwt,
 		config.MaxExpirationDuration = 24 * 60 * 60
 	}
 
+	if strings.Index(config.VerificationKey, "env.") == 0 {
+		slog.Debug("Looking up JWT verification key via env var " + config.VerificationKey[4:])
+		config.VerificationKey = os.Getenv(config.VerificationKey[4:])
+	}
+
+	if config.UserIdentifierGrant == "" {
+		config.UserIdentifierGrant = "sub"
+	}
+
 	if config.CacheSize == 0 {
 		return &Jwt{config, nil, errorMessages}, nil
 	} else {
@@ -75,8 +90,7 @@ func ConstructJwt(config *JwtConfig, errorMessages *config.ErrorMessages) (*Jwt,
 	}
 }
 
-func (c Jwt) CheckAuthentication(req *http.Request) bool {
-	ctx := req.Context()
+func (c Jwt) CheckAuthentication(req *http.Request, ctx *internal.RequestContext) bool {
 	authHeader := req.Header[c.Config.HeaderName]
 	if len(authHeader) != 1 {
 		return false
@@ -158,6 +172,62 @@ func (c Jwt) CheckAuthentication(req *http.Request) bool {
 
 	if time.Until(exp.Time) > time.Duration(c.Config.MaxExpirationDuration)*time.Second {
 		return false
+	}
+
+	if c.Config.LayerScope {
+		ctx.LimitLayers = true
+	}
+
+	rawClaim, ok := tokenJwt.Claims.(jwt.MapClaims)
+
+	if ok {
+		scope := rawClaim["scope"]
+
+		scopeStr, ok := scope.(string)
+
+		if !ok {
+			slog.InfoContext(ctx, "Request contains invalid scope type")
+		} else {
+			scopeSplit := strings.Split(scopeStr, " ")
+
+			if c.Config.ExpectedScope != "" {
+				hasScope := false
+				for _, scope := range scopeSplit {
+					if scope == c.Config.ExpectedScope {
+						hasScope = true
+					}
+				}
+				if !hasScope {
+					return false
+				}
+			}
+
+			if c.Config.LayerScope {
+				for _, scope := range scopeSplit {
+					if c.Config.LayerScopePrefix == "" || strings.Index(scope, c.Config.LayerScopePrefix) == 0 {
+						ctx.AllowedLayers = append(ctx.AllowedLayers, scope[len(c.Config.LayerScopePrefix):])
+					}
+				}
+			}
+		}
+
+		rawUid := rawClaim[c.Config.UserIdentifierGrant]
+		if rawUid != nil {
+			ctx.UserIdentifier, _ = rawUid.(string)
+		}
+	} else {
+		var debugType string
+		if t := reflect.TypeOf(tokenJwt.Claims); t.Kind() == reflect.Ptr {
+			debugType = "*" + t.Elem().Name()
+		} else {
+			debugType = t.Name()
+		}
+
+		slog.ErrorContext(ctx, "An unexpected state has occurred. Please report this to https://github.com/Michad/tilegroxy/issues : JWT authentication might not be fully working as expected because claims are of type "+debugType)
+
+		if c.Config.ExpectedSubject != "" {
+			return false
+		}
 	}
 
 	if c.Cache != nil {

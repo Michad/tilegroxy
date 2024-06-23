@@ -14,12 +14,16 @@
 
 package authentication
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/Michad/tilegroxy/internal"
+)
 
 type Noop struct {
 	Key string
 }
 
-func (c Noop) CheckAuthentication(req *http.Request) bool {
+func (c Noop) CheckAuthentication(req *http.Request, ctx *internal.RequestContext) bool {
 	return true
 }

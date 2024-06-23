@@ -18,12 +18,13 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/config"
 	"github.com/mitchellh/mapstructure"
 )
 
 type Authentication interface {
-	CheckAuthentication(req *http.Request) bool
+	CheckAuthentication(req *http.Request, ctx *internal.RequestContext) bool
 }
 
 func ConstructAuth(rawConfig map[string]interface{}, errorMessages *config.ErrorMessages) (Authentication, error) {

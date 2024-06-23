@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"sync"
 	"time"
 
@@ -65,6 +66,12 @@ func (l *Layer) authWithProvider(ctx *internal.RequestContext) error {
 }
 
 func (l *Layer) RenderTile(ctx *internal.RequestContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+	if ctx.LimitLayers {
+		if !slices.Contains(ctx.AllowedLayers, l.Id) {
+			return nil, providers.AuthError{} //TODO: should be a different auth error
+		}
+	}
+
 	if l.Config.SkipCache {
 		return l.RenderTileNoCache(ctx, tileRequest)
 	}
@@ -99,6 +106,12 @@ func (l *Layer) RenderTile(ctx *internal.RequestContext, tileRequest internal.Ti
 }
 
 func (l *Layer) RenderTileNoCache(ctx *internal.RequestContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+	if ctx.LimitLayers {
+		if !slices.Contains(ctx.AllowedLayers, l.Id) {
+			return nil, providers.AuthError{} //TODO: should be a different auth error
+		}
+	}
+
 	var img *internal.Image
 	var err error
 

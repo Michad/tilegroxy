@@ -22,27 +22,30 @@ import (
 )
 
 func NewRequestContext(req *http.Request) RequestContext {
-	return RequestContext{req.Context(), req, time.Now()}
+	return RequestContext{req.Context(), req, time.Now(), false, []string{}, ""}
 }
 
 func BackgroundContext() *RequestContext {
-	return &RequestContext{context.Background(), nil, time.Time{}}
+	return &RequestContext{context.Background(), nil, time.Time{}, false, []string{}, ""}
 }
 
 // Custom context type. Links back to request so we can pull attrs into the structured log
 type RequestContext struct {
 	context.Context
-	req       *http.Request
-	startTime time.Time
+	req            *http.Request
+	startTime      time.Time
+	LimitLayers    bool
+	AllowedLayers  []string
+	UserIdentifier string
 }
 
 func (c *RequestContext) Value(keyAny any) any {
-	key, ok := keyAny.(string)
-	if !ok {
+	if c.req == nil {
 		return nil
 	}
 
-	if c.req == nil {
+	key, ok := keyAny.(string)
+	if !ok {
 		return nil
 	}
 
@@ -63,6 +66,8 @@ func (c *RequestContext) Value(keyAny any) any {
 		return c.req.Host
 	case "elapsed":
 		return time.Since(c.startTime).Seconds()
+	case "user":
+		return c.UserIdentifier
 	}
 
 	h := c.req.Header[key]

@@ -458,6 +458,10 @@ Configuration options:
 | ExpectedAudience | string | No | None | Require the "aud" grant to be this string |
 | ExpectedSubject | string | No | None | Require the "sub" grant to be this string |
 | ExpectedIssuer | string | No | None | Require the "iss" grant to be this string |
+| ExpectedScope | string | No | None | Require the "scope" grant to contain this string |
+| LayerScope | bool | No | false | If true the "scope" grant is used to whitelist access to layers |
+| LayerScopePrefix | string | No | Empty string | If true this prefix indicates scopes to use. For example a prefix of "tile/" will mean a scope of "tile/test" grants access to "test". Doesn't impact ExpectedScope |
+| UserIdentifierGrant | string | No | sub | Use the specified grant as the user identifier. This is just used for logging by default but it's made available to custom providers |
 
 ### External
 
