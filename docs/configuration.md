@@ -506,7 +506,20 @@ Configures how the application should log during operation.
 
 ### Main Log
 
-Configures application log messages
+Configures application log messages. 
+
+These log messages output in a structured log format, either with Key=Value attributes in plain (text) mode or as JSON.  In either mode attributes are available driven by the HTTP request that is being processed.  We try to avoid plain mode logs being overly verbose for readability, which means if you want all the attributes you'll need to explicitly enable them.  In JSON mode we assume you're ingesting them into a system that handles formatting so include more attributes by default.  
+
+In order to avoid logging secrets you need to specify the headers to log. If you're including auth information via the URL (not recommended) you should make sure IncludeRequestAttributes is false to avoid logging those.
+
+Level controls the verbosity of logs. There is no guarantee as to the specific log messages that will be outputted so you might see more or fewer log messages between versions of the application, especially at higher verbosity levels.  Here are the general rules of what to expect for each level (from least to most verbose):
+
+* **error**: Only messages for things that are definitely a problem with your setup or the application itself. It's recommended to configure alerts/notifications for error logs and if the issue is not User Error, please open a ticket for it: https://github.com/Michad/tilegroxy/issues
+* **warn**: Includes messages for things that *might* be an issue but isn't critical to the core functioning of the system.  For example an issue talking to your configured cache will come through as a warning.
+* **info**: Includes messages that allow you to see what's happening in real time but without being overwhelmed with minutiae. Expect one or two log messages per request, including messages indicating requests with something unusual.
+* **debug**: Includes messages to help understand what's happening for a given request execution. Expect a few log messages per request. This is more than you probably want in prod but can be useful when first integrating with the system.
+* **trace**: Includes messages for every level of the application as a request flows between layers. Expect several log messages per request, more for complex setups/layers. Very noisy but shouldn't be a *huge* performance impact.
+* **absurd**: Includes more information than you will probably ever need. In some cases this can produce thousands of messages per request and will have a substantial performance cost.
 
 Configuration options:
 
@@ -545,7 +558,7 @@ There are four primary operating modes:
 
 **Image with Header** : The same images are returned but the error message itself is returned as a special header: x-error-message.
 
-It is highly recommended you use the Image mode for production usage.  Returning an Image provides the most user friendly experience as it provides feedback to the user in the map they're looking at that something is wrong.  More importantly, it avoids exposing the specific error message to the end user, which could contain information you don't want exposed to end users.  "Image with error" is useful for development workflows, it gives the same user experience but allows you to easily get to the error messages.
+It is highly recommended you use the Image mode for production usage.  Returning an Image provides the most user friendly experience as it provides feedback to the user in the map they're looking at that something is wrong.  More importantly, it avoids exposing the specific error message to the end user, which could contain information you don't want exposed.  "Image with error" is useful for development workflows, it gives the same user experience but allows you to easily get to the error messages.
 
 
 Configuration options:
