@@ -15,7 +15,6 @@
 package providers
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"math"
@@ -58,11 +57,11 @@ func ConstructProxy(config ProxyConfig, clientConfig *config.ClientConfig, error
 	return &Proxy{config, clientConfig, envRegex, ctxRegex}, nil
 }
 
-func (t Proxy) PreAuth(ctx context.Context, authContext AuthContext) (AuthContext, error) {
-	return AuthContext{Bypass: true}, nil
+func (t Proxy) PreAuth(ctx *internal.RequestContext, providerContext ProviderContext) (ProviderContext, error) {
+	return ProviderContext{AuthBypass: true}, nil
 }
 
-func (t Proxy) GenerateTile(ctx context.Context, authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+func (t Proxy) GenerateTile(ctx *internal.RequestContext, providerContext ProviderContext, tileRequest internal.TileRequest) (*internal.Image, error) {
 	b, err := tileRequest.GetBounds()
 
 	if err != nil {

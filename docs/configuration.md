@@ -2,7 +2,24 @@
 
 Tilegroxy is heavily configuration driven. This document describes the various configuration options available for defining the map layers you wish to serve up and various aspects about how you want the application to function.
 
-Every configuration option that supports different "types" (such as authentication, provider, and cache) has a "name" parameter for selecting the type. Parameters keys and names should generally be in all lowercase.
+Every configuration option that supports different "types" (such as authentication, provider, and cache) has a "name" parameter for selecting the type. Those names are always all-lowercase. 
+
+Keys are case-insensitive unless indicated otherwise.
+
+The following is the top-level configuration structure. All top-level keys are optional besides layers:
+
+```
+server:  ...
+client:  ...
+logging:  ...
+error:  ...
+authentication:  ...
+cache:  ...
+layers:  
+  - ...
+```
+
+[Examples are available.](../examples/configurations/)
 
 ## Layer
 
@@ -412,9 +429,7 @@ cache:
 
 ## Authentication
 
-Implements incoming authentication schemes. 
-
-These authentication options are not comprehensive and do not support authorization. That is, anyone who authenticates can access all layers. For complex use cases it is recommended to implement authentication and authorization in compliance with your business logic as a proxy/gateway before tilegroxy.
+Implements incoming auth schemes. This is primarily meant for authentication but does include some authorization by limiting access to specific layers via JWT or custom schemes.
 
 Requests that do not comply with authentication requirements will receive a 401 Unauthorized HTTP status code.
 
@@ -428,7 +443,7 @@ Name should be "none"
 
 Requires incoming requests have a specific key supplied as a "Bearer" token in a "Authorization" Header.
 
-It is recommended you employ caution with this option. It should be regarded as a protection against casual web scrapers but not true security. It is recommended only for development and internal ("intranet") use-cases.
+It is recommended you employ caution with this option. It should be regarded as a protection against casual web scrapers but not true security. It is recommended only for development and internal ("intranet") use-cases. Does not include any authz logic.
 
 Name should be "static key"
 
@@ -442,7 +457,7 @@ Configuration options:
 
 Requires incoming requests include a [JSON Web Token (JWT)](https://jwt.io/). The signature of the token is verified against a fixed secret and grants are validated.
 
-Currently this implementation only supports a single key specified in configuration against a single signing algorithm. Expanding that to allow multiple keys and keys pulled from secret stores is a desired future roadmap item.
+Currently this implementation only supports a single key specified against a single signing algorithm. The key can either be stored in configuration or supplied via environment variable. Support for multiple keys and keys pulled from secret stores is a desired future roadmap item.
 
 Name should be "jwt"
 
@@ -451,17 +466,75 @@ Configuration options:
 
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| VerificationKey | string | Yes | None | The key for verifying the signature. The public key if using asymmetric signing. |
+| VerificationKey | string | Yes | None | The key for verifying the signature. The public key if using asymmetric signing. If the value starts with "env." the remainder is interpreted as the name of the Environment Variable to use to retrieve the verification key. |
 | Algorithm | string | Yes | None | Algorithm to allow for JWT signature. One of: "HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "EdDSA" |
 | HeaderName | string | No | Authorization | The header to extract the JWT from. If this is "Authorization" it removes "Bearer " from the start |
 | MaxExpirationDuration | uint32 | No | 1 day | How many seconds from now can the expiration be. JWTs more than X seconds from now will result in a 401 |
 | ExpectedAudience | string | No | None | Require the "aud" grant to be this string |
 | ExpectedSubject | string | No | None | Require the "sub" grant to be this string |
 | ExpectedIssuer | string | No | None | Require the "iss" grant to be this string |
+| ExpectedScope | string | No | None | Require the "scope" grant to contain this string |
+| LayerScope | bool | No | false | If true the "scope" grant is used to whitelist access to layers |
+| LayerScopePrefix | string | No | Empty string | If true this prefix indicates scopes to use. For example a prefix of "tile/" will mean a scope of "tile/test" grants access to "test". Doesn't impact ExpectedScope |
+| UserIdentifierGrant | string | No | sub | Use the specified grant as the user identifier. This is just used for logging by default but it's made available to custom providers |
 
-### External
+Example:
 
-TODO. Not yet implemented.
+```
+authentication:
+  name: jwt
+  verificationkey: env.JWT_KEY
+  algorithm: HS256
+```
+
+### Custom
+
+Allows you to specify your own logic controlling how auth tokens should be extracted and validated. This, like the custom provider, utilizes [Yaegi](https://github.com/traefik/yaegi) to allow you to supply your own custom code.  
+
+To help mitigate the performance impact of calling the interpreted `validate` method, a cache is utilized by default. In turn, to avoid concurrent requests that utilize the same token from causing repetitive calls to `validate`, a pool of locks are utilized when the cache is enabled. The size of the lock pool is equal to the number of CPUs.
+
+The code you need to supply only has access to the standard library.  The package must be "custom" and you must include the following function:
+
+```
+func validate(string) (bool, time.Time, string, []string)
+```
+
+The `validate` method will be supplied with a single token.  The function should then return (in order):
+
+* pass (bool): Whether the token is valid and should allow the request to proceed
+* expiration (time.Time): When the authentication status of the token expires and the validate method should be called again. `validate` should return pass=false for already expired tokens
+* user identifier (string): An identifier for the user being authenticated. By default this is only used for logging.
+* allowed layers ([]string): The specific layer IDs to allow access to with this specific token. Return an empty array to allow access to all of them.
+
+The method how tokens are extracted from the request is configurable. The following modes are available and if multiple are specified the first one (given the order indicated) in the request is utilized:
+
+| Order | Key | Value | 
+| --- | --- | --- | 
+| 1 | header | Header Name (in Header-Case) | 
+| 2 | cookie | Cookie Name |
+| 3 | query | Query Parameter Key |
+| 4 | path | None (set as empty string) |
+
+
+Name should be "custom"
+
+Configuration options:
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| token | map[string]string | Yes | None | How to extract the auth token from the request. Each Key/Value should be one of the options in the table above |
+| cachesize | int | No | 100 | Configures the size of the cache of already verified tokens used to avoid re-verifying every request. Set to -1 to disable |
+|	file | string | No | None | Contains the path to the file containing the go code to perform validation of the auth token as a file |
+
+Example:
+
+```
+authentication:
+  name: custom
+  file: examples/auth/custom_from_file.go
+  token:
+    header: X-Token
+```
 
 ## Server
 
@@ -473,7 +546,8 @@ Configuration options:
 | --- | --- | --- | --- | --- |
 | BindHost | string | No | 127.0.0.1 | IP address to bind HTTP server to |
 | Port | int | No | 8080 | Port to bind HTTP server to |
-| ContextRoot | string | No | /tiles | The root HTTP Path to serve tiles under. The default of /tiles will result in a path that looks like /tiles/{layer}/{z}/{x}/{y} |
+| RootPath | string | No | / | The root HTTP Path to serve all requests under. |
+| TilePath | string | No | tiles | The HTTP Path to serve tiles under in addition to RootPath. The defaults will result in a path that looks like /tiles/{layer}/{z}/{x}/{y} |
 | StaticHeaders | map[string]string | No | None | Include these headers in all response from server |
 | Production | bool | No | false | Hardens operation for usage in production. For instance, controls serving splash page, documentation, x-powered-by header. |
 | Timeout | uint | No | 60 | How long (in seconds) a request can be in flight before we cancel it and return an error |
@@ -501,7 +575,20 @@ Configures how the application should log during operation.
 
 ### Main Log
 
-Configures application log messages
+Configures application log messages. 
+
+These log messages output in a structured log format, either with Key=Value attributes in plain (text) mode or as JSON.  In either mode attributes are available driven by the HTTP request that is being processed.  We try to avoid plain mode logs being overly verbose for readability, which means if you want all the attributes you'll need to explicitly enable them.  In JSON mode we assume you're ingesting them into a system that handles formatting so include more attributes by default.  
+
+In order to avoid logging secrets you need to specify the headers to log. If you're including auth information via the URL (not recommended) you should make sure IncludeRequestAttributes is false to avoid logging those.
+
+Level controls the verbosity of logs. There is no guarantee as to the specific log messages that will be outputted so you might see more or fewer log messages between versions of the application, especially at higher verbosity levels.  Here are the general rules of what to expect for each level (from least to most verbose):
+
+* **error**: Only messages for things that are definitely a problem with your setup or the application itself. It's recommended to configure alerts/notifications for error logs and if the issue is not User Error, please open a ticket for it: https://github.com/Michad/tilegroxy/issues
+* **warn**: Includes messages for things that *might* be an issue but isn't critical to the core functioning of the system.  For example an issue talking to your configured cache will come through as a warning.
+* **info**: Includes messages that allow you to see what's happening in real time but without being overwhelmed with minutiae. Expect one or two log messages per request, including messages indicating requests with something unusual.
+* **debug**: Includes messages to help understand what's happening for a given request execution. Expect a few log messages per request. This is more than you probably want in prod but can be useful when first integrating with the system.
+* **trace**: Includes messages for every level of the application as a request flows between layers. Expect several log messages per request, more for complex setups/layers. Very noisy but shouldn't be a *huge* performance impact.
+* **absurd**: Includes more information than you will probably ever need. In some cases this can produce thousands of messages per request and will have a substantial performance cost.
 
 Configuration options:
 
@@ -540,7 +627,7 @@ There are four primary operating modes:
 
 **Image with Header** : The same images are returned but the error message itself is returned as a special header: x-error-message.
 
-It is highly recommended you use the Image mode for production usage.  Returning an Image provides the most user friendly experience as it provides feedback to the user in the map they're looking at that something is wrong.  More importantly, it avoids exposing the specific error message to the end user, which could contain information you don't want exposed to end users.  "Image with error" is useful for development workflows, it gives the same user experience but allows you to easily get to the error messages.
+It is highly recommended you use the Image mode for production usage.  Returning an Image provides the most user friendly experience as it provides feedback to the user in the map they're looking at that something is wrong.  More importantly, it avoids exposing the specific error message to the end user, which could contain information you don't want exposed.  "Image with error" is useful for development workflows, it gives the same user experience but allows you to easily get to the error messages.
 
 
 Configuration options:

@@ -1,6 +1,7 @@
 Server:
     BindHost: 0.0.0.0
-    ContextRoot: /my-app/tiles
+    RootPath: /my-app
+    TilePath: /tile
     Gzip: true
     Port: 8081
     Production: true

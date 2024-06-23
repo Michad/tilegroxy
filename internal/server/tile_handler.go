@@ -23,6 +23,7 @@ import (
 	"strconv"
 
 	"github.com/Michad/tilegroxy/internal"
+	"github.com/Michad/tilegroxy/internal/providers"
 )
 
 type tileHandler struct {
@@ -30,11 +31,11 @@ type tileHandler struct {
 }
 
 func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	ctx := req.Context()
+	ctx := req.Context().(*internal.RequestContext)
 	slog.DebugContext(ctx, "server: tile handler started")
 	defer slog.DebugContext(ctx, "server: tile handler ended")
 
-	if !(*h.auth).CheckAuthentication(req) {
+	if !(*h.auth).CheckAuthentication(req, ctx) {
 		writeError(ctx, w, &h.config.Error, TypeOfErrorAuth, h.config.Error.Messages.NotAuthorized)
 		return
 	}
@@ -89,7 +90,13 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	img, err := layer.RenderTile(ctx, tileReq)
 
 	if err != nil {
-		writeError(ctx, w, &h.config.Error, TypeOfErrorOther, fmt.Sprintf(h.config.Error.Messages.ServerError, err), "stack", string(debug.Stack()))
+		var ae providers.AuthError
+		if errors.As(err, &ae) {
+			writeError(ctx, w, &h.config.Error, TypeOfErrorAuth, h.config.Error.Messages.NotAuthorized)
+		} else {
+			writeError(ctx, w, &h.config.Error, TypeOfErrorOther, fmt.Sprintf(h.config.Error.Messages.ServerError, err), "stack", string(debug.Stack()))
+		}
+
 		return
 	}
 

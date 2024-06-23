@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/config"
 	"github.com/google/uuid"
 )
@@ -50,7 +51,7 @@ func ConstructStaticKey(config *StaticKeyConfig, errorMessages *config.ErrorMess
 	return &StaticKey{config}, nil
 }
 
-func (c StaticKey) CheckAuthentication(req *http.Request) bool {
+func (c StaticKey) CheckAuthentication(req *http.Request, ctx *internal.RequestContext) bool {
 	h := req.Header["Authorization"]
 	return len(h) > 0 && h[0] == "Bearer "+c.Config.Key
 }

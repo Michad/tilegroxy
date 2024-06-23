@@ -25,7 +25,8 @@ import (
 type ServerConfig struct {
 	BindHost      string            //IP address to bind HTTP server to
 	Port          int               //Port to bind HTTP server to
-	ContextRoot   string            //Root HTTP Path to server tiles under. Defaults to /tiles which means /tiles/{layer}/{z}/{x}/{y}.
+	RootPath      string            //Root HTTP Path to apply to all endpoints. Defaults to /
+	TilePath      string            //HTTP Path to serve tiles under (in addition to RootPath). Defaults to tiles which means /tiles/{layer}/{z}/{x}/{y}.
 	StaticHeaders map[string]string //Include these headers in all response from server
 	Production    bool              //Controls serving splash page, documentation, x-powered-by header. Defaults to false, set true to harden for prod
 	Timeout       uint              //How long (in seconds) a request can be in flight before we cancel it and return an error
@@ -61,6 +62,7 @@ type ErrorMessages struct {
 	ParamsBothOrNeither     string
 	ParamsMutuallyExclusive string
 	EnumError               string
+	ScriptError             string
 }
 
 // Selects what image to return when various errors occur. These should either be an embedded:XXX value reflecting an image in `internal/layers/images` or the path to an image in the runtime filesystem
@@ -140,9 +142,10 @@ func DefaultConfig() Config {
 
 	return Config{
 		Server: ServerConfig{
-			BindHost:    "127.0.0.1",
-			Port:        8080,
-			ContextRoot: "/tiles",
+			BindHost: "127.0.0.1",
+			Port:     8080,
+			RootPath: "/",
+			TilePath: "tiles",
 			StaticHeaders: map[string]string{
 				"x-test": "true",
 			},
@@ -184,6 +187,7 @@ func DefaultConfig() Config {
 				ParamsBothOrNeither:     "Parameters %v and %v must be either both or neither supplied",
 				EnumError:               "Invalid value supplied for %v: '%v'. It must be one of: %v",
 				ParamsMutuallyExclusive: "Parameters %v and %v cannot both be set",
+				ScriptError:             "The script specified for %v is invalid: %v",
 			},
 			Images: ErrorImages{
 				OutOfBounds:    images.KeyImageTransparent,

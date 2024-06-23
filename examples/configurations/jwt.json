@@ -1,0 +1,34 @@
+{
+    "logging":{
+        "mainlog" : {
+            "level": "debug",
+            "format": "json"
+        }
+    },
+    "authentication": {
+        "name": "jwt",
+        "verificationKey": "hunter2",
+        "algorithm": "HS256",
+        "LayerScope": true,
+        "LayerScopePrefix": "tile/",
+        "ExpectedIssuer": "http://some.example.com",
+        "UserIdentifierGrant": "name",
+        "MaxExpirationDuration": 10000000000
+    },
+    "layers": [
+        {
+            "id": "osm",
+            "provider": {
+                "name": "proxy",
+                "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+            }
+        },
+        {
+            "id": "osm2",
+            "provider": {
+                "name": "proxy",
+                "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+            }
+        }
+    ]
+}

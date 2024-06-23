@@ -17,7 +17,6 @@ package providers
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"fmt"
 	"image"
 	"image/color"
@@ -84,11 +83,11 @@ func ConstructTransform(cfg TransformConfig, clientConfig *config.ClientConfig, 
 	return &Transform{cfg, provider, transformFunc}, nil
 }
 
-func (t Transform) PreAuth(ctx context.Context, authContext AuthContext) (AuthContext, error) {
-	return (*t.provider).PreAuth(ctx, authContext)
+func (t Transform) PreAuth(ctx *internal.RequestContext, providerContext ProviderContext) (ProviderContext, error) {
+	return (*t.provider).PreAuth(ctx, providerContext)
 }
 
-func (t Transform) transform(ctx context.Context, col color.Color) color.Color {
+func (t Transform) transform(ctx *internal.RequestContext, col color.Color) color.Color {
 	r1, g1, b1, a1 := col.RGBA()
 	r1b := uint8(r1)
 	g1b := uint8(g1)
@@ -104,8 +103,8 @@ func (t Transform) transform(ctx context.Context, col color.Color) color.Color {
 	return result
 }
 
-func (t Transform) GenerateTile(ctx context.Context, authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
-	img, err := (*t.provider).GenerateTile(ctx, authContext, tileRequest)
+func (t Transform) GenerateTile(ctx *internal.RequestContext, providerContext ProviderContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+	img, err := (*t.provider).GenerateTile(ctx, providerContext, tileRequest)
 
 	if err != nil {
 		return img, err
