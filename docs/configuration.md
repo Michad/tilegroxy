@@ -486,7 +486,7 @@ The `validate` method will be supplied with a single token.  The function should
 
 * pass (bool): Whether the token is valid and should allow the request to proceed
 * expiration (time.Time): When the authentication status of the token expires and the validate method should be called again. `validate` should return pass=false for already expired tokens
-* user identifier (string): An identifier for the user being authenticated. By default this is only use.
+* user identifier (string): An identifier for the user being authenticated. By default this is only used for logging.
 * allowed layers ([]string): The specific layer IDs to allow access to with this specific token. Return an empty array to allow access to all of them.
 
 The method how tokens are extracted from the request is configurable. The following modes are available and if multiple are specified they're executed in the order indicated:
@@ -506,7 +506,7 @@ Configuration options:
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
 | token | map[string]string | Yes | None | How to extract the auth token from the request. Each Key/Value should be one of the options in the table above |
-| cachesize | int | No | 100 | Configures the size of the cache of already verified tokens used to avoid re-verifying every request |
+| cachesize | int | No | 100 | Configures the size of the cache of already verified tokens used to avoid re-verifying every request. Set to -1 to disable |
 |	file | string | No | None | Contains the path to the file containing the go code to perform validation of the auth token as a file |
 
 Example:
