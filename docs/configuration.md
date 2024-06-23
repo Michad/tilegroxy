@@ -489,7 +489,7 @@ The `validate` method will be supplied with a single token.  The function should
 * user identifier (string): An identifier for the user being authenticated. By default this is only used for logging.
 * allowed layers ([]string): The specific layer IDs to allow access to with this specific token. Return an empty array to allow access to all of them.
 
-The method how tokens are extracted from the request is configurable. The following modes are available and if multiple are specified they're executed in the order indicated:
+The method how tokens are extracted from the request is configurable. The following modes are available and if multiple are specified the first one (given the order indicated) in the request is utilized:
 
 | Order | Key | Value | 
 | --- | --- | --- | 
