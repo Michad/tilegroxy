@@ -68,6 +68,7 @@ func (l *Layer) authWithProvider(ctx *internal.RequestContext) error {
 func (l *Layer) RenderTile(ctx *internal.RequestContext, tileRequest internal.TileRequest) (*internal.Image, error) {
 	if ctx.LimitLayers {
 		if !slices.Contains(ctx.AllowedLayers, l.Id) {
+			slog.InfoContext(ctx, "Denying access to non-allowed layer")
 			return nil, providers.AuthError{} //TODO: should be a different auth error
 		}
 	}
@@ -108,6 +109,7 @@ func (l *Layer) RenderTile(ctx *internal.RequestContext, tileRequest internal.Ti
 func (l *Layer) RenderTileNoCache(ctx *internal.RequestContext, tileRequest internal.TileRequest) (*internal.Image, error) {
 	if ctx.LimitLayers {
 		if !slices.Contains(ctx.AllowedLayers, l.Id) {
+			slog.InfoContext(ctx, "Denying access to non-allowed layer")
 			return nil, providers.AuthError{} //TODO: should be a different auth error
 		}
 	}

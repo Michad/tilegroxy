@@ -51,24 +51,30 @@ const (
 
 func writeError(ctx *internal.RequestContext, w http.ResponseWriter, cfg *config.ErrorConfig, errorType TypeOfError, message string, args ...any) {
 	var status int
+	var level slog.Level
 	if !cfg.SuppressStatusCode {
 		if errorType == TypeOfErrorAuth {
+			level = slog.LevelDebug
 			status = http.StatusUnauthorized
 		} else if errorType == TypeOfErrorBounds {
+			level = slog.LevelDebug
 			status = http.StatusBadRequest
 		} else if errorType == TypeOfErrorProvider {
+			level = slog.LevelInfo
 			status = http.StatusInternalServerError
 		} else if errorType == TypeOfErrorOtherBadRequest {
+			level = slog.LevelDebug
 			status = http.StatusBadRequest
 		} else {
+			level = slog.LevelWarn
 			status = http.StatusInternalServerError
 		}
 	} else {
+		level = config.LevelTrace
 		status = http.StatusOK
 	}
 
-	// fullMessage := fmt.Sprintf(message, args...)
-	slog.WarnContext(ctx, message, args...)
+	slog.Log(ctx, level, message, args...)
 
 	if cfg.Mode == config.ModeErrorPlainText {
 		w.WriteHeader(status)

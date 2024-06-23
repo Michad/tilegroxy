@@ -171,6 +171,7 @@ func (c Jwt) CheckAuthentication(req *http.Request, ctx *internal.RequestContext
 	}
 
 	if time.Until(exp.Time) > time.Duration(c.Config.MaxExpirationDuration)*time.Second {
+		slog.InfoContext(ctx, "JWT parsing error: distant expiration")
 		return false
 	}
 

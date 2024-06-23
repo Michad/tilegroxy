@@ -23,6 +23,7 @@ import (
 	"strconv"
 
 	"github.com/Michad/tilegroxy/internal"
+	"github.com/Michad/tilegroxy/internal/providers"
 )
 
 type tileHandler struct {
@@ -89,7 +90,13 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	img, err := layer.RenderTile(ctx, tileReq)
 
 	if err != nil {
-		writeError(ctx, w, &h.config.Error, TypeOfErrorOther, fmt.Sprintf(h.config.Error.Messages.ServerError, err), "stack", string(debug.Stack()))
+		var ae providers.AuthError
+		if errors.As(err, &ae) {
+			writeError(ctx, w, &h.config.Error, TypeOfErrorAuth, h.config.Error.Messages.NotAuthorized)
+		} else {
+			writeError(ctx, w, &h.config.Error, TypeOfErrorOther, fmt.Sprintf(h.config.Error.Messages.ServerError, err), "stack", string(debug.Stack()))
+		}
+
 		return
 	}
 
