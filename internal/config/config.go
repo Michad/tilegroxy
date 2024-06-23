@@ -62,6 +62,7 @@ type ErrorMessages struct {
 	ParamsBothOrNeither     string
 	ParamsMutuallyExclusive string
 	EnumError               string
+	ScriptError             string
 }
 
 // Selects what image to return when various errors occur. These should either be an embedded:XXX value reflecting an image in `internal/layers/images` or the path to an image in the runtime filesystem
@@ -186,6 +187,7 @@ func DefaultConfig() Config {
 				ParamsBothOrNeither:     "Parameters %v and %v must be either both or neither supplied",
 				EnumError:               "Invalid value supplied for %v: '%v'. It must be one of: %v",
 				ParamsMutuallyExclusive: "Parameters %v and %v cannot both be set",
+				ScriptError:             "The script specified for %v is invalid: %v",
 			},
 			Images: ErrorImages{
 				OutOfBounds:    images.KeyImageTransparent,

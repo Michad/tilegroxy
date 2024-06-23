@@ -19,6 +19,7 @@ require (
 	github.com/testcontainers/testcontainers-go v0.31.0
 	github.com/traefik/yaegi v0.16.1
 	gopkg.in/yaml.v3 v3.0.1
+	k8s.io/utils v0.0.0-20230220204549-a5ecb0141aa5
 )
 
 require (

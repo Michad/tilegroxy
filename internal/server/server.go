@@ -271,7 +271,12 @@ func ListenAndServe(config *config.Config, layerList []*layers.Layer, auth *auth
 		r.Handle(config.Server.RootPath, &defaultHandler{config, layerMap, auth})
 		// r.HandleFunc("/documentation", defaultHandler)
 	}
-	r.Handle(config.Server.RootPath+config.Server.TilePath+"/{layer}/{z}/{x}/{y}", &tileHandler{defaultHandler{config, layerMap, auth}})
+
+	tilePath := config.Server.RootPath + config.Server.TilePath + "/{layer}/{z}/{x}/{y}"
+	myTileHandler := tileHandler{defaultHandler{config, layerMap, auth}}
+
+	r.Handle(tilePath, &myTileHandler)
+	r.Handle(tilePath+"/", &myTileHandler)
 
 	var rootHandler http.Handler
 

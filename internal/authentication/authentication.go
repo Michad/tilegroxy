@@ -44,6 +44,13 @@ func ConstructAuth(rawConfig map[string]interface{}, errorMessages *config.Error
 			return nil, err
 		}
 		return ConstructJwt(&config, errorMessages)
+	} else if rawConfig["name"] == "custom" {
+		var config CustomConfig
+		err := mapstructure.Decode(rawConfig, &config)
+		if err != nil {
+			return nil, err
+		}
+		return ConstructCustom(&config, errorMessages)
 	}
 
 	name := fmt.Sprintf("%#v", rawConfig["name"])

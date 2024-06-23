@@ -463,9 +463,54 @@ Configuration options:
 | LayerScopePrefix | string | No | Empty string | If true this prefix indicates scopes to use. For example a prefix of "tile/" will mean a scope of "tile/test" grants access to "test". Doesn't impact ExpectedScope |
 | UserIdentifierGrant | string | No | sub | Use the specified grant as the user identifier. This is just used for logging by default but it's made available to custom providers |
 
-### External
+### Custom
 
-TODO. Not yet implemented.
+Allows you to specify your own logic controlling how auth tokens should be extracted and validated. This, like the custom provider, utilizes [Yaegi](https://github.com/traefik/yaegi) to allow you to supply your own custom code.  
+
+To help mitigate the performance impact of calling the interpreted `validate` method, a cache is utilized by default. In turn, to avoid concurrent requests that utilize the same token from causing repetitive calls to `validate`, a pool of locks are utilized when the cache is enabled. The size of the lock pool is equal to the number of CPUs.
+
+The code you need to supply only has access to the standard library.  The package must be "custom" and you must include the following function:
+
+```
+func validate(string) (bool, time.Time, string, []string)
+```
+
+The `validate` method will be supplied with a single token.  The function should then return (in order):
+
+* pass (bool): Whether the token is valid and should allow the request to proceed
+* expiration (time.Time): When the authentication status of the token expires and the validate method should be called again. `validate` should return pass=false for already expired tokens
+* user identifier (string): An identifier for the user being authenticated. By default this is only use.
+* allowed layers ([]string): The specific layer IDs to allow access to with this specific token. Return an empty array to allow access to all of them.
+
+The method how tokens are extracted from the request is configurable. The following modes are available and if multiple are specified they're executed in the order indicated:
+
+| Order | Key | Value | 
+| --- | --- | --- | 
+| 1 | header | Header Name (in Header-Case) | 
+| 2 | cookie | Cookie Name |
+| 3 | query | Query Parameter Key |
+| 4 | path | None (set as empty string) |
+
+
+Name should be "custom"
+
+Configuration options:
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| token | map[string]string | Yes | None | How to extract the auth token from the request. Each Key/Value should be one of the options in the table above |
+| cachesize | int | No | 100 | Configures the size of the cache of already verified tokens used to avoid re-verifying every request |
+|	file | string | No | None | Contains the path to the file containing the go code to perform validation of the auth token as a file |
+
+Example:
+
+```
+authentication:
+  name: custom
+  file: examples/auth/custom_from_file.go
+  token:
+    header: X-Token
+```
 
 ## Server
 
