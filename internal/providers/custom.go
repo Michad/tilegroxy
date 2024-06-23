@@ -15,7 +15,6 @@
 package providers
 
 import (
-	"context"
 	"os"
 	"reflect"
 
@@ -36,8 +35,8 @@ type Custom struct {
 	clientConfig     *config.ClientConfig
 	errorMessages    *config.ErrorMessages
 	interp           *interp.Interpreter
-	preAuthFunc      func(context.Context, AuthContext, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (AuthContext, error)
-	generateTileFunc func(context.Context, AuthContext, internal.TileRequest, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (*internal.Image, error)
+	preAuthFunc      func(*internal.RequestContext, ProviderContext, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (ProviderContext, error)
+	generateTileFunc func(*internal.RequestContext, ProviderContext, internal.TileRequest, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (*internal.Image, error)
 }
 
 func ConstructCustom(cfg CustomConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages) (*Custom, error) {
@@ -45,13 +44,14 @@ func ConstructCustom(cfg CustomConfig, clientConfig *config.ClientConfig, errorM
 	i.Use(stdlib.Symbols)
 	i.Use(interp.Exports{
 		"tilegroxy/tilegroxy": map[string]reflect.Value{
-			"AuthContext":   reflect.ValueOf((*AuthContext)(nil)),
-			"TileRequest":   reflect.ValueOf((*internal.TileRequest)(nil)),
-			"ClientConfig":  reflect.ValueOf((*config.ClientConfig)(nil)),
-			"ErrorMessages": reflect.ValueOf((*config.ErrorMessages)(nil)),
-			"Image":         reflect.ValueOf((*internal.Image)(nil)),
-			"AuthError":     reflect.ValueOf((*AuthError)(nil)),
-			"GetTile":       reflect.ValueOf(getTile),
+			"RequestContext":  reflect.ValueOf((*internal.RequestContext)(nil)),
+			"ProviderContext": reflect.ValueOf((*ProviderContext)(nil)),
+			"TileRequest":     reflect.ValueOf((*internal.TileRequest)(nil)),
+			"ClientConfig":    reflect.ValueOf((*config.ClientConfig)(nil)),
+			"ErrorMessages":   reflect.ValueOf((*config.ErrorMessages)(nil)),
+			"Image":           reflect.ValueOf((*internal.Image)(nil)),
+			"AuthError":       reflect.ValueOf((*AuthError)(nil)),
+			"GetTile":         reflect.ValueOf(getTile),
 		}})
 
 	script, err := os.ReadFile(cfg.File)
@@ -74,19 +74,19 @@ func ConstructCustom(cfg CustomConfig, clientConfig *config.ClientConfig, errorM
 		return nil, err
 	}
 
-	preAuthFunc := preAuthVal.Interface().(func(context.Context, AuthContext, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (AuthContext, error))
+	preAuthFunc := preAuthVal.Interface().(func(*internal.RequestContext, ProviderContext, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (ProviderContext, error))
 
-	generateTileFunc := generateTileVal.Interface().(func(context.Context, AuthContext, internal.TileRequest, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (*internal.Image, error))
+	generateTileFunc := generateTileVal.Interface().(func(*internal.RequestContext, ProviderContext, internal.TileRequest, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (*internal.Image, error))
 
 	return &Custom{cfg, clientConfig, errorMessages, i, preAuthFunc, generateTileFunc}, nil
 }
 
-func (t Custom) PreAuth(ctx context.Context, authContext AuthContext) (AuthContext, error) {
-	return t.preAuthFunc(ctx, authContext, t.Params, *t.clientConfig, *t.errorMessages)
+func (t Custom) PreAuth(ctx *internal.RequestContext, providerContext ProviderContext) (ProviderContext, error) {
+	return t.preAuthFunc(ctx, providerContext, t.Params, *t.clientConfig, *t.errorMessages)
 }
 
-func (t Custom) GenerateTile(ctx context.Context, authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
-	img, err := t.generateTileFunc(ctx, authContext, tileRequest, t.Params, *t.clientConfig, *t.errorMessages)
+func (t Custom) GenerateTile(ctx *internal.RequestContext, providerContext ProviderContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+	img, err := t.generateTileFunc(ctx, providerContext, tileRequest, t.Params, *t.clientConfig, *t.errorMessages)
 
 	if err != nil {
 		return nil, err

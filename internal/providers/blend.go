@@ -17,7 +17,6 @@ package providers
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"image"
@@ -60,39 +59,39 @@ func ConstructBlend(config BlendConfig, clientConfig *config.ClientConfig, error
 	return &Blend{config, providers}, nil
 }
 
-func (t Blend) PreAuth(ctx context.Context, authContext AuthContext) (AuthContext, error) {
-	if authContext.Other == nil {
-		authContext.Other = map[string]interface{}{}
+func (t Blend) PreAuth(ctx *internal.RequestContext, providerContext ProviderContext) (ProviderContext, error) {
+	if providerContext.Other == nil {
+		providerContext.Other = map[string]interface{}{}
 	}
 
 	wg := sync.WaitGroup{}
 	errs := make(chan error, len(t.providers))
 	acResults := make(chan struct {
 		int
-		AuthContext
+		ProviderContext
 	}, len(t.providers))
 
 	for i, p := range t.providers {
 		wg.Add(1)
 		go func(acObj interface{}, index int, p *Provider) {
 			var err error
-			ac, ok := acObj.(AuthContext)
+			ac, ok := acObj.(ProviderContext)
 
 			if ok {
 				ac, err = (*p).PreAuth(ctx, ac)
 			} else {
-				ac, err = (*p).PreAuth(ctx, AuthContext{})
+				ac, err = (*p).PreAuth(ctx, ProviderContext{})
 			}
 
 			acResults <- struct {
 				int
-				AuthContext
+				ProviderContext
 			}{index, ac}
 
 			errs <- err
 
 			wg.Done()
-		}(authContext.Other[strconv.Itoa(i)], i, p)
+		}(providerContext.Other[strconv.Itoa(i)], i, p)
 	}
 
 	wg.Wait()
@@ -102,13 +101,13 @@ func (t Blend) PreAuth(ctx context.Context, authContext AuthContext) (AuthContex
 		errSlice[i] = <-errs
 
 		acStruct := <-acResults
-		authContext.Other[strconv.Itoa(i)] = acStruct.AuthContext
+		providerContext.Other[strconv.Itoa(i)] = acStruct.ProviderContext
 	}
 
-	return authContext, errors.Join(errSlice...)
+	return providerContext, errors.Join(errSlice...)
 }
 
-func (t Blend) GenerateTile(ctx context.Context, authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+func (t Blend) GenerateTile(ctx *internal.RequestContext, providerContext ProviderContext, tileRequest internal.TileRequest) (*internal.Image, error) {
 	wg := sync.WaitGroup{}
 	errs := make(chan error, len(t.providers))
 	imgs := make(chan struct {
@@ -121,12 +120,12 @@ func (t Blend) GenerateTile(ctx context.Context, authContext AuthContext, tileRe
 		go func(key string, i int, p *Provider) {
 			var img *internal.Image
 			var err error
-			ac, ok := authContext.Other[key].(AuthContext)
+			ac, ok := providerContext.Other[key].(ProviderContext)
 
 			if ok {
 				img, err = (*p).GenerateTile(ctx, ac, tileRequest)
 			} else {
-				img, err = (*p).GenerateTile(ctx, AuthContext{}, tileRequest)
+				img, err = (*p).GenerateTile(ctx, ProviderContext{}, tileRequest)
 			}
 
 			realImage, _, err2 := image.Decode(bytes.NewReader(*img))

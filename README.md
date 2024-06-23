@@ -303,12 +303,12 @@ Example custom providers can be found within [examples/providers](./examples/pro
 Custom providers must be within the `custom` package and must import the `tilegroxy/tilegroxy` package for mandatory datatypes. There are two mandatory functions:
 
 ```go
-func preAuth(context.Context, tilegroxy.AuthContext, map[string]interface{}, tilegroxy.ClientConfig, tilegroxy.ErrorMessages) (tilegroxy.AuthContext, error)
+func preAuth(*internal.RequestContext, tilegroxy.ProviderContext, map[string]interface{}, tilegroxy.ClientConfig, tilegroxy.ErrorMessages) (tilegroxy.ProviderContext, error)
 
-func generateTile(context.Context, tilegroxy.AuthContext, tilegroxy.TileRequest, map[string]interface{}, tilegroxy.ClientConfig,tilegroxy.ErrorMessages) (*tilegroxy.Image, error)
+func generateTile(*internal.RequestContext, tilegroxy.ProviderContext, tilegroxy.TileRequest, map[string]interface{}, tilegroxy.ClientConfig,tilegroxy.ErrorMessages) (*tilegroxy.Image, error)
 ```
 
-The `preAuth` function is responsible for authenticating outgoing requests and returning a token or whatever else is needed. It is called when needed by the application when either `expiration` is reached or an `AuthError` is returned by `generateTile`. A given instance of tilegroxy will only call this method once at a time and then shares the result among threads. However, AuthContext is not shared between instances of tilegroxy. 
+The `preAuth` function is responsible for authenticating outgoing requests and returning a token or whatever else is needed. It is called when needed by the application when either `expiration` is reached or an `AuthError` is returned by `generateTile`. A given instance of tilegroxy will only call this method once at a time and then shares the result among threads. However, ProviderContext is not shared between instances of tilegroxy. 
 
 The `generateTile` function is the main function which returns an image for a given tile request. You should never trigger a call to `preAuth` yourself from `generateTile` (instead return an `AuthError`) to prevent excessive calls to the upstream provider from multiple tiles.
 
@@ -316,7 +316,8 @@ The following types are available for custom providers:
 
 | Type | Description |
 | --- | --- |
-| [AuthContext](./internal/providers/provider.go) | A holder struct for authentication information. Shared between goroutines to avoid excessive auth requests. Includes an Expiration field to inform the application when to re-auth via the preAuth method (this should be set before the token actually expires). The intent is for the relevant auth token  to be placed in the Token field, however using that token is an implementation detail left to the provider. Also includes a Bypass field for cases where no authentication is needed which avoids subsequent calls to preAuth |
+| [RequestContext](./internal/request_context.go) | Contains contextual information specific to the incoming request. Can retrieve headers via the Value method and authz information if configured properly. Do note there won't be a request when seed and test commands are run, this context will be a "Background Context" at those times |
+| [ProviderContext](./internal/providers/provider.go) | A holder struct for authentication information. Shared between goroutines to avoid excessive auth requests. Includes an Expiration field to inform the application when to re-auth via the preAuth method (this should be set before the token actually expires). The intent is for the relevant auth token  to be placed in the Token field, however using that token is an implementation detail left to the provider. Also includes a Bypass field for cases where no authentication is needed which avoids subsequent calls to preAuth |
 | [TileRequest](./internal/tile_request.go) | The parameters from the user indicating the layer being requested as well as the specific tile coordinate |
 | [ClientConfig](./internal/config/config.go) | A struct from the configuration which indicates settings such as static headers and timeouts. See `Client` in [Configuration documentation](./docs/configuration.md) for details |
 | [ErrorMessages](./internal/config/config.go) | A struct from the configuration which indicates common error messages. See `Error Messages` in [Configuration documentation](./docs/configuration.md) for details |

@@ -40,7 +40,6 @@ func (h *defaultHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	case <-time.After(1 * time.Second):
 		fmt.Fprintf(w, req.RequestURI+"\n")
 	case <-ctx.Done():
-
 		err := ctx.Err()
 		slog.DebugContext(ctx, "server:", err)
 		internalError := http.StatusInternalServerError

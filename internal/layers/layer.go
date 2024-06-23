@@ -15,7 +15,6 @@
 package layers
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -29,13 +28,13 @@ import (
 )
 
 type Layer struct {
-	Id            string
-	Config        config.LayerConfig
-	Provider      providers.Provider
-	Cache         *caches.Cache
-	ErrorMessages *config.ErrorMessages
-	authContext   providers.AuthContext
-	authMutex     sync.Mutex
+	Id              string
+	Config          config.LayerConfig
+	Provider        providers.Provider
+	Cache           *caches.Cache
+	ErrorMessages   *config.ErrorMessages
+	providerContext providers.ProviderContext
+	authMutex       sync.Mutex
 }
 
 func ConstructLayer(rawConfig config.LayerConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages) (*Layer, error) {
@@ -48,16 +47,16 @@ func ConstructLayer(rawConfig config.LayerConfig, clientConfig *config.ClientCon
 		return nil, error
 	}
 
-	return &Layer{rawConfig.Id, rawConfig, provider, nil, errorMessages, providers.AuthContext{}, sync.Mutex{}}, nil
+	return &Layer{rawConfig.Id, rawConfig, provider, nil, errorMessages, providers.ProviderContext{}, sync.Mutex{}}, nil
 }
 
-func (l *Layer) authWithProvider(ctx context.Context) error {
+func (l *Layer) authWithProvider(ctx *internal.RequestContext) error {
 	var err error
 
-	if !l.authContext.Bypass {
+	if !l.providerContext.AuthBypass {
 		l.authMutex.Lock()
-		if l.authContext.Expiration.Before(time.Now()) {
-			l.authContext, err = l.Provider.PreAuth(ctx, l.authContext)
+		if l.providerContext.AuthExpiration.Before(time.Now()) {
+			l.providerContext, err = l.Provider.PreAuth(ctx, l.providerContext)
 		}
 		l.authMutex.Unlock()
 	}
@@ -65,7 +64,7 @@ func (l *Layer) authWithProvider(ctx context.Context) error {
 	return err
 }
 
-func (l *Layer) RenderTile(ctx context.Context, tileRequest internal.TileRequest) (*internal.Image, error) {
+func (l *Layer) RenderTile(ctx *internal.RequestContext, tileRequest internal.TileRequest) (*internal.Image, error) {
 	if l.Config.SkipCache {
 		return l.RenderTileNoCache(ctx, tileRequest)
 	}
@@ -99,7 +98,7 @@ func (l *Layer) RenderTile(ctx context.Context, tileRequest internal.TileRequest
 	return img, nil
 }
 
-func (l *Layer) RenderTileNoCache(ctx context.Context, tileRequest internal.TileRequest) (*internal.Image, error) {
+func (l *Layer) RenderTileNoCache(ctx *internal.RequestContext, tileRequest internal.TileRequest) (*internal.Image, error) {
 	var img *internal.Image
 	var err error
 
@@ -109,7 +108,7 @@ func (l *Layer) RenderTileNoCache(ctx context.Context, tileRequest internal.Tile
 		return nil, err
 	}
 
-	img, err = l.Provider.GenerateTile(ctx, l.authContext, tileRequest)
+	img, err = l.Provider.GenerateTile(ctx, l.providerContext, tileRequest)
 
 	var authError *providers.AuthError
 	if errors.As(err, &authError) {
@@ -119,7 +118,7 @@ func (l *Layer) RenderTileNoCache(ctx context.Context, tileRequest internal.Tile
 			return nil, err
 		}
 
-		img, err = l.Provider.GenerateTile(ctx, l.authContext, tileRequest)
+		img, err = l.Provider.GenerateTile(ctx, l.providerContext, tileRequest)
 
 		if err != nil {
 			return nil, err

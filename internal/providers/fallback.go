@@ -15,7 +15,6 @@
 package providers
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -57,11 +56,11 @@ func ConstructFallback(config FallbackConfig, clientConfig *config.ClientConfig,
 	return &Fallback{zoom, config.Bounds, primary, secondary}, nil
 }
 
-func (t Fallback) PreAuth(ctx context.Context, authContext AuthContext) (AuthContext, error) {
-	return (*t.Primary).PreAuth(ctx, authContext)
+func (t Fallback) PreAuth(ctx *internal.RequestContext, providerContext ProviderContext) (ProviderContext, error) {
+	return (*t.Primary).PreAuth(ctx, providerContext)
 }
 
-func (t Fallback) GenerateTile(ctx context.Context, authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+func (t Fallback) GenerateTile(ctx *internal.RequestContext, providerContext ProviderContext, tileRequest internal.TileRequest) (*internal.Image, error) {
 	ok := true
 
 	if !slices.Contains(t.zoom, tileRequest.Z) {
@@ -80,7 +79,7 @@ func (t Fallback) GenerateTile(ctx context.Context, authContext AuthContext, til
 	var img *internal.Image
 
 	if ok {
-		img, err = (*t.Primary).GenerateTile(ctx, authContext, tileRequest)
+		img, err = (*t.Primary).GenerateTile(ctx, providerContext, tileRequest)
 
 		if err != nil {
 			ok = false
@@ -89,7 +88,7 @@ func (t Fallback) GenerateTile(ctx context.Context, authContext AuthContext, til
 	}
 
 	if !ok {
-		return (*t.Secondary).GenerateTile(ctx, authContext, tileRequest)
+		return (*t.Secondary).GenerateTile(ctx, providerContext, tileRequest)
 	}
 
 	return img, err

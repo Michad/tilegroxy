@@ -15,7 +15,6 @@
 package providers
 
 import (
-	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -41,11 +40,11 @@ func ConstructUrlTemplate(config UrlTemplateConfig, clientConfig *config.ClientC
 	return &UrlTemplate{config, clientConfig}, nil
 }
 
-func (t UrlTemplate) PreAuth(ctx context.Context, authContext AuthContext) (AuthContext, error) {
-	return AuthContext{Bypass: true}, nil
+func (t UrlTemplate) PreAuth(ctx *internal.RequestContext, providerContext ProviderContext) (ProviderContext, error) {
+	return ProviderContext{AuthBypass: true}, nil
 }
 
-func (t UrlTemplate) GenerateTile(ctx context.Context, authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+func (t UrlTemplate) GenerateTile(ctx *internal.RequestContext, providerContext ProviderContext, tileRequest internal.TileRequest) (*internal.Image, error) {
 	b, err := tileRequest.GetBounds()
 
 	if err != nil {

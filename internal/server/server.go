@@ -25,8 +25,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 
+	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/authentication"
 	"github.com/Michad/tilegroxy/internal/config"
 	"github.com/Michad/tilegroxy/internal/images"
@@ -49,7 +49,7 @@ const (
 	TypeOfErrorOther
 )
 
-func writeError(ctx context.Context, w http.ResponseWriter, cfg *config.ErrorConfig, errorType TypeOfError, message string, args ...any) {
+func writeError(ctx *internal.RequestContext, w http.ResponseWriter, cfg *config.ErrorConfig, errorType TypeOfError, message string, args ...any) {
 	var status int
 	if !cfg.SuppressStatusCode {
 		if errorType == TypeOfErrorAuth {
@@ -234,57 +234,13 @@ func configureAccessLogging(cfg config.AccessLogConfig, errorMessages config.Err
 	return rootHandler, nil
 }
 
-// Custom context type. Links back to request so we can pull attrs into the structured log
-type reqCtx struct {
-	context.Context
-	req       *http.Request
-	startTime time.Time
-}
-
-func (c *reqCtx) Value(keyAny any) any {
-	key, ok := keyAny.(string)
-	if !ok {
-		return nil
-	}
-
-	switch key {
-	case "uri":
-		return c.req.RequestURI
-	case "path":
-		return c.req.URL.Path
-	case "query":
-		return c.req.URL.Query()
-	case "proto":
-		return c.req.Proto
-	case "ip":
-		return strings.Split(c.req.RemoteAddr, ":")[0]
-	case "method":
-		return c.req.Method
-	case "host":
-		return c.req.Host
-	case "elapsed":
-		return time.Since(c.startTime).Seconds()
-	}
-
-	h := c.req.Header[key]
-
-	if h != nil {
-		if len(h) == 1 {
-			return h[0]
-		}
-		return h
-	}
-
-	return nil
-}
-
 type httpContextHandler struct {
 	http.Handler
 	errCfg config.ErrorConfig
 }
 
 func (h httpContextHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	reqC := reqCtx{req.Context(), req, time.Now()}
+	reqC := internal.NewRequestContext(req)
 	defer func() {
 		if err := recover(); err != nil {
 			writeError(&reqC, w, &h.errCfg, TypeOfErrorOther, "Unexpected Internal Server Error", "stack", string(debug.Stack()))

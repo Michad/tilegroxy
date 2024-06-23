@@ -15,7 +15,6 @@
 package providers
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -30,12 +29,13 @@ import (
 )
 
 type Provider interface {
-	PreAuth(ctx context.Context, authContext AuthContext) (AuthContext, error)
-	GenerateTile(ctx context.Context, authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error)
+	// Performs authentication before tiles are ever generated. The calling code ensures this is only called once at a time and only when needed
+	// based on the expiration in ProviderContext and when an AuthError is returned from GenerateTile
+	PreAuth(ctx *internal.RequestContext, providerContext ProviderContext) (ProviderContext, error)
+	GenerateTile(ctx *internal.RequestContext, providerContext ProviderContext, tileRequest internal.TileRequest) (*internal.Image, error)
 }
 
 func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages) (Provider, error) {
-
 	if rawConfig["name"] == "url template" {
 		var config UrlTemplateConfig
 		err := mapstructure.Decode(rawConfig, &config)
@@ -132,11 +132,11 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.Cl
 	return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.name", name)
 }
 
-type AuthContext struct {
-	Bypass     bool
-	Expiration time.Time
-	Token      string
-	Other      map[string]interface{}
+type ProviderContext struct {
+	AuthBypass     bool                   //If true, avoids ever calling preauth again
+	AuthExpiration time.Time              //When next to trigger preauth
+	AuthToken      string                 //The main auth token that comes back from the preauth and is used by the generate method. Details are up to the provider
+	Other          map[string]interface{} //A generic holder in cases where a provider needs extra storage - for instance Blend which needs Context for child providers
 }
 
 type AuthError struct {
@@ -175,7 +175,7 @@ func (e *RemoteServerError) Error() string {
  * Performs a GET operation against a given URL. Implementing providers should call this when possible. It has
  * standard reusable logic around various config options
  */
-func getTile(ctx context.Context, clientConfig *config.ClientConfig, url string, authHeaders map[string]string) (*internal.Image, error) {
+func getTile(ctx *internal.RequestContext, clientConfig *config.ClientConfig, url string, authHeaders map[string]string) (*internal.Image, error) {
 	slog.DebugContext(ctx, fmt.Sprintf("Calling url %v\n", url))
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)

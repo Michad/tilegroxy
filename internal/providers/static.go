@@ -15,7 +15,6 @@
 package providers
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/Michad/tilegroxy/internal"
@@ -51,10 +50,10 @@ func ConstructStatic(config StaticConfig, clientConfig *config.ClientConfig, err
 	return &Static{config, img}, nil
 }
 
-func (t Static) PreAuth(ctx context.Context, authContext AuthContext) (AuthContext, error) {
-	return AuthContext{Bypass: true}, nil
+func (t Static) PreAuth(ctx *internal.RequestContext, providerContext ProviderContext) (ProviderContext, error) {
+	return ProviderContext{AuthBypass: true}, nil
 }
 
-func (t Static) GenerateTile(ctx context.Context, authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+func (t Static) GenerateTile(ctx *internal.RequestContext, providerContext ProviderContext, tileRequest internal.TileRequest) (*internal.Image, error) {
 	return t.img, nil
 }
