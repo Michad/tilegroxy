@@ -22,7 +22,7 @@ The following features are currently available:
 * Provide a uniform ZXY mapping interface for incoming requests.
 * Proxy map tiles to ZXY, WMS, TMS, or WMTS map layers
 * Cache map tiles in disk, memory, s3, redis, or memcache
-* Require incoming authentication using a static key or JWT
+* Require incoming authentication/authorization using static key, JWT, or custom logic
 * Create your own custom provider to pull in non-standard and proprietary imagery sources
 * Tweak your map layer with 18 standard effects or by providing your own pixel-level logic
 * Combine multiple map layers with adjustable rules and blending methods

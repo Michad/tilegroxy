@@ -412,9 +412,7 @@ cache:
 
 ## Authentication
 
-Implements incoming authentication schemes. 
-
-These authentication options are not comprehensive and do not support authorization. That is, anyone who authenticates can access all layers. For complex use cases it is recommended to implement authentication and authorization in compliance with your business logic as a proxy/gateway before tilegroxy.
+Implements incoming auth schemes. This is primarily meant for authentication but does include some authorization by limiting access to specific layers via JWT or custom schemes.
 
 Requests that do not comply with authentication requirements will receive a 401 Unauthorized HTTP status code.
 
@@ -428,7 +426,7 @@ Name should be "none"
 
 Requires incoming requests have a specific key supplied as a "Bearer" token in a "Authorization" Header.
 
-It is recommended you employ caution with this option. It should be regarded as a protection against casual web scrapers but not true security. It is recommended only for development and internal ("intranet") use-cases.
+It is recommended you employ caution with this option. It should be regarded as a protection against casual web scrapers but not true security. It is recommended only for development and internal ("intranet") use-cases. Does not include any authz logic.
 
 Name should be "static key"
 
@@ -442,7 +440,7 @@ Configuration options:
 
 Requires incoming requests include a [JSON Web Token (JWT)](https://jwt.io/). The signature of the token is verified against a fixed secret and grants are validated.
 
-Currently this implementation only supports a single key specified in configuration against a single signing algorithm. Expanding that to allow multiple keys and keys pulled from secret stores is a desired future roadmap item.
+Currently this implementation only supports a single key specified against a single signing algorithm. The key can either be stored in configuration or supplied via environment variable. Support for multiple keys and keys pulled from secret stores is a desired future roadmap item.
 
 Name should be "jwt"
 
@@ -451,7 +449,7 @@ Configuration options:
 
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| VerificationKey | string | Yes | None | The key for verifying the signature. The public key if using asymmetric signing. |
+| VerificationKey | string | Yes | None | The key for verifying the signature. The public key if using asymmetric signing. If the value starts with "env." the remainder is interpreted as the name of the Environment Variable to use to retrieve the verification key. |
 | Algorithm | string | Yes | None | Algorithm to allow for JWT signature. One of: "HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "EdDSA" |
 | HeaderName | string | No | Authorization | The header to extract the JWT from. If this is "Authorization" it removes "Bearer " from the start |
 | MaxExpirationDuration | uint32 | No | 1 day | How many seconds from now can the expiration be. JWTs more than X seconds from now will result in a 401 |
@@ -462,6 +460,15 @@ Configuration options:
 | LayerScope | bool | No | false | If true the "scope" grant is used to whitelist access to layers |
 | LayerScopePrefix | string | No | Empty string | If true this prefix indicates scopes to use. For example a prefix of "tile/" will mean a scope of "tile/test" grants access to "test". Doesn't impact ExpectedScope |
 | UserIdentifierGrant | string | No | sub | Use the specified grant as the user identifier. This is just used for logging by default but it's made available to custom providers |
+
+Example:
+
+```
+authentication:
+  name: jwt
+  verificationkey: env.JWT_KEY
+  algorithm: HS256
+```
 
 ### Custom
 
