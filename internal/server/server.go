@@ -266,12 +266,12 @@ func ListenAndServe(config *config.Config, layerList []*layers.Layer, auth *auth
 	}
 
 	if config.Server.Production {
-		r.HandleFunc("/", handleNoContent)
+		r.HandleFunc(config.Server.RootPath, handleNoContent)
 	} else {
-		r.Handle("/", &defaultHandler{config, layerMap, auth})
+		r.Handle(config.Server.RootPath, &defaultHandler{config, layerMap, auth})
 		// r.HandleFunc("/documentation", defaultHandler)
 	}
-	r.Handle(config.Server.ContextRoot+"/{layer}/{z}/{x}/{y}", &tileHandler{defaultHandler{config, layerMap, auth}})
+	r.Handle(config.Server.RootPath+config.Server.TilePath+"/{layer}/{z}/{x}/{y}", &tileHandler{defaultHandler{config, layerMap, auth}})
 
 	var rootHandler http.Handler
 

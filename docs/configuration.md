@@ -477,7 +477,8 @@ Configuration options:
 | --- | --- | --- | --- | --- |
 | BindHost | string | No | 127.0.0.1 | IP address to bind HTTP server to |
 | Port | int | No | 8080 | Port to bind HTTP server to |
-| ContextRoot | string | No | /tiles | The root HTTP Path to serve tiles under. The default of /tiles will result in a path that looks like /tiles/{layer}/{z}/{x}/{y} |
+| RootPath | string | No | / | The root HTTP Path to serve all requests under. |
+| TilePath | string | No | tiles | The HTTP Path to serve tiles under in addition to RootPath. The defaults will result in a path that looks like /tiles/{layer}/{z}/{x}/{y} |
 | StaticHeaders | map[string]string | No | None | Include these headers in all response from server |
 | Production | bool | No | false | Hardens operation for usage in production. For instance, controls serving splash page, documentation, x-powered-by header. |
 | Timeout | uint | No | 60 | How long (in seconds) a request can be in flight before we cancel it and return an error |
