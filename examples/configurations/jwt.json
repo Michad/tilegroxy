@@ -1,0 +1,28 @@
+{
+    "authentication": {
+        "name": "jwt",
+        "verificationKey": "hunter2",
+        "algorithm": "HS256",
+        "LayerScope": true,
+        "LayerScopePrefix": "tile/",
+        "ExpectedIssuer": "https://some.example.com",
+        "UserIdentifierGrant": "name",
+        "MaxExpirationDuration": 1000
+    },
+    "layers": [
+        {
+            "id": "osm",
+            "provider": {
+                "name": "proxy",
+                "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+            }
+        },
+        {
+            "id": "osm2",
+            "provider": {
+                "name": "proxy",
+                "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+            }
+        }
+    ]
+}
