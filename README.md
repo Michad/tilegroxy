@@ -7,11 +7,11 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md) 
 
-A map tile proxy and cache service. Lives between your webmap and your mapping engines to provide a simple, consistent interface and improved performance.
+Tilegroxy lives between your map and your mapping providers to deliver a consistent, cached API for all your layers.
 
-💡 Inspired by [tilestache](https://github.com/tilestache/tilestache) and mostly compatible with tilestache configurations.   
-🚀 Built in Go for speed.  
-🔌 Features a flexible plugin system. Powered by [Yaegi](https://github.com/traefik/yaegi).  
+🚀 Built in Go.  
+🔌 Features a flexible plugin system powered by [Yaegi](https://github.com/traefik/yaegi).  
+💡 Inspired by [tilestache](https://github.com/tilestache/tilestache)   
 🛠️ This project is still a work in progress. Non-backwards compatible changes may occur prior to the 1.0 release.
 
 
@@ -20,19 +20,19 @@ A map tile proxy and cache service. Lives between your webmap and your mapping e
 The following features are currently available:
 
 * Provide a uniform ZXY mapping interface for incoming requests.
-* Proxy map tiles to ZXY, WMS, TMS, or WMTS backed map layers
+* Proxy map tiles to ZXY, WMS, TMS, or WMTS map layers
 * Cache map tiles in disk, memory, s3, redis, or memcache
-* Create your own custom provider to pull in non-standard and proprietary imagery sources
-* Combine multiple map layers with adjustable blending rules
-* Adjust the appearance of a map layer with 18 effect options
-* Generic support for any content type 
 * Require incoming authentication using a static key or JWT
+* Create your own custom provider to pull in non-standard and proprietary imagery sources
+* Tweak your map layer with 18 standard effects or by providing your own pixel-level logic
+* Combine multiple map layers with adjustable rules and blending methods
+* Generic support for any content type 
 * Configurable timeout, logging, and error handling rules
 
 The following are on the roadmap:
 
 * Proxy map layers directly to local providers such as Mapnik, Mapserver 
-* Specific support for vector tile formats such as [MVT](https://github.com/mapbox/vector-tile-spec) or tiled GeoJSON
+* Providers that composite/modify vector layers formats such as [MVT](https://github.com/mapbox/vector-tile-spec) or tiled GeoJSON
 * OpenTelemetry support
 * Support for external secret stores such as AWS Secrets Manager to avoid secrets in the configuration
 * Support for external configuration sources 

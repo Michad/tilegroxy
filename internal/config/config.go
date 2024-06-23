@@ -15,6 +15,8 @@
 package config
 
 import (
+	"log/slog"
+
 	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/spf13/viper"
@@ -94,11 +96,19 @@ const (
 	MainLogFormatJson  = "json"
 )
 
+const LevelTrace slog.Level = slog.LevelDebug - 5
+const LevelAbsurd slog.Level = slog.LevelDebug - 10
+
+var CustomLogLevel = map[string]slog.Level{
+	"trace":  LevelTrace,
+	"absurd": LevelAbsurd,
+}
+
 type MainLogConfig struct {
 	EnableStandardOut        bool     //If true, write access logs to standard out. Defaults to true
 	Path                     string   //The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth. Defaults to none
 	Format                   string   //The format to output access logs in. Applies to both standard out and file out. Possible values: plain, json. Defaults to plain
-	Level                    string   //logging level. one of: debug, info, warn, error
+	Level                    string   //logging level. one of: debug, info, warn, error, trace, absurd
 	IncludeRequestAttributes string   //Can be "true", "false" or "auto". If false, don't include any extra attributes based on request parameters (excluding the ones requested below). If auto (default) it defaults true if format is json, false otherwise
 	IncludeHeaders           []string //Headers to include in the logs. Useful for a transaction/request/trace/correlation ID or user identifiers
 }

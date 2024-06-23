@@ -23,7 +23,7 @@ A provider represents the underlying functionality that "provides" the tiles tha
 
 ### Proxy
 
-Proxy providers are the simplest option that simply forward tile requests to another HTTP(s) endpoint. This provider is primarily used for map layers that already return imagery in tiles: ZXY, TMS, or WMTS.  TMS inverts the y coordinate compared to ZXY and WMTS formats, which is handled by the InvertY parameter
+The Proxy provider is the simplest option that simply forwards tile requests to another HTTP(s) endpoint. This provider is primarily used for map layers that already return imagery in tiles: ZXY, TMS, or WMTS.  TMS inverts the y coordinate compared to ZXY and WMTS formats, which is handled by the InvertY parameter.
 
 Name should be "proxy"
 
@@ -31,13 +31,35 @@ Configuration options:
 
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| url | string | Yes | None | A URL pointing to the tile server. Should contain placeholders `{z}` `{x}` and `{y}` for tile coordinates |
-| inverty | bool | No | false | Changes tile numbering to be South-to-North instead of North-to-South. |
+| url | string | Yes | None | A URL pointing to the tile server. Should contain placeholders surrounded by "{}" that are replaced on-the-fly |
+| inverty | bool | No | false | Changes Y tile numbering to be South-to-North instead of North-to-South. Only impacts Y/y placeholder |
 
+
+The following placeholders are available in URL:
+
+| Placeholder | Description |
+| ----------- | ----------- |
+| x or X | The X tile coordinate from the incoming request |
+| y or Y | The Y tile coordinate either from the incoming request or the "flipped" equivalent if the `invertY` parameter is specified.  |
+| z or Z | The Z tile coordinate from the incoming request (aka "zoom") |
+| xmin | The "west" coordinate of the bounding box defined by the incoming tile coordinates. |
+| xmax | The "east" coordinate of the bounding box defined by the incoming tile coordinates. |
+| ymin | The "north" coordinate of the bounding box defined by the incoming tile coordinates. Not impacted by the `invertY` parameter. |
+| ymax | The "south" coordinate of the bounding box defined by the incoming tile coordinates. Not impacted by the `invertY` parameter. |
+| env.XXX | An environment variable whose name is XXX |
+| ctx.XXX | An context variable (typically an HTTP header) whose name is XXX |
+
+Example:
+
+```
+provider:
+  name: proxy
+  url: https://tile.openstreetmap.org/{z}/{x}/{y}.png?key={env.key}&agent={ctx.User-Agent}
+```
 
 ### URL Template
 
-URL Template providers are similar to the Proxy provider but are meant for endpoints that return mapping imagery via other schemes, primarily WMS. Instead of merely supplying tile coordinates, the URL Template provider will supply the bounding box.
+The URL Template provider overlaps with the Proxy provider but is meant specifically for WMS endpoints. Instead of merely supplying tile coordinates, the URL Template provider will supply the bounding box. This provider is available mostly for compatibility, you generally should use Proxy instead.
 
 Currently only supports EPSG:4326
 
@@ -157,6 +179,43 @@ Configuration options:
 | file | string | Yes | None | An absolute file path to find the Go code implementing the provider |
 | Any | Any | No | None | Any additional parameter you include will be automatically supplied to your custom provider as-is |
 
+### Transform
+
+This provider allows you to implement a function to change the RGBA value of each individual pixel in imagery from another provider.  Like the "Custom" provider this is implemented using Yaegi and requires you to include your own Go code.  The interface for this is however much simpler, it requires just a single function:
+
+```
+func transform(r, g, b, a uint8) (uint8, uint8, uint8, uint8) 
+```
+
+You can include the logic in a dedicated file, or inline in configuration. No special types or functions are available for use besides the standard library. A package declaration and any imports are optional.
+
+This can only be used with layers that return JPEG or PNG images. Tiles will be scaled down to the lowest resolution to be combined and the combined result always output in PNG format.  
+
+Name should be "transform"
+
+Configuration options:
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| file | string | No | None | An absolute file path to find the Go code implementing the transformation |
+| formula | string | No | None | The go code implementing the transformation. Required if file isn't included |
+| provider | Provider | Yes | None | The provider to get the imagery to transform |
+| threads | int | No | 1 | How many threads (goroutines) to use per tile. The typical tile has 65,536 pixels, setting this to 8 for instance means each thread has to process 8,192 pixels in parallel. This helps avoid latency becoming problematically slow. |
+
+Example:
+
+```
+provider:
+  name: transform
+  threads: 8
+  formula: |
+    func transform(r, g, b, a uint8) (uint8, uint8, uint8, uint8) {
+      return g,b,r,a
+    }
+  provider:
+    name: proxy
+    url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+```
 
 ## Cache
 
@@ -451,7 +510,7 @@ Configuration options:
 | EnableStandardOut | bool | No | true | Whether to write application logs to standard out |
 | Path | string | No | None | The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth |
 | Format | string | No | plain | The format to output application logs in. Applies to both standard out and file out. Possible values: plain, json |
-| Level | string | No | info | The most-detailed log level that should be included. Possible values: debug, info, warn, error |
+| Level | string | No | info | The most-detailed log level that should be included. Possible values: debug, info, warn, error, trace, absurd |
 | IncludeRequestAttributes | string | No | auto | Whether to include any extra attributes based on request parameters (excluding explicitly requested). If auto (default) it defaults true if format is json, false otherwise |
 | IncludeHeaders | string[] | No | None | Headers to include as attributes in structured log messages. Attribute key will be in all lowercase. | 
 
