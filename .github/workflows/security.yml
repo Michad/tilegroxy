@@ -1,17 +1,32 @@
-name: Snyk Container
-
+name: Security Scans
 on:
   push:
     branches: [ "main" ]
-  # pull_request:
-  #   branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
   schedule:
     - cron: '18 8 * * 2'
-
 permissions:
   contents: read
-
 jobs:
+  govulncheck:
+    name: Run govulncheck
+    permissions:
+      contents: read
+      security-events: write 
+    runs-on: ubuntu-latest
+    steps:
+    - id: govulncheck
+      uses: golang/govulncheck-action@dd0578b371c987f96d1185abb54344b44352bd58 # v1.0.3
+      with:
+          go-version-input: 1.22.4
+          go-package: ./...
+          output-format: sarif
+          output-file: govuln.sarif
+    - name: Upload result to GitHub Code Scanning
+      uses: github/codeql-action/upload-sarif@23acc5c183826b7a8a97bce3cecc52db901f8251 # v3.25.10
+      with:
+        sarif_file: govuln.sarif
   snyk:
     permissions:
       contents: read
