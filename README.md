@@ -2,9 +2,7 @@
 
 
 [![Docker Image CI](https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml/badge.svg)](https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml)
-[![Go Report Card](https://goreportcard.com/badge/michad/tilegroxy)](https://goreportcard.com/report/michad/tilegroxy)
-[![CodeQL](https://github.com/Michad/tilegroxy/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/Michad/tilegroxy/actions/workflows/github-code-scanning/codeql)
-
+[![Go Report Card](https://goreportcard.com/badge/michad/tilegroxy)](https://goreportcard.com/report/michad/tilegroxy) ![Go](https://img.shields.io/github/go-mod/go-version/michad/tilegroxy)   
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md) 
 
 Tilegroxy lives between your map and your mapping providers to deliver a consistent, cached API for all your layers.
@@ -57,7 +55,7 @@ Tilegroxy is recommended to be installed and run through a container with the on
 
 Tilegroxy builds as a statically linked executable. Prebuilt binaries are available from [Github](https://github.com/Michad/tilegroxy/releases).
 
-Building tilegroxy yourself requires `go` 1.22+, `git`, `make`, and `date`.  It uses a standard Makefile workflow:
+Building tilegroxy yourself requires `go`, `git`, `make`, and `date`.  It uses a standard Makefile workflow:
 
 ```
 make
