@@ -15,6 +15,8 @@ package internal
 
 import (
 	"errors"
+	"fmt"
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -125,4 +127,30 @@ func TestBoundsIntersect(t *testing.T) {
 
 	assert.True(t, Bounds{-90, 90, -180, 180}.Intersects(Bounds{0, 1, 0, 1}))
 	assert.True(t, Bounds{0, 1, 0, 1}.Intersects(Bounds{-90, 90, -180, 180}))
+}
+
+//Test converting a tile to bounds and back is an identity function within reason
+func FuzzToBoundsAndBack(f *testing.F) {
+
+	for z := 1; z < 21; z++ {
+		f.Add(z, int(math.Exp2(float64(z))/2), int(math.Exp2(float64(z))/2))
+	}
+	f.Fuzz(func(t *testing.T, z int, x int, y int) {
+		orig := TileRequest{"layer", z, x, y}
+		fmt.Printf("Testing against %v", orig)
+		b, err := orig.GetBounds()
+		assert.Nil(t, err)
+
+		//Small delta to avoid floating point rounding errors causing an extra tile
+		b.West += 0.000000001
+		b.South += 0.000000001
+		b.East -= 0.000000001
+		b.North -= 0.000000001
+
+		newTiles, err := b.FindTiles(orig.LayerName, uint(orig.Z), false)
+
+		assert.Nil(t, err, "Error getting tiles for %v at %v", b, orig.Z)
+		assert.Equal(t, 1, len(*newTiles))
+		assert.Equal(t, orig, (*newTiles)[0])
+	})
 }
