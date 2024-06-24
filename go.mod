@@ -4,7 +4,7 @@ go 1.22.4
 
 require (
 	github.com/anthonynsimon/bild v0.13.0
-	github.com/aws/aws-sdk-go v1.54.4
+	github.com/aws/aws-sdk-go v1.54.6
 	github.com/bradfitz/gomemcache v0.0.0-20230905024940-24af94b03874
 	github.com/go-redis/cache/v9 v9.0.0
 	github.com/golang-jwt/jwt/v5 v5.2.1
