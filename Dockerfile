@@ -5,7 +5,7 @@ COPY . .
 # TODO: Separate unit tests from integration (testcontainer) tests so we can at least run unit tests in this build
 RUN apk update && \
     apk add make git && \
-    make build
+    make clean build unit
 
 FROM alpine:3.20@sha256:b89d9c93e9ed3597455c90a0b88a8bbb5cb7188438f70953fede212a0c4394e0
 

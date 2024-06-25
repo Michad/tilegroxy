@@ -12,14 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This example implements a simple "proxy" provider but using a custom provider interface.  It can be used in contrast to the normal proxy provider for a quick performance comparison.  The filetype you see on this class ("goscript") is only to avoid the build system picking up this file as a normal go file. The extension can be anything you want.
+//go:build ignore
+
+// This example implements a simple "proxy" provider but using a custom provider interface.  It can be used in contrast to the normal proxy provider for a quick performance comparison.
 
 // Package must always be custom
 package custom
 
 import (
 	//The standard library is available for use
-	"context"
 	"math/rand"
 	"strconv"
 	"strings"

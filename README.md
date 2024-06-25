@@ -65,10 +65,10 @@ Building tilegroxy yourself requires `go`, `git`, `make`, and `date`.  It uses a
 make
 ```
 
-The tests utilize [testcontainers](https://golang.testcontainers.org/) which requires you have either docker or podman installed. If you don't have them installed it's recommended you use a prebuilt binary.  That said, you can bypass tests by running:
+The build includes integration tests using [testcontainers](https://golang.testcontainers.org/) which requires you have either docker or podman installed. If you encounter difficulties running these tests it's recommended you use a prebuilt binary.  That said, you can build with only unit tests using:
 
 ```
-make clean build
+make clean build unit
 ```
 
 Installing it after it's built is of course:
