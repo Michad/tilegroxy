@@ -10,24 +10,27 @@ Tilegroxy lives between your map and your mapping providers to deliver a consist
 🚀 Built in Go.  
 🔌 Features a flexible plugin system powered by [Yaegi](https://github.com/traefik/yaegi).  
 💡 Inspired by [tilestache](https://github.com/tilestache/tilestache)   
-🛠️ This project is still a work in progress. Non-backwards compatible changes may occur prior to the 1.0 release.
+🛠️ This project is still a work in progress. Changes may occur prior to the 1.0 release.
 
+## Why tilegroxy?
 
-## Features
+There's many map caching solutions out there; most tools that generate maps also have a cache sidecar. But most of those solutions are focused on either a single mapping backend or only support out-of-the-box implementations of the classic mapping protocols. Tilegroxy shines when you consume maps from multiple sources, especially when those sources provide non-standard APIs or require authentication you don't want exposed to your end-users. Rather than make your frontend aware of every single vendor and the particular ways you should consume from them, tilegroxy provides a uniform API with a configuration-driven backend that can be augmented by code when necessary.  
 
-The following features are currently available:
+Tilegroxy follows tilestache's example by providing a generic and extensible set of providers that can support map layers from any source and simple but powerful capabilities to make adjustments to them in cases where the map you need to present is a bit different than what you're given.  Tilegroxy includes modern quality-of-life improvements like first-class support for authentication (incoming and outgoing), built-in seeding and testing, container deployment, flexible error handling, and instrumentation.
 
-* Provide a uniform ZXY mapping interface for incoming requests.
-* Proxy map tiles to ZXY, WMS, TMS, or WMTS map layers
-* Cache map tiles in disk, memory, s3, redis, or memcache
+### Features:
+
+* Provide a uniform mapping API for incoming requests
+* Proxy to ZXY, WMS, TMS, WMTS, or other protocol map layers
+* Cache tiles in disk, memory, s3, redis, and/or memcached
 * Require authentication using static key, JWT, or custom logic
 * Create your own custom provider to pull in non-standard and proprietary imagery sources
 * Tweak your map layer with 18 standard effects or by providing your own pixel-level logic
 * Combine multiple map layers with adjustable rules and blending methods
-* Generic support for any content type 
+* Generic support for any content type (raster or vector)
 * Configurable timeout, logging, and error handling rules
 
-The following are on the roadmap:
+The following are on the roadmap and expected before a 1.0 release:
 
 * Proxy map layers directly to local providers such as Mapnik, Mapserver 
 * Providers that composite/modify vector layers formats such as [MVT](https://github.com/mapbox/vector-tile-spec) or tiled GeoJSON
@@ -37,21 +40,22 @@ The following are on the roadmap:
 * Support for HTTPS server w/ Let's Encrypt or static certs
 
 
+
 ## Configuration
 
-Tilegroxy is designed to be supplied with a declarative configuration that defines your various map layers as well as static parameters such as incoming authentication, cache connections, HTTP client configuration, and logging.  
+Configuration is required to define your layers and operational parameter.  Currently that must be supplied as a single file upfront.  Loading configuration from external services or hot-loading configuration is planned but not yet supported.
 
-The configuration currently must be supplied as a single file upfront.  Loading configuration from external services or hot-loading configuration is planned but not yet supported.
+Details can be found in [documentation](./docs/configuration.md) or through [examples](./examples/configurations/). 
 
-Documentation of the various configuration options can be found [here](./docs/configuration.md).
+You can also use `tilegroxy config create` to help get started.
 
-Example configurations are located under [examples](./examples/configurations/). You can also use `tilegroxy config create` to help get started.
+## How to get it
 
-## How to get
+Tilegroxy is designed to be run in a container. But it can also be run directly for that old-school approach; we don't judge.   
 
-Tilegroxy is recommended to be installed and run through a container with the only requirement being a mapped configuration file. It can also be run directly for the old-school approach.  It is primarily meant for use in Linux environments. Building and running on Windows should work but is currently untested, you will need a bash-compatible shell to run the Makefile.
+It is also meant to be used in Linux (or at least *nix). Building and running on Windows should work but is currently untested. You will need a bash-compatible shell to run the Makefile.
 
-### Standalone
+### Building
 
 Tilegroxy builds as a statically linked executable. Prebuilt binaries are available from [Github](https://github.com/Michad/tilegroxy/releases).
 
@@ -79,7 +83,7 @@ Once installed, tilegroxy can be run directly as an HTTP server via the `tilegro
 
 Tilegroxy is available as a container image on the Github container repository.  
 
-You can pull the most recent versioned release with the `latest` tag and the very latest (and maybe buggy) build with the `edge` tag. Tags are also available for version numbers.  [See here for a list of tags](https://github.com/Michad/tilegroxy/pkgs/container/tilegroxy).
+You can pull the most recent versioned release with the `latest` tag and the very latest (and maybe buggy) build with the `edge` tag. Tags are also available for version numbers.  [See here for a list](https://github.com/Michad/tilegroxy/pkgs/container/tilegroxy).
 
 For example: 
 
@@ -103,7 +107,7 @@ An [example docker-compose.yml file](./docker-compose.yml) is included that can 
 
 ### Kubernetes
 
-Coming soon. Not yet implemented.
+Coming soon. 
 
 ## Commands
 
@@ -315,7 +319,7 @@ The following types are available for custom providers:
 | Type | Description |
 | --- | --- |
 | [RequestContext](./internal/request_context.go) | Contains contextual information specific to the incoming request. Can retrieve headers via the Value method and authz information if configured properly. Do note there won't be a request when seed and test commands are run, this context will be a "Background Context" at those times |
-| [ProviderContext](./internal/providers/provider.go) | A holder struct for authentication information. Shared between goroutines to avoid excessive auth requests. Includes an Expiration field to inform the application when to re-auth via the preAuth method (this should be set before the token actually expires). The intent is for the relevant auth token  to be placed in the Token field, however using that token is an implementation detail left to the provider. Also includes a Bypass field for cases where no authentication is needed which avoids subsequent calls to preAuth |
+| [ProviderContext](./internal/providers/provider.go) | A struct for on the fly, provider-specific information. It is primarily used to facilitate authentication. Includes an Expiration field to inform the application when to re-auth via the preAuth method (this should occur before auth actually expires). Also includes an auth token field, a auth Bypass field (for un-authed usecases), and a map |
 | [TileRequest](./internal/tile_request.go) | The parameters from the user indicating the layer being requested as well as the specific tile coordinate |
 | [ClientConfig](./internal/config/config.go) | A struct from the configuration which indicates settings such as static headers and timeouts. See `Client` in [Configuration documentation](./docs/configuration.md) for details |
 | [ErrorMessages](./internal/config/config.go) | A struct from the configuration which indicates common error messages. See `Error Messages` in [Configuration documentation](./docs/configuration.md) for details |
@@ -398,8 +402,8 @@ If using a system with SELinux try temporarily disabling SELinux with `sudo sete
 
 ## Contributing
 
-As this is a young project any contribution via an Issue or Pull Request is very welcome without too much process.
+As this is a young project any contribution via an Issue or Pull Request is very welcome.
 
 Please try to follow go conventions and the patterns you see elsewhere in the codebase.  Also, please use [semantic](https://gist.github.com/joshbuchea/6f47e86d2510bce28f8e7f42ae84c716) or [conventional](https://www.conventionalcommits.org/en/v1.0.0/) commit messages. If you want to make a fundamental change/refactor please open an Issue for discussion first.  
 
-Very specific providers might be declined if it seems highly unlikely they can/will be reused. Those are best suited as custom providers outside the core platform.
+Very niche providers might be declined. Those are best suited as custom providers outside the core platform.
