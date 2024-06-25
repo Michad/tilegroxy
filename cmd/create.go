@@ -97,6 +97,10 @@ Example:
 }
 
 func init() {
+	initCreate()
+}
+
+func initCreate() {
 	configCmd.AddCommand(createCmd)
 
 	createCmd.Flags().BoolP("default", "d", true, "Include all default configuration. TODO: make this non-mandatory")

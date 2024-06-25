@@ -45,6 +45,10 @@ var checkCmd = &cobra.Command{
 }
 
 func init() {
+	initCheck()
+}
+
+func initCheck() {
 	configCmd.AddCommand(checkCmd)
 
 	checkCmd.Flags().BoolP("echo", "e", false, "Echos back the full parsed configuration including default values if the configuration is valid")

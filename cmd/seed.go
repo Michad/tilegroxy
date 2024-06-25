@@ -166,6 +166,10 @@ Example:
 }
 
 func init() {
+	initSeed()
+}
+
+func initSeed() {
 	rootCmd.AddCommand(seedCmd)
 
 	seedCmd.Flags().StringP("layer", "l", "", "The ID of the layer to seed")

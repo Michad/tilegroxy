@@ -193,10 +193,10 @@ Example:
 }
 
 func init() {
-	InitTest()
+	initTest()
 }
 
-func InitTest() {
+func initTest() {
 	rootCmd.AddCommand(testCmd)
 
 	testCmd.Flags().StringSliceP("layer", "l", []string{}, "The ID(s) of the layer to test. Tests all layers by default")

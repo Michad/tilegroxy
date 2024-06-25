@@ -57,6 +57,10 @@ func exit(status int) {
 }
 
 func init() {
+	initRoot()
+}
+
+func initRoot() {
 	rootCmd.PersistentFlags().StringP("config", "c", "./tilegroxy.yml", "A file path to the configuration file to use. The file should have an extension of either json or yml/yaml and be readable.")
 }
 

@@ -24,6 +24,11 @@ import (
 )
 
 func Test_ExecuteVersionCommand(t *testing.T) {
+	rootCmd.ResetFlags()
+	versionCmd.ResetFlags()
+	initRoot()
+	initVersion()
+
 	cmd := rootCmd
 	b := bytes.NewBufferString("")
 	cmd.SetOutput(b)

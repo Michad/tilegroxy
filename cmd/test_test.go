@@ -24,8 +24,10 @@ import (
 )
 
 func Test_ExecuteTestCommandNoCache(t *testing.T) {
+	rootCmd.ResetFlags()
 	testCmd.ResetFlags()
-	InitTest()
+	initRoot()
+	initTest()
 	cmd := rootCmd
 	b := bytes.NewBufferString("")
 	cmd.SetOutput(b)
@@ -43,11 +45,12 @@ func Test_ExecuteTestCommandNoCache(t *testing.T) {
 }
 
 func Test_ExecuteTestCommand(t *testing.T) {
-	cmd := rootCmd
-
+	rootCmd.ResetFlags()
 	testCmd.ResetFlags()
-	InitTest()
+	initRoot()
+	initTest()
 
+	cmd := rootCmd
 	b := bytes.NewBufferString("")
 	cmd.SetOutput(b)
 	cmd.SetArgs([]string{"test", "-c", "../examples/configurations/simple.json"})

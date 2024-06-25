@@ -50,6 +50,10 @@ var versionCmd = &cobra.Command{
 }
 
 func init() {
+	initVersion()
+}
+
+func initVersion() {
 	rootCmd.AddCommand(versionCmd)
 
 	versionCmd.Flags().Bool("short", false, "Include just the tilegroxy version by itself")
