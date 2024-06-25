@@ -15,7 +15,6 @@ package internal
 
 import (
 	"errors"
-	"fmt"
 	"math"
 	"testing"
 
@@ -129,7 +128,7 @@ func TestBoundsIntersect(t *testing.T) {
 	assert.True(t, Bounds{0, 1, 0, 1}.Intersects(Bounds{-90, 90, -180, 180}))
 }
 
-//Test converting a tile to bounds and back is an identity function within reason
+// Test converting a tile to bounds and back is an identity function within reason
 func FuzzToBoundsAndBack(f *testing.F) {
 
 	for z := 1; z < 21; z++ {
@@ -137,7 +136,6 @@ func FuzzToBoundsAndBack(f *testing.F) {
 	}
 	f.Fuzz(func(t *testing.T, z int, x int, y int) {
 		orig := TileRequest{"layer", z, x, y}
-		fmt.Printf("Testing against %v", orig)
 		b, err := orig.GetBounds()
 		assert.Nil(t, err)
 

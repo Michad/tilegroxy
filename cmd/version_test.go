@@ -15,14 +15,31 @@
 package cmd
 
 import (
-	"github.com/spf13/cobra"
+	"bytes"
+	"encoding/json"
+	"io"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-var configCmd = &cobra.Command{
-	Use:   "config",
-	Short: "Commands related to the configuration",
-}
+func Test_ExecuteVersionCommand(t *testing.T) {
+	cmd := rootCmd
+	b := bytes.NewBufferString("")
+	cmd.SetOutput(b)
+	cmd.SetArgs([]string{"version", "--json"})
+	cmd.Execute()
+	out, err := io.ReadAll(b)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-func init() {
-	rootCmd.AddCommand(configCmd)
+	var res map[string]string
+	err = json.Unmarshal(out, &res)
+	assert.Nil(t, err)
+
+	assert.NotNil(t, res["version"])
+	assert.NotNil(t, res["ref"])
+	assert.NotNil(t, res["goVersion"])
+	assert.NotNil(t, res["buildDate"])
 }

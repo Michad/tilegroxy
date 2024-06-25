@@ -1,3 +1,17 @@
+// Copyright 2024 Michael Davis
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package cmd
 
 import (
@@ -34,17 +48,18 @@ Example:
 		y, err4 := cmd.Flags().GetUint("x-coordinate")
 		noCache, err5 := cmd.Flags().GetBool("no-cache")
 		numThread, err6 := cmd.Flags().GetUint16("threads")
+		out := rootCmd.OutOrStdout()
 
 		if err := errors.Join(err1, err2, err3, err4, err5, err6); err != nil {
-			fmt.Printf("Error: %v", err)
-			os.Exit(1)
+			fmt.Fprintf(out, "Error: %v", err)
+			exit(1)
 		}
 
 		_, layerObjects, _, err := parseConfigIntoStructs(cmd)
 
 		if err != nil {
-			fmt.Printf("Error: %v", err)
-			os.Exit(1)
+			fmt.Fprintf(out, "Error: %v", err)
+			exit(1)
 		}
 		layerMap := make(map[string]*layers.Layer)
 
@@ -66,15 +81,15 @@ Example:
 			_, err := req.GetBounds()
 
 			if err != nil {
-				fmt.Printf("Error: %v", err)
-				os.Exit(1)
+				fmt.Fprintf(out, "Error: %v", err)
+				exit(1)
 			}
 
 			layer := layerMap[layerName]
 
 			if layer == nil {
-				fmt.Printf("Error: Invalid layer name: %v", layer)
-				os.Exit(1)
+				fmt.Fprintf(out, "Error: Invalid layer name: %v", layer)
+				exit(1)
 			}
 
 			tileRequests = append(tileRequests, req)
@@ -166,18 +181,22 @@ Example:
 
 		writer.Flush()
 
-		fmt.Printf("Completed with %v failures\n", errCount)
+		fmt.Fprintf(out, "Completed with %v failures\n", errCount)
 
 		if errCount > 0 {
 			if errCount > 125 {
-				os.Exit(125)
+				exit(125)
 			}
-			os.Exit(int(errCount))
+			exit(int(errCount))
 		}
 	},
 }
 
 func init() {
+	InitTest()
+}
+
+func InitTest() {
 	rootCmd.AddCommand(testCmd)
 
 	testCmd.Flags().StringSliceP("layer", "l", []string{}, "The ID(s) of the layer to test. Tests all layers by default")

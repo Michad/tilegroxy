@@ -49,7 +49,7 @@ func (e RangeError) Error() string {
 
 func (b Bounds) FindTiles(layerName string, zoom uint, force bool) (*[]TileRequest, error) {
 	//TODO: remove commented debug when confident bugs are zapped
-	// fmt.Printf("B: %v\n", b)
+	// fmt.Fprintf(out,"B: %v\n", b)
 	z := float64(zoom)
 
 	lonMin := b.West
@@ -71,8 +71,8 @@ func (b Bounds) FindTiles(layerName string, zoom uint, force bool) (*[]TileReque
 	latMin := math.Min(85.0511, math.Max(-85.0511, b.South)) * math.Pi / 180.0
 	latMax := math.Min(85.0511, math.Max(-85.0511, b.North)) * math.Pi / 180.0
 
-	// fmt.Printf("lon: %v to %v\n", lonMin, lonMax)
-	// fmt.Printf("lat: %v to %v\n", latMin, latMax)
+	// fmt.Fprintf(out,"lon: %v to %v\n", lonMin, lonMax)
+	// fmt.Fprintf(out,"lat: %v to %v\n", latMin, latMax)
 
 	xminf := n * ((lonMin + 180) / 360)
 	xmaxf := n * ((lonMax + 180) / 360)
@@ -91,9 +91,9 @@ func (b Bounds) FindTiles(layerName string, zoom uint, force bool) (*[]TileReque
 		ymax = ymin + 1
 	}
 
-	// fmt.Printf("X : %v to %v \n", xmin, xmax)
-	// fmt.Printf("Yf: %v to %v\n", yminf, ymaxf)
-	// fmt.Printf("Y : %v to %v\n", ymin, ymax)
+	// fmt.Fprintf(out,"X : %v to %v \n", xmin, xmax)
+	// fmt.Fprintf(out,"Yf: %v to %v\n", yminf, ymaxf)
+	// fmt.Fprintf(out,"Y : %v to %v\n", ymin, ymax)
 
 	numTiles := (xmax - xmin) * (ymax - ymin)
 
@@ -109,7 +109,7 @@ func (b Bounds) FindTiles(layerName string, zoom uint, force bool) (*[]TileReque
 		}
 	}
 
-	// fmt.Printf("Result: %v\n\n", result)
+	// fmt.Fprintf(out,"Result: %v\n\n", result)
 
 	return &result, nil
 }
