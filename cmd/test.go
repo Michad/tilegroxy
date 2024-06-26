@@ -122,7 +122,7 @@ Example:
 		var wg sync.WaitGroup
 		errCount := uint32(0)
 
-		writer := tabwriter.NewWriter(os.Stdout, 1, 4, 4, ' ', tabwriter.StripEscape)
+		writer := tabwriter.NewWriter(out, 1, 4, 4, ' ', tabwriter.StripEscape)
 		fmt.Fprintln(writer, "Thread\tLayer\tGenerated\tCache Write\tCache Read\tError\t")
 
 		for t := int(0); t < len(reqSplit); t++ {

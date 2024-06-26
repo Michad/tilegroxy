@@ -15,6 +15,7 @@
 package config
 
 import (
+	"bytes"
 	"log/slog"
 
 	"github.com/Michad/tilegroxy/internal"
@@ -205,6 +206,23 @@ func DefaultConfig() Config {
 		},
 		Layers: []LayerConfig{},
 	}
+}
+
+func LoadConfig(config string) (Config, error) {
+	c := DefaultConfig()
+	var viper = viper.New()
+	viper.SetConfigType("yaml")
+	err := viper.ReadConfig(bytes.NewBufferString(config))
+	if err != nil {
+		return c, err
+	}
+
+	err = viper.Unmarshal(&c)
+	if err != nil {
+		return c, err
+	}
+
+	return c, nil
 }
 
 func LoadConfigFromFile(filename string) (Config, error) {

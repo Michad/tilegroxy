@@ -29,3 +29,5 @@ disK_tile_cache/
 tilegroxy
 
 test_config.yml
+
+.env

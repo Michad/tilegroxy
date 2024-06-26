@@ -62,25 +62,32 @@ func init() {
 
 func initRoot() {
 	rootCmd.PersistentFlags().StringP("config", "c", "./tilegroxy.yml", "A file path to the configuration file to use. The file should have an extension of either json or yml/yaml and be readable.")
+	rootCmd.PersistentFlags().String("raw-config", "", "The full configuration to be used.")
+	rootCmd.MarkFlagsMutuallyExclusive("config", "raw-config")
 }
 
+// A common utility for use by multiple commands to bootstrap the core application entities
 func parseConfigIntoStructs(cmd *cobra.Command) (*config.Config, []*layers.Layer, *authentication.Authentication, error) {
-	configPath, err := cmd.Flags().GetString("config")
+	var err error
+	configPath, err1 := cmd.Flags().GetString("config")
+	configRaw, err2 := cmd.Flags().GetString("raw-config")
 
-	if err != nil {
+	if err = errors.Join(err1, err2); err != nil {
 		return nil, nil, nil, err
 	}
 
 	var cfg config.Config
 
-	if configPath != "" {
+	if configRaw != "" {
+		cfg, err = config.LoadConfig(configRaw)
+	} else if configPath != "" {
 		cfg, err = config.LoadConfigFromFile(configPath)
-
-		if err != nil {
-			return nil, nil, nil, err
-		}
 	} else {
 		return nil, nil, nil, errors.New("no configuration supplied")
+	}
+
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
 	cache, err := caches.ConstructCache(cfg.Cache, &cfg.Error.Messages)
