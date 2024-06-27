@@ -53,6 +53,7 @@ Example:
 		if err := errors.Join(err1, err2, err3, err4, err5, err6); err != nil {
 			fmt.Fprintf(out, "Error: %v", err)
 			exit(1)
+			return
 		}
 
 		_, layerObjects, _, err := parseConfigIntoStructs(cmd)
@@ -60,6 +61,7 @@ Example:
 		if err != nil {
 			fmt.Fprintf(out, "Error: %v", err)
 			exit(1)
+			return
 		}
 		layerMap := make(map[string]*layers.Layer)
 
@@ -83,6 +85,7 @@ Example:
 			if err != nil {
 				fmt.Fprintf(out, "Error: %v", err)
 				exit(1)
+				return
 			}
 
 			layer := layerMap[layerName]
@@ -90,6 +93,7 @@ Example:
 			if layer == nil {
 				fmt.Fprintf(out, "Error: Invalid layer name: %v", layer)
 				exit(1)
+				return
 			}
 
 			tileRequests = append(tileRequests, req)
@@ -186,8 +190,10 @@ Example:
 		if errCount > 0 {
 			if errCount > 125 {
 				exit(125)
+				return
 			}
 			exit(int(errCount))
+			return
 		}
 	},
 }

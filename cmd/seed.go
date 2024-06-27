@@ -51,6 +51,7 @@ Example:
 		if err := errors.Join(err1, err2, err3, err4, err5, err6, err7, err8, err9); err != nil {
 			fmt.Fprintf(out, "Error: %v", err)
 			exit(1)
+			return
 		}
 
 		_, layerObjects, _, err := parseConfigIntoStructs(cmd)
@@ -58,6 +59,7 @@ Example:
 		if err != nil {
 			fmt.Fprintf(out, "Error: %v", err)
 			exit(1)
+			return
 		}
 
 		var layer *layers.Layer
@@ -71,11 +73,13 @@ Example:
 		if layer == nil {
 			fmt.Fprintln(out, "Error: Invalid layer")
 			exit(1)
+			return
 		}
 
 		if numThread == 0 {
 			fmt.Fprintln(out, "Error: threads cannot be 0")
 			exit(1)
+			return
 		}
 
 		b := internal.Bounds{South: float64(minLat), West: float64(minLon), North: float64(maxLat), East: float64(maxLon)}
@@ -86,12 +90,14 @@ Example:
 			if z > internal.MaxZoom {
 				fmt.Fprintf(out, "Error: zoom must be less than %v\n", internal.MaxZoom)
 				exit(1)
+				return
 			}
 			newTiles, err := b.FindTiles(layerName, uint(z), force)
 
 			if err != nil {
 				fmt.Fprintf(out, "Error: %v\n", err.Error())
 				exit(1)
+				return
 			}
 
 			tileRequests = append(tileRequests, (*newTiles)...)
@@ -99,6 +105,7 @@ Example:
 			if len(tileRequests) > 10000 && !force {
 				fmt.Fprintln(out, "Too many tiles to seed. Run with --force if you're sure you want to generate this many tiles")
 				exit(1)
+				return
 			}
 		}
 

@@ -17,6 +17,7 @@ package config
 import (
 	"bytes"
 	"log/slog"
+	"strings"
 
 	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/images"
@@ -211,7 +212,13 @@ func DefaultConfig() Config {
 func LoadConfig(config string) (Config, error) {
 	c := DefaultConfig()
 	var viper = viper.New()
-	viper.SetConfigType("yaml")
+
+	if strings.Index(strings.TrimSpace(config), "{") == 0 {
+		viper.SetConfigType("json")
+	} else {
+		viper.SetConfigType("yaml")
+	}
+
 	err := viper.ReadConfig(bytes.NewBufferString(config))
 	if err != nil {
 		return c, err

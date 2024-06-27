@@ -16,7 +16,7 @@ package cmd
 
 import (
 	"encoding/json"
-	"os"
+	"fmt"
 
 	"github.com/spf13/cobra"
 )
@@ -26,21 +26,24 @@ var checkCmd = &cobra.Command{
 	Short: "Validates your configuration",
 	Long:  `Checks the validity of the configuration you supplied and then exits. If everything is valid the program displays "Valid" and exits with a code of 0. If the configuration is invalid then a descriptive error is outputted and it exits with a non-zero status code.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		verbose, _ := cmd.Flags().GetBool("verbose")
+		echo, _ := cmd.Flags().GetBool("echo")
+		out := cmd.OutOrStdout()
 
 		cfg, _, _, err := parseConfigIntoStructs(cmd)
 
-		if cfg != nil && verbose {
-			enc := json.NewEncoder(os.Stdout)
+		if err != nil {
+			fmt.Fprintf(out, "Invalid configuration: %v\n", err.Error())
+			exit(1)
+			return
+		}
+
+		if cfg != nil && echo {
+			enc := json.NewEncoder(out)
 			enc.SetIndent(" ", "  ")
 			enc.Encode(cfg)
+		} else {
+			fmt.Fprintln(out, "Valid")
 		}
-
-		if err != nil {
-			panic(err)
-		}
-
-		println("Valid")
 	},
 }
 

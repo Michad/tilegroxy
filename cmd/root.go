@@ -62,7 +62,7 @@ func init() {
 
 func initRoot() {
 	rootCmd.PersistentFlags().StringP("config", "c", "./tilegroxy.yml", "A file path to the configuration file to use. The file should have an extension of either json or yml/yaml and be readable.")
-	rootCmd.PersistentFlags().String("raw-config", "", "The full configuration to be used.")
+	rootCmd.PersistentFlags().String("raw-config", "", "The full configuration to be used as JSON.")
 	rootCmd.MarkFlagsMutuallyExclusive("config", "raw-config")
 }
 
