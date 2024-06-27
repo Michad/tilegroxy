@@ -16,11 +16,36 @@ package config
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/spf13/viper"
 )
+
+// This configures how to record tile request metrics. A distinct metric event will be recorded per time period, geographic region (geohash), user, and layer.
+// Each event contains a count of tiles requested, which isn't especially useful itself. The typical use case for this metric is to consider the count of unique
+// events per layer to more than the number of individual tiles requested. The geohash allows you to consider distinct areas of the map
+type TileUsageMetricConfig struct {
+	Enabled           bool
+	TimeContinuity    time.Duration // How long a gap to allow
+	GeohashResolution int
+}
+
+// This configuration is for error metrics
+type ErrorMetricConfig struct {
+	Enabled bool
+}
+
+// Metrics allow you to keep track of usage by layer. There's a few distinct metrics that are tracked, the primary is a count of tile requests.
+// Metrics take the form of specific events that contain a number but are most useful when those events are aggregated considering you probably
+// have multiple tilegroxy instances deployed.
+// Metrics can be delivered to a few different sources. If OpenTelemetry is enabled they will always be delivered there.
+type MetricConfig struct {
+	Enabled   bool                   //Whether to enable metric gathering
+	TileUsage TileUsageMetricConfig  //Configuration for tile request metrics
+	Consumer  map[string]interface{} //Configuration for the consumer of metrics. e.g. clickhouse, cloudevents (e.g. openmeter)
+}
 
 type ServerConfig struct {
 	BindHost      string            //IP address to bind HTTP server to
@@ -128,6 +153,7 @@ type LayerConfig struct {
 }
 
 type Config struct {
+	Metrics        MetricConfig
 	Server         ServerConfig
 	Client         ClientConfig
 	Logging        LogConfig
