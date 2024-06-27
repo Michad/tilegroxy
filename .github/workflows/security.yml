@@ -38,7 +38,7 @@ jobs:
       run: docker build -t michad/tilegroxy .
     - name: Run Snyk to check Docker image for vulnerabilities
       continue-on-error: true
-      uses: snyk/actions/docker@cf77efc3812bb036b3719dca4cecc3930db0b527
+      uses: snyk/actions/docker@a1346e4eaf761d462da22c34c681dc06849b6851
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       with:
