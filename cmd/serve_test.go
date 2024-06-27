@@ -25,12 +25,32 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_ServeCommand_Execute(t *testing.T) {
+func coreServeTest(t *testing.T, cfg string, url string) (*http.Response, error, func()) {
 	exitStatus = -1
 	rootCmd.ResetFlags()
 	seedCmd.ResetFlags()
 	initRoot()
 	initSeed()
+
+	rootCmd.SetArgs([]string{"serve", "--raw-config", cfg})
+	go func() { assert.Nil(t, rootCmd.Execute()) }()
+
+	time.Sleep(1 * time.Second)
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	assert.Nil(t, err)
+
+	resp, err := http.DefaultClient.Do(req)
+
+	return resp, err, func() {
+		syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+		if resp != nil {
+			resp.Body.Close()
+		}
+	}
+}
+
+func Test_ServeCommand_Execute(t *testing.T) {
 
 	cfg := `server:
   port: 12342
@@ -45,19 +65,9 @@ layers:
       name: static
       color: "FFFFFF"
 `
-	rootCmd.SetArgs([]string{"serve", "--raw-config", cfg})
-	go func() { assert.Nil(t, rootCmd.Execute()) }()
-	defer syscall.Kill(syscall.Getpid(), syscall.SIGINT)
 
-	time.Sleep(1 * time.Second)
-
-	req, err := http.NewRequest(http.MethodGet, "http://localhost:12342/root/tiles/color/8/12/32", nil)
-	assert.Nil(t, err)
-
-	resp, err := http.DefaultClient.Do(req)
-	if resp != nil {
-		defer resp.Body.Close()
-	}
+	resp, err, postFunc := coreServeTest(t, cfg, "http://localhost:12342/root/tiles/color/8/12/32")
+	defer postFunc()
 
 	assert.Nil(t, err)
 	assert.NotNil(t, resp)
@@ -70,12 +80,6 @@ layers:
 }
 
 func Test_ServeCommand_ExecuteProduction(t *testing.T) {
-	exitStatus = -1
-	rootCmd.ResetFlags()
-	seedCmd.ResetFlags()
-	initRoot()
-	initSeed()
-
 	cfg := `server:
   port: 12342
   Production: true
@@ -85,19 +89,8 @@ layers:
       name: static
       color: "FFFFFF"
 `
-	rootCmd.SetArgs([]string{"serve", "--raw-config", cfg})
-	go func() { assert.Nil(t, rootCmd.Execute()) }()
-	defer syscall.Kill(syscall.Getpid(), syscall.SIGINT)
-
-	time.Sleep(1 * time.Second)
-
-	req, err := http.NewRequest(http.MethodGet, "http://localhost:12342/tiles/color/8/12/32", nil)
-	assert.Nil(t, err)
-
-	resp, err := http.DefaultClient.Do(req)
-	if resp != nil {
-		defer resp.Body.Close()
-	}
+	resp, err, postFunc := coreServeTest(t, cfg, "http://localhost:12342/tiles/color/8/12/32")
+	defer postFunc()
 
 	assert.Nil(t, err)
 	assert.NotNil(t, resp)
@@ -107,12 +100,6 @@ layers:
 }
 
 func Test_ServeCommand_ExecuteErrorImage(t *testing.T) {
-	exitStatus = -1
-	rootCmd.ResetFlags()
-	seedCmd.ResetFlags()
-	initRoot()
-	initSeed()
-
 	cfg := `server:
   port: 12342
 Error:
@@ -125,19 +112,9 @@ layers:
       name: static
       color: "FFFFFF"
 `
-	rootCmd.SetArgs([]string{"serve", "--raw-config", cfg})
-	go func() { assert.Nil(t, rootCmd.Execute()) }()
-	defer syscall.Kill(syscall.Getpid(), syscall.SIGINT)
 
-	time.Sleep(1 * time.Second)
-
-	req, err := http.NewRequest(http.MethodGet, "http://localhost:12342/tiles/color/8/12/32", nil)
-	assert.Nil(t, err)
-
-	resp, err := http.DefaultClient.Do(req)
-	if resp != nil {
-		defer resp.Body.Close()
-	}
+	resp, err, postFunc := coreServeTest(t, cfg, "http://localhost:12342/tiles/color/8/12/32")
+	defer postFunc()
 
 	assert.Nil(t, err)
 	assert.NotNil(t, resp)
@@ -148,12 +125,6 @@ layers:
 }
 
 func Test_ServeCommand_ExecuteErrorImageHeader(t *testing.T) {
-	exitStatus = -1
-	rootCmd.ResetFlags()
-	seedCmd.ResetFlags()
-	initRoot()
-	initSeed()
-
 	cfg := `server:
   port: 12342
 Error:
@@ -166,19 +137,8 @@ layers:
       name: static
       color: "FFFFFF"
 `
-	rootCmd.SetArgs([]string{"serve", "--raw-config", cfg})
-	go func() { assert.Nil(t, rootCmd.Execute()) }()
-	defer syscall.Kill(syscall.Getpid(), syscall.SIGINT)
-
-	time.Sleep(1 * time.Second)
-
-	req, err := http.NewRequest(http.MethodGet, "http://localhost:12342/tiles/color/8/12/32", nil)
-	assert.Nil(t, err)
-
-	resp, err := http.DefaultClient.Do(req)
-	if resp != nil {
-		defer resp.Body.Close()
-	}
+	resp, err, postFunc := coreServeTest(t, cfg, "http://localhost:12342/tiles/color/8/12/32")
+	defer postFunc()
 
 	assert.Nil(t, err)
 	assert.NotNil(t, resp)
@@ -189,12 +149,6 @@ layers:
 }
 
 func Test_ServeCommand_ExecuteErrorText(t *testing.T) {
-	exitStatus = -1
-	rootCmd.ResetFlags()
-	seedCmd.ResetFlags()
-	initRoot()
-	initSeed()
-
 	cfg := `server:
   port: 12342
 Error:
@@ -207,19 +161,8 @@ layers:
       name: static
       color: "FFFFFF"
 `
-	rootCmd.SetArgs([]string{"serve", "--raw-config", cfg})
-	go func() { assert.Nil(t, rootCmd.Execute()) }()
-	defer syscall.Kill(syscall.Getpid(), syscall.SIGINT)
-
-	time.Sleep(1 * time.Second)
-
-	req, err := http.NewRequest(http.MethodGet, "http://localhost:12342/tiles/color/8/12/32", nil)
-	assert.Nil(t, err)
-
-	resp, err := http.DefaultClient.Do(req)
-	if resp != nil {
-		defer resp.Body.Close()
-	}
+	resp, err, postFunc := coreServeTest(t, cfg, "http://localhost:12342/tiles/color/8/12/32")
+	defer postFunc()
 
 	assert.Nil(t, err)
 	assert.NotNil(t, resp)
