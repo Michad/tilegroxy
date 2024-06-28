@@ -359,7 +359,7 @@ layers:
 
 	resp3, err := http.DefaultClient.Do(req)
 	assert.Nil(t, err)
-	assert.Equal(t, 401, resp2.StatusCode)
+	assert.Equal(t, 401, resp3.StatusCode)
 
 	resp3.Body.Close()
 }
