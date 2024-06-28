@@ -1,7 +1,22 @@
+// Copyright 2024 Michael Davis
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package cmd
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"os"
 
@@ -27,31 +42,52 @@ var rootCmd = &cobra.Command{
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
-		os.Exit(1)
+		exit(1)
+	}
+}
+
+var exitStatus int = -1
+
+func exit(status int) {
+	if flag.Lookup("test.v") == nil {
+		os.Exit(status)
+	} else {
+		exitStatus = status
 	}
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringP("config", "c", "./tilegroxy.yml", "A file path to the configuration file to use. The file should have an extension of either json or yml/yaml and be readable.")
+	initRoot()
 }
 
-func parseConfigIntoStructs(cmd *cobra.Command) (*config.Config, []*layers.Layer, *authentication.Authentication, error) {
-	configPath, err := cmd.Flags().GetString("config")
+func initRoot() {
+	rootCmd.PersistentFlags().StringP("config", "c", "./tilegroxy.yml", "A file path to the configuration file to use. The file should have an extension of either json or yml/yaml and be readable.")
+	rootCmd.PersistentFlags().String("raw-config", "", "The full configuration to be used as JSON.")
+	rootCmd.MarkFlagsMutuallyExclusive("config", "raw-config")
+}
 
-	if err != nil {
+// A common utility for use by multiple commands to bootstrap the core application entities
+func parseConfigIntoStructs(cmd *cobra.Command) (*config.Config, []*layers.Layer, *authentication.Authentication, error) {
+	var err error
+	configPath, err1 := cmd.Flags().GetString("config")
+	configRaw, err2 := cmd.Flags().GetString("raw-config")
+
+	if err = errors.Join(err1, err2); err != nil {
 		return nil, nil, nil, err
 	}
 
 	var cfg config.Config
 
-	if configPath != "" {
+	if configRaw != "" {
+		cfg, err = config.LoadConfig(configRaw)
+	} else if configPath != "" {
 		cfg, err = config.LoadConfigFromFile(configPath)
-
-		if err != nil {
-			return nil, nil, nil, err
-		}
 	} else {
 		return nil, nil, nil, errors.New("no configuration supplied")
+	}
+
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
 	cache, err := caches.ConstructCache(cfg.Cache, &cfg.Error.Messages)

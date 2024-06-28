@@ -1,3 +1,17 @@
+// Copyright 2024 Michael Davis
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package cmd
 
 import (
@@ -32,17 +46,20 @@ Example:
 		force, err7 := cmd.Flags().GetBool("force")
 		numThread, err8 := cmd.Flags().GetUint16("threads")
 		verbose, err9 := cmd.Flags().GetBool("verbose")
+		out := rootCmd.OutOrStdout()
 
 		if err := errors.Join(err1, err2, err3, err4, err5, err6, err7, err8, err9); err != nil {
-			fmt.Printf("Error: %v", err)
-			os.Exit(1)
+			fmt.Fprintf(out, "Error: %v", err)
+			exit(1)
+			return
 		}
 
 		_, layerObjects, _, err := parseConfigIntoStructs(cmd)
 
 		if err != nil {
-			fmt.Printf("Error: %v", err)
-			os.Exit(1)
+			fmt.Fprintf(out, "Error: %v", err)
+			exit(1)
+			return
 		}
 
 		var layer *layers.Layer
@@ -54,13 +71,15 @@ Example:
 		}
 
 		if layer == nil {
-			fmt.Println("Error: Invalid layer")
-			os.Exit(1)
+			fmt.Fprintln(out, "Error: Invalid layer")
+			exit(1)
+			return
 		}
 
 		if numThread == 0 {
-			fmt.Println("Error: threads cannot be 0")
-			os.Exit(1)
+			fmt.Fprintln(out, "Error: threads cannot be 0")
+			exit(1)
+			return
 		}
 
 		b := internal.Bounds{South: float64(minLat), West: float64(minLon), North: float64(maxLat), East: float64(maxLon)}
@@ -69,26 +88,29 @@ Example:
 
 		for _, z := range zoom {
 			if z > internal.MaxZoom {
-				fmt.Printf("Error: zoom must be less than %v\n", internal.MaxZoom)
-				os.Exit(1)
+				fmt.Fprintf(out, "Error: zoom must be less than %v\n", internal.MaxZoom)
+				exit(1)
+				return
 			}
 			newTiles, err := b.FindTiles(layerName, uint(z), force)
 
 			if err != nil {
-				fmt.Printf("Error: %v\n", err.Error())
-				os.Exit(1)
+				fmt.Fprintf(out, "Error: %v\n", err.Error())
+				exit(1)
+				return
 			}
 
 			tileRequests = append(tileRequests, (*newTiles)...)
 
 			if len(tileRequests) > 10000 && !force {
-				fmt.Println("Too many tiles to seed. Run with --force if you're sure you want to generate this many tiles")
-				os.Exit(1)
+				fmt.Fprintln(out, "Too many tiles to seed. Run with --force if you're sure you want to generate this many tiles")
+				exit(1)
+				return
 			}
 		}
 
 		if verbose {
-			fmt.Printf("Number of tile requests: %v\n", len(tileRequests))
+			fmt.Fprintf(out, "Number of tile requests: %v\n", len(tileRequests))
 		}
 
 		numReq := len(tileRequests)
@@ -120,7 +142,7 @@ Example:
 			wg.Add(1)
 			go func(t int, myReqs []internal.TileRequest) {
 				if verbose {
-					fmt.Printf("Created thread %v with %v tiles\n", t, len(myReqs))
+					fmt.Fprintf(out, "Created thread %v with %v tiles\n", t, len(myReqs))
 				}
 				for _, req := range myReqs {
 					_, tileErr := layer.RenderTile(internal.BackgroundContext(), req)
@@ -133,11 +155,11 @@ Example:
 							status = tileErr.Error()
 						}
 
-						fmt.Printf("Thread %v - %v = %v\n", t, req, status)
+						fmt.Fprintf(out, "Thread %v - %v = %v\n", t, req, status)
 					}
 				}
 				if verbose {
-					fmt.Printf("Finished thread %v\n", t)
+					fmt.Fprintf(out, "Finished thread %v\n", t)
 				}
 				wg.Done()
 			}(t, reqSplit[t])
@@ -145,12 +167,16 @@ Example:
 
 		wg.Wait()
 		if verbose {
-			fmt.Printf("Completed seeding")
+			fmt.Fprintf(out, "Completed seeding")
 		}
 	},
 }
 
 func init() {
+	initSeed()
+}
+
+func initSeed() {
 	rootCmd.AddCommand(seedCmd)
 
 	seedCmd.Flags().StringP("layer", "l", "", "The ID of the layer to seed")
