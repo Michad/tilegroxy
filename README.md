@@ -1,4 +1,5 @@
 # tilegroxy
+![Coverage](https://img.shields.io/badge/Coverage-52.1%25-yellow)
 
 
 [![Docker Image CI](https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml/badge.svg)](https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml)
