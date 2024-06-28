@@ -3,6 +3,6 @@ layers:
     provider:
         name: custom
         #You may need to adjust this to match your local filesystem
-        file: examples/providers/custom_proxy.goscript
+        file: examples/providers/custom_proxy.go
         #The schema below here is dynamic - whatever you specify will be sent to the script
         url: https://tile.openstreetmap.org/{z}/{x}/{y}.png

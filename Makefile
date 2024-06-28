@@ -12,6 +12,9 @@ build:
 test:
 	@go test ./... -v -count=1
 
+unit:
+	@go test ./... -v -count=1 -tags=unit
+
 version:
 	@./${OUT} version --json
 

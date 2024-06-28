@@ -15,7 +15,9 @@
 package config
 
 import (
+	"bytes"
 	"log/slog"
+	"strings"
 
 	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/images"
@@ -142,16 +144,14 @@ func DefaultConfig() Config {
 
 	return Config{
 		Server: ServerConfig{
-			BindHost: "127.0.0.1",
-			Port:     8080,
-			RootPath: "/",
-			TilePath: "tiles",
-			StaticHeaders: map[string]string{
-				"x-test": "true",
-			},
-			Production: false,
-			Timeout:    60,
-			Gzip:       false,
+			BindHost:      "127.0.0.1",
+			Port:          8080,
+			RootPath:      "/",
+			TilePath:      "tiles",
+			StaticHeaders: map[string]string{},
+			Production:    false,
+			Timeout:       60,
+			Gzip:          false,
 		},
 		Client: ClientConfig{
 			UserAgent:           "tilegroxy/" + version,
@@ -205,6 +205,29 @@ func DefaultConfig() Config {
 		},
 		Layers: []LayerConfig{},
 	}
+}
+
+func LoadConfig(config string) (Config, error) {
+	c := DefaultConfig()
+	var viper = viper.New()
+
+	if strings.Index(strings.TrimSpace(config), "{") == 0 {
+		viper.SetConfigType("json")
+	} else {
+		viper.SetConfigType("yaml")
+	}
+
+	err := viper.ReadConfig(bytes.NewBufferString(config))
+	if err != nil {
+		return c, err
+	}
+
+	err = viper.Unmarshal(&c)
+	if err != nil {
+		return c, err
+	}
+
+	return c, nil
 }
 
 func LoadConfigFromFile(filename string) (Config, error) {

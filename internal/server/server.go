@@ -19,12 +19,16 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"runtime/debug"
 	"slices"
 	"strconv"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/authentication"
@@ -299,7 +303,31 @@ func ListenAndServe(config *config.Config, layerList []*layers.Layer, auth *auth
 		return err
 	}
 
-	slog.InfoContext(context.Background(), "Binding...")
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGUSR1)
+	defer stop()
 
-	return http.ListenAndServe(config.Server.BindHost+":"+strconv.Itoa(config.Server.Port), rootHandler)
+	srv := &http.Server{
+		Addr:         config.Server.BindHost + ":" + strconv.Itoa(config.Server.Port),
+		BaseContext:  func(_ net.Listener) context.Context { return ctx },
+		ReadTimeout:  time.Second,
+		WriteTimeout: time.Duration(config.Server.Timeout) * time.Second,
+		Handler:      rootHandler,
+	}
+
+	srvErr := make(chan error, 1)
+
+	go func() {
+		slog.InfoContext(context.Background(), "Binding...")
+		srvErr <- srv.ListenAndServe()
+	}()
+
+	select {
+	case err = <-srvErr:
+		return err
+	case <-ctx.Done():
+		stop()
+	}
+
+	err = srv.Shutdown(context.Background())
+	return err
 }
