@@ -18,12 +18,28 @@ package caches
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
+
+func init() {
+	//This is a hack to help with vscode test execution. Put a .env in repo root w/ anything you need for test containers
+	if env, err := os.ReadFile("../../.env"); err == nil {
+		envs := strings.Split(string(env), "\n")
+		for _, e := range envs {
+			if es := strings.Split(e, "="); len(es) == 2 {
+				fmt.Printf("Loading env...")
+				os.Setenv(es[0], es[1])
+			}
+		}
+	}
+}
 
 func setupMemcacheContainer(ctx context.Context, t *testing.T) (testcontainers.Container, func(t *testing.T)) {
 	t.Log("setup container")

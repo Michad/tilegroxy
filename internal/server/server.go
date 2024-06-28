@@ -27,6 +27,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/Michad/tilegroxy/internal"
@@ -302,7 +303,7 @@ func ListenAndServe(config *config.Config, layerList []*layers.Layer, auth *auth
 		return err
 	}
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGUSR1)
 	defer stop()
 
 	srv := &http.Server{
