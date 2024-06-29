@@ -80,10 +80,6 @@ layers:
 	resp, err, postFunc := coreServeTest(t, cfg, "http://localhost:12342/root/tiles/color/8/12/32")
 	defer postFunc()
 
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 
@@ -106,10 +102,6 @@ layers:
 `
 	resp, err, postFunc := coreServeTest(t, cfg, "http://localhost:12343/tiles/color/8/12/32")
 	defer postFunc()
-
-	if err != nil {
-		fmt.Println(err.Error())
-	}
 
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
@@ -159,10 +151,6 @@ layers:
 	resp, err, postFunc := coreServeTest(t, cfg, "http://localhost:12345/tiles/color/8/12/32")
 	defer postFunc()
 
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 
@@ -186,10 +174,6 @@ layers:
 `
 	resp, err, postFunc := coreServeTest(t, cfg, "http://localhost:12346/tiles/color/8/12/32")
 	defer postFunc()
-
-	if err != nil {
-		fmt.Println(err.Error())
-	}
 
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
@@ -215,10 +199,6 @@ layers:
 
 	resp, err, postFunc := coreServeTest(t, cfg, "http://localhost:12347/tiles/color/8/12/32")
 	defer postFunc()
-
-	if err != nil {
-		fmt.Println(err.Error())
-	}
 
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
@@ -253,10 +233,6 @@ layers:
 	resp, err, postFunc := coreServeTest(t, cfg, "http://localhost:12348/tiles/color/8/12/32")
 	defer postFunc()
 
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 
@@ -278,10 +254,6 @@ layers:
 	resp, err, postFunc := coreServeTest(t, cfg, "http://localhost:12349/tiles/color/8/12/32")
 	if postFunc != nil {
 		defer postFunc()
-	}
-
-	if err != nil {
-		fmt.Println(err.Error())
 	}
 
 	assert.Error(t, err)
@@ -309,10 +281,6 @@ layers:
 
 	resp, err, postFunc := coreServeTest(t, cfg, "http://localhost:12349/tiles/color/8/12/32")
 	defer postFunc()
-
-	if err != nil {
-		fmt.Println(err.Error())
-	}
 
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
