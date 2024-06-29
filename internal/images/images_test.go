@@ -76,3 +76,11 @@ func TestColors(t *testing.T) {
 	assert.Error(t, err)
 
 }
+
+func TestImageLoad(t *testing.T) {
+	img, err := GetStaticImage("error.png")
+	assert.NotNil(t, img)
+	assert.NoError(t, err)
+
+	assert.Equal(t, imageError, *img)
+}

@@ -61,6 +61,23 @@ func coreServeTest(t *testing.T, cfg string, url string) (*http.Response, error,
 	}
 }
 
+func Test_ServeCommand_ExecuteInvalidPort(t *testing.T) {
+
+	cfg := `server:
+  port: 1
+layers:
+  - id: color
+    provider:
+      name: static
+      color: "FFFFFF"
+`
+
+	_, err, _ := coreServeTest(t, cfg, "http://localhost:12340/")
+
+	assert.Error(t, err)
+	assert.Equal(t, 1, exitStatus)
+}
+
 func Test_ServeCommand_Execute(t *testing.T) {
 
 	cfg := `server:
@@ -88,6 +105,48 @@ layers:
 	assert.Equal(t, "image/png", resp.Header["Content-Type"][0])
 	assert.Equal(t, "result", resp.Header["X-Test"][0])
 	assert.Equal(t, "tilegroxy v0.X.Y", resp.Header["X-Powered-By"][0])
+}
+
+func Test_ServeCommand_ExecuteDefaultRoute(t *testing.T) {
+
+	cfg := `server:
+  port: 12341
+  Production: false
+layers:
+  - id: color
+    provider:
+      name: static
+      color: "FFFFFF"
+`
+
+	resp, err, postFunc := coreServeTest(t, cfg, "http://localhost:12341/")
+	defer postFunc()
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+
+	assert.Equal(t, 200, resp.StatusCode)
+}
+
+func Test_ServeCommand_ExecuteNoContentRoute(t *testing.T) {
+
+	cfg := `server:
+  port: 12341
+  Production: true
+layers:
+  - id: color
+    provider:
+      name: static
+      color: "FFFFFF"
+`
+
+	resp, err, postFunc := coreServeTest(t, cfg, "http://localhost:12341/")
+	defer postFunc()
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+
+	assert.Equal(t, 204, resp.StatusCode)
 }
 
 func Test_ServeCommand_ExecuteProduction(t *testing.T) {
@@ -214,6 +273,31 @@ layers:
 	assert.Equal(t, 200, resp2.StatusCode)
 
 	resp2.Body.Close()
+}
+
+func Test_ServeCommand_ExecuteJsonLog(t *testing.T) {
+	cfg := `server:
+  port: 12342
+Logging:
+  mainlog:
+    level: debug
+    format: json
+    IncludeHeaders:
+      - User-Agent
+layers:
+  - id: color
+    provider:
+      name: static
+      color: "FFFFFF"
+`
+	resp, err, postFunc := coreServeTest(t, cfg, "http://localhost:12342/tiles/color/8/12/32")
+	defer postFunc()
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+
+	assert.Equal(t, 200, resp.StatusCode)
+	//TODO: find some way to validate log output is in json
 }
 
 // Just make sure it starts up and rejects unauth for now. TODO: figure out how to get the key from logs
