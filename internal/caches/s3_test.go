@@ -94,6 +94,8 @@ func Test_S3Execute(t *testing.T) {
 	}(c, ctx)
 
 	s3, err := ConstructS3(&S3Config{
+		Access:       "test",
+		Secret:       "test",
 		Bucket:       "test",
 		Endpoint:     "http://localhost:4566",
 		Region:       "us-east-1",
