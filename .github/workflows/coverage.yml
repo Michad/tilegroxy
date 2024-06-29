@@ -25,14 +25,16 @@ jobs:
         with:
           filename: coveragef.out
       - name: Verify Changed files
-        uses: tj-actions/verify-changed-files@v20
+        uses: tj-actions/verify-changed-files@6ed7632824d235029086612d4330d659005af687 # v20.0.1
         id: verify-changed-files
         with:
           files: README.md
       - name: Commit changes
         if: steps.verify-changed-files.outputs.files_changed == 'true'
+        env:
+          REF: ${{ github.head_ref || github.ref_name }}
         run: |
-          git checkout ${{ github.head_ref || github.ref_name }}
+          git checkout $REF
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add README.md
@@ -40,6 +42,8 @@ jobs:
       - name: Push changes
         if: steps.verify-changed-files.outputs.files_changed == 'true'
         uses: ad-m/github-push-action@d91a481090679876dfc4178fef17f286781251df # v0.8.0
+        env:
+          REF: ${{ github.head_ref || github.ref_name }}
         with:
           github_token: ${{ github.token }}
-          branch: ${{ github.head_ref || github.ref_name }} 
+          branch: $REF
