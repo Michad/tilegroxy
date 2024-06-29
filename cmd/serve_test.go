@@ -103,6 +103,10 @@ layers:
 	resp, err, postFunc := coreServeTest(t, cfg, "http://localhost:12343/tiles/color/8/12/32")
 	defer postFunc()
 
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
 	assert.Nil(t, err)
 	assert.NotNil(t, resp)
 
