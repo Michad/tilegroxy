@@ -105,11 +105,16 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-
 	for h, v := range h.config.Server.StaticHeaders {
 		w.Header().Add(h, v)
 	}
+
+	if !h.config.Server.Production {
+		version, _, _ := internal.GetVersionInformation()
+		w.Header().Add("X-Powered-By", "tilegroxy "+version)
+	}
+
+	w.WriteHeader(http.StatusOK)
 
 	w.Write(*img)
 }

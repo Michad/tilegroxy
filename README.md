@@ -1,8 +1,7 @@
-# tilegroxy
+# tilegroxy    
+[![Docker Image CI](https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml/badge.svg)](https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml) [![Go Report Card](https://goreportcard.com/badge/michad/tilegroxy)](https://goreportcard.com/report/michad/tilegroxy) ![Go](https://img.shields.io/github/go-mod/go-version/michad/tilegroxy) 
+![Coverage](https://img.shields.io/badge/Coverage-52.1%25-yellow)
 
-
-[![Docker Image CI](https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml/badge.svg)](https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml)
-[![Go Report Card](https://goreportcard.com/badge/michad/tilegroxy)](https://goreportcard.com/report/michad/tilegroxy) ![Go](https://img.shields.io/github/go-mod/go-version/michad/tilegroxy)   
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md) 
 
 Tilegroxy lives between your map and your mapping providers to deliver a consistent, cached API for all your layers.
@@ -14,9 +13,7 @@ Tilegroxy lives between your map and your mapping providers to deliver a consist
 
 ## Why tilegroxy?
 
-There's many map caching solutions out there; most tools that generate maps also have a cache sidecar. But most of those solutions are focused on either a single mapping backend or only support out-of-the-box implementations of the classic mapping protocols. Tilegroxy shines when you consume maps from multiple sources, especially when those sources provide non-standard APIs or require authentication you don't want exposed to your end-users. Rather than make your frontend aware of every single vendor and the particular ways you should consume from them, tilegroxy provides a uniform API with a configuration-driven backend that can be augmented by code when necessary.  
-
-Tilegroxy follows tilestache's example by providing a generic and extensible set of providers that can support map layers from any source and simple but powerful capabilities to make adjustments to them in cases where the map you need to present is a bit different than what you're given.  Tilegroxy includes modern quality-of-life improvements like first-class support for authentication (incoming and outgoing), built-in seeding and testing, container deployment, flexible error handling, and instrumentation.
+Tilegroxy shines when you consume maps from multiple sources.  It isn't tied to any one mapping backend and can pull data from any protocol, whether the standard alphabet soup or a proprietary, authenticated API. Rather than make your frontend aware of every single vendor and exposing your keys, utilize tilegroxy and provide a uniform API with a configuration-driven backend that can be augmented by code when necessary.  
 
 ### Features:
 
@@ -29,6 +26,8 @@ Tilegroxy follows tilestache's example by providing a generic and extensible set
 * Combine multiple map layers with adjustable rules and blending methods
 * Generic support for any content type (raster or vector)
 * Configurable timeout, logging, and error handling rules
+* Commands for seeding and testing your layers
+* Container deployment
 
 The following are on the roadmap and expected before a 1.0 release:
 
@@ -65,10 +64,10 @@ Building tilegroxy yourself requires `go`, `git`, `make`, and `date`.  It uses a
 make
 ```
 
-The tests utilize [testcontainers](https://golang.testcontainers.org/) which requires you have either docker or podman installed. If you don't have them installed it's recommended you use a prebuilt binary.  That said, you can bypass tests by running:
+The build includes integration tests using [testcontainers](https://golang.testcontainers.org/) which requires you have either docker or podman installed. If you encounter difficulties running these tests it's recommended you use a prebuilt binary.  That said, you can build with only unit tests using:
 
 ```
-make clean build
+make clean build unit
 ```
 
 Installing it after it's built is of course:
