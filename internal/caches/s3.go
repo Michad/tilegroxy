@@ -40,7 +40,8 @@ type S3Config struct {
 	Path         string
 	Profile      string
 	StorageClass string //STANDARD | REDUCED_REDUNDANCY | STANDARD_IA | ONEZONE_IA | INTELLIGENT_TIERING | GLACIER |  DEEP_ARCHIVE  |  GLACIER_IR
-	Endpoint     string
+	Endpoint     string //For directory buckets or non-s3
+	UsePathStyle bool   //For testing purposes and maybe real non-S3 usage
 }
 
 type S3 struct {
@@ -68,7 +69,7 @@ func ConstructS3(config *S3Config, errorMessages *config.ErrorMessages) (*S3, er
 	}
 
 	sessionOptions := session.Options{}
-	awsConfig := aws.Config{}
+	awsConfig := aws.Config{CredentialsChainVerboseErrors: aws.Bool(true)}
 
 	if config.Region != "" {
 		awsConfig.WithRegion(config.Region)
@@ -80,6 +81,10 @@ func ConstructS3(config *S3Config, errorMessages *config.ErrorMessages) (*S3, er
 
 	if config.Endpoint != "" {
 		awsConfig.WithEndpoint(config.Endpoint)
+	}
+
+	if config.UsePathStyle {
+		awsConfig.WithS3ForcePathStyle(true)
 	}
 
 	if config.StorageClass != "" {
