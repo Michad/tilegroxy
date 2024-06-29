@@ -9,44 +9,37 @@ jobs:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
-          persist-credentials: false # otherwise, the token used is the GITHUB_TOKEN, instead of your personal access token.
-          fetch-depth: 0 # otherwise, there would be errors pushing refs to the destination repository.
-      
+          persist-credentials: false 
+          fetch-depth: 0 
       - name: Setup go
-        uses: actions/setup-go@v4
+      uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
         with:
           go-version-file: 'go.mod'
-
       - name: Run Test
         run: |
-          go test -v -covermode=count -coverprofile=coverage.out -coverpkg=./... ./...
-          go tool cover -func=coverage.out -o=coverage.out
-
-      - name: Go Coverage Badge  # Pass the `coverage.out` output to this action
-        uses: tj-actions/coverage-badge-go@84540b9f82b4f569ac9f248cf6f2893ac3cc4791 
+          make cover
+      - name: Go Coverage Badge  
+        uses: tj-actions/coverage-badge-go@84540b9f82b4f569ac9f248cf6f2893ac3cc4791 # v2.4.2
         with:
-          filename: coverage.out
-
+          filename: coveragef.out
       - name: Verify Changed files
         uses: tj-actions/verify-changed-files@v20
         id: verify-changed-files
         with:
           files: README.md
-
       - name: Commit changes
         if: steps.verify-changed-files.outputs.files_changed == 'true'
         run: |
-          git checkout ${{ github.head_ref }}
+          git checkout ${{ github.head_ref || github.ref_name }}
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add README.md
           git commit -m "chore: Updated coverage badge."
-
       - name: Push changes
         if: steps.verify-changed-files.outputs.files_changed == 'true'
-        uses: ad-m/github-push-action@master
+        uses: ad-m/github-push-action@d91a481090679876dfc4178fef17f286781251df # v0.8.0
         with:
           github_token: ${{ github.token }}
-          branch: ${{ github.head_ref }}
+          branch: ${{ github.head_ref || github.ref_name }} 
