@@ -27,6 +27,7 @@ import (
 
 type CustomConfig struct {
 	File   string
+	Script string                 //Contains the go code of the provider inline.
 	Params map[string]interface{} `mapstructure:",remain"`
 }
 
@@ -54,12 +55,20 @@ func ConstructCustom(cfg CustomConfig, clientConfig *config.ClientConfig, errorM
 			"GetTile":         reflect.ValueOf(getTile),
 		}})
 
-	script, err := os.ReadFile(cfg.File)
-	if err != nil {
-		return nil, err
+	var err error
+	var script string
+
+	if cfg.File != "" {
+		scriptBytes, err := os.ReadFile(cfg.File)
+		if err != nil {
+			return nil, err
+		}
+		script = string(scriptBytes)
+	} else {
+		script = cfg.Script
 	}
 
-	_, err = i.Eval(string(script))
+	_, err = i.Eval(script)
 	if err != nil {
 		return nil, err
 	}
