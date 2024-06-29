@@ -15,9 +15,16 @@ test:
 unit:
 	@go test ./... -v -count=1 -tags=unit
 
-coverage:
-	@go test -coverprofile=cover.out -coverpkg=./... ./... 
-	@go tool cover -html=cover.out
+cover:
+	@go install github.com/dave/courtney@latest
+	@courtney
+	@go tool cover -func=coverage.out -o=coveragef.out
+
+cover-out:
+	@tail -1 coveragef.out
+	@go tool cover -html=coverage.out
+
+coverage: cover cover-out
 
 version:
 	@./${OUT} version --json

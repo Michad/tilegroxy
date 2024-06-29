@@ -41,7 +41,7 @@ func Test_ExecuteVersionCommand(t *testing.T) {
 
 	var res map[string]string
 	err = json.Unmarshal(out, &res)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	assert.NotNil(t, res["version"])
 	assert.NotNil(t, res["ref"])

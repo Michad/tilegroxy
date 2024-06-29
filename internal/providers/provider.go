@@ -148,7 +148,7 @@ func (e AuthError) Error() string {
 }
 
 type InvalidContentLengthError struct {
-	Length uint
+	Length int
 }
 
 func (e *InvalidContentLengthError) Error() string {
@@ -208,11 +208,17 @@ func getTile(ctx *internal.RequestContext, clientConfig *config.ClientConfig, ur
 		return nil, &RemoteServerError{StatusCode: resp.StatusCode}
 	}
 
-	if resp.ContentLength == -1 {
+	if !slices.Contains(clientConfig.AllowedContentTypes, resp.Header.Get("Content-Type")) {
+		return nil, &InvalidContentTypeError{ContentType: resp.Header.Get("Content-Type")}
+	}
 
+	if resp.ContentLength == -1 {
+		if !clientConfig.AllowUnknownLength {
+			return nil, &InvalidContentLengthError{-1}
+		}
 	} else {
 		if resp.ContentLength > int64(clientConfig.MaxResponseLength) {
-			return nil, &InvalidContentLengthError{uint(resp.ContentLength)}
+			return nil, &InvalidContentLengthError{int(resp.ContentLength)}
 		}
 	}
 
@@ -223,7 +229,7 @@ func getTile(ctx *internal.RequestContext, clientConfig *config.ClientConfig, ur
 	}
 
 	if len(img) > int(clientConfig.MaxResponseLength) {
-		return nil, &InvalidContentLengthError{uint(len(img))}
+		return nil, &InvalidContentLengthError{int(len(img))}
 	}
 
 	return &img, nil

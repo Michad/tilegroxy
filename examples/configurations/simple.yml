@@ -3,5 +3,9 @@ cache:
 layers:
   - id: osm
     provider:
-        name: proxy
-        url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+      name: proxy
+      url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+  - id: color
+    provider:
+      name: static
+      color: "FFFFFF"

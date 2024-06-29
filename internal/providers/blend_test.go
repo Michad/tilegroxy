@@ -37,35 +37,35 @@ func makeBlendProviders() []*Provider {
 func Test_BlendValidate(t *testing.T) {
 	b, err := ConstructBlend(BlendConfig{}, nil, &testErrMessages, makeBlendProviders())
 	assert.Nil(t, b)
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 	b, err = ConstructBlend(BlendConfig{Mode: "fake"}, nil, &testErrMessages, makeBlendProviders())
 	assert.Nil(t, b)
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 	b, err = ConstructBlend(BlendConfig{Mode: "add", Opacity: 23}, nil, &testErrMessages, makeBlendProviders())
 	assert.Nil(t, b)
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 	b, err = ConstructBlend(BlendConfig{Mode: "opacity", Opacity: 23}, nil, &testErrMessages, []*Provider{})
 	assert.Nil(t, b)
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 }
 
 func Test_BlendExecute_Add(t *testing.T) {
 	b, err := ConstructBlend(BlendConfig{Mode: "add"}, nil, &testErrMessages, makeBlendProviders())
 	assert.NotNil(t, b)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	ctx, err := b.PreAuth(internal.BackgroundContext(), ProviderContext{})
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.NotNil(t, ctx)
 	assert.NotEmpty(t, ctx.Other)
 	ctx, err = b.PreAuth(internal.BackgroundContext(), ctx)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.NotNil(t, ctx)
 	assert.NotEmpty(t, ctx.Other)
 
 	exp, _ := images.GetStaticImage("color:FF0")
 	i, err := b.GenerateTile(internal.BackgroundContext(), ctx, internal.TileRequest{LayerName: "", Z: 4, X: 2, Y: 3})
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	assert.Equal(t, *exp, *i)
 }
@@ -74,9 +74,9 @@ func Test_BlendExecute_All(t *testing.T) {
 	for _, mode := range allBlendModes {
 		b, err := ConstructBlend(BlendConfig{Mode: mode}, nil, &testErrMessages, makeBlendProviders())
 		assert.NotNil(t, b)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		i, err := b.GenerateTile(internal.BackgroundContext(), ProviderContext{}, internal.TileRequest{LayerName: "", Z: 4, X: 2, Y: 3})
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.NotNil(t, i)
 		assert.Greater(t, len(*i), 1000)
 	}

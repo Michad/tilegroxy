@@ -42,6 +42,8 @@ Example:
 		forceYml, _ := cmd.Flags().GetBool("yaml")
 		writePath, _ := cmd.Flags().GetString("output")
 
+		out := cmd.OutOrStdout()
+
 		cfg := make(map[string]interface{})
 
 		if includeDefault {
@@ -77,7 +79,7 @@ Example:
 			if writePath != "" {
 				enc = json.NewEncoder(file)
 			} else {
-				enc = json.NewEncoder(os.Stdout)
+				enc = json.NewEncoder(out)
 			}
 			if !noPretty {
 				enc.SetIndent(" ", "  ")
@@ -89,7 +91,7 @@ Example:
 			if writePath != "" {
 				enc = yaml.NewEncoder(file)
 			} else {
-				enc = yaml.NewEncoder(os.Stdout)
+				enc = yaml.NewEncoder(out)
 			}
 			enc.Encode(cfg)
 		}

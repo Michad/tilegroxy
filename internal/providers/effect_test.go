@@ -32,12 +32,12 @@ func Test_EffectValidate(t *testing.T) {
 	c, err := ConstructEffect(EffectConfig{}, nil, &testErrMessages, &s)
 
 	assert.Nil(t, c)
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 
 	c, err = ConstructEffect(EffectConfig{Mode: "emboss", Intensity: 24}, nil, &testErrMessages, &s)
 
 	assert.Nil(t, c)
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 }
 
 func Test_EffectExecuteGreyscale(t *testing.T) {
@@ -45,16 +45,16 @@ func Test_EffectExecuteGreyscale(t *testing.T) {
 	c, err := ConstructEffect(EffectConfig{Mode: "grayscale"}, nil, &testErrMessages, &s)
 
 	assert.NotNil(t, c)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	pc, err := c.PreAuth(internal.BackgroundContext(), ProviderContext{})
 	assert.NotNil(t, pc)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	exp, _ := images.GetStaticImage("color:4d4d4d")
 	img, err := c.GenerateTile(internal.BackgroundContext(), pc, internal.TileRequest{LayerName: "l", Z: 5, X: 3, Y: 1})
 	assert.NotNil(t, img)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	assert.Equal(t, *exp, *img)
 }
@@ -65,14 +65,14 @@ func Test_EffectExecuteAll(t *testing.T) {
 		c, err := ConstructEffect(EffectConfig{Mode: mode}, nil, &testErrMessages, &s)
 
 		assert.NotNil(t, c)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		pc, err := c.PreAuth(internal.BackgroundContext(), ProviderContext{})
 		assert.NotNil(t, pc)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		img, err := c.GenerateTile(internal.BackgroundContext(), pc, internal.TileRequest{LayerName: "l", Z: 5, X: 3, Y: 1})
 		assert.NotNil(t, img)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 	}
 }

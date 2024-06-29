@@ -32,11 +32,11 @@ func Test_Transform_Validate(t *testing.T) {
 	tr, err := ConstructTransform(TransformConfig{}, nil, &testErrMessages, &p)
 
 	assert.Nil(t, tr)
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 	tr, err = ConstructTransform(TransformConfig{Formula: "package custom"}, nil, &testErrMessages, &p)
 
 	assert.Nil(t, tr)
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 }
 
 func Test_Transform_Execute(t *testing.T) {
@@ -44,16 +44,16 @@ func Test_Transform_Execute(t *testing.T) {
 	tr, err := ConstructTransform(TransformConfig{Formula: `func transform(r, g, b, a uint8) (uint8, uint8, uint8, uint8) { return g,b,r,a }`}, nil, &testErrMessages, &p)
 
 	assert.NotNil(t, tr)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	exp, _ := images.GetStaticImage("color:00F")
 
 	pc, err := tr.PreAuth(internal.BackgroundContext(), ProviderContext{})
 	assert.NotNil(t, pc)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	img, err := tr.GenerateTile(internal.BackgroundContext(), pc, internal.TileRequest{LayerName: "l", Z: 9, X: 23, Y: 32})
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, *exp, *img)
 }

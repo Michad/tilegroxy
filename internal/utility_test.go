@@ -22,34 +22,34 @@ import (
 func TestParseZoom(t *testing.T) {
 	zooms, err := ParseZoomString("1")
 	assert.Equal(t, []int{1}, zooms)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	zooms, err = ParseZoomString("1-2")
 	assert.Equal(t, []int{1, 2}, zooms)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	zooms, err = ParseZoomString("1,2")
 	assert.Equal(t, []int{1, 2}, zooms)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	_, err = ParseZoomString("2-1")
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 
 	_, err = ParseZoomString("fish")
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 
 	_, err = ParseZoomString("f")
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 
 	_, err = ParseZoomString("-1")
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 
 	_, err = ParseZoomString("25")
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 
 	_, err = ParseZoomString("2-30")
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 
 	_, err = ParseZoomString("-1-1")
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 }

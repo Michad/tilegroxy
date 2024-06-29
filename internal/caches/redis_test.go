@@ -53,7 +53,7 @@ func setupRedisContainer(ctx context.Context, t *testing.T) (testcontainers.Cont
 		ContainerRequest: req,
 		Started:          true,
 	})
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		return nil, nil
 	}
 
@@ -61,7 +61,7 @@ func setupRedisContainer(ctx context.Context, t *testing.T) (testcontainers.Cont
 		t.Log("teardown container")
 
 		err := redisC.Terminate(ctx)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 	}
 }
 
@@ -75,7 +75,7 @@ func TestRedisWithContainerHostAndPort(t *testing.T) {
 	defer cleanupF(t)
 
 	endpoint, err := redisC.Endpoint(ctx, "")
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		return
 	}
 
@@ -84,7 +84,7 @@ func TestRedisWithContainerHostAndPort(t *testing.T) {
 	}
 
 	r, err := ConstructRedis(&config, nil)
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		return
 	}
 
@@ -101,7 +101,7 @@ func TestRedisWithContainerSingleServersArr(t *testing.T) {
 	defer cleanupF(t)
 
 	endpoint, err := redisC.Endpoint(ctx, "")
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		return
 	}
 
@@ -110,7 +110,7 @@ func TestRedisWithContainerSingleServersArr(t *testing.T) {
 	}
 
 	r, err := ConstructRedis(&config, nil)
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		return
 	}
 
@@ -129,11 +129,11 @@ func TestRedisWithContainerRing(t *testing.T) {
 	defer cleanupF2(t)
 
 	endpoint, err := redisC.Endpoint(ctx, "")
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		return
 	}
 	endpoint2, err := redisC2.Endpoint(ctx, "")
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		return
 	}
 
@@ -143,7 +143,7 @@ func TestRedisWithContainerRing(t *testing.T) {
 	}
 
 	r, err := ConstructRedis(&config, nil)
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		return
 	}
 
@@ -160,7 +160,7 @@ func TestRedisWithContainerDiffPrefix(t *testing.T) {
 	defer cleanupF(t)
 
 	endpoint, err := redisC.Endpoint(ctx, "")
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		return
 	}
 
@@ -170,7 +170,7 @@ func TestRedisWithContainerDiffPrefix(t *testing.T) {
 	}
 
 	r, err := ConstructRedis(&config, nil)
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		return
 	}
 
@@ -180,7 +180,7 @@ func TestRedisWithContainerDiffPrefix(t *testing.T) {
 	}
 
 	r2, err := ConstructRedis(&config2, nil)
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		return
 	}
 
@@ -197,7 +197,7 @@ func TestRedisWithContainerDiffDb(t *testing.T) {
 	defer cleanupF(t)
 
 	endpoint, err := redisC.Endpoint(ctx, "")
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		return
 	}
 
@@ -207,7 +207,7 @@ func TestRedisWithContainerDiffDb(t *testing.T) {
 	}
 
 	r, err := ConstructRedis(&config, nil)
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		return
 	}
 
@@ -217,7 +217,7 @@ func TestRedisWithContainerDiffDb(t *testing.T) {
 	}
 
 	r2, err := ConstructRedis(&config2, nil)
-	_ = assert.Nil(t, err) &&
+	_ = assert.NoError(t, err) &&
 		validateSaveAndLookup(t, r) &&
 		validateSaveAndLookup(t, r2)
 }

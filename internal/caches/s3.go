@@ -40,11 +40,13 @@ type S3Config struct {
 	Path         string
 	Profile      string
 	StorageClass string //STANDARD | REDUCED_REDUNDANCY | STANDARD_IA | ONEZONE_IA | INTELLIGENT_TIERING | GLACIER |  DEEP_ARCHIVE  |  GLACIER_IR
-	Endpoint     string
+	Endpoint     string //For directory buckets or non-s3
+	UsePathStyle bool   //For testing purposes and maybe real non-S3 usage
 }
 
 type S3 struct {
 	*S3Config
+	client     *s3.S3
 	downloader *s3manager.Downloader
 	uploader   *s3manager.Uploader
 }
@@ -67,7 +69,7 @@ func ConstructS3(config *S3Config, errorMessages *config.ErrorMessages) (*S3, er
 	}
 
 	sessionOptions := session.Options{}
-	awsConfig := aws.Config{}
+	awsConfig := aws.Config{CredentialsChainVerboseErrors: aws.Bool(true)}
 
 	if config.Region != "" {
 		awsConfig.WithRegion(config.Region)
@@ -79,6 +81,10 @@ func ConstructS3(config *S3Config, errorMessages *config.ErrorMessages) (*S3, er
 
 	if config.Endpoint != "" {
 		awsConfig.WithEndpoint(config.Endpoint)
+	}
+
+	if config.UsePathStyle {
+		awsConfig.WithS3ForcePathStyle(true)
 	}
 
 	if config.StorageClass != "" {
@@ -106,14 +112,21 @@ func ConstructS3(config *S3Config, errorMessages *config.ErrorMessages) (*S3, er
 		return nil, err
 	}
 
+	s3Client := s3.New(awsSession, &awsConfig)
 	downloader := s3manager.NewDownloader(awsSession)
 	uploader := s3manager.NewUploader(awsSession, s3manager.WithUploaderRequestOptions())
 
-	return &S3{config, downloader, uploader}, nil
+	return &S3{config, s3Client, downloader, uploader}, nil
 }
 
 func calcKey(config *S3, t *internal.TileRequest) string {
 	return config.Path + t.LayerName + "/" + strconv.Itoa(t.Z) + "/" + strconv.Itoa(t.X) + "/" + strconv.Itoa(t.Y)
+}
+
+// Just for testing purposes
+func (c S3) makeBucket() error {
+	_, err := c.client.CreateBucket(&s3.CreateBucketInput{Bucket: &c.Bucket})
+	return err
 }
 
 func (c S3) Lookup(t internal.TileRequest) (*internal.Image, error) {

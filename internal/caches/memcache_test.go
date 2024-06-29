@@ -53,7 +53,7 @@ func setupMemcacheContainer(ctx context.Context, t *testing.T) (testcontainers.C
 		ContainerRequest: req,
 		Started:          true,
 	})
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		return nil, nil
 	}
 
@@ -61,7 +61,7 @@ func setupMemcacheContainer(ctx context.Context, t *testing.T) (testcontainers.C
 		t.Log("teardown container")
 
 		err := memcacheC.Terminate(ctx)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 	}
 }
 
@@ -75,7 +75,7 @@ func TestMemcacheWithContainerHostAndPort(t *testing.T) {
 	defer cleanupF(t)
 
 	endpoint, err := memcacheC.Endpoint(ctx, "")
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		return
 	}
 
@@ -84,7 +84,7 @@ func TestMemcacheWithContainerHostAndPort(t *testing.T) {
 	}
 
 	r, err := ConstructMemcache(&config, nil)
-	_ = assert.Nil(t, err) &&
+	_ = assert.NoError(t, err) &&
 		validateSaveAndLookup(t, r)
 }
 
@@ -98,7 +98,7 @@ func TestMemcacheWithContainerSingleServersArr(t *testing.T) {
 	defer cleanupF(t)
 
 	endpoint, err := memcacheC.Endpoint(ctx, "")
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		return
 	}
 
@@ -107,7 +107,7 @@ func TestMemcacheWithContainerSingleServersArr(t *testing.T) {
 	}
 
 	r, err := ConstructMemcache(&config, nil)
-	_ = assert.Nil(t, err) &&
+	_ = assert.NoError(t, err) &&
 		validateSaveAndLookup(t, r)
 }
 
@@ -121,7 +121,7 @@ func TestMemcacheWithContainerDiffPrefix(t *testing.T) {
 	defer cleanupF(t)
 
 	endpoint, err := memcacheC.Endpoint(ctx, "")
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		return
 	}
 
@@ -131,7 +131,7 @@ func TestMemcacheWithContainerDiffPrefix(t *testing.T) {
 	}
 
 	r, err := ConstructMemcache(&config, nil)
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		return
 	}
 
@@ -141,7 +141,7 @@ func TestMemcacheWithContainerDiffPrefix(t *testing.T) {
 	}
 
 	r2, err := ConstructMemcache(&config2, nil)
-	_ = assert.Nil(t, err) &&
+	_ = assert.NoError(t, err) &&
 		validateSaveAndLookup(t, r) &&
 		validateSaveAndLookup(t, r2)
 }
