@@ -1,6 +1,8 @@
 name: Coverage
 on:
   workflow_dispatch:
+permissions:
+  contents: read
 jobs:
   coverage:
     runs-on: ubuntu-latest
@@ -24,13 +26,7 @@ jobs:
         uses: tj-actions/coverage-badge-go@84540b9f82b4f569ac9f248cf6f2893ac3cc4791 # v2.4.2
         with:
           filename: coveragef.out
-      - name: Verify Changed files
-        uses: tj-actions/verify-changed-files@6ed7632824d235029086612d4330d659005af687 # v20.0.1
-        id: verify-changed-files
-        with:
-          files: README.md
       - name: Commit changes
-        if: steps.verify-changed-files.outputs.files_changed == 'true'
         env:
           REF: ${{ github.head_ref || github.ref_name }}
         run: |
@@ -40,10 +36,7 @@ jobs:
           git add README.md
           git commit -m "chore: Updated coverage badge."
       - name: Push changes
-        if: steps.verify-changed-files.outputs.files_changed == 'true'
         uses: ad-m/github-push-action@d91a481090679876dfc4178fef17f286781251df # v0.8.0
-        env:
-          REF: ${{ github.head_ref || github.ref_name }}
         with:
           github_token: ${{ github.token }}
-          branch: $REF
+          branch: badge-update
