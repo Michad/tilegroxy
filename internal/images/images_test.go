@@ -23,56 +23,56 @@ import (
 func TestColors(t *testing.T) {
 	col, err := parseColor(KeyPrefixColor + "FFF")
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, col, color.RGBA{255, 255, 255, 255})
 
 	col, err = parseColor(KeyPrefixColor + "fff")
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, col, color.RGBA{255, 255, 255, 255})
 
 	col, err = parseColor(KeyPrefixColor + "FFFFFF")
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, col, color.RGBA{255, 255, 255, 255})
 
 	col, err = parseColor(KeyPrefixColor + "ffffff")
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, col, color.RGBA{255, 255, 255, 255})
 
 	col, err = parseColor(KeyPrefixColor + "FFFF")
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, col, color.RGBA{255, 255, 255, 255})
 
 	col, err = parseColor(KeyPrefixColor + "ffff")
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, col, color.RGBA{255, 255, 255, 255})
 
 	col, err = parseColor(KeyPrefixColor + "ffffffff")
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, col, color.RGBA{255, 255, 255, 255})
 
 	col, err = parseColor(KeyPrefixColor + "f01")
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, col, color.RGBA{255, 0, 17, 255})
 
 	col, err = parseColor(KeyPrefixColor + "aaaa")
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, col, color.RGBA{0xaa, 0xaa, 0xaa, 0xaa})
 
 	_, err = parseColor(KeyPrefixColor + "hello")
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 
 	_, err = parseColor(KeyPrefixColor + "ffffffffff")
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 
 	_, err = parseColor(KeyPrefixColor + "")
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 
 }

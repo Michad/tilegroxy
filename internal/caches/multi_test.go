@@ -24,12 +24,12 @@ func TestMultiSaveAndLookup(t *testing.T) {
 	memConfig1 := MemoryConfig{}
 
 	mem1, err := ConstructMemory(memConfig1, nil)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	memConfig2 := MemoryConfig{}
 
 	mem2, err := ConstructMemory(memConfig2, nil)
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		return
 	}
 
@@ -48,12 +48,12 @@ func TestMultiIn1(t *testing.T) {
 	memConfig1 := MemoryConfig{}
 
 	mem1, err := ConstructMemory(memConfig1, nil)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	memConfig2 := MemoryConfig{}
 
 	mem2, err := ConstructMemory(memConfig2, nil)
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		return
 	}
 
@@ -70,12 +70,12 @@ func TestMultiIn2(t *testing.T) {
 	memConfig1 := MemoryConfig{}
 
 	mem1, err := ConstructMemory(memConfig1, nil)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	memConfig2 := MemoryConfig{}
 
 	mem2, err := ConstructMemory(memConfig2, nil)
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		return
 	}
 

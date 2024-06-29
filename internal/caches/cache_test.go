@@ -42,7 +42,7 @@ func TestHostAndPortToStringArr(t *testing.T) {
 func extractHostAndPort(t *testing.T, endpoint string) HostAndPort {
 	split := strings.Split(endpoint, ":")
 	port, err := strconv.Atoi(split[1])
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	return HostAndPort{Host: split[0], Port: uint16(port)}
 }

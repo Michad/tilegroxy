@@ -97,7 +97,7 @@ func Test_ExecuteTestWithMultiCache(t *testing.T) {
 
 	dir, err := os.MkdirTemp(os.TempDir(), "tilegroxy-tests")
 	defer os.RemoveAll(dir)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	cfg := fmt.Sprintf(
 		`cache:
@@ -153,14 +153,14 @@ func Test_ExecuteTestWithRedisCache(t *testing.T) {
 		ContainerRequest: req,
 		Started:          true,
 	})
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		return
 	}
 
 	defer redisC.Terminate(ctx)
 
 	endpoint, err := redisC.Endpoint(ctx, "")
-	if !assert.Nil(t, err) {
+	if !assert.NoError(t, err) {
 		return
 	}
 	endSplit := strings.Split(endpoint, ":")

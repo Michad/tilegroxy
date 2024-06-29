@@ -27,12 +27,12 @@ func Test_CustomValidate(t *testing.T) {
 	c, err := ConstructCustom(CustomConfig{}, nil, &testErrMessages)
 
 	assert.Nil(t, c)
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 
 	c, err = ConstructCustom(CustomConfig{Script: "package custom"}, nil, &testErrMessages)
 
 	assert.Nil(t, c)
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 }
 
 func Test_CustomExecute(t *testing.T) {
@@ -61,15 +61,15 @@ func generateTile(ctx *tilegroxy.RequestContext, providerContext tilegroxy.Provi
 	}
 
 	assert.NotNil(t, c)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	pc, err := c.PreAuth(internal.BackgroundContext(), ProviderContext{})
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.NotNil(t, pc)
 	assert.True(t, pc.AuthBypass)
 
 	img, err := c.GenerateTile(internal.BackgroundContext(), pc, internal.TileRequest{LayerName: "l", Z: 3, X: 1, Y: 2})
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.NotNil(t, img)
 	assert.Equal(t, []byte{0x01, 0x02}, *img)
 

@@ -45,6 +45,7 @@ type S3Config struct {
 
 type S3 struct {
 	*S3Config
+	client     *s3.S3
 	downloader *s3manager.Downloader
 	uploader   *s3manager.Uploader
 }
@@ -106,14 +107,21 @@ func ConstructS3(config *S3Config, errorMessages *config.ErrorMessages) (*S3, er
 		return nil, err
 	}
 
+	s3Client := s3.New(awsSession, &awsConfig)
 	downloader := s3manager.NewDownloader(awsSession)
 	uploader := s3manager.NewUploader(awsSession, s3manager.WithUploaderRequestOptions())
 
-	return &S3{config, downloader, uploader}, nil
+	return &S3{config, s3Client, downloader, uploader}, nil
 }
 
 func calcKey(config *S3, t *internal.TileRequest) string {
 	return config.Path + t.LayerName + "/" + strconv.Itoa(t.Z) + "/" + strconv.Itoa(t.X) + "/" + strconv.Itoa(t.Y)
+}
+
+// Just for testing purposes
+func (c S3) makeBucket() error {
+	_, err := c.client.CreateBucket(&s3.CreateBucketInput{Bucket: &c.Bucket})
+	return err
 }
 
 func (c S3) Lookup(t internal.TileRequest) (*internal.Image, error) {

@@ -137,7 +137,7 @@ func FuzzToBoundsAndBack(f *testing.F) {
 	f.Fuzz(func(t *testing.T, z int, x int, y int) {
 		orig := TileRequest{"layer", z, x, y}
 		b, err := orig.GetBounds()
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		//Small delta to avoid floating point rounding errors causing an extra tile
 		b.West += 0.000000001

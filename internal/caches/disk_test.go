@@ -32,6 +32,6 @@ func TestDisk(t *testing.T) {
 	config := DiskConfig{Path: dir}
 
 	c, err := ConstructDisk(config, nil)
-	_ = assert.Nil(t, err) &&
+	_ = assert.NoError(t, err) &&
 		validateSaveAndLookup(t, c)
 }

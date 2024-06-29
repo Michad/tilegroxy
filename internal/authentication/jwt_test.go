@@ -29,7 +29,7 @@ func TestFailMissingArgs(t *testing.T) {
 	jwtConfig := JwtConfig{}
 	jwt, err := ConstructJwt(&jwtConfig, &config.ErrorMessages{})
 
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 	assert.Nil(t, jwt)
 }
 func TestFailMissingKey(t *testing.T) {
@@ -38,7 +38,7 @@ func TestFailMissingKey(t *testing.T) {
 	}
 	jwt, err := ConstructJwt(&jwtConfig, &config.ErrorMessages{})
 
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 	assert.Nil(t, jwt)
 }
 func TestFailMissingAlg(t *testing.T) {
@@ -47,7 +47,7 @@ func TestFailMissingAlg(t *testing.T) {
 	}
 	jwt, err := ConstructJwt(&jwtConfig, &config.ErrorMessages{})
 
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 	assert.Nil(t, jwt)
 }
 
@@ -59,13 +59,13 @@ func TestGoodJwts(t *testing.T) {
 	}
 	jwt, err := ConstructJwt(&jwtConfig, &config.ErrorMessages{})
 
-	if !assert.Nil(t, err) || !assert.NotNil(t, jwt) {
+	if !assert.NoError(t, err) || !assert.NotNil(t, jwt) {
 		return
 	}
 
 	req, err := http.NewRequest(http.MethodGet, "http://127.0.0.1/tiles/layer/0/0/0", nil)
 
-	if !assert.Nil(t, err) || !assert.NotNil(t, req) {
+	if !assert.NoError(t, err) || !assert.NotNil(t, req) {
 		return
 	}
 
@@ -80,13 +80,13 @@ func TestBadJwts(t *testing.T) {
 	}
 	jwt, err := ConstructJwt(&jwtConfig, &config.ErrorMessages{})
 
-	if !assert.Nil(t, err) || !assert.NotNil(t, jwt) {
+	if !assert.NoError(t, err) || !assert.NotNil(t, jwt) {
 		return
 	}
 
 	req, err := http.NewRequest(http.MethodGet, "http://127.0.0.1/tiles/layer/0/0/0", nil)
 
-	if !assert.Nil(t, err) || !assert.NotNil(t, req) {
+	if !assert.NoError(t, err) || !assert.NotNil(t, req) {
 		return
 	}
 
@@ -115,13 +115,13 @@ func TestGoodJwtClaims(t *testing.T) {
 	}
 	jwt, err := ConstructJwt(&jwtConfig, &config.ErrorMessages{})
 
-	if !assert.Nil(t, err) || !assert.NotNil(t, jwt) {
+	if !assert.NoError(t, err) || !assert.NotNil(t, jwt) {
 		return
 	}
 
 	req, err := http.NewRequest(http.MethodGet, "http://127.0.0.1/tiles/layer/0/0/0", nil)
 
-	if !assert.Nil(t, err) || !assert.NotNil(t, req) {
+	if !assert.NoError(t, err) || !assert.NotNil(t, req) {
 		return
 	}
 
@@ -140,13 +140,13 @@ func TestGoodJwtScopeLimit(t *testing.T) {
 	}
 	jwt, err := ConstructJwt(&jwtConfig, &config.ErrorMessages{})
 
-	if !assert.Nil(t, err) || !assert.NotNil(t, jwt) {
+	if !assert.NoError(t, err) || !assert.NotNil(t, jwt) {
 		return
 	}
 
 	req, err := http.NewRequest(http.MethodGet, "http://127.0.0.1/tiles/layer/0/0/0", nil)
 
-	if !assert.Nil(t, err) || !assert.NotNil(t, req) {
+	if !assert.NoError(t, err) || !assert.NotNil(t, req) {
 		return
 	}
 
@@ -176,13 +176,13 @@ func TestBadJwtClaims(t *testing.T) {
 	}
 	jwt, err := ConstructJwt(&jwtConfig, &config.ErrorMessages{})
 
-	if !assert.Nil(t, err) || !assert.NotNil(t, jwt) {
+	if !assert.NoError(t, err) || !assert.NotNil(t, jwt) {
 		return
 	}
 
 	req, err := http.NewRequest(http.MethodGet, "http://127.0.0.1/tiles/layer/0/0/0", nil)
 
-	if !assert.Nil(t, err) || !assert.NotNil(t, req) {
+	if !assert.NoError(t, err) || !assert.NotNil(t, req) {
 		return
 	}
 

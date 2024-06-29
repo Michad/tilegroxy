@@ -25,7 +25,7 @@ func TestMemory(t *testing.T) {
 	config := MemoryConfig{}
 
 	r, err := ConstructMemory(config, nil)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	validateSaveAndLookup(t, r)
 }
@@ -34,7 +34,7 @@ func TestTtl(t *testing.T) {
 	config := MemoryConfig{Ttl: 1}
 
 	r, err := ConstructMemory(config, nil)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	tile := makeReq(53)
 	img := makeImg(53)

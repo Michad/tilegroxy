@@ -84,7 +84,7 @@ layers:
 		fmt.Println(err.Error())
 	}
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 
 	assert.Equal(t, 200, resp.StatusCode)
@@ -111,7 +111,7 @@ layers:
 		fmt.Println(err.Error())
 	}
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 
 	assert.Equal(t, 200, resp.StatusCode)
@@ -135,7 +135,7 @@ layers:
 	resp, err, postFunc := coreServeTest(t, cfg, "http://localhost:12344/tiles/color/8/12/32")
 	defer postFunc()
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 
 	assert.Equal(t, 401, resp.StatusCode)
@@ -163,7 +163,7 @@ layers:
 		fmt.Println(err.Error())
 	}
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 
 	assert.Equal(t, 401, resp.StatusCode)
@@ -191,7 +191,7 @@ layers:
 		fmt.Println(err.Error())
 	}
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 
 	assert.Equal(t, 401, resp.StatusCode)
@@ -220,17 +220,17 @@ layers:
 		fmt.Println(err.Error())
 	}
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 
 	assert.Equal(t, 401, resp.StatusCode)
 
 	req, err := http.NewRequest(http.MethodGet, "http://localhost:12347/tiles/color/8/12/32", nil)
 	req.Header.Add("Authorization", "Bearer hunter2")
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	resp2, err := http.DefaultClient.Do(req)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, 200, resp2.StatusCode)
 
 	resp2.Body.Close()
@@ -257,7 +257,7 @@ layers:
 		fmt.Println(err.Error())
 	}
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 
 	assert.Equal(t, 401, resp.StatusCode)
@@ -284,7 +284,7 @@ layers:
 		fmt.Println(err.Error())
 	}
 
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 	assert.Nil(t, resp)
 }
 
@@ -314,17 +314,17 @@ layers:
 		fmt.Println(err.Error())
 	}
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 
 	assert.Equal(t, 401, resp.StatusCode)
 
 	req, err := http.NewRequest(http.MethodGet, "http://localhost:12349/tiles/color/8/12/32", nil)
 	req.Header.Add("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdWJqZWN0IiwiYXVkIjoiYXVkaWVuY2UiLCJpc3MiOiJpc3N1ZXIiLCJzY29wZSI6InNvbWV0aGluZyB0aWxlIG90aGVyIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjQyOTQ5NjcyOTV9.6jOBwjsvFcJXGkaleXB-75F6J3CjaQYuRELJPfvOfQE")
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	resp2, err := http.DefaultClient.Do(req)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, 200, resp2.StatusCode)
 
 	resp2.Body.Close()
@@ -370,27 +370,27 @@ layers:
 		fmt.Println(err.Error())
 	}
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 
 	assert.Equal(t, 401, resp.StatusCode)
 
 	req, err := http.NewRequest(http.MethodGet, "http://localhost:12341/tiles/color/8/12/32", nil)
 	req.Header.Add("X-Token", "hunter2")
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	resp2, err := http.DefaultClient.Do(req)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, 200, resp2.StatusCode)
 
 	resp2.Body.Close()
 
 	req, err = http.NewRequest(http.MethodGet, "http://localhost:12341/tiles/color2/8/12/32", nil)
 	req.Header.Add("X-Token", "hunter2")
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	resp3, err := http.DefaultClient.Do(req)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, 401, resp3.StatusCode)
 
 	resp3.Body.Close()

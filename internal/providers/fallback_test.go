@@ -56,7 +56,7 @@ func Test_Fallback_Validate(t *testing.T) {
 	f, err := ConstructFallback(FallbackConfig{Zoom: "aksfajl"}, &config.ClientConfig{}, &testErrMessages, p, s)
 
 	assert.Nil(t, f)
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 }
 
 func Test_Fallback_ExecuteNoFallback(t *testing.T) {
@@ -64,16 +64,16 @@ func Test_Fallback_ExecuteNoFallback(t *testing.T) {
 	f, err := ConstructFallback(FallbackConfig{Zoom: "1-5"}, &config.ClientConfig{}, &testErrMessages, p, s)
 
 	assert.NotNil(t, f)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	pc, err := f.PreAuth(internal.BackgroundContext(), ProviderContext{})
 	assert.NotNil(t, pc)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	img, err := f.GenerateTile(internal.BackgroundContext(), pc, internal.TileRequest{LayerName: "l", Z: 9, X: 23, Y: 32})
 
 	assert.NotNil(t, img)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 }
 
 func Test_Fallback_ExecuteZoom(t *testing.T) {
@@ -81,19 +81,19 @@ func Test_Fallback_ExecuteZoom(t *testing.T) {
 	f, err := ConstructFallback(FallbackConfig{Zoom: "1-5"}, &config.ClientConfig{}, &testErrMessages, p, s)
 
 	assert.NotNil(t, f)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	exp1, _ := images.GetStaticImage("color:F00")
 	exp2, _ := images.GetStaticImage("color:0F0")
 
 	img, err := f.GenerateTile(internal.BackgroundContext(), ProviderContext{}, internal.TileRequest{LayerName: "layer", Z: 2, X: 23, Y: 32})
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, *exp1, *img)
 
 	img, err = f.GenerateTile(internal.BackgroundContext(), ProviderContext{}, internal.TileRequest{LayerName: "layer", Z: 9, X: 23, Y: 32})
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, *exp2, *img)
 }
 
@@ -104,19 +104,19 @@ func Test_Fallback_ExecuteBouns(t *testing.T) {
 	f, err := ConstructFallback(FallbackConfig{Bounds: *b}, &config.ClientConfig{}, &testErrMessages, p, s)
 
 	assert.NotNil(t, f)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	exp1, _ := images.GetStaticImage("color:F00")
 	exp2, _ := images.GetStaticImage("color:0F0")
 
 	img, err := f.GenerateTile(internal.BackgroundContext(), ProviderContext{}, internal.TileRequest{LayerName: "layer", Z: 20, X: 23, Y: 32})
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, *exp1, *img)
 
 	img, err = f.GenerateTile(internal.BackgroundContext(), ProviderContext{}, internal.TileRequest{LayerName: "layer", Z: 20, X: 1, Y: 1})
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, *exp2, *img)
 }
 
@@ -125,11 +125,11 @@ func Test_Fallback_ExecuteFallback(t *testing.T) {
 	f, err := ConstructFallback(FallbackConfig{}, &config.ClientConfig{}, &testErrMessages, p, s)
 
 	assert.NotNil(t, f)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	exp2, _ := images.GetStaticImage("color:0F0")
 	img, err := f.GenerateTile(internal.BackgroundContext(), ProviderContext{}, internal.TileRequest{LayerName: "layer", Z: 20, X: 1, Y: 1})
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, *exp2, *img)
 }
