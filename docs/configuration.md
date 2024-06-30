@@ -182,7 +182,7 @@ Configuration options:
 
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| image | string | Yes | None | Either a filepath to an image on the local filesystem or one of the built-in images described under "Error Images" |
+| image | string | Yes | None | Either a filepath to an image on the local filesystem or one of the [built-in images](#image-options) |
 | color | string | No | None | A hexcode (RGB or RGBA) of a color to return. Equivalent to specifying `image` with this value with a prefix of "color:" |
 
 
@@ -719,6 +719,8 @@ The following can be supplied as environment variables:
 | Other | ERROR_IMAGES_OTHER | 
 
 #### Image Options
+
+In addition to an image on the filesystem you can refer to a static color or a built-in image.
 
 There are currently 4 built-in images available:
 
