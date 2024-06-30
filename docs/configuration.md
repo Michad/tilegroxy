@@ -1,10 +1,12 @@
 # Configuration
 
-Tilegroxy is heavily configuration driven. This document describes the various configuration options available for defining the map layers you wish to serve up and various aspects about how you want the application to function.
+Tilegroxy is heavily configuration driven. This document describes the various configuration options available. [Complete examples are available here.](../examples/configurations/)
 
-Every configuration option that supports different "types" (such as authentication, provider, and cache) has a "name" parameter for selecting the type. Those names are always all-lowercase. 
+Some configuration sections ([authentication](#authentication), [provider](#provider), and [cache](#cache)) support selecting different methods of operation that change the full list of parameters available. For example,  a "proxy" provider requires a `url` parameter to get a map tile from another server while a "static" provider takes in a `image` to return for every request. You select these operating modes using a parameter called `name`. 
 
-Keys are case-insensitive unless indicated otherwise.
+Configuration key names are case-insensitive unless indicated otherwise. Names are always lower case. 
+
+Some parameters can be specified by environment variables which must be upper case. Environment variables override config parameters which override default values.
 
 The following is the top-level configuration structure. All top-level keys are optional besides layers:
 
@@ -19,7 +21,6 @@ layers:
   - ...
 ```
 
-[Examples are available.](../examples/configurations/)
 
 ## Layer
 
@@ -36,7 +37,9 @@ Configuration options:
 
 ## Provider
 
-A provider represents the underlying functionality that "provides" the tiles that make up the mapping layer.  This is most commonly an external HTTP(s) endpoint using either the "proxy" or "URL template" providers. Custom providers can be created to extract tiles from other sources.  
+A provider represents the underlying functionality that "provides" the tiles that make up the mapping layer.  This is most commonly an external HTTP(s) endpoint using either the "proxy" or "URL template" providers. Custom providers can be created to extract tiles from other sources.
+
+When supplying a provider ensure you include the `name` parameter. Some providers require nested providers; be aware that repeated nesting has a performance cost.
 
 ### Proxy
 
@@ -52,7 +55,7 @@ Configuration options:
 | inverty | bool | No | false | Changes Y tile numbering to be South-to-North instead of North-to-South. Only impacts Y/y placeholder |
 
 
-The following placeholders are available in URL:
+The following placeholders are available in the URL:
 
 | Placeholder | Description |
 | ----------- | ----------- |
@@ -64,7 +67,7 @@ The following placeholders are available in URL:
 | ymin | The "north" coordinate of the bounding box defined by the incoming tile coordinates. Not impacted by the `invertY` parameter. |
 | ymax | The "south" coordinate of the bounding box defined by the incoming tile coordinates. Not impacted by the `invertY` parameter. |
 | env.XXX | An environment variable whose name is XXX |
-| ctx.XXX | An context variable (typically an HTTP header) whose name is XXX |
+| ctx.XXX | A context variable (typically an HTTP header) whose name is XXX |
 
 Example:
 
@@ -236,9 +239,11 @@ provider:
 
 ## Cache
 
-The cache configuration defines the datastores where tiles should be stored/retrieved. It's recommended when possible to make use of a multi-tiered cache with a smaller, faster "near" cache first followed by a larger, slower "far" cache.  
+The cache configuration defines the datastores where tiles should be stored/retrieved. We recommended you use a `multi`-tiered cache with a smaller, faster "near" cache first followed by a larger, slower "far" cache.    
 
 There is no universal mechanism for expiring cache entries. Some cache options include built-in mechanisms for applying an TTL and maximum size however some require an external cleanup mechanism if desired. Be mindful of this as some options may incur their own costs if allowed to grow unchecked.
+
+When specifying a cache ensure you include the `name` parameter.
 
 ### None
 
@@ -432,6 +437,8 @@ cache:
 Implements incoming auth schemes. This is primarily meant for authentication but does include some authorization by limiting access to specific layers via JWT or custom schemes.
 
 Requests that do not comply with authentication requirements will receive a 401 Unauthorized HTTP status code.
+
+When supplying authentication ensure you include the `name` parameter.
 
 ### None
 
