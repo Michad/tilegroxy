@@ -586,7 +586,7 @@ Configuration options:
 | AllowUnknownLength | bool | No | false | Allow responses that are missing a Content-Length header, this could lead to excessive memory usage |
 | AllowedContentTypes | string[] | No | image/png, image/jpg | The content-types to allow remote servers to return. Anything else will be interpreted as an error |
 | AllowedStatusCodes | int[] | No | 200 | The status codes from the remote server to consider successful |
-| StaticHeaders | None | map[string]string | No | None | Include these headers in requests |
+| StaticHeaders | map[string]string | No | None | Include these headers in requests |
 
 The following can be supplied as environment variables:
 
