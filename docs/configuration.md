@@ -542,16 +542,16 @@ Configures how the HTTP server should operate
 
 Configuration options:
 
-| Parameter | Type | Required | Default | Description |
-| --- | --- | --- | --- | --- |
-| BindHost | string | No | 127.0.0.1 | IP address to bind HTTP server to |
-| Port | int | No | 8080 | Port to bind HTTP server to |
-| RootPath | string | No | / | The root HTTP Path to serve all requests under. |
-| TilePath | string | No | tiles | The HTTP Path to serve tiles under in addition to RootPath. The defaults will result in a path that looks like /tiles/{layer}/{z}/{x}/{y} |
-| StaticHeaders | map[string]string | No | None | Include these headers in all response from server |
-| Production | bool | No | false | Hardens operation for usage in production. For instance, controls serving splash page, documentation, x-powered-by header. |
-| Timeout | uint | No | 60 | How long (in seconds) a request can be in flight before we cancel it and return an error |
-| Gzip | bool | No | false | Whether to gzip compress HTTP responses |
+| Configuration Parameter | Environment Variable | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- | --- |
+| BindHost | SERVER_BINDHOST | string | No | 127.0.0.1 | IP address to bind HTTP server to |
+| Port | SERVER_PORT | int | No | 8080 | Port to bind HTTP server to |
+| RootPath | SERVER_ROOTPATH | string | No | / | The root HTTP Path to serve all requests under. |
+| TilePath | SERVER_TILEPATH | string | No | tiles | The HTTP Path to serve tiles under in addition to RootPath. The defaults will result in a path that looks like /tiles/{layer}/{z}/{x}/{y} |
+| StaticHeaders | None | map[string]string | No | None | Include these headers in all response from server |
+| Production | SERVER_PRODUCTION | bool | No | false | Hardens operation for usage in production. For instance, controls serving splash page, documentation, x-powered-by header. |
+| Timeout | SERVER_TIMEOUT | uint | No | 60 | How long (in seconds) a request can be in flight before we cancel it and return an error |
+| Gzip | SERVER_GZIP | bool | No | false | Whether to gzip compress HTTP responses |
 
 
 ## Client
@@ -560,14 +560,14 @@ Configures how the HTTP client should operate for tile requests that require cal
  
 Configuration options:
 
-| Parameter | Type | Required | Default | Description |
-| --- | --- | --- | --- | --- |
-| UserAgent | string | No | tilegroxy/VERSION | The user agent to include in outgoing http requests. |
-| MaxResponseLength | int | No | 10 MiB | The maximum Content-Length to allow incoming responses | 
-| AllowUnknownLength | bool | No | false | Allow responses that are missing a Content-Length header, this could lead to excessive memory usage |
-| AllowedContentTypes | string[] | No | image/png, image/jpg | The content-types to allow remote servers to return. Anything else will be interpreted as an error |
-| AllowedStatusCodes | int[] | No | 200 | The status codes from the remote server to consider successful |
-| StaticHeaders | map[string]string | No | None | Include these headers in requests |
+| Configuration Parameter | Environment Variable | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- | --- |
+| UserAgent | CLIENT_USERAGENT | string | No | tilegroxy/VERSION | The user agent to include in outgoing http requests. |
+| MaxResponseLength | CLIENT_MAXRESPONSELENGTH | int | No | 10 MiB | The maximum Content-Length to allow incoming responses | 
+| AllowUnknownLength | CLIENT_ALLOWUNKNOWNLENGTH | bool | No | false | Allow responses that are missing a Content-Length header, this could lead to excessive memory usage |
+| AllowedContentTypes | CLIENT_ALLOWEDCONTENTTYPES | string[] | No | image/png, image/jpg | The content-types to allow remote servers to return. Anything else will be interpreted as an error |
+| AllowedStatusCodes | CLIENT_ALLOWEDSTATUSCODES | int[] | No | 200 | The status codes from the remote server to consider successful |
+| StaticHeaders | None | map[string]string | No | None | Include these headers in requests |
 
 ## Log
 
@@ -592,14 +592,14 @@ Level controls the verbosity of logs. There is no guarantee as to the specific l
 
 Configuration options:
 
-| Parameter | Type | Required | Default | Description |
-| --- | --- | --- | --- | --- |
-| EnableStandardOut | bool | No | true | Whether to write application logs to standard out |
-| Path | string | No | None | The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth |
-| Format | string | No | plain | The format to output application logs in. Applies to both standard out and file out. Possible values: plain, json |
-| Level | string | No | info | The most-detailed log level that should be included. Possible values: debug, info, warn, error, trace, absurd |
-| IncludeRequestAttributes | string | No | auto | Whether to include any extra attributes based on request parameters (excluding explicitly requested). If auto (default) it defaults true if format is json, false otherwise |
-| IncludeHeaders | string[] | No | None | Headers to include as attributes in structured log messages. Attribute key will be in all lowercase. | 
+| Configuration Parameter | Environment Variable | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- | --- |
+| EnableStandardOut | LOGGING_MAINLOG_ENABLESTANDARDOUT | bool | No | true | Whether to write application logs to standard out |
+| Path | LOGGING_MAINLOG_PATH | string | No | None | The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth |
+| Format | LOGGING_MAINLOG_FORMAT | string | No | plain | The format to output application logs in. Applies to both standard out and file out. Possible values: plain, json |
+| Level | LOGGING_MAINLOG_LEVEL | string | No | info | The most-detailed log level that should be included. Possible values: debug, info, warn, error, trace, absurd |
+| IncludeRequestAttributes | LOGGING_MAINLOG_INCLUDEREQUESTATTRIBUTES | bool | No | auto | Whether to include any extra attributes based on request parameters (excluding explicitly requested). If auto (default) it defaults true if format is json, false otherwise |
+| IncludeHeaders | LOGGING_MAINLOG_INCLUDEHEADERS | string[] | No | None | Headers to include as attributes in structured log messages. Attribute key will be in all lowercase. | 
 
 ### Access Log
 
@@ -607,11 +607,11 @@ Configures logs for incoming HTTP requests. Primarily outputs in standard Apache
 
 Configuration options:
 
-| Parameter | Type | Required | Default | Description |
-| --- | --- | --- | --- | --- |
-| EnableStandardOut | bool | No | true | Whether to write access logs to standard out |
-| Path | string | No | None | The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth |
-| Format | string | No | common | The format to output access logs in. Applies to both standard out and file out. Possible values: common, combined |
+| Configuration Parameter | Environment Variable | Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- | --- | --- |
+| EnableStandardOut | LOGGING_ACCESSLOG_ENABLESTANDARDOUT | bool | No | true | Whether to write access logs to standard out |
+| Path | LOGGING_ACCESSLOG_PATH | string | No | None | The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth |
+| Format | LOGGING_ACCESSLOG_FORMAT | string | No | common | The format to output access logs in. Applies to both standard out and file out. Possible values: common, combined |
 
 ## Error
 
@@ -632,12 +632,12 @@ It is highly recommended you use the Image mode for production usage.  Returning
 
 Configuration options:
 
-| Parameter | Type | Required | Default | Description |
-| --- | --- | --- | --- | --- |
-| Mode | string | No | image | The error mode as described above.  One of: text none image image+header |
-| Messages | ErrorMessages | No | Various | Controls the error messages returned as described below |
-| Images | ErrorImages | No | Various | Controls the images returned for errors as described below |
-| SuppressStatusCode | bool | No | false | If set we always return 200 regardless of what happens |
+| Configuration Parameter | Environment Variable | Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- | --- | --- |
+| Mode | ERROR_MODE | string | No | image | The error mode as described above.  One of: text none image image+header |
+| Messages | None | ErrorMessages | No | Various | Controls the error messages returned as described below |
+| Images | None | ErrorImages | No | Various | Controls the images returned for errors as described below |
+| SuppressStatusCode | ERROR_SUPPRESSSTATUSCODE | bool | No | false | If set we always return 200 regardless of what happens |
 
 ### Error Images
 
@@ -645,12 +645,12 @@ When using the image or image+header modes you can configure the images you want
 
 Configuration options:
 
-| Parameter | Type | Required | Default | Description |
-| --- | --- | --- | --- | --- |
-| OutOfBounds | string | No | embedded:transparent.png | The image to display for requests outside the extent of the layer |
-| Authentication | string | No | embedded:unauthorized.png | The image to display for auth errors |
-| Provider | string | No | embedded:error.png | The image to display for errors returned by the layer's provider |
-| Other | string | No | embedded:error.png | The image to display for all other errors |
+| Configuration Parameter | Environment Variable | Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- | --- | --- |
+| OutOfBounds | ERROR_IMAGES_OUTOFBOUNDS | string | No | embedded:transparent.png | The image to display for requests outside the extent of the layer |
+| Authentication | ERROR_IMAGES_AUTHENTICATION | string | No | embedded:unauthorized.png | The image to display for auth errors |
+| Provider | ERROR_IMAGES_PROVIDER | string | No | embedded:error.png | The image to display for errors returned by the layer's provider |
+| Other | ERROR_IMAGES_OTHER | string | No | embedded:error.png | The image to display for all other errors |
 
 
 There are currently 4 built-in images available:
@@ -663,6 +663,8 @@ There are currently 4 built-in images available:
 | unauthorized.png | A semi-transparent solid red image with the words "Not Authorized" in white | ![](../internal/images/unauthorized.png) |
 
 To utilize them prepend "embedded:" before the name.  For example `embedded:transparent.png`
+
+You can also reference any color by including an hex code prefixed by "color:". The color code can be RGB or RGBA and have single or double hex digits. For example the following all generate an identical violet tile: `color:FF00FFFF`, `color:FF00FF`, `color:F0F`, `color:F0FF`
 
 ### Error Messages
 

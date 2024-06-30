@@ -32,7 +32,7 @@ type ServerConfig struct {
 	StaticHeaders map[string]string //Include these headers in all response from server
 	Production    bool              //Controls serving splash page, documentation, x-powered-by header. Defaults to false, set true to harden for prod
 	Timeout       uint              //How long (in seconds) a request can be in flight before we cancel it and return an error
-	Gzip          bool
+	Gzip          bool              //Whether to apply gzip compression. Not super helpful when just serving up raster images
 }
 
 type ClientConfig struct {
@@ -209,7 +209,8 @@ func DefaultConfig() Config {
 
 func LoadConfig(config string) (Config, error) {
 	c := DefaultConfig()
-	var viper = viper.New()
+	var viper = viper.NewWithOptions(viper.KeyDelimiter("_"))
+	viper.AutomaticEnv()
 
 	if strings.Index(strings.TrimSpace(config), "{") == 0 {
 		viper.SetConfigType("json")
@@ -232,7 +233,9 @@ func LoadConfig(config string) (Config, error) {
 
 func LoadConfigFromFile(filename string) (Config, error) {
 	c := DefaultConfig()
-	var viper = viper.New()
+	var viper = viper.NewWithOptions(viper.KeyDelimiter("_"))
+	viper.AutomaticEnv()
+
 	viper.SetConfigFile(filename)
 
 	err := viper.ReadInConfig()
