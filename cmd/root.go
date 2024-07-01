@@ -63,7 +63,11 @@ func init() {
 func initRoot() {
 	rootCmd.PersistentFlags().StringP("config", "c", "./tilegroxy.yml", "A file path to the configuration file to use. The file should have an extension of either json or yml/yaml and be readable.")
 	rootCmd.PersistentFlags().String("raw-config", "", "The full configuration to be used as JSON.")
-	rootCmd.MarkFlagsMutuallyExclusive("config", "raw-config")
+	rootCmd.PersistentFlags().String("remote-provider", "", "The provider to pull configuration from. One of: etcd, etcd3, consul, firestore, nats")
+	rootCmd.PersistentFlags().String("remote-endpoint", "http://127.0.0.1:2379", "The endpoint to use to connect to the remote provider")
+	rootCmd.PersistentFlags().String("remote-path", "/config/tilegroxy.yml", "The path to use to select the configuration on the remote provider")
+	rootCmd.PersistentFlags().String("remote-type", "yaml", "The file format to use to parse the configuration from the remote provider")
+	rootCmd.MarkFlagsMutuallyExclusive("config", "raw-config", "remote-provider")
 }
 
 // A common utility for use by multiple commands to bootstrap the core application entities
@@ -71,8 +75,12 @@ func parseConfigIntoStructs(cmd *cobra.Command) (*config.Config, []*layers.Layer
 	var err error
 	configPath, err1 := cmd.Flags().GetString("config")
 	configRaw, err2 := cmd.Flags().GetString("raw-config")
+	remoteProvider, err3 := cmd.Flags().GetString("remote-provider")
+	remoteEndpoint, err4 := cmd.Flags().GetString("remote-endpoint")
+	remotePath, err5 := cmd.Flags().GetString("remote-path")
+	remoteType, err6 := cmd.Flags().GetString("remote-type")
 
-	if err = errors.Join(err1, err2); err != nil {
+	if err = errors.Join(err1, err2, err3, err4, err5, err6); err != nil {
 		return nil, nil, nil, err
 	}
 
@@ -80,6 +88,8 @@ func parseConfigIntoStructs(cmd *cobra.Command) (*config.Config, []*layers.Layer
 
 	if configRaw != "" {
 		cfg, err = config.LoadConfig(configRaw)
+	} else if remoteProvider != "" {
+		cfg, err = config.LoadConfigFromRemote(remoteProvider, remoteEndpoint, remotePath, remoteType)
 	} else if configPath != "" {
 		cfg, err = config.LoadConfigFromFile(configPath)
 	} else {

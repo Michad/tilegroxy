@@ -22,6 +22,7 @@ import (
 	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/spf13/viper"
+	_ "github.com/spf13/viper/remote"
 )
 
 type ServerConfig struct {
@@ -207,10 +208,24 @@ func DefaultConfig() Config {
 	}
 }
 
-func LoadConfig(config string) (Config, error) {
-	c := DefaultConfig()
+func initViper() *viper.Viper {
 	var viper = viper.NewWithOptions(viper.KeyDelimiter("_"))
 	viper.AutomaticEnv()
+	return viper
+}
+
+func unmarshal(viper *viper.Viper) (Config, error) {
+	c := DefaultConfig()
+	err := viper.Unmarshal(&c)
+	if err != nil {
+		return c, err
+	}
+
+	return c, nil
+}
+
+func LoadConfig(config string) (Config, error) {
+	viper := initViper()
 
 	if strings.Index(strings.TrimSpace(config), "{") == 0 {
 		viper.SetConfigType("json")
@@ -220,34 +235,41 @@ func LoadConfig(config string) (Config, error) {
 
 	err := viper.ReadConfig(bytes.NewBufferString(config))
 	if err != nil {
-		return c, err
+		return Config{}, err
 	}
 
-	err = viper.Unmarshal(&c)
-	if err != nil {
-		return c, err
-	}
-
-	return c, nil
+	return unmarshal(viper)
 }
 
 func LoadConfigFromFile(filename string) (Config, error) {
-	c := DefaultConfig()
-	var viper = viper.NewWithOptions(viper.KeyDelimiter("_"))
-	viper.AutomaticEnv()
+	viper := initViper()
 
 	viper.SetConfigFile(filename)
 
 	err := viper.ReadInConfig()
 
 	if err != nil {
-		return c, err
+		return Config{}, err
 	}
 
-	err = viper.Unmarshal(&c)
+	return unmarshal(viper)
+}
+
+func LoadConfigFromRemote(provider, endpoint, path, format string) (Config, error) {
+	viper := initViper()
+
+	viper.SetConfigType(format)
+	err := viper.AddRemoteProvider(provider, endpoint, path)
+
 	if err != nil {
-		return c, err
+		return Config{}, err
 	}
 
-	return c, nil
+	err = viper.ReadRemoteConfig()
+
+	if err != nil {
+		return Config{}, err
+	}
+
+	return unmarshal(viper)
 }

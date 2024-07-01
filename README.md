@@ -35,14 +35,13 @@ The following are on the roadmap and expected before a 1.0 release:
 * Providers that composite/modify vector layers formats such as [MVT](https://github.com/mapbox/vector-tile-spec) or tiled GeoJSON
 * OpenTelemetry support
 * Support for external secret stores such as AWS Secrets Manager to avoid secrets in the configuration
-* Support for external configuration sources 
 * Support for HTTPS server w/ Let's Encrypt or static certs
 
 
 
 ## Configuration
 
-Configuration is required to define your layers and operational parameter.  Currently that must be supplied as a single file upfront.  Loading configuration from external services or hot-loading configuration is planned but not yet supported.
+Configuration is required to define your layers and operational parameter.  The configuration can be supplied as a file or through an external service such as etcd or consul. Configuration can also be partially supplied via Environment Variables. 
 
 Details can be found in [documentation](./docs/configuration.md) or through [examples](./examples/configurations/). 
 
@@ -111,6 +110,24 @@ Coming soon.
 ## Commands
 
 The `tilegroxy` executable is a standard [cobra](https://github.com/spf13/cobra) program with a handful of commands available. If you're deploying tilegroxy for use as a webserver you want to use the `serve` command. A couple other commands are available to aid in standing up and administering a tilegroxy deployment.
+
+The following global flags are available for supplying your configuration:
+
+```
+  -c, --config string            A file path to the configuration file to use. 
+                                 The file should have an extension of either 
+                                 json or yml/yaml and be readable. 
+                                 (default "./tilegroxy.yml")
+      --remote-endpoint string   The endpoint to use to connect to the remote 
+                                 provider (default "http://127.0.0.1:2379")
+      --remote-path string       The path to use to select the configuration 
+                                 on the remote provider 
+                                 (default "/config/tilegroxy.yml")
+      --remote-provider string   The provider to pull configuration from. 
+                                 One of: etcd, etcd3, consul, firestore, nats
+      --remote-type string       The file format to use to parse the configuration 
+                                 from the remote provider (default "yaml")
+```
 
 ### Serve
 
