@@ -602,7 +602,21 @@ The following can be supplied as environment variables:
 
 Configures how the application should log during operation.
 
-### Main Log
+The `Logging` section supports two keys: `main` and `access` which are objects described respectively below.
+
+Example:
+
+```
+logging:
+  access:
+    console: false 
+    path: access.log 
+  main:
+    level: debug
+    format: json
+```
+
+### Main
 
 Configures application log messages. 
 
@@ -641,7 +655,7 @@ The following can be supplied as environment variables:
 | Request | LOGGING_MAIN_REQUEST | 
 | Headers | LOGGING_MAIN_HEADERS | 
 
-### Access Log
+### Access
 
 Configures logs for incoming HTTP requests. Primarily outputs in standard Apache Access Log formats.
 
