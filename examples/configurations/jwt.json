@@ -1,19 +1,19 @@
 {
     "logging":{
-        "mainlog" : {
+        "main" : {
             "level": "debug",
             "format": "json"
         }
     },
     "authentication": {
         "name": "jwt",
-        "verificationKey": "hunter2",
+        "key": "hunter2",
         "algorithm": "HS256",
         "LayerScope": true,
-        "LayerScopePrefix": "tile/",
+        "ScopePrefix": "tile/",
         "ExpectedIssuer": "http://some.example.com",
-        "UserIdentifierGrant": "name",
-        "MaxExpirationDuration": 10000000000
+        "UserId": "name",
+        "MaxExpiration": 10000000000
     },
     "layers": [
         {

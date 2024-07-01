@@ -25,23 +25,23 @@ import (
 )
 
 type ServerConfig struct {
-	BindHost      string            //IP address to bind HTTP server to
-	Port          int               //Port to bind HTTP server to
-	RootPath      string            //Root HTTP Path to apply to all endpoints. Defaults to /
-	TilePath      string            //HTTP Path to serve tiles under (in addition to RootPath). Defaults to tiles which means /tiles/{layer}/{z}/{x}/{y}.
-	StaticHeaders map[string]string //Include these headers in all response from server
-	Production    bool              //Controls serving splash page, documentation, x-powered-by header. Defaults to false, set true to harden for prod
-	Timeout       uint              //How long (in seconds) a request can be in flight before we cancel it and return an error
-	Gzip          bool              //Whether to apply gzip compression. Not super helpful when just serving up raster images
+	BindHost   string            //IP address to bind HTTP server to
+	Port       int               //Port to bind HTTP server to
+	RootPath   string            //Root HTTP Path to apply to all endpoints. Defaults to /
+	TilePath   string            //HTTP Path to serve tiles under (in addition to RootPath). Defaults to tiles which means /tiles/{layer}/{z}/{x}/{y}.
+	Headers    map[string]string //Include these headers in all response from server
+	Production bool              //Controls serving splash page, documentation, x-powered-by header. Defaults to false, set true to harden for prod
+	Timeout    uint              //How long (in seconds) a request can be in flight before we cancel it and return an error
+	Gzip       bool              //Whether to apply gzip compression. Not super helpful when just serving up raster images
 }
 
 type ClientConfig struct {
-	UserAgent           string            //The user agent to include in outgoing http requests. Separate from StaticHeaders to avoid omitting this.
-	MaxResponseLength   int               //The maximum Content-Length to allow incoming responses. Default: 10 Megabytes
-	AllowUnknownLength  bool              //If true, allow responses that are missing a Content-Length header, this could lead to memory overruns. Default: false
-	AllowedContentTypes []string          //The content-types to allow servers to return. Anything else will be interpreted as an error
-	AllowedStatusCodes  []int             //The status codes from the remote server to consider successful.  Defaults to just 200
-	StaticHeaders       map[string]string //Include these headers in requests. Defaults to none
+	UserAgent     string            //The user agent to include in outgoing http requests. Separate from Headers to avoid omitting this.
+	MaxLength     int               //The maximum Content-Length to allow incoming responses. Default: 10 Megabytes
+	UnknownLength bool              //If true, allow responses that are missing a Content-Length header, this could lead to memory overruns. Default: false
+	ContentTypes  []string          //The content-types to allow servers to return. Anything else will be interpreted as an error
+	StatusCodes   []int             //The status codes from the remote server to consider successful.  Defaults to just 200
+	Headers       map[string]string //Include these headers in requests. Defaults to none
 }
 
 // Modes for error reporting
@@ -76,28 +76,28 @@ type ErrorImages struct {
 }
 
 type ErrorConfig struct {
-	Mode               string        //How errors should be returned.  See the consts above for options
-	Messages           ErrorMessages //Patterns to use for error messages in logs and responses. Not used for utility commands.
-	Images             ErrorImages   //Only used if Mode is image or image+header
-	SuppressStatusCode bool          //If set we always return 200 regardless of what happens
+	Mode     string        //How errors should be returned.  See the consts above for options
+	Messages ErrorMessages //Patterns to use for error messages in logs and responses. Not used for utility commands.
+	Images   ErrorImages   //Only used if Mode is image or image+header
+	AlwaysOk bool          //If set we always return 200 regardless of what happens
 }
 
 // Formats for outputting the access log
 const (
-	AccessLogFormatCommon   = "common"
-	AccessLogFormatCombined = "combined"
+	AccessFormatCommon   = "common"
+	AccessFormatCombined = "combined"
 )
 
-type AccessLogConfig struct {
-	EnableStandardOut bool   //If true, write access logs to standard out. Defaults to true
-	Path              string //The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth. Defaults to none
-	Format            string //The format to output access logs in. Applies to both standard out and file out. Possible values: common, combined. Defaults to common
+type AccessConfig struct {
+	Console bool   //If true, write access logs to standard out. Defaults to true
+	Path    string //The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth. Defaults to none
+	Format  string //The format to output access logs in. Applies to both standard out and file out. Possible values: common, combined. Defaults to common
 }
 
 // Formats for outputting the main log
 const (
-	MainLogFormatPlain = "plain"
-	MainLogFormatJson  = "json"
+	MainFormatPlain = "plain"
+	MainFormatJson  = "json"
 )
 
 const LevelTrace slog.Level = slog.LevelDebug - 5
@@ -108,18 +108,18 @@ var CustomLogLevel = map[string]slog.Level{
 	"absurd": LevelAbsurd,
 }
 
-type MainLogConfig struct {
-	EnableStandardOut        bool     //If true, write access logs to standard out. Defaults to true
-	Path                     string   //The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth. Defaults to none
-	Format                   string   //The format to output access logs in. Applies to both standard out and file out. Possible values: plain, json. Defaults to plain
-	Level                    string   //logging level. one of: debug, info, warn, error, trace, absurd
-	IncludeRequestAttributes string   //Can be "true", "false" or "auto". If false, don't include any extra attributes based on request parameters (excluding the ones requested below). If auto (default) it defaults true if format is json, false otherwise
-	IncludeHeaders           []string //Headers to include in the logs. Useful for a transaction/request/trace/correlation ID or user identifiers
+type MainConfig struct {
+	Console bool     //If true, write access logs to standard out. Defaults to true
+	Path    string   //The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth. Defaults to none
+	Format  string   //The format to output access logs in. Applies to both standard out and file out. Possible values: plain, json. Defaults to plain
+	Level   string   //logging level. one of: debug, info, warn, error, trace, absurd
+	Request string   //Can be "true", "false" or "auto". If false, don't include any extra attributes based on request parameters (excluding the ones requested below). If auto (default) it defaults true if format is json, false otherwise
+	Headers []string //Headers to include in the logs. Useful for a transaction/request/trace/correlation ID or user identifiers
 }
 
 type LogConfig struct {
-	AccessLog AccessLogConfig
-	MainLog   MainLogConfig
+	Access AccessConfig
+	Main   MainConfig
 }
 
 type LayerConfig struct {
@@ -144,36 +144,36 @@ func DefaultConfig() Config {
 
 	return Config{
 		Server: ServerConfig{
-			BindHost:      "127.0.0.1",
-			Port:          8080,
-			RootPath:      "/",
-			TilePath:      "tiles",
-			StaticHeaders: map[string]string{},
-			Production:    false,
-			Timeout:       60,
-			Gzip:          false,
+			BindHost:   "127.0.0.1",
+			Port:       8080,
+			RootPath:   "/",
+			TilePath:   "tiles",
+			Headers:    map[string]string{},
+			Production: false,
+			Timeout:    60,
+			Gzip:       false,
 		},
 		Client: ClientConfig{
-			UserAgent:           "tilegroxy/" + version,
-			MaxResponseLength:   1024 * 1024 * 10,
-			AllowUnknownLength:  false,
-			AllowedContentTypes: []string{"image/png", "image/jpg", "image/jpeg"},
-			AllowedStatusCodes:  []int{200},
-			StaticHeaders:       map[string]string{},
+			UserAgent:     "tilegroxy/" + version,
+			MaxLength:     1024 * 1024 * 10,
+			UnknownLength: false,
+			ContentTypes:  []string{"image/png", "image/jpg", "image/jpeg"},
+			StatusCodes:   []int{200},
+			Headers:       map[string]string{},
 		},
 		Logging: LogConfig{
-			MainLog: MainLogConfig{
-				EnableStandardOut:        true,
-				Path:                     "",
-				Format:                   MainLogFormatPlain,
-				Level:                    "info",
-				IncludeRequestAttributes: "auto",
-				IncludeHeaders:           []string{},
+			Main: MainConfig{
+				Console: true,
+				Path:    "",
+				Format:  MainFormatPlain,
+				Level:   "info",
+				Request: "auto",
+				Headers: []string{},
 			},
-			AccessLog: AccessLogConfig{
-				EnableStandardOut: true,
-				Path:              "",
-				Format:            AccessLogFormatCombined,
+			Access: AccessConfig{
+				Console: true,
+				Path:    "",
+				Format:  AccessFormatCombined,
 			},
 		},
 		Error: ErrorConfig{
@@ -195,7 +195,7 @@ func DefaultConfig() Config {
 				Provider:       images.KeyImageError,
 				Other:          images.KeyImageError,
 			},
-			SuppressStatusCode: false,
+			AlwaysOk: false,
 		},
 		Authentication: map[string]interface{}{
 			"name": "none",

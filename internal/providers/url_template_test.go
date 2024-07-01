@@ -34,7 +34,7 @@ func Test_UrlTemplateValidate(t *testing.T) {
 	assert.Error(t, err)
 }
 func Test_UrlTemplateExecute(t *testing.T) {
-	p, err := ConstructUrlTemplate(UrlTemplateConfig{Template: testTemplate}, &config.ClientConfig{AllowedStatusCodes: []int{200}, MaxResponseLength: 2000, AllowedContentTypes: []string{"image/png"}, AllowUnknownLength: true}, &testErrMessages)
+	p, err := ConstructUrlTemplate(UrlTemplateConfig{Template: testTemplate}, &config.ClientConfig{StatusCodes: []int{200}, MaxLength: 2000, ContentTypes: []string{"image/png"}, UnknownLength: true}, &testErrMessages)
 
 	assert.NotNil(t, p)
 	assert.NoError(t, err)
@@ -49,7 +49,7 @@ func Test_UrlTemplateExecute(t *testing.T) {
 }
 
 func Test_UrlTemplateConfigOptions(t *testing.T) {
-	var clientConfig = config.ClientConfig{AllowedStatusCodes: []int{400}, MaxResponseLength: 2000, AllowedContentTypes: []string{"image/png"}, AllowUnknownLength: true}
+	var clientConfig = config.ClientConfig{StatusCodes: []int{400}, MaxLength: 2000, ContentTypes: []string{"image/png"}, UnknownLength: true}
 	p, err := ConstructUrlTemplate(UrlTemplateConfig{Template: testTemplate}, &clientConfig, &testErrMessages)
 	assert.NotNil(t, p)
 	assert.NoError(t, err)
@@ -58,20 +58,20 @@ func Test_UrlTemplateConfigOptions(t *testing.T) {
 	assert.Nil(t, img)
 	assert.Error(t, err)
 
-	clientConfig.AllowedStatusCodes = []int{200}
-	clientConfig.MaxResponseLength = 2
+	clientConfig.StatusCodes = []int{200}
+	clientConfig.MaxLength = 2
 	img, err = p.GenerateTile(internal.BackgroundContext(), ProviderContext{}, internal.TileRequest{LayerName: "layer", Z: 6, X: 10, Y: 10})
 	assert.Nil(t, img)
 	assert.Error(t, err)
 
-	clientConfig.MaxResponseLength = 2000
-	clientConfig.AllowUnknownLength = false
+	clientConfig.MaxLength = 2000
+	clientConfig.UnknownLength = false
 	img, err = p.GenerateTile(internal.BackgroundContext(), ProviderContext{}, internal.TileRequest{LayerName: "layer", Z: 6, X: 10, Y: 10})
 	assert.Nil(t, img)
 	assert.Error(t, err)
 
-	clientConfig.AllowUnknownLength = true
-	clientConfig.AllowedContentTypes = []string{"text/plain"}
+	clientConfig.UnknownLength = true
+	clientConfig.ContentTypes = []string{"text/plain"}
 	img, err = p.GenerateTile(internal.BackgroundContext(), ProviderContext{}, internal.TileRequest{LayerName: "layer", Z: 6, X: 10, Y: 10})
 	assert.Nil(t, img)
 	assert.Error(t, err)

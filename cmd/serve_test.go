@@ -82,7 +82,7 @@ func Test_ServeCommand_Execute(t *testing.T) {
 
 	cfg := `server:
   port: 12342
-  StaticHeaders:
+  Headers:
     X-Test: result
   RootPath: "/root"
   TilePath: "/tiles"
@@ -279,10 +279,10 @@ func Test_ServeCommand_ExecuteJsonLog(t *testing.T) {
 	cfg := `server:
   port: 12342
 Logging:
-  mainlog:
+  main:
     level: debug
     format: json
-    IncludeHeaders:
+    Headers:
       - User-Agent
 layers:
   - id: color
@@ -350,8 +350,8 @@ func Test_ServeCommand_ExecuteJWT(t *testing.T) {
 Authentication:
   name: jwt
   Algorithm: HS256
-  VerificationKey: hunter2
-  MaxExpirationDuration: 4294967295
+  Key: hunter2
+  MaxExpiration: 4294967295
   ExpectedAudience: audience
   ExpectedSubject: subject
   ExpectedIssuer: issuer

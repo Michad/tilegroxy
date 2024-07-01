@@ -32,18 +32,18 @@ import (
 
 type JwtConfig struct {
 	//TODO: Performance profile if the cache is actually worthwhile
-	CacheSize             uint16 //Configures the size of the cache of already verified JWTs to avoid re-verifying keys for every token. Expiration still applies. Set to 0 to disable. Defaults to 0
-	VerificationKey       string //The key for verifying the signature. The public key if using asymmetric signing. Required
-	Algorithm             string //Algorithm to allow for JWT signature. Required
-	HeaderName            string //The header to extract the JWT from. If this is "Authorization" it removes the "Bearer " from the start. Defaults to "Authorization"
-	MaxExpirationDuration uint32 //How many seconds from now can the expiration be. JWTs more than X seconds from now will result in a 401. Defaults to 1 day
-	ExpectedAudience      string //If specified, require the "aud" grant to be this string
-	ExpectedSubject       string //If specified, require the "sub" grant to be this string
-	ExpectedIssuer        string //If specified, require the "iss" grant to be this string
-	ExpectedScope         string //If specified, require the "scope" grant to contain this string.
-	LayerScope            bool   //If specified, the "scope" grant is used to limit access to layer
-	LayerScopePrefix      string //If LayerScope is true, this prefix indicates scopes to use
-	UserIdentifierGrant   string //Use the specified grant as the user identifier. Defaults to sub
+	CacheSize        uint16 //Configures the size of the cache of already verified JWTs to avoid re-verifying keys for every token. Expiration still applies. Set to 0 to disable. Defaults to 0
+	Key              string //The key for verifying the signature. The public key if using asymmetric signing. Required
+	Algorithm        string //Algorithm to allow for JWT signature. Required
+	HeaderName       string //The header to extract the JWT from. If this is "Authorization" it removes the "Bearer " from the start. Defaults to "Authorization"
+	MaxExpiration    uint32 //How many seconds from now can the expiration be. JWTs more than X seconds from now will result in a 401. Defaults to 1 day
+	ExpectedAudience string //If specified, require the "aud" grant to be this string
+	ExpectedSubject  string //If specified, require the "sub" grant to be this string
+	ExpectedIssuer   string //If specified, require the "iss" grant to be this string
+	ExpectedScope    string //If specified, require the "scope" grant to contain this string.
+	LayerScope       bool   //If specified, the "scope" grant is used to limit access to layer
+	ScopePrefix      string //If LayerScope is true, this prefix indicates scopes to use
+	UserId           string //Use the specified grant as the user identifier. Defaults to sub
 }
 
 type Jwt struct {
@@ -57,25 +57,25 @@ func ConstructJwt(config *JwtConfig, errorMessages *config.ErrorMessages) (*Jwt,
 		return nil, fmt.Errorf(errorMessages.InvalidParam, "authentication.algorithm", config.Algorithm)
 	}
 
-	if len(config.VerificationKey) < 1 {
-		return nil, fmt.Errorf(errorMessages.InvalidParam, "authentication.verificationKey", "")
+	if len(config.Key) < 1 {
+		return nil, fmt.Errorf(errorMessages.InvalidParam, "authentication.key", "")
 	}
 
 	if len(config.HeaderName) < 1 {
 		config.HeaderName = "Authorization"
 	}
 
-	if config.MaxExpirationDuration == 0 {
-		config.MaxExpirationDuration = 24 * 60 * 60
+	if config.MaxExpiration == 0 {
+		config.MaxExpiration = 24 * 60 * 60
 	}
 
-	if strings.Index(config.VerificationKey, "env.") == 0 {
-		slog.Debug("Looking up JWT verification key via env var " + config.VerificationKey[4:])
-		config.VerificationKey = os.Getenv(config.VerificationKey[4:])
+	if strings.Index(config.Key, "env.") == 0 {
+		slog.Debug("Looking up JWT verification key via env var " + config.Key[4:])
+		config.Key = os.Getenv(config.Key[4:])
 	}
 
-	if config.UserIdentifierGrant == "" {
-		config.UserIdentifierGrant = "sub"
+	if config.UserId == "" {
+		config.UserId = "sub"
 	}
 
 	if config.CacheSize == 0 {
@@ -137,19 +137,19 @@ func (c Jwt) CheckAuthentication(req *http.Request, ctx *internal.RequestContext
 
 	tokenJwt, error := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
 		if strings.Index(c.Config.Algorithm, "HS") == 0 {
-			return []byte(c.Config.VerificationKey), nil
+			return []byte(c.Config.Key), nil
 		}
 		if strings.Index(c.Config.Algorithm, "RS") == 0 {
-			return jwt.ParseRSAPublicKeyFromPEM([]byte(c.Config.VerificationKey))
+			return jwt.ParseRSAPublicKeyFromPEM([]byte(c.Config.Key))
 		}
 		if strings.Index(c.Config.Algorithm, "ES") == 0 {
-			return jwt.ParseECPublicKeyFromPEM([]byte(c.Config.VerificationKey))
+			return jwt.ParseECPublicKeyFromPEM([]byte(c.Config.Key))
 		}
 		if strings.Index(c.Config.Algorithm, "PS") == 0 {
-			return jwt.ParseRSAPublicKeyFromPEM([]byte(c.Config.VerificationKey))
+			return jwt.ParseRSAPublicKeyFromPEM([]byte(c.Config.Key))
 		}
 		if c.Config.Algorithm == "EdDSA" {
-			return jwt.ParseEdPublicKeyFromPEM([]byte(c.Config.VerificationKey))
+			return jwt.ParseEdPublicKeyFromPEM([]byte(c.Config.Key))
 		}
 
 		return nil, fmt.Errorf(c.errorMessages.InvalidParam, "jwt.alg", c.Config.Algorithm)
@@ -170,7 +170,7 @@ func (c Jwt) CheckAuthentication(req *http.Request, ctx *internal.RequestContext
 		return false
 	}
 
-	if time.Until(exp.Time) > time.Duration(c.Config.MaxExpirationDuration)*time.Second {
+	if time.Until(exp.Time) > time.Duration(c.Config.MaxExpiration)*time.Second {
 		slog.InfoContext(ctx, "JWT parsing error: distant expiration")
 		return false
 	}
@@ -205,14 +205,14 @@ func (c Jwt) CheckAuthentication(req *http.Request, ctx *internal.RequestContext
 
 			if c.Config.LayerScope {
 				for _, scope := range scopeSplit {
-					if c.Config.LayerScopePrefix == "" || strings.Index(scope, c.Config.LayerScopePrefix) == 0 {
-						ctx.AllowedLayers = append(ctx.AllowedLayers, scope[len(c.Config.LayerScopePrefix):])
+					if c.Config.ScopePrefix == "" || strings.Index(scope, c.Config.ScopePrefix) == 0 {
+						ctx.AllowedLayers = append(ctx.AllowedLayers, scope[len(c.Config.ScopePrefix):])
 					}
 				}
 			}
 		}
 
-		rawUid := rawClaim[c.Config.UserIdentifierGrant]
+		rawUid := rawClaim[c.Config.UserId]
 		if rawUid != nil {
 			ctx.UserIdentifier, _ = rawUid.(string)
 		}

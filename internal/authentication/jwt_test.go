@@ -43,7 +43,7 @@ func TestFailMissingKey(t *testing.T) {
 }
 func TestFailMissingAlg(t *testing.T) {
 	jwtConfig := JwtConfig{
-		VerificationKey: "hunter2",
+		Key: "hunter2",
 	}
 	jwt, err := ConstructJwt(&jwtConfig, &config.ErrorMessages{})
 
@@ -53,9 +53,9 @@ func TestFailMissingAlg(t *testing.T) {
 
 func TestGoodJwts(t *testing.T) {
 	jwtConfig := JwtConfig{
-		Algorithm:             "HS256",
-		VerificationKey:       "hunter2",
-		MaxExpirationDuration: 4294967295, //136 years from now
+		Algorithm:     "HS256",
+		Key:           "hunter2",
+		MaxExpiration: 4294967295, //136 years from now
 	}
 	jwt, err := ConstructJwt(&jwtConfig, &config.ErrorMessages{})
 
@@ -75,8 +75,8 @@ func TestGoodJwts(t *testing.T) {
 
 func TestBadJwts(t *testing.T) {
 	jwtConfig := JwtConfig{
-		Algorithm:       "HS256",
-		VerificationKey: "hunter2",
+		Algorithm: "HS256",
+		Key:       "hunter2",
 	}
 	jwt, err := ConstructJwt(&jwtConfig, &config.ErrorMessages{})
 
@@ -105,13 +105,13 @@ func TestBadJwts(t *testing.T) {
 
 func TestGoodJwtClaims(t *testing.T) {
 	jwtConfig := JwtConfig{
-		Algorithm:             "HS256",
-		VerificationKey:       "hunter2",
-		MaxExpirationDuration: 4294967295, //136 years from now
-		ExpectedAudience:      "audience",
-		ExpectedSubject:       "subject",
-		ExpectedIssuer:        "issuer",
-		ExpectedScope:         "tile",
+		Algorithm:        "HS256",
+		Key:              "hunter2",
+		MaxExpiration:    4294967295, //136 years from now
+		ExpectedAudience: "audience",
+		ExpectedSubject:  "subject",
+		ExpectedIssuer:   "issuer",
+		ExpectedScope:    "tile",
 	}
 	jwt, err := ConstructJwt(&jwtConfig, &config.ErrorMessages{})
 
@@ -131,12 +131,12 @@ func TestGoodJwtClaims(t *testing.T) {
 
 func TestGoodJwtScopeLimit(t *testing.T) {
 	jwtConfig := JwtConfig{
-		Algorithm:             "HS256",
-		VerificationKey:       "hunter2",
-		MaxExpirationDuration: 4294967295, //136 years from now
-		LayerScope:            true,
-		LayerScopePrefix:      "tile/",
-		UserIdentifierGrant:   "name",
+		Algorithm:     "HS256",
+		Key:           "hunter2",
+		MaxExpiration: 4294967295, //136 years from now
+		LayerScope:    true,
+		ScopePrefix:   "tile/",
+		UserId:        "name",
 	}
 	jwt, err := ConstructJwt(&jwtConfig, &config.ErrorMessages{})
 
@@ -166,13 +166,13 @@ func TestGoodJwtScopeLimit(t *testing.T) {
 
 func TestBadJwtClaims(t *testing.T) {
 	jwtConfig := JwtConfig{
-		Algorithm:             "HS256",
-		VerificationKey:       "hunter2",
-		MaxExpirationDuration: 4294967295, //136 years from now
-		ExpectedAudience:      "audience",
-		ExpectedSubject:       "subject",
-		ExpectedIssuer:        "issuer",
-		ExpectedScope:         "tile",
+		Algorithm:        "HS256",
+		Key:              "hunter2",
+		MaxExpiration:    4294967295, //136 years from now
+		ExpectedAudience: "audience",
+		ExpectedSubject:  "subject",
+		ExpectedIssuer:   "issuer",
+		ExpectedScope:    "tile",
 	}
 	jwt, err := ConstructJwt(&jwtConfig, &config.ErrorMessages{})
 

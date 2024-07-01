@@ -473,24 +473,24 @@ Configuration options:
 
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| VerificationKey | string | Yes | None | The key for verifying the signature. The public key if using asymmetric signing. If the value starts with "env." the remainder is interpreted as the name of the Environment Variable to use to retrieve the verification key. |
+| Key | string | Yes | None | The key for verifying the signature. The public key if using asymmetric signing. If the value starts with "env." the remainder is interpreted as the name of the Environment Variable to use to retrieve the verification key. |
 | Algorithm | string | Yes | None | Algorithm to allow for JWT signature. One of: "HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "EdDSA" |
 | HeaderName | string | No | Authorization | The header to extract the JWT from. If this is "Authorization" it removes "Bearer " from the start |
-| MaxExpirationDuration | uint32 | No | 1 day | How many seconds from now can the expiration be. JWTs more than X seconds from now will result in a 401 |
+| MaxExpiration | uint32 | No | 1 day | How many seconds from now can the expiration be. JWTs more than X seconds from now will result in a 401 |
 | ExpectedAudience | string | No | None | Require the "aud" grant to be this string |
 | ExpectedSubject | string | No | None | Require the "sub" grant to be this string |
 | ExpectedIssuer | string | No | None | Require the "iss" grant to be this string |
 | ExpectedScope | string | No | None | Require the "scope" grant to contain this string |
 | LayerScope | bool | No | false | If true the "scope" grant is used to whitelist access to layers |
-| LayerScopePrefix | string | No | Empty string | If true this prefix indicates scopes to use. For example a prefix of "tile/" will mean a scope of "tile/test" grants access to "test". Doesn't impact ExpectedScope |
-| UserIdentifierGrant | string | No | sub | Use the specified grant as the user identifier. This is just used for logging by default but it's made available to custom providers |
+| ScopePrefix | string | No | Empty string | If true this prefix indicates scopes to use. For example a prefix of "tile/" will mean a scope of "tile/test" grants access to "test". Doesn't impact ExpectedScope |
+| UserId | string | No | sub | Use the specified grant as the user identifier. This is just used for logging by default but it's made available to custom providers |
 
 Example:
 
 ```
 authentication:
   name: jwt
-  verificationkey: env.JWT_KEY
+  key: env.JWT_KEY
   algorithm: HS256
 ```
 
@@ -555,7 +555,7 @@ Configuration options:
 | Port | int | No | 8080 | Port to bind HTTP server to |
 | RootPath | string | No | / | The root HTTP Path to serve all requests under. |
 | TilePath | string | No | tiles | The HTTP Path to serve tiles under in addition to RootPath. The defaults will result in a path that looks like /tiles/{layer}/{z}/{x}/{y} |
-| StaticHeaders | map[string]string | No | None | Include these headers in all response from server |
+| Headers | map[string]string | No | None | Include these headers in all response from server |
 | Production | bool | No | false | Hardens operation for usage in production. For instance, controls serving splash page, documentation, x-powered-by header. |
 | Timeout | uint | No | 60 | How long (in seconds) a request can be in flight before we cancel it and return an error |
 | Gzip | bool | No | false | Whether to gzip compress HTTP responses |
@@ -582,21 +582,21 @@ Configuration options:
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
 | UserAgent | string | No | tilegroxy/VERSION | The user agent to include in outgoing http requests. |
-| MaxResponseLength | int | No | 10 MiB | The maximum Content-Length to allow incoming responses | 
-| AllowUnknownLength | bool | No | false | Allow responses that are missing a Content-Length header, this could lead to excessive memory usage |
-| AllowedContentTypes | string[] | No | image/png, image/jpg | The content-types to allow remote servers to return. Anything else will be interpreted as an error |
-| AllowedStatusCodes | int[] | No | 200 | The status codes from the remote server to consider successful |
-| StaticHeaders | map[string]string | No | None | Include these headers in requests |
+| MaxLength | int | No | 10 MiB | The maximum Content-Length to allow incoming responses | 
+| UnknownLength | bool | No | false | Allow responses that are missing a Content-Length header, this could lead to excessive memory usage |
+| ContentTypes | string[] | No | image/png, image/jpg | The content-types to allow remote servers to return. Anything else will be interpreted as an error |
+| StatusCodes | int[] | No | 200 | The status codes from the remote server to consider successful |
+| Headers | map[string]string | No | None | Include these headers in requests |
 
 The following can be supplied as environment variables:
 
 | Configuration Parameter | Environment Variable |
 | --- | --- |
 | UserAgent | CLIENT_USERAGENT | 
-| MaxResponseLength | CLIENT_MAXRESPONSELENGTH | 
-| AllowUnknownLength | CLIENT_ALLOWUNKNOWNLENGTH | 
-| AllowedContentTypes | CLIENT_ALLOWEDCONTENTTYPES |
-| AllowedStatusCodes | CLIENT_ALLOWEDSTATUSCODES | 
+| MaxLength | CLIENT_MAXLENGTH | 
+| UnknownLength | CLIENT_UNKNOWNLENGTH | 
+| ContentTypes | CLIENT_CONTENTTYPES |
+| StatusCodes | CLIENT_STATUSCODES | 
 
 ## Log
 
@@ -608,7 +608,7 @@ Configures application log messages.
 
 These log messages output in a structured log format, either with Key=Value attributes in plain (text) mode or as JSON.  In either mode attributes are available driven by the HTTP request that is being processed.  We try to avoid plain mode logs being overly verbose for readability, which means if you want all the attributes you'll need to explicitly enable them.  In JSON mode we assume you're ingesting them into a system that handles formatting so include more attributes by default.  
 
-In order to avoid logging secrets you need to specify the headers to log. If you're including auth information via the URL (not recommended) you should make sure IncludeRequestAttributes is false to avoid logging those.
+In order to avoid logging secrets you need to specify the headers to log. If you're including auth information via the URL (not recommended) you should make sure Request is false to avoid logging those.
 
 Level controls the verbosity of logs. There is no guarantee as to the specific log messages that will be outputted so you might see more or fewer log messages between versions of the application, especially at higher verbosity levels.  Here are the general rules of what to expect for each level (from least to most verbose):
 
@@ -623,23 +623,23 @@ Configuration options:
 
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| EnableStandardOut | bool | No | true | Whether to write application logs to standard out |
+| Console | bool | No | true | Whether to write application logs to standard out |
 | Path | string | No | None | The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth |
 | Format | string | No | plain | The format to output application logs in. Applies to both standard out and file out. Possible values: plain, json |
 | Level | string | No | info | The most-detailed log level that should be included. Possible values: debug, info, warn, error, trace, absurd |
-| IncludeRequestAttributes | bool | No | auto | Whether to include any extra attributes based on request parameters (excluding explicitly requested). If auto (default) it defaults true if format is json, false otherwise |
-| IncludeHeaders | string[] | No | None | Headers to include as attributes in structured log messages. Attribute key will be in all lowercase. | 
+| Request | bool | No | auto | Whether to include any extra attributes based on request parameters (excluding explicitly requested). If auto (default) it defaults true if format is json, false otherwise |
+| Headers | string[] | No | None | Headers to include as attributes in structured log messages. Attribute key will be in all lowercase. | 
 
 The following can be supplied as environment variables:
 
 | Configuration Parameter | Environment Variable |
 | --- | --- |
-| EnableStandardOut | LOGGING_MAINLOG_ENABLESTANDARDOUT |
-| Path | LOGGING_MAINLOG_PATH |
-| Format | LOGGING_MAINLOG_FORMAT |
-| Level | LOGGING_MAINLOG_LEVEL | 
-| IncludeRequestAttributes | LOGGING_MAINLOG_INCLUDEREQUESTATTRIBUTES | 
-| IncludeHeaders | LOGGING_MAINLOG_INCLUDEHEADERS | 
+| Console | LOGGING_MAIN_CONSOLE |
+| Path | LOGGING_MAIN_PATH |
+| Format | LOGGING_MAIN_FORMAT |
+| Level | LOGGING_MAIN_LEVEL | 
+| Request | LOGGING_MAIN_REQUEST | 
+| Headers | LOGGING_MAIN_HEADERS | 
 
 ### Access Log
 
@@ -649,7 +649,7 @@ Configuration options:
 
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| EnableStandardOut | bool | No | true | Whether to write access logs to standard out |
+| Console | bool | No | true | Whether to write access logs to standard out |
 | Path | string | No | None | The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth |
 | Format | string | No | common | The format to output access logs in. Applies to both standard out and file out. Possible values: common, combined |
 
@@ -657,9 +657,9 @@ The following can be supplied as environment variables:
 
 | Configuration Parameter | Environment Variable |
 | --- | --- |
-| EnableStandardOut | LOGGING_ACCESSLOG_ENABLESTANDARDOUT |
-| Path | LOGGING_ACCESSLOG_PATH | 
-| Format | LOGGING_ACCESSLOG_FORMAT |
+| Console | LOGGING_ACCESS_CONSOLE |
+| Path | LOGGING_ACCESS_PATH | 
+| Format | LOGGING_ACCESS_FORMAT |
 
 
 ## Error
@@ -686,14 +686,14 @@ Configuration options:
 | Mode | string | No | image | The error mode as described above.  One of: text none image image+header |
 | Messages | ErrorMessages | No | Various | Controls the error messages returned as described below |
 | Images | ErrorImages | No | Various | Controls the images returned for errors as described below |
-| SuppressStatusCode | bool | No | false | If set we always return 200 regardless of what happens |
+| AlwaysOk | bool | No | false | If set we always return 200 regardless of what happens |
 
 The following can be supplied as environment variables:
 
 | Configuration Parameter | Environment Variable |
 | --- | --- |
 | Mode | ERROR_MODE | 
-| SuppressStatusCode | ERROR_SUPPRESSSTATUSCODE | 
+| AlwaysOk | ERROR_ALWAYSOK | 
 
 
 ### Error Images

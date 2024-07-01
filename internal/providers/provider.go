@@ -185,7 +185,7 @@ func getTile(ctx *internal.RequestContext, clientConfig *config.ClientConfig, ur
 
 	req.Header.Set("User-Agent", clientConfig.UserAgent)
 
-	for h, v := range clientConfig.StaticHeaders {
+	for h, v := range clientConfig.Headers {
 		req.Header.Set(h, v)
 	}
 
@@ -204,20 +204,20 @@ func getTile(ctx *internal.RequestContext, clientConfig *config.ClientConfig, ur
 
 	slog.DebugContext(ctx, fmt.Sprintf("Response status: %v", resp.StatusCode))
 
-	if !slices.Contains(clientConfig.AllowedStatusCodes, resp.StatusCode) {
+	if !slices.Contains(clientConfig.StatusCodes, resp.StatusCode) {
 		return nil, &RemoteServerError{StatusCode: resp.StatusCode}
 	}
 
-	if !slices.Contains(clientConfig.AllowedContentTypes, resp.Header.Get("Content-Type")) {
+	if !slices.Contains(clientConfig.ContentTypes, resp.Header.Get("Content-Type")) {
 		return nil, &InvalidContentTypeError{ContentType: resp.Header.Get("Content-Type")}
 	}
 
 	if resp.ContentLength == -1 {
-		if !clientConfig.AllowUnknownLength {
+		if !clientConfig.UnknownLength {
 			return nil, &InvalidContentLengthError{-1}
 		}
 	} else {
-		if resp.ContentLength > int64(clientConfig.MaxResponseLength) {
+		if resp.ContentLength > int64(clientConfig.MaxLength) {
 			return nil, &InvalidContentLengthError{int(resp.ContentLength)}
 		}
 	}
@@ -228,7 +228,7 @@ func getTile(ctx *internal.RequestContext, clientConfig *config.ClientConfig, ur
 		return nil, &RemoteServerError{StatusCode: resp.StatusCode}
 	}
 
-	if len(img) > int(clientConfig.MaxResponseLength) {
+	if len(img) > int(clientConfig.MaxLength) {
 		return nil, &InvalidContentLengthError{int(len(img))}
 	}
 

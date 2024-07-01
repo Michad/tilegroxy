@@ -5,35 +5,35 @@ Server:
     Gzip: true
     Port: 8081
     Production: true
-    StaticHeaders:
+    Headers:
         x-test: "true"
     Timeout: 6
 Logging:
-    AccessLog:
-        EnableStandardOut: false
+    Access:
+        Console: false
         Format: common
         Path: "my-access.log"
-    MainLog:
-        EnableStandardOut: false
+    Main:
+        Console: false
         Format: json
         Level: debug
         Path: "my-main.log"
 Authentication:
   name: jwt
   algorithm: HS256
-  verificationkey: some_secret_key
+  key: some_secret_key
 Client:
-    AllowUnknownLength: false
-    AllowedContentTypes:
+    UnknownLength: false
+    ContentTypes:
         - image/png
         - image/jpeg
         - image/gif
         - image/webp
-    AllowedStatusCodes:
+    StatusCodes:
         - 200
         - 201
-    MaxResponseLength: 100000000
-    StaticHeaders: 
+    MaxLength: 100000000
+    Headers: 
       x-custom-header: hello
     UserAgent: my_app_name/1.0
 error:
