@@ -2,11 +2,11 @@
 
 Tilegroxy is heavily configuration driven. This document describes the various configuration options available. [Complete examples are available here.](../examples/configurations/)
 
-Some configuration sections ([authentication](#authentication), [provider](#provider), and [cache](#cache)) support selecting different methods of operation that change the full list of parameters available. For example,  a "proxy" provider requires a `url` parameter to get a map tile from another server while a "static" provider takes in a `image` to return for every request. You select these operating modes using a parameter called `name`. 
+Some configuration sections ([authentication](#authentication), [provider](#provider), and [cache](#cache)) support selecting different methods of operation that change the full list of parameters available. For example,  a "proxy" provider requires a `url` parameter to get a map tile from another server while a "static" provider takes in a `image` to return for every request. You select these operating modes using a parameter called `name`. In addition, since these sections are too dynamic to have fixed environment variables and frequently may require a secret to operate, any string parameters can be made to use an environment variable by specifying a value in the format of `env.ENV_VAR_NAME`.
 
 Configuration key names are case-insensitive unless indicated otherwise. Names are always lower case. 
 
-Some parameters can be specified by environment variables which must be upper case. Environment variables override config parameters which override default values.
+Some parameters can be specified by environment variables which must be upper case. Environment variables override config parameters which override default values. 
 
 The following is the top-level configuration structure. All top-level keys are optional besides layers:
 

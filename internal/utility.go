@@ -16,6 +16,8 @@ package internal
 import (
 	"errors"
 	"fmt"
+	"log/slog"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -102,4 +104,27 @@ func ParseZoomString(str string) ([]int, error) {
 	}
 
 	return result, nil
+}
+
+// Find any string values that start with `env.` and interpret the rest as an environment variable. Replaces the full value with the contents of the respective environment variable. Useful for avoiding secrets in config so your configuration can be placed in source control
+func ReplaceEnv(rawConfig map[string]interface{}) map[string]interface{} {
+	result := make(map[string]interface{})
+	for k, v := range rawConfig {
+		if vMap, ok := v.(map[string]interface{}); ok {
+			result[k] = ReplaceEnv(vMap)
+		} else if vStr, ok := v.(string); ok {
+			if strings.Index(vStr, "env.") == 0 {
+				envVar := vStr[4:]
+				slog.Debug("Replacing env var " + envVar)
+
+				result[k] = os.Getenv(envVar)
+			} else {
+				result[k] = vStr
+			}
+		} else {
+			result[k] = v
+		}
+	}
+
+	return result
 }

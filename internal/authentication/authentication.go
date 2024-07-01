@@ -28,6 +28,8 @@ type Authentication interface {
 }
 
 func ConstructAuth(rawConfig map[string]interface{}, errorMessages *config.ErrorMessages) (Authentication, error) {
+	rawConfig = internal.ReplaceEnv(rawConfig)
+
 	if rawConfig["name"] == "none" {
 		return Noop{}, nil
 	} else if rawConfig["name"] == "static key" {

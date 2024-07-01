@@ -36,6 +36,8 @@ type Provider interface {
 }
 
 func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages) (Provider, error) {
+	rawConfig = internal.ReplaceEnv(rawConfig)
+
 	if rawConfig["name"] == "url template" {
 		var config UrlTemplateConfig
 		err := mapstructure.Decode(rawConfig, &config)
