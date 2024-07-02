@@ -14,7 +14,11 @@ builds:
     ldflags:
       - -s -w -X {{.Env.PKG}}/internal.tilegroxyVersion={{.Env.VERSION}} -X {{.Env.PKG}}/internal.tilegroxyBuildRef={{.Env.REF}} -X {{.Env.PKG}}/internal.tilegroxyBuildDate={{.Env.DATE}}
 archives:
-  - format: binary
+  - builds_info:
+      mode: 0744
+    format_overrides:
+      - goos: windows
+        format: zip
 changelog:
   use: github-native
 release:
@@ -23,3 +27,5 @@ release:
     name: tilegroxy
   draft: true
   replace_existing_draft: true
+  extra_files:
+    - glob: ./LICENSE
