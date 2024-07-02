@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Michad/tilegroxy/internal/server"
 	"github.com/stretchr/testify/assert"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -33,6 +34,8 @@ import (
 )
 
 func init() {
+	server.InterruptFlags = append(server.InterruptFlags, syscall.SIGUSR1)
+
 	//This is a hack to help with vscode test execution. Put a .env in repo root w/ anything you need for test containers
 	if env, err := os.ReadFile("../.env"); err == nil {
 		envs := strings.Split(string(env), "\n")
