@@ -9,6 +9,71 @@ on:
 permissions:
   contents: read
 jobs:
+  ossf:
+    name: OSSF Scorecard analysis
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      id-token: write
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          persist-credentials: false
+      - name: "Run analysis"
+        uses: ossf/scorecard-action@dc50aa9510b46c811795eb24b2f1ba02a914e534 # v2.3.3
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: ${{ github.event_name != 'pull_request' }}
+      - name: "Upload artifact"
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        with:
+          name: SARIF file
+          path: results.sarif
+          retention-days: 5
+      - name: "Upload to code-scanning"
+        if: github.event_name != 'pull_request'
+        uses: github/codeql-action/upload-sarif@23acc5c183826b7a8a97bce3cecc52db901f8251 # v3.25.10
+        with:
+          sarif_file: results.sarif
+  dependency-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Checkout Repository'
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - name: 'Dependency Review'
+        uses: actions/dependency-review-action@72eb03d02c7872a771aacd928f3123ac62ad6d3a # v4.3.3
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ["go"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@23acc5c183826b7a8a97bce3cecc52db901f8251 # v3.25.10
+        with:
+          languages: ${{ matrix.language }}
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@23acc5c183826b7a8a97bce3cecc52db901f8251 # v3.25.10
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@23acc5c183826b7a8a97bce3cecc52db901f8251 # v3.25.10
+        with:
+          category: "/language:${{matrix.language}}"
+
   govulncheck:
     name: Run govulncheck
     permissions:
@@ -27,31 +92,32 @@ jobs:
       uses: github/codeql-action/upload-sarif@23acc5c183826b7a8a97bce3cecc52db901f8251 # v3.25.10
       with:
         sarif_file: govuln.sarif
-  snyk:
-    permissions:
-      contents: read
-      security-events: write 
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
-    - name: Build a Docker image
-      run: docker build -t michad/tilegroxy .
-    - name: Run Snyk to check Docker image for vulnerabilities
-      continue-on-error: true
-      uses: snyk/actions/docker@a1346e4eaf761d462da22c34c681dc06849b6851
-      env:
-        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-      with:
-        image: michad/tilegroxy
-        args: --file=Dockerfile
-      # Snyk sometimes generates invalid severity scores that tank the upload step. And they're insistent on not fixing the bug. So we need to post-process it to avoid build failures
-      # See https://github.com/github/codeql-action/issues/2187 for more context.
-    - name: Post-process sarif output
-      run: |
-        sed -i 's/"security-severity": null/"security-severity": "0"/g' snyk.sarif
-        sed -i 's/"security-severity": "null"/"security-severity": "0"/g' snyk.sarif
-        sed -i 's/"security-severity": "undefined"/"security-severity": "0"/g' snyk.sarif
-    - name: Upload result to GitHub Code Scanning
-      uses: github/codeql-action/upload-sarif@23acc5c183826b7a8a97bce3cecc52db901f8251 # v3.25.10
-      with:
-        sarif_file: snyk.sarif
+  # Disabled because its free version is too limited and it keeps failing due to exceeding run limit
+  # snyk:
+  #   permissions:
+  #     contents: read
+  #     security-events: write 
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+  #   - name: Build a Docker image
+  #     run: docker build -t michad/tilegroxy .
+  #   - name: Run Snyk to check Docker image for vulnerabilities
+  #     continue-on-error: true
+  #     uses: snyk/actions/docker@a1346e4eaf761d462da22c34c681dc06849b6851
+  #     env:
+  #       SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+  #     with:
+  #       image: michad/tilegroxy
+  #       args: --file=Dockerfile
+  #     # Snyk sometimes generates invalid severity scores that tank the upload step. And they're insistent on not fixing the bug. So we need to post-process it to avoid build failures
+  #     # See https://github.com/github/codeql-action/issues/2187 for more context.
+  #   - name: Post-process sarif output
+  #     run: |
+  #       sed -i 's/"security-severity": null/"security-severity": "0"/g' snyk.sarif
+  #       sed -i 's/"security-severity": "null"/"security-severity": "0"/g' snyk.sarif
+  #       sed -i 's/"security-severity": "undefined"/"security-severity": "0"/g' snyk.sarif
+  #   - name: Upload result to GitHub Code Scanning
+  #     uses: github/codeql-action/upload-sarif@23acc5c183826b7a8a97bce3cecc52db901f8251 # v3.25.10
+  #     with:
+  #       sarif_file: snyk.sarif
