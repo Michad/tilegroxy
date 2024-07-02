@@ -477,23 +477,13 @@ func Test_ServeCommand_RemoteProvider(t *testing.T) {
 	ctx := context.Background()
 
 	etcdReq := testcontainers.ContainerRequest{
-		Image: "quay.io/coreos/etcd:latest",
+		Image: "bitnami/etcd:latest",
 		WaitingFor: wait.ForAll(
-			wait.ForLog("embed: ready to serve client requests"),
+			wait.ForLog("ready to serve client requests"),
 		),
 		ExposedPorts: []string{"2379/tcp"},
-		Cmd: []string{
-			"etcd",
-			"-name",
-			"etcd0",
-			"-advertise-client-urls",
-			"http://127.0.0.1:2379,http://127.0.0.1:4001",
-			"-listen-client-urls", "http://0.0.0.0:2379,http://0.0.0.0:4001",
-			"-initial-advertise-peer-urls", "http://127.0.0.1:2380",
-			"-listen-peer-urls", "http://0.0.0.0:2380",
-			"-initial-cluster-token", "etcd-cluster-1",
-			"-initial-cluster", "etcd0=http://127.0.0.1:2380",
-			"-initial-cluster-state", "new",
+		Env: map[string]string{
+			"ALLOW_NONE_AUTHENTICATION": "yes",
 		},
 	}
 
