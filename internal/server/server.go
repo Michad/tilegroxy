@@ -27,7 +27,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/Michad/tilegroxy/internal"
@@ -44,6 +43,8 @@ func handleNoContent(w http.ResponseWriter, req *http.Request) {
 }
 
 type TypeOfError int
+
+var interruptFlags = []os.Signal{os.Interrupt}
 
 const (
 	TypeOfErrorBounds = iota
@@ -303,7 +304,7 @@ func ListenAndServe(config *config.Config, layerList []*layers.Layer, auth *auth
 		return err
 	}
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGUSR1)
+	ctx, stop := signal.NotifyContext(context.Background(), interruptFlags...)
 	defer stop()
 
 	srv := &http.Server{
