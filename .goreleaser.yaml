@@ -1,0 +1,25 @@
+version: 2
+before:
+  hooks:
+    - go mod tidy
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    flags:
+      - -tags=viper_bind_struct
+    ldflags:
+      - -X "${PKG}/internal.tilegroxyVersion={{.Env.VERSION}}" -X "{{.Env.PKG}}/internal.tilegroxyBuildRef={{.Env.REF}}" -X "{{.Env.PKG}}/internal.tilegroxyBuildDate={{.Env.DATE}}"
+archives:
+  - format: binary
+changelog:
+  use: github-native
+release:
+  github:
+    owner: michad
+    name: tilegroxy
+  draft: true
+  replace_existing_draft: true
