@@ -10,7 +10,9 @@ builds:
       - windows
       - darwin
     flags:
-      - -tags="viper_bind_struct"
+      - -tags=viper_bind_struct
+    tags:
+      - viper_bind_struct
     ldflags:
       - -s -w -X {{.Env.PKG}}/internal.tilegroxyVersion={{.Env.VERSION}} -X {{.Env.PKG}}/internal.tilegroxyBuildRef={{.Env.REF}} -X {{.Env.PKG}}/internal.tilegroxyBuildDate={{.Env.DATE}}
 archives:
