@@ -29,6 +29,8 @@ type Cache interface {
 }
 
 func ConstructCache(rawConfig map[string]interface{}, errorMessages *config.ErrorMessages) (Cache, error) {
+	rawConfig = internal.ReplaceEnv(rawConfig)
+
 	if rawConfig["name"] == "none" || rawConfig["name"] == "test" {
 		return Noop{}, nil
 	} else if rawConfig["name"] == "disk" {

@@ -105,7 +105,7 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	for h, v := range h.config.Server.StaticHeaders {
+	for h, v := range h.config.Server.Headers {
 		w.Header().Add(h, v)
 	}
 

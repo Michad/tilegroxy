@@ -17,14 +17,33 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"os"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
+	clientv3 "go.etcd.io/etcd/client/v3"
 )
+
+func init() {
+	//This is a hack to help with vscode test execution. Put a .env in repo root w/ anything you need for test containers
+	if env, err := os.ReadFile("../.env"); err == nil {
+		envs := strings.Split(string(env), "\n")
+		for _, e := range envs {
+			if es := strings.Split(e, "="); len(es) == 2 {
+				fmt.Printf("Loading env...")
+				os.Setenv(es[0], es[1])
+			}
+		}
+	}
+}
 
 func coreServeTest(t *testing.T, cfg string, url string) (*http.Response, error, func()) {
 	exitStatus = -1
@@ -40,7 +59,7 @@ func coreServeTest(t *testing.T, cfg string, url string) (*http.Response, error,
 
 	go func() { bindErr = rootCmd.Execute() }()
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(2 * time.Second)
 
 	if bindErr != nil {
 		return nil, bindErr, nil
@@ -82,7 +101,7 @@ func Test_ServeCommand_Execute(t *testing.T) {
 
 	cfg := `server:
   port: 12342
-  StaticHeaders:
+  Headers:
     X-Test: result
   RootPath: "/root"
   TilePath: "/tiles"
@@ -279,10 +298,10 @@ func Test_ServeCommand_ExecuteJsonLog(t *testing.T) {
 	cfg := `server:
   port: 12342
 Logging:
-  mainlog:
+  main:
     level: debug
     format: json
-    IncludeHeaders:
+    Headers:
       - User-Agent
 layers:
   - id: color
@@ -350,8 +369,8 @@ func Test_ServeCommand_ExecuteJWT(t *testing.T) {
 Authentication:
   name: jwt
   Algorithm: HS256
-  VerificationKey: hunter2
-  MaxExpirationDuration: 4294967295
+  Key: hunter2
+  MaxExpiration: 4294967295
   ExpectedAudience: audience
   ExpectedSubject: subject
   ExpectedIssuer: issuer
@@ -446,4 +465,83 @@ layers:
 	assert.Equal(t, 401, resp3.StatusCode)
 
 	resp3.Body.Close()
+}
+
+func Test_ServeCommand_RemoteProvider(t *testing.T) {
+	exitStatus = -1
+	rootCmd.ResetFlags()
+	serveCmd.ResetFlags()
+	initRoot()
+	initServe()
+
+	ctx := context.Background()
+
+	etcdReq := testcontainers.ContainerRequest{
+		Image: "bitnami/etcd:latest",
+		WaitingFor: wait.ForAll(
+			wait.ForLog("ready to serve client requests"),
+		),
+		ExposedPorts: []string{"2379/tcp"},
+		Env: map[string]string{
+			"ALLOW_NONE_AUTHENTICATION": "yes",
+		},
+	}
+
+	etcdC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: etcdReq,
+		Started:          true,
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	defer etcdC.Terminate(ctx)
+
+	cfg := `server:
+  port: 12342
+layers:
+  - id: color
+    provider:
+      name: static
+      color: "FFFFFF"
+`
+	endpoint, err := etcdC.Endpoint(ctx, "")
+	assert.NoError(t, err)
+
+	fmt.Println("Running on " + endpoint)
+
+	cli, err := clientv3.New(clientv3.Config{
+		Endpoints:   []string{endpoint},
+		DialTimeout: 5 * time.Second,
+	})
+	assert.NoError(t, err)
+	defer cli.Close()
+	ctx2, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	_, err = cli.Put(ctx2, "sample_key", cfg)
+	cancel()
+	assert.NoError(t, err)
+
+	rootCmd.SetArgs([]string{"serve", "--remote-provider", "etcd3", "--remote-path", "sample_key", "--remote-endpoint", "http://" + endpoint})
+
+	go func() { assert.NoError(t, rootCmd.Execute()) }()
+
+	time.Sleep(1 * time.Second)
+
+	req, err := http.NewRequest(http.MethodGet, "http://localhost:12342/tiles/color/8/12/32", nil)
+	assert.NoError(t, err)
+
+	resp, err := http.DefaultClient.Do(req)
+
+	defer func() {
+		syscall.Kill(syscall.Getpid(), syscall.SIGUSR1)
+		if resp != nil {
+			resp.Body.Close()
+		}
+	}()
+
+	assert.NoError(t, err)
+	if assert.NotNil(t, resp) {
+		assert.Equal(t, 200, resp.StatusCode)
+		assert.Equal(t, "image/png", resp.Header["Content-Type"][0])
+	}
 }

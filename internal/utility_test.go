@@ -14,6 +14,7 @@
 package internal
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -52,4 +53,44 @@ func TestParseZoom(t *testing.T) {
 
 	_, err = ParseZoomString("-1-1")
 	assert.Error(t, err)
+}
+
+func Test_ReplaceEnv_Nothing(t *testing.T) {
+	raw := make(map[string]interface{})
+	child := make(map[string]interface{})
+
+	raw["H"] = "K"
+	raw["f"] = 1.0
+	raw["i"] = 1
+	raw["a"] = []string{"a", "b", "c"}
+	raw["child"] = child
+	child["f"] = "saf"
+
+	cloned := ReplaceEnv(raw)
+
+	assert.Equal(t, raw, cloned)
+}
+
+func Test_ReplaceEnv_WithVals(t *testing.T) {
+	os.Setenv("TEST", "val")
+	os.Setenv("TEST2", "val2")
+	raw := make(map[string]interface{})
+	child := make(map[string]interface{})
+
+	raw["H"] = "K"
+	raw["f"] = 1.0
+	raw["i"] = 1
+	raw["a"] = []string{"a", "b", "c"}
+	raw["child"] = child
+	child["f"] = "saf"
+	raw["p"] = "env.TEST"
+	raw["fake"] = "env.FAKE"
+	child["r"] = "env.TEST2"
+
+	cloned := ReplaceEnv(raw)
+
+	assert.Equal(t, "val", cloned["p"])
+	assert.Equal(t, "", cloned["fake"])
+	assert.Equal(t, "val2", cloned["child"].(map[string]interface{})["r"])
+	assert.Equal(t, "saf", cloned["child"].(map[string]interface{})["f"])
 }

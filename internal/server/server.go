@@ -56,7 +56,7 @@ const (
 func writeError(ctx *internal.RequestContext, w http.ResponseWriter, cfg *config.ErrorConfig, errorType TypeOfError, message string, args ...any) {
 	var status int
 	var level slog.Level
-	if !cfg.SuppressStatusCode {
+	if !cfg.AlwaysOk {
 		if errorType == TypeOfErrorAuth {
 			level = slog.LevelDebug
 			status = http.StatusUnauthorized
@@ -128,34 +128,34 @@ func (h slogContextHandler) Handle(ctx context.Context, r slog.Record) error {
 
 	return h.Handler.Handle(ctx, r)
 }
-func configureMainLogging(cfg *config.Config) error {
-	if cfg.Logging.MainLog.EnableStandardOut || len(cfg.Logging.MainLog.Path) > 0 {
+func configureMainging(cfg *config.Config) error {
+	if cfg.Logging.Main.Console || len(cfg.Logging.Main.Path) > 0 {
 		var out io.Writer
-		if len(cfg.Logging.MainLog.Path) > 0 {
-			logFile, err := os.OpenFile(cfg.Logging.MainLog.Path, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+		if len(cfg.Logging.Main.Path) > 0 {
+			logFile, err := os.OpenFile(cfg.Logging.Main.Path, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
 
 			if err != nil {
 				return err
 			}
 
-			if cfg.Logging.MainLog.EnableStandardOut {
+			if cfg.Logging.Main.Console {
 				out = io.MultiWriter(os.Stdout, out)
 			} else {
 				out = logFile
 			}
-		} else if cfg.Logging.MainLog.EnableStandardOut {
+		} else if cfg.Logging.Main.Console {
 			out = os.Stdout
 		} else {
 			panic("Impossible logic error")
 		}
 
 		var level slog.Level
-		custLogLevel, ok := config.CustomLogLevel[strings.ToLower(cfg.Logging.MainLog.Level)]
+		custLogLevel, ok := config.CustomLogLevel[strings.ToLower(cfg.Logging.Main.Level)]
 
 		if ok {
 			level = custLogLevel
 		} else {
-			err := level.UnmarshalText([]byte(cfg.Logging.MainLog.Level))
+			err := level.UnmarshalText([]byte(cfg.Logging.Main.Level))
 
 			if err != nil {
 				return err
@@ -175,20 +175,20 @@ func configureMainLogging(cfg *config.Config) error {
 
 		var logHandler slog.Handler
 
-		if cfg.Logging.MainLog.Format == config.MainLogFormatPlain {
+		if cfg.Logging.Main.Format == config.MainFormatPlain {
 			logHandler = slog.NewTextHandler(out, &opt)
-		} else if cfg.Logging.MainLog.Format == config.MainLogFormatJson {
+		} else if cfg.Logging.Main.Format == config.MainFormatJson {
 			logHandler = slog.NewJSONHandler(out, &opt)
-			if cfg.Logging.MainLog.IncludeRequestAttributes == "auto" {
-				cfg.Logging.MainLog.IncludeRequestAttributes = "true"
+			if cfg.Logging.Main.Request == "auto" {
+				cfg.Logging.Main.Request = "true"
 			}
 		} else {
-			return fmt.Errorf(cfg.Error.Messages.InvalidParam, "logging.mainlog.format", cfg.Logging.MainLog.Format)
+			return fmt.Errorf(cfg.Error.Messages.InvalidParam, "logging.main.format", cfg.Logging.Main.Format)
 		}
 
 		var attr []string
 
-		if cfg.Logging.MainLog.IncludeRequestAttributes == "true" || cfg.Logging.MainLog.IncludeRequestAttributes == "1" {
+		if cfg.Logging.Main.Request == "true" || cfg.Logging.Main.Request == "1" {
 			attr = slices.Concat(attr, []string{
 				"uri",
 				"path",
@@ -202,7 +202,7 @@ func configureMainLogging(cfg *config.Config) error {
 			})
 		}
 
-		attr = slices.Concat(attr, cfg.Logging.MainLog.IncludeHeaders)
+		attr = slices.Concat(attr, cfg.Logging.Main.Headers)
 
 		logHandler = slogContextHandler{logHandler, attr}
 
@@ -213,8 +213,8 @@ func configureMainLogging(cfg *config.Config) error {
 	return nil
 }
 
-func configureAccessLogging(cfg config.AccessLogConfig, errorMessages config.ErrorMessages, rootHandler http.Handler) (http.Handler, error) {
-	if cfg.EnableStandardOut || len(cfg.Path) > 0 {
+func configureAccessging(cfg config.AccessConfig, errorMessages config.ErrorMessages, rootHandler http.Handler) (http.Handler, error) {
+	if cfg.Console || len(cfg.Path) > 0 {
 		var out io.Writer
 		if len(cfg.Path) > 0 {
 			logFile, err := os.OpenFile(cfg.Path, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
@@ -223,23 +223,23 @@ func configureAccessLogging(cfg config.AccessLogConfig, errorMessages config.Err
 				return nil, err
 			}
 
-			if cfg.EnableStandardOut {
+			if cfg.Console {
 				out = io.MultiWriter(os.Stdout, out)
 			} else {
 				out = logFile
 			}
-		} else if cfg.EnableStandardOut {
+		} else if cfg.Console {
 			out = os.Stdout
 		} else {
 			panic("Impossible logic error")
 		}
 
-		if cfg.Format == config.AccessLogFormatCommon {
+		if cfg.Format == config.AccessFormatCommon {
 			rootHandler = handlers.LoggingHandler(out, rootHandler)
-		} else if cfg.Format == config.AccessLogFormatCombined {
+		} else if cfg.Format == config.AccessFormatCombined {
 			rootHandler = handlers.CombinedLoggingHandler(out, rootHandler)
 		} else {
-			return nil, fmt.Errorf(errorMessages.InvalidParam, "logging.accesslog.format", cfg.Format)
+			return nil, fmt.Errorf(errorMessages.InvalidParam, "logging.access.format", cfg.Format)
 		}
 	}
 	return rootHandler, nil
@@ -290,14 +290,14 @@ func ListenAndServe(config *config.Config, layerList []*layers.Layer, auth *auth
 		rootHandler = handlers.CompressHandler(rootHandler)
 	}
 
-	rootHandler, err := configureAccessLogging(config.Logging.AccessLog, config.Error.Messages, rootHandler)
+	rootHandler, err := configureAccessging(config.Logging.Access, config.Error.Messages, rootHandler)
 	rootHandler = httpContextHandler{rootHandler, config.Error}
 
 	if err != nil {
 		return err
 	}
 
-	err = configureMainLogging(config)
+	err = configureMainging(config)
 
 	if err != nil {
 		return err

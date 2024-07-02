@@ -1,10 +1,12 @@
 # Configuration
 
-Tilegroxy is heavily configuration driven. This document describes the various configuration options available for defining the map layers you wish to serve up and various aspects about how you want the application to function.
+Tilegroxy is heavily configuration driven. This document describes the various configuration options available. [Complete examples are available here.](../examples/configurations/)
 
-Every configuration option that supports different "types" (such as authentication, provider, and cache) has a "name" parameter for selecting the type. Those names are always all-lowercase. 
+Some configuration sections ([authentication](#authentication), [provider](#provider), and [cache](#cache)) support selecting different methods of operation that change the full list of parameters available. For example,  a "proxy" provider requires a `url` parameter to get a map tile from another server while a "static" provider takes in a `image` to return for every request. You select these operating modes using a parameter called `name`. In addition, since these sections are too dynamic to have fixed environment variables and frequently may require a secret to operate, any string parameters can be made to use an environment variable by specifying a value in the format of `env.ENV_VAR_NAME`.
 
-Keys are case-insensitive unless indicated otherwise.
+Configuration key names are case-insensitive unless indicated otherwise. Names are always lower case. 
+
+Some parameters can be specified by environment variables which must be upper case. Environment variables override config parameters which override default values. 
 
 The following is the top-level configuration structure. All top-level keys are optional besides layers:
 
@@ -19,7 +21,6 @@ layers:
   - ...
 ```
 
-[Examples are available.](../examples/configurations/)
 
 ## Layer
 
@@ -36,7 +37,9 @@ Configuration options:
 
 ## Provider
 
-A provider represents the underlying functionality that "provides" the tiles that make up the mapping layer.  This is most commonly an external HTTP(s) endpoint using either the "proxy" or "URL template" providers. Custom providers can be created to extract tiles from other sources.  
+A provider represents the underlying functionality that "provides" the tiles that make up the mapping layer.  This is most commonly an external HTTP(s) endpoint using either the "proxy" or "URL template" providers. Custom providers can be created to extract tiles from other sources.
+
+When supplying a provider ensure you include the `name` parameter. Some providers require nested providers; be aware that repeated nesting has a performance cost.
 
 ### Proxy
 
@@ -52,7 +55,7 @@ Configuration options:
 | inverty | bool | No | false | Changes Y tile numbering to be South-to-North instead of North-to-South. Only impacts Y/y placeholder |
 
 
-The following placeholders are available in URL:
+The following placeholders are available in the URL:
 
 | Placeholder | Description |
 | ----------- | ----------- |
@@ -64,7 +67,7 @@ The following placeholders are available in URL:
 | ymin | The "north" coordinate of the bounding box defined by the incoming tile coordinates. Not impacted by the `invertY` parameter. |
 | ymax | The "south" coordinate of the bounding box defined by the incoming tile coordinates. Not impacted by the `invertY` parameter. |
 | env.XXX | An environment variable whose name is XXX |
-| ctx.XXX | An context variable (typically an HTTP header) whose name is XXX |
+| ctx.XXX | A context variable (typically an HTTP header) whose name is XXX |
 
 Example:
 
@@ -179,7 +182,7 @@ Configuration options:
 
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| image | string | Yes | None | Either a filepath to an image on the local filesystem or one of the built-in images described under "Error Images" |
+| image | string | Yes | None | Either a filepath to an image on the local filesystem or one of the [built-in images](#image-options) |
 | color | string | No | None | A hexcode (RGB or RGBA) of a color to return. Equivalent to specifying `image` with this value with a prefix of "color:" |
 
 
@@ -236,9 +239,11 @@ provider:
 
 ## Cache
 
-The cache configuration defines the datastores where tiles should be stored/retrieved. It's recommended when possible to make use of a multi-tiered cache with a smaller, faster "near" cache first followed by a larger, slower "far" cache.  
+The cache configuration defines the datastores where tiles should be stored/retrieved. We recommended you use a `multi`-tiered cache with a smaller, faster "near" cache first followed by a larger, slower "far" cache.    
 
 There is no universal mechanism for expiring cache entries. Some cache options include built-in mechanisms for applying an TTL and maximum size however some require an external cleanup mechanism if desired. Be mindful of this as some options may incur their own costs if allowed to grow unchecked.
+
+When specifying a cache ensure you include the `name` parameter.
 
 ### None
 
@@ -433,6 +438,8 @@ Implements incoming auth schemes. This is primarily meant for authentication but
 
 Requests that do not comply with authentication requirements will receive a 401 Unauthorized HTTP status code.
 
+When supplying authentication ensure you include the `name` parameter.
+
 ### None
 
 No incoming authentication, all requests are allowed. Ensure you have an external authentication solution before exposing this to the internet.
@@ -466,24 +473,24 @@ Configuration options:
 
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| VerificationKey | string | Yes | None | The key for verifying the signature. The public key if using asymmetric signing. If the value starts with "env." the remainder is interpreted as the name of the Environment Variable to use to retrieve the verification key. |
+| Key | string | Yes | None | The key for verifying the signature. The public key if using asymmetric signing. If the value starts with "env." the remainder is interpreted as the name of the Environment Variable to use to retrieve the verification key. |
 | Algorithm | string | Yes | None | Algorithm to allow for JWT signature. One of: "HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "EdDSA" |
 | HeaderName | string | No | Authorization | The header to extract the JWT from. If this is "Authorization" it removes "Bearer " from the start |
-| MaxExpirationDuration | uint32 | No | 1 day | How many seconds from now can the expiration be. JWTs more than X seconds from now will result in a 401 |
+| MaxExpiration | uint32 | No | 1 day | How many seconds from now can the expiration be. JWTs more than X seconds from now will result in a 401 |
 | ExpectedAudience | string | No | None | Require the "aud" grant to be this string |
 | ExpectedSubject | string | No | None | Require the "sub" grant to be this string |
 | ExpectedIssuer | string | No | None | Require the "iss" grant to be this string |
 | ExpectedScope | string | No | None | Require the "scope" grant to contain this string |
 | LayerScope | bool | No | false | If true the "scope" grant is used to whitelist access to layers |
-| LayerScopePrefix | string | No | Empty string | If true this prefix indicates scopes to use. For example a prefix of "tile/" will mean a scope of "tile/test" grants access to "test". Doesn't impact ExpectedScope |
-| UserIdentifierGrant | string | No | sub | Use the specified grant as the user identifier. This is just used for logging by default but it's made available to custom providers |
+| ScopePrefix | string | No | Empty string | If true this prefix indicates scopes to use. For example a prefix of "tile/" will mean a scope of "tile/test" grants access to "test". Doesn't impact ExpectedScope |
+| UserId | string | No | sub | Use the specified grant as the user identifier. This is just used for logging by default but it's made available to custom providers |
 
 Example:
 
 ```
 authentication:
   name: jwt
-  verificationkey: env.JWT_KEY
+  key: env.JWT_KEY
   algorithm: HS256
 ```
 
@@ -548,10 +555,22 @@ Configuration options:
 | Port | int | No | 8080 | Port to bind HTTP server to |
 | RootPath | string | No | / | The root HTTP Path to serve all requests under. |
 | TilePath | string | No | tiles | The HTTP Path to serve tiles under in addition to RootPath. The defaults will result in a path that looks like /tiles/{layer}/{z}/{x}/{y} |
-| StaticHeaders | map[string]string | No | None | Include these headers in all response from server |
+| Headers | map[string]string | No | None | Include these headers in all response from server |
 | Production | bool | No | false | Hardens operation for usage in production. For instance, controls serving splash page, documentation, x-powered-by header. |
 | Timeout | uint | No | 60 | How long (in seconds) a request can be in flight before we cancel it and return an error |
 | Gzip | bool | No | false | Whether to gzip compress HTTP responses |
+
+The following can be supplied as environment variables:
+
+| Configuration Parameter | Environment Variable |
+| --- | --- |
+| BindHost | SERVER_BINDHOST |
+| Port | SERVER_PORT | 
+| RootPath | SERVER_ROOTPATH | 
+| TilePath | SERVER_TILEPATH | 
+| Production | SERVER_PRODUCTION | 
+| Timeout | SERVER_TIMEOUT |
+| Gzip | SERVER_GZIP |
 
 
 ## Client
@@ -563,23 +582,47 @@ Configuration options:
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
 | UserAgent | string | No | tilegroxy/VERSION | The user agent to include in outgoing http requests. |
-| MaxResponseLength | int | No | 10 MiB | The maximum Content-Length to allow incoming responses | 
-| AllowUnknownLength | bool | No | false | Allow responses that are missing a Content-Length header, this could lead to excessive memory usage |
-| AllowedContentTypes | string[] | No | image/png, image/jpg | The content-types to allow remote servers to return. Anything else will be interpreted as an error |
-| AllowedStatusCodes | int[] | No | 200 | The status codes from the remote server to consider successful |
-| StaticHeaders | map[string]string | No | None | Include these headers in requests |
+| MaxLength | int | No | 10 MiB | The maximum Content-Length to allow incoming responses | 
+| UnknownLength | bool | No | false | Allow responses that are missing a Content-Length header, this could lead to excessive memory usage |
+| ContentTypes | string[] | No | image/png, image/jpg | The content-types to allow remote servers to return. Anything else will be interpreted as an error |
+| StatusCodes | int[] | No | 200 | The status codes from the remote server to consider successful |
+| Headers | map[string]string | No | None | Include these headers in requests |
+
+The following can be supplied as environment variables:
+
+| Configuration Parameter | Environment Variable |
+| --- | --- |
+| UserAgent | CLIENT_USERAGENT | 
+| MaxLength | CLIENT_MAXLENGTH | 
+| UnknownLength | CLIENT_UNKNOWNLENGTH | 
+| ContentTypes | CLIENT_CONTENTTYPES |
+| StatusCodes | CLIENT_STATUSCODES | 
 
 ## Log
 
 Configures how the application should log during operation.
 
-### Main Log
+The `Logging` section supports two keys: `main` and `access` which are objects described respectively below.
+
+Example:
+
+```
+logging:
+  access:
+    console: false 
+    path: access.log 
+  main:
+    level: debug
+    format: json
+```
+
+### Main
 
 Configures application log messages. 
 
 These log messages output in a structured log format, either with Key=Value attributes in plain (text) mode or as JSON.  In either mode attributes are available driven by the HTTP request that is being processed.  We try to avoid plain mode logs being overly verbose for readability, which means if you want all the attributes you'll need to explicitly enable them.  In JSON mode we assume you're ingesting them into a system that handles formatting so include more attributes by default.  
 
-In order to avoid logging secrets you need to specify the headers to log. If you're including auth information via the URL (not recommended) you should make sure IncludeRequestAttributes is false to avoid logging those.
+In order to avoid logging secrets you need to specify the headers to log. If you're including auth information via the URL (not recommended) you should make sure Request is false to avoid logging those.
 
 Level controls the verbosity of logs. There is no guarantee as to the specific log messages that will be outputted so you might see more or fewer log messages between versions of the application, especially at higher verbosity levels.  Here are the general rules of what to expect for each level (from least to most verbose):
 
@@ -594,14 +637,25 @@ Configuration options:
 
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| EnableStandardOut | bool | No | true | Whether to write application logs to standard out |
+| Console | bool | No | true | Whether to write application logs to standard out |
 | Path | string | No | None | The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth |
 | Format | string | No | plain | The format to output application logs in. Applies to both standard out and file out. Possible values: plain, json |
 | Level | string | No | info | The most-detailed log level that should be included. Possible values: debug, info, warn, error, trace, absurd |
-| IncludeRequestAttributes | string | No | auto | Whether to include any extra attributes based on request parameters (excluding explicitly requested). If auto (default) it defaults true if format is json, false otherwise |
-| IncludeHeaders | string[] | No | None | Headers to include as attributes in structured log messages. Attribute key will be in all lowercase. | 
+| Request | bool | No | auto | Whether to include any extra attributes based on request parameters (excluding explicitly requested). If auto (default) it defaults true if format is json, false otherwise |
+| Headers | string[] | No | None | Headers to include as attributes in structured log messages. Attribute key will be in all lowercase. | 
 
-### Access Log
+The following can be supplied as environment variables:
+
+| Configuration Parameter | Environment Variable |
+| --- | --- |
+| Console | LOGGING_MAIN_CONSOLE |
+| Path | LOGGING_MAIN_PATH |
+| Format | LOGGING_MAIN_FORMAT |
+| Level | LOGGING_MAIN_LEVEL | 
+| Request | LOGGING_MAIN_REQUEST | 
+| Headers | LOGGING_MAIN_HEADERS | 
+
+### Access
 
 Configures logs for incoming HTTP requests. Primarily outputs in standard Apache Access Log formats.
 
@@ -609,9 +663,18 @@ Configuration options:
 
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| EnableStandardOut | bool | No | true | Whether to write access logs to standard out |
+| Console | bool | No | true | Whether to write access logs to standard out |
 | Path | string | No | None | The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth |
 | Format | string | No | common | The format to output access logs in. Applies to both standard out and file out. Possible values: common, combined |
+
+The following can be supplied as environment variables:
+
+| Configuration Parameter | Environment Variable |
+| --- | --- |
+| Console | LOGGING_ACCESS_CONSOLE |
+| Path | LOGGING_ACCESS_PATH | 
+| Format | LOGGING_ACCESS_FORMAT |
+
 
 ## Error
 
@@ -637,7 +700,15 @@ Configuration options:
 | Mode | string | No | image | The error mode as described above.  One of: text none image image+header |
 | Messages | ErrorMessages | No | Various | Controls the error messages returned as described below |
 | Images | ErrorImages | No | Various | Controls the images returned for errors as described below |
-| SuppressStatusCode | bool | No | false | If set we always return 200 regardless of what happens |
+| AlwaysOk | bool | No | false | If set we always return 200 regardless of what happens |
+
+The following can be supplied as environment variables:
+
+| Configuration Parameter | Environment Variable |
+| --- | --- |
+| Mode | ERROR_MODE | 
+| AlwaysOk | ERROR_ALWAYSOK | 
+
 
 ### Error Images
 
@@ -652,6 +723,18 @@ Configuration options:
 | Provider | string | No | embedded:error.png | The image to display for errors returned by the layer's provider |
 | Other | string | No | embedded:error.png | The image to display for all other errors |
 
+The following can be supplied as environment variables:
+
+| Configuration Parameter | Environment Variable |
+| --- | --- |
+| OutOfBounds | ERROR_IMAGES_OUTOFBOUNDS | 
+| Authentication | ERROR_IMAGES_AUTHENTICATION | 
+| Provider | ERROR_IMAGES_PROVIDER | 
+| Other | ERROR_IMAGES_OTHER | 
+
+#### Image Options
+
+In addition to an image on the filesystem you can refer to a static color or a built-in image.
 
 There are currently 4 built-in images available:
 
@@ -663,6 +746,8 @@ There are currently 4 built-in images available:
 | unauthorized.png | A semi-transparent solid red image with the words "Not Authorized" in white | ![](../internal/images/unauthorized.png) |
 
 To utilize them prepend "embedded:" before the name.  For example `embedded:transparent.png`
+
+You can also reference any color by including an hex code prefixed by "color:". The color code can be RGB or RGBA and have single or double hex digits. For example the following all generate an identical violet tile: `color:FF00FFFF`, `color:FF00FF`, `color:F0F`, `color:F0FF`
 
 ### Error Messages
 
