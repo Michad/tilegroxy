@@ -44,7 +44,9 @@ func handleNoContent(w http.ResponseWriter, req *http.Request) {
 
 type TypeOfError int
 
-var interruptFlags = []os.Signal{os.Interrupt}
+// This is just here to allow tests to specify a different signal to send to kill the webserver
+// not useful in practice due to OS-specific nature of signals
+var InterruptFlags = []os.Signal{os.Interrupt}
 
 const (
 	TypeOfErrorBounds = iota
@@ -304,7 +306,7 @@ func ListenAndServe(config *config.Config, layerList []*layers.Layer, auth *auth
 		return err
 	}
 
-	ctx, stop := signal.NotifyContext(context.Background(), interruptFlags...)
+	ctx, stop := signal.NotifyContext(context.Background(), InterruptFlags...)
 	defer stop()
 
 	srv := &http.Server{
