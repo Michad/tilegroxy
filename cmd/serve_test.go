@@ -59,7 +59,7 @@ func coreServeTest(t *testing.T, cfg string, url string) (*http.Response, error,
 
 	go func() { bindErr = rootCmd.Execute() }()
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(2 * time.Second)
 
 	if bindErr != nil {
 		return nil, bindErr, nil
