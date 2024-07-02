@@ -25,10 +25,10 @@ jobs:
     - name: Get Build Vars
       id: vars
       run: |
-        echo "PKG=github.com/Michad/tilegroxy"
-        echo "VERSION=$(git describe --tag --abbrev=0 --dirty)"
-        echo "REF=$(git rev-parse --short HEAD)"
-        echo "DATE=$(date -Iseconds --u)"
+        echo "PKG=github.com/Michad/tilegroxy" >> $GITHUB_OUTPUT
+        echo "VERSION=$(git describe --tag --abbrev=0 --dirty)" >> $GITHUB_OUTPUT
+        echo "REF=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+        echo "DATE=$(date -Iseconds --u)" >> $GITHUB_OUTPUT
 
     - name: Release
       uses: goreleaser/goreleaser-action@286f3b13b1b49da4ac219696163fb8c1c93e1200 # v6.0.0
