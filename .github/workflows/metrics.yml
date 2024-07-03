@@ -1,4 +1,4 @@
-name: Coverage
+name: Code Metrics
 on:
   push:
     branches: [ "code-metrics" ]
