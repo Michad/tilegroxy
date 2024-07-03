@@ -16,6 +16,7 @@ package caches
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"slices"
@@ -24,12 +25,12 @@ import (
 
 	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/config"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
 type S3Config struct {
@@ -46,9 +47,9 @@ type S3Config struct {
 
 type S3 struct {
 	*S3Config
-	client     *s3.S3
-	downloader *s3manager.Downloader
-	uploader   *s3manager.Uploader
+	client     *s3.Client
+	downloader *manager.Downloader
+	uploader   *manager.Uploader
 }
 
 func ConstructS3(config *S3Config, errorMessages *config.ErrorMessages) (*S3, error) {
@@ -68,55 +69,54 @@ func ConstructS3(config *S3Config, errorMessages *config.ErrorMessages) (*S3, er
 		return nil, fmt.Errorf(errorMessages.InvalidParam, "cache.s3.bucket", config.Bucket)
 	}
 
-	sessionOptions := session.Options{}
-	awsConfig := aws.Config{CredentialsChainVerboseErrors: aws.Bool(true)}
+	// sessionOptions := session.Options{}
 
-	if config.Region != "" {
-		awsConfig.WithRegion(config.Region)
-	}
+	awsConfig, err := awsconfig.LoadDefaultConfig(internal.BackgroundContext(), func(lo *awsconfig.LoadOptions) error {
 
-	if config.Access != "" {
-		awsConfig.WithCredentials(credentials.NewStaticCredentials(config.Access, config.Secret, ""))
-	}
-
-	if config.Endpoint != "" {
-		awsConfig.WithEndpoint(config.Endpoint)
-	}
-
-	if config.UsePathStyle {
-		awsConfig.WithS3ForcePathStyle(true)
-	}
-
-	if config.StorageClass != "" {
-		validValues := s3.StorageClass_Values()
-
-		if !slices.Contains(validValues, config.StorageClass) {
-			return nil, fmt.Errorf(errorMessages.EnumError, "cache.s3.storageclass", config.StorageClass, validValues)
+		if config.Profile != "" {
+			lo.SharedConfigProfile = config.Profile
 		}
 
-		if strings.Contains(config.StorageClass, "ONEZONE") {
-			//Directory AKA Express One Zone fails if an MD5 header set. The Go SDK requires you find this obscure flag to disable that
-			awsConfig.WithS3DisableContentMD5Validation(true)
+		if config.Region != "" {
+			lo.Region = config.Region
 		}
-	}
 
-	sessionOptions.Config = awsConfig
+		if config.Access != "" {
+			lo.Credentials = aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider(config.Access, config.Secret, ""))
+		}
 
-	if config.Profile != "" {
-		sessionOptions.Profile = config.Profile
-	}
-
-	awsSession, err := session.NewSessionWithOptions(sessionOptions)
+		return nil
+	})
 
 	if err != nil {
 		return nil, err
 	}
 
-	s3Client := s3.New(awsSession, &awsConfig)
-	downloader := s3manager.NewDownloader(awsSession)
-	uploader := s3manager.NewUploader(awsSession, s3manager.WithUploaderRequestOptions())
+	// awsConfig := aws.Config{CredentialsChainVerboseErrors: aws.Bool(true)}
 
-	return &S3{config, s3Client, downloader, uploader}, nil
+	if config.StorageClass != "" {
+		validValues := types.StorageClass.Values("")
+
+		if !slices.Contains(validValues, types.StorageClass(config.StorageClass)) {
+			return nil, fmt.Errorf(errorMessages.EnumError, "cache.s3.storageclass", config.StorageClass, validValues)
+		}
+
+		// if strings.Contains(config.StorageClass, "ONEZONE") {
+		// 	//Directory AKA Express One Zone fails if an MD5 header set. The Go SDK requires you find this obscure flag to disable that
+		// 	awsConfig.WithS3DisableContentMD5Validation(true)
+		// }
+	}
+
+	client := s3.NewFromConfig(awsConfig, func(o *s3.Options) {
+		o.BaseEndpoint = &config.Endpoint
+		o.UsePathStyle = config.UsePathStyle
+		// o.MD
+	})
+
+	downloader := manager.NewDownloader(client)
+	uploader := manager.NewUploader(client)
+
+	return &S3{config, client, downloader, uploader}, nil
 }
 
 func calcKey(config *S3, t *internal.TileRequest) string {
@@ -125,14 +125,15 @@ func calcKey(config *S3, t *internal.TileRequest) string {
 
 // Just for testing purposes
 func (c S3) makeBucket() error {
-	_, err := c.client.CreateBucket(&s3.CreateBucketInput{Bucket: &c.Bucket})
+	_, err := c.client.CreateBucket(internal.BackgroundContext(), &s3.CreateBucketInput{Bucket: &c.Bucket})
 	return err
 }
 
 func (c S3) Lookup(t internal.TileRequest) (*internal.Image, error) {
-	writer := aws.NewWriteAtBuffer([]byte{})
+	writer := manager.NewWriteAtBuffer([]byte{})
 
 	_, err := c.downloader.Download(
+		context.TODO(),
 		writer,
 		&s3.GetObjectInput{
 			Bucket: aws.String(c.Bucket),
@@ -140,8 +141,8 @@ func (c S3) Lookup(t internal.TileRequest) (*internal.Image, error) {
 		})
 
 	if err != nil {
-		var requestFailure awserr.Error
-		if errors.As(err, &requestFailure) && requestFailure.Code() == s3.ErrCodeNoSuchKey {
+		var requestFailure *types.NoSuchKey
+		if errors.As(err, &requestFailure) {
 			//Simple cache miss
 			return nil, nil
 		}
@@ -156,16 +157,16 @@ func (c S3) Lookup(t internal.TileRequest) (*internal.Image, error) {
 
 func (c S3) Save(t internal.TileRequest, img *internal.Image) error {
 
-	uploadConfig := &s3manager.UploadInput{
+	uploadConfig := &s3.PutObjectInput{
 		Bucket: &c.Bucket,
 		Key:    aws.String(calcKey(&c, &t)),
 		Body:   bytes.NewReader(*img),
 	}
 
 	if c.StorageClass != "" {
-		uploadConfig.StorageClass = &c.StorageClass
+		uploadConfig.StorageClass = types.StorageClass(c.StorageClass)
 	}
 
-	_, err := c.uploader.Upload(uploadConfig)
+	_, err := c.uploader.Upload(context.TODO(), uploadConfig)
 	return err
 }
