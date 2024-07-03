@@ -3,7 +3,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md) 
 
-Tilegroxy lives between your map and your mapping providers to deliver a consistent, cached API for all your layers.
+Tilegroxy lives between your map and your mapping providers to deliver a consistent, cached API for all your layers. 
 
 🚀 Built in Go.  
 🔌 Features a flexible plugin system powered by [Yaegi](https://github.com/traefik/yaegi).  
