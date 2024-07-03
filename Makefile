@@ -26,6 +26,10 @@ cover-out:
 
 coverage: cover cover-out
 
+libyears:
+	@go install github.com/nieomylnieja/go-libyear/cmd/go-libyear@latest
+	@go-libyear --json go.mod < /dev/null
+
 version:
 	@./${OUT} version --json
 
