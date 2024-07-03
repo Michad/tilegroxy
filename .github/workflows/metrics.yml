@@ -52,7 +52,7 @@ jobs:
       - name: Run Test
         id: test
         run: |
-          make libyears | /usr/bin/jq '.libyear' | xargs -I{} echo VAL={} >> $GITHUB_OUTPUT
+          make libyears | /usr/bin/jq '.libyear | .*100 | round/100' | xargs -I{} echo VAL={} >> $GITHUB_OUTPUT
       - name: Create the Badge
         uses: schneegans/dynamic-badges-action@e9a478b16159b4d31420099ba146cdc50f134483 # v1.7.0
         env:
@@ -62,7 +62,7 @@ jobs:
           gistID: d1b9e082f6608635494188d0f52bae69
           filename: libyears.json
           label: Libyears
-          message: ${{ env.VAL }}
+          message: ${{ env.VAL }} years
           invertColorRange: true
           valColorRange: ${{ env.VAL }}
           maxColorRange: 50
