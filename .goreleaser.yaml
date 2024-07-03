@@ -9,8 +9,6 @@ builds:
       - linux
       - windows
       - darwin
-    flags:
-      - -tags=viper_bind_struct
     tags:
       - viper_bind_struct
     ldflags:

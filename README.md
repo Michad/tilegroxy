@@ -1,6 +1,5 @@
 # tilegroxy    
-[![Docker Image CI](https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml/badge.svg)](https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml) [![Go Report Card](https://goreportcard.com/badge/michad/tilegroxy)](https://goreportcard.com/report/michad/tilegroxy) ![Go](https://img.shields.io/github/go-mod/go-version/michad/tilegroxy) 
-![Coverage](https://img.shields.io/badge/Coverage-80.2%25-brightgreen)
+[![Docker Image CI](https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml/badge.svg)](https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml) [![Go Report Card](https://goreportcard.com/badge/michad/tilegroxy)](https://goreportcard.com/report/michad/tilegroxy) ![Go](https://img.shields.io/github/go-mod/go-version/michad/tilegroxy) ![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/michad/d1b9e082f6608635494188d0f52bae69/raw/coverage.json) [![Libyears](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/michad/d1b9e082f6608635494188d0f52bae69/raw/coverage.json)](https://libyear.com/)
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md) 
 
