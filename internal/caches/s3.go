@@ -40,7 +40,7 @@ type S3Config struct {
 	Region       string
 	Path         string
 	Profile      string
-	StorageClass string //STANDARD | REDUCED_REDUNDANCY | STANDARD_IA | ONEZONE_IA | INTELLIGENT_TIERING | GLACIER |  DEEP_ARCHIVE  |  GLACIER_IR
+	StorageClass string
 	Endpoint     string //For directory buckets or non-s3
 	UsePathStyle bool   //For testing purposes and maybe real non-S3 usage
 }
@@ -57,9 +57,9 @@ func ConstructS3(config *S3Config, errorMessages *config.ErrorMessages) (*S3, er
 		return nil, fmt.Errorf(errorMessages.ParamsBothOrNeither, "cache.s3.access", "cache.s3.secret")
 	}
 
-	//Ensure path starts and ends with a /
-	if strings.Index(config.Path, "/") != 0 {
-		config.Path = "/" + config.Path
+	//Ensure path doesn't start with / but does end with one
+	if strings.Index(config.Path, "/") == 0 && len(config.Path) > 0 {
+		config.Path = config.Path[1:]
 	}
 	if strings.LastIndex(config.Path, "/") != len(config.Path)-1 {
 		config.Path = config.Path + "/"
@@ -68,8 +68,6 @@ func ConstructS3(config *S3Config, errorMessages *config.ErrorMessages) (*S3, er
 	if config.Bucket == "" {
 		return nil, fmt.Errorf(errorMessages.InvalidParam, "cache.s3.bucket", config.Bucket)
 	}
-
-	// sessionOptions := session.Options{}
 
 	awsConfig, err := awsconfig.LoadDefaultConfig(internal.BackgroundContext(), func(lo *awsconfig.LoadOptions) error {
 
@@ -92,25 +90,17 @@ func ConstructS3(config *S3Config, errorMessages *config.ErrorMessages) (*S3, er
 		return nil, err
 	}
 
-	// awsConfig := aws.Config{CredentialsChainVerboseErrors: aws.Bool(true)}
-
 	if config.StorageClass != "" {
 		validValues := types.StorageClass.Values("")
 
 		if !slices.Contains(validValues, types.StorageClass(config.StorageClass)) {
 			return nil, fmt.Errorf(errorMessages.EnumError, "cache.s3.storageclass", config.StorageClass, validValues)
 		}
-
-		// if strings.Contains(config.StorageClass, "ONEZONE") {
-		// 	//Directory AKA Express One Zone fails if an MD5 header set. The Go SDK requires you find this obscure flag to disable that
-		// 	awsConfig.WithS3DisableContentMD5Validation(true)
-		// }
 	}
 
 	client := s3.NewFromConfig(awsConfig, func(o *s3.Options) {
 		o.BaseEndpoint = &config.Endpoint
 		o.UsePathStyle = config.UsePathStyle
-		// o.MD
 	})
 
 	downloader := manager.NewDownloader(client)
