@@ -37,6 +37,7 @@ install:
 	cp ${OUT} /usr/local/bin
 
 clean:
+	@go clean
 	-@rm ${OUT}
 
 .PHONY: build test clean version
