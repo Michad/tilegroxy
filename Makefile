@@ -10,14 +10,14 @@ build:
 	go build -v -o ${OUT} -ldflags="-X \"${PKG}/internal.tilegroxyVersion=${VERSION}\" -X \"${PKG}/internal.tilegroxyBuildRef=${REF}\" -X \"${PKG}/internal.tilegroxyBuildDate=${DATE}\"" -tags viper_bind_struct
 
 test:
-	@go test ./... -v -count=1 -tags viper_bind_struct
+	@go test ./internal/... ./cmd/... -v -count=1 -tags viper_bind_struct
 
 unit:
-	@go test ./... -v -count=1 -tags "unit,viper_bind_struct"
+	@go test ./internal/... ./cmd/... -v -count=1 -tags "unit,viper_bind_struct"
 
 cover:
 	@go install github.com/dave/courtney@latest
-	@courtney
+	@courtney ./internal/... ./cmd/...
 	@go tool cover -func=coverage.out -o=coveragef.out
 
 cover-out:
