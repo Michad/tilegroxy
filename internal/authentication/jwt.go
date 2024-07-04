@@ -211,6 +211,7 @@ func (c Jwt) CheckAuthentication(req *http.Request, ctx *internal.RequestContext
 			ctx.UserIdentifier, _ = rawUid.(string)
 		}
 	} else {
+		// notest
 		var debugType string
 		if t := reflect.TypeOf(tokenJwt.Claims); t.Kind() == reflect.Ptr {
 			debugType = "*" + t.Elem().Name()
