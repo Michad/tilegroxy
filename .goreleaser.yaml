@@ -29,3 +29,13 @@ release:
   replace_existing_draft: true
   extra_files:
     - glob: ./LICENSE
+signs:
+  - artifacts: checksum
+    args:
+      - "--batch"
+      - "--local-user"
+      - "{{ .Env.GPG_FINGERPRINT }}" 
+      - "--output"
+      - "${signature}"
+      - "--detach-sign"
+      - "${artifact}"
