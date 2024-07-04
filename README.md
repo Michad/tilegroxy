@@ -39,7 +39,7 @@ The following are on the roadmap and expected before a 1.0 release:
 
 ## Configuration
 
-Configuration is required to define your layers and operational parameter.  The configuration can be supplied as a file or through an external service such as etcd or consul. Configuration can also be partially supplied via Environment Variables. 
+Configuration is required to define your layers, cache, authentication, and service operation.  The configuration should be supplied as a JSON or YAML file either directly or through an external service such as etcd or consul. Configuration can also be partially supplied via Environment Variables. 
 
 Details can be found in [documentation](./docs/configuration.md) or through [examples](./examples/configurations/). 
 
@@ -49,25 +49,19 @@ You can also use `tilegroxy config create` to help get started.
 
 Tilegroxy is designed to be run in a container. But it can also be run directly for that old-school approach; we don't judge.   
 
-It is also meant to be used in Linux (or at least *nix). Building and running on Windows should work but is currently untested. You will need a bash-compatible shell to run the Makefile.
-
 ### Building
 
 Tilegroxy builds as a statically linked executable. Prebuilt binaries are available from [Github](https://github.com/Michad/tilegroxy/releases).
 
-Building tilegroxy yourself requires `go`, `git`, `make`, and `date`.  It uses a standard Makefile workflow:
+Building tilegroxy yourself requires `go`, `git`, `make`, and `date`.  It uses a standard [Makefile](./Makefile) workflow:
+
+Build with
 
 ```
 make
 ```
 
-The build includes integration tests using [testcontainers](https://golang.testcontainers.org/) which requires you have either docker or podman installed. If you encounter difficulties running these tests it's recommended you use a prebuilt binary.  That said, you can build with only unit tests using:
-
-```
-make clean build unit
-```
-
-Installing it after it's built is of course:
+then install with
 
 ```
 sudo make install
@@ -75,11 +69,19 @@ sudo make install
 
 Once installed, tilegroxy can be run directly as an HTTP server via the `tilegroxy serve` command documented below. It's recommended to create a systemd unit file to allow it to run as a daemon as an appropriate user.
 
+#### Tests
+
+The build includes integration tests that use [testcontainers](https://golang.testcontainers.org/).  This requires you have either docker or podman installed and running. If you encounter difficulties running these tests it's recommended you use a prebuilt binary.  That said, you can also build with just unit tests using:
+
+```
+make clean build unit
+```
+
 ### Docker
 
 Tilegroxy is available as a container image on the Github container repository.  
 
-You can pull the most recent versioned release with the `latest` tag and the very latest (and maybe buggy) build with the `edge` tag. Tags are also available for version numbers.  [See here for a list](https://github.com/Michad/tilegroxy/pkgs/container/tilegroxy).
+You can pull the most recent versioned release with the `latest` tag and the very latest (and maybe buggy) build with the `edge` tag. Tags are also available for version numbers.  [See here for a full list](https://github.com/Michad/tilegroxy/pkgs/container/tilegroxy).
 
 For example: 
 
@@ -181,16 +183,11 @@ Flags:
   -z, --zoom uints              The zoom level(s) to seed (default [0,1,2,
                                 3,4,5])
 
-Global Flags:
-  -c, --config string           A file path to the configuration file to 
-                                use. The file should have an extension of 
-                                either json or yml/yaml and be readable. 
-                                (default "./tilegroxy.yml")
 ```
 
 ### Config
 
-The `tilegroxy config` command does nothing but contains two subcommands.
+The `tilegroxy config` command contains two subcommands.
 
 #### Check
 
@@ -212,11 +209,6 @@ Flags:
                values if the configuration is valid
   -h, --help   help for check
 
-Global Flags:
-  -c, --config string   A file path to the configuration file to use. The 
-                        file should have an extension of either json or 
-                        yml/yaml and be readable. 
-                        (default "./tilegroxy.yml")
 ```
 
 #### Create
@@ -250,11 +242,6 @@ Flags:
                         overwrite anything already in the file
       --yaml            Output the configuration in YAML
 
-Global Flags:
-  -c, --config string   A file path to the configuration file to use. The 
-                        file should have an extension of either json or 
-                        yml/yaml and be readable. 
-                        (default "./tilegroxy.yml")
 ```
 
 ### Test
@@ -300,11 +287,6 @@ Flags:
   -y, --y-coordinate uint   The y coordinate to use to test (default 534)
   -z, --z-coordinate uint   The z coordinate to use to test (default 10)
 
-Global Flags:
-  -c, --config string   A file path to the configuration file to use. The 
-                        file should have an extension of either json or 
-                        yml/yaml and be readable. 
-                        (default "./tilegroxy.yml")
 ```
 
 
