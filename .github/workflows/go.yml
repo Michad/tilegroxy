@@ -1,9 +1,10 @@
 name: Go
 on:
   push:
-    branches: [ "*" ]
+    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
