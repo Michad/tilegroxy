@@ -1,7 +1,7 @@
 name: Code Metrics
 on:
   push:
-    branches: [ "main", "fix-code-metrics" ]
+    branches: [ "main" ]
 permissions:
   contents: read
 jobs:
