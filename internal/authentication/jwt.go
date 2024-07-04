@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"os"
 	"reflect"
 	"slices"
 	"strings"
@@ -67,11 +66,6 @@ func ConstructJwt(config *JwtConfig, errorMessages *config.ErrorMessages) (*Jwt,
 
 	if config.MaxExpiration == 0 {
 		config.MaxExpiration = 24 * 60 * 60
-	}
-
-	if strings.Index(config.Key, "env.") == 0 {
-		slog.Debug("Looking up JWT verification key via env var " + config.Key[4:])
-		config.Key = os.Getenv(config.Key[4:])
 	}
 
 	if config.UserId == "" {
@@ -217,6 +211,7 @@ func (c Jwt) CheckAuthentication(req *http.Request, ctx *internal.RequestContext
 			ctx.UserIdentifier, _ = rawUid.(string)
 		}
 	} else {
+		// notest
 		var debugType string
 		if t := reflect.TypeOf(tokenJwt.Claims); t.Kind() == reflect.Ptr {
 			debugType = "*" + t.Elem().Name()
@@ -226,7 +221,7 @@ func (c Jwt) CheckAuthentication(req *http.Request, ctx *internal.RequestContext
 
 		slog.ErrorContext(ctx, "An unexpected state has occurred. Please report this to https://github.com/Michad/tilegroxy/issues : JWT authentication might not be fully working as expected because claims are of type "+debugType)
 
-		if c.Config.ExpectedSubject != "" {
+		if c.Config.ExpectedScope != "" {
 			return false
 		}
 	}

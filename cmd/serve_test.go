@@ -18,15 +18,19 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"syscall"
 	"testing"
 	"time"
 
 	"github.com/Michad/tilegroxy/internal/server"
+	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/assert"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -48,7 +52,7 @@ func init() {
 	}
 }
 
-func coreServeTest(t *testing.T, cfg string, url string) (*http.Response, error, func()) {
+func coreServeTest(cfg string, port int, url string) (*http.Response, func(), error) {
 	exitStatus = -1
 	rootCmd.ResetFlags()
 	seedCmd.ResetFlags()
@@ -62,25 +66,52 @@ func coreServeTest(t *testing.T, cfg string, url string) (*http.Response, error,
 
 	go func() { bindErr = rootCmd.Execute() }()
 
-	time.Sleep(2 * time.Second)
+	if bindErr != nil {
+		return nil, nil, bindErr
+	}
+
+	time.Sleep(time.Second)
 
 	if bindErr != nil {
-		return nil, bindErr, nil
+		return nil, nil, bindErr
+	}
+
+	ok := false
+	for i := 0; i < 10; i++ {
+		timeout := time.Duration(i*i*100) * time.Millisecond
+		conn, err := net.DialTimeout("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)), timeout)
+		if conn != nil {
+			defer conn.Close()
+		}
+		if err == nil {
+			ok = true
+			break
+		} else {
+			fmt.Printf("Didn't connect to tcp: %v\n", err)
+		}
+	}
+
+	if bindErr != nil {
+		return nil, nil, bindErr
+	}
+
+	if !ok {
+		return nil, nil, errors.New("unable to connect to server")
 	}
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		return nil, err, nil
+		return nil, nil, err
 	}
 
 	resp, err := http.DefaultClient.Do(req)
 
-	return resp, err, func() {
+	return resp, func() {
 		syscall.Kill(syscall.Getpid(), syscall.SIGUSR1)
 		if resp != nil {
 			resp.Body.Close()
 		}
-	}
+	}, err
 }
 
 func Test_ServeCommand_ExecuteInvalidPort(t *testing.T) {
@@ -94,14 +125,13 @@ layers:
       color: "FFFFFF"
 `
 
-	_, err, _ := coreServeTest(t, cfg, "http://localhost:12340/")
+	_, _, err := coreServeTest(cfg, 12340, "http://localhost:12340/")
 
 	assert.Error(t, err)
 	assert.Equal(t, 1, exitStatus)
 }
 
 func Test_ServeCommand_Execute(t *testing.T) {
-
 	cfg := `server:
   port: 12342
   Headers:
@@ -114,9 +144,14 @@ layers:
     provider:
       name: static
       color: "FFFFFF"
+  - id: meta
+    provider:
+      name: proxy
+      url: http://localhost:12342/root/tiles/color/{z}/{x}/{y}?agent={ctx.User-Agent}&key={env.KEY}
 `
+	os.Setenv("KEY", "hunter2")
 
-	resp, err, postFunc := coreServeTest(t, cfg, "http://localhost:12342/root/tiles/color/8/12/32")
+	resp, postFunc, err := coreServeTest(cfg, 12342, "http://localhost:12342/root/tiles/color/8/12/32")
 	defer postFunc()
 
 	assert.NoError(t, err)
@@ -127,6 +162,55 @@ layers:
 	assert.Equal(t, "image/png", resp.Header["Content-Type"][0])
 	assert.Equal(t, "result", resp.Header["X-Test"][0])
 	assert.Equal(t, "tilegroxy v0.X.Y", resp.Header["X-Powered-By"][0])
+
+	req, err := http.NewRequest(http.MethodGet, "http://localhost:12342/root/tiles/color/hgkgh/12/32", nil)
+	assert.NoError(t, err)
+	resp, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 400, resp.StatusCode)
+	resp.Body.Close()
+
+	req, err = http.NewRequest(http.MethodGet, "http://localhost:12342/root/tiles/color/8/ghj/32", nil)
+	assert.NoError(t, err)
+	resp, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 400, resp.StatusCode)
+	resp.Body.Close()
+
+	req, err = http.NewRequest(http.MethodGet, "http://localhost:12342/root/tiles/color/8/12/dfg", nil)
+	assert.NoError(t, err)
+	resp, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 400, resp.StatusCode)
+	resp.Body.Close()
+
+	req, err = http.NewRequest(http.MethodGet, "http://localhost:12342/root/tiles/asfas/8/12/32", nil)
+	assert.NoError(t, err)
+	resp, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 400, resp.StatusCode)
+	resp.Body.Close()
+
+	req, err = http.NewRequest(http.MethodGet, "http://localhost:12342/root/tiles/color/800/12/32", nil)
+	assert.NoError(t, err)
+	resp, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 400, resp.StatusCode)
+	resp.Body.Close()
+
+	req, err = http.NewRequest(http.MethodGet, "http://localhost:12342/root/tiles/color/8/1234567/32", nil)
+	assert.NoError(t, err)
+	resp, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 400, resp.StatusCode)
+	resp.Body.Close()
+
+	req, err = http.NewRequest(http.MethodGet, "http://localhost:12342/root/tiles/meta/8/1/32", nil)
+	assert.NoError(t, err)
+	resp, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, resp.StatusCode)
+	resp.Body.Close()
 }
 
 func Test_ServeCommand_ExecuteDefaultRoute(t *testing.T) {
@@ -141,7 +225,7 @@ layers:
       color: "FFFFFF"
 `
 
-	resp, err, postFunc := coreServeTest(t, cfg, "http://localhost:12341/")
+	resp, postFunc, err := coreServeTest(cfg, 12341, "http://localhost:12341/")
 	defer postFunc()
 
 	assert.NoError(t, err)
@@ -162,7 +246,7 @@ layers:
       color: "FFFFFF"
 `
 
-	resp, err, postFunc := coreServeTest(t, cfg, "http://localhost:12341/")
+	resp, postFunc, err := coreServeTest(cfg, 12341, "http://localhost:12341/")
 	defer postFunc()
 
 	assert.NoError(t, err)
@@ -181,7 +265,7 @@ layers:
       name: static
       color: "FFFFFF"
 `
-	resp, err, postFunc := coreServeTest(t, cfg, "http://localhost:12343/tiles/color/8/12/32")
+	resp, postFunc, err := coreServeTest(cfg, 12343, "http://localhost:12343/tiles/color/8/12/32")
 	defer postFunc()
 
 	assert.NoError(t, err)
@@ -205,7 +289,7 @@ layers:
       color: "FFFFFF"
 `
 
-	resp, err, postFunc := coreServeTest(t, cfg, "http://localhost:12344/tiles/color/8/12/32")
+	resp, postFunc, err := coreServeTest(cfg, 12344, "http://localhost:12344/tiles/color/8/12/32")
 	defer postFunc()
 
 	assert.NoError(t, err)
@@ -229,7 +313,7 @@ layers:
       name: static
       color: "FFFFFF"
 `
-	resp, err, postFunc := coreServeTest(t, cfg, "http://localhost:12345/tiles/color/8/12/32")
+	resp, postFunc, err := coreServeTest(cfg, 12345, "http://localhost:12345/tiles/color/8/12/32")
 	defer postFunc()
 
 	assert.NoError(t, err)
@@ -253,7 +337,7 @@ layers:
       name: static
       color: "FFFFFF"
 `
-	resp, err, postFunc := coreServeTest(t, cfg, "http://localhost:12346/tiles/color/8/12/32")
+	resp, postFunc, err := coreServeTest(cfg, 12346, "http://localhost:12346/tiles/color/8/12/32")
 	defer postFunc()
 
 	assert.NoError(t, err)
@@ -278,7 +362,7 @@ layers:
       color: "FFFFFF"
 `
 
-	resp, err, postFunc := coreServeTest(t, cfg, "http://localhost:12347/tiles/color/8/12/32")
+	resp, postFunc, err := coreServeTest(cfg, 12347, "http://localhost:12347/tiles/color/8/12/32")
 	defer postFunc()
 
 	assert.NoError(t, err)
@@ -312,7 +396,7 @@ layers:
       name: static
       color: "FFFFFF"
 `
-	resp, err, postFunc := coreServeTest(t, cfg, "http://localhost:12342/tiles/color/8/12/32")
+	resp, postFunc, err := coreServeTest(cfg, 12342, "http://localhost:12342/tiles/color/8/12/32")
 	defer postFunc()
 
 	assert.NoError(t, err)
@@ -336,7 +420,7 @@ layers:
       color: "FFFFFF"
 `
 
-	resp, err, postFunc := coreServeTest(t, cfg, "http://localhost:12348/tiles/color/8/12/32")
+	resp, postFunc, err := coreServeTest(cfg, 12348, "http://localhost:12348/tiles/color/8/12/32")
 	defer postFunc()
 
 	assert.NoError(t, err)
@@ -357,7 +441,7 @@ layers:
       color: "FFFFFF"
 `
 
-	resp, err, postFunc := coreServeTest(t, cfg, "http://localhost:12349/tiles/color/8/12/32")
+	resp, postFunc, err := coreServeTest(cfg, 12349, "http://localhost:12349/tiles/color/8/12/32")
 	if postFunc != nil {
 		defer postFunc()
 	}
@@ -385,7 +469,7 @@ layers:
       color: "FFFFFF"
 `
 
-	resp, err, postFunc := coreServeTest(t, cfg, "http://localhost:12349/tiles/color/8/12/32")
+	resp, postFunc, err := coreServeTest(cfg, 12349, "http://localhost:12349/tiles/color/8/12/32")
 	defer postFunc()
 
 	assert.NoError(t, err)
@@ -437,7 +521,7 @@ layers:
 `
 	fmt.Println(cfg)
 
-	resp, err, postFunc := coreServeTest(t, cfg, "http://localhost:12341/tiles/color/8/12/32")
+	resp, postFunc, err := coreServeTest(cfg, 12341, "http://localhost:12341/tiles/color/8/12/32")
 	defer postFunc()
 
 	if err != nil {
@@ -479,12 +563,14 @@ func Test_ServeCommand_RemoteProvider(t *testing.T) {
 
 	ctx := context.Background()
 
+	p, _ := nat.NewPort("tcp", "2379")
 	etcdReq := testcontainers.ContainerRequest{
 		Image: "bitnami/etcd:latest",
 		WaitingFor: wait.ForAll(
 			wait.ForLog("ready to serve client requests"),
+			wait.ForListeningPort(p),
 		),
-		ExposedPorts: []string{"2379/tcp"},
+		ExposedPorts: []string{"2379:2379/tcp"},
 		Env: map[string]string{
 			"ALLOW_NONE_AUTHENTICATION": "yes",
 		},
@@ -508,8 +594,9 @@ layers:
       name: static
       color: "FFFFFF"
 `
-	endpoint, err := etcdC.Endpoint(ctx, "")
-	assert.NoError(t, err)
+	endpoint := "127.0.0.1:2379"
+	// endpoint, err := etcdC.Endpoint(ctx, "")
+	// assert.NoError(t, err)
 
 	fmt.Println("Running on " + endpoint)
 

@@ -129,6 +129,39 @@ func TestGoodJwtClaims(t *testing.T) {
 	assert.True(t, jwt.CheckAuthentication(req, internal.BackgroundContext()))
 }
 
+func TestGoodJwtClaimsWithCache(t *testing.T) {
+	jwtConfig := JwtConfig{
+		Algorithm:        "HS256",
+		Key:              "hunter2",
+		MaxExpiration:    4294967295, //136 years from now
+		ExpectedAudience: "audience",
+		ExpectedSubject:  "subject",
+		ExpectedIssuer:   "issuer",
+		ExpectedScope:    "tile",
+		CacheSize:        100,
+	}
+	jwt, err := ConstructJwt(&jwtConfig, &config.ErrorMessages{})
+
+	if !assert.NoError(t, err) || !assert.NotNil(t, jwt) {
+		return
+	}
+
+	req, err := http.NewRequest(http.MethodGet, "http://127.0.0.1/tiles/layer/0/0/0", nil)
+
+	if !assert.NoError(t, err) || !assert.NotNil(t, req) {
+		return
+	}
+
+	req.Header["Authorization"] = []string{"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdWJqZWN0IiwiYXVkIjoiYXVkaWVuY2UiLCJpc3MiOiJpc3N1ZXIiLCJzY29wZSI6InNvbWV0aGluZyB0aWxlIG90aGVyIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjQyOTQ5NjcyOTV9.6jOBwjsvFcJXGkaleXB-75F6J3CjaQYuRELJPfvOfQE"} //Valid JWT with all claims
+	assert.True(t, jwt.CheckAuthentication(req, internal.BackgroundContext()))
+	assert.True(t, jwt.CheckAuthentication(req, internal.BackgroundContext()))
+
+	assert.Equal(t, 1, jwt.Cache.Size())
+	date, ok := jwt.Cache.Get(req.Header["Authorization"][0])
+	assert.True(t, ok)
+	assert.Equal(t, int64(4294967295), date.Time.Unix())
+}
+
 func TestGoodJwtScopeLimit(t *testing.T) {
 	jwtConfig := JwtConfig{
 		Algorithm:     "HS256",
