@@ -49,8 +49,6 @@ You can also use `tilegroxy config create` to help get started.
 
 Tilegroxy is designed to be run in a container. But it can also be run directly for that old-school approach; we don't judge.   
 
-It is also meant to be used in Linux (or at least *nix). Building and running on Windows should work but is currently untested. You will need a bash-compatible shell to run the Makefile.
-
 ### Building
 
 Tilegroxy builds as a statically linked executable. Prebuilt binaries are available from [Github](https://github.com/Michad/tilegroxy/releases).
