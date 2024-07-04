@@ -30,6 +30,13 @@ jobs:
         echo "REF=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
         echo "DATE=$(date -Iseconds --u)" >> $GITHUB_OUTPUT
 
+    - name: Import GPG key
+      uses: crazy-max/ghaction-import-gpg@01dd5d3ca463c7f10f7f4f7b4f177225ac661ee4 # v6.1.0
+      id: import_gpg
+      with:
+        gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+        passphrase: ${{ secrets.GPG_PASSPHRASE }}
+
     - name: Release
       uses: goreleaser/goreleaser-action@286f3b13b1b49da4ac219696163fb8c1c93e1200 # v6.0.0
       if: startsWith(github.ref, 'refs/tags/v')
@@ -39,6 +46,7 @@ jobs:
         args: release --clean
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
         PKG: ${{ steps.vars.outputs.PKG }}
         VERSION: ${{ steps.vars.outputs.VERSION }}
         REF: ${{ steps.vars.outputs.REF }}
