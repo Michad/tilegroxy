@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/Michad/tilegroxy/internal/server"
+	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/assert"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -101,7 +102,6 @@ layers:
 }
 
 func Test_ServeCommand_Execute(t *testing.T) {
-
 	cfg := `server:
   port: 12342
   Headers:
@@ -114,7 +114,12 @@ layers:
     provider:
       name: static
       color: "FFFFFF"
+  - id: meta
+    provider:
+      name: proxy
+      url: http://localhost:12342/root/tiles/color/{z}/{x}/{y}?agent={ctx.User-Agent}&key={env.KEY}
 `
+	os.Setenv("KEY", "hunter2")
 
 	resp, err, postFunc := coreServeTest(t, cfg, "http://localhost:12342/root/tiles/color/8/12/32")
 	defer postFunc()
@@ -127,6 +132,55 @@ layers:
 	assert.Equal(t, "image/png", resp.Header["Content-Type"][0])
 	assert.Equal(t, "result", resp.Header["X-Test"][0])
 	assert.Equal(t, "tilegroxy v0.X.Y", resp.Header["X-Powered-By"][0])
+
+	req, err := http.NewRequest(http.MethodGet, "http://localhost:12342/root/tiles/color/hgkgh/12/32", nil)
+	assert.NoError(t, err)
+	resp, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 400, resp.StatusCode)
+	resp.Body.Close()
+
+	req, err = http.NewRequest(http.MethodGet, "http://localhost:12342/root/tiles/color/8/ghj/32", nil)
+	assert.NoError(t, err)
+	resp, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 400, resp.StatusCode)
+	resp.Body.Close()
+
+	req, err = http.NewRequest(http.MethodGet, "http://localhost:12342/root/tiles/color/8/12/dfg", nil)
+	assert.NoError(t, err)
+	resp, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 400, resp.StatusCode)
+	resp.Body.Close()
+
+	req, err = http.NewRequest(http.MethodGet, "http://localhost:12342/root/tiles/asfas/8/12/32", nil)
+	assert.NoError(t, err)
+	resp, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 400, resp.StatusCode)
+	resp.Body.Close()
+
+	req, err = http.NewRequest(http.MethodGet, "http://localhost:12342/root/tiles/color/800/12/32", nil)
+	assert.NoError(t, err)
+	resp, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 400, resp.StatusCode)
+	resp.Body.Close()
+
+	req, err = http.NewRequest(http.MethodGet, "http://localhost:12342/root/tiles/color/8/1234567/32", nil)
+	assert.NoError(t, err)
+	resp, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 400, resp.StatusCode)
+	resp.Body.Close()
+
+	req, err = http.NewRequest(http.MethodGet, "http://localhost:12342/root/tiles/meta/8/1/32", nil)
+	assert.NoError(t, err)
+	resp, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, resp.StatusCode)
+	resp.Body.Close()
 }
 
 func Test_ServeCommand_ExecuteDefaultRoute(t *testing.T) {
@@ -479,12 +533,14 @@ func Test_ServeCommand_RemoteProvider(t *testing.T) {
 
 	ctx := context.Background()
 
+	p, _ := nat.NewPort("tcp", "2379")
 	etcdReq := testcontainers.ContainerRequest{
 		Image: "bitnami/etcd:latest",
 		WaitingFor: wait.ForAll(
 			wait.ForLog("ready to serve client requests"),
+			wait.ForListeningPort(p),
 		),
-		ExposedPorts: []string{"2379/tcp"},
+		ExposedPorts: []string{"2379:2379/tcp"},
 		Env: map[string]string{
 			"ALLOW_NONE_AUTHENTICATION": "yes",
 		},
@@ -508,8 +564,9 @@ layers:
       name: static
       color: "FFFFFF"
 `
-	endpoint, err := etcdC.Endpoint(ctx, "")
-	assert.NoError(t, err)
+	endpoint := "127.0.0.1:2379"
+	// endpoint, err := etcdC.Endpoint(ctx, "")
+	// assert.NoError(t, err)
 
 	fmt.Println("Running on " + endpoint)
 
