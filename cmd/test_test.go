@@ -196,3 +196,24 @@ layers:
 	assert.Greater(t, len(outStr), 69)
 	assert.Less(t, exitStatus, 1)
 }
+
+func Test_TestCommand_InvalidConfig(t *testing.T) {
+	exitStatus = -1
+	rootCmd.ResetFlags()
+	testCmd.ResetFlags()
+	initRoot()
+	initTest()
+
+	cmd := rootCmd
+	b := bytes.NewBufferString("")
+	cmd.SetOutput(b)
+	cmd.SetArgs([]string{"test", "-c", "not real file"})
+	assert.Nil(t, cmd.Execute())
+	out, err := io.ReadAll(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.NotEmpty(t, out)
+	assert.Equal(t, exitStatus, 1)
+}

@@ -43,8 +43,71 @@ func Test_ExecuteVersionCommand(t *testing.T) {
 	err = json.Unmarshal(out, &res)
 	assert.NoError(t, err)
 
-	assert.NotNil(t, res["version"])
-	assert.NotNil(t, res["ref"])
-	assert.NotNil(t, res["goVersion"])
-	assert.NotNil(t, res["buildDate"])
+	assert.NotEmpty(t, res["version"])
+	assert.NotEmpty(t, res["ref"])
+	assert.NotEmpty(t, res["goVersion"])
+	assert.NotEmpty(t, res["buildDate"])
+}
+
+func Test_ExecuteVersionCommandShort(t *testing.T) {
+	rootCmd.ResetFlags()
+	versionCmd.ResetFlags()
+	initRoot()
+	initVersion()
+
+	cmd := rootCmd
+	b := bytes.NewBufferString("")
+	cmd.SetOutput(b)
+	cmd.SetArgs([]string{"version", "--json", "--short"})
+	cmd.Execute()
+	out, err := io.ReadAll(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var res map[string]string
+	err = json.Unmarshal(out, &res)
+	assert.NoError(t, err)
+
+	assert.NotEmpty(t, res["version"])
+	assert.Empty(t, res["ref"])
+	assert.Empty(t, res["goVersion"])
+	assert.Empty(t, res["buildDate"])
+}
+
+func Test_ExecuteVersionCommandShortNoJson(t *testing.T) {
+	rootCmd.ResetFlags()
+	versionCmd.ResetFlags()
+	initRoot()
+	initVersion()
+
+	cmd := rootCmd
+	b := bytes.NewBufferString("")
+	cmd.SetOutput(b)
+	cmd.SetArgs([]string{"version", "--short"})
+	cmd.Execute()
+	out, err := io.ReadAll(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.NotEmpty(t, out)
+}
+func Test_ExecuteVersionCommandNoJson(t *testing.T) {
+	rootCmd.ResetFlags()
+	versionCmd.ResetFlags()
+	initRoot()
+	initVersion()
+
+	cmd := rootCmd
+	b := bytes.NewBufferString("")
+	cmd.SetOutput(b)
+	cmd.SetArgs([]string{"version"})
+	cmd.Execute()
+	out, err := io.ReadAll(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.NotEmpty(t, out)
 }

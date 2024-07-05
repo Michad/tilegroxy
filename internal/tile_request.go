@@ -44,12 +44,20 @@ type RangeError struct {
 }
 
 func (e RangeError) Error() string {
+	// notest
 	return fmt.Sprintf("Param %v must be between %v and %v", e.ParamName, e.MinValue, e.MaxValue)
 }
 
+type TooManyTilesError struct {
+	NumTiles uint64
+}
+
+func (e TooManyTilesError) Error() string {
+	// notest
+	return fmt.Sprintf("too many tiles to return (%v > 10000)", e.NumTiles)
+}
+
 func (b Bounds) FindTiles(layerName string, zoom uint, force bool) (*[]TileRequest, error) {
-	//TODO: remove commented debug when confident bugs are zapped
-	// fmt.Fprintf(out,"B: %v\n", b)
 	z := float64(zoom)
 
 	lonMin := b.West
@@ -71,45 +79,40 @@ func (b Bounds) FindTiles(layerName string, zoom uint, force bool) (*[]TileReque
 	latMin := math.Min(85.0511, math.Max(-85.0511, b.South)) * math.Pi / 180.0
 	latMax := math.Min(85.0511, math.Max(-85.0511, b.North)) * math.Pi / 180.0
 
-	// fmt.Fprintf(out,"lon: %v to %v\n", lonMin, lonMax)
-	// fmt.Fprintf(out,"lat: %v to %v\n", latMin, latMax)
+	x1 := n * ((lonMin + 180) / 360)
+	x2 := n * ((lonMax + 180) / 360)
+	y1 := math.Ceil(n * (1 - (math.Log(math.Tan(latMin)+1.0/math.Cos(latMin)) / math.Pi)) / 2)
+	y2 := math.Floor(n * (1 - (math.Log(math.Tan(latMax)+1.0/math.Cos(latMax)) / math.Pi)) / 2)
 
-	xminf := n * ((lonMin + 180) / 360)
-	xmaxf := n * ((lonMax + 180) / 360)
-	ymaxf := math.Ceil(n * (1 - (math.Log(math.Tan(latMin)+1.0/math.Cos(latMin)) / math.Pi)) / 2)
-	yminf := math.Floor(n * (1 - (math.Log(math.Tan(latMax)+1.0/math.Cos(latMax)) / math.Pi)) / 2)
+	yMin := int(math.Min(n, math.Max(0, y2)))
+	yMax := int(math.Min(n, math.Max(0, y1)))
+	xMin := int(math.Min(n, math.Max(0, x1)))
+	xMax := int(math.Min(n, math.Max(0, x2)))
 
-	ymin := int(math.Min(n, math.Max(0, yminf)))
-	ymax := int(math.Min(n, math.Max(0, ymaxf)))
-	xmin := int(math.Min(n, math.Max(0, xminf)))
-	xmax := int(math.Min(n, math.Max(0, xmaxf)))
-
-	if xmin == xmax {
-		xmax = xmin + 1
+	if xMin == xMax {
+		xMax = xMin + 1
 	}
-	if ymin == ymax {
-		ymax = ymin + 1
+	if yMin == yMax {
+		yMax = yMin + 1
 	}
 
-	// fmt.Fprintf(out,"X : %v to %v \n", xmin, xmax)
-	// fmt.Fprintf(out,"Yf: %v to %v\n", yminf, ymaxf)
-	// fmt.Fprintf(out,"Y : %v to %v\n", ymin, ymax)
-
-	numTiles := (xmax - xmin) * (ymax - ymin)
+	numTiles := uint64(xMax-xMin) * uint64(yMax-yMin)
 
 	if numTiles > 10000 && !force {
-		return nil, fmt.Errorf("too many tiles to return (%v > 10000)", numTiles)
+		return nil, TooManyTilesError{NumTiles: numTiles}
 	}
 
-	result := make([]TileRequest, numTiles)
+	if numTiles > math.MaxInt32 {
+		return nil, TooManyTilesError{NumTiles: numTiles}
+	}
 
-	for x := xmin; x < xmax; x++ {
-		for y := ymin; y < ymax; y++ {
-			result[(y-ymin)*(xmax-xmin)+x-xmin] = TileRequest{layerName, int(zoom), x, y}
+	result := make([]TileRequest, int32(numTiles))
+
+	for x := xMin; x < xMax; x++ {
+		for y := yMin; y < yMax; y++ {
+			result[(y-yMin)*(xMax-xMin)+x-xMin] = TileRequest{layerName, int(zoom), x, y}
 		}
 	}
-
-	// fmt.Fprintf(out,"Result: %v\n\n", result)
 
 	return &result, nil
 }

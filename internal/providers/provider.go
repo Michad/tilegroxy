@@ -146,6 +146,7 @@ type AuthError struct {
 }
 
 func (e AuthError) Error() string {
+	// notest
 	return fmt.Sprintf("Auth Error - %s", e.Message)
 }
 
@@ -154,6 +155,7 @@ type InvalidContentLengthError struct {
 }
 
 func (e *InvalidContentLengthError) Error() string {
+	// notest
 	return fmt.Sprintf("Invalid content length %v", e.Length)
 }
 
@@ -162,6 +164,7 @@ type InvalidContentTypeError struct {
 }
 
 func (e *InvalidContentTypeError) Error() string {
+	// notest
 	return fmt.Sprintf("Invalid content type %v", e.ContentType)
 }
 
@@ -170,6 +173,7 @@ type RemoteServerError struct {
 }
 
 func (e *RemoteServerError) Error() string {
+	// notest
 	return fmt.Sprintf("Remote server returned status code %v", e.StatusCode)
 }
 

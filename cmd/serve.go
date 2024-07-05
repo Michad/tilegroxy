@@ -30,25 +30,27 @@ var serveCmd = &cobra.Command{
 	The process will run blocking in the foreground until terminated. The majority of configuration should be supplied via a configuration file.
 	
 	`,
-	Run: func(cmd *cobra.Command, args []string) {
-		out := rootCmd.OutOrStdout()
+	Run: runServe,
+}
 
-		cfg, layerObjects, auth, err := parseConfigIntoStructs(cmd)
+func runServe(cmd *cobra.Command, args []string) {
+	out := rootCmd.OutOrStdout()
 
-		if err != nil {
-			fmt.Fprintf(out, "Error: %v\n", err.Error())
-			exit(1)
-			return
-		}
+	cfg, layerObjects, auth, err := parseConfigIntoStructs(cmd)
 
-		err = server.ListenAndServe(cfg, layerObjects, auth)
+	if err != nil {
+		fmt.Fprintf(out, "Error: %v\n", err.Error())
+		exit(1)
+		return
+	}
 
-		if err != nil {
-			fmt.Fprintf(out, "Error: %v\n", err.Error())
-			exit(1)
-			return
-		}
-	},
+	err = server.ListenAndServe(cfg, layerObjects, auth)
+
+	if err != nil {
+		fmt.Fprintf(out, "Error: %v\n", err.Error())
+		exit(1)
+		return
+	}
 }
 
 func init() {

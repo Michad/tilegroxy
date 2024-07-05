@@ -25,26 +25,28 @@ var checkCmd = &cobra.Command{
 	Use:   "check",
 	Short: "Validates your configuration",
 	Long:  `Checks the validity of the configuration you supplied and then exits. If everything is valid the program displays "Valid" and exits with a code of 0. If the configuration is invalid then a descriptive error is outputted and it exits with a non-zero status code.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		echo, _ := cmd.Flags().GetBool("echo")
-		out := cmd.OutOrStdout()
+	Run:   runCheck,
+}
 
-		cfg, _, _, err := parseConfigIntoStructs(cmd)
+func runCheck(cmd *cobra.Command, args []string) {
+	echo, _ := cmd.Flags().GetBool("echo")
+	out := cmd.OutOrStdout()
 
-		if err != nil {
-			fmt.Fprintf(out, "Invalid configuration: %v\n", err.Error())
-			exit(1)
-			return
-		}
+	cfg, _, _, err := parseConfigIntoStructs(cmd)
 
-		if cfg != nil && echo {
-			enc := json.NewEncoder(out)
-			enc.SetIndent(" ", "  ")
-			enc.Encode(cfg)
-		} else {
-			fmt.Fprintln(out, "Valid")
-		}
-	},
+	if err != nil {
+		fmt.Fprintf(out, "Invalid configuration: %v\n", err.Error())
+		exit(1)
+		return
+	}
+
+	if cfg != nil && echo {
+		enc := json.NewEncoder(out)
+		enc.SetIndent(" ", "  ")
+		enc.Encode(cfg)
+	} else {
+		fmt.Fprintln(out, "Valid")
+	}
 }
 
 func init() {

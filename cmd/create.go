@@ -35,67 +35,69 @@ Defaults to outputting to standard out, specify --output/-o to write to a file. 
 	
 Example:
 	tilegroxy config create --default --json -o tilegroxy.json`,
-	Run: func(cmd *cobra.Command, args []string) {
-		includeDefault, _ := cmd.Flags().GetBool("default")
-		noPretty, _ := cmd.Flags().GetBool("no-pretty")
-		forceJson, _ := cmd.Flags().GetBool("json")
-		forceYml, _ := cmd.Flags().GetBool("yaml")
-		writePath, _ := cmd.Flags().GetString("output")
+	Run: runCreate,
+}
 
-		out := cmd.OutOrStdout()
+func runCreate(cmd *cobra.Command, args []string) {
+	includeDefault, _ := cmd.Flags().GetBool("default")
+	noPretty, _ := cmd.Flags().GetBool("no-pretty")
+	forceJson, _ := cmd.Flags().GetBool("json")
+	forceYml, _ := cmd.Flags().GetBool("yaml")
+	writePath, _ := cmd.Flags().GetString("output")
 
-		cfg := make(map[string]interface{})
+	out := cmd.OutOrStdout()
 
-		if includeDefault {
-			mapstructure.Decode(config.DefaultConfig(), &cfg)
+	cfg := make(map[string]interface{})
+
+	if includeDefault {
+		mapstructure.Decode(config.DefaultConfig(), &cfg)
+	}
+
+	if writePath != "" && !forceJson && !forceYml {
+		ext := strings.ToLower(filepath.Ext(writePath))
+
+		if ext == ".json" {
+			forceJson = true
+		} //Check for extension being yaml isn't needed because we default to yaml
+	}
+
+	//TODO: populate example config here
+
+	var file *os.File
+	var err error
+
+	if writePath != "" {
+		file, err = os.OpenFile(writePath, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0666)
+
+		if err != nil {
+			panic(err)
 		}
 
-		if writePath != "" && !forceJson && !forceYml {
-			ext := strings.ToLower(filepath.Ext(writePath))
+		defer file.Close()
+	}
 
-			if ext == ".json" {
-				forceJson = true
-			} //Check for extension being yaml isn't needed because we default to yaml
-		}
-
-		//TODO: populate example config here
-
-		var file *os.File
-		var err error
+	if forceJson {
+		var enc *json.Encoder
 
 		if writePath != "" {
-			file, err = os.OpenFile(writePath, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0666)
-
-			if err != nil {
-				panic(err)
-			}
-
-			defer file.Close()
-		}
-
-		if forceJson {
-			var enc *json.Encoder
-
-			if writePath != "" {
-				enc = json.NewEncoder(file)
-			} else {
-				enc = json.NewEncoder(out)
-			}
-			if !noPretty {
-				enc.SetIndent(" ", "  ")
-			}
-			enc.Encode(cfg)
+			enc = json.NewEncoder(file)
 		} else {
-			var enc *yaml.Encoder
-
-			if writePath != "" {
-				enc = yaml.NewEncoder(file)
-			} else {
-				enc = yaml.NewEncoder(out)
-			}
-			enc.Encode(cfg)
+			enc = json.NewEncoder(out)
 		}
-	},
+		if !noPretty {
+			enc.SetIndent(" ", "  ")
+		}
+		enc.Encode(cfg)
+	} else {
+		var enc *yaml.Encoder
+
+		if writePath != "" {
+			enc = yaml.NewEncoder(file)
+		} else {
+			enc = yaml.NewEncoder(out)
+		}
+		enc.Encode(cfg)
+	}
 }
 
 func init() {

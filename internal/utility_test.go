@@ -94,3 +94,8 @@ func Test_ReplaceEnv_WithVals(t *testing.T) {
 	assert.Equal(t, "val2", cloned["child"].(map[string]interface{})["r"])
 	assert.Equal(t, "saf", cloned["child"].(map[string]interface{})["f"])
 }
+
+func Test_Ternary(t *testing.T) {
+	assert.Equal(t, "a", Ternary(true, "a", "b"))
+	assert.Equal(t, "b", Ternary(false, "a", "b"))
+}
