@@ -94,16 +94,29 @@ Example:
 			}
 			newTiles, err := b.FindTiles(layerName, uint(z), force)
 
-			if err != nil {
-				fmt.Fprintf(out, "Error: %v\n", err.Error())
-				exit(1)
-				return
+			if newTiles != nil {
+				tileRequests = append(tileRequests, (*newTiles)...)
 			}
 
-			tileRequests = append(tileRequests, (*newTiles)...)
+			if err != nil || (len(tileRequests) > 10000 && !force) {
+				count := len(tileRequests)
 
-			if len(tileRequests) > 10000 && !force {
-				fmt.Fprintln(out, "Too many tiles to seed. Run with --force if you're sure you want to generate this many tiles")
+				if err != nil {
+					var tilesError internal.TooManyTilesError
+
+					if errors.As(err, &tilesError) {
+						count = int(tilesError.NumTiles)
+					} else {
+						fmt.Fprintf(out, "Error: %v\n", err.Error())
+						exit(1)
+						return
+					}
+				}
+
+				fmt.Fprintf(out, "Too many tiles to seed (%v > %v). %v\n",
+					count,
+					internal.Ternary(count > math.MaxInt32, math.MaxInt32, 10000),
+					internal.Ternary(count > math.MaxInt32, "", "Run with --force if you're sure you want to generate this many tiles"))
 				exit(1)
 				return
 			}

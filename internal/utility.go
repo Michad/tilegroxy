@@ -128,3 +128,10 @@ func ReplaceEnv(rawConfig map[string]interface{}) map[string]interface{} {
 
 	return result
 }
+
+func Ternary[T any](cond bool, a T, b T) T {
+	if cond {
+		return a
+	}
+	return b
+}
