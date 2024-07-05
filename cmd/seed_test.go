@@ -78,6 +78,72 @@ func Test_SeedCommand_InvalidLayer(t *testing.T) {
 	assert.Equal(t, 1, exitStatus)
 }
 
+func Test_SeedCommand_InvalidThread(t *testing.T) {
+	exitStatus = -1
+	rootCmd.ResetFlags()
+	seedCmd.ResetFlags()
+	initRoot()
+	initSeed()
+
+	b := bytes.NewBufferString("")
+	rootCmd.SetOutput(b)
+	rootCmd.SetArgs([]string{"seed", "--verbose", "-c", "../examples/configurations/simple.json", "-l", "osm", "-t", "0"})
+	assert.Nil(t, rootCmd.Execute())
+	out, err := io.ReadAll(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Println(string(out))
+
+	assert.Greater(t, len(out), 0)
+	assert.Equal(t, 1, exitStatus)
+}
+
+func Test_SeedCommand_InvalidZoom(t *testing.T) {
+	exitStatus = -1
+	rootCmd.ResetFlags()
+	seedCmd.ResetFlags()
+	initRoot()
+	initSeed()
+
+	b := bytes.NewBufferString("")
+	rootCmd.SetOutput(b)
+	rootCmd.SetArgs([]string{"seed", "--verbose", "-c", "../examples/configurations/simple.json", "-l", "osm", "-z", "200"})
+	assert.Nil(t, rootCmd.Execute())
+	out, err := io.ReadAll(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Println(string(out))
+
+	assert.Greater(t, len(out), 0)
+	assert.Equal(t, 1, exitStatus)
+}
+
+func Test_SeedCommand_InvalidConfig(t *testing.T) {
+	exitStatus = -1
+	rootCmd.ResetFlags()
+	seedCmd.ResetFlags()
+	initRoot()
+	initSeed()
+
+	b := bytes.NewBufferString("")
+	rootCmd.SetOutput(b)
+	rootCmd.SetArgs([]string{"seed", "--verbose", "--raw-config", "asfasfas", "-l", "osm"})
+	assert.Nil(t, rootCmd.Execute())
+	out, err := io.ReadAll(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Println(string(out))
+
+	assert.Greater(t, len(out), 0)
+	assert.Equal(t, 1, exitStatus)
+}
+
 func Test_SeedCommand_ExcessTiles(t *testing.T) {
 	exitStatus = -1
 	rootCmd.ResetFlags()
