@@ -41,161 +41,163 @@ This test uses an arbitrary tile coordinate to test with. The default coordinate
 Example:
 
 	tilegroxy test -c test_config.yml -l osm -z 10 -x 123 -y 534`,
-	Run: func(cmd *cobra.Command, args []string) {
-		layerNames, err1 := cmd.Flags().GetStringSlice("layer")
-		z, err2 := cmd.Flags().GetUint("z-coordinate")
-		x, err3 := cmd.Flags().GetUint("y-coordinate")
-		y, err4 := cmd.Flags().GetUint("x-coordinate")
-		noCache, err5 := cmd.Flags().GetBool("no-cache")
-		numThread, err6 := cmd.Flags().GetUint16("threads")
-		out := rootCmd.OutOrStdout()
+	Run: runTest,
+}
 
-		if err := errors.Join(err1, err2, err3, err4, err5, err6); err != nil {
-			fmt.Fprintf(out, "Error: %v", err)
-			exit(1)
-			return
+func runTest(cmd *cobra.Command, args []string) {
+	layerNames, err1 := cmd.Flags().GetStringSlice("layer")
+	z, err2 := cmd.Flags().GetUint("z-coordinate")
+	x, err3 := cmd.Flags().GetUint("y-coordinate")
+	y, err4 := cmd.Flags().GetUint("x-coordinate")
+	noCache, err5 := cmd.Flags().GetBool("no-cache")
+	numThread, err6 := cmd.Flags().GetUint16("threads")
+	out := rootCmd.OutOrStdout()
+
+	if err := errors.Join(err1, err2, err3, err4, err5, err6); err != nil {
+		fmt.Fprintf(out, "Error: %v", err)
+		exit(1)
+		return
+	}
+
+	_, layerObjects, _, err := parseConfigIntoStructs(cmd)
+
+	if err != nil {
+		fmt.Fprintf(out, "Error: %v", err)
+		exit(1)
+		return
+	}
+	layerMap := make(map[string]*layers.Layer)
+
+	for _, l := range layerObjects {
+		layerMap[l.Id] = l
+	}
+
+	if len(layerNames) == 0 {
+		for _, l := range layerObjects {
+			layerNames = append(layerNames, l.Id)
 		}
+	}
 
-		_, layerObjects, _, err := parseConfigIntoStructs(cmd)
+	//Generate the full list of requests to process
+	tileRequests := make([]internal.TileRequest, 0)
+
+	for _, layerName := range layerNames {
+		req := internal.TileRequest{LayerName: layerName, Z: int(z), X: int(x), Y: int(y)}
+		_, err := req.GetBounds()
 
 		if err != nil {
 			fmt.Fprintf(out, "Error: %v", err)
 			exit(1)
 			return
 		}
-		layerMap := make(map[string]*layers.Layer)
 
-		for _, l := range layerObjects {
-			layerMap[l.Id] = l
+		layer := layerMap[layerName]
+
+		if layer == nil {
+			fmt.Fprintf(out, "Error: Invalid layer name: %v", layer)
+			exit(1)
+			return
 		}
 
-		if len(layerNames) == 0 {
-			for _, l := range layerObjects {
-				layerNames = append(layerNames, l.Id)
-			}
+		tileRequests = append(tileRequests, req)
+	}
+
+	numReq := len(tileRequests)
+
+	if numThread > uint16(numReq) {
+		fmt.Fprintln(os.Stderr, "Warning: more threads requested than tiles")
+		numThread = uint16(numReq)
+	}
+
+	//Split up all the requests for N threads
+	numReqPerThread := int(math.Floor(float64(numReq) / float64(numThread)))
+	var reqSplit [][]internal.TileRequest
+
+	for i := 0; i < int(numThread); i++ {
+		chunkStart := i * numReqPerThread
+		var chunkEnd uint
+		if i == int(numThread)-1 {
+			chunkEnd = uint(numReq)
+		} else {
+			chunkEnd = uint(math.Min(float64(chunkStart+numReqPerThread), float64(numReq)))
 		}
 
-		//Generate the full list of requests to process
-		tileRequests := make([]internal.TileRequest, 0)
+		reqSplit = append(reqSplit, tileRequests[chunkStart:chunkEnd])
+	}
 
-		for _, layerName := range layerNames {
-			req := internal.TileRequest{LayerName: layerName, Z: int(z), X: int(x), Y: int(y)}
-			_, err := req.GetBounds()
+	//Start processing all the tile requests over N threads
+	var wg sync.WaitGroup
+	errCount := uint32(0)
 
-			if err != nil {
-				fmt.Fprintf(out, "Error: %v", err)
-				exit(1)
-				return
-			}
+	writer := tabwriter.NewWriter(out, 1, 4, 4, ' ', tabwriter.StripEscape)
+	fmt.Fprintln(writer, "Thread\tLayer\tGenerated\tCache Write\tCache Read\tError\t")
 
-			layer := layerMap[layerName]
+	for t := int(0); t < len(reqSplit); t++ {
+		wg.Add(1)
+		go func(t int, myReqs []internal.TileRequest) {
 
-			if layer == nil {
-				fmt.Fprintf(out, "Error: Invalid layer name: %v", layer)
-				exit(1)
-				return
-			}
+			for _, req := range myReqs {
+				layer := layerMap[req.LayerName]
+				img, layerErr := layer.RenderTileNoCache(internal.BackgroundContext(), req)
+				var cacheWriteError error
+				var cacheReadError error
 
-			tileRequests = append(tileRequests, req)
-		}
-
-		numReq := len(tileRequests)
-
-		if numThread > uint16(numReq) {
-			fmt.Fprintln(os.Stderr, "Warning: more threads requested than tiles")
-			numThread = uint16(numReq)
-		}
-
-		//Split up all the requests for N threads
-		numReqPerThread := int(math.Floor(float64(numReq) / float64(numThread)))
-		var reqSplit [][]internal.TileRequest
-
-		for i := 0; i < int(numThread); i++ {
-			chunkStart := i * numReqPerThread
-			var chunkEnd uint
-			if i == int(numThread)-1 {
-				chunkEnd = uint(numReq)
-			} else {
-				chunkEnd = uint(math.Min(float64(chunkStart+numReqPerThread), float64(numReq)))
-			}
-
-			reqSplit = append(reqSplit, tileRequests[chunkStart:chunkEnd])
-		}
-
-		//Start processing all the tile requests over N threads
-		var wg sync.WaitGroup
-		errCount := uint32(0)
-
-		writer := tabwriter.NewWriter(out, 1, 4, 4, ' ', tabwriter.StripEscape)
-		fmt.Fprintln(writer, "Thread\tLayer\tGenerated\tCache Write\tCache Read\tError\t")
-
-		for t := int(0); t < len(reqSplit); t++ {
-			wg.Add(1)
-			go func(t int, myReqs []internal.TileRequest) {
-
-				for _, req := range myReqs {
-					layer := layerMap[req.LayerName]
-					img, layerErr := layer.RenderTileNoCache(internal.BackgroundContext(), req)
-					var cacheWriteError error
-					var cacheReadError error
-
-					if !noCache && layerErr == nil {
-						cacheWriteError = (*layer.Cache).Save(req, img)
-						if cacheWriteError == nil {
-							var img2 *internal.Image
-							img2, cacheReadError = (*layer.Cache).Lookup(req)
-							if cacheReadError == nil {
-								if img2 == nil {
-									cacheReadError = errors.New("no result from cache lookup")
-								} else if !slices.Equal(*img, *img2) {
-									cacheReadError = errors.New("cache result doesn't match what we put into cache")
-								}
+				if !noCache && layerErr == nil {
+					cacheWriteError = (*layer.Cache).Save(req, img)
+					if cacheWriteError == nil {
+						var img2 *internal.Image
+						img2, cacheReadError = (*layer.Cache).Lookup(req)
+						if cacheReadError == nil {
+							if img2 == nil {
+								cacheReadError = errors.New("no result from cache lookup")
+							} else if !slices.Equal(*img, *img2) {
+								cacheReadError = errors.New("cache result doesn't match what we put into cache")
 							}
 						}
 					}
-
-					if layerErr != nil || cacheWriteError != nil || cacheReadError != nil {
-						atomic.AddUint32(&errCount, 1)
-					}
-
-					//Output the result into the table
-					resultStr := strconv.Itoa(t) + "\t" + req.LayerName + "\t"
-					if layerErr != nil {
-						resultStr += "No\tN/A\tN/A\t\xff" + layerErr.Error() + "\xff\t"
-					} else {
-						if noCache {
-							resultStr += "Yes\tN/A\tN/A\tNone\t"
-						} else if cacheWriteError != nil {
-							resultStr += "Yes\tNo\tN/A\t\xff" + cacheWriteError.Error() + "\xff\t"
-						} else if cacheReadError != nil {
-							resultStr += "Yes\tYes\tNo\t\xff" + cacheReadError.Error() + "\xff\t"
-						} else {
-							resultStr += "Yes\tYes\tYes\tNone\t"
-						}
-					}
-					fmt.Fprintln(writer, resultStr)
-
 				}
 
-				wg.Done()
-			}(t, reqSplit[t])
-		}
+				if layerErr != nil || cacheWriteError != nil || cacheReadError != nil {
+					atomic.AddUint32(&errCount, 1)
+				}
 
-		wg.Wait()
+				//Output the result into the table
+				resultStr := strconv.Itoa(t) + "\t" + req.LayerName + "\t"
+				if layerErr != nil {
+					resultStr += "No\tN/A\tN/A\t\xff" + layerErr.Error() + "\xff\t"
+				} else {
+					if noCache {
+						resultStr += "Yes\tN/A\tN/A\tNone\t"
+					} else if cacheWriteError != nil {
+						resultStr += "Yes\tNo\tN/A\t\xff" + cacheWriteError.Error() + "\xff\t"
+					} else if cacheReadError != nil {
+						resultStr += "Yes\tYes\tNo\t\xff" + cacheReadError.Error() + "\xff\t"
+					} else {
+						resultStr += "Yes\tYes\tYes\tNone\t"
+					}
+				}
+				fmt.Fprintln(writer, resultStr)
 
-		writer.Flush()
-
-		fmt.Fprintf(out, "Completed with %v failures\n", errCount)
-
-		if errCount > 0 {
-			if errCount > 125 {
-				exit(125)
-				return
 			}
-			exit(int(errCount))
+
+			wg.Done()
+		}(t, reqSplit[t])
+	}
+
+	wg.Wait()
+
+	writer.Flush()
+
+	fmt.Fprintf(out, "Completed with %v failures\n", errCount)
+
+	if errCount > 0 {
+		if errCount > 125 {
+			exit(125)
 			return
 		}
-	},
+		exit(int(errCount))
+		return
+	}
 }
 
 func init() {
