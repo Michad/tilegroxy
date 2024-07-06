@@ -264,23 +264,18 @@ func (h httpContextHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 	h.Handler.ServeHTTP(w, req.WithContext(&reqC))
 }
 
-func ListenAndServe(config *config.Config, layerList []*layers.Layer, auth *authentication.Authentication) error {
+func ListenAndServe(config *config.Config, layerGroup *layers.LayerGroup, auth *authentication.Authentication) error {
 	r := http.ServeMux{}
-
-	layerMap := make(map[string]*layers.Layer)
-	for _, l := range layerList {
-		layerMap[l.Id] = l
-	}
 
 	if config.Server.Production {
 		r.HandleFunc(config.Server.RootPath, handleNoContent)
 	} else {
-		r.Handle(config.Server.RootPath, &defaultHandler{config, layerMap, auth})
+		r.Handle(config.Server.RootPath, &defaultHandler{config, layerGroup, auth})
 		// r.HandleFunc("/documentation", defaultHandler)
 	}
 
 	tilePath := config.Server.RootPath + config.Server.TilePath + "/{layer}/{z}/{x}/{y}"
-	myTileHandler := tileHandler{defaultHandler{config, layerMap, auth}}
+	myTileHandler := tileHandler{defaultHandler{config, layerGroup, auth}}
 
 	r.Handle(tilePath, &myTileHandler)
 	r.Handle(tilePath+"/", &myTileHandler)

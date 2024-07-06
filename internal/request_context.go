@@ -22,22 +22,23 @@ import (
 )
 
 func NewRequestContext(req *http.Request) RequestContext {
-	return RequestContext{req.Context(), req, time.Now(), false, []string{}, Bounds{}, ""}
+	return RequestContext{req.Context(), req, time.Now(), false, []string{}, Bounds{}, "", make(map[string]string)}
 }
 
 func BackgroundContext() *RequestContext {
-	return &RequestContext{context.Background(), nil, time.Time{}, false, []string{}, Bounds{}, ""}
+	return &RequestContext{context.Background(), nil, time.Time{}, false, []string{}, Bounds{}, "", make(map[string]string)}
 }
 
 // Custom context type. Links back to request so we can pull attrs into the structured log
 type RequestContext struct {
 	context.Context
-	req            *http.Request
-	startTime      time.Time
-	LimitLayers    bool
-	AllowedLayers  []string
-	AllowedArea    Bounds
-	UserIdentifier string
+	req                 *http.Request
+	startTime           time.Time
+	LimitLayers         bool
+	AllowedLayers       []string
+	AllowedArea         Bounds
+	UserIdentifier      string
+	LayerPatternMatches map[string]string
 }
 
 func (c *RequestContext) Value(keyAny any) any {
@@ -71,13 +72,19 @@ func (c *RequestContext) Value(keyAny any) any {
 		return c.UserIdentifier
 	}
 
-	h := c.req.Header[key]
+	h, hMatch := c.req.Header[key]
 
-	if h != nil {
+	if hMatch && h != nil {
 		if len(h) == 1 {
 			return h[0]
 		}
 		return h
+	}
+
+	l, lMatch := c.LayerPatternMatches[key]
+
+	if lMatch {
+		return l
 	}
 
 	return nil

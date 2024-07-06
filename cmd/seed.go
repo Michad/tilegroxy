@@ -22,7 +22,6 @@ import (
 	"sync"
 
 	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/spf13/cobra"
 )
 
@@ -57,7 +56,9 @@ func runSeed(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	_, layerObjects, _, err := parseConfigIntoStructs(cmd)
+	ctx := internal.BackgroundContext()
+
+	_, layerGroup, _, err := parseConfigIntoStructs(cmd)
 
 	if err != nil {
 		fmt.Fprintf(out, "Error: %v", err)
@@ -65,13 +66,7 @@ func runSeed(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	var layer *layers.Layer
-
-	for _, l := range layerObjects {
-		if l.Id == layerName {
-			layer = l
-		}
-	}
+	layer := layerGroup.FindLayer(ctx, layerName)
 
 	if layer == nil {
 		fmt.Fprintln(out, "Error: Invalid layer")

@@ -26,9 +26,9 @@ import (
 )
 
 type defaultHandler struct {
-	config   *config.Config
-	layerMap map[string]*layers.Layer
-	auth     *authentication.Authentication
+	config     *config.Config
+	layerGroup *layers.LayerGroup
+	auth       *authentication.Authentication
 }
 
 func (h *defaultHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {

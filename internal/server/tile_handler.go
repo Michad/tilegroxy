@@ -80,12 +80,12 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if h.layerMap[layerName] == nil {
+	layer := h.layerGroup.FindLayer(ctx, layerName)
+
+	if layer == nil {
 		writeError(ctx, w, &h.config.Error, TypeOfErrorOtherBadRequest, fmt.Sprintf(h.config.Error.Messages.InvalidParam, "layer", layerName))
 		return
 	}
-
-	layer := h.layerMap[layerName]
 
 	img, err := layer.RenderTile(ctx, tileReq)
 

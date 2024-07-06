@@ -27,7 +27,6 @@ import (
 	"sync/atomic"
 
 	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/spf13/cobra"
 )
 
@@ -59,6 +58,8 @@ func runTest(cmd *cobra.Command, args []string) {
 		return
 	}
 
+	ctx := internal.BackgroundContext()
+
 	_, layerObjects, _, err := parseConfigIntoStructs(cmd)
 
 	if err != nil {
@@ -66,16 +67,9 @@ func runTest(cmd *cobra.Command, args []string) {
 		exit(1)
 		return
 	}
-	layerMap := make(map[string]*layers.Layer)
-
-	for _, l := range layerObjects {
-		layerMap[l.Id] = l
-	}
 
 	if len(layerNames) == 0 {
-		for _, l := range layerObjects {
-			layerNames = append(layerNames, l.Id)
-		}
+		layerNames = layerObjects.ListLayerIds()
 	}
 
 	//Generate the full list of requests to process
@@ -91,7 +85,7 @@ func runTest(cmd *cobra.Command, args []string) {
 			return
 		}
 
-		layer := layerMap[layerName]
+		layer := layerObjects.FindLayer(ctx, layerName)
 
 		if layer == nil {
 			fmt.Fprintf(out, "Error: Invalid layer name: %v", layer)
@@ -135,10 +129,11 @@ func runTest(cmd *cobra.Command, args []string) {
 	for t := int(0); t < len(reqSplit); t++ {
 		wg.Add(1)
 		go func(t int, myReqs []internal.TileRequest) {
+			ctx2 := internal.BackgroundContext()
 
 			for _, req := range myReqs {
-				layer := layerMap[req.LayerName]
-				img, layerErr := layer.RenderTileNoCache(internal.BackgroundContext(), req)
+				layer := layerObjects.FindLayer(ctx2, req.LayerName)
+				img, layerErr := layer.RenderTileNoCache(ctx2, req)
 				var cacheWriteError error
 				var cacheReadError error
 
