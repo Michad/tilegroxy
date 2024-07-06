@@ -19,6 +19,7 @@ Tilegroxy shines when you consume maps from multiple sources.  It isn't tied to 
 * Proxy to ZXY, WMS, TMS, WMTS, or other protocol map layers
 * Cache tiles in disk, memory, s3, redis, and/or memcached
 * Require authentication using static key, JWT, or custom logic
+* Restrict access to a given layer and/or geographic region based on auth token
 * Create your own custom provider to pull in non-standard and proprietary imagery sources
 * Tweak your map layer with 18 standard effects or by providing your own pixel-level logic
 * Combine multiple map layers with adjustable rules and blending methods
