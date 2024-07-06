@@ -128,6 +128,53 @@ func TestBoundsIntersect(t *testing.T) {
 	assert.True(t, Bounds{0, 1, 0, 1}.Intersects(Bounds{-90, 90, -180, 180}))
 }
 
+func TestBoundsContains(t *testing.T) {
+	assert.False(t, Bounds{0, 1, 0, 1}.Contains(Bounds{.9, 1.1, 0.9, 1.1}))
+	assert.False(t, Bounds{0, 1, 0, 1}.Contains(Bounds{-1, 0.1, -1, 0.1}))
+	assert.True(t, Bounds{0, 1, 0, 1}.Contains(Bounds{0, 1, 0, 0.1}))
+	assert.False(t, Bounds{0, 1, 0, 1}.Contains(Bounds{0, 1, 0.9, 2}))
+	assert.False(t, Bounds{.9, 1.1, 0.9, 1.1}.Contains(Bounds{0, 1, 0, 1}))
+	assert.False(t, Bounds{-1, 0.1, -1, 0.1}.Contains(Bounds{0, 1, 0, 1}))
+	assert.False(t, Bounds{0, 1, 0, 0.1}.Contains(Bounds{0, 1, 0, 1}))
+	assert.False(t, Bounds{0, 1, 0.9, 2}.Contains(Bounds{0, 1, 0, 1}))
+
+	assert.False(t, Bounds{0, 1, 0, 1}.Contains(Bounds{101, 200, 10, 354}))
+	assert.False(t, Bounds{0, 1, 0, 1}.Contains(Bounds{0, 1, 1, 2}))
+	assert.False(t, Bounds{0, 1, 0, 1}.Contains(Bounds{0, 1, -1, 0}))
+	assert.False(t, Bounds{0, 1, 0, 1}.Contains(Bounds{1, 2, 0, 1}))
+	assert.False(t, Bounds{0, 1, 0, 1}.Contains(Bounds{-1, 0, 0, 1}))
+
+	assert.True(t, Bounds{0, 10, 0, 10}.Contains(Bounds{0, 1, 0, 1}))
+	assert.False(t, Bounds{0, 1, 0, 1}.Contains(Bounds{0, 10, 0, 10}))
+	assert.True(t, Bounds{0, 10, 0, 10}.Contains(Bounds{3, 4, 3, 4}))
+	assert.False(t, Bounds{3, 4, 3, 4}.Contains(Bounds{0, 10, 0, 10}))
+
+	assert.True(t, Bounds{-90, 90, -180, 180}.Contains(Bounds{0, 1, 0, 1}))
+	assert.False(t, Bounds{0, 1, 0, 1}.Contains(Bounds{-90, 90, -180, 180}))
+}
+
+func TestGeohashToBounds(t *testing.T) {
+	bbox, err := NewBoundsFromGeohash("gbsuv7z")
+
+	assert.NoError(t, err)
+	assert.InDelta(t, bbox.West, -4.329986572265625, 0.000001)
+	assert.InDelta(t, bbox.East, -4.32861328125, 0.000001)
+	assert.InDelta(t, bbox.North, 48.66943359375, 0.000001)
+	assert.InDelta(t, bbox.South, 48.668060302734375, 0.000001)
+
+	bbox, err = NewBoundsFromGeohash("gb")
+
+	assert.NoError(t, err)
+	assert.InDelta(t, bbox.West, -11.25, 0.000001)
+	assert.InDelta(t, bbox.East, 0, 0.000001)
+	assert.InDelta(t, bbox.North, 50.625, 0.000001)
+	assert.InDelta(t, bbox.South, 45, 0.000001)
+
+	bbox, err = NewBoundsFromGeohash("some nonsense")
+	assert.Error(t, err)
+	assert.True(t, bbox.IsNullIsland())
+}
+
 // Test converting a tile to bounds and back is an identity function within reason
 func FuzzToBoundsAndBack(f *testing.F) {
 
