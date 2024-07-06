@@ -22,11 +22,11 @@ import (
 )
 
 func NewRequestContext(req *http.Request) RequestContext {
-	return RequestContext{req.Context(), req, time.Now(), false, []string{}, ""}
+	return RequestContext{req.Context(), req, time.Now(), false, []string{}, Bounds{}, ""}
 }
 
 func BackgroundContext() *RequestContext {
-	return &RequestContext{context.Background(), nil, time.Time{}, false, []string{}, ""}
+	return &RequestContext{context.Background(), nil, time.Time{}, false, []string{}, Bounds{}, ""}
 }
 
 // Custom context type. Links back to request so we can pull attrs into the structured log
@@ -36,6 +36,7 @@ type RequestContext struct {
 	startTime      time.Time
 	LimitLayers    bool
 	AllowedLayers  []string
+	AllowedArea    Bounds
 	UserIdentifier string
 }
 

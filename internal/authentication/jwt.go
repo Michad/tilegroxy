@@ -176,34 +176,14 @@ func (c Jwt) CheckAuthentication(req *http.Request, ctx *internal.RequestContext
 	rawClaim, ok := tokenJwt.Claims.(jwt.MapClaims)
 
 	if ok {
-		scope := rawClaim["scope"]
+		validatePassed := c.validateScope(rawClaim, ctx)
+		if !validatePassed {
+			return false
+		}
 
-		scopeStr, ok := scope.(string)
-
-		if !ok {
-			slog.InfoContext(ctx, "Request contains invalid scope type")
-		} else {
-			scopeSplit := strings.Split(scopeStr, " ")
-
-			if c.Config.ExpectedScope != "" {
-				hasScope := false
-				for _, scope := range scopeSplit {
-					if scope == c.Config.ExpectedScope {
-						hasScope = true
-					}
-				}
-				if !hasScope {
-					return false
-				}
-			}
-
-			if c.Config.LayerScope {
-				for _, scope := range scopeSplit {
-					if c.Config.ScopePrefix == "" || strings.Index(scope, c.Config.ScopePrefix) == 0 {
-						ctx.AllowedLayers = append(ctx.AllowedLayers, scope[len(c.Config.ScopePrefix):])
-					}
-				}
-			}
+		validatePassed = c.validateGeohash(rawClaim, ctx)
+		if !validatePassed {
+			return false
 		}
 
 		rawUid := rawClaim[c.Config.UserId]
@@ -221,13 +201,69 @@ func (c Jwt) CheckAuthentication(req *http.Request, ctx *internal.RequestContext
 
 		slog.ErrorContext(ctx, "An unexpected state has occurred. Please report this to https://github.com/Michad/tilegroxy/issues : JWT authentication might not be fully working as expected because claims are of type "+debugType)
 
-		if c.Config.ExpectedScope != "" {
-			return false
-		}
+		return false
 	}
 
 	if c.Cache != nil {
 		c.Cache.SetIfAbsent(tokenStr, *exp)
+	}
+
+	return true
+}
+
+func (c Jwt) validateScope(rawClaim jwt.MapClaims, ctx *internal.RequestContext) bool {
+	scope := rawClaim["scope"]
+	scopeStr, ok := scope.(string)
+
+	if !ok {
+		slog.InfoContext(ctx, "Request contains invalid scope type")
+
+		if c.Config.LayerScope || c.Config.ExpectedScope != "" {
+			return false
+		}
+	} else {
+		scopeSplit := strings.Split(scopeStr, " ")
+
+		if c.Config.ExpectedScope != "" {
+			hasScope := false
+			for _, scope := range scopeSplit {
+				if scope == c.Config.ExpectedScope {
+					hasScope = true
+				}
+			}
+			if !hasScope {
+				return false
+			}
+		}
+
+		if c.Config.LayerScope {
+			for _, scope := range scopeSplit {
+				if c.Config.ScopePrefix == "" || strings.Index(scope, c.Config.ScopePrefix) == 0 {
+					ctx.AllowedLayers = append(ctx.AllowedLayers, scope[len(c.Config.ScopePrefix):])
+				}
+			}
+		}
+	}
+
+	return true
+}
+
+func (c Jwt) validateGeohash(rawClaim jwt.MapClaims, ctx *internal.RequestContext) bool {
+	hash := rawClaim["geohash"]
+	hashStr, ok := hash.(string)
+
+	if !ok {
+		slog.InfoContext(ctx, "Request contains invalid geohash type")
+		return false
+	} else {
+		bounds, err := internal.NewBoundsFromGeohash(hashStr)
+
+		if err != nil {
+			slog.InfoContext(ctx, "Request contains invalid geohash "+hashStr)
+			return false
+		}
+
+		ctx.AllowedArea = bounds
 	}
 
 	return true
