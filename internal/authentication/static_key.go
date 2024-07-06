@@ -19,11 +19,9 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"strings"
 
 	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/config"
-	"github.com/google/uuid"
 )
 
 type StaticKeyConfig struct {
@@ -36,13 +34,7 @@ type StaticKey struct {
 
 func ConstructStaticKey(config *StaticKeyConfig, errorMessages *config.ErrorMessages) (*StaticKey, error) {
 	if config.Key == "" {
-		keyUuid, err := uuid.NewRandom()
-
-		if err != nil {
-			return nil, err
-		}
-
-		keyStr := strings.ReplaceAll(keyUuid.String(), "-", "")
+		keyStr := internal.RandomString()
 
 		slog.WarnContext(context.Background(), fmt.Sprintf("Generated authentication key: %v\n", keyStr))
 		config.Key = keyStr

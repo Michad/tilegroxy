@@ -5,7 +5,3 @@ layers:
     provider:
       name: proxy
       url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
-  - id: color
-    provider:
-      name: static
-      color: "FFFFFF"

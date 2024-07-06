@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math/rand/v2"
 	"os"
 	"strconv"
 	"strings"
@@ -134,4 +135,10 @@ func Ternary[T any](cond bool, a T, b T) T {
 		return a
 	}
 	return b
+}
+
+func RandomString() string {
+	i := rand.Int64()
+	i2 := rand.Int64()
+	return strconv.FormatInt(i, 36) + strconv.FormatInt(i2, 36)
 }
