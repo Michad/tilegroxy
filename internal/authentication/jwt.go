@@ -216,7 +216,9 @@ func (c Jwt) validateScope(rawClaim jwt.MapClaims, ctx *internal.RequestContext)
 	scopeStr, ok := scope.(string)
 
 	if !ok {
-		slog.InfoContext(ctx, "Request contains invalid scope type")
+		if scope != nil {
+			slog.InfoContext(ctx, "Request contains invalid scope type")
+		}
 
 		if c.Config.LayerScope || c.Config.ExpectedScope != "" {
 			return false
@@ -250,6 +252,11 @@ func (c Jwt) validateScope(rawClaim jwt.MapClaims, ctx *internal.RequestContext)
 
 func (c Jwt) validateGeohash(rawClaim jwt.MapClaims, ctx *internal.RequestContext) bool {
 	hash := rawClaim["geohash"]
+
+	if hash == nil {
+		return true
+	}
+
 	hashStr, ok := hash.(string)
 
 	if !ok {
