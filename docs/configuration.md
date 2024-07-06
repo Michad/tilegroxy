@@ -466,6 +466,17 @@ Requires incoming requests include a [JSON Web Token (JWT)](https://jwt.io/). Th
 
 Currently this implementation only supports a single key specified against a single signing algorithm. The key can either be stored in configuration or supplied via environment variable. Support for multiple keys and keys pulled from secret stores is a desired future roadmap item.
 
+The following claims are supported/enforced:
+
+| Claim | Implementation |
+| --- | --- |
+| exp | Ensure the JWT hasn't expired and it's no further than a certain amount of time from now |
+| aud | Validate it matches a specific value |
+| sub | Validate it matches a specific value |
+| iss | Validate it matches a specific value |
+| scope | Validate it contains a specific scope OR ensure a given prefix plus the layer in the current request is contained in scope |
+| geohash | Validate the current tile being requested is fully contained in [the geohash](https://en.wikipedia.org/wiki/Geohash) |
+
 Name should be "jwt"
 
 

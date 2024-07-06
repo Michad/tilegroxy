@@ -73,6 +73,14 @@ func (l *Layer) RenderTile(ctx *internal.RequestContext, tileRequest internal.Ti
 		}
 	}
 
+	if !ctx.AllowedArea.IsNullIsland() {
+		bounds, err := tileRequest.GetBounds()
+		if err != nil || !ctx.AllowedArea.Contains(*bounds) {
+			slog.InfoContext(ctx, "Denying access to non-allowed area")
+			return nil, providers.AuthError{} //TODO: should be a different auth error
+		}
+	}
+
 	if l.Config.SkipCache {
 		return l.RenderTileNoCache(ctx, tileRequest)
 	}
