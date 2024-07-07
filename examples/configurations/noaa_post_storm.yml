@@ -8,7 +8,7 @@ layers:
     provider:
       name: blend
       mode: normal
-      providers:
+      providers: #equivalent to specifying layer like below
         - name: ref
           layer: noaa_poststorm_20230917a
         - name: ref
@@ -31,6 +31,7 @@ layers:
       contenttypes:
         - binary/octet-stream
         - image/png
+      timeout: 2
     provider:
       name: fallback
       primary:
