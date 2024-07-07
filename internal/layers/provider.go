@@ -67,6 +67,13 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.Cl
 			return nil, err
 		}
 		return ConstructStatic(config, clientConfig, errorMessages)
+	} else if rawConfig["name"] == "ref" {
+		var config RefConfig
+		err := mapstructure.Decode(rawConfig, &config)
+		if err != nil {
+			return nil, err
+		}
+		return ConstructRef(config, clientConfig, errorMessages, layerGroup)
 	} else if rawConfig["name"] == "fallback" {
 		var config FallbackConfig
 		err := mapstructure.Decode(rawConfig, &config)
