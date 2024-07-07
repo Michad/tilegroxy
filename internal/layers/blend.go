@@ -173,14 +173,17 @@ func (t Blend) GenerateTile(ctx *internal.RequestContext, providerContext Provid
 				img, err = (*p).GenerateTile(ctx, ProviderContext{}, tileRequest)
 			}
 
-			realImage, _, err2 := image.Decode(bytes.NewReader(*img))
+			if img != nil {
+				realImage, _, err2 := image.Decode(bytes.NewReader(*img))
+				err = errors.Join(err, err2)
 
-			imgs <- struct {
-				int
-				image.Image
-			}{i, realImage}
+				imgs <- struct {
+					int
+					image.Image
+				}{i, realImage}
+			}
 
-			errs <- errors.Join(err, err2)
+			errs <- err
 		}(strconv.Itoa(i), i, p)
 	}
 
