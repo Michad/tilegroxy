@@ -35,22 +35,22 @@ func makeBlendProviders() []*Provider {
 }
 
 func Test_BlendValidate(t *testing.T) {
-	b, err := ConstructBlend(BlendConfig{}, nil, &testErrMessages, makeBlendProviders())
+	b, err := ConstructBlend(BlendConfig{}, nil, &testErrMessages, makeBlendProviders(), nil)
 	assert.Nil(t, b)
 	assert.Error(t, err)
-	b, err = ConstructBlend(BlendConfig{Mode: "fake"}, nil, &testErrMessages, makeBlendProviders())
+	b, err = ConstructBlend(BlendConfig{Mode: "fake"}, nil, &testErrMessages, makeBlendProviders(), nil)
 	assert.Nil(t, b)
 	assert.Error(t, err)
-	b, err = ConstructBlend(BlendConfig{Mode: "add", Opacity: 23}, nil, &testErrMessages, makeBlendProviders())
+	b, err = ConstructBlend(BlendConfig{Mode: "add", Opacity: 23}, nil, &testErrMessages, makeBlendProviders(), nil)
 	assert.Nil(t, b)
 	assert.Error(t, err)
-	b, err = ConstructBlend(BlendConfig{Mode: "opacity", Opacity: 23}, nil, &testErrMessages, []*Provider{})
+	b, err = ConstructBlend(BlendConfig{Mode: "opacity", Opacity: 23}, nil, &testErrMessages, []*Provider{}, nil)
 	assert.Nil(t, b)
 	assert.Error(t, err)
 }
 
 func Test_BlendExecute_Add(t *testing.T) {
-	b, err := ConstructBlend(BlendConfig{Mode: "add"}, nil, &testErrMessages, makeBlendProviders())
+	b, err := ConstructBlend(BlendConfig{Mode: "add"}, nil, &testErrMessages, makeBlendProviders(), nil)
 	assert.NotNil(t, b)
 	assert.NoError(t, err)
 
@@ -72,7 +72,7 @@ func Test_BlendExecute_Add(t *testing.T) {
 
 func Test_BlendExecute_All(t *testing.T) {
 	for _, mode := range allBlendModes {
-		b, err := ConstructBlend(BlendConfig{Mode: mode}, nil, &testErrMessages, makeBlendProviders())
+		b, err := ConstructBlend(BlendConfig{Mode: mode}, nil, &testErrMessages, makeBlendProviders(), nil)
 		assert.NotNil(t, b)
 		assert.NoError(t, err)
 		i, err := b.GenerateTile(internal.BackgroundContext(), ProviderContext{}, internal.TileRequest{LayerName: "", Z: 4, X: 2, Y: 3})

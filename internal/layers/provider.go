@@ -109,7 +109,7 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.Cl
 			return nil, errorsFlat
 		}
 
-		return ConstructBlend(config, clientConfig, errorMessages, providers)
+		return ConstructBlend(config, clientConfig, errorMessages, providers, layerGroup)
 	} else if rawConfig["name"] == "effect" {
 		var config EffectConfig
 		err := mapstructure.Decode(rawConfig, &config)

@@ -13,6 +13,18 @@ layers:
           layer: noaa_poststorm_20230917a
         - name: ref
           layer: noaa_poststorm_20230917b
+  - id: noaa_2023_idalia
+    provider:
+      name: blend
+      mode: normal
+      layer: #instead of writing the full provider each time, you can do
+        pattern: noaa_poststorm_{v}
+        values:
+          - v: 20230902a
+          - v: 20230901b
+          - v: 20230901a
+          - v: 20230831b
+          - v: 20230831a
   - id: noaa_poststorm_imagery_in_parts
     pattern: noaa_poststorm_{version}
     client:

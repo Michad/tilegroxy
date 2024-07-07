@@ -25,6 +25,7 @@ import (
 	"log/slog"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/Michad/tilegroxy/internal"
@@ -34,10 +35,17 @@ import (
 	"github.com/anthonynsimon/bild/transform"
 )
 
+// Allow you to directly reference another layer that uses a pattern with multiple concrete values for the pattern
+type BlendLayerConfig struct {
+	Pattern string
+	Values  []map[string]string
+}
+
 type BlendConfig struct {
 	Opacity   float64
 	Mode      string
 	Providers []map[string]interface{}
+	Layer     *BlendLayerConfig
 }
 
 type Blend struct {
@@ -47,15 +55,36 @@ type Blend struct {
 
 var allBlendModes = []string{"add", "color burn", "color dodge", "darken", "difference", "divide", "exclusion", "lighten", "linear burn", "linear light", "multiply", "normal", "opacity", "overlay", "screen", "soft light", "subtract"}
 
-func ConstructBlend(config BlendConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, providers []*Provider) (*Blend, error) {
+func ConstructBlend(config BlendConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, providers []*Provider, layerGroup *LayerGroup) (*Blend, error) {
+	var err error
 	if !slices.Contains(allBlendModes, config.Mode) {
 		return nil, fmt.Errorf(errorMessages.EnumError, "provider.blend.mode", config.Mode, allBlendModes)
 	}
 	if config.Mode != "opacity" && config.Opacity != 0 {
 		return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "provider.blend.opacity", config.Mode)
 	}
-	if len(providers) < 2 || len(providers) > 100 {
-		return nil, fmt.Errorf(errorMessages.RangeError, "provider.blend.providers.length", 2, 100)
+	if config.Layer != nil {
+		providers = make([]*Provider, len(config.Layer.Values))
+		for i, lay := range config.Layer.Values {
+			var ref Provider
+
+			layerName := config.Layer.Pattern
+			
+			for k, v := range lay {
+				layerName = strings.ReplaceAll(layerName, "{" + k + "}", v)
+			}
+
+			cfg := RefConfig{Layer: layerName}
+			ref, err = ConstructRef(cfg, clientConfig, errorMessages, layerGroup)
+			if err != nil {
+				return nil, err
+			}
+			providers[i] = &ref
+		}
+	} else {
+		if len(providers) < 2 || len(providers) > 100 {
+			return nil, fmt.Errorf(errorMessages.RangeError, "provider.blend.providers.length", 2, 100)
+		}
 	}
 
 	return &Blend{config, providers}, nil
