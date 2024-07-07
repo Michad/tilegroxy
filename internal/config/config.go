@@ -64,6 +64,7 @@ type ErrorMessages struct {
 	ProviderError           string
 	ParamsBothOrNeither     string
 	ParamsMutuallyExclusive string
+	OneOfRequired           string
 	EnumError               string
 	ScriptError             string
 }
@@ -190,6 +191,7 @@ func DefaultConfig() Config {
 				EnumError:               "Invalid value supplied for %v: '%v'. It must be one of: %v",
 				ParamsMutuallyExclusive: "Parameters %v and %v cannot both be set",
 				ScriptError:             "The script specified for %v is invalid: %v",
+				OneOfRequired:           "You must specify one of: %v",
 			},
 			Images: ErrorImages{
 				OutOfBounds:    images.KeyImageTransparent,
