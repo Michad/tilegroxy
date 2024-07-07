@@ -146,6 +146,13 @@ func (t Transform) GenerateTile(ctx *internal.RequestContext, providerContext Pr
 		pixelRange := pixelSplit[tid]
 
 		go func(iStart int, iEnd int) {
+			defer func() {
+				if r := recover(); r != nil {
+					slog.Error(fmt.Sprintf("unexpected transform error! %v", r))
+				}
+				wg.Done()
+			}()
+
 			for i := iStart; i < iEnd; i++ {
 				dX := i % size.X
 				dY := i / size.X
@@ -158,7 +165,6 @@ func (t Transform) GenerateTile(ctx *internal.RequestContext, providerContext Pr
 
 				resultImage.Set(x, y, c2)
 			}
-			wg.Done()
 		}(pixelRange[0], pixelRange[1])
 	}
 

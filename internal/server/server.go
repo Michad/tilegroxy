@@ -315,6 +315,12 @@ func ListenAndServe(config *config.Config, layerGroup *layers.LayerGroup, auth *
 	srvErr := make(chan error, 1)
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				srvErr <- fmt.Errorf("unexpected server error %v", r)
+			}
+		}()
+
 		slog.InfoContext(context.Background(), "Binding...")
 		srvErr <- srv.ListenAndServe()
 	}()

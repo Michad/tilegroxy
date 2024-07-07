@@ -105,6 +105,13 @@ func (t Blend) PreAuth(ctx *internal.RequestContext, providerContext ProviderCon
 	for i, p := range t.providers {
 		wg.Add(1)
 		go func(acObj interface{}, index int, p *Provider) {
+			defer func() {
+				if r := recover(); r != nil {
+					errs <- fmt.Errorf("unexpected blend error %v", r)
+				}
+				wg.Done()
+			}()
+
 			var err error
 			ac, ok := acObj.(ProviderContext)
 
@@ -120,8 +127,6 @@ func (t Blend) PreAuth(ctx *internal.RequestContext, providerContext ProviderCon
 			}{index, ac}
 
 			errs <- err
-
-			wg.Done()
 		}(providerContext.Other[strconv.Itoa(i)], i, p)
 	}
 
@@ -151,6 +156,13 @@ func (t Blend) GenerateTile(ctx *internal.RequestContext, providerContext Provid
 	for i, p := range t.providers {
 		wg.Add(1)
 		go func(key string, i int, p *Provider) {
+			defer func() {
+				if r := recover(); r != nil {
+					errs <- fmt.Errorf("unexpected blend error %v", r)
+				}
+				wg.Done()
+			}()
+
 			var img *internal.Image
 			var err error
 			ac, ok := providerContext.Other[key].(ProviderContext)
@@ -169,8 +181,6 @@ func (t Blend) GenerateTile(ctx *internal.RequestContext, providerContext Provid
 			}{i, realImage}
 
 			errs <- errors.Join(err, err2)
-
-			wg.Done()
 		}(strconv.Itoa(i), i, p)
 	}
 
