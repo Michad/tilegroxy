@@ -22,6 +22,7 @@ import (
 	"image"
 	_ "image/jpeg"
 	"image/png"
+	"log/slog"
 	"slices"
 	"strconv"
 	"sync"
@@ -30,6 +31,7 @@ import (
 	"github.com/Michad/tilegroxy/internal/config"
 
 	"github.com/anthonynsimon/bild/blend"
+	"github.com/anthonynsimon/bild/transform"
 )
 
 type BlendConfig struct {
@@ -108,6 +110,8 @@ func (t Blend) PreAuth(ctx *internal.RequestContext, providerContext ProviderCon
 }
 
 func (t Blend) GenerateTile(ctx *internal.RequestContext, providerContext ProviderContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+	slog.DebugContext(ctx, fmt.Sprintf("Blending together %v providers", len(t.providers)))
+
 	wg := sync.WaitGroup{}
 	errs := make(chan error, len(t.providers))
 	imgs := make(chan struct {
@@ -163,7 +167,25 @@ func (t Blend) GenerateTile(ctx *internal.RequestContext, providerContext Provid
 	var combinedImg image.Image
 	combinedImg = nil
 
+	var size image.Point
+	for i, img := range imgSlice {
+		curSize := img.Bounds().Max
+		slog.Log(ctx, config.LevelTrace, fmt.Sprintf("Image %v size: %v", i, curSize))
+		if curSize.X > size.X {
+			size.X = curSize.X
+		}
+		if curSize.Y > size.Y {
+			size.Y = curSize.Y
+		}
+	}
+	slog.Log(ctx, config.LevelTrace, fmt.Sprintf("Blended size: %v", size))
+
 	for _, img := range imgSlice {
+		if img.Bounds().Max != size {
+			slog.DebugContext(ctx, fmt.Sprintf("Resizing from %v to %v", img.Bounds().Max, size))
+			img = transform.Resize(img, size.X, size.Y, transform.NearestNeighbor)
+		}
+
 		if combinedImg == nil {
 			combinedImg = img
 		} else {
