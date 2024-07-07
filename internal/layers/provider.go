@@ -206,7 +206,9 @@ func getTile(ctx *internal.RequestContext, clientConfig *config.ClientConfig, ur
 		req.Header.Set(h, v)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	client := http.Client{Timeout: time.Duration(clientConfig.Timeout) * time.Second}
+
+	resp, err := client.Do(req)
 	if resp != nil {
 		defer resp.Body.Close()
 	}

@@ -43,6 +43,7 @@ type ClientConfig struct {
 	ContentTypes  []string          //The content-types to allow servers to return. Anything else will be interpreted as an error
 	StatusCodes   []int             //The status codes from the remote server to consider successful.  Defaults to just 200
 	Headers       map[string]string //Include these headers in requests. Defaults to none
+	Timeout       uint              //How long (in seconds) a request can be in flight before we cancel it and return an error
 }
 
 // TODO: handle this better. Not foolproof in detecting default values and very manual. Probably need to do a mapstructure method for this
@@ -58,6 +59,9 @@ func (c *ClientConfig) MergeDefaultsFrom(o ClientConfig) {
 	}
 	if c.StatusCodes == nil || len(c.StatusCodes) == 0 {
 		c.StatusCodes = o.StatusCodes
+	}
+	if c.Timeout == 0 {
+		c.Timeout = o.Timeout
 	}
 }
 
@@ -179,6 +183,7 @@ func DefaultConfig() Config {
 			ContentTypes:  []string{"image/png", "image/jpg", "image/jpeg"},
 			StatusCodes:   []int{200},
 			Headers:       map[string]string{},
+			Timeout:       10,
 		},
 		Logging: LogConfig{
 			Main: MainConfig{
