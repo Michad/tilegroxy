@@ -111,4 +111,20 @@ func Test_MatchPattern(t *testing.T) {
 	assert.Equal(t, "HELLO", matches["b"])
 	assert.Equal(t, "WORLD", matches["d"])
 	assert.Equal(t, "TEST", matches["f"])
+
+	pattern = []layerSegment{
+		{value: "c", placeholder: false},
+	}
+
+	doesMatch, matches = match(pattern, "c")
+	assert.True(t, doesMatch)
+	assert.Equal(t, 0, len(matches))
+
+	doesMatch, matches = match(pattern, "ac")
+	assert.False(t, doesMatch)
+	assert.Equal(t, 0, len(matches))
+
+	doesMatch, matches = match(pattern, "ca")
+	assert.False(t, doesMatch)
+	assert.Equal(t, 0, len(matches))
 }

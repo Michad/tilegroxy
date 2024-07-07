@@ -87,6 +87,8 @@ func match(segments []layerSegment, str string) (bool, map[string]string) {
 			if matchLoc >= 0 {
 				if lastSeg != nil {
 					matches[lastSeg.value] = str[strLoc : matchLoc+strLoc]
+				} else if matchLoc > 0 {
+					return false, matches
 				}
 				strLoc = matchLoc + strLoc + len(seg.value)
 			} else {
@@ -97,6 +99,8 @@ func match(segments []layerSegment, str string) (bool, map[string]string) {
 	}
 	if lastSeg != nil {
 		matches[lastSeg.value] = str[strLoc:]
+	} else if strLoc < len(str) {
+		return false, matches
 	}
 
 	return true, matches
@@ -151,7 +155,6 @@ func (l *Layer) authWithProvider(ctx *internal.RequestContext) error {
 
 	return err
 }
-
 
 func (l *Layer) RenderTileNoCache(ctx *internal.RequestContext, tileRequest internal.TileRequest) (*internal.Image, error) {
 	var img *internal.Image
