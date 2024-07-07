@@ -45,6 +45,22 @@ type ClientConfig struct {
 	Headers       map[string]string //Include these headers in requests. Defaults to none
 }
 
+// TODO: handle this better. Not foolproof in detecting default values and very manual. Probably need to do a mapstructure method for this
+func (c *ClientConfig) MergeDefaultsFrom(o ClientConfig) {
+	if c.UserAgent == "" {
+		c.UserAgent = o.UserAgent
+	}
+	if c.MaxLength == 0 {
+		c.MaxLength = o.MaxLength
+	}
+	if c.ContentTypes == nil || len(c.ContentTypes) == 0 {
+		c.ContentTypes = o.ContentTypes
+	}
+	if c.StatusCodes == nil || len(c.StatusCodes) == 0 {
+		c.StatusCodes = o.StatusCodes
+	}
+}
+
 // Modes for error reporting
 const (
 	ModeErrorPlainText   = "text"         //Response will be text/plain with the error message in the body
@@ -125,11 +141,11 @@ type LogConfig struct {
 }
 
 type LayerConfig struct {
-	Id             string
-	Pattern        string
-	Provider       map[string]any
-	SkipCache      bool
-	OverrideClient *ClientConfig //If specified, all of the default Client is overridden. TODO: re-apply default
+	Id        string
+	Pattern   string
+	Provider  map[string]any
+	SkipCache bool
+	Client    *ClientConfig //If specified, the default Client is overridden.
 }
 
 type Config struct {

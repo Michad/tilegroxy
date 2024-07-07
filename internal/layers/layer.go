@@ -115,11 +115,13 @@ type Layer struct {
 	authMutex       sync.Mutex
 }
 
-func ConstructLayer(rawConfig config.LayerConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages) (*Layer, error) {
-	if rawConfig.OverrideClient == nil {
-		rawConfig.OverrideClient = clientConfig
+func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig *config.ClientConfig, errorMessages *config.ErrorMessages) (*Layer, error) {
+	if rawConfig.Client == nil {
+		rawConfig.Client = defaultClientConfig
+	} else {
+		rawConfig.Client.MergeDefaultsFrom(*defaultClientConfig)
 	}
-	provider, err := providers.ConstructProvider(rawConfig.Provider, rawConfig.OverrideClient, errorMessages)
+	provider, err := providers.ConstructProvider(rawConfig.Provider, rawConfig.Client, errorMessages)
 
 	if err != nil {
 		return nil, err
