@@ -1,0 +1,33 @@
+logging:
+  main:
+    level: debug
+cache:
+  name: memory
+layers:
+  - id: noaa_2023_lee
+    provider:
+      name: blend
+      mode: normal
+      providers:
+        - name: ref
+          layer: noaa_poststorm_20230917a
+        - name: ref
+          layer: noaa_poststorm_20230917b
+  - id: noaa_poststorm_imagery_in_parts
+    pattern: noaa_poststorm_{version}
+    client:
+      contenttypes:
+        - binary/octet-stream
+        - image/png
+    provider:
+      name: fallback
+      primary:
+        name: proxy
+        url: https://stormscdn.ngs.noaa.gov/{layer.version}-rgb/{z}/{x}/{y}
+      secondary:
+        name: static
+        color: FFF0
+  - id: osm
+    provider:
+      name: proxy
+      url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
