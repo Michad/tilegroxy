@@ -14,7 +14,7 @@
 
 //go:build !unit
 
-package providers
+package layers
 
 import (
 	"testing"

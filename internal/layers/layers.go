@@ -28,10 +28,11 @@ type LayerGroup struct {
 
 func ConstructLayerGroup(cfg config.Config, layers []config.LayerConfig, cache *caches.Cache) (*LayerGroup, error) {
 	var err error
+	var layerGroup LayerGroup
 	layerObjects := make([]*Layer, len(cfg.Layers))
 
 	for i, l := range cfg.Layers {
-		layerObjects[i], err = ConstructLayer(l, &cfg.Client, &cfg.Error.Messages)
+		layerObjects[i], err = ConstructLayer(l, &cfg.Client, &cfg.Error.Messages, &layerGroup)
 		if err != nil {
 			return nil, fmt.Errorf("error constructing layer %v: %v", i, err)
 		}
@@ -39,7 +40,9 @@ func ConstructLayerGroup(cfg config.Config, layers []config.LayerConfig, cache *
 		layerObjects[i].Cache = cache
 	}
 
-	return &LayerGroup{layerObjects}, nil
+	layerGroup.layers = layerObjects
+
+	return &layerGroup, nil
 }
 
 func (lg LayerGroup) FindLayer(ctx *internal.RequestContext, layerName string) *Layer {

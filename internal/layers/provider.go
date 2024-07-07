@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package providers
+package layers
 
 import (
 	"errors"
@@ -35,7 +35,7 @@ type Provider interface {
 	GenerateTile(ctx *internal.RequestContext, providerContext ProviderContext, tileRequest internal.TileRequest) (*internal.Image, error)
 }
 
-func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages) (Provider, error) {
+func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, layerGroup *LayerGroup) (Provider, error) {
 	rawConfig = internal.ReplaceEnv(rawConfig)
 
 	if rawConfig["name"] == "url template" {
@@ -73,11 +73,11 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.Cl
 		if err != nil {
 			return nil, err
 		}
-		primary, err := ConstructProvider(config.Primary, clientConfig, errorMessages)
+		primary, err := ConstructProvider(config.Primary, clientConfig, errorMessages, layerGroup)
 		if err != nil {
 			return nil, err
 		}
-		secondary, err := ConstructProvider(config.Secondary, clientConfig, errorMessages)
+		secondary, err := ConstructProvider(config.Secondary, clientConfig, errorMessages, layerGroup)
 		if err != nil {
 			return nil, err
 		}
@@ -92,7 +92,7 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.Cl
 		var providers []*Provider
 		var errorSlice []error
 		for _, p := range config.Providers {
-			provider, err := ConstructProvider(p, clientConfig, errorMessages)
+			provider, err := ConstructProvider(p, clientConfig, errorMessages, layerGroup)
 			providers = append(providers, &provider)
 			errorSlice = append(errorSlice, err)
 		}
@@ -109,7 +109,7 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.Cl
 		if err != nil {
 			return nil, err
 		}
-		child, err := ConstructProvider(config.Provider, clientConfig, errorMessages)
+		child, err := ConstructProvider(config.Provider, clientConfig, errorMessages, layerGroup)
 		if err != nil {
 			return nil, err
 		}
@@ -122,7 +122,7 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.Cl
 			return nil, err
 		}
 
-		child, err := ConstructProvider(config.Provider, clientConfig, errorMessages)
+		child, err := ConstructProvider(config.Provider, clientConfig, errorMessages, layerGroup)
 		if err != nil {
 			return nil, err
 		}

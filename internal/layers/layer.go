@@ -26,7 +26,6 @@ import (
 	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/caches"
 	"github.com/Michad/tilegroxy/internal/config"
-	"github.com/Michad/tilegroxy/internal/providers"
 )
 
 type layerSegment struct {
@@ -108,20 +107,20 @@ type Layer struct {
 	Id              string
 	Pattern         []layerSegment
 	Config          config.LayerConfig
-	Provider        providers.Provider
+	Provider        Provider
 	Cache           *caches.Cache
 	ErrorMessages   *config.ErrorMessages
-	providerContext providers.ProviderContext
+	providerContext ProviderContext
 	authMutex       sync.Mutex
 }
 
-func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig *config.ClientConfig, errorMessages *config.ErrorMessages) (*Layer, error) {
+func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, layerGroup *LayerGroup) (*Layer, error) {
 	if rawConfig.Client == nil {
 		rawConfig.Client = defaultClientConfig
 	} else {
 		rawConfig.Client.MergeDefaultsFrom(*defaultClientConfig)
 	}
-	provider, err := providers.ConstructProvider(rawConfig.Provider, rawConfig.Client, errorMessages)
+	provider, err := ConstructProvider(rawConfig.Provider, rawConfig.Client, errorMessages, layerGroup)
 
 	if err != nil {
 		return nil, err
@@ -137,7 +136,7 @@ func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig *config.Cl
 		segments = []layerSegment{{value: rawConfig.Id, placeholder: false}}
 	}
 
-	return &Layer{rawConfig.Id, segments, rawConfig, provider, nil, errorMessages, providers.ProviderContext{}, sync.Mutex{}}, nil
+	return &Layer{rawConfig.Id, segments, rawConfig, provider, nil, errorMessages, ProviderContext{}, sync.Mutex{}}, nil
 }
 
 func (l *Layer) authWithProvider(ctx *internal.RequestContext) error {
@@ -158,7 +157,7 @@ func (l *Layer) RenderTile(ctx *internal.RequestContext, tileRequest internal.Ti
 	if ctx.LimitLayers {
 		if !slices.Contains(ctx.AllowedLayers, l.Id) {
 			slog.InfoContext(ctx, "Denying access to non-allowed layer")
-			return nil, providers.AuthError{} //TODO: should be a different auth error
+			return nil, AuthError{} //TODO: should be a different auth error
 		}
 	}
 
@@ -166,7 +165,7 @@ func (l *Layer) RenderTile(ctx *internal.RequestContext, tileRequest internal.Ti
 		bounds, err := tileRequest.GetBounds()
 		if err != nil || !ctx.AllowedArea.Contains(*bounds) {
 			slog.InfoContext(ctx, "Denying access to non-allowed area")
-			return nil, providers.AuthError{} //TODO: should be a different auth error
+			return nil, AuthError{} //TODO: should be a different auth error
 		}
 	}
 
@@ -207,7 +206,7 @@ func (l *Layer) RenderTileNoCache(ctx *internal.RequestContext, tileRequest inte
 	if ctx.LimitLayers {
 		if !slices.Contains(ctx.AllowedLayers, l.Id) {
 			slog.InfoContext(ctx, "Denying access to non-allowed layer")
-			return nil, providers.AuthError{} //TODO: should be a different auth error
+			return nil, AuthError{} //TODO: should be a different auth error
 		}
 	}
 
@@ -222,7 +221,7 @@ func (l *Layer) RenderTileNoCache(ctx *internal.RequestContext, tileRequest inte
 
 	img, err = l.Provider.GenerateTile(ctx, l.providerContext, tileRequest)
 
-	var authError *providers.AuthError
+	var authError *AuthError
 	if errors.As(err, &authError) {
 		err = l.authWithProvider(ctx)
 
