@@ -17,7 +17,6 @@ package layers
 import (
 	"errors"
 	"fmt"
-	"log/slog"
 	"slices"
 	"strings"
 	"sync"
@@ -153,63 +152,8 @@ func (l *Layer) authWithProvider(ctx *internal.RequestContext) error {
 	return err
 }
 
-func (l *Layer) RenderTile(ctx *internal.RequestContext, tileRequest internal.TileRequest) (*internal.Image, error) {
-	if ctx.LimitLayers {
-		if !slices.Contains(ctx.AllowedLayers, l.Id) {
-			slog.InfoContext(ctx, "Denying access to non-allowed layer")
-			return nil, AuthError{} //TODO: should be a different auth error
-		}
-	}
-
-	if !ctx.AllowedArea.IsNullIsland() {
-		bounds, err := tileRequest.GetBounds()
-		if err != nil || !ctx.AllowedArea.Contains(*bounds) {
-			slog.InfoContext(ctx, "Denying access to non-allowed area")
-			return nil, AuthError{} //TODO: should be a different auth error
-		}
-	}
-
-	if l.Config.SkipCache {
-		return l.RenderTileNoCache(ctx, tileRequest)
-	}
-
-	var img *internal.Image
-	var err error
-
-	img, err = (*l.Cache).Lookup(tileRequest)
-
-	if img != nil {
-		slog.DebugContext(ctx, "Cache hit")
-		return img, err
-	}
-
-	if err != nil {
-		slog.WarnContext(ctx, fmt.Sprintf("Cache read error %v\n", err))
-	}
-
-	img, err = l.RenderTileNoCache(ctx, tileRequest)
-
-	if err != nil {
-		return nil, err
-	}
-
-	err = (*l.Cache).Save(tileRequest, img)
-
-	if err != nil {
-		slog.WarnContext(ctx, fmt.Sprintf("Cache save error %v\n", err))
-	}
-
-	return img, nil
-}
 
 func (l *Layer) RenderTileNoCache(ctx *internal.RequestContext, tileRequest internal.TileRequest) (*internal.Image, error) {
-	if ctx.LimitLayers {
-		if !slices.Contains(ctx.AllowedLayers, l.Id) {
-			slog.InfoContext(ctx, "Denying access to non-allowed layer")
-			return nil, AuthError{} //TODO: should be a different auth error
-		}
-	}
-
 	var img *internal.Image
 	var err error
 

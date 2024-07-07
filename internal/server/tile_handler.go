@@ -80,14 +80,7 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	layer := h.layerGroup.FindLayer(ctx, layerName)
-
-	if layer == nil {
-		writeError(ctx, w, &h.config.Error, TypeOfErrorOtherBadRequest, fmt.Sprintf(h.config.Error.Messages.InvalidParam, "layer", layerName))
-		return
-	}
-
-	img, err := layer.RenderTile(ctx, tileReq)
+	img, err := h.layerGroup.RenderTile(ctx, tileReq)
 
 	if err != nil {
 		var ae layers.AuthError

@@ -156,7 +156,7 @@ func runSeed(cmd *cobra.Command, args []string) {
 				fmt.Fprintf(out, "Created thread %v with %v tiles\n", t, len(myReqs))
 			}
 			for _, req := range myReqs {
-				_, tileErr := layer.RenderTile(internal.BackgroundContext(), req)
+				_, tileErr := layerGroup.RenderTile(internal.BackgroundContext(), req)
 
 				if verbose {
 					var status string
