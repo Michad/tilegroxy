@@ -69,9 +69,9 @@ func ConstructBlend(config BlendConfig, clientConfig *config.ClientConfig, error
 			var ref Provider
 
 			layerName := config.Layer.Pattern
-			
+
 			for k, v := range lay {
-				layerName = strings.ReplaceAll(layerName, "{" + k + "}", v)
+				layerName = strings.ReplaceAll(layerName, "{"+k+"}", v)
 			}
 
 			cfg := RefConfig{Layer: layerName}
@@ -81,10 +81,10 @@ func ConstructBlend(config BlendConfig, clientConfig *config.ClientConfig, error
 			}
 			providers[i] = &ref
 		}
-	} else {
-		if len(providers) < 2 || len(providers) > 100 {
-			return nil, fmt.Errorf(errorMessages.RangeError, "provider.blend.providers.length", 2, 100)
-		}
+	}
+
+	if len(providers) < 2 || len(providers) > 100 {
+		return nil, fmt.Errorf(errorMessages.RangeError, "provider.blend.providers.length", 2, 100)
 	}
 
 	return &Blend{config, providers}, nil
