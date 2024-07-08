@@ -78,8 +78,7 @@ func coreServeTest(cfg string, port int, url string) (*http.Response, func(), er
 			return nil, nil, bindErr
 		}
 
-		timeout := time.Duration(i*i*100) * time.Millisecond
-		conn, err := net.DialTimeout("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)), timeout)
+		conn, err := net.DialTimeout("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)), 1*time.Second)
 		if conn != nil {
 			defer conn.Close()
 		}
@@ -89,6 +88,8 @@ func coreServeTest(cfg string, port int, url string) (*http.Response, func(), er
 		} else {
 			fmt.Printf("Didn't connect to tcp: %v\n", err)
 		}
+
+		time.Sleep(time.Duration(i*i*100) * time.Millisecond)
 	}
 
 	if !ok {
