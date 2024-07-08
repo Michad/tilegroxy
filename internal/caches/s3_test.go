@@ -26,6 +26,7 @@ import (
 
 	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/assert"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -76,8 +77,9 @@ func Test_S3Execute(t *testing.T) {
 	ctx := context.Background()
 	req := testcontainers.ContainerRequest{
 		Image:        "localstack/localstack",
-		ExposedPorts: []string{"4566:4566/tcp"},
-		WaitingFor:   wait.ForLog("Ready"),
+		ExposedPorts: []string{"4566/tcp"},
+		Privileged:   true,
+		WaitingFor:   wait.ForAll(wait.ForLog("Ready"), wait.ForListeningPort(nat.Port("4566/tcp"))),
 	}
 
 	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
@@ -93,11 +95,14 @@ func Test_S3Execute(t *testing.T) {
 		}
 	}(c, ctx)
 
+	endpoint, err := c.PortEndpoint(ctx, nat.Port("4566/tcp"), "http")
+	assert.NoError(t, err)
+
 	s3, err := ConstructS3(&S3Config{
 		Access:       "test",
 		Secret:       "test",
 		Bucket:       "test",
-		Endpoint:     "http://localhost:4566",
+		Endpoint:     endpoint, //"http://localhost:4566",
 		Region:       "us-east-1",
 		UsePathStyle: true,
 	}, &config.ErrorMessages{})
