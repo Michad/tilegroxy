@@ -3,7 +3,7 @@ module github.com/Michad/tilegroxy
 go 1.22.4
 
 require (
-	github.com/anthonynsimon/bild v0.13.0
+	github.com/anthonynsimon/bild v0.14.0
 	github.com/aws/aws-sdk-go-v2 v1.30.1
 	github.com/aws/aws-sdk-go-v2/config v1.27.23
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.23
