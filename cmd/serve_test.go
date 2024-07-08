@@ -567,7 +567,7 @@ func Test_ServeCommand_RemoteProvider(t *testing.T) {
 			wait.ForLog("ready to serve client requests"),
 			wait.ForListeningPort(p),
 		),
-		ExposedPorts: []string{"2379:2379/tcp"},
+		ExposedPorts: []string{"2379"},
 		Env: map[string]string{
 			"ALLOW_NONE_AUTHENTICATION": "yes",
 		},
@@ -591,9 +591,8 @@ layers:
       name: static
       color: "FFFFFF"
 `
-	endpoint := "127.0.0.1:2379"
-	// endpoint, err := etcdC.Endpoint(ctx, "")
-	// assert.NoError(t, err)
+	endpoint, err := etcdC.Endpoint(ctx, "")
+	assert.NoError(t, err)
 
 	fmt.Println("Running on " + endpoint)
 
