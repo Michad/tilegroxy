@@ -15,7 +15,7 @@ Tilegroxy shines when you consume maps from multiple sources.  It isn't tied to 
 
 ### Features:
 
-* Provide a uniform mapping API for incoming requests
+* Provide a uniform interface for mapping
 * Proxy to ZXY, WMS, TMS, WMTS, or other protocol map layers
 * Cache tiles in disk, memory, s3, redis, and/or memcached
 * Require authentication using static key, JWT, or custom logic
