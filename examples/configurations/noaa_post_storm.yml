@@ -17,7 +17,7 @@ layers:
     provider:
       name: blend
       mode: normal
-      layer: #instead of writing the full provider each time, you can do
+      layer: #equivalent to above but with less copy/pasting:
         pattern: noaa_poststorm_{v}
         values:
           - v: 20230902a
@@ -25,6 +25,7 @@ layers:
           - v: 20230901a
           - v: 20230831b
           - v: 20230831a
+  # The generic layer with a placeholder to enable re-use of config
   - id: noaa_poststorm_imagery_in_parts
     pattern: noaa_poststorm_{version}
     client:
