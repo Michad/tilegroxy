@@ -40,10 +40,10 @@ func Test_TileHandler_AllowedArea(t *testing.T) {
 	var cache caches.Cache
 	auth = authentication.Noop{}
 	cache = caches.Noop{}
-	lg, err := layers.ConstructLayerGroup(cfg, cfg.Layers, &cache)
+	lg, err := layers.ConstructLayerGroup(cfg, cfg.Layers, cache)
 	assert.NoError(t, err)
 
-	handler := tileHandler{defaultHandler{config: &cfg, auth: &auth, layerGroup: lg}}
+	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
 
 	ctx := internal.BackgroundContext()
 	b, _ := internal.TileRequest{LayerName: "l", Z: 10, X: 12, Y: 12}.GetBounds()
@@ -95,10 +95,10 @@ func Test_TileHandler_Proxy(t *testing.T) {
 	var cache caches.Cache
 	auth = authentication.Noop{}
 	cache = caches.Noop{}
-	lg, err := layers.ConstructLayerGroup(cfg, cfg.Layers, &cache)
+	lg, err := layers.ConstructLayerGroup(cfg, cfg.Layers, cache)
 	assert.NoError(t, err)
 
-	handler := tileHandler{defaultHandler{config: &cfg, auth: &auth, layerGroup: lg}}
+	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
 
 	ctx := internal.BackgroundContext()
 	ctx.UserIdentifier = "hi"
@@ -130,10 +130,10 @@ func Test_TileHandler_RefToStatic(t *testing.T) {
 	var cache caches.Cache
 	auth = authentication.Noop{}
 	cache = caches.Noop{}
-	lg, err := layers.ConstructLayerGroup(cfg, cfg.Layers, &cache)
+	lg, err := layers.ConstructLayerGroup(cfg, cfg.Layers, cache)
 	assert.NoError(t, err)
 
-	handler := tileHandler{defaultHandler{config: &cfg, auth: &auth, layerGroup: lg}}
+	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
 
 	req1 := httptest.NewRequest("GET", "http://example.com/tiles/test/10/10/10", nil).WithContext(internal.BackgroundContext())
 	req1.SetPathValue("layer", "test")

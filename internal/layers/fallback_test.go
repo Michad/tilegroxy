@@ -23,20 +23,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func makeFallbackProvidersNoFail() (*Provider, *Provider) {
+func makeFallbackProvidersNoFail() (Provider, Provider) {
 	a, _ := ConstructStatic(StaticConfig{Color: "F00"}, nil, &testErrMessages)
 	b, _ := ConstructStatic(StaticConfig{Color: "0F0"}, nil, &testErrMessages)
-	var ap Provider = *a
-	var bp Provider = *b
 
-	return &ap, &bp
+	return a, b
 }
-func makeFallbackProvidersFail() (*Provider, *Provider) {
+func makeFallbackProvidersFail() (Provider, Provider) {
 	b, _ := ConstructStatic(StaticConfig{Color: "0F0"}, nil, &testErrMessages)
 	var ap Provider = Fail{FailConfig{Message: "failed intentionally"}}
-	var bp Provider = *b
 
-	return &ap, &bp
+	return ap, b
 }
 
 func Test_Fallback_Validate(t *testing.T) {

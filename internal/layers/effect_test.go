@@ -29,12 +29,12 @@ func makeEffectProvider() Provider {
 
 func Test_EffectValidate(t *testing.T) {
 	s := makeEffectProvider()
-	c, err := ConstructEffect(EffectConfig{}, nil, &testErrMessages, &s)
+	c, err := ConstructEffect(EffectConfig{}, nil, &testErrMessages, s)
 
 	assert.Nil(t, c)
 	assert.Error(t, err)
 
-	c, err = ConstructEffect(EffectConfig{Mode: "emboss", Intensity: 24}, nil, &testErrMessages, &s)
+	c, err = ConstructEffect(EffectConfig{Mode: "emboss", Intensity: 24}, nil, &testErrMessages, s)
 
 	assert.Nil(t, c)
 	assert.Error(t, err)
@@ -42,7 +42,7 @@ func Test_EffectValidate(t *testing.T) {
 
 func Test_EffectExecuteGreyscale(t *testing.T) {
 	s := makeEffectProvider()
-	c, err := ConstructEffect(EffectConfig{Mode: "grayscale"}, nil, &testErrMessages, &s)
+	c, err := ConstructEffect(EffectConfig{Mode: "grayscale"}, nil, &testErrMessages, s)
 
 	assert.NotNil(t, c)
 	assert.NoError(t, err)
@@ -62,7 +62,7 @@ func Test_EffectExecuteGreyscale(t *testing.T) {
 func Test_EffectExecuteAll(t *testing.T) {
 	s := makeEffectProvider()
 	for _, mode := range allEffectModes {
-		c, err := ConstructEffect(EffectConfig{Mode: mode}, nil, &testErrMessages, &s)
+		c, err := ConstructEffect(EffectConfig{Mode: mode}, nil, &testErrMessages, s)
 
 		assert.NotNil(t, c)
 		assert.NoError(t, err)

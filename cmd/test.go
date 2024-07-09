@@ -138,10 +138,10 @@ func runTest(cmd *cobra.Command, args []string) {
 				var cacheReadError error
 
 				if !noCache && layerErr == nil {
-					cacheWriteError = (*layer.Cache).Save(req, img)
+					cacheWriteError = layer.Cache.Save(req, img)
 					if cacheWriteError == nil {
 						var img2 *internal.Image
-						img2, cacheReadError = (*layer.Cache).Lookup(req)
+						img2, cacheReadError = layer.Cache.Lookup(req)
 						if cacheReadError == nil {
 							if img2 == nil {
 								cacheReadError = errors.New("no result from cache lookup")

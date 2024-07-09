@@ -50,12 +50,12 @@ type BlendConfig struct {
 
 type Blend struct {
 	BlendConfig
-	providers []*Provider
+	providers []Provider
 }
 
 var allBlendModes = []string{"add", "color burn", "color dodge", "darken", "difference", "divide", "exclusion", "lighten", "linear burn", "linear light", "multiply", "normal", "opacity", "overlay", "screen", "soft light", "subtract"}
 
-func ConstructBlend(config BlendConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, providers []*Provider, layerGroup *LayerGroup) (*Blend, error) {
+func ConstructBlend(config BlendConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, providers []Provider, layerGroup *LayerGroup) (*Blend, error) {
 	var err error
 	if !slices.Contains(allBlendModes, config.Mode) {
 		return nil, fmt.Errorf(errorMessages.EnumError, "provider.blend.mode", config.Mode, allBlendModes)
@@ -64,7 +64,7 @@ func ConstructBlend(config BlendConfig, clientConfig *config.ClientConfig, error
 		return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "provider.blend.opacity", config.Mode)
 	}
 	if config.Layer != nil {
-		providers = make([]*Provider, len(config.Layer.Values))
+		providers = make([]Provider, len(config.Layer.Values))
 		for i, lay := range config.Layer.Values {
 			var ref Provider
 
@@ -79,7 +79,7 @@ func ConstructBlend(config BlendConfig, clientConfig *config.ClientConfig, error
 			if err != nil {
 				return nil, err
 			}
-			providers[i] = &ref
+			providers[i] = ref
 		}
 	}
 
@@ -104,7 +104,7 @@ func (t Blend) PreAuth(ctx *internal.RequestContext, providerContext ProviderCon
 
 	for i, p := range t.providers {
 		wg.Add(1)
-		go func(acObj interface{}, index int, p *Provider) {
+		go func(acObj interface{}, index int, p Provider) {
 			defer func() {
 				if r := recover(); r != nil {
 					errs <- fmt.Errorf("unexpected blend error %v", r)
@@ -116,9 +116,9 @@ func (t Blend) PreAuth(ctx *internal.RequestContext, providerContext ProviderCon
 			ac, ok := acObj.(ProviderContext)
 
 			if ok {
-				ac, err = (*p).PreAuth(ctx, ac)
+				ac, err = p.PreAuth(ctx, ac)
 			} else {
-				ac, err = (*p).PreAuth(ctx, ProviderContext{})
+				ac, err = p.PreAuth(ctx, ProviderContext{})
 			}
 
 			acResults <- struct {
@@ -155,7 +155,7 @@ func (t Blend) GenerateTile(ctx *internal.RequestContext, providerContext Provid
 
 	for i, p := range t.providers {
 		wg.Add(1)
-		go func(key string, i int, p *Provider) {
+		go func(key string, i int, p Provider) {
 			defer func() {
 				if r := recover(); r != nil {
 					errs <- fmt.Errorf("unexpected blend error %v", r)
@@ -168,9 +168,9 @@ func (t Blend) GenerateTile(ctx *internal.RequestContext, providerContext Provid
 			ac, ok := providerContext.Other[key].(ProviderContext)
 
 			if ok {
-				img, err = (*p).GenerateTile(ctx, ac, tileRequest)
+				img, err = p.GenerateTile(ctx, ac, tileRequest)
 			} else {
-				img, err = (*p).GenerateTile(ctx, ProviderContext{}, tileRequest)
+				img, err = p.GenerateTile(ctx, ProviderContext{}, tileRequest)
 			}
 
 			if img != nil {

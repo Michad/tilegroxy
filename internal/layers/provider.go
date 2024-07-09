@@ -89,18 +89,18 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.Cl
 			return nil, err
 		}
 
-		return ConstructFallback(config, clientConfig, errorMessages, &primary, &secondary)
+		return ConstructFallback(config, clientConfig, errorMessages, primary, secondary)
 	} else if rawConfig["name"] == "blend" {
 		var config BlendConfig
 		err := mapstructure.Decode(rawConfig, &config)
 		if err != nil {
 			return nil, err
 		}
-		var providers []*Provider
+		var providers []Provider
 		var errorSlice []error
 		for _, p := range config.Providers {
 			provider, err := ConstructProvider(p, clientConfig, errorMessages, layerGroup)
-			providers = append(providers, &provider)
+			providers = append(providers, provider)
 			errorSlice = append(errorSlice, err)
 		}
 
@@ -121,7 +121,7 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.Cl
 			return nil, err
 		}
 
-		return ConstructEffect(config, clientConfig, errorMessages, &child)
+		return ConstructEffect(config, clientConfig, errorMessages, child)
 	} else if rawConfig["name"] == "transform" {
 		var config TransformConfig
 		err := mapstructure.Decode(rawConfig, &config)
@@ -134,7 +134,7 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.Cl
 			return nil, err
 		}
 
-		return ConstructTransform(config, clientConfig, errorMessages, &child)
+		return ConstructTransform(config, clientConfig, errorMessages, child)
 	}
 
 	name := fmt.Sprintf("%#v", rawConfig["name"])

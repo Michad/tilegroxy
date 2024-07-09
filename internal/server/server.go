@@ -264,7 +264,7 @@ func (h httpContextHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 	h.Handler.ServeHTTP(w, req.WithContext(&reqC))
 }
 
-func ListenAndServe(config *config.Config, layerGroup *layers.LayerGroup, auth *authentication.Authentication) error {
+func ListenAndServe(config *config.Config, layerGroup *layers.LayerGroup, auth authentication.Authentication) error {
 	r := http.ServeMux{}
 
 	if config.Server.Production {

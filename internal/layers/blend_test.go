@@ -25,13 +25,11 @@ import (
 
 var testErrMessages = config.ErrorMessages{}
 
-func makeBlendProviders() []*Provider {
+func makeBlendProviders() []Provider {
 	a, _ := ConstructStatic(StaticConfig{Color: "F00"}, nil, &testErrMessages)
 	b, _ := ConstructStatic(StaticConfig{Color: "0F0"}, nil, &testErrMessages)
-	var ap Provider = *a
-	var bp Provider = *b
 
-	return []*Provider{&ap, &bp}
+	return []Provider{a, b}
 }
 
 func Test_BlendValidate(t *testing.T) {
@@ -44,7 +42,7 @@ func Test_BlendValidate(t *testing.T) {
 	b, err = ConstructBlend(BlendConfig{Mode: "add", Opacity: 23}, nil, &testErrMessages, makeBlendProviders(), nil)
 	assert.Nil(t, b)
 	assert.Error(t, err)
-	b, err = ConstructBlend(BlendConfig{Mode: "opacity", Opacity: 23}, nil, &testErrMessages, []*Provider{}, nil)
+	b, err = ConstructBlend(BlendConfig{Mode: "opacity", Opacity: 23}, nil, &testErrMessages, []Provider{}, nil)
 	assert.Nil(t, b)
 	assert.Error(t, err)
 }
@@ -67,8 +65,8 @@ func Test_Blend_Layers(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, 2, len(b.providers))
-	assert.Equal(t, &Ref{RefConfig{"something_hello_world"}, nil}, *(b.providers[0]))
-	assert.Equal(t, &Ref{RefConfig{"something_goodbye_world"}, nil}, *(b.providers[1]))
+	assert.Equal(t, &Ref{RefConfig{"something_hello_world"}, nil}, b.providers[0])
+	assert.Equal(t, &Ref{RefConfig{"something_goodbye_world"}, nil}, b.providers[1])
 }
 
 func Test_BlendExecute_Add(t *testing.T) {

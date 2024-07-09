@@ -29,11 +29,11 @@ func makeTransformProvider() Provider {
 
 func Test_Transform_Validate(t *testing.T) {
 	p := makeTransformProvider()
-	tr, err := ConstructTransform(TransformConfig{}, nil, &testErrMessages, &p)
+	tr, err := ConstructTransform(TransformConfig{}, nil, &testErrMessages, p)
 
 	assert.Nil(t, tr)
 	assert.Error(t, err)
-	tr, err = ConstructTransform(TransformConfig{Formula: "package custom"}, nil, &testErrMessages, &p)
+	tr, err = ConstructTransform(TransformConfig{Formula: "package custom"}, nil, &testErrMessages, p)
 
 	assert.Nil(t, tr)
 	assert.Error(t, err)
@@ -41,7 +41,7 @@ func Test_Transform_Validate(t *testing.T) {
 
 func Test_Transform_Execute(t *testing.T) {
 	p := makeTransformProvider()
-	tr, err := ConstructTransform(TransformConfig{Formula: `func transform(r, g, b, a uint8) (uint8, uint8, uint8, uint8) { return g,b,r,a }`}, nil, &testErrMessages, &p)
+	tr, err := ConstructTransform(TransformConfig{Formula: `func transform(r, g, b, a uint8) (uint8, uint8, uint8, uint8) { return g,b,r,a }`}, nil, &testErrMessages, p)
 
 	assert.NotNil(t, tr)
 	assert.NoError(t, err)

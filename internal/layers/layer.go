@@ -111,7 +111,7 @@ type Layer struct {
 	Pattern         []layerSegment
 	Config          config.LayerConfig
 	Provider        Provider
-	Cache           *caches.Cache
+	Cache           caches.Cache
 	ErrorMessages   *config.ErrorMessages
 	providerContext ProviderContext
 	authMutex       sync.Mutex

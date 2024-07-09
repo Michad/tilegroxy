@@ -35,7 +35,7 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	slog.DebugContext(ctx, "server: tile handler started")
 	defer slog.DebugContext(ctx, "server: tile handler ended")
 
-	if !(*h.auth).CheckAuthentication(req, ctx) {
+	if !h.auth.CheckAuthentication(req, ctx) {
 		writeError(ctx, w, &h.config.Error, TypeOfErrorAuth, h.config.Error.Messages.NotAuthorized)
 		return
 	}
