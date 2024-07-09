@@ -43,12 +43,20 @@ type RequestContext struct {
 }
 
 func (c *RequestContext) Value(keyAny any) any {
-	if c.req == nil {
-		return nil
-	}
 
 	key, ok := keyAny.(string)
 	if !ok {
+		return nil
+	}
+
+	switch key {
+	case "elapsed":
+		return time.Since(c.startTime).Seconds()
+	case "user":
+		return c.UserIdentifier
+	}
+
+	if c.req == nil {
 		return nil
 	}
 
@@ -67,10 +75,6 @@ func (c *RequestContext) Value(keyAny any) any {
 		return c.req.Method
 	case "host":
 		return c.req.Host
-	case "elapsed":
-		return time.Since(c.startTime).Seconds()
-	case "user":
-		return c.UserIdentifier
 	}
 
 	h, hMatch := c.req.Header[key]
