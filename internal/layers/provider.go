@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package providers
+package layers
 
 import (
 	"errors"
@@ -35,7 +35,7 @@ type Provider interface {
 	GenerateTile(ctx *internal.RequestContext, providerContext ProviderContext, tileRequest internal.TileRequest) (*internal.Image, error)
 }
 
-func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages) (Provider, error) {
+func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, layerGroup *LayerGroup) (Provider, error) {
 	rawConfig = internal.ReplaceEnv(rawConfig)
 
 	if rawConfig["name"] == "url template" {
@@ -67,17 +67,24 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.Cl
 			return nil, err
 		}
 		return ConstructStatic(config, clientConfig, errorMessages)
+	} else if rawConfig["name"] == "ref" {
+		var config RefConfig
+		err := mapstructure.Decode(rawConfig, &config)
+		if err != nil {
+			return nil, err
+		}
+		return ConstructRef(config, clientConfig, errorMessages, layerGroup)
 	} else if rawConfig["name"] == "fallback" {
 		var config FallbackConfig
 		err := mapstructure.Decode(rawConfig, &config)
 		if err != nil {
 			return nil, err
 		}
-		primary, err := ConstructProvider(config.Primary, clientConfig, errorMessages)
+		primary, err := ConstructProvider(config.Primary, clientConfig, errorMessages, layerGroup)
 		if err != nil {
 			return nil, err
 		}
-		secondary, err := ConstructProvider(config.Secondary, clientConfig, errorMessages)
+		secondary, err := ConstructProvider(config.Secondary, clientConfig, errorMessages, layerGroup)
 		if err != nil {
 			return nil, err
 		}
@@ -92,7 +99,7 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.Cl
 		var providers []*Provider
 		var errorSlice []error
 		for _, p := range config.Providers {
-			provider, err := ConstructProvider(p, clientConfig, errorMessages)
+			provider, err := ConstructProvider(p, clientConfig, errorMessages, layerGroup)
 			providers = append(providers, &provider)
 			errorSlice = append(errorSlice, err)
 		}
@@ -102,14 +109,14 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.Cl
 			return nil, errorsFlat
 		}
 
-		return ConstructBlend(config, clientConfig, errorMessages, providers)
+		return ConstructBlend(config, clientConfig, errorMessages, providers, layerGroup)
 	} else if rawConfig["name"] == "effect" {
 		var config EffectConfig
 		err := mapstructure.Decode(rawConfig, &config)
 		if err != nil {
 			return nil, err
 		}
-		child, err := ConstructProvider(config.Provider, clientConfig, errorMessages)
+		child, err := ConstructProvider(config.Provider, clientConfig, errorMessages, layerGroup)
 		if err != nil {
 			return nil, err
 		}
@@ -122,7 +129,7 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.Cl
 			return nil, err
 		}
 
-		child, err := ConstructProvider(config.Provider, clientConfig, errorMessages)
+		child, err := ConstructProvider(config.Provider, clientConfig, errorMessages, layerGroup)
 		if err != nil {
 			return nil, err
 		}
@@ -199,7 +206,9 @@ func getTile(ctx *internal.RequestContext, clientConfig *config.ClientConfig, ur
 		req.Header.Set(h, v)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	client := http.Client{Timeout: time.Duration(clientConfig.Timeout) * time.Second}
+
+	resp, err := client.Do(req)
 	if resp != nil {
 		defer resp.Body.Close()
 	}

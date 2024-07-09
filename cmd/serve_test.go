@@ -185,7 +185,7 @@ layers:
 	assert.NoError(t, err)
 	resp, err = http.DefaultClient.Do(req)
 	assert.NoError(t, err)
-	assert.Equal(t, 400, resp.StatusCode)
+	assert.Equal(t, 401, resp.StatusCode)
 	resp.Body.Close()
 
 	req, err = http.NewRequest(http.MethodGet, "http://localhost:12342/root/tiles/color/800/12/32", nil)

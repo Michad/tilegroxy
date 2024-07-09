@@ -37,6 +37,7 @@ type Bounds struct {
 
 const (
 	MaxZoom = 21
+	delta   = .00000001
 )
 
 type RangeError struct {
@@ -181,7 +182,7 @@ func (b Bounds) Intersects(b2 Bounds) bool {
 
 // The bounds passed in is fully contained by this bounds
 func (b Bounds) Contains(b2 Bounds) bool {
-	return b2.South >= b.South && b2.North <= b.North && b2.West >= b.West && b2.East <= b.East
+	return b2.South+delta >= b.South && b2.North <= b.North+delta && b2.West+delta >= b.West && b2.East <= b.East+delta
 }
 
 func NewBoundsFromGeohash(hashStr string) (Bounds, error) {

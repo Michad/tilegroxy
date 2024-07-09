@@ -71,7 +71,7 @@ func initRoot() {
 }
 
 // A common utility for use by multiple commands to bootstrap the core application entities
-func parseConfigIntoStructs(cmd *cobra.Command) (*config.Config, []*layers.Layer, *authentication.Authentication, error) {
+func parseConfigIntoStructs(cmd *cobra.Command) (*config.Config, *layers.LayerGroup, *authentication.Authentication, error) {
 	var err error
 	configPath, err1 := cmd.Flags().GetString("config")
 	configRaw, err2 := cmd.Flags().GetString("raw-config")
@@ -110,16 +110,10 @@ func parseConfigIntoStructs(cmd *cobra.Command) (*config.Config, []*layers.Layer
 		return nil, nil, nil, fmt.Errorf("error constructing auth: %v", err)
 	}
 
-	layerObjects := make([]*layers.Layer, len(cfg.Layers))
-
-	for i, l := range cfg.Layers {
-		layerObjects[i], err = layers.ConstructLayer(l, &cfg.Client, &cfg.Error.Messages)
-		if err != nil {
-			return nil, nil, nil, fmt.Errorf("error constructing layer %v: %v", i, err)
-		}
-
-		layerObjects[i].Cache = &cache
+	layerGroup, err :=layers.ConstructLayerGroup(cfg, cfg.Layers, &cache)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("error constructing layers: %v", err)
 	}
 
-	return &cfg, layerObjects, &auth, err
+	return &cfg, layerGroup, &auth, err
 }

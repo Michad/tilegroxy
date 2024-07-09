@@ -22,31 +22,41 @@ import (
 )
 
 func NewRequestContext(req *http.Request) RequestContext {
-	return RequestContext{req.Context(), req, time.Now(), false, []string{}, Bounds{}, ""}
+	return RequestContext{req.Context(), req, time.Now(), false, []string{}, Bounds{}, "", make(map[string]string), false}
 }
 
 func BackgroundContext() *RequestContext {
-	return &RequestContext{context.Background(), nil, time.Time{}, false, []string{}, Bounds{}, ""}
+	return &RequestContext{context.Background(), nil, time.Time{}, false, []string{}, Bounds{}, "", make(map[string]string), false}
 }
 
 // Custom context type. Links back to request so we can pull attrs into the structured log
 type RequestContext struct {
 	context.Context
-	req            *http.Request
-	startTime      time.Time
-	LimitLayers    bool
-	AllowedLayers  []string
-	AllowedArea    Bounds
-	UserIdentifier string
+	req                 *http.Request
+	startTime           time.Time
+	LimitLayers         bool
+	AllowedLayers       []string
+	AllowedArea         Bounds
+	UserIdentifier      string
+	LayerPatternMatches map[string]string
+	SkipCacheSave       bool
 }
 
 func (c *RequestContext) Value(keyAny any) any {
-	if c.req == nil {
-		return nil
-	}
 
 	key, ok := keyAny.(string)
 	if !ok {
+		return nil
+	}
+
+	switch key {
+	case "elapsed":
+		return time.Since(c.startTime).Seconds()
+	case "user":
+		return c.UserIdentifier
+	}
+
+	if c.req == nil {
 		return nil
 	}
 
@@ -65,19 +75,21 @@ func (c *RequestContext) Value(keyAny any) any {
 		return c.req.Method
 	case "host":
 		return c.req.Host
-	case "elapsed":
-		return time.Since(c.startTime).Seconds()
-	case "user":
-		return c.UserIdentifier
 	}
 
-	h := c.req.Header[key]
+	h, hMatch := c.req.Header[key]
 
-	if h != nil {
+	if hMatch && h != nil {
 		if len(h) == 1 {
 			return h[0]
 		}
 		return h
+	}
+
+	l, lMatch := c.LayerPatternMatches[key]
+
+	if lMatch {
+		return l
 	}
 
 	return nil

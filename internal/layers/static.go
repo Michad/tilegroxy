@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package providers
+package layers
 
 import (
 	"fmt"
@@ -37,7 +37,7 @@ func ConstructStatic(config StaticConfig, clientConfig *config.ClientConfig, err
 		if config.Color != "" {
 			config.Image = images.KeyPrefixColor + config.Color
 		} else {
-			return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "provider.static.image", "")
+			return nil, fmt.Errorf(errorMessages.OneOfRequired, []string{"provider.static.image", "provider.static.color"})
 		}
 	}
 

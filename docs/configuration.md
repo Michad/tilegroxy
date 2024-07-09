@@ -26,11 +26,14 @@ layers:
 
 A layer represents a distinct mapping layer as would be displayed in a typical web map application.  Each layer can be accessed independently from other map layers. The main thing that needs to be configured for a layer is the provider described below. 
 
+The URLs of incoming requests follow a format like: `/tiles/{layerName}/{z}/{x}/{y}` the layer name can be one of two things: 1) the ID of the layer or 2) A string that matches a pattern.  A pattern should include non-subsequent placeholder values wrapped in curly braces. Those placeholder values can be used in certain providers, such as the Proxy provider where they can be forwarded along to the upstream map layer. To understand how you can utilize patterns, see the [NOAA Post-Storm example](../examples/configurations/noaa_post_storm.yml)
+
 Configuration options:
 
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| id | string | Yes | None | A url-safe identifier of the layer. Primarily used as a path parameter for incoming tile web requests |
+| id | string | Yes | None | A url-safe identifier of the layer. Primarily used as the default path for incoming tile web requests |
+| pattern | string | No | id | A url-safe pattern with non-subsequent placeholders |
 | provider | Provider | Yes | None | See below |
 | overrideclient | Client | No | None | A Client configuration to use for this layer specifically that overrides the Client from the top-level of the configuration. See below for Client schema | 
 | skipcache | bool | No | false | If true, skip reading and writing to cache |
@@ -68,6 +71,7 @@ The following placeholders are available in the URL:
 | ymax | The "south" coordinate of the bounding box defined by the incoming tile coordinates. Not impacted by the `invertY` parameter. |
 | env.XXX | An environment variable whose name is XXX |
 | ctx.XXX | A context variable (typically an HTTP header) whose name is XXX |
+| layer.XXX | If the layer includes a pattern with a placeholder of XXX, this is the replacement value from the used layer name | 
 
 Example:
 
@@ -129,9 +133,33 @@ Name should be "blend"
 
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| providers | Array[Provider] | Yes | None | The providers to blend together.  Order matters |
+| providers | Provider[] | Yes | None | The providers to blend together.  Order matters |
 | mode | String | No | normal | How to blend the images. [Examples of the modes](https://github.com/anthonynsimon/bild#blend-modes). Possible values: "add", "color burn", "color dodge", "darken", "difference", "divide", "exclusion", "lighten", "linear burn", "linear light", "multiply", "normal", "opacity", "overlay", "screen", "soft light", "subtract" |
 | opacity | Float | No | 0 | Only applicable if mode is "opacity". A value between 0 and 1 controlling the amount of opacity |
+| layer | Object - See next rows | No | None | An alternative to the `providers` parameter for specifying references to other layers that utilize patterns. Equivalent to specifying a number of [`Ref`](#ref) providers in `providers` |
+| layer.pattern | String | Yes | None | A string with one or more placeholders present wrapped in curly brackets that match the layer placeholder you want to refer towards |
+| layer.values | {"k":"v"}[] | Yes | None | An entry per instantiation of the layer, each entry should have a value for each placeholder in the pattern with the key being the placeholder and the value being the replacement value |
+
+Example:
+
+```
+provider:
+  name: blend
+  mode: normal
+  layer: 
+    pattern: noaa_poststorm_{date}{version}
+    values:
+      - date: 20230902
+        version: a
+      - date: 20230901
+        version: b
+      - date: 20230901
+        version: a
+      - date: 20230831
+        version: b
+      - date: 20230831
+        version: a
+```
 
 
 ### Fallback
@@ -152,12 +180,14 @@ Configuration options:
 | secondary | Provider | Yes | None | The provider to delegate to if primary returns an error |
 | zoom | String | No | 0-21 | Zooming below or above this range will activate the fallback. Can be a single number, a range with a dash between start and end, or a comma separated list of the first two options.  For example "4" "2-3" or "2,3-4" |
 | bounds | Object with north, south, east, west | No | Whole world | Any tiles that don't intersect with this bounds will activate the fallback |
+| cache | string | No | unless-error | When to save the resulting tile to the cache. Options: always, unless-error, unless-fallback. |
 
 Example:
 
 ```
 provider:
   name: fallback
+  cache: always
   zoom: 4-21
   bounds: 
     south: 51
@@ -184,6 +214,28 @@ Configuration options:
 | --- | --- | --- | --- | --- |
 | image | string | Yes | None | Either a filepath to an image on the local filesystem or one of the [built-in images](#image-options) |
 | color | string | No | None | A hexcode (RGB or RGBA) of a color to return. Equivalent to specifying `image` with this value with a prefix of "color:" |
+
+### Ref
+
+Ref refers requests to another layer. This is pointless by itself but can be useful when combined with other providers to avoid repeating yourself.
+
+For instance you can have a layer with a complex client coniguration that utilizes a `pattern` and points to a WMS server with the WMS layer being specified by a placeholder, then several other layers using `Ref` that fill in the blank.
+
+Name should be "ref"
+
+Configuration options:
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| layer | string | Yes | None | The layername to refer towards, treated the same if it were supplied in an incoming request. |
+
+Example
+
+```
+provider:
+  name: ref
+  layer: something_else
+```
 
 
 ### Custom

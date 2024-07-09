@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package providers
+package layers
 
 import (
 	"bufio"
@@ -22,20 +22,30 @@ import (
 	"image"
 	_ "image/jpeg"
 	"image/png"
+	"log/slog"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/config"
 
 	"github.com/anthonynsimon/bild/blend"
+	"github.com/anthonynsimon/bild/transform"
 )
+
+// Allow you to directly reference another layer that uses a pattern with multiple concrete values for the pattern
+type BlendLayerConfig struct {
+	Pattern string
+	Values  []map[string]string
+}
 
 type BlendConfig struct {
 	Opacity   float64
 	Mode      string
 	Providers []map[string]interface{}
+	Layer     *BlendLayerConfig
 }
 
 type Blend struct {
@@ -45,13 +55,34 @@ type Blend struct {
 
 var allBlendModes = []string{"add", "color burn", "color dodge", "darken", "difference", "divide", "exclusion", "lighten", "linear burn", "linear light", "multiply", "normal", "opacity", "overlay", "screen", "soft light", "subtract"}
 
-func ConstructBlend(config BlendConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, providers []*Provider) (*Blend, error) {
+func ConstructBlend(config BlendConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, providers []*Provider, layerGroup *LayerGroup) (*Blend, error) {
+	var err error
 	if !slices.Contains(allBlendModes, config.Mode) {
 		return nil, fmt.Errorf(errorMessages.EnumError, "provider.blend.mode", config.Mode, allBlendModes)
 	}
 	if config.Mode != "opacity" && config.Opacity != 0 {
 		return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "provider.blend.opacity", config.Mode)
 	}
+	if config.Layer != nil {
+		providers = make([]*Provider, len(config.Layer.Values))
+		for i, lay := range config.Layer.Values {
+			var ref Provider
+
+			layerName := config.Layer.Pattern
+
+			for k, v := range lay {
+				layerName = strings.ReplaceAll(layerName, "{"+k+"}", v)
+			}
+
+			cfg := RefConfig{Layer: layerName}
+			ref, err = ConstructRef(cfg, clientConfig, errorMessages, layerGroup)
+			if err != nil {
+				return nil, err
+			}
+			providers[i] = &ref
+		}
+	}
+
 	if len(providers) < 2 || len(providers) > 100 {
 		return nil, fmt.Errorf(errorMessages.RangeError, "provider.blend.providers.length", 2, 100)
 	}
@@ -74,6 +105,13 @@ func (t Blend) PreAuth(ctx *internal.RequestContext, providerContext ProviderCon
 	for i, p := range t.providers {
 		wg.Add(1)
 		go func(acObj interface{}, index int, p *Provider) {
+			defer func() {
+				if r := recover(); r != nil {
+					errs <- fmt.Errorf("unexpected blend error %v", r)
+				}
+				wg.Done()
+			}()
+
 			var err error
 			ac, ok := acObj.(ProviderContext)
 
@@ -89,8 +127,6 @@ func (t Blend) PreAuth(ctx *internal.RequestContext, providerContext ProviderCon
 			}{index, ac}
 
 			errs <- err
-
-			wg.Done()
 		}(providerContext.Other[strconv.Itoa(i)], i, p)
 	}
 
@@ -108,6 +144,8 @@ func (t Blend) PreAuth(ctx *internal.RequestContext, providerContext ProviderCon
 }
 
 func (t Blend) GenerateTile(ctx *internal.RequestContext, providerContext ProviderContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+	slog.DebugContext(ctx, fmt.Sprintf("Blending together %v providers", len(t.providers)))
+
 	wg := sync.WaitGroup{}
 	errs := make(chan error, len(t.providers))
 	imgs := make(chan struct {
@@ -118,6 +156,13 @@ func (t Blend) GenerateTile(ctx *internal.RequestContext, providerContext Provid
 	for i, p := range t.providers {
 		wg.Add(1)
 		go func(key string, i int, p *Provider) {
+			defer func() {
+				if r := recover(); r != nil {
+					errs <- fmt.Errorf("unexpected blend error %v", r)
+				}
+				wg.Done()
+			}()
+
 			var img *internal.Image
 			var err error
 			ac, ok := providerContext.Other[key].(ProviderContext)
@@ -128,16 +173,17 @@ func (t Blend) GenerateTile(ctx *internal.RequestContext, providerContext Provid
 				img, err = (*p).GenerateTile(ctx, ProviderContext{}, tileRequest)
 			}
 
-			realImage, _, err2 := image.Decode(bytes.NewReader(*img))
+			if img != nil {
+				realImage, _, err2 := image.Decode(bytes.NewReader(*img))
+				err = errors.Join(err, err2)
 
-			imgs <- struct {
-				int
-				image.Image
-			}{i, realImage}
+				imgs <- struct {
+					int
+					image.Image
+				}{i, realImage}
+			}
 
-			errs <- errors.Join(err, err2)
-
-			wg.Done()
+			errs <- err
 		}(strconv.Itoa(i), i, p)
 	}
 
@@ -163,7 +209,25 @@ func (t Blend) GenerateTile(ctx *internal.RequestContext, providerContext Provid
 	var combinedImg image.Image
 	combinedImg = nil
 
+	var size image.Point
+	for i, img := range imgSlice {
+		curSize := img.Bounds().Max
+		slog.Log(ctx, config.LevelTrace, fmt.Sprintf("Image %v size: %v", i, curSize))
+		if curSize.X > size.X {
+			size.X = curSize.X
+		}
+		if curSize.Y > size.Y {
+			size.Y = curSize.Y
+		}
+	}
+	slog.Log(ctx, config.LevelTrace, fmt.Sprintf("Blended size: %v", size))
+
 	for _, img := range imgSlice {
+		if img.Bounds().Max != size {
+			slog.DebugContext(ctx, fmt.Sprintf("Resizing from %v to %v", img.Bounds().Max, size))
+			img = transform.Resize(img, size.X, size.Y, transform.NearestNeighbor)
+		}
+
 		if combinedImg == nil {
 			combinedImg = img
 		} else {

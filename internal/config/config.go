@@ -43,6 +43,26 @@ type ClientConfig struct {
 	ContentTypes  []string          //The content-types to allow servers to return. Anything else will be interpreted as an error
 	StatusCodes   []int             //The status codes from the remote server to consider successful.  Defaults to just 200
 	Headers       map[string]string //Include these headers in requests. Defaults to none
+	Timeout       uint              //How long (in seconds) a request can be in flight before we cancel it and return an error
+}
+
+// TODO: handle this better. Not foolproof in detecting default values and very manual. Probably need to do a mapstructure method for this
+func (c *ClientConfig) MergeDefaultsFrom(o ClientConfig) {
+	if c.UserAgent == "" {
+		c.UserAgent = o.UserAgent
+	}
+	if c.MaxLength == 0 {
+		c.MaxLength = o.MaxLength
+	}
+	if c.ContentTypes == nil || len(c.ContentTypes) == 0 {
+		c.ContentTypes = o.ContentTypes
+	}
+	if c.StatusCodes == nil || len(c.StatusCodes) == 0 {
+		c.StatusCodes = o.StatusCodes
+	}
+	if c.Timeout == 0 {
+		c.Timeout = o.Timeout
+	}
 }
 
 // Modes for error reporting
@@ -64,6 +84,7 @@ type ErrorMessages struct {
 	ProviderError           string
 	ParamsBothOrNeither     string
 	ParamsMutuallyExclusive string
+	OneOfRequired           string
 	EnumError               string
 	ScriptError             string
 }
@@ -124,10 +145,11 @@ type LogConfig struct {
 }
 
 type LayerConfig struct {
-	Id             string
-	Provider       map[string]any
-	SkipCache      bool
-	OverrideClient *ClientConfig //If specified, all of the default Client is overridden. TODO: re-apply default
+	Id        string
+	Pattern   string
+	Provider  map[string]any
+	SkipCache bool
+	Client    *ClientConfig //If specified, the default Client is overridden.
 }
 
 type Config struct {
@@ -161,6 +183,7 @@ func DefaultConfig() Config {
 			ContentTypes:  []string{"image/png", "image/jpg", "image/jpeg"},
 			StatusCodes:   []int{200},
 			Headers:       map[string]string{},
+			Timeout:       10,
 		},
 		Logging: LogConfig{
 			Main: MainConfig{
@@ -189,6 +212,7 @@ func DefaultConfig() Config {
 				EnumError:               "Invalid value supplied for %v: '%v'. It must be one of: %v",
 				ParamsMutuallyExclusive: "Parameters %v and %v cannot both be set",
 				ScriptError:             "The script specified for %v is invalid: %v",
+				OneOfRequired:           "You must specify one of: %v",
 			},
 			Images: ErrorImages{
 				OutOfBounds:    images.KeyImageTransparent,

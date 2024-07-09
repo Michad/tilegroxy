@@ -23,7 +23,7 @@ import (
 	"strconv"
 
 	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/providers"
+	"github.com/Michad/tilegroxy/internal/layers"
 )
 
 type tileHandler struct {
@@ -80,17 +80,10 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if h.layerMap[layerName] == nil {
-		writeError(ctx, w, &h.config.Error, TypeOfErrorOtherBadRequest, fmt.Sprintf(h.config.Error.Messages.InvalidParam, "layer", layerName))
-		return
-	}
-
-	layer := h.layerMap[layerName]
-
-	img, err := layer.RenderTile(ctx, tileReq)
+	img, err := h.layerGroup.RenderTile(ctx, tileReq)
 
 	if err != nil {
-		var ae providers.AuthError
+		var ae layers.AuthError
 		if errors.As(err, &ae) {
 			writeError(ctx, w, &h.config.Error, TypeOfErrorAuth, h.config.Error.Messages.NotAuthorized)
 		} else {

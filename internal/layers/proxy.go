@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package providers
+package layers
 
 import (
 	"fmt"
@@ -35,26 +35,18 @@ type ProxyConfig struct {
 type Proxy struct {
 	ProxyConfig
 	clientConfig *config.ClientConfig
-	envRegex     *regexp.Regexp
-	ctxRegex     *regexp.Regexp
 }
+
+var envRegex, _ = regexp.Compile(`{env\.[^{}}]*}`)
+var ctxRegex, _ = regexp.Compile(`{ctx\.[^{}}]*}`)
+var lyrRegex, _ = regexp.Compile(`{layer\.[^{}}]*}`)
 
 func ConstructProxy(config ProxyConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages) (*Proxy, error) {
 	if config.Url == "" {
 		return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.proxy.url", "")
 	}
 
-	envRegex, err := regexp.Compile(`{env\.[^}]*}`)
-	if err != nil {
-		return nil, err
-	}
-
-	ctxRegex, err := regexp.Compile(`{ctx\.[^}]*}`)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Proxy{config, clientConfig, envRegex, ctxRegex}, nil
+	return &Proxy{config, clientConfig}, nil
 }
 
 func (t Proxy) PreAuth(ctx *internal.RequestContext, providerContext ProviderContext) (ProviderContext, error) {
@@ -76,7 +68,7 @@ func (t Proxy) GenerateTile(ctx *internal.RequestContext, providerContext Provid
 	url := t.Url
 
 	if strings.Contains(url, "{env.") {
-		envMatches := t.envRegex.FindAllString(url, -1)
+		envMatches := envRegex.FindAllString(url, -1)
 
 		for _, envMatch := range envMatches {
 			envVar := envMatch[5 : len(envMatch)-1]
@@ -88,7 +80,7 @@ func (t Proxy) GenerateTile(ctx *internal.RequestContext, providerContext Provid
 	}
 
 	if strings.Contains(url, "{ctx.") {
-		ctxMatches := t.ctxRegex.FindAllString(url, -1)
+		ctxMatches := ctxRegex.FindAllString(url, -1)
 
 		for _, ctxMatch := range ctxMatches {
 			ctxVar := ctxMatch[5 : len(ctxMatch)-1]
@@ -96,6 +88,18 @@ func (t Proxy) GenerateTile(ctx *internal.RequestContext, providerContext Provid
 			slog.Debug("Replacing context var " + ctxVar)
 
 			url = strings.Replace(url, ctxMatch, fmt.Sprint(ctx.Value(ctxVar)), 1)
+		}
+	}
+
+	if strings.Contains(url, "{layer.") {
+		layerMatches := lyrRegex.FindAllString(url, -1)
+
+		for _, layerMatch := range layerMatches {
+			layerVar := layerMatch[7 : len(layerMatch)-1]
+
+			slog.Debug("Replacing layer var " + layerVar)
+
+			url = strings.Replace(url, layerMatch, fmt.Sprint(ctx.LayerPatternMatches[layerVar]), 1)
 		}
 	}
 
