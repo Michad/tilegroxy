@@ -152,12 +152,14 @@ Configuration options:
 | secondary | Provider | Yes | None | The provider to delegate to if primary returns an error |
 | zoom | String | No | 0-21 | Zooming below or above this range will activate the fallback. Can be a single number, a range with a dash between start and end, or a comma separated list of the first two options.  For example "4" "2-3" or "2,3-4" |
 | bounds | Object with north, south, east, west | No | Whole world | Any tiles that don't intersect with this bounds will activate the fallback |
+| cache | string | No | unless-error | When to save the resulting tile to the cache. Options: always, unless-error, unless-fallback. |
 
 Example:
 
 ```
 provider:
   name: fallback
+  cache: always
   zoom: 4-21
   bounds: 
     south: 51

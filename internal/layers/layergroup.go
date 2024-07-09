@@ -76,13 +76,13 @@ func (lg LayerGroup) RenderTile(ctx *internal.RequestContext, tileRequest intern
 		return nil, AuthError{}
 	}
 
+	if l.Config.SkipCache {
+		return lg.RenderTileNoCache(ctx, tileRequest)
+	}
+
 	err = lg.checkPermission(ctx, l, tileRequest)
 	if err != nil {
 		return nil, err
-	}
-
-	if l.Config.SkipCache {
-		return lg.RenderTileNoCache(ctx, tileRequest)
 	}
 
 	img, err = (*l.Cache).Lookup(tileRequest)
@@ -102,10 +102,12 @@ func (lg LayerGroup) RenderTile(ctx *internal.RequestContext, tileRequest intern
 		return nil, err
 	}
 
-	err = (*l.Cache).Save(tileRequest, img)
+	if !ctx.SkipCacheSave {
+		err = (*l.Cache).Save(tileRequest, img)
 
-	if err != nil {
-		slog.WarnContext(ctx, fmt.Sprintf("Cache save error %v\n", err))
+		if err != nil {
+			slog.WarnContext(ctx, fmt.Sprintf("Cache save error %v\n", err))
+		}
 	}
 
 	return img, nil

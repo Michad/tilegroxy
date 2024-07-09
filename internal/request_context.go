@@ -39,6 +39,7 @@ type RequestContext struct {
 	AllowedArea         Bounds
 	UserIdentifier      string
 	LayerPatternMatches map[string]string
+	SkipCacheSave       bool
 }
 
 func (c *RequestContext) Value(keyAny any) any {
