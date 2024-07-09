@@ -15,7 +15,6 @@
 package layers
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/Michad/tilegroxy/internal"
@@ -23,17 +22,6 @@ import (
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/stretchr/testify/assert"
 )
-
-type Fail struct {
-}
-
-func (t Fail) PreAuth(ctx *internal.RequestContext, providerContext ProviderContext) (ProviderContext, error) {
-	return providerContext, errors.New("failed intentionally")
-}
-
-func (t Fail) GenerateTile(ctx *internal.RequestContext, providerContext ProviderContext, tileRequest internal.TileRequest) (*internal.Image, error) {
-	return nil, errors.New("failed intentionally")
-}
 
 func makeFallbackProvidersNoFail() (*Provider, *Provider) {
 	a, _ := ConstructStatic(StaticConfig{Color: "F00"}, nil, &testErrMessages)
@@ -45,7 +33,7 @@ func makeFallbackProvidersNoFail() (*Provider, *Provider) {
 }
 func makeFallbackProvidersFail() (*Provider, *Provider) {
 	b, _ := ConstructStatic(StaticConfig{Color: "0F0"}, nil, &testErrMessages)
-	var ap Provider = Fail{}
+	var ap Provider = Fail{FailConfig{Message: "failed intentionally"}}
 	var bp Provider = *b
 
 	return &ap, &bp
@@ -97,7 +85,7 @@ func Test_Fallback_ExecuteZoom(t *testing.T) {
 	assert.Equal(t, *exp2, *img)
 }
 
-func Test_Fallback_ExecuteBouns(t *testing.T) {
+func Test_Fallback_ExecuteBounds(t *testing.T) {
 	b, _ := internal.TileRequest{LayerName: "layer", Z: 20, X: 23, Y: 32}.GetBounds()
 
 	p, s := makeFallbackProvidersNoFail()
@@ -132,4 +120,55 @@ func Test_Fallback_ExecuteFallback(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, *exp2, *img)
+}
+
+func Test_Fallback_CacheMode(t *testing.T) {
+	p, s := makeFallbackProvidersFail()
+
+	ctx := internal.BackgroundContext()
+	f, _ := ConstructFallback(FallbackConfig{Cache: CacheModeUnlessError}, &config.ClientConfig{}, &testErrMessages, p, s)
+	f.GenerateTile(ctx, ProviderContext{}, internal.TileRequest{LayerName: "layer", Z: 20, X: 1, Y: 1})
+	assert.True(t, ctx.SkipCacheSave)
+
+	ctx = internal.BackgroundContext()
+	f, _ = ConstructFallback(FallbackConfig{Cache: CacheModeAlways}, &config.ClientConfig{}, &testErrMessages, p, s)
+	f.GenerateTile(ctx, ProviderContext{}, internal.TileRequest{LayerName: "layer", Z: 20, X: 1, Y: 1})
+	assert.False(t, ctx.SkipCacheSave)
+
+	ctx = internal.BackgroundContext()
+	f, _ = ConstructFallback(FallbackConfig{Cache: CacheModeUnlessFallback}, &config.ClientConfig{}, &testErrMessages, p, s)
+	f.GenerateTile(ctx, ProviderContext{}, internal.TileRequest{LayerName: "layer", Z: 20, X: 1, Y: 1})
+	assert.True(t, ctx.SkipCacheSave)
+
+	p, s = makeFallbackProvidersNoFail()
+
+	ctx = internal.BackgroundContext()
+	f, _ = ConstructFallback(FallbackConfig{Cache: CacheModeUnlessError}, &config.ClientConfig{}, &testErrMessages, p, s)
+	f.GenerateTile(ctx, ProviderContext{}, internal.TileRequest{LayerName: "layer", Z: 20, X: 1, Y: 1})
+	assert.False(t, ctx.SkipCacheSave)
+
+	ctx = internal.BackgroundContext()
+	f, _ = ConstructFallback(FallbackConfig{Cache: CacheModeAlways}, &config.ClientConfig{}, &testErrMessages, p, s)
+	f.GenerateTile(ctx, ProviderContext{}, internal.TileRequest{LayerName: "layer", Z: 20, X: 1, Y: 1})
+	assert.False(t, ctx.SkipCacheSave)
+
+	ctx = internal.BackgroundContext()
+	f, _ = ConstructFallback(FallbackConfig{Cache: CacheModeUnlessFallback}, &config.ClientConfig{}, &testErrMessages, p, s)
+	f.GenerateTile(ctx, ProviderContext{}, internal.TileRequest{LayerName: "layer", Z: 20, X: 1, Y: 1})
+	assert.False(t, ctx.SkipCacheSave)
+
+	ctx = internal.BackgroundContext()
+	f, _ = ConstructFallback(FallbackConfig{Zoom: "1-5", Cache: CacheModeUnlessError}, &config.ClientConfig{}, &testErrMessages, p, s)
+	f.GenerateTile(ctx, ProviderContext{}, internal.TileRequest{LayerName: "layer", Z: 20, X: 1, Y: 1})
+	assert.False(t, ctx.SkipCacheSave)
+
+	ctx = internal.BackgroundContext()
+	f, _ = ConstructFallback(FallbackConfig{Zoom: "1-5", Cache: CacheModeAlways}, &config.ClientConfig{}, &testErrMessages, p, s)
+	f.GenerateTile(ctx, ProviderContext{}, internal.TileRequest{LayerName: "layer", Z: 20, X: 1, Y: 1})
+	assert.False(t, ctx.SkipCacheSave)
+
+	ctx = internal.BackgroundContext()
+	f, _ = ConstructFallback(FallbackConfig{Zoom: "1-5", Cache: CacheModeUnlessFallback}, &config.ClientConfig{}, &testErrMessages, p, s)
+	f.GenerateTile(ctx, ProviderContext{}, internal.TileRequest{LayerName: "layer", Z: 20, X: 1, Y: 1})
+	assert.True(t, ctx.SkipCacheSave)
 }

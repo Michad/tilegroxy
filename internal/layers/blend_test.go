@@ -49,6 +49,28 @@ func Test_BlendValidate(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func Test_Blend_Layers(t *testing.T) {
+	v1 := make(map[string]string)
+	v2 := make(map[string]string)
+	v1["a"] = "hello"
+	v1["b"] = "world"
+	v2["a"] = "goodbye"
+	v2["b"] = "world"
+
+	b, err := ConstructBlend(BlendConfig{
+		Mode: "normal",
+		Layer: &BlendLayerConfig{
+			Pattern: "something_{a}_{b}",
+			Values:  []map[string]string{v1, v2},
+		}}, nil, &testErrMessages, makeBlendProviders(), nil)
+	assert.NotNil(t, b)
+	assert.NoError(t, err)
+
+	assert.Equal(t, 2, len(b.providers))
+	assert.Equal(t, &Ref{RefConfig{"something_hello_world"}, nil}, *(b.providers[0]))
+	assert.Equal(t, &Ref{RefConfig{"something_goodbye_world"}, nil}, *(b.providers[1]))
+}
+
 func Test_BlendExecute_Add(t *testing.T) {
 	b, err := ConstructBlend(BlendConfig{Mode: "add"}, nil, &testErrMessages, makeBlendProviders(), nil)
 	assert.NotNil(t, b)
