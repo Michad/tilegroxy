@@ -307,11 +307,9 @@ func ListenAndServe(config *config.Config, layerGroup *layers.LayerGroup, auth a
 	defer stop()
 
 	srv := &http.Server{
-		Addr:         config.Server.BindHost + ":" + strconv.Itoa(config.Server.Port),
-		BaseContext:  func(_ net.Listener) context.Context { return ctx },
-		ReadTimeout:  time.Second,
-		WriteTimeout: time.Duration(config.Server.Timeout) * time.Second,
-		Handler:      rootHandler,
+		Addr:        config.Server.BindHost + ":" + strconv.Itoa(config.Server.Port),
+		BaseContext: func(_ net.Listener) context.Context { return ctx },
+		Handler:     rootHandler,
 	}
 
 	srvErr := make(chan error, 1)
