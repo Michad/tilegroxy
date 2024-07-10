@@ -22,13 +22,6 @@ import (
 	"github.com/bradfitz/gomemcache/memcache"
 )
 
-type MemcacheConfig struct {
-	HostAndPort `mapstructure:",squash"`
-	Servers     []HostAndPort //The list of servers to use.
-	KeyPrefix   string        //Prefix to keynames stored in cache
-	Ttl         uint32        //Cache expiration in seconds. Max of 30 days. Default to 1 day
-}
-
 const (
 	memcacheDefaultHost = "127.0.0.1"
 	memcacheDefaultPort = 11211
@@ -36,12 +29,19 @@ const (
 	memcacheMaxTtl      = 30 * 60 * 60 * 24
 )
 
+type MemcacheConfig struct {
+	HostAndPort `mapstructure:",squash"`
+	Servers     []HostAndPort //The list of servers to use.
+	KeyPrefix   string        //Prefix to keynames stored in cache
+	Ttl         uint32        //Cache expiration in seconds. Max of 30 days. Default to 1 day
+}
+
 type Memcache struct {
-	*MemcacheConfig
+	MemcacheConfig
 	client *memcache.Client
 }
 
-func ConstructMemcache(config *MemcacheConfig, errorMessages *config.ErrorMessages) (*Memcache, error) {
+func ConstructMemcache(config MemcacheConfig, errorMessages config.ErrorMessages) (*Memcache, error) {
 	if config.Servers == nil || len(config.Servers) == 0 {
 		if config.Host == "" {
 			config.Host = memcacheDefaultHost

@@ -32,14 +32,14 @@ type DiskConfig struct {
 }
 
 type Disk struct {
-	config DiskConfig
+	DiskConfig
 }
 
 func requestToFilename(t internal.TileRequest) string {
 	return t.LayerName + "_" + strconv.Itoa(t.Z) + "_" + strconv.Itoa(t.X) + "_" + strconv.Itoa(t.Y)
 }
 
-func ConstructDisk(config DiskConfig, ErrorMessages *config.ErrorMessages) (*Disk, error) {
+func ConstructDisk(config DiskConfig, ErrorMessages config.ErrorMessages) (*Disk, error) {
 	if config.Path == "" {
 		return nil, fmt.Errorf(ErrorMessages.InvalidParam, "Cache.Disk.path", config.Path)
 	}
@@ -58,7 +58,7 @@ func ConstructDisk(config DiskConfig, ErrorMessages *config.ErrorMessages) (*Dis
 func (c Disk) Lookup(t internal.TileRequest) (*internal.Image, error) {
 	filename := requestToFilename(t)
 
-	img, err := os.ReadFile(filepath.Join(c.config.Path, filename))
+	img, err := os.ReadFile(filepath.Join(c.Path, filename))
 
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, nil
@@ -70,5 +70,5 @@ func (c Disk) Lookup(t internal.TileRequest) (*internal.Image, error) {
 func (c Disk) Save(t internal.TileRequest, img *internal.Image) error {
 	filename := requestToFilename(t)
 
-	return os.WriteFile(filepath.Join(c.config.Path, filename), *img, fs.FileMode(c.config.FileMode))
+	return os.WriteFile(filepath.Join(c.Path, filename), *img, fs.FileMode(c.FileMode))
 }

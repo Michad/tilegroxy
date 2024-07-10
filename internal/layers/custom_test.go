@@ -24,12 +24,12 @@ import (
 )
 
 func Test_CustomValidate(t *testing.T) {
-	c, err := ConstructCustom(CustomConfig{}, nil, &testErrMessages)
+	c, err := ConstructCustom(CustomConfig{}, testClientConfig, testErrMessages)
 
 	assert.Nil(t, c)
 	assert.Error(t, err)
 
-	c, err = ConstructCustom(CustomConfig{Script: "package custom"}, nil, &testErrMessages)
+	c, err = ConstructCustom(CustomConfig{Script: "package custom"}, testClientConfig, testErrMessages)
 
 	assert.Nil(t, c)
 	assert.Error(t, err)
@@ -54,7 +54,7 @@ func preAuth(ctx *tilegroxy.RequestContext, providerContext tilegroxy.ProviderCo
 func generateTile(ctx *tilegroxy.RequestContext, providerContext tilegroxy.ProviderContext, tileRequest tilegroxy.TileRequest, params map[string]interface{}, clientConfig tilegroxy.ClientConfig, errorMessages tilegroxy.ErrorMessages ) (*tilegroxy.Image, error ) {
 	return &[]byte{0x01,0x02}, nil
 }
-	`}, &config.ClientConfig{}, &testErrMessages)
+	`}, config.ClientConfig{}, testErrMessages)
 
 	if err != nil {
 		fmt.Println(err)

@@ -43,10 +43,10 @@ type EffectConfig struct {
 
 type Effect struct {
 	EffectConfig
-	provider *Provider
+	provider Provider
 }
 
-func ConstructEffect(config EffectConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, provider *Provider) (*Effect, error) {
+func ConstructEffect(config EffectConfig, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, provider Provider) (*Effect, error) {
 	if !slices.Contains(allEffectModes, config.Mode) {
 		return nil, fmt.Errorf(errorMessages.EnumError, "provider.effect.mode", config.Mode, allEffectModes)
 	}
@@ -59,11 +59,11 @@ func ConstructEffect(config EffectConfig, clientConfig *config.ClientConfig, err
 }
 
 func (t Effect) PreAuth(ctx *internal.RequestContext, providerContext ProviderContext) (ProviderContext, error) {
-	return (*t.provider).PreAuth(ctx, providerContext)
+	return t.provider.PreAuth(ctx, providerContext)
 }
 
 func (t Effect) GenerateTile(ctx *internal.RequestContext, providerContext ProviderContext, tileRequest internal.TileRequest) (*internal.Image, error) {
-	img, err := (*t.provider).GenerateTile(ctx, providerContext, tileRequest)
+	img, err := t.provider.GenerateTile(ctx, providerContext, tileRequest)
 
 	if err != nil {
 		return img, err

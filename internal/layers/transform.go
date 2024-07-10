@@ -42,11 +42,11 @@ type TransformConfig struct {
 
 type Transform struct {
 	TransformConfig
-	provider      *Provider
+	provider      Provider
 	transformFunc func(uint8, uint8, uint8, uint8) (uint8, uint8, uint8, uint8)
 }
 
-func ConstructTransform(cfg TransformConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, provider *Provider) (*Transform, error) {
+func ConstructTransform(cfg TransformConfig, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, provider Provider) (*Transform, error) {
 	var err error
 
 	if cfg.Threads == 0 {
@@ -83,8 +83,8 @@ func ConstructTransform(cfg TransformConfig, clientConfig *config.ClientConfig, 
 	return &Transform{cfg, provider, transformFunc}, nil
 }
 
-func (t Transform) PreAuth(ctx *internal.RequestContext, providerContext ProviderContext) (ProviderContext, error) {
-	return (*t.provider).PreAuth(ctx, providerContext)
+func (t Transform) PreAuth(ctx *internal.RequestContext, ProviderContext ProviderContext) (ProviderContext, error) {
+	return t.provider.PreAuth(ctx, ProviderContext)
 }
 
 func (t Transform) transform(ctx *internal.RequestContext, col color.Color) color.Color {
@@ -103,8 +103,8 @@ func (t Transform) transform(ctx *internal.RequestContext, col color.Color) colo
 	return result
 }
 
-func (t Transform) GenerateTile(ctx *internal.RequestContext, providerContext ProviderContext, tileRequest internal.TileRequest) (*internal.Image, error) {
-	img, err := (*t.provider).GenerateTile(ctx, providerContext, tileRequest)
+func (t Transform) GenerateTile(ctx *internal.RequestContext, ProviderContext ProviderContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+	img, err := t.provider.GenerateTile(ctx, ProviderContext, tileRequest)
 
 	if err != nil {
 		return img, err

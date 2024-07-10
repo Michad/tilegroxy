@@ -23,6 +23,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Michad/tilegroxy/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -79,11 +80,11 @@ func TestMemcacheWithContainerHostAndPort(t *testing.T) {
 		return
 	}
 
-	config := MemcacheConfig{
+	cfg := MemcacheConfig{
 		HostAndPort: extractHostAndPort(t, endpoint),
 	}
 
-	r, err := ConstructMemcache(&config, nil)
+	r, err := ConstructMemcache(cfg, config.ErrorMessages{})
 	_ = assert.NoError(t, err) &&
 		validateSaveAndLookup(t, r)
 }
@@ -102,11 +103,11 @@ func TestMemcacheWithContainerSingleServersArr(t *testing.T) {
 		return
 	}
 
-	config := MemcacheConfig{
+	cfg := MemcacheConfig{
 		Servers: []HostAndPort{extractHostAndPort(t, endpoint)},
 	}
 
-	r, err := ConstructMemcache(&config, nil)
+	r, err := ConstructMemcache(cfg, config.ErrorMessages{})
 	_ = assert.NoError(t, err) &&
 		validateSaveAndLookup(t, r)
 }
@@ -125,12 +126,12 @@ func TestMemcacheWithContainerDiffPrefix(t *testing.T) {
 		return
 	}
 
-	config := MemcacheConfig{
+	cfg := MemcacheConfig{
 		HostAndPort: extractHostAndPort(t, endpoint),
 		KeyPrefix:   "first_",
 	}
 
-	r, err := ConstructMemcache(&config, nil)
+	r, err := ConstructMemcache(cfg, config.ErrorMessages{})
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -140,7 +141,7 @@ func TestMemcacheWithContainerDiffPrefix(t *testing.T) {
 		KeyPrefix:   "second_",
 	}
 
-	r2, err := ConstructMemcache(&config2, nil)
+	r2, err := ConstructMemcache(config2, config.ErrorMessages{})
 	_ = assert.NoError(t, err) &&
 		validateSaveAndLookup(t, r) &&
 		validateSaveAndLookup(t, r2)

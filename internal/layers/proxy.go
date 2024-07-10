@@ -34,14 +34,14 @@ type ProxyConfig struct {
 
 type Proxy struct {
 	ProxyConfig
-	clientConfig *config.ClientConfig
+	clientConfig config.ClientConfig
 }
 
 var envRegex, _ = regexp.Compile(`{env\.[^{}}]*}`)
 var ctxRegex, _ = regexp.Compile(`{ctx\.[^{}}]*}`)
 var lyrRegex, _ = regexp.Compile(`{layer\.[^{}}]*}`)
 
-func ConstructProxy(config ProxyConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages) (*Proxy, error) {
+func ConstructProxy(config ProxyConfig, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (*Proxy, error) {
 	if config.Url == "" {
 		return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.proxy.url", "")
 	}

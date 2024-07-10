@@ -111,19 +111,19 @@ type Layer struct {
 	Pattern         []layerSegment
 	Config          config.LayerConfig
 	Provider        Provider
-	Cache           *caches.Cache
-	ErrorMessages   *config.ErrorMessages
+	Cache           caches.Cache
+	ErrorMessages   config.ErrorMessages
 	providerContext ProviderContext
 	authMutex       sync.Mutex
 }
 
-func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, layerGroup *LayerGroup) (*Layer, error) {
+func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup) (*Layer, error) {
 	if rawConfig.Client == nil {
-		rawConfig.Client = defaultClientConfig
+		rawConfig.Client = &defaultClientConfig
 	} else {
-		rawConfig.Client.MergeDefaultsFrom(*defaultClientConfig)
+		rawConfig.Client.MergeDefaultsFrom(defaultClientConfig)
 	}
-	provider, err := ConstructProvider(rawConfig.Provider, rawConfig.Client, errorMessages, layerGroup)
+	provider, err := ConstructProvider(rawConfig.Provider, *rawConfig.Client, errorMessages, layerGroup)
 
 	if err != nil {
 		return nil, err

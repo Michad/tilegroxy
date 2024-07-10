@@ -131,7 +131,7 @@ func (h slogContextHandler) Handle(ctx context.Context, r slog.Record) error {
 
 	return h.Handler.Handle(ctx, r)
 }
-func configureMainging(cfg *config.Config) error {
+func configureMainLogging(cfg *config.Config) error {
 	if cfg.Logging.Main.Console || len(cfg.Logging.Main.Path) > 0 {
 		var out io.Writer
 		if len(cfg.Logging.Main.Path) > 0 {
@@ -216,7 +216,7 @@ func configureMainging(cfg *config.Config) error {
 	return nil
 }
 
-func configureAccessging(cfg config.AccessConfig, errorMessages config.ErrorMessages, rootHandler http.Handler) (http.Handler, error) {
+func configureAccessLogging(cfg config.AccessConfig, errorMessages config.ErrorMessages, rootHandler http.Handler) (http.Handler, error) {
 	if cfg.Console || len(cfg.Path) > 0 {
 		var out io.Writer
 		if len(cfg.Path) > 0 {
@@ -264,7 +264,7 @@ func (h httpContextHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 	h.Handler.ServeHTTP(w, req.WithContext(&reqC))
 }
 
-func ListenAndServe(config *config.Config, layerGroup *layers.LayerGroup, auth *authentication.Authentication) error {
+func ListenAndServe(config *config.Config, layerGroup *layers.LayerGroup, auth authentication.Authentication) error {
 	r := http.ServeMux{}
 
 	if config.Server.Production {
@@ -288,14 +288,14 @@ func ListenAndServe(config *config.Config, layerGroup *layers.LayerGroup, auth *
 		rootHandler = handlers.CompressHandler(rootHandler)
 	}
 
-	rootHandler, err := configureAccessging(config.Logging.Access, config.Error.Messages, rootHandler)
+	rootHandler, err := configureAccessLogging(config.Logging.Access, config.Error.Messages, rootHandler)
 	rootHandler = httpContextHandler{rootHandler, config.Error}
 
 	if err != nil {
 		return err
 	}
 
-	err = configureMainging(config)
+	err = configureMainLogging(config)
 
 	if err != nil {
 		return err

@@ -23,17 +23,17 @@ import (
 )
 
 func makeTransformProvider() Provider {
-	p, _ := ConstructStatic(StaticConfig{Color: "F00"}, nil, &testErrMessages)
+	p, _ := ConstructStatic(StaticConfig{Color: "F00"}, testClientConfig, testErrMessages)
 	return *p
 }
 
 func Test_Transform_Validate(t *testing.T) {
 	p := makeTransformProvider()
-	tr, err := ConstructTransform(TransformConfig{}, nil, &testErrMessages, &p)
+	tr, err := ConstructTransform(TransformConfig{}, testClientConfig, testErrMessages, p)
 
 	assert.Nil(t, tr)
 	assert.Error(t, err)
-	tr, err = ConstructTransform(TransformConfig{Formula: "package custom"}, nil, &testErrMessages, &p)
+	tr, err = ConstructTransform(TransformConfig{Formula: "package custom"}, testClientConfig, testErrMessages, p)
 
 	assert.Nil(t, tr)
 	assert.Error(t, err)
@@ -41,7 +41,7 @@ func Test_Transform_Validate(t *testing.T) {
 
 func Test_Transform_Execute(t *testing.T) {
 	p := makeTransformProvider()
-	tr, err := ConstructTransform(TransformConfig{Formula: `func transform(r, g, b, a uint8) (uint8, uint8, uint8, uint8) { return g,b,r,a }`}, nil, &testErrMessages, &p)
+	tr, err := ConstructTransform(TransformConfig{Formula: `func transform(r, g, b, a uint8) (uint8, uint8, uint8, uint8) { return g,b,r,a }`}, testClientConfig, testErrMessages, p)
 
 	assert.NotNil(t, tr)
 	assert.NoError(t, err)

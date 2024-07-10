@@ -27,7 +27,7 @@ type Authentication interface {
 	CheckAuthentication(req *http.Request, ctx *internal.RequestContext) bool
 }
 
-func ConstructAuth(rawConfig map[string]interface{}, errorMessages *config.ErrorMessages) (Authentication, error) {
+func ConstructAuth(rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (Authentication, error) {
 	rawConfig = internal.ReplaceEnv(rawConfig)
 
 	if rawConfig["name"] == "none" {
@@ -38,21 +38,21 @@ func ConstructAuth(rawConfig map[string]interface{}, errorMessages *config.Error
 		if err != nil {
 			return nil, err
 		}
-		return ConstructStaticKey(&config, errorMessages)
+		return ConstructStaticKey(config, errorMessages)
 	} else if rawConfig["name"] == "jwt" {
 		var config JwtConfig
 		err := mapstructure.Decode(rawConfig, &config)
 		if err != nil {
 			return nil, err
 		}
-		return ConstructJwt(&config, errorMessages)
+		return ConstructJwt(config, errorMessages)
 	} else if rawConfig["name"] == "custom" {
 		var config CustomConfig
 		err := mapstructure.Decode(rawConfig, &config)
 		if err != nil {
 			return nil, err
 		}
-		return ConstructCustom(&config, errorMessages)
+		return ConstructCustom(config, errorMessages)
 	}
 
 	name := fmt.Sprintf("%#v", rawConfig["name"])

@@ -35,7 +35,7 @@ type Provider interface {
 	GenerateTile(ctx *internal.RequestContext, providerContext ProviderContext, tileRequest internal.TileRequest) (*internal.Image, error)
 }
 
-func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, layerGroup *LayerGroup) (Provider, error) {
+func ConstructProvider(rawConfig map[string]interface{}, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup) (Provider, error) {
 	rawConfig = internal.ReplaceEnv(rawConfig)
 
 	if rawConfig["name"] == "url template" {
@@ -89,18 +89,18 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.Cl
 			return nil, err
 		}
 
-		return ConstructFallback(config, clientConfig, errorMessages, &primary, &secondary)
+		return ConstructFallback(config, clientConfig, errorMessages, primary, secondary)
 	} else if rawConfig["name"] == "blend" {
 		var config BlendConfig
 		err := mapstructure.Decode(rawConfig, &config)
 		if err != nil {
 			return nil, err
 		}
-		var providers []*Provider
+		var providers []Provider
 		var errorSlice []error
 		for _, p := range config.Providers {
 			provider, err := ConstructProvider(p, clientConfig, errorMessages, layerGroup)
-			providers = append(providers, &provider)
+			providers = append(providers, provider)
 			errorSlice = append(errorSlice, err)
 		}
 
@@ -121,7 +121,7 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.Cl
 			return nil, err
 		}
 
-		return ConstructEffect(config, clientConfig, errorMessages, &child)
+		return ConstructEffect(config, clientConfig, errorMessages, child)
 	} else if rawConfig["name"] == "transform" {
 		var config TransformConfig
 		err := mapstructure.Decode(rawConfig, &config)
@@ -134,7 +134,7 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.Cl
 			return nil, err
 		}
 
-		return ConstructTransform(config, clientConfig, errorMessages, &child)
+		return ConstructTransform(config, clientConfig, errorMessages, child)
 	}
 
 	name := fmt.Sprintf("%#v", rawConfig["name"])
@@ -188,7 +188,7 @@ func (e *RemoteServerError) Error() string {
  * Performs a GET operation against a given URL. Implementing providers should call this when possible. It has
  * standard reusable logic around various config options
  */
-func getTile(ctx *internal.RequestContext, clientConfig *config.ClientConfig, url string, authHeaders map[string]string) (*internal.Image, error) {
+func getTile(ctx *internal.RequestContext, clientConfig config.ClientConfig, url string, authHeaders map[string]string) (*internal.Image, error) {
 	slog.DebugContext(ctx, fmt.Sprintf("Calling url %v\n", url))
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)

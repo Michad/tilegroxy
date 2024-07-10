@@ -44,11 +44,11 @@ type FallbackConfig struct {
 type Fallback struct {
 	FallbackConfig
 	zoomLevels []int
-	Primary    *Provider
-	Secondary  *Provider
+	Primary    Provider
+	Secondary  Provider
 }
 
-func ConstructFallback(config FallbackConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, primary *Provider, secondary *Provider) (*Fallback, error) {
+func ConstructFallback(config FallbackConfig, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, primary Provider, secondary Provider) (*Fallback, error) {
 	var zoom []int
 
 	if config.Zoom != "" {
@@ -75,11 +75,11 @@ func ConstructFallback(config FallbackConfig, clientConfig *config.ClientConfig,
 	return &Fallback{config, zoom, primary, secondary}, nil
 }
 
-func (t Fallback) PreAuth(ctx *internal.RequestContext, providerContext ProviderContext) (ProviderContext, error) {
-	return (*t.Primary).PreAuth(ctx, providerContext)
+func (t Fallback) PreAuth(ctx *internal.RequestContext, ProviderContext ProviderContext) (ProviderContext, error) {
+	return t.Primary.PreAuth(ctx, ProviderContext)
 }
 
-func (t Fallback) GenerateTile(ctx *internal.RequestContext, providerContext ProviderContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+func (t Fallback) GenerateTile(ctx *internal.RequestContext, ProviderContext ProviderContext, tileRequest internal.TileRequest) (*internal.Image, error) {
 	ok := true
 
 	if !slices.Contains(t.zoomLevels, tileRequest.Z) {
@@ -106,7 +106,7 @@ func (t Fallback) GenerateTile(ctx *internal.RequestContext, providerContext Pro
 	var img *internal.Image
 
 	if ok {
-		img, err = (*t.Primary).GenerateTile(ctx, providerContext, tileRequest)
+		img, err = t.Primary.GenerateTile(ctx, ProviderContext, tileRequest)
 
 		if err != nil {
 			ok = false
@@ -120,7 +120,7 @@ func (t Fallback) GenerateTile(ctx *internal.RequestContext, providerContext Pro
 
 	if !ok {
 
-		return (*t.Secondary).GenerateTile(ctx, providerContext, tileRequest)
+		return t.Secondary.GenerateTile(ctx, ProviderContext, tileRequest)
 	}
 
 	return img, err

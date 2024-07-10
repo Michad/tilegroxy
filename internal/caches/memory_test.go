@@ -18,22 +18,23 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Michad/tilegroxy/internal/config"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestMemory(t *testing.T) {
-	config := MemoryConfig{}
+	cfg := MemoryConfig{}
 
-	r, err := ConstructMemory(config, nil)
+	r, err := ConstructMemory(cfg, config.ErrorMessages{})
 	assert.NoError(t, err)
 
 	validateSaveAndLookup(t, r)
 }
 
 func TestTtl(t *testing.T) {
-	config := MemoryConfig{Ttl: 1}
+	cfg := MemoryConfig{Ttl: 1}
 
-	r, err := ConstructMemory(config, nil)
+	r, err := ConstructMemory(cfg, config.ErrorMessages{})
 	assert.NoError(t, err)
 
 	tile := makeReq(53)

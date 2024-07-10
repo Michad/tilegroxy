@@ -29,10 +29,10 @@ type UrlTemplateConfig struct {
 
 type UrlTemplate struct {
 	UrlTemplateConfig
-	clientConfig *config.ClientConfig
+	clientConfig config.ClientConfig
 }
 
-func ConstructUrlTemplate(config UrlTemplateConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages) (*UrlTemplate, error) {
+func ConstructUrlTemplate(config UrlTemplateConfig, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (*UrlTemplate, error) {
 	if config.Template == "" {
 		return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.url template.url", "")
 	}

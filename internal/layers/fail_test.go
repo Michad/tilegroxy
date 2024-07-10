@@ -21,6 +21,9 @@ import (
 	"github.com/Michad/tilegroxy/internal/config"
 )
 
+var testErrMessages = config.DefaultConfig().Error.Messages
+var testClientConfig = config.DefaultConfig().Client
+
 type FailConfig struct {
 	OnAuth  bool
 	Message string
@@ -30,7 +33,7 @@ type Fail struct {
 	FailConfig
 }
 
-func ConstructFail(config FailConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages) (*Fail, error) {
+func ConstructFail(config FailConfig, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (*Fail, error) {
 	return &Fail{config}, nil
 }
 
