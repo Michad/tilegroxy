@@ -541,7 +541,7 @@ layers:
 	end := time.Now()
 	assert.Greater(t, 2.0, end.Sub(start).Seconds())
 	if resp2 != nil {
-		assert.Equal(t, 500, resp2.StatusCode)
+		assert.Equal(t, 503, resp2.StatusCode)
 	}
 }
 
