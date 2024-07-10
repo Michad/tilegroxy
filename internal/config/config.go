@@ -87,6 +87,7 @@ type ErrorMessages struct {
 	OneOfRequired           string
 	EnumError               string
 	ScriptError             string
+	Timeout                 string
 }
 
 // Selects what image to return when various errors occur. These should either be an embedded:XXX value reflecting an image in `internal/layers/images` or the path to an image in the runtime filesystem
@@ -213,6 +214,7 @@ func DefaultConfig() Config {
 				ParamsMutuallyExclusive: "Parameters %v and %v cannot both be set",
 				ScriptError:             "The script specified for %v is invalid: %v",
 				OneOfRequired:           "You must specify one of: %v",
+				Timeout:                 "Timeout error",
 			},
 			Images: ErrorImages{
 				OutOfBounds:    images.KeyImageTransparent,

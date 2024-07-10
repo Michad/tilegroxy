@@ -171,3 +171,73 @@ func Test_TileHandler_RefToStatic(t *testing.T) {
 	img, _ := images.GetStaticImage("color:FFF")
 	assert.Equal(t, *img, b1)
 }
+
+func Test_TileHandler_ExecuteCustom(t *testing.T) {
+	cfg := config.DefaultConfig()
+	mainProvider := make(map[string]interface{})
+	mainProvider["name"] = "static"
+	mainProvider["color"] = "FFF"
+	cfg.Layers = append(cfg.Layers, config.LayerConfig{Id: "color2", SkipCache: true, Provider: mainProvider})
+	cfg.Layers = append(cfg.Layers, config.LayerConfig{Id: "color", SkipCache: true, Provider: mainProvider})
+	auth := make(map[string]interface{})
+	auth["name"] = "custom"
+	authToken := make(map[string]interface{})
+	auth["token"] = authToken
+	authToken["header"] = "X-Token"
+	auth["script"] = `
+    package custom
+    import (
+    	"os"
+    	"time"
+    )
+    func validate(token string) (bool, time.Time, string, []string) {
+    	if string(token) == "hunter2" {
+    		return true, time.Now().Add(1 * time.Hour), "user", []string{"color"}
+    	}
+    	return false, time.Now().Add(1000 * time.Hour), "", []string{}
+    }`
+
+	cache := caches.Noop{}
+	lg, err := layers.ConstructLayerGroup(cfg, cfg.Layers, cache)
+	assert.NoError(t, err)
+
+	authO, err := authentication.ConstructAuth(auth, cfg.Error.Messages)
+	assert.NoError(t, err)
+
+	handler := tileHandler{defaultHandler{config: &cfg, auth: authO, layerGroup: lg}}
+
+	req1 := httptest.NewRequest("GET", "http://localhost:12341/tiles/color/8/12/32", nil).WithContext(internal.BackgroundContext())
+	req1.SetPathValue("layer", "color")
+	req1.SetPathValue("z", "8")
+	req1.SetPathValue("x", "12")
+	req1.SetPathValue("y", "32")
+
+	w1 := httptest.NewRecorder()
+	handler.ServeHTTP(w1, req1)
+	res1 := w1.Result()
+	assert.Equal(t, 401, res1.StatusCode)
+
+	req2 := httptest.NewRequest("GET", "http://localhost:12341/tiles/color/8/12/32", nil).WithContext(internal.BackgroundContext())
+	req2.Header.Add("X-Token", "hunter2")
+	req2.SetPathValue("layer", "color")
+	req2.SetPathValue("z", "8")
+	req2.SetPathValue("x", "12")
+	req2.SetPathValue("y", "32")
+
+	w2 := httptest.NewRecorder()
+	handler.ServeHTTP(w2, req2)
+	res2 := w2.Result()
+	assert.Equal(t, 200, res2.StatusCode)
+
+	req3 := httptest.NewRequest("GET", "http://localhost:12341/tiles/color2/8/12/32", nil).WithContext(internal.BackgroundContext())
+	req3.Header.Add("X-Token", "hunter2")
+	req3.SetPathValue("layer", "color2")
+	req3.SetPathValue("z", "8")
+	req3.SetPathValue("x", "12")
+	req3.SetPathValue("y", "32")
+
+	w3 := httptest.NewRecorder()
+	handler.ServeHTTP(w3, req3)
+	res3 := w3.Result()
+	assert.Equal(t, 401, res3.StatusCode)
+}

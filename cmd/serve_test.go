@@ -63,8 +63,12 @@ func coreServeTest(cfg string, port int, url string) (*http.Response, func(), er
 
 	//This isn't proper goroutine practice but done this way since we only care about errors that happen at startup of the server
 	var bindErr error
+	exited := false
 
-	go func() { bindErr = rootCmd.Execute() }()
+	go func() {
+		bindErr = rootCmd.Execute()
+		exited = true
+	}()
 
 	if bindErr != nil {
 		return nil, nil, bindErr
@@ -76,6 +80,9 @@ func coreServeTest(cfg string, port int, url string) (*http.Response, func(), er
 	for i := 1; i < 10; i++ {
 		if bindErr != nil {
 			return nil, nil, bindErr
+		}
+		if exited {
+			return nil, nil, errors.New("unexpected server exit")
 		}
 
 		conn, err := net.DialTimeout("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)), 1*time.Second)
@@ -96,12 +103,18 @@ func coreServeTest(cfg string, port int, url string) (*http.Response, func(), er
 		return nil, nil, errors.New("unable to connect to server")
 	}
 
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		return nil, nil, err
-	}
+	var err error
+	var resp *http.Response
 
-	resp, err := http.DefaultClient.Do(req)
+	if url != "" {
+		var req *http.Request
+		req, err = http.NewRequest(http.MethodGet, url, nil)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		resp, err = http.DefaultClient.Do(req)
+	}
 
 	return resp, func() {
 		syscall.Kill(syscall.Getpid(), syscall.SIGUSR1)
@@ -485,70 +498,51 @@ layers:
 	resp2.Body.Close()
 }
 
-func Test_ServeCommand_ExecuteCustom(t *testing.T) {
+func Test_ServeCommand_Timeout(t *testing.T) {
+
 	cfg := `server:
   port: 12341
-Authentication:
-  name: custom
-  token:
-    header: X-Token
-  script: |
-    package custom
-    import (
-    	"os"
-    	"time"
-    )
-    func validate(token string) (bool, time.Time, string, []string) {
-    	if string(token) == "hunter2" {
-    		return true, time.Now().Add(1 * time.Hour), "user", []string{"color"}
-    	}
-    	return false, time.Now().Add(1000 * time.Hour), "", []string{}
-    }
+  timeout: 1
 layers:
-  - id: color2
-    skipCache: true
+  - id: l
     provider:
-      name: static
-      color: "FFFFFF"
-  - id: color
-    skipCache: true
-    provider:
-      name: static
-      color: "FFFFFF"
-`
+      name: custom
+      script: |
+        package custom
+
+        import (
+            "math/rand"
+            "strconv"
+            "strings"
+            "time"
+
+            "tilegroxy/tilegroxy"
+        )
+        func preAuth(ctx *tilegroxy.RequestContext, providerContext tilegroxy.ProviderContext, params map[string]interface{}, cientConfig tilegroxy.ClientConfig, errorMessages tilegroxy.ErrorMessages,
+        )  (tilegroxy.ProviderContext, error) {
+            return tilegroxy.ProviderContext{AuthBypass: true}, nil
+        }
+
+        func generateTile(ctx *tilegroxy.RequestContext, providerContext tilegroxy.ProviderContext, tileRequest tilegroxy.TileRequest, params map[string]interface{}, clientConfig tilegroxy.ClientConfig, errorMessages tilegroxy.ErrorMessages ) (*tilegroxy.Image, error ) {
+            time.Sleep(10 * time.Second)
+            return &[]byte{0x01,0x02}, nil
+        }
+    `
 	fmt.Println(cfg)
 
-	resp, postFunc, err := coreServeTest(cfg, 12341, "http://localhost:12341/tiles/color/8/12/32")
+	_, postFunc, _ := coreServeTest(cfg, 12341, "")
 	defer postFunc()
 
-	if err != nil {
-		fmt.Println(err.Error())
+	req, err := http.NewRequest(http.MethodGet, "http://localhost:12341/tiles/l/8/12/32", nil)
+	assert.NoError(t, err)
+
+	start := time.Now()
+	resp2, _ := http.DefaultClient.Do(req)
+	end := time.Now()
+	assert.Greater(t, 2.0, end.Sub(start).Seconds())
+	if resp2 != nil {
+		assert.Equal(t, 500, resp2.StatusCode)
 	}
-
-	assert.NoError(t, err)
-	assert.NotNil(t, resp)
-
-	assert.Equal(t, 401, resp.StatusCode)
-
-	req, err := http.NewRequest(http.MethodGet, "http://localhost:12341/tiles/color/8/12/32", nil)
-	req.Header.Add("X-Token", "hunter2")
-	assert.NoError(t, err)
-
-	resp2, err := http.DefaultClient.Do(req)
-	assert.NoError(t, err)
-	assert.Equal(t, 200, resp2.StatusCode)
-
-	resp2.Body.Close()
-
-	req, err = http.NewRequest(http.MethodGet, "http://localhost:12341/tiles/color2/8/12/32", nil)
-	req.Header.Add("X-Token", "hunter2")
-	assert.NoError(t, err)
-
-	resp3, err := http.DefaultClient.Do(req)
-	assert.NoError(t, err)
-	assert.Equal(t, 401, resp3.StatusCode)
-
-	resp3.Body.Close()
 }
 
 func Test_ServeCommand_RemoteProvider(t *testing.T) {
