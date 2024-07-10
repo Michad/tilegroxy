@@ -46,12 +46,12 @@ type JwtConfig struct {
 }
 
 type Jwt struct {
-	Config        *JwtConfig
+	JwtConfig
 	Cache         *otter.Cache[string, jwt.NumericDate]
 	errorMessages *config.ErrorMessages
 }
 
-func ConstructJwt(config *JwtConfig, errorMessages *config.ErrorMessages) (*Jwt, error) {
+func ConstructJwt(config JwtConfig, errorMessages *config.ErrorMessages) (*Jwt, error) {
 	if !slices.Contains([]string{"HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "EdDSA"}, config.Algorithm) {
 		return nil, fmt.Errorf(errorMessages.InvalidParam, "authentication.algorithm", config.Algorithm)
 	}
@@ -85,13 +85,13 @@ func ConstructJwt(config *JwtConfig, errorMessages *config.ErrorMessages) (*Jwt,
 }
 
 func (c Jwt) CheckAuthentication(req *http.Request, ctx *internal.RequestContext) bool {
-	authHeader := req.Header[c.Config.HeaderName]
+	authHeader := req.Header[c.HeaderName]
 	if len(authHeader) != 1 {
 		return false
 	}
 
 	var tokenStr string
-	if c.Config.HeaderName == "Authorization" {
+	if c.HeaderName == "Authorization" {
 		tokenStr = strings.Replace(authHeader[0], "Bearer ", "", 1)
 	} else {
 		tokenStr = authHeader[0]
@@ -117,46 +117,46 @@ func (c Jwt) CheckAuthentication(req *http.Request, ctx *internal.RequestContext
 	parserOptions := make([]jwt.ParserOption, 0)
 	parserOptions = append(parserOptions, jwt.WithLeeway(5*time.Second))
 	parserOptions = append(parserOptions, jwt.WithExpirationRequired())
-	parserOptions = append(parserOptions, jwt.WithValidMethods([]string{c.Config.Algorithm}))
+	parserOptions = append(parserOptions, jwt.WithValidMethods([]string{c.Algorithm}))
 
-	if len(c.Config.ExpectedAudience) > 0 {
-		parserOptions = append(parserOptions, jwt.WithAudience(c.Config.ExpectedAudience))
+	if len(c.ExpectedAudience) > 0 {
+		parserOptions = append(parserOptions, jwt.WithAudience(c.ExpectedAudience))
 	}
-	if len(c.Config.ExpectedSubject) > 0 {
-		parserOptions = append(parserOptions, jwt.WithSubject(c.Config.ExpectedSubject))
+	if len(c.ExpectedSubject) > 0 {
+		parserOptions = append(parserOptions, jwt.WithSubject(c.ExpectedSubject))
 	}
-	if len(c.Config.ExpectedIssuer) > 0 {
-		parserOptions = append(parserOptions, jwt.WithIssuer(c.Config.ExpectedIssuer))
+	if len(c.ExpectedIssuer) > 0 {
+		parserOptions = append(parserOptions, jwt.WithIssuer(c.ExpectedIssuer))
 	}
 
-	tokenJwt, error := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
-		if strings.Index(c.Config.Algorithm, "HS") == 0 {
-			return []byte(c.Config.Key), nil
+	tokenJwt, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
+		if strings.Index(c.Algorithm, "HS") == 0 {
+			return []byte(c.Key), nil
 		}
-		if strings.Index(c.Config.Algorithm, "RS") == 0 {
-			return jwt.ParseRSAPublicKeyFromPEM([]byte(c.Config.Key))
+		if strings.Index(c.Algorithm, "RS") == 0 {
+			return jwt.ParseRSAPublicKeyFromPEM([]byte(c.Key))
 		}
-		if strings.Index(c.Config.Algorithm, "ES") == 0 {
-			return jwt.ParseECPublicKeyFromPEM([]byte(c.Config.Key))
+		if strings.Index(c.Algorithm, "ES") == 0 {
+			return jwt.ParseECPublicKeyFromPEM([]byte(c.Key))
 		}
-		if strings.Index(c.Config.Algorithm, "PS") == 0 {
-			return jwt.ParseRSAPublicKeyFromPEM([]byte(c.Config.Key))
+		if strings.Index(c.Algorithm, "PS") == 0 {
+			return jwt.ParseRSAPublicKeyFromPEM([]byte(c.Key))
 		}
-		if c.Config.Algorithm == "EdDSA" {
-			return jwt.ParseEdPublicKeyFromPEM([]byte(c.Config.Key))
+		if c.Algorithm == "EdDSA" {
+			return jwt.ParseEdPublicKeyFromPEM([]byte(c.Key))
 		}
 
-		return nil, fmt.Errorf(c.errorMessages.InvalidParam, "jwt.alg", c.Config.Algorithm)
+		return nil, fmt.Errorf(c.errorMessages.InvalidParam, "jwt.alg", c.Algorithm)
 	}, parserOptions...)
 
-	if error != nil {
-		slog.InfoContext(ctx, "JWT parsing error: ", error)
+	if err != nil {
+		slog.InfoContext(ctx, "JWT parsing error: "+err.Error())
 		return false
 	}
 
-	exp, error := tokenJwt.Claims.GetExpirationTime()
+	exp, err := tokenJwt.Claims.GetExpirationTime()
 
-	if error != nil {
+	if err != nil {
 		return false
 	}
 
@@ -164,12 +164,12 @@ func (c Jwt) CheckAuthentication(req *http.Request, ctx *internal.RequestContext
 		return false
 	}
 
-	if time.Until(exp.Time) > time.Duration(c.Config.MaxExpiration)*time.Second {
+	if time.Until(exp.Time) > time.Duration(c.MaxExpiration)*time.Second {
 		slog.InfoContext(ctx, "JWT parsing error: distant expiration")
 		return false
 	}
 
-	if c.Config.LayerScope {
+	if c.LayerScope {
 		ctx.LimitLayers = true
 	}
 
@@ -186,7 +186,7 @@ func (c Jwt) CheckAuthentication(req *http.Request, ctx *internal.RequestContext
 			return false
 		}
 
-		rawUid := rawClaim[c.Config.UserId]
+		rawUid := rawClaim[c.UserId]
 		if rawUid != nil {
 			ctx.UserIdentifier, _ = rawUid.(string)
 		}
@@ -220,16 +220,16 @@ func (c Jwt) validateScope(rawClaim jwt.MapClaims, ctx *internal.RequestContext)
 			slog.InfoContext(ctx, "Request contains invalid scope type")
 		}
 
-		if c.Config.LayerScope || c.Config.ExpectedScope != "" {
+		if c.LayerScope || c.ExpectedScope != "" {
 			return false
 		}
 	} else {
 		scopeSplit := strings.Split(scopeStr, " ")
 
-		if c.Config.ExpectedScope != "" {
+		if c.ExpectedScope != "" {
 			hasScope := false
 			for _, scope := range scopeSplit {
-				if scope == c.Config.ExpectedScope {
+				if scope == c.ExpectedScope {
 					hasScope = true
 				}
 			}
@@ -238,10 +238,10 @@ func (c Jwt) validateScope(rawClaim jwt.MapClaims, ctx *internal.RequestContext)
 			}
 		}
 
-		if c.Config.LayerScope {
+		if c.LayerScope {
 			for _, scope := range scopeSplit {
-				if c.Config.ScopePrefix == "" || strings.Index(scope, c.Config.ScopePrefix) == 0 {
-					ctx.AllowedLayers = append(ctx.AllowedLayers, scope[len(c.Config.ScopePrefix):])
+				if c.ScopePrefix == "" || strings.Index(scope, c.ScopePrefix) == 0 {
+					ctx.AllowedLayers = append(ctx.AllowedLayers, scope[len(c.ScopePrefix):])
 				}
 			}
 		}

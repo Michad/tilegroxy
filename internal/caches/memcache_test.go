@@ -83,7 +83,7 @@ func TestMemcacheWithContainerHostAndPort(t *testing.T) {
 		HostAndPort: extractHostAndPort(t, endpoint),
 	}
 
-	r, err := ConstructMemcache(&config, nil)
+	r, err := ConstructMemcache(config, nil)
 	_ = assert.NoError(t, err) &&
 		validateSaveAndLookup(t, r)
 }
@@ -106,7 +106,7 @@ func TestMemcacheWithContainerSingleServersArr(t *testing.T) {
 		Servers: []HostAndPort{extractHostAndPort(t, endpoint)},
 	}
 
-	r, err := ConstructMemcache(&config, nil)
+	r, err := ConstructMemcache(config, nil)
 	_ = assert.NoError(t, err) &&
 		validateSaveAndLookup(t, r)
 }
@@ -130,7 +130,7 @@ func TestMemcacheWithContainerDiffPrefix(t *testing.T) {
 		KeyPrefix:   "first_",
 	}
 
-	r, err := ConstructMemcache(&config, nil)
+	r, err := ConstructMemcache(config, nil)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -140,7 +140,7 @@ func TestMemcacheWithContainerDiffPrefix(t *testing.T) {
 		KeyPrefix:   "second_",
 	}
 
-	r2, err := ConstructMemcache(&config2, nil)
+	r2, err := ConstructMemcache(config2, nil)
 	_ = assert.NoError(t, err) &&
 		validateSaveAndLookup(t, r) &&
 		validateSaveAndLookup(t, r2)

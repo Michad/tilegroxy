@@ -72,21 +72,21 @@ func ConstructCache(rawConfig map[string]interface{}, errorMessages *config.Erro
 		if err != nil {
 			return nil, err
 		}
-		return ConstructS3(&config, errorMessages)
+		return ConstructS3(config, errorMessages)
 	} else if rawConfig["name"] == "redis" {
 		var config RedisConfig
 		err := mapstructure.Decode(rawConfig, &config)
 		if err != nil {
 			return nil, err
 		}
-		return ConstructRedis(&config, errorMessages)
+		return ConstructRedis(config, errorMessages)
 	} else if rawConfig["name"] == "memcache" {
 		var config MemcacheConfig
 		err := mapstructure.Decode(rawConfig, &config)
 		if err != nil {
 			return nil, err
 		}
-		return ConstructMemcache(&config, errorMessages)
+		return ConstructMemcache(config, errorMessages)
 	}
 
 	name := fmt.Sprintf("%#v", rawConfig["name"])

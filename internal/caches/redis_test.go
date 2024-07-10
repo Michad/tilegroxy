@@ -83,7 +83,7 @@ func TestRedisWithContainerHostAndPort(t *testing.T) {
 		HostAndPort: extractHostAndPort(t, endpoint),
 	}
 
-	r, err := ConstructRedis(&config, nil)
+	r, err := ConstructRedis(config, nil)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -109,7 +109,7 @@ func TestRedisWithContainerSingleServersArr(t *testing.T) {
 		Servers: []HostAndPort{extractHostAndPort(t, endpoint)},
 	}
 
-	r, err := ConstructRedis(&config, nil)
+	r, err := ConstructRedis(config, nil)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -142,7 +142,7 @@ func TestRedisWithContainerRing(t *testing.T) {
 		Servers: []HostAndPort{extractHostAndPort(t, endpoint), extractHostAndPort(t, endpoint2)},
 	}
 
-	r, err := ConstructRedis(&config, nil)
+	r, err := ConstructRedis(config, nil)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -169,7 +169,7 @@ func TestRedisWithContainerDiffPrefix(t *testing.T) {
 		KeyPrefix:   "first_",
 	}
 
-	r, err := ConstructRedis(&config, nil)
+	r, err := ConstructRedis(config, nil)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -179,7 +179,7 @@ func TestRedisWithContainerDiffPrefix(t *testing.T) {
 		KeyPrefix:   "second_",
 	}
 
-	r2, err := ConstructRedis(&config2, nil)
+	r2, err := ConstructRedis(config2, nil)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -206,7 +206,7 @@ func TestRedisWithContainerDiffDb(t *testing.T) {
 		Db:          0,
 	}
 
-	r, err := ConstructRedis(&config, nil)
+	r, err := ConstructRedis(config, nil)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -216,7 +216,7 @@ func TestRedisWithContainerDiffDb(t *testing.T) {
 		Db:          1,
 	}
 
-	r2, err := ConstructRedis(&config2, nil)
+	r2, err := ConstructRedis(config2, nil)
 	_ = assert.NoError(t, err) &&
 		validateSaveAndLookup(t, r) &&
 		validateSaveAndLookup(t, r2)

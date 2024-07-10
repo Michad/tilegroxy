@@ -46,13 +46,13 @@ type S3Config struct {
 }
 
 type S3 struct {
-	*S3Config
+	S3Config
 	client     *s3.Client
 	downloader *manager.Downloader
 	uploader   *manager.Uploader
 }
 
-func ConstructS3(config *S3Config, errorMessages *config.ErrorMessages) (*S3, error) {
+func ConstructS3(config S3Config, errorMessages *config.ErrorMessages) (*S3, error) {
 	if (config.Access != "" && config.Secret == "") || (config.Access == "" && config.Secret != "") {
 		return nil, fmt.Errorf(errorMessages.ParamsBothOrNeither, "cache.s3.access", "cache.s3.secret")
 	}

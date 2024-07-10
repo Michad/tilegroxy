@@ -29,10 +29,10 @@ type StaticKeyConfig struct {
 }
 
 type StaticKey struct {
-	Config *StaticKeyConfig
+	StaticKeyConfig
 }
 
-func ConstructStaticKey(config *StaticKeyConfig, errorMessages *config.ErrorMessages) (*StaticKey, error) {
+func ConstructStaticKey(config StaticKeyConfig, errorMessages *config.ErrorMessages) (*StaticKey, error) {
 	if config.Key == "" {
 		keyStr := internal.RandomString()
 
@@ -45,5 +45,5 @@ func ConstructStaticKey(config *StaticKeyConfig, errorMessages *config.ErrorMess
 
 func (c StaticKey) CheckAuthentication(req *http.Request, ctx *internal.RequestContext) bool {
 	h := req.Header["Authorization"]
-	return len(h) > 0 && h[0] == "Bearer "+c.Config.Key
+	return len(h) > 0 && h[0] == "Bearer "+c.Key
 }
