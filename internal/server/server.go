@@ -288,6 +288,7 @@ func ListenAndServe(config *config.Config, layerGroup *layers.LayerGroup, auth a
 		rootHandler = handlers.CompressHandler(rootHandler)
 	}
 
+	rootHandler = http.TimeoutHandler(rootHandler, time.Duration(config.Server.Timeout)*time.Second, config.Error.Messages.Timeout)
 	rootHandler, err := configureAccessLogging(config.Logging.Access, config.Error.Messages, rootHandler)
 	rootHandler = httpContextHandler{rootHandler, config.Error}
 
@@ -301,7 +302,7 @@ func ListenAndServe(config *config.Config, layerGroup *layers.LayerGroup, auth a
 		return err
 	}
 
-	ctx, stop := signal.NotifyContext(context.Background(), InterruptFlags...)
+	ctx, stop := signal.NotifyContext(internal.BackgroundContext(), InterruptFlags...)
 	defer stop()
 
 	srv := &http.Server{
