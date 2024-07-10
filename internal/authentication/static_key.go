@@ -32,7 +32,7 @@ type StaticKey struct {
 	StaticKeyConfig
 }
 
-func ConstructStaticKey(config StaticKeyConfig, errorMessages *config.ErrorMessages) (*StaticKey, error) {
+func ConstructStaticKey(config StaticKeyConfig, errorMessages config.ErrorMessages) (*StaticKey, error) {
 	if config.Key == "" {
 		keyStr := internal.RandomString()
 

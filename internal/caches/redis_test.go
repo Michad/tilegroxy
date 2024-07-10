@@ -23,6 +23,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Michad/tilegroxy/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -79,11 +80,11 @@ func TestRedisWithContainerHostAndPort(t *testing.T) {
 		return
 	}
 
-	config := RedisConfig{
+	cfg := RedisConfig{
 		HostAndPort: extractHostAndPort(t, endpoint),
 	}
 
-	r, err := ConstructRedis(config, nil)
+	r, err := ConstructRedis(cfg, config.ErrorMessages{})
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -105,11 +106,11 @@ func TestRedisWithContainerSingleServersArr(t *testing.T) {
 		return
 	}
 
-	config := RedisConfig{
+	cfg := RedisConfig{
 		Servers: []HostAndPort{extractHostAndPort(t, endpoint)},
 	}
 
-	r, err := ConstructRedis(config, nil)
+	r, err := ConstructRedis(cfg, config.ErrorMessages{})
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -137,12 +138,12 @@ func TestRedisWithContainerRing(t *testing.T) {
 		return
 	}
 
-	config := RedisConfig{
+	cfg := RedisConfig{
 		Mode:    ModeRing,
 		Servers: []HostAndPort{extractHostAndPort(t, endpoint), extractHostAndPort(t, endpoint2)},
 	}
 
-	r, err := ConstructRedis(config, nil)
+	r, err := ConstructRedis(cfg, config.ErrorMessages{})
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -164,12 +165,12 @@ func TestRedisWithContainerDiffPrefix(t *testing.T) {
 		return
 	}
 
-	config := RedisConfig{
+	cfg := RedisConfig{
 		HostAndPort: extractHostAndPort(t, endpoint),
 		KeyPrefix:   "first_",
 	}
 
-	r, err := ConstructRedis(config, nil)
+	r, err := ConstructRedis(cfg, config.ErrorMessages{})
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -179,7 +180,7 @@ func TestRedisWithContainerDiffPrefix(t *testing.T) {
 		KeyPrefix:   "second_",
 	}
 
-	r2, err := ConstructRedis(config2, nil)
+	r2, err := ConstructRedis(config2, config.ErrorMessages{})
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -201,12 +202,12 @@ func TestRedisWithContainerDiffDb(t *testing.T) {
 		return
 	}
 
-	config := RedisConfig{
+	cfg := RedisConfig{
 		HostAndPort: extractHostAndPort(t, endpoint),
 		Db:          0,
 	}
 
-	r, err := ConstructRedis(config, nil)
+	r, err := ConstructRedis(cfg, config.ErrorMessages{})
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -216,7 +217,7 @@ func TestRedisWithContainerDiffDb(t *testing.T) {
 		Db:          1,
 	}
 
-	r2, err := ConstructRedis(config2, nil)
+	r2, err := ConstructRedis(config2, config.ErrorMessages{})
 	_ = assert.NoError(t, err) &&
 		validateSaveAndLookup(t, r) &&
 		validateSaveAndLookup(t, r2)

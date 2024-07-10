@@ -35,7 +35,7 @@ type Provider interface {
 	GenerateTile(ctx *internal.RequestContext, providerContext ProviderContext, tileRequest internal.TileRequest) (*internal.Image, error)
 }
 
-func ConstructProvider(rawConfig map[string]interface{}, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, layerGroup *LayerGroup) (Provider, error) {
+func ConstructProvider(rawConfig map[string]interface{}, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup) (Provider, error) {
 	rawConfig = internal.ReplaceEnv(rawConfig)
 
 	if rawConfig["name"] == "url template" {
@@ -188,7 +188,7 @@ func (e *RemoteServerError) Error() string {
  * Performs a GET operation against a given URL. Implementing providers should call this when possible. It has
  * standard reusable logic around various config options
  */
-func getTile(ctx *internal.RequestContext, clientConfig *config.ClientConfig, url string, authHeaders map[string]string) (*internal.Image, error) {
+func getTile(ctx *internal.RequestContext, clientConfig config.ClientConfig, url string, authHeaders map[string]string) (*internal.Image, error) {
 	slog.DebugContext(ctx, fmt.Sprintf("Calling url %v\n", url))
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)

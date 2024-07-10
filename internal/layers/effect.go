@@ -46,7 +46,7 @@ type Effect struct {
 	provider Provider
 }
 
-func ConstructEffect(config EffectConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, provider Provider) (*Effect, error) {
+func ConstructEffect(config EffectConfig, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, provider Provider) (*Effect, error) {
 	if !slices.Contains(allEffectModes, config.Mode) {
 		return nil, fmt.Errorf(errorMessages.EnumError, "provider.effect.mode", config.Mode, allEffectModes)
 	}

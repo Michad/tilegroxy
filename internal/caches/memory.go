@@ -33,7 +33,7 @@ type Memory struct {
 	Cache otter.Cache[string, []byte]
 }
 
-func ConstructMemory(config MemoryConfig, ErrorMessages *config.ErrorMessages) (*Memory, error) {
+func ConstructMemory(config MemoryConfig, ErrorMessages config.ErrorMessages) (*Memory, error) {
 	if config.MaxSize < 1 {
 		config.MaxSize = 100
 	}

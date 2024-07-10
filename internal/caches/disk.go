@@ -39,7 +39,7 @@ func requestToFilename(t internal.TileRequest) string {
 	return t.LayerName + "_" + strconv.Itoa(t.Z) + "_" + strconv.Itoa(t.X) + "_" + strconv.Itoa(t.Y)
 }
 
-func ConstructDisk(config DiskConfig, ErrorMessages *config.ErrorMessages) (*Disk, error) {
+func ConstructDisk(config DiskConfig, ErrorMessages config.ErrorMessages) (*Disk, error) {
 	if config.Path == "" {
 		return nil, fmt.Errorf(ErrorMessages.InvalidParam, "Cache.Disk.path", config.Path)
 	}

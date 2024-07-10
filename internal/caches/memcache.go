@@ -41,7 +41,7 @@ type Memcache struct {
 	client *memcache.Client
 }
 
-func ConstructMemcache(config MemcacheConfig, errorMessages *config.ErrorMessages) (*Memcache, error) {
+func ConstructMemcache(config MemcacheConfig, errorMessages config.ErrorMessages) (*Memcache, error) {
 	if config.Servers == nil || len(config.Servers) == 0 {
 		if config.Host == "" {
 			config.Host = memcacheDefaultHost

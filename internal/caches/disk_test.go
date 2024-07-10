@@ -18,6 +18,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/Michad/tilegroxy/internal/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -29,9 +30,9 @@ func TestDisk(t *testing.T) {
 		return
 	}
 
-	config := DiskConfig{Path: dir}
+	cfg := DiskConfig{Path: dir}
 
-	c, err := ConstructDisk(config, nil)
+	c, err := ConstructDisk(cfg, config.ErrorMessages{})
 	_ = assert.NoError(t, err) &&
 		validateSaveAndLookup(t, c)
 }

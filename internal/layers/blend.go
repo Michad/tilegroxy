@@ -55,7 +55,7 @@ type Blend struct {
 
 var allBlendModes = []string{"add", "color burn", "color dodge", "darken", "difference", "divide", "exclusion", "lighten", "linear burn", "linear light", "multiply", "normal", "opacity", "overlay", "screen", "soft light", "subtract"}
 
-func ConstructBlend(config BlendConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, providers []Provider, layerGroup *LayerGroup) (*Blend, error) {
+func ConstructBlend(config BlendConfig, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, providers []Provider, layerGroup *LayerGroup) (*Blend, error) {
 	var err error
 	if !slices.Contains(allBlendModes, config.Mode) {
 		return nil, fmt.Errorf(errorMessages.EnumError, "provider.blend.mode", config.Mode, allBlendModes)

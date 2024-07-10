@@ -30,7 +30,7 @@ type Ref struct {
 	layerGroup *LayerGroup
 }
 
-func ConstructRef(config RefConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, layerGroup *LayerGroup) (*Ref, error) {
+func ConstructRef(config RefConfig, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup) (*Ref, error) {
 	return &Ref{config, layerGroup}, nil
 }
 

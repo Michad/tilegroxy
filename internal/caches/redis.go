@@ -59,7 +59,7 @@ type Redis struct {
 	cache *cache.Cache
 }
 
-func ConstructRedis(config RedisConfig, errorMessages *config.ErrorMessages) (*Redis, error) {
+func ConstructRedis(config RedisConfig, errorMessages config.ErrorMessages) (*Redis, error) {
 	var tileCache *cache.Cache
 
 	if config.Mode == "" {

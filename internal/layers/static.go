@@ -32,7 +32,7 @@ type Static struct {
 	img *internal.Image
 }
 
-func ConstructStatic(config StaticConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages) (*Static, error) {
+func ConstructStatic(config StaticConfig, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (*Static, error) {
 	if config.Image == "" {
 		if config.Color != "" {
 			config.Image = images.KeyPrefixColor + config.Color

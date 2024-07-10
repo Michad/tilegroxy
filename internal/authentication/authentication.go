@@ -27,7 +27,7 @@ type Authentication interface {
 	CheckAuthentication(req *http.Request, ctx *internal.RequestContext) bool
 }
 
-func ConstructAuth(rawConfig map[string]interface{}, errorMessages *config.ErrorMessages) (Authentication, error) {
+func ConstructAuth(rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (Authentication, error) {
 	rawConfig = internal.ReplaceEnv(rawConfig)
 
 	if rawConfig["name"] == "none" {

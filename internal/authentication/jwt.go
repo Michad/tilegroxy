@@ -48,10 +48,10 @@ type JwtConfig struct {
 type Jwt struct {
 	JwtConfig
 	Cache         *otter.Cache[string, jwt.NumericDate]
-	errorMessages *config.ErrorMessages
+	errorMessages config.ErrorMessages
 }
 
-func ConstructJwt(config JwtConfig, errorMessages *config.ErrorMessages) (*Jwt, error) {
+func ConstructJwt(config JwtConfig, errorMessages config.ErrorMessages) (*Jwt, error) {
 	if !slices.Contains([]string{"HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "EdDSA"}, config.Algorithm) {
 		return nil, fmt.Errorf(errorMessages.InvalidParam, "authentication.algorithm", config.Algorithm)
 	}

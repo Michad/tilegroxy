@@ -120,7 +120,7 @@ func extractToken(req *http.Request, ctx *internal.RequestContext, tokenExtract 
 	return "", false
 }
 
-func ConstructCustom(cfg CustomConfig, errorMessages *config.ErrorMessages) (*Custom, error) {
+func ConstructCustom(cfg CustomConfig, errorMessages config.ErrorMessages) (*Custom, error) {
 	var err error
 
 	if cfg.Token == nil || len(cfg.Token) == 0 {

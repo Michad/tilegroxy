@@ -100,12 +100,12 @@ func parseConfigIntoStructs(cmd *cobra.Command) (*config.Config, *layers.LayerGr
 		return nil, nil, nil, err
 	}
 
-	cache, err := caches.ConstructCache(cfg.Cache, &cfg.Error.Messages)
+	cache, err := caches.ConstructCache(cfg.Cache, cfg.Error.Messages)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("error constructing cache: %v", err)
 	}
 
-	auth, err := authentication.ConstructAuth(cfg.Authentication, &cfg.Error.Messages)
+	auth, err := authentication.ConstructAuth(cfg.Authentication, cfg.Error.Messages)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("error constructing auth: %v", err)
 	}

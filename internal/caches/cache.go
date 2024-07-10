@@ -28,7 +28,7 @@ type Cache interface {
 	Save(t internal.TileRequest, img *internal.Image) error
 }
 
-func ConstructCache(rawConfig map[string]interface{}, errorMessages *config.ErrorMessages) (Cache, error) {
+func ConstructCache(rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (Cache, error) {
 	rawConfig = internal.ReplaceEnv(rawConfig)
 
 	if rawConfig["name"] == "none" || rawConfig["name"] == "test" {

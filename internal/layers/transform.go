@@ -46,7 +46,7 @@ type Transform struct {
 	transformFunc func(uint8, uint8, uint8, uint8) (uint8, uint8, uint8, uint8)
 }
 
-func ConstructTransform(cfg TransformConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, provider Provider) (*Transform, error) {
+func ConstructTransform(cfg TransformConfig, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, provider Provider) (*Transform, error) {
 	var err error
 
 	if cfg.Threads == 0 {

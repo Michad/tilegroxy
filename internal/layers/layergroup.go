@@ -34,7 +34,7 @@ func ConstructLayerGroup(cfg config.Config, layers []config.LayerConfig, cache c
 	layerObjects := make([]*Layer, len(cfg.Layers))
 
 	for i, l := range cfg.Layers {
-		layerObjects[i], err = ConstructLayer(l, &cfg.Client, &cfg.Error.Messages, &layerGroup)
+		layerObjects[i], err = ConstructLayer(l, cfg.Client, cfg.Error.Messages, &layerGroup)
 		if err != nil {
 			return nil, fmt.Errorf("error constructing layer %v: %v", i, err)
 		}

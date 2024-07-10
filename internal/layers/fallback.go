@@ -48,7 +48,7 @@ type Fallback struct {
 	Secondary  Provider
 }
 
-func ConstructFallback(config FallbackConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, primary Provider, secondary Provider) (*Fallback, error) {
+func ConstructFallback(config FallbackConfig, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, primary Provider, secondary Provider) (*Fallback, error) {
 	var zoom []int
 
 	if config.Zoom != "" {

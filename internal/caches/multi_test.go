@@ -17,18 +17,19 @@ package caches
 import (
 	"testing"
 
+	"github.com/Michad/tilegroxy/internal/config"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestMultiSaveAndLookup(t *testing.T) {
 	memConfig1 := MemoryConfig{}
 
-	mem1, err := ConstructMemory(memConfig1, nil)
+	mem1, err := ConstructMemory(memConfig1, config.ErrorMessages{})
 	assert.NoError(t, err)
 
 	memConfig2 := MemoryConfig{}
 
-	mem2, err := ConstructMemory(memConfig2, nil)
+	mem2, err := ConstructMemory(memConfig2, config.ErrorMessages{})
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -47,12 +48,12 @@ func TestMultiSaveAndLookup(t *testing.T) {
 func TestMultiIn1(t *testing.T) {
 	memConfig1 := MemoryConfig{}
 
-	mem1, err := ConstructMemory(memConfig1, nil)
+	mem1, err := ConstructMemory(memConfig1, config.ErrorMessages{})
 	assert.NoError(t, err)
 
 	memConfig2 := MemoryConfig{}
 
-	mem2, err := ConstructMemory(memConfig2, nil)
+	mem2, err := ConstructMemory(memConfig2, config.ErrorMessages{})
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -69,12 +70,12 @@ func TestMultiIn1(t *testing.T) {
 func TestMultiIn2(t *testing.T) {
 	memConfig1 := MemoryConfig{}
 
-	mem1, err := ConstructMemory(memConfig1, nil)
+	mem1, err := ConstructMemory(memConfig1, config.ErrorMessages{})
 	assert.NoError(t, err)
 
 	memConfig2 := MemoryConfig{}
 
-	mem2, err := ConstructMemory(memConfig2, nil)
+	mem2, err := ConstructMemory(memConfig2, config.ErrorMessages{})
 	if !assert.NoError(t, err) {
 		return
 	}

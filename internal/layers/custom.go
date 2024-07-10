@@ -33,14 +33,14 @@ type CustomConfig struct {
 
 type Custom struct {
 	CustomConfig
-	clientConfig     *config.ClientConfig
-	errorMessages    *config.ErrorMessages
+	clientConfig     config.ClientConfig
+	errorMessages    config.ErrorMessages
 	interp           *interp.Interpreter
 	preAuthFunc      func(*internal.RequestContext, ProviderContext, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (ProviderContext, error)
 	generateTileFunc func(*internal.RequestContext, ProviderContext, internal.TileRequest, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (*internal.Image, error)
 }
 
-func ConstructCustom(cfg CustomConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages) (*Custom, error) {
+func ConstructCustom(cfg CustomConfig, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (*Custom, error) {
 	i := interp.New(interp.Options{Unrestricted: true})
 	i.Use(stdlib.Symbols)
 	i.Use(interp.Exports{
@@ -91,11 +91,11 @@ func ConstructCustom(cfg CustomConfig, clientConfig *config.ClientConfig, errorM
 }
 
 func (t Custom) PreAuth(ctx *internal.RequestContext, providerContext ProviderContext) (ProviderContext, error) {
-	return t.preAuthFunc(ctx, providerContext, t.Params, *t.clientConfig, *t.errorMessages)
+	return t.preAuthFunc(ctx, providerContext, t.Params, t.clientConfig, t.errorMessages)
 }
 
 func (t Custom) GenerateTile(ctx *internal.RequestContext, providerContext ProviderContext, tileRequest internal.TileRequest) (*internal.Image, error) {
-	img, err := t.generateTileFunc(ctx, providerContext, tileRequest, t.Params, *t.clientConfig, *t.errorMessages)
+	img, err := t.generateTileFunc(ctx, providerContext, tileRequest, t.Params, t.clientConfig, t.errorMessages)
 
 	if err != nil {
 		return nil, err
