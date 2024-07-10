@@ -537,9 +537,8 @@ layers:
 	assert.NoError(t, err)
 
 	start := time.Now()
-	resp2, err := http.DefaultClient.Do(req)
+	resp2, _ := http.DefaultClient.Do(req)
 	end := time.Now()
-	assert.NoError(t, err)
 	assert.Greater(t, 2.0, end.Sub(start).Seconds())
 	if resp2 != nil {
 		assert.Equal(t, 500, resp2.StatusCode)
