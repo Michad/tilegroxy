@@ -15,6 +15,7 @@
 package server
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -240,4 +241,249 @@ func Test_TileHandler_ExecuteCustom(t *testing.T) {
 	handler.ServeHTTP(w3, req3)
 	res3 := w3.Result()
 	assert.Equal(t, 401, res3.StatusCode)
+}
+
+func Test_ServeCommand_ExecuteJWT(t *testing.T) {
+	configRaw := `server:
+  port: 12349
+Authentication:
+  name: jwt
+  Algorithm: HS256
+  Key: hunter2
+  MaxExpiration: 4294967295
+  ExpectedAudience: audience
+  ExpectedSubject: subject
+  ExpectedIssuer: issuer
+  ExpectedScope: tile
+layers:
+  - id: color
+    provider:
+      name: static
+      color: "FFFFFF"
+`
+	cfg, err := config.LoadConfig(configRaw)
+	assert.NoError(t, err)
+	lg, auth, err := layers.ConfigToEntities(cfg)
+	assert.NoError(t, err)
+	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
+
+	req1 := httptest.NewRequest("GET", "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(internal.BackgroundContext())
+	req1.SetPathValue("layer", "color")
+	req1.SetPathValue("z", "8")
+	req1.SetPathValue("x", "12")
+	req1.SetPathValue("y", "32")
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req1)
+	resp1 := w.Result()
+
+	assert.Equal(t, 401, resp1.StatusCode)
+
+	req2 := httptest.NewRequest("GET", "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(internal.BackgroundContext())
+	req2.SetPathValue("layer", "color")
+	req2.SetPathValue("z", "8")
+	req2.SetPathValue("x", "12")
+	req2.SetPathValue("y", "32")
+	req2.Header.Add("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdWJqZWN0IiwiYXVkIjoiYXVkaWVuY2UiLCJpc3MiOiJpc3N1ZXIiLCJzY29wZSI6InNvbWV0aGluZyB0aWxlIG90aGVyIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjQyOTQ5NjcyOTV9.6jOBwjsvFcJXGkaleXB-75F6J3CjaQYuRELJPfvOfQE")
+
+	w2 := httptest.NewRecorder()
+	handler.ServeHTTP(w2, req2)
+	resp2 := w2.Result()
+
+	assert.Equal(t, 200, resp2.StatusCode)
+}
+
+// Just make sure it starts up and rejects unauth for now. TODO: figure out how to get the key from logs
+func Test_ServeCommand_ExecuteStaticRandomKey(t *testing.T) {
+
+	configRaw := `server:
+  port: 12348
+Authentication:
+  name: static key
+layers:
+  - id: color
+    provider:
+      name: static
+      color: "FFFFFF"
+`
+
+	cfg, err := config.LoadConfig(configRaw)
+	assert.NoError(t, err)
+	lg, auth, err := layers.ConfigToEntities(cfg)
+	assert.NoError(t, err)
+	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
+
+	req1 := httptest.NewRequest("GET", "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(internal.BackgroundContext())
+	req1.SetPathValue("layer", "color")
+	req1.SetPathValue("z", "8")
+	req1.SetPathValue("x", "12")
+	req1.SetPathValue("y", "32")
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req1)
+	resp := w.Result()
+
+	assert.Equal(t, 401, resp.StatusCode)
+}
+
+func Test_ServeCommand_ExecuteStatic(t *testing.T) {
+
+	configRaw := `server:
+  port: 12347
+Authentication:
+  name: static key
+  key: hunter2
+layers:
+  - id: color
+    provider:
+      name: static
+      color: "FFFFFF"
+`
+
+	cfg, err := config.LoadConfig(configRaw)
+	assert.NoError(t, err)
+	lg, auth, err := layers.ConfigToEntities(cfg)
+	assert.NoError(t, err)
+	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
+
+	req1 := httptest.NewRequest("GET", "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(internal.BackgroundContext())
+	req1.SetPathValue("layer", "color")
+	req1.SetPathValue("z", "8")
+	req1.SetPathValue("x", "12")
+	req1.SetPathValue("y", "32")
+
+	w1 := httptest.NewRecorder()
+	handler.ServeHTTP(w1, req1)
+	resp1 := w1.Result()
+
+	assert.Equal(t, 401, resp1.StatusCode)
+
+	req2 := httptest.NewRequest("GET", "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(internal.BackgroundContext())
+	req2.Header.Add("Authorization", "Bearer hunter2")
+	req2.SetPathValue("layer", "color")
+	req2.SetPathValue("z", "8")
+	req2.SetPathValue("x", "12")
+	req2.SetPathValue("y", "32")
+
+	w2 := httptest.NewRecorder()
+	handler.ServeHTTP(w2, req2)
+	resp2 := w2.Result()
+
+	assert.Equal(t, 200, resp2.StatusCode)
+}
+
+func Test_ServeCommand_ExecuteErrorText(t *testing.T) {
+	configRaw := `server:
+  port: 12346
+Error:
+  mode: "text"
+authentication:
+  name: static key
+layers:
+  - id: color
+    provider:
+      name: static
+      color: "FFFFFF"
+`
+
+	cfg, err := config.LoadConfig(configRaw)
+	assert.NoError(t, err)
+	lg, auth, err := layers.ConfigToEntities(cfg)
+	assert.NoError(t, err)
+	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
+
+	req1 := httptest.NewRequest("GET", "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(internal.BackgroundContext())
+	req1.SetPathValue("layer", "color")
+	req1.SetPathValue("z", "8")
+	req1.SetPathValue("x", "12")
+	req1.SetPathValue("y", "32")
+
+	w1 := httptest.NewRecorder()
+	handler.ServeHTTP(w1, req1)
+	resp := w1.Result()
+	fmt.Printf("Header %v\n", resp.Header)
+	body, err := io.ReadAll(resp.Body)
+	assert.NoError(t, err)
+
+	assert.Equal(t, 401, resp.StatusCode)
+	assert.Equal(t, "Not authorized", string(body))
+	assert.Nil(t, resp.Header["X-Error-Message"])
+}
+
+func Test_ServeCommand_ExecuteErrorImage(t *testing.T) {
+	configRaw := `server:
+  port: 12345
+Error:
+  mode: "image"
+authentication:
+  name: static key
+layers:
+  - id: color
+    provider:
+      name: static
+      color: "FFFFFF"
+`
+
+	cfg, err := config.LoadConfig(configRaw)
+	assert.NoError(t, err)
+	lg, auth, err := layers.ConfigToEntities(cfg)
+	assert.NoError(t, err)
+	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
+
+	req1 := httptest.NewRequest("GET", "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(internal.BackgroundContext())
+	req1.SetPathValue("layer", "color")
+	req1.SetPathValue("z", "8")
+	req1.SetPathValue("x", "12")
+	req1.SetPathValue("y", "32")
+
+	w1 := httptest.NewRecorder()
+	handler.ServeHTTP(w1, req1)
+	resp := w1.Result()
+	fmt.Printf("Header %v\n", resp.Header)
+	body, err := io.ReadAll(resp.Body)
+	assert.NoError(t, err)
+	img, _ := images.GetStaticImage(images.KeyImageUnauthorized)
+
+	assert.Equal(t, 401, resp.StatusCode)
+	assert.Equal(t, *img, body)
+	assert.Nil(t, resp.Header["X-Error-Message"])
+}
+
+func Test_ServeCommand_ExecuteErrorImageHeader(t *testing.T) {
+	configRaw := `server:
+  port: 12345
+Error:
+  mode: "image+header"
+authentication:
+  name: static key
+layers:
+  - id: color
+    provider:
+      name: static
+      color: "FFFFFF"
+`
+
+	cfg, err := config.LoadConfig(configRaw)
+	assert.NoError(t, err)
+	lg, auth, err := layers.ConfigToEntities(cfg)
+	assert.NoError(t, err)
+	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
+
+	req1 := httptest.NewRequest("GET", "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(internal.BackgroundContext())
+	req1.SetPathValue("layer", "color")
+	req1.SetPathValue("z", "8")
+	req1.SetPathValue("x", "12")
+	req1.SetPathValue("y", "32")
+
+	w1 := httptest.NewRecorder()
+	handler.ServeHTTP(w1, req1)
+	resp := w1.Result()
+	fmt.Printf("Header %v\n", resp.Header)
+	body, err := io.ReadAll(resp.Body)
+	assert.NoError(t, err)
+	img, _ := images.GetStaticImage(images.KeyImageUnauthorized)
+
+	assert.Equal(t, 401, resp.StatusCode)
+	assert.Equal(t, *img, body)
+	assert.NotNil(t, resp.Header["X-Error-Message"])
 }
