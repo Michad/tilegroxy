@@ -243,7 +243,7 @@ func Test_TileHandler_ExecuteCustom(t *testing.T) {
 	assert.Equal(t, 401, res3.StatusCode)
 }
 
-func Test_ServeCommand_ExecuteJWT(t *testing.T) {
+func Test_TileHandler_ExecuteJWT(t *testing.T) {
 	configRaw := `server:
   port: 12349
 Authentication:
@@ -294,7 +294,7 @@ layers:
 }
 
 // Just make sure it starts up and rejects unauth for now. TODO: figure out how to get the key from logs
-func Test_ServeCommand_ExecuteStaticRandomKey(t *testing.T) {
+func Test_TileHandler_ExecuteStaticRandomKey(t *testing.T) {
 
 	configRaw := `server:
   port: 12348
@@ -326,7 +326,7 @@ layers:
 	assert.Equal(t, 401, resp.StatusCode)
 }
 
-func Test_ServeCommand_ExecuteStatic(t *testing.T) {
+func Test_TileHandler_ExecuteStatic(t *testing.T) {
 
 	configRaw := `server:
   port: 12347
@@ -372,7 +372,7 @@ layers:
 	assert.Equal(t, 200, resp2.StatusCode)
 }
 
-func Test_ServeCommand_ExecuteErrorText(t *testing.T) {
+func Test_TileHandler_ExecuteErrorText(t *testing.T) {
 	configRaw := `server:
   port: 12346
 Error:
@@ -410,7 +410,7 @@ layers:
 	assert.Nil(t, resp.Header["X-Error-Message"])
 }
 
-func Test_ServeCommand_ExecuteErrorImage(t *testing.T) {
+func Test_TileHandler_ExecuteErrorImage(t *testing.T) {
 	configRaw := `server:
   port: 12345
 Error:
@@ -449,7 +449,7 @@ layers:
 	assert.Nil(t, resp.Header["X-Error-Message"])
 }
 
-func Test_ServeCommand_ExecuteErrorImageHeader(t *testing.T) {
+func Test_TileHandler_ExecuteErrorImageHeader(t *testing.T) {
 	configRaw := `server:
   port: 12345
 Error:
