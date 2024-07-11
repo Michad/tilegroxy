@@ -221,27 +221,13 @@ layers:
 	assert.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
 	resp.Body.Close()
-}
 
-func Test_ServeCommand_ExecuteDefaultRoute(t *testing.T) {
-
-	cfg := `server:
-  port: 12341
-  Production: false
-layers:
-  - id: color
-    provider:
-      name: static
-      color: "FFFFFF"
-`
-
-	resp, postFunc, err := coreServeTest(cfg, 12341, "http://localhost:12341/")
-	defer postFunc()
-
+	req, err = http.NewRequest(http.MethodGet, "http://localhost:12342/root", nil)
 	assert.NoError(t, err)
-	assert.NotNil(t, resp)
-
+	resp, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
+	resp.Body.Close()
 }
 
 func Test_ServeCommand_ExecuteNoContentRoute(t *testing.T) {
@@ -249,46 +235,7 @@ func Test_ServeCommand_ExecuteNoContentRoute(t *testing.T) {
 	cfg := `server:
   port: 12341
   Production: true
-layers:
-  - id: color
-    provider:
-      name: static
-      color: "FFFFFF"
-`
-
-	resp, postFunc, err := coreServeTest(cfg, 12341, "http://localhost:12341/")
-	defer postFunc()
-
-	assert.NoError(t, err)
-	assert.NotNil(t, resp)
-
-	assert.Equal(t, 204, resp.StatusCode)
-}
-
-func Test_ServeCommand_ExecuteProduction(t *testing.T) {
-	cfg := `server:
-  port: 12343
-  Production: true
-layers:
-  - id: color
-    provider:
-      name: static
-      color: "FFFFFF"
-`
-	resp, postFunc, err := coreServeTest(cfg, 12343, "http://localhost:12343/tiles/color/8/12/32")
-	defer postFunc()
-
-	assert.NoError(t, err)
-	assert.NotNil(t, resp)
-
-	assert.Equal(t, 200, resp.StatusCode)
-	assert.Nil(t, resp.Header["X-Powered-By"])
-}
-
-
-func Test_ServeCommand_ExecuteJsonLog(t *testing.T) {
-	cfg := `server:
-  port: 12342
+  timeout: 1
 Logging:
   main:
     level: debug
@@ -300,24 +247,6 @@ layers:
     provider:
       name: static
       color: "FFFFFF"
-`
-	resp, postFunc, err := coreServeTest(cfg, 12342, "http://localhost:12342/tiles/color/8/12/32")
-	defer postFunc()
-
-	assert.NoError(t, err)
-	assert.NotNil(t, resp)
-
-	assert.Equal(t, 200, resp.StatusCode)
-	//TODO: find some way to validate log output is in json
-}
-
-
-func Test_ServeCommand_Timeout(t *testing.T) {
-
-	cfg := `server:
-  port: 12341
-  timeout: 1
-layers:
   - id: l
     provider:
       name: custom
@@ -341,13 +270,27 @@ layers:
             time.Sleep(10 * time.Second)
             return &[]byte{0x01,0x02}, nil
         }
-    `
-	fmt.Println(cfg)
+`
 
-	_, postFunc, _ := coreServeTest(cfg, 12341, "")
+	resp, postFunc, err := coreServeTest(cfg, 12341, "http://localhost:12341/")
 	defer postFunc()
 
-	req, err := http.NewRequest(http.MethodGet, "http://localhost:12341/tiles/l/8/12/32", nil)
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+
+	assert.Equal(t, 204, resp.StatusCode)
+
+	req, err := http.NewRequest(http.MethodGet, "http://localhost:12341/tiles/color/8/12/32", nil)
+	assert.NoError(t, err)
+	resp, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, resp.StatusCode)
+	assert.Nil(t, resp.Header["X-Powered-By"])
+	resp.Body.Close()
+
+	//TODO: find some way to validate log output is in json
+
+	req, err = http.NewRequest(http.MethodGet, "http://localhost:12341/tiles/l/8/12/32", nil)
 	assert.NoError(t, err)
 
 	start := time.Now()
