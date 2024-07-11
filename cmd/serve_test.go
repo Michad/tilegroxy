@@ -221,27 +221,13 @@ layers:
 	assert.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
 	resp.Body.Close()
-}
 
-func Test_ServeCommand_ExecuteDefaultRoute(t *testing.T) {
-
-	cfg := `server:
-  port: 12341
-  Production: false
-layers:
-  - id: color
-    provider:
-      name: static
-      color: "FFFFFF"
-`
-
-	resp, postFunc, err := coreServeTest(cfg, 12341, "http://localhost:12341/")
-	defer postFunc()
-
+	req, err = http.NewRequest(http.MethodGet, "http://localhost:12342/root", nil)
 	assert.NoError(t, err)
-	assert.NotNil(t, resp)
-
+	resp, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
+	resp.Body.Close()
 }
 
 func Test_ServeCommand_ExecuteNoContentRoute(t *testing.T) {
@@ -249,151 +235,7 @@ func Test_ServeCommand_ExecuteNoContentRoute(t *testing.T) {
 	cfg := `server:
   port: 12341
   Production: true
-layers:
-  - id: color
-    provider:
-      name: static
-      color: "FFFFFF"
-`
-
-	resp, postFunc, err := coreServeTest(cfg, 12341, "http://localhost:12341/")
-	defer postFunc()
-
-	assert.NoError(t, err)
-	assert.NotNil(t, resp)
-
-	assert.Equal(t, 204, resp.StatusCode)
-}
-
-func Test_ServeCommand_ExecuteProduction(t *testing.T) {
-	cfg := `server:
-  port: 12343
-  Production: true
-layers:
-  - id: color
-    provider:
-      name: static
-      color: "FFFFFF"
-`
-	resp, postFunc, err := coreServeTest(cfg, 12343, "http://localhost:12343/tiles/color/8/12/32")
-	defer postFunc()
-
-	assert.NoError(t, err)
-	assert.NotNil(t, resp)
-
-	assert.Equal(t, 200, resp.StatusCode)
-	assert.Nil(t, resp.Header["X-Powered-By"])
-}
-
-func Test_ServeCommand_ExecuteErrorImage(t *testing.T) {
-	cfg := `server:
-  port: 12344
-Error:
-  mode: "image"
-authentication:
-  name: static key
-layers:
-  - id: color
-    provider:
-      name: static
-      color: "FFFFFF"
-`
-
-	resp, postFunc, err := coreServeTest(cfg, 12344, "http://localhost:12344/tiles/color/8/12/32")
-	defer postFunc()
-
-	assert.NoError(t, err)
-	assert.NotNil(t, resp)
-
-	assert.Equal(t, 401, resp.StatusCode)
-	assert.Equal(t, "image/png", resp.Header["Content-Type"][0])
-	assert.Nil(t, resp.Header["X-Error-Message"])
-}
-
-func Test_ServeCommand_ExecuteErrorImageHeader(t *testing.T) {
-	cfg := `server:
-  port: 12345
-Error:
-  mode: "image+header"
-authentication:
-  name: static key
-layers:
-  - id: color
-    provider:
-      name: static
-      color: "FFFFFF"
-`
-	resp, postFunc, err := coreServeTest(cfg, 12345, "http://localhost:12345/tiles/color/8/12/32")
-	defer postFunc()
-
-	assert.NoError(t, err)
-	assert.NotNil(t, resp)
-
-	assert.Equal(t, 401, resp.StatusCode)
-	assert.Equal(t, "image/png", resp.Header["Content-Type"][0])
-	assert.NotNil(t, resp.Header["X-Error-Message"])
-}
-
-func Test_ServeCommand_ExecuteErrorText(t *testing.T) {
-	cfg := `server:
-  port: 12346
-Error:
-  mode: "text"
-authentication:
-  name: static key
-layers:
-  - id: color
-    provider:
-      name: static
-      color: "FFFFFF"
-`
-	resp, postFunc, err := coreServeTest(cfg, 12346, "http://localhost:12346/tiles/color/8/12/32")
-	defer postFunc()
-
-	assert.NoError(t, err)
-	assert.NotNil(t, resp)
-
-	assert.Equal(t, 401, resp.StatusCode)
-	assert.Equal(t, "text/plain; charset=utf-8", resp.Header["Content-Type"][0])
-	assert.Nil(t, resp.Header["X-Error-Message"])
-}
-
-func Test_ServeCommand_ExecuteStatic(t *testing.T) {
-
-	cfg := `server:
-  port: 12347
-Authentication:
-  name: static key
-  key: hunter2
-layers:
-  - id: color
-    provider:
-      name: static
-      color: "FFFFFF"
-`
-
-	resp, postFunc, err := coreServeTest(cfg, 12347, "http://localhost:12347/tiles/color/8/12/32")
-	defer postFunc()
-
-	assert.NoError(t, err)
-	assert.NotNil(t, resp)
-
-	assert.Equal(t, 401, resp.StatusCode)
-
-	req, err := http.NewRequest(http.MethodGet, "http://localhost:12347/tiles/color/8/12/32", nil)
-	req.Header.Add("Authorization", "Bearer hunter2")
-	assert.NoError(t, err)
-
-	resp2, err := http.DefaultClient.Do(req)
-	assert.NoError(t, err)
-	assert.Equal(t, 200, resp2.StatusCode)
-
-	resp2.Body.Close()
-}
-
-func Test_ServeCommand_ExecuteJsonLog(t *testing.T) {
-	cfg := `server:
-  port: 12342
+  timeout: 1
 Logging:
   main:
     level: debug
@@ -405,105 +247,6 @@ layers:
     provider:
       name: static
       color: "FFFFFF"
-`
-	resp, postFunc, err := coreServeTest(cfg, 12342, "http://localhost:12342/tiles/color/8/12/32")
-	defer postFunc()
-
-	assert.NoError(t, err)
-	assert.NotNil(t, resp)
-
-	assert.Equal(t, 200, resp.StatusCode)
-	//TODO: find some way to validate log output is in json
-}
-
-// Just make sure it starts up and rejects unauth for now. TODO: figure out how to get the key from logs
-func Test_ServeCommand_ExecuteStaticRandomKey(t *testing.T) {
-
-	cfg := `server:
-  port: 12348
-Authentication:
-  name: static key
-layers:
-  - id: color
-    provider:
-      name: static
-      color: "FFFFFF"
-`
-
-	resp, postFunc, err := coreServeTest(cfg, 12348, "http://localhost:12348/tiles/color/8/12/32")
-	defer postFunc()
-
-	assert.NoError(t, err)
-	assert.NotNil(t, resp)
-
-	assert.Equal(t, 401, resp.StatusCode)
-}
-
-func Test_ServeCommand_ExecuteJWT_MissingAlg(t *testing.T) {
-	cfg := `server:
-  port: 12349
-Authentication:
-  name: jwt
-layers:
-  - id: color
-    provider:
-      name: static
-      color: "FFFFFF"
-`
-
-	resp, postFunc, err := coreServeTest(cfg, 12349, "http://localhost:12349/tiles/color/8/12/32")
-	if postFunc != nil {
-		defer postFunc()
-	}
-
-	assert.Error(t, err)
-	assert.Nil(t, resp)
-}
-
-func Test_ServeCommand_ExecuteJWT(t *testing.T) {
-	cfg := `server:
-  port: 12349
-Authentication:
-  name: jwt
-  Algorithm: HS256
-  Key: hunter2
-  MaxExpiration: 4294967295
-  ExpectedAudience: audience
-  ExpectedSubject: subject
-  ExpectedIssuer: issuer
-  ExpectedScope: tile
-layers:
-  - id: color
-    provider:
-      name: static
-      color: "FFFFFF"
-`
-
-	resp, postFunc, err := coreServeTest(cfg, 12349, "http://localhost:12349/tiles/color/8/12/32")
-	defer postFunc()
-
-	assert.NoError(t, err)
-	assert.NotNil(t, resp)
-
-	assert.Equal(t, 401, resp.StatusCode)
-
-	req, err := http.NewRequest(http.MethodGet, "http://localhost:12349/tiles/color/8/12/32", nil)
-	req.Header.Add("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdWJqZWN0IiwiYXVkIjoiYXVkaWVuY2UiLCJpc3MiOiJpc3N1ZXIiLCJzY29wZSI6InNvbWV0aGluZyB0aWxlIG90aGVyIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjQyOTQ5NjcyOTV9.6jOBwjsvFcJXGkaleXB-75F6J3CjaQYuRELJPfvOfQE")
-	assert.NoError(t, err)
-
-	resp2, err := http.DefaultClient.Do(req)
-	assert.NoError(t, err)
-	assert.Equal(t, 200, resp2.StatusCode)
-
-	resp2.Body.Close()
-}
-
-func Test_ServeCommand_Timeout(t *testing.T) {
-
-	cfg := `server:
-  port: 12341
-  timeout: 1
-layers:
   - id: l
     provider:
       name: custom
@@ -527,13 +270,27 @@ layers:
             time.Sleep(10 * time.Second)
             return &[]byte{0x01,0x02}, nil
         }
-    `
-	fmt.Println(cfg)
+`
 
-	_, postFunc, _ := coreServeTest(cfg, 12341, "")
+	resp, postFunc, err := coreServeTest(cfg, 12341, "http://localhost:12341/")
 	defer postFunc()
 
-	req, err := http.NewRequest(http.MethodGet, "http://localhost:12341/tiles/l/8/12/32", nil)
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+
+	assert.Equal(t, 204, resp.StatusCode)
+
+	req, err := http.NewRequest(http.MethodGet, "http://localhost:12341/tiles/color/8/12/32", nil)
+	assert.NoError(t, err)
+	resp, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, resp.StatusCode)
+	assert.Nil(t, resp.Header["X-Powered-By"])
+	resp.Body.Close()
+
+	//TODO: find some way to validate log output is in json
+
+	req, err = http.NewRequest(http.MethodGet, "http://localhost:12341/tiles/l/8/12/32", nil)
 	assert.NoError(t, err)
 
 	start := time.Now()

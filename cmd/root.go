@@ -17,11 +17,9 @@ package cmd
 import (
 	"errors"
 	"flag"
-	"fmt"
 	"os"
 
 	"github.com/Michad/tilegroxy/internal/authentication"
-	"github.com/Michad/tilegroxy/internal/caches"
 	"github.com/Michad/tilegroxy/internal/config"
 	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/spf13/cobra"
@@ -100,20 +98,6 @@ func parseConfigIntoStructs(cmd *cobra.Command) (*config.Config, *layers.LayerGr
 		return nil, nil, nil, err
 	}
 
-	cache, err := caches.ConstructCache(cfg.Cache, cfg.Error.Messages)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("error constructing cache: %v", err)
-	}
-
-	auth, err := authentication.ConstructAuth(cfg.Authentication, cfg.Error.Messages)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("error constructing auth: %v", err)
-	}
-
-	layerGroup, err := layers.ConstructLayerGroup(cfg, cfg.Layers, cache)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("error constructing layers: %v", err)
-	}
-
-	return &cfg, layerGroup, auth, err
+	l, a, e := layers.ConfigToEntities(cfg)
+	return &cfg, l, a, e
 }
