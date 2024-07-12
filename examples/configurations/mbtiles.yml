@@ -1,0 +1,10 @@
+cache:
+    name: none
+server:
+  headers:
+    Access-Control-Allow-Origin: "*"
+layers:
+  - id: osm
+    provider:
+      name: mbtiles
+      path: /home/michad/Downloads/planet_-2.564,52.251_-1.193,52.769.osm.mbtiles-openmaptiles/planet_-2.564,52.251_-1.193,52.769-mbtiles-openmaptiles/planet_-2.564,52.251_-1.193,52.769.mbtiles
