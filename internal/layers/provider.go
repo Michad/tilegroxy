@@ -67,6 +67,13 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig config.Cli
 			return nil, err
 		}
 		return ConstructStatic(config, clientConfig, errorMessages)
+	} else if rawConfig["name"] == "mbtiles" {
+		var config MBTilesConfig
+		err := mapstructure.Decode(rawConfig, &config)
+		if err != nil {
+			return nil, err
+		}
+		return ConstructMBTiles(config, clientConfig, errorMessages)
 	} else if rawConfig["name"] == "ref" {
 		var config RefConfig
 		err := mapstructure.Decode(rawConfig, &config)
