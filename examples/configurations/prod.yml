@@ -1,0 +1,52 @@
+Server:
+    BindHost: 0.0.0.0
+    Gzip: true
+    Port: 8443
+    Production: true
+    Headers:
+        Access-Control-Allow-Origin: "*"
+    Timeout: 30
+    Encrypt:
+      Domain: dev.local.io
+      Certificate: certs/dev.local.io.crt
+      Keyfile: certs/dev.local.io.key
+Logging:
+    Access:
+        Console: false
+        Format: combined
+        Path: "my-access.log"
+    Main:
+        Console: true
+        Format: json
+        Level: error
+        Path: "my-main.log"
+# Authentication:
+#   name: jwt
+#   algorithm: HS256
+#   key: some_secret_key
+Client:
+    UnknownLength: false
+    ContentTypes:
+        - image/png
+        - image/jpeg
+        - image/webp
+    StatusCodes:
+        - 200
+        - 201
+    MaxLength: 100000000
+    UserAgent: company/1.0
+error:
+    Mode: image
+cache:
+  name: multi
+  tiers:
+    - name: memory
+      maxsize: 1000
+      ttl: 1000
+    - name: disk
+      path: "./disk_tile_cache"
+layers: 
+  - id: osm
+    provider:
+        name: proxy
+        url: https://tile.openstreetmap.org/{z}/{x}/{y}.png

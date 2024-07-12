@@ -322,7 +322,16 @@ func ListenAndServe(config *config.Config, layerGroup *layers.LayerGroup, auth a
 		}()
 
 		slog.InfoContext(context.Background(), "Binding...")
-		srvErr <- srv.ListenAndServe()
+
+		if config.Server.Encrypt != nil {
+			if config.Server.Encrypt.Certificate != "" && config.Server.Encrypt.KeyFile != "" {
+				srvErr <- srv.ListenAndServeTLS(config.Server.Encrypt.Certificate, config.Server.Encrypt.KeyFile)
+			} else {
+				//TODO: Let's Encrypt
+			}
+		} else {
+			srvErr <- srv.ListenAndServe()
+		}
 	}()
 
 	select {

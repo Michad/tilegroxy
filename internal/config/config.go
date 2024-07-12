@@ -25,7 +25,16 @@ import (
 	_ "github.com/spf13/viper/remote"
 )
 
+// Configuration for TLS (HTTPS) operation. If this is configured then TLS is enabled. This can operate either with a static certificate and keyfile via the filesystem or via ACME/Let's Encrypt
+type EncryptionConfig struct {
+	Domain      string //The domain name you're operating with (the domain end-users use). Required
+	Cache       string //The path to a directory to cache certificates in if using let's encrypt. Defaults to ./certs
+	Certificate string //The file path to get to the TLS certificate
+	KeyFile     string //The file path to get to the keyfile
+}
+
 type ServerConfig struct {
+	Encrypt    *EncryptionConfig //Whether and how to use TLS. Defaults to none AKA no encryption.
 	BindHost   string            //IP address to bind HTTP server to
 	Port       int               //Port to bind HTTP server to
 	RootPath   string            //Root HTTP Path to apply to all endpoints. Defaults to /
