@@ -25,7 +25,17 @@ import (
 	_ "github.com/spf13/viper/remote"
 )
 
+// Configuration for TLS (HTTPS) operation. If this is configured then TLS is enabled. This can operate either with a static certificate and keyfile via the filesystem or via ACME/Let's Encrypt
+type EncryptionConfig struct {
+	Domain      string //The domain name you're operating with (the domain end-users use). Required
+	Cache       string //The path to a directory to cache certificates in if using let's encrypt. Defaults to ./certs
+	Certificate string //The file path to get to the TLS certificate
+	KeyFile     string //The file path to get to the keyfile
+	HttpPort    int    //The port used for non-encrypted traffic. Required if using Let's Encrypt for ACME challenge and needs to indirectly be 80 (that is, it could be 8080 if something else redirects 80 to 8080). Everything except .well-known will be redirected to the main port when set.
+}
+
 type ServerConfig struct {
+	Encrypt    *EncryptionConfig //Whether and how to use TLS. Defaults to none AKA no encryption.
 	BindHost   string            //IP address to bind HTTP server to
 	Port       int               //Port to bind HTTP server to
 	RootPath   string            //Root HTTP Path to apply to all endpoints. Defaults to /
@@ -78,6 +88,7 @@ const (
 // replaced with fully static constants later if it does turn out nobody ever sees value in it
 type ErrorMessages struct {
 	NotAuthorized           string
+	ParamRequired           string
 	InvalidParam            string
 	RangeError              string
 	ServerError             string
@@ -215,6 +226,7 @@ func DefaultConfig() Config {
 				ScriptError:             "The script specified for %v is invalid: %v",
 				OneOfRequired:           "You must specify one of: %v",
 				Timeout:                 "Timeout error",
+				ParamRequired:           "Parameter %v is required",
 			},
 			Images: ErrorImages{
 				OutOfBounds:    images.KeyImageTransparent,

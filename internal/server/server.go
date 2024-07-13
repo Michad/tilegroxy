@@ -34,6 +34,7 @@ import (
 	"github.com/Michad/tilegroxy/internal/config"
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/Michad/tilegroxy/internal/layers"
+	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/gorilla/handlers"
 )
@@ -265,7 +266,19 @@ func (h httpContextHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 	h.Handler.ServeHTTP(w, req.WithContext(&reqC))
 }
 
+type httpRedirectHandler struct {
+	protoAndHost string
+}
+
+func (h httpRedirectHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	http.Redirect(w, req, h.protoAndHost+req.RequestURI, http.StatusMovedPermanently)
+}
+
 func ListenAndServe(config *config.Config, layerGroup *layers.LayerGroup, auth authentication.Authentication) error {
+	if config.Server.Encrypt != nil && config.Server.Encrypt.Domain == "" {
+		return fmt.Errorf(config.Error.Messages.ParamRequired, "server.encrypt.domain")
+	}
+
 	r := http.ServeMux{}
 
 	if config.Server.Production {
@@ -317,12 +330,46 @@ func ListenAndServe(config *config.Config, layerGroup *layers.LayerGroup, auth a
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				srvErr <- fmt.Errorf("unexpected server error %v", r)
+				srvErr <- fmt.Errorf("unexpected server error %v \n %v", r, string(debug.Stack()))
 			}
 		}()
 
 		slog.InfoContext(context.Background(), "Binding...")
-		srvErr <- srv.ListenAndServe()
+
+		if config.Server.Encrypt != nil {
+			httpPort := config.Server.Encrypt.HttpPort
+			httpHostPort := net.JoinHostPort(config.Server.BindHost, strconv.Itoa(httpPort))
+
+			if config.Server.Encrypt.Certificate != "" && config.Server.Encrypt.KeyFile != "" {
+				if httpPort != 0 {
+					go http.ListenAndServe(httpHostPort, httpRedirectHandler{protoAndHost: "https://" + config.Server.Encrypt.Domain})
+				}
+
+				srvErr <- srv.ListenAndServeTLS(config.Server.Encrypt.Certificate, config.Server.Encrypt.KeyFile)
+			} else {
+				//Let's Encrypt workflow
+				cacheDir := "certs"
+				if config.Server.Encrypt.Cache != "" {
+					cacheDir = config.Server.Encrypt.Cache
+				}
+
+				certManager := autocert.Manager{
+					Prompt:     autocert.AcceptTOS,
+					HostPolicy: autocert.HostWhitelist(config.Server.Encrypt.Domain),
+					Cache:      autocert.DirCache(cacheDir),
+				}
+
+				if httpPort != 0 {
+					go http.ListenAndServe(httpHostPort, certManager.HTTPHandler(nil))
+				}
+
+				srv.TLSConfig = certManager.TLSConfig()
+
+				srvErr <- srv.ListenAndServeTLS("", "")
+			}
+		} else {
+			srvErr <- srv.ListenAndServe()
+		}
 	}()
 
 	select {
