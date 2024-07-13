@@ -622,6 +622,7 @@ Configuration options:
 | Production | bool | No | false | Hardens operation for usage in production. For instance, controls serving splash page, documentation, x-powered-by header. |
 | Timeout | uint | No | 60 | How long (in seconds) a request can be in flight before we cancel it and return an error |
 | Gzip | bool | No | false | Whether to gzip compress HTTP responses |
+| Encrypt | [Encryption](#encryption) | No | None | Configuration for enabling TLS (HTTPS). Don't specify to operate without encryption (the default) |
 
 The following can be supplied as environment variables:
 
@@ -634,6 +635,36 @@ The following can be supplied as environment variables:
 | Production | SERVER_PRODUCTION | 
 | Timeout | SERVER_TIMEOUT |
 | Gzip | SERVER_GZIP |
+
+### Encryption
+
+Configures how encryption should be applied to the server.  
+
+There are two main ways this can work:
+1. With a pre-supplied certificate and keyfile
+2. Via [Let's Encrypt](https://letsencrypt.org/how-it-works/) (ACME) using Go's built-in autocert module
+
+If a certificate and keyfile are supplied the server will utilize option 1, otherwise it'll fallback to option 2. If you don't want to utilize encryption (for example you have TLS termination handled externally) simply omit `Server.Encrypt`
+
+Configuration options:
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| Domain | string | Yes | None | The domain name you're operating with (the domain end-users use) |
+| Cache | string | No | ./certs | The path to a directory to cache certificates in if using let's encrypt. 
+| Certificate | string | None | The file path to the TLS certificate
+| KeyFile | string | None | The file path to the keyfile
+| HttpPort | int | No | None |The port used for non-encrypted traffic. Required if using Let's Encrypt to provide for the ACME challenge, in which case this needs to indirectly be 80 (that is, this can be set to e.g. 8080 if something ahead of this redirects 80 to 8080). Everything except .well-known will be redirected to the main port when set. |
+
+The following can be supplied as environment variables:
+
+| Configuration Parameter | Environment Variable |
+| --- | --- |
+| Domain | SERVER_ENCRYPT_DOMAIN |
+| Cache | SERVER_ENCRYPT_CACHE | 
+| Certificate | SERVER_ENCRYPT_CERTIFICATE | 
+| KeyFile | SERVER_ENCRYPT_KEYFILE | 
+| HttpPort | SERVER_ENCRYPT_HTTPPORT | 
 
 
 ## Client
