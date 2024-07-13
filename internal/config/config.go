@@ -31,6 +31,7 @@ type EncryptionConfig struct {
 	Cache       string //The path to a directory to cache certificates in if using let's encrypt. Defaults to ./certs
 	Certificate string //The file path to get to the TLS certificate
 	KeyFile     string //The file path to get to the keyfile
+	HttpPort    int    //The port used for non-encrypted traffic. Required if using Let's Encrypt for ACME challenge and needs to indirectly be 80 (that is, it could be 8080 if something else redirects 80 to 8080). Everything except .well-known will be redirected to the main port when set.
 }
 
 type ServerConfig struct {
@@ -87,6 +88,7 @@ const (
 // replaced with fully static constants later if it does turn out nobody ever sees value in it
 type ErrorMessages struct {
 	NotAuthorized           string
+	ParamRequired           string
 	InvalidParam            string
 	RangeError              string
 	ServerError             string
@@ -224,6 +226,7 @@ func DefaultConfig() Config {
 				ScriptError:             "The script specified for %v is invalid: %v",
 				OneOfRequired:           "You must specify one of: %v",
 				Timeout:                 "Timeout error",
+				ParamRequired:           "Parameter %v is required",
 			},
 			Images: ErrorImages{
 				OutOfBounds:    images.KeyImageTransparent,
