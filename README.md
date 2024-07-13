@@ -401,6 +401,11 @@ If using a system with SELinux try temporarily disabling SELinux with `sudo sete
 
 As this is a young project any contribution via an Issue or Pull Request is very welcome.
 
-Please try to follow go conventions and the patterns you see elsewhere in the codebase.  Also, please use [semantic](https://gist.github.com/joshbuchea/6f47e86d2510bce28f8e7f42ae84c716) or [conventional](https://www.conventionalcommits.org/en/v1.0.0/) commit messages. If you want to make a fundamental change/refactor please open an Issue for discussion first.  
+A few please and thank yous: 
+
+* Follow [go conventions](https://go.dev/doc/effective_go) and the patterns you see elsewhere in the codebase.  
+* Use [semantic](https://gist.github.com/joshbuchea/6f47e86d2510bce28f8e7f42ae84c716) or [conventional](https://www.conventionalcommits.org/en/v1.0.0/) commit messages. 
+* Open an issue for discussion before making large, fundamental change/refactors
+* Ensure you add tests. You can use `make coverage` to ensure you're not dropping coverage.
 
 Very niche providers might be declined. Those are best suited as custom providers outside the core platform.
