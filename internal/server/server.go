@@ -16,6 +16,7 @@ package server
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"log/slog"
@@ -37,11 +38,9 @@ import (
 	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/gorilla/handlers"
-)
 
-func handleNoContent(w http.ResponseWriter, req *http.Request) {
-	w.WriteHeader(http.StatusNoContent)
-}
+	_ "unsafe"
+)
 
 type TypeOfError int
 
@@ -120,18 +119,6 @@ func writeError(ctx *internal.RequestContext, w http.ResponseWriter, cfg *config
 	}
 }
 
-type slogContextHandler struct {
-	slog.Handler
-	keys []string
-}
-
-func (h slogContextHandler) Handle(ctx context.Context, r slog.Record) error {
-	for _, k := range h.keys {
-		r.AddAttrs(slog.Attr{Key: strings.ToLower(k), Value: slog.AnyValue(ctx.Value(k))})
-	}
-
-	return h.Handler.Handle(ctx, r)
-}
 func configureMainLogging(cfg *config.Config) error {
 	if cfg.Logging.Main.Console || len(cfg.Logging.Main.Path) > 0 {
 		var out io.Writer
@@ -249,29 +236,69 @@ func configureAccessLogging(cfg config.AccessConfig, errorMessages config.ErrorM
 	return rootHandler, nil
 }
 
-type httpContextHandler struct {
-	http.Handler
-	errCfg config.ErrorConfig
-}
+//go:linkname defaultCipherSuites crypto/tls.cipherSuitesPreferenceOrder
+var defaultCipherSuites []uint16
 
-func (h httpContextHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	reqC := internal.NewRequestContext(req)
-	defer func() {
-		if err := recover(); err != nil {
-			slog.ErrorContext(&reqC, "Unexpected panic: "+fmt.Sprint(err))
-			writeError(&reqC, w, &h.errCfg, TypeOfErrorOther, "Unexpected Internal Server Error", "stack", string(debug.Stack()))
+//go:linkname disabledCipherSuites crypto/tls.disabledCipherSuites
+var disabledCipherSuites map[uint16]bool
+
+//go:linkname rsaKexCiphers crypto/tls.rsaKexCiphers
+var rsaKexCiphers map[uint16]bool
+
+// Update the TLS config for our HTTPS server with the config supplied by the operator
+func configureTls(tlsConfig *tls.Config, encryptConfig *config.EncryptionConfig, errorMessages config.ErrorMessages) error {
+	if encryptConfig == nil {
+		return nil
+	}
+
+	if encryptConfig.MinTLS != "" {
+		switch encryptConfig.MinTLS {
+		case "1.0":
+			tlsConfig.MinVersion = tls.VersionTLS10
+		case "1.1":
+			tlsConfig.MinVersion = tls.VersionTLS11
+		case "1.2":
+			tlsConfig.MinVersion = tls.VersionTLS12
+		case "1.3":
+			tlsConfig.MinVersion = tls.VersionTLS13
+		default:
+			return fmt.Errorf(errorMessages.EnumError, "server.encrypt.mintls", tlsConfig.MinVersion, []string{"1.0", "1.1", "1.2", "1.3"})
 		}
-	}()
+	}
 
-	h.Handler.ServeHTTP(w, req.WithContext(&reqC))
-}
+	if encryptConfig.DisableCiphers != nil && len(encryptConfig.DisableCiphers) > 0 {
+		slog.DebugContext(internal.BackgroundContext(), fmt.Sprintf("Disabling the following cipher Names: %v", encryptConfig.DisableCiphers))
 
-type httpRedirectHandler struct {
-	protoAndHost string
-}
+		allSuites := slices.Concat(tls.InsecureCipherSuites(), tls.CipherSuites())
+		disableIds := make([]uint16, 0)
+		for _, name := range encryptConfig.DisableCiphers {
+			found := false
+			for _, suite := range allSuites {
+				if suite != nil && name == suite.Name {
+					disableIds = append(disableIds, suite.ID)
+					found = true
+				}
+			}
+			if !found {
+				return fmt.Errorf(errorMessages.InvalidParam, "server.encrypt.disableciphers", name)
+			}
+		}
 
-func (h httpRedirectHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	http.Redirect(w, req, h.protoAndHost+req.RequestURI, http.StatusMovedPermanently)
+		slog.DebugContext(internal.BackgroundContext(), fmt.Sprintf("Disabling the following cipher IDs: %v", disableIds))
+
+		enabledSuiteIds := make([]uint16, 0)
+		for _, id := range defaultCipherSuites {
+			if !slices.Contains(disableIds, id) && !disabledCipherSuites[id] && !rsaKexCiphers[id] {
+				enabledSuiteIds = append(enabledSuiteIds, id)
+			}
+		}
+
+		slog.DebugContext(internal.BackgroundContext(), fmt.Sprintf("Using the following ciphers: %v", enabledSuiteIds))
+
+		tlsConfig.CipherSuites = enabledSuiteIds
+	}
+
+	return nil
 }
 
 func ListenAndServe(config *config.Config, layerGroup *layers.LayerGroup, auth authentication.Authentication) error {
@@ -345,6 +372,11 @@ func ListenAndServe(config *config.Config, layerGroup *layers.LayerGroup, auth a
 					go http.ListenAndServe(httpHostPort, httpRedirectHandler{protoAndHost: "https://" + config.Server.Encrypt.Domain})
 				}
 
+				err := configureTls(srv.TLSConfig, config.Server.Encrypt, config.Error.Messages)
+				if err != nil {
+					srvErr <- err
+				}
+
 				srvErr <- srv.ListenAndServeTLS(config.Server.Encrypt.Certificate, config.Server.Encrypt.KeyFile)
 			} else {
 				//Let's Encrypt workflow
@@ -359,11 +391,16 @@ func ListenAndServe(config *config.Config, layerGroup *layers.LayerGroup, auth a
 					Cache:      autocert.DirCache(cacheDir),
 				}
 
+				srv.TLSConfig = certManager.TLSConfig()
+
+				err := configureTls(srv.TLSConfig, config.Server.Encrypt, config.Error.Messages)
+				if err != nil {
+					srvErr <- err
+				}
+
 				if httpPort != 0 {
 					go http.ListenAndServe(httpHostPort, certManager.HTTPHandler(nil))
 				}
-
-				srv.TLSConfig = certManager.TLSConfig()
 
 				srvErr <- srv.ListenAndServeTLS("", "")
 			}

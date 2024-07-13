@@ -27,11 +27,13 @@ import (
 
 // Configuration for TLS (HTTPS) operation. If this is configured then TLS is enabled. This can operate either with a static certificate and keyfile via the filesystem or via ACME/Let's Encrypt
 type EncryptionConfig struct {
-	Domain      string //The domain name you're operating with (the domain end-users use). Required
-	Cache       string //The path to a directory to cache certificates in if using let's encrypt. Defaults to ./certs
-	Certificate string //The file path to get to the TLS certificate
-	KeyFile     string //The file path to get to the keyfile
-	HttpPort    int    //The port used for non-encrypted traffic. Required if using Let's Encrypt for ACME challenge and needs to indirectly be 80 (that is, it could be 8080 if something else redirects 80 to 8080). Everything except .well-known will be redirected to the main port when set.
+	Domain         string   //The domain name you're operating with (the domain end-users use). Required
+	Cache          string   //The path to a directory to cache certificates in if using let's encrypt. Defaults to ./certs
+	Certificate    string   //The file path to get to the TLS certificate
+	KeyFile        string   //The file path to get to the keyfile
+	HttpPort       int      //The port used for non-encrypted traffic. Required if using Let's Encrypt for ACME challenge and needs to indirectly be 80 (that is, it could be 8080 if something else redirects 80 to 8080). Everything except .well-known will be redirected to the main port when set.
+	DisableCiphers []string //The list of TLS ciphers to disable. The enabled Cipher list follows Go defaults, this allows you to suppress specific ones that might be considered too weak
+	MinTLS         string   //Disable TLS below this version. Defaults to 1.2
 }
 
 type ServerConfig struct {
