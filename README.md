@@ -1,5 +1,5 @@
 # tilegroxy    
-[![Docker Image CI](https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml/badge.svg)](https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml) [![Go Report Card](https://goreportcard.com/badge/michad/tilegroxy)](https://goreportcard.com/report/michad/tilegroxy) ![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/michad/d1b9e082f6608635494188d0f52bae69/raw/coverage.json) [![Libyears](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/michad/d1b9e082f6608635494188d0f52bae69/raw/libyears.json)](https://libyear.com/)    
+[![Docker Image CI](https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml/badge.svg)](https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml) [![Go Report Card](https://goreportcard.com/badge/michad/tilegroxy)](https://goreportcard.com/report/michad/tilegroxy) [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/9066/badge)](https://www.bestpractices.dev/projects/9066) ![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/michad/d1b9e082f6608635494188d0f52bae69/raw/coverage.json) [![Libyears](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/michad/d1b9e082f6608635494188d0f52bae69/raw/libyears.json)](https://libyear.com/)    
 ![Go Version](https://img.shields.io/github/go-mod/go-version/michad/tilegroxy) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md) 
 
 Tilegroxy lives between your map and your mapping providers to deliver a consistent, cached API for all your layers. 
@@ -401,6 +401,11 @@ If using a system with SELinux try temporarily disabling SELinux with `sudo sete
 
 As this is a young project any contribution via an Issue or Pull Request is very welcome.
 
-Please try to follow go conventions and the patterns you see elsewhere in the codebase.  Also, please use [semantic](https://gist.github.com/joshbuchea/6f47e86d2510bce28f8e7f42ae84c716) or [conventional](https://www.conventionalcommits.org/en/v1.0.0/) commit messages. If you want to make a fundamental change/refactor please open an Issue for discussion first.  
+A few please and thank yous: 
+
+* Follow [go conventions](https://go.dev/doc/effective_go) and the patterns you see elsewhere in the codebase.  
+* Use [semantic](https://gist.github.com/joshbuchea/6f47e86d2510bce28f8e7f42ae84c716) or [conventional](https://www.conventionalcommits.org/en/v1.0.0/) commit messages. 
+* Open an issue for discussion before making large, fundamental change/refactors
+* Ensure you add tests. You can use `make coverage` to ensure you're not dropping coverage.
 
 Very niche providers might be declined. Those are best suited as custom providers outside the core platform.
