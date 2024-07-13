@@ -142,7 +142,7 @@ func configureMainLogging(cfg *config.Config) error {
 			}
 
 			if cfg.Logging.Main.Console {
-				out = io.MultiWriter(os.Stdout, out)
+				out = io.MultiWriter(os.Stdout, logFile)
 			} else {
 				out = logFile
 			}
@@ -227,7 +227,7 @@ func configureAccessLogging(cfg config.AccessConfig, errorMessages config.ErrorM
 			}
 
 			if cfg.Console {
-				out = io.MultiWriter(os.Stdout, out)
+				out = io.MultiWriter(os.Stdout, logFile)
 			} else {
 				out = logFile
 			}
