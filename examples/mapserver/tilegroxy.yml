@@ -4,7 +4,8 @@ layers:
   # Put this last so anything more specific will match first
   - id: mapserver_layers 
     pattern: {file}_{layer}
-    patternValidation: "^[a-zA-Z0-9\-]+$" #It's highly recommended you utilize as strict a validation pattern as possible
+    paramValidator: 
+      "*": "^[a-zA-Z0-9\-]+$" #It's highly recommended you utilize as strict a validation pattern as possible
     provider:
       # The CGI provider can work with any CGI executable that generates tiles. Mapserver is the primary example
       name: cgi
@@ -18,3 +19,4 @@ layers:
       #The http path and query string to use for requests supplied to the CGI executable. Should be a template that includes variables simple to the Proxy provider
       uri: "/?QUERY_STRING=map=mapfiles/{layer.file}.map&MODE=tile&TILEMODE=gmap&TILE={x}+{y}+{z}&TILESIZE={size}"
       headers:
+        Accept: image/png
