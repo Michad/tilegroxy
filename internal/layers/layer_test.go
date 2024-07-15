@@ -128,3 +128,64 @@ func Test_MatchPattern(t *testing.T) {
 	assert.False(t, doesMatch)
 	assert.Equal(t, 0, len(matches))
 }
+
+func Test_ValidateMatches(t *testing.T) {
+	matches := make(map[string]string)
+	rules := make(map[string]string)
+
+	matches["test1"] = "allLetters"
+	matches["test2"] = "letters4ndn4mb3r5"
+
+	rules["*"] = "[a-zA-Z0-9]*"
+
+	regex, err := constructValidation(rules)
+	assert.NoError(t, err)
+	assert.True(t, validateParamMatches(matches, regex))
+
+	rules["*"] = "^[a-zA-Z0-9]*$"
+
+	regex, err = constructValidation(rules)
+	assert.NoError(t, err)
+	assert.True(t, validateParamMatches(matches, regex))
+
+	rules["*"] = "[a-zA-Z]*"
+	regex, err = constructValidation(rules)
+	assert.NoError(t, err)
+	assert.False(t, validateParamMatches(matches, regex))
+
+	delete(rules, "*")
+	regex, err = constructValidation(rules)
+	assert.NoError(t, err)
+	assert.True(t, validateParamMatches(matches, regex))
+
+	regex, err = constructValidation(nil)
+	assert.NoError(t, err)
+	assert.True(t, validateParamMatches(matches, regex))
+
+	rules["test1"] = "[a-zA-Z]*"
+	regex, err = constructValidation(rules)
+	assert.NoError(t, err)
+	assert.True(t, validateParamMatches(matches, regex))
+
+	rules["test1"] = "a"
+	regex, err = constructValidation(rules)
+	assert.NoError(t, err)
+	assert.False(t, validateParamMatches(matches, regex))
+
+	rules["test1"] = "[a-zA-Z]*"
+	rules["test2"] = "[a-zA-Z0-9]*"
+	regex, err = constructValidation(rules)
+	assert.NoError(t, err)
+	assert.True(t, validateParamMatches(matches, regex))
+
+	rules["*"] = "aaa"
+	regex, err = constructValidation(rules)
+	assert.NoError(t, err)
+	assert.False(t, validateParamMatches(matches, regex))
+
+	delete(rules, "*")
+	rules["test3"] = ".+"
+	regex, err = constructValidation(rules)
+	assert.NoError(t, err)
+	assert.False(t, validateParamMatches(matches, regex))
+}

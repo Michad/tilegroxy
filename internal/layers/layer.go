@@ -17,6 +17,7 @@ package layers
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 	"sync"
@@ -33,7 +34,7 @@ type layerSegment struct {
 }
 
 // Utility method that prepends with checking for dupe segments and propagating errors along
-func app(arr []layerSegment, new layerSegment, errs error) ([]layerSegment, error) {
+func prependLayerSegment(arr []layerSegment, new layerSegment, errs error) ([]layerSegment, error) {
 	if new.placeholder {
 		if len(arr) > 0 && arr[0].placeholder {
 			errs = errors.Join(errs, errors.New("placeholders without separators"))
@@ -61,12 +62,12 @@ func parsePattern(pattern string) ([]layerSegment, error) {
 	if firstOpening > 0 {
 		seg := layerSegment{value: pattern[0:firstOpening], placeholder: false}
 		next, err := parsePattern(pattern[firstOpening:])
-		return app(next, seg, err)
+		return prependLayerSegment(next, seg, err)
 	} else if firstOpening == 0 {
 		if firstClosing > 0 {
 			seg := layerSegment{value: pattern[1:firstClosing], placeholder: true}
 			next, err := parsePattern(pattern[firstClosing+1:])
-			return app(next, seg, err)
+			return prependLayerSegment(next, seg, err)
 		} else {
 			return []layerSegment{{value: pattern[1:], placeholder: true}}, errors.New("missing }")
 		}
@@ -106,9 +107,59 @@ func match(segments []layerSegment, str string) (bool, map[string]string) {
 	return true, matches
 }
 
+func constructValidation(raw map[string]string) (map[string]*regexp.Regexp, error) {
+	if raw == nil {
+		return nil, nil
+	}
+
+	res := make(map[string]*regexp.Regexp)
+	errs := make([]error, 0)
+
+	for k, v := range raw {
+		var err error
+		if v[0] != '^' {
+			v = "^" + v
+		}
+		if v[len(v)-1] != '$' {
+			v = v + "$"
+		}
+		fmt.Println(v)
+
+		res[k], err = regexp.Compile(v)
+
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	return res, errors.Join(errs...)
+}
+
+func validateParamMatches(values map[string]string, regexp map[string]*regexp.Regexp) bool {
+	if regexp == nil {
+		return true
+	}
+
+	for k, r := range regexp {
+		if k == "*" {
+			for _, v := range values {
+				if !r.MatchString(v) {
+					return false
+				}
+			}
+		}
+		if !r.MatchString(values[k]) {
+			return false
+		}
+	}
+
+	return true
+}
+
 type Layer struct {
 	Id              string
 	Pattern         []layerSegment
+	ParamValidator  map[string]*regexp.Regexp
 	Config          config.LayerConfig
 	Provider        Provider
 	Cache           caches.Cache
@@ -139,7 +190,16 @@ func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.Cli
 		segments = []layerSegment{{value: rawConfig.Id, placeholder: false}}
 	}
 
-	return &Layer{rawConfig.Id, segments, rawConfig, provider, nil, errorMessages, ProviderContext{}, sync.Mutex{}}, nil
+	var validator map[string]*regexp.Regexp
+
+	if rawConfig.Pattern != "" && rawConfig.ParamValidator != nil {
+		validator, err = constructValidation(rawConfig.ParamValidator)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &Layer{rawConfig.Id, segments, validator, rawConfig, provider, nil, errorMessages, ProviderContext{}, sync.Mutex{}}, nil
 }
 
 func (l *Layer) authWithProvider(ctx *internal.RequestContext) error {
@@ -154,6 +214,19 @@ func (l *Layer) authWithProvider(ctx *internal.RequestContext) error {
 	}
 
 	return err
+}
+
+func (l *Layer) MatchesName(ctx *internal.RequestContext, layerName string) bool {
+
+	if doesMatch, matches := match(l.Pattern, layerName); doesMatch {
+		if validateParamMatches(matches, l.ParamValidator) {
+
+			ctx.LayerPatternMatches = matches
+			return true
+		}
+	}
+
+	return false
 }
 
 func (l *Layer) RenderTileNoCache(ctx *internal.RequestContext, tileRequest internal.TileRequest) (*internal.Image, error) {

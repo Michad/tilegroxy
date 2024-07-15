@@ -49,8 +49,7 @@ func ConstructLayerGroup(cfg config.Config, layers []config.LayerConfig, cache c
 
 func (lg LayerGroup) FindLayer(ctx *internal.RequestContext, layerName string) *Layer {
 	for _, l := range lg.layers {
-		if doesMatch, matches := match(l.Pattern, layerName); doesMatch {
-			ctx.LayerPatternMatches = matches
+		if l.MatchesName(ctx, layerName) {
 			return l
 		}
 	}
