@@ -5,7 +5,7 @@ layers:
   - id: mapserver_layers 
     pattern: "{file}_{layer}"
     paramValidator: 
-      "*": '^[a-zA-Z0-9\-]+$' #It's highly recommended you utilize as strict a validation pattern as possible
+      "*": '^[a-zA-Z0-9\-]+$' #It's highly recommended you utilize as strict a validation pattern as possible to prevent attack vectors
     provider:
       # The CGI provider can work with any CGI executable that generates tiles. Mapserver is the primary example
       name: cgi
