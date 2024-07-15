@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<!-- https://leafletjs.com/examples/quick-start/example-basic.html -->
+	<base target="_top">
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Quick Start - Leaflet</title>
+	<link rel="shortcut icon" type="image/x-icon" href="docs/images/favicon.ico" />
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+		integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+		integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+	<script src="https://cdn.jsdelivr.net/npm/leaflet-vector-tile-layer@0.16.1/dist/VectorTileLayer.umd.min.js"></script>	
+	<style>
+		html,
+		body {
+			height: 100%;
+			margin: 0;
+		}
+
+		.leaflet-container {
+			height: 400px;
+			width: 600px;
+			max-width: 100%;
+			max-height: 100%;
+		}
+	</style>
+</head>
+
+<body>
+	<div id="map" style="width: 600px; height: 400px;"></div>
+	<script>
+		const map = L.map('map').setView([44, -86], 13);
+
+		L.tileLayer('http://localhost:8080/tiles/states_all/{z}/{x}/{y}', {
+			maxZoom: 19,
+			attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+		}).addTo(map);
+
+		function onMapClick(e) {
+    		alert("You clicked on " + JSON.stringify(e.layer.feature.properties, null, 2));
+		}
+
+		VectorTileLayer('http://localhost:8080/tiles/mvt_states_all/{z}/{x}/{y}', {
+			maxZoom: 19,
+			attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+			style: {
+				interactive: true,
+				fill: true,
+				fillOpacity: 0.0,
+				stroke: false
+			}
+		}).addTo(map).on('click', onMapClick);
+
+
+	</script>
+</body>
+
+</html>

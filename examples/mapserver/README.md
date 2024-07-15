@@ -10,6 +10,8 @@ The requirement for using this setup is that you have MapServer installed on the
 
 `mapserver.conf` is the main MapServer configuration file (newly made required as of MapServer 8.0+)
 
+`index.html` is a leaflet map that demos the map from mapserver served up through tilegroxy. It includes the styling of mapserver as PNG tiles in one layer and then a transparent vector tile layer above it to add in interactivity without needing any clients-side styling rules. 
+
 `mapfiles` is a directory containing example .map files. 
 
 `data` is a directory containing a shapefile used by the example mapfiles. These files come from the US Census therefore is open data 

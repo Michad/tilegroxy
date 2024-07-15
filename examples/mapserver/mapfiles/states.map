@@ -25,6 +25,10 @@ MAP
       "init=epsg:4269"
     END
 
+    METADATA
+      "gml_include_items" "all"
+    END
+
     CLASSITEM    "NAME"
     CLASS
       EXPRESSION 'Nebraska'
