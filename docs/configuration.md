@@ -35,7 +35,7 @@ Configuration options:
 | id | string | Yes | None | A url-safe identifier of the layer. Primarily used as the default path for incoming tile web requests |
 | pattern | string | No | id | A url-safe pattern with non-subsequent placeholders |
 | provider | Provider | Yes | None | See below |
-| overrideclient | Client | No | None | A Client configuration to use for this layer specifically that overrides the Client from the top-level of the configuration. See below for Client schema | 
+| client | Client | No | None | A Client configuration to use for this layer specifically that overrides the Client from the top-level of the configuration. See below for Client schema | 
 | skipcache | bool | No | false | If true, skip reading and writing to cache |
 
 ## Provider
