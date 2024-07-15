@@ -72,6 +72,13 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig config.Cli
 			return nil, err
 		}
 		return ConstructStatic(config, clientConfig, errorMessages)
+	} else if rawConfig["name"] == "cgi" {
+		var config CGIConfig
+		err := mapstructure.Decode(rawConfig, &config)
+		if err != nil {
+			return nil, err
+		}
+		return ConstructCGI(config, clientConfig, errorMessages)
 	} else if rawConfig["name"] == "ref" {
 		var config RefConfig
 		err := mapstructure.Decode(rawConfig, &config)

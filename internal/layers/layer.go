@@ -123,7 +123,6 @@ func constructValidation(raw map[string]string) (map[string]*regexp.Regexp, erro
 		if v[len(v)-1] != '$' {
 			v = v + "$"
 		}
-		fmt.Println(v)
 
 		res[k], err = regexp.Compile(v)
 
@@ -147,8 +146,7 @@ func validateParamMatches(values map[string]string, regexp map[string]*regexp.Re
 					return false
 				}
 			}
-		}
-		if !r.MatchString(values[k]) {
+		} else if !r.MatchString(values[k]) {
 			return false
 		}
 	}

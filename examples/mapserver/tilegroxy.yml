@@ -3,20 +3,20 @@ cache:
 layers:
   # Put this last so anything more specific will match first
   - id: mapserver_layers 
-    pattern: {file}_{layer}
+    pattern: "{file}_{layer}"
     paramValidator: 
-      "*": "^[a-zA-Z0-9\-]+$" #It's highly recommended you utilize as strict a validation pattern as possible
+      "*": '^[a-zA-Z0-9\-]+$' #It's highly recommended you utilize as strict a validation pattern as possible
     provider:
       # The CGI provider can work with any CGI executable that generates tiles. Mapserver is the primary example
       name: cgi
+      textAsError: true
       # The filepath to the compiled CGI executable (no arguments)
-      exec: mapserv
-      # An array of arguments to supply to the executable
-      args:
-        - "-conf"
-        - "mapserver.conf" # Mapserver 8.0+ requires a configuration file. It's a good idea to use it to limit the mapfiles that can be used as defense-in-depth protection to avoid the risk of being able to explore the filesystem by passing in an invalid layername (e.g. ../../etc/passwd)
-        - "-nh" # We don't use the headers that come back, so no need to include them
+      exec: /usr/bin/mapserv
+      workingDir: /repos/tilegroxy/examples/mapserver
       #The http path and query string to use for requests supplied to the CGI executable. Should be a template that includes variables simple to the Proxy provider
-      uri: "/?QUERY_STRING=map=mapfiles/{layer.file}.map&MODE=tile&TILEMODE=gmap&TILE={x}+{y}+{z}&TILESIZE={size}"
+      uri: "/?map=mapfiles/{layer.file}.map&MODE=tile&layers=all&TILEMODE=gmap&TILE={x}+{y}+{z}&TILESIZE=512+512"
       headers:
         Accept: image/png
+      env:
+        # Mapserver 8.0+ requires a configuration file. It's a good idea to use it to limit the mapfiles that can be used as defense-in-depth protection to avoid the risk of being able to explore the filesystem by passing in an invalid layername (e.g. ../../etc/passwd)
+        MAPSERVER_CONFIG_FILE: "/repos/tilegroxy/examples/mapserver/mapserver.conf"
