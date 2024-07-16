@@ -28,15 +28,34 @@ A layer represents a distinct mapping layer as would be displayed in a typical w
 
 The URLs of incoming requests follow a format like: `/tiles/{layerName}/{z}/{x}/{y}` the layer name can be one of two things: 1) the ID of the layer or 2) A string that matches a pattern.  A pattern should include non-subsequent placeholder values wrapped in curly braces. Those placeholder values can be used in certain providers, such as the Proxy provider where they can be forwarded along to the upstream map layer. To understand how you can utilize patterns, see the [NOAA Post-Storm example](../examples/configurations/noaa_post_storm.yml)
 
+When using a pattern you can include [Regular Expressions](https://regex101.com/) to validate the values that match against the placeholder. 
+
 Configuration options:
 
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
 | id | string | Yes | None | A url-safe identifier of the layer. Primarily used as the default path for incoming tile web requests |
 | pattern | string | No | id | A url-safe pattern with non-subsequent placeholders |
+| paramValidator | map[string]string | No | None | A mapping of regular expressions to use to validate the values that match against the placeholders. The regular expressions must match the full value. Specify a key of "*" to apply it to all values |
 | provider | Provider | Yes | None | See below |
-| overrideclient | Client | No | None | A Client configuration to use for this layer specifically that overrides the Client from the top-level of the configuration. See below for Client schema | 
+| client | Client | No | None | A Client configuration to use for this layer specifically that overrides the Client from the top-level of the configuration. See below for Client schema | 
 | skipcache | bool | No | false | If true, skip reading and writing to cache |
+
+Example:
+
+```
+layer:
+  id: my_layer
+  pattern: my_{name}_{version}
+  paramValidator:
+    "*": "^[a-zA-Z0-9]+$"
+    "version": "v[0-9]{1,3}"
+  skipCache: true
+  client:
+    userAgent: my_app/1.0
+  provider:
+    ...
+```
 
 ## Provider
 
@@ -288,6 +307,26 @@ provider:
     name: proxy
     url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
 ```
+
+
+### CGI
+
+The CGI provider allows a call-out to an external executable on the local system that's responsible for generating the tile. This allows tilegroxy to act as the HTTP server for a CGI program like Apache httpd or nginx traditionally acts. The flagship use-case for this is to integrate with [MapServer](https://www.mapserver.org). A full example is available in [examples/mapserver](../examples/mapserver/).
+
+Name should be "cgi"
+
+Configuration options:
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| Exec | string | Yes | None | The path to the CGI executable | 
+| Args | []string | No | None | Arguments to pass into the executable in standard "split on spaces" format | 
+| Uri | string | Yes | None | The URI (path + query) to pass into the CGI for the fake request - think mod_rewrite style invocation of the CGI | 
+| Domain | string | No | localhost | The host to pass into the CGI for the fake request | 
+| Headers | map[string][]string | No | None | Extra headers to pass into the CGI with the request | 
+| Env | map[string]string | No | None | Extra environment variables to supply to the CGI invocations. If the value is an empty string it passes along the value from the main tilegroxy invocation | 
+| WorkingDir | string | No | Base dir of exec | Working directory for the CGI invocation | 
+| InvalidAsError | bool | No | false | If true, if the CGI response includes a content type that isn't in the [Client](#client)'s list of acceptable content types then it treats the response body as an error message |
 
 ## Cache
 
