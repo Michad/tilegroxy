@@ -316,13 +316,13 @@ The following types are available for custom providers:
 | Type | Description |
 | --- | --- |
 | [RequestContext](./internal/request_context.go) | Contains contextual information specific to the incoming request. Can retrieve headers via the Value method and authz information if configured properly. Do note there won't be a request when seed and test commands are run, this context will be a "Background Context" at those times |
-| [ProviderContext](./internal/providers/provider.go) | A struct for on the fly, provider-specific information. It is primarily used to facilitate authentication. Includes an Expiration field to inform the application when to re-auth via the preAuth method (this should occur before auth actually expires). Also includes an auth token field, a auth Bypass field (for un-authed usecases), and a map |
+| [ProviderContext](./internal/layers/provider.go) | A struct for on the fly, provider-specific information. It is primarily used to facilitate authentication. Includes an Expiration field to inform the application when to re-auth via the preAuth method (this should occur before auth actually expires). Also includes an auth token field, a auth Bypass field (for un-authed usecases), and a map |
 | [TileRequest](./internal/tile_request.go) | The parameters from the user indicating the layer being requested as well as the specific tile coordinate |
 | [ClientConfig](./internal/config/config.go) | A struct from the configuration which indicates settings such as static headers and timeouts. See `Client` in [Configuration documentation](./docs/configuration.md) for details |
 | [ErrorMessages](./internal/config/config.go) | A struct from the configuration which indicates common error messages. See `Error Messages` in [Configuration documentation](./docs/configuration.md) for details |
-| [Image](./internal/statics.go) | The imagery for a given tile. Currently type mapped to []byte |
-| [AuthError](./internal/providers/provider.go) | An Error type to indicate an upstream provider returned an auth error that should trigger a new call to preAuth |
-| [GetTile](./internal/providers/provider.go) | A utility method that performs an HTTP GET request to a given URL. Use this when possible to ensure all standard Client configurations are honored |
+| [Image](./internal/utility.go) | The imagery for a given tile. Currently type mapped to []byte |
+| [AuthError](./internal/layers/provider.go) | An Error type to indicate an upstream provider returned an auth error that should trigger a new call to preAuth |
+| [GetTile](./internal/layers/provider.go) | A utility method that performs an HTTP GET request to a given URL. Use this when possible to ensure all standard Client configurations are honored |
 
 There is a performance cost of using a custom provider vs a built-in provider. The exact cost depends on the complexity of your provider, however it is typically below 10 milliseconds while tile generation as a whole is usually more than order of magnitude slower. Due to the custom providers being written in Go, it is easy to convert a custom provider to a built-in provider if your use-case is highly performance critical.
 
