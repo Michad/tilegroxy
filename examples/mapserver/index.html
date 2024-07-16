@@ -36,7 +36,6 @@
 
 		L.tileLayer('http://localhost:8080/tiles/states_all/{z}/{x}/{y}', {
 			maxZoom: 19,
-			attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 		}).addTo(map);
 
 		function onMapClick(e) {
@@ -45,7 +44,6 @@
 
 		VectorTileLayer('http://localhost:8080/tiles/mvt_states_all/{z}/{x}/{y}', {
 			maxZoom: 19,
-			attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
 			style: {
 				interactive: true,
 				fill: true,
