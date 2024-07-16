@@ -16,12 +16,14 @@ package layers
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"log/slog"
 	"net/http"
 	"net/http/cgi"
+	"slices"
 	"strings"
 
 	"github.com/Michad/tilegroxy/internal"
@@ -29,18 +31,20 @@ import (
 )
 
 type CGIConfig struct {
-	Exec        string
-	Args        []string
-	Uri         string
-	Headers     map[string]string
-	Env         map[string]string
-	WorkingDir  string
-	TextAsError bool
+	Exec           string              //The path to the CGI executable
+	Args           []string            //Arguments to pass into the executable in standard "split on spaces" format
+	Uri            string              //The URI (path + query) to pass into the CGI for the fake request - think mod_rewrite style invocation of the CGI
+	Domain         string              //The host to pass into the CGI for the fake request. Defaults to localhost
+	Headers        map[string][]string //Extra headers to pass into the CGI for the fake request
+	Env            map[string]string   //Environment variables to supply to the CGI invocations. If the value is an empty string it passes along the value from the main tilegroxy invocation
+	WorkingDir     string              //Working directory for the CGI invocation
+	InvalidAsError bool                //If true, if the CGI response includes a content type that isn't in the Client's list of acceptable content types then it treats the response body as an error message
 }
 
 type CGI struct {
 	CGIConfig
-	handler cgi.Handler
+	handler      cgi.Handler
+	clientConfig config.ClientConfig
 }
 
 type SLogWriter struct {
@@ -56,15 +60,16 @@ func (w SLogWriter) Write(p []byte) (n int, err error) {
 }
 
 type response struct {
-	buff io.Writer
-	code int
+	buff    io.Writer
+	code    int
+	headers map[string][]string
 }
 
 func (r *response) Flush() {
 }
 
 func (r *response) Header() http.Header {
-	return make(http.Header)
+	return r.headers
 }
 
 func (r *response) Write(p []byte) (n int, err error) {
@@ -80,6 +85,18 @@ func ConstructCGI(cfg CGIConfig, clientConfig config.ClientConfig, errorMessages
 	env := make([]string, 0)
 	inheritEnv := make([]string, 0)
 
+	if cfg.Exec == "" {
+		return nil, fmt.Errorf(errorMessages.ParamRequired, "provider.cgi.exec")
+	}
+
+	if cfg.Uri == "" {
+		return nil, fmt.Errorf(errorMessages.ParamRequired, "provider.cgi.uri")
+	}
+
+	if cfg.Domain == "" {
+		cfg.Domain = "localhost"
+	}
+
 	if cfg.Env != nil {
 		for k, v := range cfg.Env {
 			if v == "" {
@@ -90,8 +107,6 @@ func ConstructCGI(cfg CGIConfig, clientConfig config.ClientConfig, errorMessages
 		}
 	}
 
-	log.Println(env)
-
 	h := cgi.Handler{
 		Path:       cfg.Exec,
 		Env:        env,
@@ -100,7 +115,7 @@ func ConstructCGI(cfg CGIConfig, clientConfig config.ClientConfig, errorMessages
 		Dir:        cfg.WorkingDir,
 	}
 
-	return &CGI{cfg, h}, nil
+	return &CGI{cfg, h, clientConfig}, nil
 }
 
 func (t CGI) PreAuth(ctx *internal.RequestContext, providerContext ProviderContext) (ProviderContext, error) {
@@ -125,33 +140,30 @@ func (t CGI) GenerateTile(ctx *internal.RequestContext, providerContext Provider
 		return nil, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "GET", "http://localhost"+uri, nil)
+	slog.DebugContext(ctx, fmt.Sprintf("Calling %v", uri))
+
+	req, err := http.NewRequestWithContext(ctx, "GET", "http://"+t.Domain+uri, nil)
 	if err != nil {
 		return nil, err
 	}
 
+	req.Header = t.Headers
+
 	var buf bytes.Buffer
-	rw := response{&buf, 0}
+	rw := response{&buf, 0, make(map[string][]string)}
 
 	h.ServeHTTP(&rw, req)
 	b := buf.Bytes()
-	// fmt.Printf("Final output %v", b)
-	fmt.Printf("Status: %v \n", rw.code)
-	// if rw.code > 300 {
-	// 	return nil, fmt.Errorf("status code %v", rw.code)
-	// }
 
-	// if t.TextAsError {
-	// 	isText := true
-	// 	for _, c := range b {
-	// 		if c > unicode.MaxASCII {
-	// 			isText = false
-	// 		}
-	// 	}
-	// 	if isText {
-	// 		return nil, errors.New(string(b))
-	// 	}
-	// }
+	slog.DebugContext(ctx, fmt.Sprintf("CGI response - Status: %v Content: %v", rw.code, rw.headers["Content-Type"]))
+
+	if !slices.Contains(t.clientConfig.StatusCodes, rw.code) {
+		return nil, fmt.Errorf("cgi returned status code %v", rw.code)
+	}
+
+	if t.InvalidAsError && !slices.Contains(t.clientConfig.ContentTypes, rw.headers["Content-Type"][0]) {
+		return nil, errors.New(string(b))
+	}
 
 	return &b, nil
 }
