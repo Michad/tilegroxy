@@ -15,7 +15,7 @@ Tilegroxy shines when you consume maps from multiple sources.  It isn't tied to 
 
 ### Features:
 
-* Provide a uniform interface for mapping
+* Provide a uniform interface for serving map layers
 * Proxy to ZXY, WMS, TMS, WMTS, or other protocol map layers
 * Cache tiles in disk, memory, s3, redis, and/or memcached
 * Require authentication using static key, JWT, or custom logic
@@ -23,18 +23,19 @@ Tilegroxy shines when you consume maps from multiple sources.  It isn't tied to 
 * Create your own custom provider to pull in non-standard and proprietary imagery sources
 * Tweak your map layer with 18 standard effects or by providing your own pixel-level logic
 * Combine multiple map layers with adjustable rules and blending methods
-* Generic support for any content type (raster or vector)
-* Configurable timeout, logging, and error handling rules
+* Act as an HTTP server for [MapServer](https://www.mapserver.org) and any other CGI application that generates tiles
 * Commands for seeding and testing your layers
+* Support for both raster and vector format tiles
 * Run as HTTPS including Let's Encrypt support
+* Configurable timeout, logging, and error handling rules
+* Override configuration via environment variables to enable IaC/CaC
 * Container deployment
 
 The following are on the roadmap and expected before a 1.0 release:
 
-* Proxy map layers directly to local providers such as Mapnik, Mapserver 
 * Providers that composite/modify vector layers formats such as [MVT](https://github.com/mapbox/vector-tile-spec) or tiled GeoJSON
 * OpenTelemetry support
-* Support for external secret stores such as AWS Secrets Manager to avoid secrets in the configuration
+* Support for external secret stores such as AWS Secrets Manager
 
 
 
