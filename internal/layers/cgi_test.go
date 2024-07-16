@@ -46,7 +46,7 @@ func Test_CGI_Mapserv(t *testing.T) {
 
 	cfg := CGIConfig{
 		Exec: "test_files/mapserv_via_docker.sh",
-		Uri:  "/?map=mapfiles/{layer.file}.map&MODE=tile&layers={layer.layer}&TILEMODE=gmap&TILE={x}+{y}+{z}",
+		Uri:  "?map=mapfiles/{layer.file}.map&MODE=tile&layers={layer.layer}&TILEMODE=gmap&TILE={x}+{y}+{z}",
 		Env:  env,
 	}
 

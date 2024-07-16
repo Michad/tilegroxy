@@ -66,6 +66,7 @@ type response struct {
 }
 
 func (r *response) Flush() {
+	// notest
 }
 
 func (r *response) Header() http.Header {
