@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 
-REPOROOT=../../../
+REPOROOT=$(realpath ../../../)
 BASE=$REPOROOT/examples/mapserver
 
 if [ -f $REPOROOT/.env ]; then
