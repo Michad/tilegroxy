@@ -302,14 +302,7 @@ layers:
 	}
 }
 
-func Test_ServeCommand_RemoteProvider(t *testing.T) {
-	exitStatus = -1
-	rootCmd.ResetFlags()
-	serveCmd.ResetFlags()
-	initRoot()
-	initServe()
-
-	ctx := context.Background()
+func setupEtcd(ctx context.Context) (testcontainers.Container, error) {
 
 	p, _ := nat.NewPort("tcp", "2379")
 	etcdReq := testcontainers.ContainerRequest{
@@ -324,10 +317,39 @@ func Test_ServeCommand_RemoteProvider(t *testing.T) {
 		},
 	}
 
-	etcdC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+	return testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: etcdReq,
 		Started:          true,
 	})
+}
+
+func Test_ServeCommand_RemoteProvider(t *testing.T) {
+	exitStatus = -1
+	rootCmd.ResetFlags()
+	serveCmd.ResetFlags()
+	initRoot()
+	initServe()
+
+	ctx := context.Background()
+
+	var endpoint string
+	var etcdC testcontainers.Container
+	var err error
+
+	for i := 0; i < 3; i++ {
+		etcdC, err = setupEtcd(ctx)
+		time.Sleep(time.Second)
+		if err == nil {
+			endpoint, err = etcdC.Endpoint(ctx, "")
+		}
+		if err == nil && etcdC != nil {
+			break
+		}
+		if etcdC != nil {
+			etcdC.Terminate(ctx)
+		}
+	}
+
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -342,8 +364,6 @@ layers:
       name: static
       color: "FFFFFF"
 `
-	endpoint, err := etcdC.Endpoint(ctx, "")
-	assert.NoError(t, err)
 
 	fmt.Println("Running on " + endpoint)
 
