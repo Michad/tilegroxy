@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build !no_aws
+
 package secrets
 
 import (
@@ -48,7 +50,18 @@ type AWSSecretsManager struct {
 	cache  *otter.Cache[string, string]
 }
 
-func ConstructAWSSecretsManagerConfig(cfg AWSSecretsManagerConfig, errorMessages config.ErrorMessages) (*AWSSecretsManager, error) {
+type AWSSecretsManagerSecreter struct {
+}
+
+func (s AWSSecretsManagerSecreter) InitializeConfig() AWSSecretsManagerConfig {
+	return AWSSecretsManagerConfig{}
+}
+
+func init() {
+	RegisterSecreter[AWSSecretsManagerConfig]("awssecretsmanager", AWSSecretsManagerSecreter{})
+}
+
+func (s AWSSecretsManagerSecreter) InitializeSecreter(cfg AWSSecretsManagerConfig, errorMessages config.ErrorMessages) (Secreter, error) {
 	if cfg.Separator == "" {
 		cfg.Separator = ":"
 	}

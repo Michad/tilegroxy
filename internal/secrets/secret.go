@@ -22,24 +22,51 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+type SecreterRegistration[T any] interface {
+	InitializeConfig() T
+	InitializeSecreter(config T, errorMessages config.ErrorMessages) (Secreter, error)
+}
+
 type Secreter interface {
 	Lookup(ctx *internal.RequestContext, key string) (string, error)
 }
 
-func ConstructSecreter(rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (Secreter, error) {
+var registrations map[string]interface{} = make(map[string]interface{})
 
+func RegisterSecreter[T any](name string, reg SecreterRegistration[T]) {
+	registrations[name] = reg
+}
+
+func ConstructSecreter(rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (Secreter, error) {
 	rawConfig = internal.ReplaceEnv(rawConfig)
 
-	if rawConfig["name"] == "awssecretsmanager" {
-		var config AWSSecretsManagerConfig
-		err := mapstructure.Decode(rawConfig, &config)
-		if err != nil {
-			return nil, err
-		}
+	name, ok := rawConfig["name"].(string)
 
-		return ConstructAWSSecretsManagerConfig(config, errorMessages)
+	if ok {
+		regAny, ok := registrations[name]
+		if ok {
+			reg, ok := regAny.(SecreterRegistration[any])
+			if ok {
+				cfg := reg.InitializeConfig()
+				err := mapstructure.Decode(rawConfig, &cfg)
+				if err != nil {
+					return nil, err
+				}
+				return reg.InitializeSecreter(cfg, errorMessages)
+			}
+		}
 	}
 
-	name := fmt.Sprintf("%#v", rawConfig["name"])
-	return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.name", name)
+	// if rawConfig["name"] == "awssecretsmanager" {
+	// 	var config AWSSecretsManagerConfig
+	// 	err := mapstructure.Decode(rawConfig, &config)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+
+	// 	return ConstructAWSSecretsManagerConfig(config, errorMessages)
+	// }
+
+	nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
+	return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.name", nameCoerce)
 }
