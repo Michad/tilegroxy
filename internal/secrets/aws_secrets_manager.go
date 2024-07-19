@@ -90,7 +90,8 @@ func ConstructAWSSecretsManagerConfig(cfg AWSSecretsManagerConfig, errorMessages
 	return &AWSSecretsManager{cfg, svc, nil}, nil
 }
 
-func (s AWSSecretsManager) Lookup(ctx *internal.RequestContext, key string) (string, error) {
+func (s AWSSecretsManager) Lookup(key string) (string, error) {
+	ctx := internal.BackgroundContext()
 	keySplit := strings.Split(key, s.Separator)
 
 	secretName := keySplit[0]

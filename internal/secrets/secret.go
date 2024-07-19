@@ -17,20 +17,24 @@ package secrets
 import (
 	"fmt"
 
-	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/config"
 	"github.com/mitchellh/mapstructure"
 )
 
 type Secreter interface {
-	Lookup(ctx *internal.RequestContext, key string) (string, error)
+	Lookup(key string) (string, error)
 }
 
 func ConstructSecreter(rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (Secreter, error) {
+	if rawConfig["name"] == "none" {
+		var config NoopConfig
+		err := mapstructure.Decode(rawConfig, &config)
+		if err != nil {
+			return nil, err
+		}
 
-	rawConfig = internal.ReplaceEnv(rawConfig)
-
-	if rawConfig["name"] == "awssecretsmanager" {
+		return ConstructNoopConfig(config, errorMessages)
+	} else if rawConfig["name"] == "awssecretsmanager" {
 		var config AWSSecretsManagerConfig
 		err := mapstructure.Decode(rawConfig, &config)
 		if err != nil {
