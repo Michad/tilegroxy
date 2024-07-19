@@ -19,40 +19,30 @@ import (
 
 	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
 	"github.com/mitchellh/mapstructure"
 )
 
-type SecreterRegistration[T any] interface {
-	InitializeConfig() T
-	InitializeSecreter(config T, errorMessages config.ErrorMessages) (Secreter, error)
-}
-
-type Secreter interface {
+type Secreter[C any] interface {
 	Lookup(ctx *internal.RequestContext, key string) (string, error)
 }
 
-var registrations map[string]interface{} = make(map[string]interface{})
-
-func RegisterSecreter[T any](name string, reg SecreterRegistration[T]) {
-	registrations[name] = reg
-}
-
-func ConstructSecreter(rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (Secreter, error) {
+func ConstructSecreter[C any](rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (*Secreter[C], error) {
 	rawConfig = internal.ReplaceEnv(rawConfig)
 
 	name, ok := rawConfig["name"].(string)
 
 	if ok {
-		regAny, ok := registrations[name]
+		regAny, ok := pkg.Registration[C, Secreter[C]](pkg.EntitySecret, name)
 		if ok {
-			reg, ok := regAny.(SecreterRegistration[any])
+			reg, ok := regAny.(pkg.EntityRegistration[C, Secreter[C]])
 			if ok {
 				cfg := reg.InitializeConfig()
 				err := mapstructure.Decode(rawConfig, &cfg)
 				if err != nil {
 					return nil, err
 				}
-				return reg.InitializeSecreter(cfg, errorMessages)
+				return reg.Initialize(cfg, errorMessages)
 			}
 		}
 	}

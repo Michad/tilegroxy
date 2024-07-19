@@ -23,6 +23,7 @@ import (
 
 	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
 	"github.com/maypok86/otter"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -50,6 +51,10 @@ type AWSSecretsManager struct {
 	cache  *otter.Cache[string, string]
 }
 
+func init() {
+	pkg.Register(pkg.EntitySecret, AWSSecretsManagerSecreter{})
+}
+
 type AWSSecretsManagerSecreter struct {
 }
 
@@ -57,11 +62,11 @@ func (s AWSSecretsManagerSecreter) InitializeConfig() AWSSecretsManagerConfig {
 	return AWSSecretsManagerConfig{}
 }
 
-func init() {
-	RegisterSecreter[AWSSecretsManagerConfig]("awssecretsmanager", AWSSecretsManagerSecreter{})
+func (s AWSSecretsManagerSecreter) Name() string {
+	return "awssecretsmanager"
 }
 
-func (s AWSSecretsManagerSecreter) InitializeSecreter(cfg AWSSecretsManagerConfig, errorMessages config.ErrorMessages) (Secreter, error) {
+func (s AWSSecretsManagerSecreter) Initialize(cfg AWSSecretsManagerConfig, errorMessages config.ErrorMessages) (*AWSSecretsManager, error) {
 	if cfg.Separator == "" {
 		cfg.Separator = ":"
 	}
