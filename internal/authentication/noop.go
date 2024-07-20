@@ -18,10 +18,34 @@ import (
 	"net/http"
 
 	"github.com/Michad/tilegroxy/internal"
+	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
 )
 
+type NoopConfig struct {
+}
+
 type Noop struct {
-	Key string
+	NoopConfig
+}
+
+func init() {
+	pkg.Register[Authentication](pkg.EntityAuth, NoopRegistration{})
+}
+
+type NoopRegistration struct {
+}
+
+func (s NoopRegistration) InitializeConfig() any {
+	return NoopConfig{}
+}
+
+func (s NoopRegistration) Name() string {
+	return "none"
+}
+
+func (s NoopRegistration) Initialize(config any, errorMessages config.ErrorMessages) (Authentication, error) {
+	return &Noop{config.(NoopConfig)}, nil
 }
 
 func (c Noop) CheckAuthentication(req *http.Request, ctx *internal.RequestContext) bool {

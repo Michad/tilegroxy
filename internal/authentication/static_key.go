@@ -22,6 +22,7 @@ import (
 
 	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
 )
 
 type StaticKeyConfig struct {
@@ -32,15 +33,31 @@ type StaticKey struct {
 	StaticKeyConfig
 }
 
-func ConstructStaticKey(config StaticKeyConfig, errorMessages config.ErrorMessages) (*StaticKey, error) {
-	if config.Key == "" {
+func init() {
+	pkg.Register(pkg.EntityAuth, StaticKeyRegistration{})
+}
+
+type StaticKeyRegistration struct {
+}
+
+func (s StaticKeyRegistration) InitializeConfig() any {
+	return StaticKeyConfig{}
+}
+
+func (s StaticKeyRegistration) Name() string {
+	return "static key"
+}
+
+func (s StaticKeyRegistration) Initialize(cfgAny any, errorMessages config.ErrorMessages) (Authentication, error) {
+	cfg := cfgAny.(StaticKeyConfig)
+	if cfg.Key == "" {
 		keyStr := internal.RandomString()
 
 		slog.WarnContext(context.Background(), fmt.Sprintf("Generated authentication key: %v\n", keyStr))
-		config.Key = keyStr
+		cfg.Key = keyStr
 	}
 
-	return &StaticKey{config}, nil
+	return &StaticKey{cfg}, nil
 }
 
 func (c StaticKey) CheckAuthentication(req *http.Request, ctx *internal.RequestContext) bool {

@@ -20,6 +20,7 @@ import (
 
 	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -30,31 +31,46 @@ type Authentication interface {
 func ConstructAuth(rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (Authentication, error) {
 	rawConfig = internal.ReplaceEnv(rawConfig)
 
-	if rawConfig["name"] == "none" {
-		return Noop{}, nil
-	} else if rawConfig["name"] == "static key" {
-		var config StaticKeyConfig
-		err := mapstructure.Decode(rawConfig, &config)
-		if err != nil {
-			return nil, err
+	name, ok := rawConfig["name"].(string)
+
+	if ok {
+		reg, ok := pkg.Registration[Authentication](pkg.EntityAuth, name)
+		if ok {
+			cfg := reg.InitializeConfig()
+			err := mapstructure.Decode(rawConfig, &cfg)
+			if err != nil {
+				return nil, err
+			}
+			a, err := reg.Initialize(cfg, errorMessages)
+			return a, err
 		}
-		return ConstructStaticKey(config, errorMessages)
-	} else if rawConfig["name"] == "jwt" {
-		var config JwtConfig
-		err := mapstructure.Decode(rawConfig, &config)
-		if err != nil {
-			return nil, err
-		}
-		return ConstructJwt(config, errorMessages)
-	} else if rawConfig["name"] == "custom" {
-		var config CustomConfig
-		err := mapstructure.Decode(rawConfig, &config)
-		if err != nil {
-			return nil, err
-		}
-		return ConstructCustom(config, errorMessages)
 	}
 
-	name := fmt.Sprintf("%#v", rawConfig["name"])
-	return nil, fmt.Errorf(errorMessages.InvalidParam, "authentication.name", name)
+	// if rawConfig["name"] == "none" {
+	// 	return Noop{}, nil
+	// } else if rawConfig["name"] == "static key" {
+	// 	var config StaticKeyConfig
+	// 	err := mapstructure.Decode(rawConfig, &config)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	return ConstructStaticKey(config, errorMessages)
+	// } else if rawConfig["name"] == "jwt" {
+	// 	var config JwtConfig
+	// 	err := mapstructure.Decode(rawConfig, &config)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	return ConstructJwt(config, errorMessages)
+	// } else if rawConfig["name"] == "custom" {
+	// 	var config CustomConfig
+	// 	err := mapstructure.Decode(rawConfig, &config)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	return ConstructCustom(config, errorMessages)
+	// }
+
+	nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
+	return nil, fmt.Errorf(errorMessages.InvalidParam, "authentication.name", nameCoerce)
 }

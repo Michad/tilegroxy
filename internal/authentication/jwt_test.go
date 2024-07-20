@@ -27,7 +27,7 @@ import (
 
 func TestFailMissingArgs(t *testing.T) {
 	jwtConfig := JwtConfig{}
-	jwt, err := ConstructJwt(jwtConfig, config.ErrorMessages{})
+	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
 
 	assert.Error(t, err)
 	assert.Nil(t, jwt)
@@ -36,7 +36,7 @@ func TestFailMissingKey(t *testing.T) {
 	jwtConfig := JwtConfig{
 		Algorithm: "HS256",
 	}
-	jwt, err := ConstructJwt(jwtConfig, config.ErrorMessages{})
+	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
 
 	assert.Error(t, err)
 	assert.Nil(t, jwt)
@@ -45,7 +45,7 @@ func TestFailMissingAlg(t *testing.T) {
 	jwtConfig := JwtConfig{
 		Key: "hunter2",
 	}
-	jwt, err := ConstructJwt(jwtConfig, config.ErrorMessages{})
+	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
 
 	assert.Error(t, err)
 	assert.Nil(t, jwt)
@@ -57,7 +57,7 @@ func TestGoodJwts(t *testing.T) {
 		Key:           "hunter2",
 		MaxExpiration: 4294967295, //136 years from now
 	}
-	jwt, err := ConstructJwt(jwtConfig, config.ErrorMessages{})
+	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
 
 	if !assert.NoError(t, err) || !assert.NotNil(t, jwt) {
 		return
@@ -78,7 +78,7 @@ func TestBadJwts(t *testing.T) {
 		Algorithm: "HS256",
 		Key:       "hunter2",
 	}
-	jwt, err := ConstructJwt(jwtConfig, config.ErrorMessages{})
+	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
 
 	if !assert.NoError(t, err) || !assert.NotNil(t, jwt) {
 		return
@@ -113,7 +113,7 @@ func TestGoodJwtClaims(t *testing.T) {
 		ExpectedIssuer:   "issuer",
 		ExpectedScope:    "tile",
 	}
-	jwt, err := ConstructJwt(jwtConfig, config.ErrorMessages{})
+	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
 
 	if !assert.NoError(t, err) || !assert.NotNil(t, jwt) {
 		return
@@ -140,7 +140,8 @@ func TestGoodJwtClaimsWithCache(t *testing.T) {
 		ExpectedScope:    "tile",
 		CacheSize:        100,
 	}
-	jwt, err := ConstructJwt(jwtConfig, config.ErrorMessages{})
+	jwtAny, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
+	jwt := jwtAny.(*Jwt)
 
 	if !assert.NoError(t, err) || !assert.NotNil(t, jwt) {
 		return
@@ -171,7 +172,7 @@ func TestGoodJwtScopeLimit(t *testing.T) {
 		ScopePrefix:   "tile/",
 		UserId:        "name",
 	}
-	jwt, err := ConstructJwt(jwtConfig, config.ErrorMessages{})
+	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
 
 	if !assert.NoError(t, err) || !assert.NotNil(t, jwt) {
 		return
@@ -207,7 +208,7 @@ func TestBadJwtClaims(t *testing.T) {
 		ExpectedIssuer:   "issuer",
 		ExpectedScope:    "tile",
 	}
-	jwt, err := ConstructJwt(jwtConfig, config.ErrorMessages{})
+	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
 
 	if !assert.NoError(t, err) || !assert.NotNil(t, jwt) {
 		return
@@ -252,7 +253,7 @@ vxNWUY5rv006ZwPuWVEhno8CAwEAAQ==
 -----END PUBLIC KEY-----`,
 		MaxExpiration: 4294967295, //136 years from now
 	}
-	jwt, err := ConstructJwt(jwtConfig, config.ErrorMessages{})
+	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
 
 	if !assert.NoError(t, err) || !assert.NotNil(t, jwt) {
 		return
@@ -279,7 +280,7 @@ rqGjrzwgkmGypGsfnplZv4okkdfUrPb0VX1PICa0vTotAH97umIvEDBB3Q==
 -----END PUBLIC KEY-----`,
 		MaxExpiration: 4294967295, //136 years from now
 	}
-	jwt, err := ConstructJwt(jwtConfig, config.ErrorMessages{})
+	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
 
 	if !assert.NoError(t, err) || !assert.NotNil(t, jwt) {
 		return
@@ -316,7 +317,7 @@ vxNWUY5rv006ZwPuWVEhno8CAwEAAQ==
 -----END PUBLIC KEY-----`,
 		MaxExpiration: 4294967295, //136 years from now
 	}
-	jwt, err := ConstructJwt(jwtConfig, config.ErrorMessages{})
+	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
 
 	if !assert.NoError(t, err) || !assert.NotNil(t, jwt) {
 		return
@@ -353,7 +354,7 @@ vxNWUY5rv006ZwPuWVEhno8CAwEAAQ==
 -----END PUBLIC KEY-----`,
 		MaxExpiration: 4294967295, //136 years from now
 	}
-	jwt, err := ConstructJwt(jwtConfig, config.ErrorMessages{})
+	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
 
 	if !assert.NoError(t, err) || !assert.NotNil(t, jwt) {
 		return

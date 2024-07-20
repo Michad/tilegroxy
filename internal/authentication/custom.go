@@ -24,6 +24,7 @@ import (
 
 	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
 	"github.com/maypok86/otter"
 	"github.com/traefik/yaegi/interp"
 	"github.com/traefik/yaegi/stdlib"
@@ -120,7 +121,23 @@ func extractToken(req *http.Request, ctx *internal.RequestContext, tokenExtract 
 	return "", false
 }
 
-func ConstructCustom(cfg CustomConfig, errorMessages config.ErrorMessages) (*Custom, error) {
+func init() {
+	pkg.Register(pkg.EntityAuth, CustomRegistration{})
+}
+
+type CustomRegistration struct {
+}
+
+func (s CustomRegistration) InitializeConfig() any {
+	return CustomConfig{}
+}
+
+func (s CustomRegistration) Name() string {
+	return "custom"
+}
+
+func (s CustomRegistration) Initialize(cfgAny any, errorMessages config.ErrorMessages) (Authentication, error) {
+	cfg := cfgAny.(CustomConfig)
 	var err error
 
 	if cfg.Token == nil || len(cfg.Token) == 0 {

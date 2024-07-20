@@ -11,26 +11,29 @@ const (
 	EntitySecret
 )
 
-type Entity[Config any] interface {
-}
-
-type EntityRegistration[Config any, T Entity[Config]] interface {
+type EntityRegistration[T any] interface {
 	Name() string
-	Initialize(config Config, errorMessages config.ErrorMessages) (*T, error)
-	InitializeConfig() Config
+	Initialize(config any, errorMessages config.ErrorMessages) (T, error)
+	InitializeConfig() any
 }
 
-var registrations map[EntityType]map[string]interface{} //= make(map[string]interface{})
+var registrations map[EntityType]map[string]interface{} = make(map[EntityType]map[string]interface{})
 
-func Register[C any, T Entity[C]](entity EntityType, reg EntityRegistration[C, T]) {
+func init() {
+	for i := EntityAuth; i <= EntitySecret; i++ {
+		registrations[EntityType(i)] = make(map[string]interface{})
+	}
+}
+
+func Register[T any](entity EntityType, reg EntityRegistration[T]) {
 	registrations[entity][reg.Name()] = reg
 }
 
-func Registration[C any, T Entity[C]](entity EntityType, name string) (EntityRegistration[C, T], bool) {
+func Registration[T any](entity EntityType, name string) (EntityRegistration[T], bool) {
 	o, ok := registrations[entity][name]
 
 	if ok {
-		return o.(EntityRegistration[C, T]), true
+		return o.(EntityRegistration[T]), true
 	}
 	return nil, false
 }

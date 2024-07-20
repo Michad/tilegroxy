@@ -52,13 +52,13 @@ type AWSSecretsManager struct {
 }
 
 func init() {
-	pkg.Register(pkg.EntitySecret, AWSSecretsManagerSecreter{})
+	pkg.Register[Secreter](pkg.EntitySecret, AWSSecretsManagerSecreter{})
 }
 
 type AWSSecretsManagerSecreter struct {
 }
 
-func (s AWSSecretsManagerSecreter) InitializeConfig() AWSSecretsManagerConfig {
+func (s AWSSecretsManagerSecreter) InitializeConfig() any {
 	return AWSSecretsManagerConfig{}
 }
 
@@ -66,7 +66,8 @@ func (s AWSSecretsManagerSecreter) Name() string {
 	return "awssecretsmanager"
 }
 
-func (s AWSSecretsManagerSecreter) Initialize(cfg AWSSecretsManagerConfig, errorMessages config.ErrorMessages) (*AWSSecretsManager, error) {
+func (s AWSSecretsManagerSecreter) Initialize(cfgAny any, errorMessages config.ErrorMessages) (Secreter, error) {
+	cfg := cfgAny.(AWSSecretsManagerConfig)
 	if cfg.Separator == "" {
 		cfg.Separator = ":"
 	}

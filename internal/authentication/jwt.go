@@ -25,6 +25,7 @@ import (
 
 	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/maypok86/otter"
 )
@@ -51,7 +52,24 @@ type Jwt struct {
 	errorMessages config.ErrorMessages
 }
 
-func ConstructJwt(config JwtConfig, errorMessages config.ErrorMessages) (*Jwt, error) {
+func init() {
+	pkg.Register(pkg.EntityAuth, JWTRegistration{})
+}
+
+type JWTRegistration struct {
+}
+
+func (s JWTRegistration) InitializeConfig() any {
+	return JwtConfig{}
+}
+
+func (s JWTRegistration) Name() string {
+	return "jwt"
+}
+
+func (s JWTRegistration) Initialize(configAny any, errorMessages config.ErrorMessages) (Authentication, error) {
+	config := configAny.(JwtConfig)
+
 	if !slices.Contains([]string{"HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "EdDSA"}, config.Algorithm) {
 		return nil, fmt.Errorf(errorMessages.InvalidParam, "authentication.algorithm", config.Algorithm)
 	}
