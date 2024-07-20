@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	tg "github.com/Michad/tilegroxy/pkg/entry"
 	"github.com/spf13/cobra"
 )
 
@@ -32,7 +33,10 @@ func runCheck(cmd *cobra.Command, args []string) {
 	echo, _ := cmd.Flags().GetBool("echo")
 	out := cmd.OutOrStdout()
 
-	cfg, _, _, err := parseConfigIntoStructs(cmd)
+	cfg, err := extractConfigFromCommand(cmd)
+	if err == nil {
+		_, _, err = tg.ConfigToEntities(*cfg)
+	}
 
 	if err != nil {
 		fmt.Fprintf(out, "Invalid configuration: %v\n", err.Error())

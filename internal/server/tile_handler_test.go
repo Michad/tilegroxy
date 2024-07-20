@@ -15,6 +15,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -31,6 +32,14 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities"
 	"github.com/stretchr/testify/assert"
 )
+
+func configToEntities(cfg config.Config) (*layers.LayerGroup, entities.Authentication, error) {
+	cache, err1 := caches.ConstructCache(cfg.Cache, cfg.Error.Messages)
+	auth, err2 := authentication.ConstructAuth(cfg.Authentication, cfg.Error.Messages)
+	layerGroup, err3 := layers.ConstructLayerGroup(cfg, cfg.Layers, cache)
+
+	return layerGroup, auth, errors.Join(err1, err2, err3)
+}
 
 func Test_TileHandler_AllowedArea(t *testing.T) {
 	cfg := config.DefaultConfig()
@@ -264,7 +273,7 @@ layers:
 `
 	cfg, err := config.LoadConfig(configRaw)
 	assert.NoError(t, err)
-	lg, auth, err := layers.ConfigToEntities(cfg)
+	lg, auth, err := configToEntities(cfg)
 	assert.NoError(t, err)
 	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
 
@@ -310,7 +319,7 @@ layers:
 
 	cfg, err := config.LoadConfig(configRaw)
 	assert.NoError(t, err)
-	lg, auth, err := layers.ConfigToEntities(cfg)
+	lg, auth, err := configToEntities(cfg)
 	assert.NoError(t, err)
 	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
 
@@ -343,7 +352,7 @@ layers:
 
 	cfg, err := config.LoadConfig(configRaw)
 	assert.NoError(t, err)
-	lg, auth, err := layers.ConfigToEntities(cfg)
+	lg, auth, err := configToEntities(cfg)
 	assert.NoError(t, err)
 	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
 
@@ -389,7 +398,7 @@ layers:
 
 	cfg, err := config.LoadConfig(configRaw)
 	assert.NoError(t, err)
-	lg, auth, err := layers.ConfigToEntities(cfg)
+	lg, auth, err := configToEntities(cfg)
 	assert.NoError(t, err)
 	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
 
@@ -427,7 +436,7 @@ layers:
 
 	cfg, err := config.LoadConfig(configRaw)
 	assert.NoError(t, err)
-	lg, auth, err := layers.ConfigToEntities(cfg)
+	lg, auth, err := configToEntities(cfg)
 	assert.NoError(t, err)
 	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
 
@@ -466,7 +475,7 @@ layers:
 
 	cfg, err := config.LoadConfig(configRaw)
 	assert.NoError(t, err)
-	lg, auth, err := layers.ConfigToEntities(cfg)
+	lg, auth, err := configToEntities(cfg)
 	assert.NoError(t, err)
 	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
 

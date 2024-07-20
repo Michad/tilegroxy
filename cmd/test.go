@@ -17,16 +17,8 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"math"
-	"os"
-	"slices"
-	"strconv"
-	"sync"
-	"text/tabwriter"
 
-	"sync/atomic"
-
-	"github.com/Michad/tilegroxy/pkg"
+	tg "github.com/Michad/tilegroxy/pkg/entry"
 	"github.com/spf13/cobra"
 )
 
@@ -58,130 +50,20 @@ func runTest(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	ctx := pkg.BackgroundContext()
-
-	_, layerObjects, _, err := parseConfigIntoStructs(cmd)
-
+	cfg, err := extractConfigFromCommand(cmd)
 	if err != nil {
 		fmt.Fprintf(out, "Error: %v", err)
 		exit(1)
 		return
 	}
 
-	if len(layerNames) == 0 {
-		layerNames = layerObjects.ListLayerIds()
+	errCount, err := tg.Test(cfg, tg.TestOptions{layerNames, int(z), int(x), int(y), numThread, noCache}, out)
+
+	if err != nil {
+		fmt.Fprintf(out, "Error: %v", err)
+		exit(1)
+		return
 	}
-
-	//Generate the full list of requests to process
-	tileRequests := make([]pkg.TileRequest, 0)
-
-	for _, layerName := range layerNames {
-		req := pkg.TileRequest{LayerName: layerName, Z: int(z), X: int(x), Y: int(y)}
-		_, err := req.GetBounds()
-
-		if err != nil {
-			fmt.Fprintf(out, "Error: %v", err)
-			exit(1)
-			return
-		}
-
-		layer := layerObjects.FindLayer(ctx, layerName)
-
-		if layer == nil {
-			fmt.Fprintf(out, "Error: Invalid layer name: %v", layer)
-			exit(1)
-			return
-		}
-
-		tileRequests = append(tileRequests, req)
-	}
-
-	numReq := len(tileRequests)
-
-	if numThread > uint16(numReq) {
-		fmt.Fprintln(os.Stderr, "Warning: more threads requested than tiles")
-		numThread = uint16(numReq)
-	}
-
-	//Split up all the requests for N threads
-	numReqPerThread := int(math.Floor(float64(numReq) / float64(numThread)))
-	var reqSplit [][]pkg.TileRequest
-
-	for i := 0; i < int(numThread); i++ {
-		chunkStart := i * numReqPerThread
-		var chunkEnd uint
-		if i == int(numThread)-1 {
-			chunkEnd = uint(numReq)
-		} else {
-			chunkEnd = uint(math.Min(float64(chunkStart+numReqPerThread), float64(numReq)))
-		}
-
-		reqSplit = append(reqSplit, tileRequests[chunkStart:chunkEnd])
-	}
-
-	//Start processing all the tile requests over N threads
-	var wg sync.WaitGroup
-	errCount := uint32(0)
-
-	writer := tabwriter.NewWriter(out, 1, 4, 4, ' ', tabwriter.StripEscape)
-	fmt.Fprintln(writer, "Thread\tLayer\tGenerated\tCache Write\tCache Read\tError\t")
-
-	for t := int(0); t < len(reqSplit); t++ {
-		wg.Add(1)
-		go func(t int, myReqs []pkg.TileRequest) {
-			ctx2 := pkg.BackgroundContext()
-
-			for _, req := range myReqs {
-				layer := layerObjects.FindLayer(ctx2, req.LayerName)
-				img, layerErr := layer.RenderTileNoCache(ctx2, req)
-				var cacheWriteError error
-				var cacheReadError error
-
-				if !noCache && layerErr == nil {
-					cacheWriteError = layer.Cache.Save(req, img)
-					if cacheWriteError == nil {
-						var img2 *pkg.Image
-						img2, cacheReadError = layer.Cache.Lookup(req)
-						if cacheReadError == nil {
-							if img2 == nil {
-								cacheReadError = errors.New("no result from cache lookup")
-							} else if !slices.Equal(*img, *img2) {
-								cacheReadError = errors.New("cache result doesn't match what we put into cache")
-							}
-						}
-					}
-				}
-
-				if layerErr != nil || cacheWriteError != nil || cacheReadError != nil {
-					atomic.AddUint32(&errCount, 1)
-				}
-
-				//Output the result into the table
-				resultStr := strconv.Itoa(t) + "\t" + req.LayerName + "\t"
-				if layerErr != nil {
-					resultStr += "No\tN/A\tN/A\t\xff" + layerErr.Error() + "\xff\t"
-				} else {
-					if noCache {
-						resultStr += "Yes\tN/A\tN/A\tNone\t"
-					} else if cacheWriteError != nil {
-						resultStr += "Yes\tNo\tN/A\t\xff" + cacheWriteError.Error() + "\xff\t"
-					} else if cacheReadError != nil {
-						resultStr += "Yes\tYes\tNo\t\xff" + cacheReadError.Error() + "\xff\t"
-					} else {
-						resultStr += "Yes\tYes\tYes\tNone\t"
-					}
-				}
-				fmt.Fprintln(writer, resultStr)
-
-			}
-
-			wg.Done()
-		}(t, reqSplit[t])
-	}
-
-	wg.Wait()
-
-	writer.Flush()
 
 	fmt.Fprintf(out, "Completed with %v failures\n", errCount)
 

@@ -17,11 +17,9 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"math"
-	"os"
-	"sync"
 
 	"github.com/Michad/tilegroxy/pkg"
+	tg "github.com/Michad/tilegroxy/pkg/entry"
 	"github.com/spf13/cobra"
 )
 
@@ -30,7 +28,7 @@ var seedCmd = &cobra.Command{
 	Short: "Pre-populate (seed) the cache",
 	Long: `Pre-populates the cache for a given layer for a given area (bounding box) for a range of zoom levels. 
 	
-Be mindful that the higher the zoom level (the more you "zoom in"), exponentially more tiles will need to be seeded for a given area. For instance, while zoom level 1 only requires 4 tiles to cover the planet, zoom level 10 requires over a million tiles.
+Be mindful that the greater the zoom level (the more you "zoom in"), exponentially more tiles will need to be seeded for a given area. For instance, while zoom level 1 only requires 4 tiles to cover the planet, zoom level 10 requires over a million tiles.
 
 Example:
 
@@ -56,131 +54,29 @@ func runSeed(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	ctx := pkg.BackgroundContext()
-
-	_, layerGroup, _, err := parseConfigIntoStructs(cmd)
-
+	cfg, err := extractConfigFromCommand(cmd)
 	if err != nil {
-		fmt.Fprintf(out, "Error: %v", err)
-		exit(1)
-		return
-	}
-
-	layer := layerGroup.FindLayer(ctx, layerName)
-
-	if layer == nil {
-		fmt.Fprintln(out, "Error: Invalid layer")
-		exit(1)
-		return
-	}
-
-	if numThread == 0 {
-		fmt.Fprintln(out, "Error: threads cannot be 0")
+		fmt.Fprintf(out, "Error: %v\n", err)
 		exit(1)
 		return
 	}
 
 	b := pkg.Bounds{South: float64(minLat), West: float64(minLon), North: float64(maxLat), East: float64(maxLon)}
 
-	tileRequests := make([]pkg.TileRequest, 0)
+	err = tg.Seed(cfg,
+		tg.SeedOptions{
+			Zoom:      zoom,
+			Bounds:    b,
+			LayerName: layerName,
+			Force:     force,
+			Verbose:   verbose,
+			NumThread: numThread},
+		out)
 
-	for _, z := range zoom {
-		if z > pkg.MaxZoom {
-			fmt.Fprintf(out, "Error: zoom must be less than %v\n", pkg.MaxZoom)
-			exit(1)
-			return
-		}
-		newTiles, err := b.FindTiles(layerName, uint(z), force)
-
-		if newTiles != nil {
-			tileRequests = append(tileRequests, (*newTiles)...)
-		}
-
-		if err != nil || (len(tileRequests) > 10000 && !force) {
-			count := len(tileRequests)
-
-			if err != nil {
-				var tilesError pkg.TooManyTilesError
-
-				if errors.As(err, &tilesError) {
-					count = int(tilesError.NumTiles)
-				} else {
-					fmt.Fprintf(out, "Error: %v\n", err.Error())
-					exit(1)
-					return
-				}
-			}
-
-			fmt.Fprintf(out, "Too many tiles to seed (%v > %v). %v\n",
-				count,
-				pkg.Ternary(count > math.MaxInt32, math.MaxInt32, 10000),
-				pkg.Ternary(count > math.MaxInt32, "", "Run with --force if you're sure you want to generate this many tiles"))
-			exit(1)
-			return
-		}
+	if err != nil {
+		fmt.Fprintf(out, "Error: %v\n", err.Error())
+		exit(1)
 	}
-
-	if verbose {
-		fmt.Fprintf(out, "Number of tile requests: %v\n", len(tileRequests))
-	}
-
-	numReq := len(tileRequests)
-
-	if numThread > uint16(numReq) {
-		fmt.Fprintln(os.Stderr, "Warning: more threads requested than tiles")
-		numThread = uint16(numReq)
-	}
-
-	chunkSize := int(math.Floor(float64(numReq) / float64(numThread)))
-
-	var reqSplit [][]pkg.TileRequest
-
-	for i := 0; i < int(numThread); i++ {
-		chunkStart := i * chunkSize
-		var chunkEnd uint
-		if i == int(numThread)-1 {
-			chunkEnd = uint(numReq)
-		} else {
-			chunkEnd = uint(math.Min(float64(chunkStart+chunkSize), float64(numReq)))
-		}
-
-		reqSplit = append(reqSplit, tileRequests[chunkStart:chunkEnd])
-	}
-
-	var wg sync.WaitGroup
-
-	for t := int(0); t < len(reqSplit); t++ {
-		wg.Add(1)
-		go func(t int, myReqs []pkg.TileRequest) {
-			if verbose {
-				fmt.Fprintf(out, "Created thread %v with %v tiles\n", t, len(myReqs))
-			}
-			for _, req := range myReqs {
-				_, tileErr := layerGroup.RenderTile(pkg.BackgroundContext(), req)
-
-				if verbose {
-					var status string
-					if tileErr == nil {
-						status = "OK"
-					} else {
-						status = tileErr.Error()
-					}
-
-					fmt.Fprintf(out, "Thread %v - %v = %v\n", t, req, status)
-				}
-			}
-			if verbose {
-				fmt.Fprintf(out, "Finished thread %v\n", t)
-			}
-			wg.Done()
-		}(t, reqSplit[t])
-	}
-
-	wg.Wait()
-	if verbose {
-		fmt.Fprintf(out, "Completed seeding")
-	}
-
 }
 
 func init() {

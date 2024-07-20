@@ -12,18 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package layers
+package tg
 
 import (
 	"fmt"
 
 	"github.com/Michad/tilegroxy/internal/authentication"
 	"github.com/Michad/tilegroxy/internal/caches"
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities"
 )
 
-func ConfigToEntities(cfg config.Config) (*LayerGroup, entities.Authentication, error) {
+func ConfigToEntities(cfg config.Config) (*layers.LayerGroup, entities.Authentication, error) {
 	cache, err := caches.ConstructCache(cfg.Cache, cfg.Error.Messages)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error constructing cache: %v", err)
@@ -34,7 +35,7 @@ func ConfigToEntities(cfg config.Config) (*LayerGroup, entities.Authentication, 
 		return nil, nil, fmt.Errorf("error constructing auth: %v", err)
 	}
 
-	layerGroup, err := ConstructLayerGroup(cfg, cfg.Layers, cache)
+	layerGroup, err := layers.ConstructLayerGroup(cfg, cfg.Layers, cache)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error constructing layers: %v", err)
 	}
