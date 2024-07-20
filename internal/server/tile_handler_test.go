@@ -28,6 +28,7 @@ import (
 	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -37,7 +38,7 @@ func Test_TileHandler_AllowedArea(t *testing.T) {
 	mainProvider["name"] = "static"
 	mainProvider["color"] = "FFF"
 	cfg.Layers = append(cfg.Layers, config.LayerConfig{Id: "main", Provider: mainProvider})
-	var auth authentication.Authentication
+	var auth entities.Authentication
 	var cache caches.Cache
 	auth = authentication.Noop{}
 	cache = caches.Noop{}
@@ -92,7 +93,7 @@ func Test_TileHandler_Proxy(t *testing.T) {
 	os.Setenv("TEST", "t")
 	mainProvider["url"] = ts.URL + "?a={layer.a}&b={ctx.user}&t={env.TEST}&z={z}&y={y}&x={x}"
 	cfg.Layers = append(cfg.Layers, config.LayerConfig{Id: "main", Pattern: "main_{a}", Provider: mainProvider, Client: &cfg.Client})
-	var auth authentication.Authentication
+	var auth entities.Authentication
 	var cache caches.Cache
 	auth = authentication.Noop{}
 	cache = caches.Noop{}
@@ -127,7 +128,7 @@ func Test_TileHandler_RefToStatic(t *testing.T) {
 	refProvider["layer"] = "main_white"
 	cfg.Layers = append(cfg.Layers, config.LayerConfig{Id: "main", Pattern: "main_{something}", Provider: mainProvider})
 	cfg.Layers = append(cfg.Layers, config.LayerConfig{Id: "ref", Pattern: "test", Provider: refProvider})
-	var auth authentication.Authentication
+	var auth entities.Authentication
 	var cache caches.Cache
 	auth = authentication.Noop{}
 	cache = caches.Noop{}

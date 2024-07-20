@@ -16,7 +16,6 @@ package authentication
 
 import (
 	"fmt"
-	"net/http"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -24,17 +23,13 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-type Authentication interface {
-	CheckAuthentication(req *http.Request, ctx *pkg.RequestContext) bool
-}
-
-func ConstructAuth(rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (Authentication, error) {
+func ConstructAuth(rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (entities.Authentication, error) {
 	rawConfig = pkg.ReplaceEnv(rawConfig)
 
 	name, ok := rawConfig["name"].(string)
 
 	if ok {
-		reg, ok := entities.Registration[Authentication](entities.EntityAuth, name)
+		reg, ok := entities.Registration[entities.Authentication](entities.EntityAuth, name)
 		if ok {
 			cfg := reg.InitializeConfig()
 			err := mapstructure.Decode(rawConfig, &cfg)

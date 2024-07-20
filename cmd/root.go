@@ -19,9 +19,9 @@ import (
 	"flag"
 	"os"
 
-	"github.com/Michad/tilegroxy/internal/authentication"
 	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities"
 	"github.com/spf13/cobra"
 )
 
@@ -69,7 +69,7 @@ func initRoot() {
 }
 
 // A common utility for use by multiple commands to bootstrap the core application entities
-func parseConfigIntoStructs(cmd *cobra.Command) (*config.Config, *layers.LayerGroup, authentication.Authentication, error) {
+func parseConfigIntoStructs(cmd *cobra.Command) (*config.Config, *layers.LayerGroup, entities.Authentication, error) {
 	var err error
 	configPath, err1 := cmd.Flags().GetString("config")
 	configRaw, err2 := cmd.Flags().GetString("raw-config")

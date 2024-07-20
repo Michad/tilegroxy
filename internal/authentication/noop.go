@@ -30,7 +30,7 @@ type Noop struct {
 }
 
 func init() {
-	entities.Register[Authentication](entities.EntityAuth, NoopRegistration{})
+	entities.Register[entities.Authentication](entities.EntityAuth, NoopRegistration{})
 }
 
 type NoopRegistration struct {
@@ -44,7 +44,7 @@ func (s NoopRegistration) Name() string {
 	return "none"
 }
 
-func (s NoopRegistration) Initialize(config any, errorMessages config.ErrorMessages) (Authentication, error) {
+func (s NoopRegistration) Initialize(config any, errorMessages config.ErrorMessages) (entities.Authentication, error) {
 	return &Noop{config.(NoopConfig)}, nil
 }
 

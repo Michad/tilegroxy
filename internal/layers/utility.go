@@ -20,9 +20,10 @@ import (
 	"github.com/Michad/tilegroxy/internal/authentication"
 	"github.com/Michad/tilegroxy/internal/caches"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities"
 )
 
-func ConfigToEntities(cfg config.Config) (*LayerGroup, authentication.Authentication, error) {
+func ConfigToEntities(cfg config.Config) (*LayerGroup, entities.Authentication, error) {
 	cache, err := caches.ConstructCache(cfg.Cache, cfg.Error.Messages)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error constructing cache: %v", err)
