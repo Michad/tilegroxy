@@ -19,14 +19,15 @@ import (
 
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/entities"
 	"github.com/stretchr/testify/assert"
 )
 
-func makeBlendProviders() []Provider {
+func makeBlendProviders() []entities.Provider {
 	a, _ := ConstructStatic(StaticConfig{Color: "F00"}, testClientConfig, testErrMessages)
 	b, _ := ConstructStatic(StaticConfig{Color: "0F0"}, testClientConfig, testErrMessages)
 
-	return []Provider{a, b}
+	return []entities.Provider{a, b}
 }
 
 func Test_BlendValidate(t *testing.T) {
@@ -39,7 +40,7 @@ func Test_BlendValidate(t *testing.T) {
 	b, err = ConstructBlend(BlendConfig{Mode: "add", Opacity: 23}, testClientConfig, testErrMessages, makeBlendProviders(), nil)
 	assert.Nil(t, b)
 	assert.Error(t, err)
-	b, err = ConstructBlend(BlendConfig{Mode: "opacity", Opacity: 23}, testClientConfig, testErrMessages, []Provider{}, nil)
+	b, err = ConstructBlend(BlendConfig{Mode: "opacity", Opacity: 23}, testClientConfig, testErrMessages, []entities.Provider{}, nil)
 	assert.Nil(t, b)
 	assert.Error(t, err)
 }
@@ -71,7 +72,7 @@ func Test_BlendExecute_Add(t *testing.T) {
 	assert.NotNil(t, b)
 	assert.NoError(t, err)
 
-	ctx, err := b.PreAuth(pkg.BackgroundContext(), ProviderContext{})
+	ctx, err := b.PreAuth(pkg.BackgroundContext(), entities.ProviderContext{})
 	assert.NoError(t, err)
 	assert.NotNil(t, ctx)
 	assert.NotEmpty(t, ctx.Other)
@@ -92,7 +93,7 @@ func Test_BlendExecute_All(t *testing.T) {
 		b, err := ConstructBlend(BlendConfig{Mode: mode}, testClientConfig, testErrMessages, makeBlendProviders(), nil)
 		assert.NotNil(t, b)
 		assert.NoError(t, err)
-		i, err := b.GenerateTile(pkg.BackgroundContext(), ProviderContext{}, pkg.TileRequest{LayerName: "", Z: 4, X: 2, Y: 3})
+		i, err := b.GenerateTile(pkg.BackgroundContext(), entities.ProviderContext{}, pkg.TileRequest{LayerName: "", Z: 4, X: 2, Y: 3})
 		assert.NoError(t, err)
 		assert.NotNil(t, i)
 		assert.Greater(t, len(*i), 1000)

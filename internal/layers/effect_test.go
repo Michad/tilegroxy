@@ -19,10 +19,11 @@ import (
 
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/entities"
 	"github.com/stretchr/testify/assert"
 )
 
-func makeEffectProvider() Provider {
+func makeEffectProvider() entities.Provider {
 	p, _ := ConstructStatic(StaticConfig{Color: "F00"}, testClientConfig, testErrMessages)
 	return *p
 }
@@ -47,7 +48,7 @@ func Test_EffectExecuteGreyscale(t *testing.T) {
 	assert.NotNil(t, c)
 	assert.NoError(t, err)
 
-	pc, err := c.PreAuth(pkg.BackgroundContext(), ProviderContext{})
+	pc, err := c.PreAuth(pkg.BackgroundContext(), entities.ProviderContext{})
 	assert.NotNil(t, pc)
 	assert.NoError(t, err)
 
@@ -67,7 +68,7 @@ func Test_EffectExecuteAll(t *testing.T) {
 		assert.NotNil(t, c)
 		assert.NoError(t, err)
 
-		pc, err := c.PreAuth(pkg.BackgroundContext(), ProviderContext{})
+		pc, err := c.PreAuth(pkg.BackgroundContext(), entities.ProviderContext{})
 		assert.NotNil(t, pc)
 		assert.NoError(t, err)
 

@@ -29,6 +29,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities"
 	"github.com/traefik/yaegi/interp"
 	"github.com/traefik/yaegi/stdlib"
 )
@@ -42,11 +43,11 @@ type TransformConfig struct {
 
 type Transform struct {
 	TransformConfig
-	provider      Provider
+	provider      entities.Provider
 	transformFunc func(uint8, uint8, uint8, uint8) (uint8, uint8, uint8, uint8)
 }
 
-func ConstructTransform(cfg TransformConfig, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, provider Provider) (*Transform, error) {
+func ConstructTransform(cfg TransformConfig, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, provider entities.Provider) (*Transform, error) {
 	var err error
 
 	if cfg.Threads == 0 {
@@ -83,8 +84,8 @@ func ConstructTransform(cfg TransformConfig, clientConfig config.ClientConfig, e
 	return &Transform{cfg, provider, transformFunc}, nil
 }
 
-func (t Transform) PreAuth(ctx *pkg.RequestContext, ProviderContext ProviderContext) (ProviderContext, error) {
-	return t.provider.PreAuth(ctx, ProviderContext)
+func (t Transform) PreAuth(ctx *pkg.RequestContext, providerContext entities.ProviderContext) (entities.ProviderContext, error) {
+	return t.provider.PreAuth(ctx, providerContext)
 }
 
 func (t Transform) transform(ctx *pkg.RequestContext, col color.Color) color.Color {
@@ -103,8 +104,8 @@ func (t Transform) transform(ctx *pkg.RequestContext, col color.Color) color.Col
 	return result
 }
 
-func (t Transform) GenerateTile(ctx *pkg.RequestContext, ProviderContext ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
-	img, err := t.provider.GenerateTile(ctx, ProviderContext, tileRequest)
+func (t Transform) GenerateTile(ctx *pkg.RequestContext, providerContext entities.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+	img, err := t.provider.GenerateTile(ctx, providerContext, tileRequest)
 
 	if err != nil {
 		return img, err

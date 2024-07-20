@@ -28,6 +28,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities"
 )
 
 type CGIConfig struct {
@@ -119,11 +120,11 @@ func ConstructCGI(cfg CGIConfig, clientConfig config.ClientConfig, errorMessages
 	return &CGI{cfg, h, clientConfig}, nil
 }
 
-func (t CGI) PreAuth(ctx *pkg.RequestContext, providerContext ProviderContext) (ProviderContext, error) {
-	return ProviderContext{AuthBypass: true}, nil
+func (t CGI) PreAuth(ctx *pkg.RequestContext, providerContext entities.ProviderContext) (entities.ProviderContext, error) {
+	return entities.ProviderContext{AuthBypass: true}, nil
 }
 
-func (t CGI) GenerateTile(ctx *pkg.RequestContext, providerContext ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t CGI) GenerateTile(ctx *pkg.RequestContext, providerContext entities.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	var err error
 
 	h := t.handler

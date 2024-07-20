@@ -21,6 +21,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities"
 )
 
 type CacheMode string
@@ -44,11 +45,11 @@ type FallbackConfig struct {
 type Fallback struct {
 	FallbackConfig
 	zoomLevels []int
-	Primary    Provider
-	Secondary  Provider
+	Primary    entities.Provider
+	Secondary  entities.Provider
 }
 
-func ConstructFallback(config FallbackConfig, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, primary Provider, secondary Provider) (*Fallback, error) {
+func ConstructFallback(config FallbackConfig, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, primary entities.Provider, secondary entities.Provider) (*Fallback, error) {
 	var zoom []int
 
 	if config.Zoom != "" {
@@ -75,11 +76,11 @@ func ConstructFallback(config FallbackConfig, clientConfig config.ClientConfig, 
 	return &Fallback{config, zoom, primary, secondary}, nil
 }
 
-func (t Fallback) PreAuth(ctx *pkg.RequestContext, ProviderContext ProviderContext) (ProviderContext, error) {
-	return t.Primary.PreAuth(ctx, ProviderContext)
+func (t Fallback) PreAuth(ctx *pkg.RequestContext, providerContext entities.ProviderContext) (entities.ProviderContext, error) {
+	return t.Primary.PreAuth(ctx, providerContext)
 }
 
-func (t Fallback) GenerateTile(ctx *pkg.RequestContext, ProviderContext ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t Fallback) GenerateTile(ctx *pkg.RequestContext, providerContext entities.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	ok := true
 
 	if !slices.Contains(t.zoomLevels, tileRequest.Z) {
@@ -106,7 +107,7 @@ func (t Fallback) GenerateTile(ctx *pkg.RequestContext, ProviderContext Provider
 	var img *pkg.Image
 
 	if ok {
-		img, err = t.Primary.GenerateTile(ctx, ProviderContext, tileRequest)
+		img, err = t.Primary.GenerateTile(ctx, providerContext, tileRequest)
 
 		if err != nil {
 			ok = false
@@ -120,7 +121,7 @@ func (t Fallback) GenerateTile(ctx *pkg.RequestContext, ProviderContext Provider
 
 	if !ok {
 
-		return t.Secondary.GenerateTile(ctx, ProviderContext, tileRequest)
+		return t.Secondary.GenerateTile(ctx, providerContext, tileRequest)
 	}
 
 	return img, err

@@ -19,6 +19,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities"
 )
 
 type ProxyConfig struct {
@@ -39,11 +40,11 @@ func ConstructProxy(config ProxyConfig, clientConfig config.ClientConfig, errorM
 	return &Proxy{config, clientConfig}, nil
 }
 
-func (t Proxy) PreAuth(ctx *pkg.RequestContext, providerContext ProviderContext) (ProviderContext, error) {
-	return ProviderContext{AuthBypass: true}, nil
+func (t Proxy) PreAuth(ctx *pkg.RequestContext, providerContext entities.ProviderContext) (entities.ProviderContext, error) {
+	return entities.ProviderContext{AuthBypass: true}, nil
 }
 
-func (t Proxy) GenerateTile(ctx *pkg.RequestContext, providerContext ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t Proxy) GenerateTile(ctx *pkg.RequestContext, providerContext entities.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	url, err := replaceUrlPlaceholders(ctx, tileRequest, t.Url, t.InvertY)
 	if err != nil {
 		return nil, err

@@ -18,6 +18,7 @@ import (
 	"errors"
 
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/entities"
 )
 
 type MultiConfig struct {
@@ -25,7 +26,7 @@ type MultiConfig struct {
 }
 
 type Multi struct {
-	Tiers []Cache
+	Tiers []entities.Cache
 }
 
 func (c Multi) Lookup(t pkg.TileRequest) (*pkg.Image, error) {

@@ -21,6 +21,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -39,7 +40,7 @@ func Test_UrlTemplateExecute(t *testing.T) {
 	assert.NotNil(t, p)
 	assert.NoError(t, err)
 
-	pc, err := p.PreAuth(pkg.BackgroundContext(), ProviderContext{})
+	pc, err := p.PreAuth(pkg.BackgroundContext(), entities.ProviderContext{})
 	assert.NotNil(t, pc)
 	assert.NoError(t, err)
 
@@ -54,25 +55,25 @@ func Test_UrlTemplateConfigOptions(t *testing.T) {
 	assert.NotNil(t, p)
 	assert.NoError(t, err)
 
-	img, err := p.GenerateTile(pkg.BackgroundContext(), ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 6, X: 10, Y: 10})
+	img, err := p.GenerateTile(pkg.BackgroundContext(), entities.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 6, X: 10, Y: 10})
 	assert.Nil(t, img)
 	assert.Error(t, err)
 
 	clientConfig.StatusCodes = []int{200}
 	clientConfig.MaxLength = 2
-	img, err = p.GenerateTile(pkg.BackgroundContext(), ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 6, X: 10, Y: 10})
+	img, err = p.GenerateTile(pkg.BackgroundContext(), entities.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 6, X: 10, Y: 10})
 	assert.Nil(t, img)
 	assert.Error(t, err)
 
 	clientConfig.MaxLength = 2000
 	clientConfig.UnknownLength = false
-	img, err = p.GenerateTile(pkg.BackgroundContext(), ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 6, X: 10, Y: 10})
+	img, err = p.GenerateTile(pkg.BackgroundContext(), entities.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 6, X: 10, Y: 10})
 	assert.Nil(t, img)
 	assert.Error(t, err)
 
 	clientConfig.UnknownLength = true
 	clientConfig.ContentTypes = []string{"text/plain"}
-	img, err = p.GenerateTile(pkg.BackgroundContext(), ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 6, X: 10, Y: 10})
+	img, err = p.GenerateTile(pkg.BackgroundContext(), entities.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 6, X: 10, Y: 10})
 	assert.Nil(t, img)
 	assert.Error(t, err)
 }

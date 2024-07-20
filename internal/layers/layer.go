@@ -23,9 +23,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Michad/tilegroxy/internal/caches"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities"
 )
 
 type layerSegment struct {
@@ -159,10 +159,10 @@ type Layer struct {
 	Pattern         []layerSegment
 	ParamValidator  map[string]*regexp.Regexp
 	Config          config.LayerConfig
-	Provider        Provider
-	Cache           caches.Cache
+	Provider        entities.Provider
+	Cache           entities.Cache
 	ErrorMessages   config.ErrorMessages
-	providerContext ProviderContext
+	providerContext entities.ProviderContext
 	authMutex       sync.Mutex
 }
 
@@ -197,7 +197,7 @@ func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.Cli
 		}
 	}
 
-	return &Layer{rawConfig.Id, segments, validator, rawConfig, provider, nil, errorMessages, ProviderContext{}, sync.Mutex{}}, nil
+	return &Layer{rawConfig.Id, segments, validator, rawConfig, provider, nil, errorMessages, entities.ProviderContext{}, sync.Mutex{}}, nil
 }
 
 func (l *Layer) authWithProvider(ctx *pkg.RequestContext) error {
@@ -239,7 +239,7 @@ func (l *Layer) RenderTileNoCache(ctx *pkg.RequestContext, tileRequest pkg.TileR
 
 	img, err = l.Provider.GenerateTile(ctx, l.providerContext, tileRequest)
 
-	var authError *AuthError
+	var authError *pkg.AuthError
 	if errors.As(err, &authError) {
 		err = l.authWithProvider(ctx)
 

@@ -20,6 +20,7 @@ import (
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities"
 )
 
 type StaticConfig struct {
@@ -50,10 +51,10 @@ func ConstructStatic(config StaticConfig, clientConfig config.ClientConfig, erro
 	return &Static{config, img}, nil
 }
 
-func (t Static) PreAuth(ctx *pkg.RequestContext, providerContext ProviderContext) (ProviderContext, error) {
-	return ProviderContext{AuthBypass: true}, nil
+func (t Static) PreAuth(ctx *pkg.RequestContext, providerContext entities.ProviderContext) (entities.ProviderContext, error) {
+	return entities.ProviderContext{AuthBypass: true}, nil
 }
 
-func (t Static) GenerateTile(ctx *pkg.RequestContext, providerContext ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t Static) GenerateTile(ctx *pkg.RequestContext, providerContext entities.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	return t.img, nil
 }

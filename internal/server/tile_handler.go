@@ -22,7 +22,6 @@ import (
 	"runtime/debug"
 	"strconv"
 
-	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 )
 
@@ -83,7 +82,7 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	img, err := h.layerGroup.RenderTile(ctx, tileReq)
 
 	if err != nil {
-		var ae layers.AuthError
+		var ae pkg.AuthError
 		if errors.As(err, &ae) {
 			writeError(ctx, w, &h.config.Error, TypeOfErrorAuth, h.config.Error.Messages.NotAuthorized)
 		} else {

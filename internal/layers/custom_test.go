@@ -20,6 +20,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -63,7 +64,7 @@ func generateTile(ctx *tilegroxy.RequestContext, providerContext tilegroxy.Provi
 	assert.NotNil(t, c)
 	assert.NoError(t, err)
 
-	pc, err := c.PreAuth(pkg.BackgroundContext(), ProviderContext{})
+	pc, err := c.PreAuth(pkg.BackgroundContext(), entities.ProviderContext{})
 	assert.NoError(t, err)
 	assert.NotNil(t, pc)
 	assert.True(t, pc.AuthBypass)

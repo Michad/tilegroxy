@@ -30,17 +30,11 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities"
 	"github.com/mitchellh/mapstructure"
 )
 
-type Provider interface {
-	// Performs authentication before tiles are ever generated. The calling code ensures this is only called once at a time and only when needed
-	// based on the expiration in ProviderContext and when an AuthError is returned from GenerateTile
-	PreAuth(ctx *pkg.RequestContext, providerContext ProviderContext) (ProviderContext, error)
-	GenerateTile(ctx *pkg.RequestContext, providerContext ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error)
-}
-
-func ConstructProvider(rawConfig map[string]interface{}, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup) (Provider, error) {
+func ConstructProvider(rawConfig map[string]interface{}, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup) (entities.Provider, error) {
 	rawConfig = pkg.ReplaceEnv(rawConfig)
 
 	if rawConfig["name"] == "url template" {
@@ -108,7 +102,7 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig config.Cli
 		if err != nil {
 			return nil, err
 		}
-		var providers []Provider
+		var providers []entities.Provider
 		var errorSlice []error
 		for _, p := range config.Providers {
 			provider, err := ConstructProvider(p, clientConfig, errorMessages, layerGroup)
@@ -151,49 +145,6 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig config.Cli
 
 	name := fmt.Sprintf("%#v", rawConfig["name"])
 	return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.name", name)
-}
-
-type ProviderContext struct {
-	AuthBypass     bool                   //If true, avoids ever calling preauth again
-	AuthExpiration time.Time              //When next to trigger preauth
-	AuthToken      string                 //The main auth token that comes back from the preauth and is used by the generate method. Details are up to the provider
-	Other          map[string]interface{} //A generic holder in cases where a provider needs extra storage - for instance Blend which needs Context for child providers
-}
-
-type AuthError struct {
-	Message string
-}
-
-func (e AuthError) Error() string {
-	// notest
-	return fmt.Sprintf("Auth Error - %s", e.Message)
-}
-
-type InvalidContentLengthError struct {
-	Length int
-}
-
-func (e *InvalidContentLengthError) Error() string {
-	// notest
-	return fmt.Sprintf("Invalid content length %v", e.Length)
-}
-
-type InvalidContentTypeError struct {
-	ContentType string
-}
-
-func (e *InvalidContentTypeError) Error() string {
-	// notest
-	return fmt.Sprintf("Invalid content type %v", e.ContentType)
-}
-
-type RemoteServerError struct {
-	StatusCode int
-}
-
-func (e *RemoteServerError) Error() string {
-	// notest
-	return fmt.Sprintf("Remote server returned status code %v", e.StatusCode)
 }
 
 var envRegex, _ = regexp.Compile(`{env\.[^{}}]*}`)
@@ -298,31 +249,31 @@ func getTile(ctx *pkg.RequestContext, clientConfig config.ClientConfig, url stri
 	slog.DebugContext(ctx, fmt.Sprintf("Response status: %v", resp.StatusCode))
 
 	if !slices.Contains(clientConfig.StatusCodes, resp.StatusCode) {
-		return nil, &RemoteServerError{StatusCode: resp.StatusCode}
+		return nil, &pkg.RemoteServerError{StatusCode: resp.StatusCode}
 	}
 
 	if !slices.Contains(clientConfig.ContentTypes, resp.Header.Get("Content-Type")) {
-		return nil, &InvalidContentTypeError{ContentType: resp.Header.Get("Content-Type")}
+		return nil, &pkg.InvalidContentTypeError{ContentType: resp.Header.Get("Content-Type")}
 	}
 
 	if resp.ContentLength == -1 {
 		if !clientConfig.UnknownLength {
-			return nil, &InvalidContentLengthError{-1}
+			return nil, &pkg.InvalidContentLengthError{-1}
 		}
 	} else {
 		if resp.ContentLength > int64(clientConfig.MaxLength) {
-			return nil, &InvalidContentLengthError{int(resp.ContentLength)}
+			return nil, &pkg.InvalidContentLengthError{int(resp.ContentLength)}
 		}
 	}
 
 	img, err := io.ReadAll(resp.Body)
 
 	if err != nil {
-		return nil, &RemoteServerError{StatusCode: resp.StatusCode}
+		return nil, &pkg.RemoteServerError{StatusCode: resp.StatusCode}
 	}
 
 	if len(img) > int(clientConfig.MaxLength) {
-		return nil, &InvalidContentLengthError{int(len(img))}
+		return nil, &pkg.InvalidContentLengthError{int(len(img))}
 	}
 
 	return &img, nil

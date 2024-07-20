@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -34,7 +35,7 @@ func TestMultiSaveAndLookup(t *testing.T) {
 		return
 	}
 
-	multi := Multi{Tiers: []Cache{mem1, mem2}}
+	multi := Multi{Tiers: []entities.Cache{mem1, mem2}}
 
 	tile := makeReq(53)
 	img := makeImg(24)
@@ -58,7 +59,7 @@ func TestMultiIn1(t *testing.T) {
 		return
 	}
 
-	multi := Multi{Tiers: []Cache{mem1, mem2}}
+	multi := Multi{Tiers: []entities.Cache{mem1, mem2}}
 
 	tile := makeReq(53)
 	img := makeImg(24)
@@ -80,7 +81,7 @@ func TestMultiIn2(t *testing.T) {
 		return
 	}
 
-	multi := Multi{Tiers: []Cache{mem1, mem2}}
+	multi := Multi{Tiers: []entities.Cache{mem1, mem2}}
 
 	tile := makeReq(53)
 	img := makeImg(24)

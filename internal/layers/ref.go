@@ -17,6 +17,7 @@ package layers
 import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities"
 )
 
 type RefConfig struct {
@@ -34,11 +35,11 @@ func ConstructRef(config RefConfig, clientConfig config.ClientConfig, errorMessa
 	return &Ref{config, layerGroup}, nil
 }
 
-func (t Ref) PreAuth(ctx *pkg.RequestContext, providerContext ProviderContext) (ProviderContext, error) {
-	return ProviderContext{AuthBypass: true}, nil
+func (t Ref) PreAuth(ctx *pkg.RequestContext, providerContext entities.ProviderContext) (entities.ProviderContext, error) {
+	return entities.ProviderContext{AuthBypass: true}, nil
 }
 
-func (t Ref) GenerateTile(ctx *pkg.RequestContext, providerContext ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t Ref) GenerateTile(ctx *pkg.RequestContext, providerContext entities.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	newRequest := pkg.TileRequest{LayerName: t.Layer, Z: tileRequest.Z, X: tileRequest.X, Y: tileRequest.Y}
 	newCtx := *ctx
 	return t.layerGroup.RenderTile(&newCtx, newRequest)

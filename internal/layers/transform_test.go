@@ -19,10 +19,11 @@ import (
 
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/entities"
 	"github.com/stretchr/testify/assert"
 )
 
-func makeTransformProvider() Provider {
+func makeTransformProvider() entities.Provider {
 	p, _ := ConstructStatic(StaticConfig{Color: "F00"}, testClientConfig, testErrMessages)
 	return *p
 }
@@ -48,7 +49,7 @@ func Test_Transform_Execute(t *testing.T) {
 
 	exp, _ := images.GetStaticImage("color:00F")
 
-	pc, err := tr.PreAuth(pkg.BackgroundContext(), ProviderContext{})
+	pc, err := tr.PreAuth(pkg.BackgroundContext(), entities.ProviderContext{})
 	assert.NotNil(t, pc)
 	assert.NoError(t, err)
 

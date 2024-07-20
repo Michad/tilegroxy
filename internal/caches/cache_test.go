@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/entities"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -58,7 +59,7 @@ func makeImg(seed int) pkg.Image {
 	return make([]byte, seed)
 }
 
-func validateSaveAndLookup(t *testing.T, c Cache) bool {
+func validateSaveAndLookup(t *testing.T, c entities.Cache) bool {
 	//TODO: reconsider use of rand
 	tile := makeReq(rand.Intn(10000))
 	img := makeImg(rand.Intn(100))
@@ -71,7 +72,7 @@ func validateSaveAndLookup(t *testing.T, c Cache) bool {
 	return validateLookup(t, c, tile, &img)
 }
 
-func validateLookup(t *testing.T, c Cache, tile pkg.TileRequest, expected *pkg.Image) bool {
+func validateLookup(t *testing.T, c entities.Cache, tile pkg.TileRequest, expected *pkg.Image) bool {
 	img2, err := c.Lookup(tile)
 	if !assert.Nil(t, err, "Cache lookup returned an error") {
 		return false
@@ -83,7 +84,7 @@ func validateLookup(t *testing.T, c Cache, tile pkg.TileRequest, expected *pkg.I
 	return assert.True(t, slices.Equal(*expected, *img2), "Result before and after cache don't match")
 }
 
-func validateNoLookup(t *testing.T, c Cache, tile pkg.TileRequest) bool {
+func validateNoLookup(t *testing.T, c entities.Cache, tile pkg.TileRequest) bool {
 	img2, err := c.Lookup(tile)
 	if !assert.Nil(t, err, "Cache lookup returned an error") {
 		return false

@@ -20,15 +20,11 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities"
 	"github.com/mitchellh/mapstructure"
 )
 
-type Cache interface {
-	Lookup(t pkg.TileRequest) (*pkg.Image, error)
-	Save(t pkg.TileRequest, img *pkg.Image) error
-}
-
-func ConstructCache(rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (Cache, error) {
+func ConstructCache(rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (entities.Cache, error) {
 	rawConfig = pkg.ReplaceEnv(rawConfig)
 
 	if rawConfig["name"] == "none" || rawConfig["name"] == "test" {
@@ -53,7 +49,7 @@ func ConstructCache(rawConfig map[string]interface{}, errorMessages config.Error
 		if err != nil {
 			return nil, err
 		}
-		tierCaches := make([]Cache, len(config.Tiers))
+		tierCaches := make([]entities.Cache, len(config.Tiers))
 
 		for i, tierRawConfig := range config.Tiers {
 			tierCache, err := ConstructCache(tierRawConfig, errorMessages)

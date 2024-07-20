@@ -25,6 +25,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities"
 	"github.com/anthonynsimon/bild/adjust"
 	"github.com/anthonynsimon/bild/blur"
 	"github.com/anthonynsimon/bild/effect"
@@ -43,10 +44,10 @@ type EffectConfig struct {
 
 type Effect struct {
 	EffectConfig
-	provider Provider
+	provider entities.Provider
 }
 
-func ConstructEffect(config EffectConfig, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, provider Provider) (*Effect, error) {
+func ConstructEffect(config EffectConfig, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, provider entities.Provider) (*Effect, error) {
 	if !slices.Contains(allEffectModes, config.Mode) {
 		return nil, fmt.Errorf(errorMessages.EnumError, "provider.effect.mode", config.Mode, allEffectModes)
 	}
@@ -58,11 +59,11 @@ func ConstructEffect(config EffectConfig, clientConfig config.ClientConfig, erro
 	return &Effect{config, provider}, nil
 }
 
-func (t Effect) PreAuth(ctx *pkg.RequestContext, providerContext ProviderContext) (ProviderContext, error) {
+func (t Effect) PreAuth(ctx *pkg.RequestContext, providerContext entities.ProviderContext) (entities.ProviderContext, error) {
 	return t.provider.PreAuth(ctx, providerContext)
 }
 
-func (t Effect) GenerateTile(ctx *pkg.RequestContext, providerContext ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t Effect) GenerateTile(ctx *pkg.RequestContext, providerContext entities.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	img, err := t.provider.GenerateTile(ctx, providerContext, tileRequest)
 
 	if err != nil {
