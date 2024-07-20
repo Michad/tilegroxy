@@ -23,8 +23,8 @@ import (
 	"image/png"
 	"slices"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/anthonynsimon/bild/adjust"
 	"github.com/anthonynsimon/bild/blur"
 	"github.com/anthonynsimon/bild/effect"
@@ -58,11 +58,11 @@ func ConstructEffect(config EffectConfig, clientConfig config.ClientConfig, erro
 	return &Effect{config, provider}, nil
 }
 
-func (t Effect) PreAuth(ctx *internal.RequestContext, providerContext ProviderContext) (ProviderContext, error) {
+func (t Effect) PreAuth(ctx *pkg.RequestContext, providerContext ProviderContext) (ProviderContext, error) {
 	return t.provider.PreAuth(ctx, providerContext)
 }
 
-func (t Effect) GenerateTile(ctx *internal.RequestContext, providerContext ProviderContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+func (t Effect) GenerateTile(ctx *pkg.RequestContext, providerContext ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	img, err := t.provider.GenerateTile(ctx, providerContext, tileRequest)
 
 	if err != nil {

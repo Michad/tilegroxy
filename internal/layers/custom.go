@@ -18,8 +18,8 @@ import (
 	"os"
 	"reflect"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 
 	"github.com/traefik/yaegi/interp"
 	"github.com/traefik/yaegi/stdlib"
@@ -36,8 +36,8 @@ type Custom struct {
 	clientConfig     config.ClientConfig
 	errorMessages    config.ErrorMessages
 	interp           *interp.Interpreter
-	preAuthFunc      func(*internal.RequestContext, ProviderContext, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (ProviderContext, error)
-	generateTileFunc func(*internal.RequestContext, ProviderContext, internal.TileRequest, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (*internal.Image, error)
+	preAuthFunc      func(*pkg.RequestContext, ProviderContext, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (ProviderContext, error)
+	generateTileFunc func(*pkg.RequestContext, ProviderContext, pkg.TileRequest, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (*pkg.Image, error)
 }
 
 func ConstructCustom(cfg CustomConfig, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (*Custom, error) {
@@ -45,12 +45,12 @@ func ConstructCustom(cfg CustomConfig, clientConfig config.ClientConfig, errorMe
 	i.Use(stdlib.Symbols)
 	i.Use(interp.Exports{
 		"tilegroxy/tilegroxy": map[string]reflect.Value{
-			"RequestContext":  reflect.ValueOf((*internal.RequestContext)(nil)),
+			"RequestContext":  reflect.ValueOf((*pkg.RequestContext)(nil)),
 			"ProviderContext": reflect.ValueOf((*ProviderContext)(nil)),
-			"TileRequest":     reflect.ValueOf((*internal.TileRequest)(nil)),
+			"TileRequest":     reflect.ValueOf((*pkg.TileRequest)(nil)),
 			"ClientConfig":    reflect.ValueOf((*config.ClientConfig)(nil)),
 			"ErrorMessages":   reflect.ValueOf((*config.ErrorMessages)(nil)),
-			"Image":           reflect.ValueOf((*internal.Image)(nil)),
+			"Image":           reflect.ValueOf((*pkg.Image)(nil)),
 			"AuthError":       reflect.ValueOf((*AuthError)(nil)),
 			"GetTile":         reflect.ValueOf(getTile),
 		}})
@@ -83,18 +83,18 @@ func ConstructCustom(cfg CustomConfig, clientConfig config.ClientConfig, errorMe
 		return nil, err
 	}
 
-	preAuthFunc := preAuthVal.Interface().(func(*internal.RequestContext, ProviderContext, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (ProviderContext, error))
+	preAuthFunc := preAuthVal.Interface().(func(*pkg.RequestContext, ProviderContext, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (ProviderContext, error))
 
-	generateTileFunc := generateTileVal.Interface().(func(*internal.RequestContext, ProviderContext, internal.TileRequest, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (*internal.Image, error))
+	generateTileFunc := generateTileVal.Interface().(func(*pkg.RequestContext, ProviderContext, pkg.TileRequest, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (*pkg.Image, error))
 
 	return &Custom{cfg, clientConfig, errorMessages, i, preAuthFunc, generateTileFunc}, nil
 }
 
-func (t Custom) PreAuth(ctx *internal.RequestContext, providerContext ProviderContext) (ProviderContext, error) {
+func (t Custom) PreAuth(ctx *pkg.RequestContext, providerContext ProviderContext) (ProviderContext, error) {
 	return t.preAuthFunc(ctx, providerContext, t.Params, t.clientConfig, t.errorMessages)
 }
 
-func (t Custom) GenerateTile(ctx *internal.RequestContext, providerContext ProviderContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+func (t Custom) GenerateTile(ctx *pkg.RequestContext, providerContext ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	img, err := t.generateTileFunc(ctx, providerContext, tileRequest, t.Params, t.clientConfig, t.errorMessages)
 
 	if err != nil {

@@ -28,8 +28,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 
 	"github.com/anthonynsimon/bild/blend"
 	"github.com/anthonynsimon/bild/transform"
@@ -90,7 +90,7 @@ func ConstructBlend(config BlendConfig, clientConfig config.ClientConfig, errorM
 	return &Blend{config, providers}, nil
 }
 
-func (t Blend) PreAuth(ctx *internal.RequestContext, providerContext ProviderContext) (ProviderContext, error) {
+func (t Blend) PreAuth(ctx *pkg.RequestContext, providerContext ProviderContext) (ProviderContext, error) {
 	if providerContext.Other == nil {
 		providerContext.Other = map[string]interface{}{}
 	}
@@ -143,7 +143,7 @@ func (t Blend) PreAuth(ctx *internal.RequestContext, providerContext ProviderCon
 	return providerContext, errors.Join(errSlice...)
 }
 
-func (t Blend) GenerateTile(ctx *internal.RequestContext, providerContext ProviderContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+func (t Blend) GenerateTile(ctx *pkg.RequestContext, providerContext ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	slog.DebugContext(ctx, fmt.Sprintf("Blending together %v providers", len(t.providers)))
 
 	wg := sync.WaitGroup{}
@@ -163,7 +163,7 @@ func (t Blend) GenerateTile(ctx *internal.RequestContext, providerContext Provid
 				wg.Done()
 			}()
 
-			var img *internal.Image
+			var img *pkg.Image
 			var err error
 			ac, ok := providerContext.Other[key].(ProviderContext)
 

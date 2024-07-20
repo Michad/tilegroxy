@@ -22,12 +22,12 @@ import (
 	"os"
 	"testing"
 
-	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/authentication"
 	"github.com/Michad/tilegroxy/internal/caches"
-	"github.com/Michad/tilegroxy/internal/config"
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/Michad/tilegroxy/internal/layers"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -46,8 +46,8 @@ func Test_TileHandler_AllowedArea(t *testing.T) {
 
 	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
 
-	ctx := internal.BackgroundContext()
-	b, _ := internal.TileRequest{LayerName: "l", Z: 10, X: 12, Y: 12}.GetBounds()
+	ctx := pkg.BackgroundContext()
+	b, _ := pkg.TileRequest{LayerName: "l", Z: 10, X: 12, Y: 12}.GetBounds()
 	ctx.AllowedArea = *b
 	req1 := httptest.NewRequest("GET", "http://example.com/tiles/main/10/10/10", nil).WithContext(ctx)
 	req1.SetPathValue("layer", "main")
@@ -101,7 +101,7 @@ func Test_TileHandler_Proxy(t *testing.T) {
 
 	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
 
-	ctx := internal.BackgroundContext()
+	ctx := pkg.BackgroundContext()
 	ctx.UserIdentifier = "hi"
 	req1 := httptest.NewRequest("GET", "http://example.com/tiles/main/10/10/10", nil).WithContext(ctx)
 	req1.SetPathValue("layer", "main_test")
@@ -136,7 +136,7 @@ func Test_TileHandler_RefToStatic(t *testing.T) {
 
 	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
 
-	req1 := httptest.NewRequest("GET", "http://example.com/tiles/test/10/10/10", nil).WithContext(internal.BackgroundContext())
+	req1 := httptest.NewRequest("GET", "http://example.com/tiles/test/10/10/10", nil).WithContext(pkg.BackgroundContext())
 	req1.SetPathValue("layer", "test")
 	req1.SetPathValue("z", "10")
 	req1.SetPathValue("x", "10")
@@ -151,7 +151,7 @@ func Test_TileHandler_RefToStatic(t *testing.T) {
 	b1, err := io.ReadAll(res1.Body)
 	assert.NoError(t, err)
 
-	req2 := httptest.NewRequest("GET", "http://example.com/tiles/main_a/10/10/10", nil).WithContext(internal.BackgroundContext())
+	req2 := httptest.NewRequest("GET", "http://example.com/tiles/main_a/10/10/10", nil).WithContext(pkg.BackgroundContext())
 	req2.SetPathValue("layer", "main_a")
 	req2.SetPathValue("z", "10")
 	req2.SetPathValue("x", "10")
@@ -207,7 +207,7 @@ func Test_TileHandler_ExecuteCustom(t *testing.T) {
 
 	handler := tileHandler{defaultHandler{config: &cfg, auth: authO, layerGroup: lg}}
 
-	req1 := httptest.NewRequest("GET", "http://localhost:12341/tiles/color/8/12/32", nil).WithContext(internal.BackgroundContext())
+	req1 := httptest.NewRequest("GET", "http://localhost:12341/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
 	req1.SetPathValue("layer", "color")
 	req1.SetPathValue("z", "8")
 	req1.SetPathValue("x", "12")
@@ -218,7 +218,7 @@ func Test_TileHandler_ExecuteCustom(t *testing.T) {
 	res1 := w1.Result()
 	assert.Equal(t, 401, res1.StatusCode)
 
-	req2 := httptest.NewRequest("GET", "http://localhost:12341/tiles/color/8/12/32", nil).WithContext(internal.BackgroundContext())
+	req2 := httptest.NewRequest("GET", "http://localhost:12341/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
 	req2.Header.Add("X-Token", "hunter2")
 	req2.SetPathValue("layer", "color")
 	req2.SetPathValue("z", "8")
@@ -230,7 +230,7 @@ func Test_TileHandler_ExecuteCustom(t *testing.T) {
 	res2 := w2.Result()
 	assert.Equal(t, 200, res2.StatusCode)
 
-	req3 := httptest.NewRequest("GET", "http://localhost:12341/tiles/color2/8/12/32", nil).WithContext(internal.BackgroundContext())
+	req3 := httptest.NewRequest("GET", "http://localhost:12341/tiles/color2/8/12/32", nil).WithContext(pkg.BackgroundContext())
 	req3.Header.Add("X-Token", "hunter2")
 	req3.SetPathValue("layer", "color2")
 	req3.SetPathValue("z", "8")
@@ -267,7 +267,7 @@ layers:
 	assert.NoError(t, err)
 	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
 
-	req1 := httptest.NewRequest("GET", "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(internal.BackgroundContext())
+	req1 := httptest.NewRequest("GET", "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
 	req1.SetPathValue("layer", "color")
 	req1.SetPathValue("z", "8")
 	req1.SetPathValue("x", "12")
@@ -279,7 +279,7 @@ layers:
 
 	assert.Equal(t, 401, resp1.StatusCode)
 
-	req2 := httptest.NewRequest("GET", "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(internal.BackgroundContext())
+	req2 := httptest.NewRequest("GET", "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
 	req2.SetPathValue("layer", "color")
 	req2.SetPathValue("z", "8")
 	req2.SetPathValue("x", "12")
@@ -313,7 +313,7 @@ layers:
 	assert.NoError(t, err)
 	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
 
-	req1 := httptest.NewRequest("GET", "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(internal.BackgroundContext())
+	req1 := httptest.NewRequest("GET", "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
 	req1.SetPathValue("layer", "color")
 	req1.SetPathValue("z", "8")
 	req1.SetPathValue("x", "12")
@@ -346,7 +346,7 @@ layers:
 	assert.NoError(t, err)
 	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
 
-	req1 := httptest.NewRequest("GET", "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(internal.BackgroundContext())
+	req1 := httptest.NewRequest("GET", "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
 	req1.SetPathValue("layer", "color")
 	req1.SetPathValue("z", "8")
 	req1.SetPathValue("x", "12")
@@ -358,7 +358,7 @@ layers:
 
 	assert.Equal(t, 401, resp1.StatusCode)
 
-	req2 := httptest.NewRequest("GET", "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(internal.BackgroundContext())
+	req2 := httptest.NewRequest("GET", "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
 	req2.Header.Add("Authorization", "Bearer hunter2")
 	req2.SetPathValue("layer", "color")
 	req2.SetPathValue("z", "8")
@@ -392,7 +392,7 @@ layers:
 	assert.NoError(t, err)
 	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
 
-	req1 := httptest.NewRequest("GET", "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(internal.BackgroundContext())
+	req1 := httptest.NewRequest("GET", "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
 	req1.SetPathValue("layer", "color")
 	req1.SetPathValue("z", "8")
 	req1.SetPathValue("x", "12")
@@ -430,7 +430,7 @@ layers:
 	assert.NoError(t, err)
 	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
 
-	req1 := httptest.NewRequest("GET", "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(internal.BackgroundContext())
+	req1 := httptest.NewRequest("GET", "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
 	req1.SetPathValue("layer", "color")
 	req1.SetPathValue("z", "8")
 	req1.SetPathValue("x", "12")
@@ -469,7 +469,7 @@ layers:
 	assert.NoError(t, err)
 	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
 
-	req1 := httptest.NewRequest("GET", "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(internal.BackgroundContext())
+	req1 := httptest.NewRequest("GET", "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
 	req1.SetPathValue("layer", "color")
 	req1.SetPathValue("z", "8")
 	req1.SetPathValue("x", "12")

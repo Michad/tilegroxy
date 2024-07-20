@@ -19,7 +19,7 @@ package layers
 import (
 	"testing"
 
-	"github.com/Michad/tilegroxy/internal"
+	"github.com/Michad/tilegroxy/pkg"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -57,14 +57,14 @@ func Test_CGI_Mapserv(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, cgi)
 
-	ctx := internal.BackgroundContext()
+	ctx := pkg.BackgroundContext()
 	ctx.LayerPatternMatches["file"] = "states"
 	ctx.LayerPatternMatches["layer"] = "all"
 
 	pc, err := cgi.PreAuth(ctx, ProviderContext{})
 	assert.NoError(t, err)
 
-	img, err := cgi.GenerateTile(ctx, pc, internal.TileRequest{LayerName: "states", Z: 8, X: 58, Y: 96})
+	img, err := cgi.GenerateTile(ctx, pc, pkg.TileRequest{LayerName: "states", Z: 8, X: 58, Y: 96})
 	assert.NoError(t, err)
 
 	assert.NotNil(t, img)
@@ -83,14 +83,14 @@ func Test_CGI_InvalidMapserv(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, cgi)
 
-	ctx := internal.BackgroundContext()
+	ctx := pkg.BackgroundContext()
 	ctx.LayerPatternMatches["file"] = "fstates"
 	ctx.LayerPatternMatches["layer"] = "all"
 
 	pc, err := cgi.PreAuth(ctx, ProviderContext{})
 	assert.NoError(t, err)
 
-	img, err := cgi.GenerateTile(ctx, pc, internal.TileRequest{LayerName: "states", Z: 8, X: 58, Y: 96})
+	img, err := cgi.GenerateTile(ctx, pc, pkg.TileRequest{LayerName: "states", Z: 8, X: 58, Y: 96})
 	assert.Error(t, err)
 
 	assert.Nil(t, img)

@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"github.com/Michad/tilegroxy/internal/authentication"
-	"github.com/Michad/tilegroxy/internal/config"
 	"github.com/Michad/tilegroxy/internal/layers"
+	"github.com/Michad/tilegroxy/pkg/config"
 )
 
 type defaultHandler struct {

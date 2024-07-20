@@ -17,8 +17,8 @@ package layers
 import (
 	"testing"
 
-	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/images"
+	"github.com/Michad/tilegroxy/pkg"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -47,12 +47,12 @@ func Test_EffectExecuteGreyscale(t *testing.T) {
 	assert.NotNil(t, c)
 	assert.NoError(t, err)
 
-	pc, err := c.PreAuth(internal.BackgroundContext(), ProviderContext{})
+	pc, err := c.PreAuth(pkg.BackgroundContext(), ProviderContext{})
 	assert.NotNil(t, pc)
 	assert.NoError(t, err)
 
 	exp, _ := images.GetStaticImage("color:4d4d4d")
-	img, err := c.GenerateTile(internal.BackgroundContext(), pc, internal.TileRequest{LayerName: "l", Z: 5, X: 3, Y: 1})
+	img, err := c.GenerateTile(pkg.BackgroundContext(), pc, pkg.TileRequest{LayerName: "l", Z: 5, X: 3, Y: 1})
 	assert.NotNil(t, img)
 	assert.NoError(t, err)
 
@@ -67,11 +67,11 @@ func Test_EffectExecuteAll(t *testing.T) {
 		assert.NotNil(t, c)
 		assert.NoError(t, err)
 
-		pc, err := c.PreAuth(internal.BackgroundContext(), ProviderContext{})
+		pc, err := c.PreAuth(pkg.BackgroundContext(), ProviderContext{})
 		assert.NotNil(t, pc)
 		assert.NoError(t, err)
 
-		img, err := c.GenerateTile(internal.BackgroundContext(), pc, internal.TileRequest{LayerName: "l", Z: 5, X: 3, Y: 1})
+		img, err := c.GenerateTile(pkg.BackgroundContext(), pc, pkg.TileRequest{LayerName: "l", Z: 5, X: 3, Y: 1})
 		assert.NotNil(t, img)
 		assert.NoError(t, err)
 	}

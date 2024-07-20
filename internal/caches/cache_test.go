@@ -21,7 +21,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Michad/tilegroxy/internal"
+	"github.com/Michad/tilegroxy/pkg"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -47,14 +47,14 @@ func extractHostAndPort(t *testing.T, endpoint string) HostAndPort {
 	return HostAndPort{Host: split[0], Port: uint16(port)}
 }
 
-func makeReq(seed int) internal.TileRequest {
+func makeReq(seed int) pkg.TileRequest {
 	z := 20
 	x := seed
 	y := seed
-	return internal.TileRequest{LayerName: "test", Z: int(z), X: x, Y: y}
+	return pkg.TileRequest{LayerName: "test", Z: int(z), X: x, Y: y}
 }
 
-func makeImg(seed int) internal.Image {
+func makeImg(seed int) pkg.Image {
 	return make([]byte, seed)
 }
 
@@ -71,7 +71,7 @@ func validateSaveAndLookup(t *testing.T, c Cache) bool {
 	return validateLookup(t, c, tile, &img)
 }
 
-func validateLookup(t *testing.T, c Cache, tile internal.TileRequest, expected *internal.Image) bool {
+func validateLookup(t *testing.T, c Cache, tile pkg.TileRequest, expected *pkg.Image) bool {
 	img2, err := c.Lookup(tile)
 	if !assert.Nil(t, err, "Cache lookup returned an error") {
 		return false
@@ -83,7 +83,7 @@ func validateLookup(t *testing.T, c Cache, tile internal.TileRequest, expected *
 	return assert.True(t, slices.Equal(*expected, *img2), "Result before and after cache don't match")
 }
 
-func validateNoLookup(t *testing.T, c Cache, tile internal.TileRequest) bool {
+func validateNoLookup(t *testing.T, c Cache, tile pkg.TileRequest) bool {
 	img2, err := c.Lookup(tile)
 	if !assert.Nil(t, err, "Cache lookup returned an error") {
 		return false

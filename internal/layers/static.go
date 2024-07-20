@@ -17,9 +17,9 @@ package layers
 import (
 	"fmt"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/config"
 	"github.com/Michad/tilegroxy/internal/images"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 )
 
 type StaticConfig struct {
@@ -29,7 +29,7 @@ type StaticConfig struct {
 
 type Static struct {
 	StaticConfig
-	img *internal.Image
+	img *pkg.Image
 }
 
 func ConstructStatic(config StaticConfig, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (*Static, error) {
@@ -50,10 +50,10 @@ func ConstructStatic(config StaticConfig, clientConfig config.ClientConfig, erro
 	return &Static{config, img}, nil
 }
 
-func (t Static) PreAuth(ctx *internal.RequestContext, providerContext ProviderContext) (ProviderContext, error) {
+func (t Static) PreAuth(ctx *pkg.RequestContext, providerContext ProviderContext) (ProviderContext, error) {
 	return ProviderContext{AuthBypass: true}, nil
 }
 
-func (t Static) GenerateTile(ctx *internal.RequestContext, providerContext ProviderContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+func (t Static) GenerateTile(ctx *pkg.RequestContext, providerContext ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	return t.img, nil
 }

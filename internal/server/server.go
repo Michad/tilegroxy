@@ -29,11 +29,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/authentication"
-	"github.com/Michad/tilegroxy/internal/config"
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/Michad/tilegroxy/internal/layers"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/gorilla/handlers"
@@ -57,7 +57,7 @@ const (
 	TypeOfErrorOther
 )
 
-func writeError(ctx *internal.RequestContext, w http.ResponseWriter, cfg *config.ErrorConfig, errorType TypeOfError, message string, args ...any) {
+func writeError(ctx *pkg.RequestContext, w http.ResponseWriter, cfg *config.ErrorConfig, errorType TypeOfError, message string, args ...any) {
 	var status int
 	var level slog.Level
 	if !cfg.AlwaysOk {
@@ -255,7 +255,7 @@ type httpContextHandler struct {
 }
 
 func (h httpContextHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	reqC := internal.NewRequestContext(req)
+	reqC := pkg.NewRequestContext(req)
 	defer func() {
 		if err := recover(); err != nil {
 			slog.ErrorContext(&reqC, "Unexpected panic: "+fmt.Sprint(err))
@@ -316,7 +316,7 @@ func ListenAndServe(config *config.Config, layerGroup *layers.LayerGroup, auth a
 		return err
 	}
 
-	ctx, stop := signal.NotifyContext(internal.BackgroundContext(), InterruptFlags...)
+	ctx, stop := signal.NotifyContext(pkg.BackgroundContext(), InterruptFlags...)
 	defer stop()
 
 	srv := &http.Server{

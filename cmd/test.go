@@ -26,7 +26,7 @@ import (
 
 	"sync/atomic"
 
-	"github.com/Michad/tilegroxy/internal"
+	"github.com/Michad/tilegroxy/pkg"
 	"github.com/spf13/cobra"
 )
 
@@ -58,7 +58,7 @@ func runTest(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	ctx := internal.BackgroundContext()
+	ctx := pkg.BackgroundContext()
 
 	_, layerObjects, _, err := parseConfigIntoStructs(cmd)
 
@@ -73,10 +73,10 @@ func runTest(cmd *cobra.Command, args []string) {
 	}
 
 	//Generate the full list of requests to process
-	tileRequests := make([]internal.TileRequest, 0)
+	tileRequests := make([]pkg.TileRequest, 0)
 
 	for _, layerName := range layerNames {
-		req := internal.TileRequest{LayerName: layerName, Z: int(z), X: int(x), Y: int(y)}
+		req := pkg.TileRequest{LayerName: layerName, Z: int(z), X: int(x), Y: int(y)}
 		_, err := req.GetBounds()
 
 		if err != nil {
@@ -105,7 +105,7 @@ func runTest(cmd *cobra.Command, args []string) {
 
 	//Split up all the requests for N threads
 	numReqPerThread := int(math.Floor(float64(numReq) / float64(numThread)))
-	var reqSplit [][]internal.TileRequest
+	var reqSplit [][]pkg.TileRequest
 
 	for i := 0; i < int(numThread); i++ {
 		chunkStart := i * numReqPerThread
@@ -128,8 +128,8 @@ func runTest(cmd *cobra.Command, args []string) {
 
 	for t := int(0); t < len(reqSplit); t++ {
 		wg.Add(1)
-		go func(t int, myReqs []internal.TileRequest) {
-			ctx2 := internal.BackgroundContext()
+		go func(t int, myReqs []pkg.TileRequest) {
+			ctx2 := pkg.BackgroundContext()
 
 			for _, req := range myReqs {
 				layer := layerObjects.FindLayer(ctx2, req.LayerName)
@@ -140,7 +140,7 @@ func runTest(cmd *cobra.Command, args []string) {
 				if !noCache && layerErr == nil {
 					cacheWriteError = layer.Cache.Save(req, img)
 					if cacheWriteError == nil {
-						var img2 *internal.Image
+						var img2 *pkg.Image
 						img2, cacheReadError = layer.Cache.Lookup(req)
 						if cacheReadError == nil {
 							if img2 == nil {

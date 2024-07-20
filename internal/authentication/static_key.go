@@ -20,9 +20,9 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/config"
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities"
 )
 
 type StaticKeyConfig struct {
@@ -34,7 +34,7 @@ type StaticKey struct {
 }
 
 func init() {
-	pkg.Register(pkg.EntityAuth, StaticKeyRegistration{})
+	entities.Register(entities.EntityAuth, StaticKeyRegistration{})
 }
 
 type StaticKeyRegistration struct {
@@ -51,7 +51,7 @@ func (s StaticKeyRegistration) Name() string {
 func (s StaticKeyRegistration) Initialize(cfgAny any, errorMessages config.ErrorMessages) (Authentication, error) {
 	cfg := cfgAny.(StaticKeyConfig)
 	if cfg.Key == "" {
-		keyStr := internal.RandomString()
+		keyStr := pkg.RandomString()
 
 		slog.WarnContext(context.Background(), fmt.Sprintf("Generated authentication key: %v\n", keyStr))
 		cfg.Key = keyStr
@@ -60,7 +60,7 @@ func (s StaticKeyRegistration) Initialize(cfgAny any, errorMessages config.Error
 	return &StaticKey{cfg}, nil
 }
 
-func (c StaticKey) CheckAuthentication(req *http.Request, ctx *internal.RequestContext) bool {
+func (c StaticKey) CheckAuthentication(req *http.Request, ctx *pkg.RequestContext) bool {
 	h := req.Header["Authorization"]
 	return len(h) > 0 && h[0] == "Bearer "+c.Key
 }

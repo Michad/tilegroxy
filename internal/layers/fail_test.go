@@ -17,8 +17,8 @@ package layers
 import (
 	"errors"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 )
 
 var testErrMessages = config.DefaultConfig().Error.Messages
@@ -37,13 +37,13 @@ func ConstructFail(config FailConfig, clientConfig config.ClientConfig, errorMes
 	return &Fail{config}, nil
 }
 
-func (t Fail) PreAuth(ctx *internal.RequestContext, providerContext ProviderContext) (ProviderContext, error) {
+func (t Fail) PreAuth(ctx *pkg.RequestContext, providerContext ProviderContext) (ProviderContext, error) {
 	if t.OnAuth {
 		return providerContext, errors.New(t.Message)
 	}
 	return providerContext, nil
 }
 
-func (t Fail) GenerateTile(ctx *internal.RequestContext, providerContext ProviderContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+func (t Fail) GenerateTile(ctx *pkg.RequestContext, providerContext ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	return nil, errors.New(t.Message)
 }

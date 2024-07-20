@@ -19,9 +19,9 @@ import (
 	"log/slog"
 	"slices"
 
-	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/caches"
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 )
 
 type LayerGroup struct {
@@ -47,7 +47,7 @@ func ConstructLayerGroup(cfg config.Config, layers []config.LayerConfig, cache c
 	return &layerGroup, nil
 }
 
-func (lg LayerGroup) FindLayer(ctx *internal.RequestContext, layerName string) *Layer {
+func (lg LayerGroup) FindLayer(ctx *pkg.RequestContext, layerName string) *Layer {
 	for _, l := range lg.layers {
 		if l.MatchesName(ctx, layerName) {
 			return l
@@ -65,8 +65,8 @@ func (lg LayerGroup) ListLayerIds() []string {
 	return r
 }
 
-func (lg LayerGroup) RenderTile(ctx *internal.RequestContext, tileRequest internal.TileRequest) (*internal.Image, error) {
-	var img *internal.Image
+func (lg LayerGroup) RenderTile(ctx *pkg.RequestContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+	var img *pkg.Image
 	var err error
 
 	l := lg.FindLayer(ctx, tileRequest.LayerName)
@@ -112,7 +112,7 @@ func (lg LayerGroup) RenderTile(ctx *internal.RequestContext, tileRequest intern
 	return img, nil
 }
 
-func (LayerGroup) checkPermission(ctx *internal.RequestContext, l *Layer, tileRequest internal.TileRequest) error {
+func (LayerGroup) checkPermission(ctx *pkg.RequestContext, l *Layer, tileRequest pkg.TileRequest) error {
 	if ctx.LimitLayers {
 		if !slices.Contains(ctx.AllowedLayers, l.Id) {
 			slog.InfoContext(ctx, "Denying access to non-allowed layer")
@@ -130,7 +130,7 @@ func (LayerGroup) checkPermission(ctx *internal.RequestContext, l *Layer, tileRe
 	return nil
 }
 
-func (lg *LayerGroup) RenderTileNoCache(ctx *internal.RequestContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+func (lg *LayerGroup) RenderTileNoCache(ctx *pkg.RequestContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	var err error
 
 	l := lg.FindLayer(ctx, tileRequest.LayerName)

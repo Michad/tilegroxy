@@ -24,8 +24,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/assert"
 	"github.com/testcontainers/testcontainers-go"
@@ -67,7 +67,7 @@ func Test_S3ValidateProfile(t *testing.T) {
 	var err2 error
 	s3, err1 := ConstructS3(S3Config{Bucket: "test", Profile: "fakeyfake"}, config.ErrorMessages{})
 	if s3 != nil {
-		_, err2 = s3.Lookup(internal.TileRequest{})
+		_, err2 = s3.Lookup(pkg.TileRequest{})
 	}
 
 	assert.Error(t, errors.Join(err1, err2))
@@ -114,7 +114,7 @@ func Test_S3Execute(t *testing.T) {
 	assert.NoError(t, err)
 
 	validateSaveAndLookup(t, s3)
-	img, err := s3.Lookup(internal.TileRequest{LayerName: "layer", Z: 93, X: 53, Y: 12345})
+	img, err := s3.Lookup(pkg.TileRequest{LayerName: "layer", Z: 93, X: 53, Y: 12345})
 	assert.Nil(t, img)
 	assert.NoError(t, err)
 }

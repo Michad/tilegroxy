@@ -19,8 +19,8 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/images"
+	"github.com/Michad/tilegroxy/pkg"
 	"github.com/spf13/viper"
 	_ "github.com/spf13/viper/remote"
 )
@@ -177,7 +177,7 @@ type Config struct {
 }
 
 func DefaultConfig() Config {
-	version, _, _ := internal.GetVersionInformation()
+	version, _, _ := pkg.GetVersionInformation()
 
 	return Config{
 		Server: ServerConfig{

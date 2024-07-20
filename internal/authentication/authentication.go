@@ -18,23 +18,23 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/config"
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities"
 	"github.com/mitchellh/mapstructure"
 )
 
 type Authentication interface {
-	CheckAuthentication(req *http.Request, ctx *internal.RequestContext) bool
+	CheckAuthentication(req *http.Request, ctx *pkg.RequestContext) bool
 }
 
 func ConstructAuth(rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (Authentication, error) {
-	rawConfig = internal.ReplaceEnv(rawConfig)
+	rawConfig = pkg.ReplaceEnv(rawConfig)
 
 	name, ok := rawConfig["name"].(string)
 
 	if ok {
-		reg, ok := pkg.Registration[Authentication](pkg.EntityAuth, name)
+		reg, ok := entities.Registration[Authentication](entities.EntityAuth, name)
 		if ok {
 			cfg := reg.InitializeConfig()
 			err := mapstructure.Decode(rawConfig, &cfg)
@@ -45,31 +45,6 @@ func ConstructAuth(rawConfig map[string]interface{}, errorMessages config.ErrorM
 			return a, err
 		}
 	}
-
-	// if rawConfig["name"] == "none" {
-	// 	return Noop{}, nil
-	// } else if rawConfig["name"] == "static key" {
-	// 	var config StaticKeyConfig
-	// 	err := mapstructure.Decode(rawConfig, &config)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	return ConstructStaticKey(config, errorMessages)
-	// } else if rawConfig["name"] == "jwt" {
-	// 	var config JwtConfig
-	// 	err := mapstructure.Decode(rawConfig, &config)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	return ConstructJwt(config, errorMessages)
-	// } else if rawConfig["name"] == "custom" {
-	// 	var config CustomConfig
-	// 	err := mapstructure.Decode(rawConfig, &config)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	return ConstructCustom(config, errorMessages)
-	// }
 
 	nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
 	return nil, fmt.Errorf(errorMessages.InvalidParam, "authentication.name", nameCoerce)

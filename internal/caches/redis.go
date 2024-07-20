@@ -21,8 +21,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 
 	"github.com/go-redis/cache/v9"
 	"github.com/redis/go-redis/v9"
@@ -150,11 +150,11 @@ func ConstructRedis(config RedisConfig, errorMessages config.ErrorMessages) (*Re
 	return &r, nil
 }
 
-func (c Redis) Lookup(t internal.TileRequest) (*internal.Image, error) {
+func (c Redis) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
 	ctx := context.TODO()
 
 	key := c.KeyPrefix + t.String()
-	var obj internal.Image
+	var obj pkg.Image
 
 	err := c.cache.Get(ctx, key, &obj)
 
@@ -169,7 +169,7 @@ func (c Redis) Lookup(t internal.TileRequest) (*internal.Image, error) {
 	return &obj, nil
 }
 
-func (c Redis) Save(t internal.TileRequest, img *internal.Image) error {
+func (c Redis) Save(t pkg.TileRequest, img *pkg.Image) error {
 	ctx := context.TODO()
 
 	key := c.KeyPrefix + t.String()

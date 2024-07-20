@@ -25,8 +25,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
@@ -71,7 +71,7 @@ func ConstructS3(config S3Config, errorMessages config.ErrorMessages) (*S3, erro
 		return nil, fmt.Errorf(errorMessages.InvalidParam, "cache.s3.bucket", config.Bucket)
 	}
 
-	awsConfig, err := awsconfig.LoadDefaultConfig(internal.BackgroundContext(), func(lo *awsconfig.LoadOptions) error {
+	awsConfig, err := awsconfig.LoadDefaultConfig(pkg.BackgroundContext(), func(lo *awsconfig.LoadOptions) error {
 
 		if config.Profile != "" {
 			lo.SharedConfigProfile = config.Profile
@@ -111,17 +111,17 @@ func ConstructS3(config S3Config, errorMessages config.ErrorMessages) (*S3, erro
 	return &S3{config, client, downloader, uploader}, nil
 }
 
-func calcKey(config *S3, t *internal.TileRequest) string {
+func calcKey(config *S3, t *pkg.TileRequest) string {
 	return config.Path + t.LayerName + "/" + strconv.Itoa(t.Z) + "/" + strconv.Itoa(t.X) + "/" + strconv.Itoa(t.Y)
 }
 
 // Just for testing purposes
 func (c S3) makeBucket() error {
-	_, err := c.client.CreateBucket(internal.BackgroundContext(), &s3.CreateBucketInput{Bucket: &c.Bucket})
+	_, err := c.client.CreateBucket(pkg.BackgroundContext(), &s3.CreateBucketInput{Bucket: &c.Bucket})
 	return err
 }
 
-func (c S3) Lookup(t internal.TileRequest) (*internal.Image, error) {
+func (c S3) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
 	writer := manager.NewWriteAtBuffer([]byte{})
 
 	_, err := c.downloader.Download(
@@ -142,12 +142,12 @@ func (c S3) Lookup(t internal.TileRequest) (*internal.Image, error) {
 		return nil, err
 	}
 
-	img := internal.Image(writer.Bytes())
+	img := pkg.Image(writer.Bytes())
 
 	return &img, nil
 }
 
-func (c S3) Save(t internal.TileRequest, img *internal.Image) error {
+func (c S3) Save(t pkg.TileRequest, img *pkg.Image) error {
 
 	uploadConfig := &s3.PutObjectInput{
 		Bucket: &c.Bucket,

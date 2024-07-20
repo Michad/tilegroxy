@@ -17,8 +17,8 @@ package layers
 import (
 	"testing"
 
-	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/images"
+	"github.com/Michad/tilegroxy/pkg"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -48,11 +48,11 @@ func Test_Transform_Execute(t *testing.T) {
 
 	exp, _ := images.GetStaticImage("color:00F")
 
-	pc, err := tr.PreAuth(internal.BackgroundContext(), ProviderContext{})
+	pc, err := tr.PreAuth(pkg.BackgroundContext(), ProviderContext{})
 	assert.NotNil(t, pc)
 	assert.NoError(t, err)
 
-	img, err := tr.GenerateTile(internal.BackgroundContext(), pc, internal.TileRequest{LayerName: "l", Z: 9, X: 23, Y: 32})
+	img, err := tr.GenerateTile(pkg.BackgroundContext(), pc, pkg.TileRequest{LayerName: "l", Z: 9, X: 23, Y: 32})
 
 	assert.NoError(t, err)
 	assert.Equal(t, *exp, *img)

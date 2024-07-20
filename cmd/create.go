@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"

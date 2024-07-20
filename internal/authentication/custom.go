@@ -22,9 +22,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/config"
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities"
 	"github.com/maypok86/otter"
 	"github.com/traefik/yaegi/interp"
 	"github.com/traefik/yaegi/stdlib"
@@ -76,7 +76,7 @@ func (v ValidationResult) isGood() bool {
 	return true
 }
 
-func extractToken(req *http.Request, ctx *internal.RequestContext, tokenExtract map[string]string) (string, bool) {
+func extractToken(req *http.Request, ctx *pkg.RequestContext, tokenExtract map[string]string) (string, bool) {
 	h, hOk := tokenExtract[ExtractModeHeader]
 	c, cOk := tokenExtract[ExtractModeCookie]
 	q, qOk := tokenExtract[ExtractModeQuery]
@@ -122,7 +122,7 @@ func extractToken(req *http.Request, ctx *internal.RequestContext, tokenExtract 
 }
 
 func init() {
-	pkg.Register(pkg.EntityAuth, CustomRegistration{})
+	entities.Register(entities.EntityAuth, CustomRegistration{})
 }
 
 type CustomRegistration struct {
@@ -196,7 +196,7 @@ func (s CustomRegistration) Initialize(cfgAny any, errorMessages config.ErrorMes
 	}
 }
 
-func (c Custom) CheckAuthentication(req *http.Request, ctx *internal.RequestContext) bool {
+func (c Custom) CheckAuthentication(req *http.Request, ctx *pkg.RequestContext) bool {
 	slog.Log(ctx, config.LevelTrace, "Performing custom auth check")
 	tok, ok := extractToken(req, ctx, c.Token)
 	if ok {

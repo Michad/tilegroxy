@@ -18,7 +18,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 

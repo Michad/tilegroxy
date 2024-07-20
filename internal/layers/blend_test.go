@@ -17,8 +17,8 @@ package layers
 import (
 	"testing"
 
-	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/images"
+	"github.com/Michad/tilegroxy/pkg"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -71,17 +71,17 @@ func Test_BlendExecute_Add(t *testing.T) {
 	assert.NotNil(t, b)
 	assert.NoError(t, err)
 
-	ctx, err := b.PreAuth(internal.BackgroundContext(), ProviderContext{})
+	ctx, err := b.PreAuth(pkg.BackgroundContext(), ProviderContext{})
 	assert.NoError(t, err)
 	assert.NotNil(t, ctx)
 	assert.NotEmpty(t, ctx.Other)
-	ctx, err = b.PreAuth(internal.BackgroundContext(), ctx)
+	ctx, err = b.PreAuth(pkg.BackgroundContext(), ctx)
 	assert.NoError(t, err)
 	assert.NotNil(t, ctx)
 	assert.NotEmpty(t, ctx.Other)
 
 	exp, _ := images.GetStaticImage("color:FF0")
-	i, err := b.GenerateTile(internal.BackgroundContext(), ctx, internal.TileRequest{LayerName: "", Z: 4, X: 2, Y: 3})
+	i, err := b.GenerateTile(pkg.BackgroundContext(), ctx, pkg.TileRequest{LayerName: "", Z: 4, X: 2, Y: 3})
 	assert.NoError(t, err)
 
 	assert.Equal(t, *exp, *i)
@@ -92,7 +92,7 @@ func Test_BlendExecute_All(t *testing.T) {
 		b, err := ConstructBlend(BlendConfig{Mode: mode}, testClientConfig, testErrMessages, makeBlendProviders(), nil)
 		assert.NotNil(t, b)
 		assert.NoError(t, err)
-		i, err := b.GenerateTile(internal.BackgroundContext(), ProviderContext{}, internal.TileRequest{LayerName: "", Z: 4, X: 2, Y: 3})
+		i, err := b.GenerateTile(pkg.BackgroundContext(), ProviderContext{}, pkg.TileRequest{LayerName: "", Z: 4, X: 2, Y: 3})
 		assert.NoError(t, err)
 		assert.NotNil(t, i)
 		assert.Greater(t, len(*i), 1000)

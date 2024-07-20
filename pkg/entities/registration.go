@@ -1,6 +1,6 @@
-package pkg
+package entities
 
-import "github.com/Michad/tilegroxy/internal/config"
+import "github.com/Michad/tilegroxy/pkg/config"
 
 type EntityType int
 

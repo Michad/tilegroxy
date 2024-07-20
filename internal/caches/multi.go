@@ -17,7 +17,7 @@ package caches
 import (
 	"errors"
 
-	"github.com/Michad/tilegroxy/internal"
+	"github.com/Michad/tilegroxy/pkg"
 )
 
 type MultiConfig struct {
@@ -28,7 +28,7 @@ type Multi struct {
 	Tiers []Cache
 }
 
-func (c Multi) Lookup(t internal.TileRequest) (*internal.Image, error) {
+func (c Multi) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
 	var allErrors error
 
 	for _, cache := range c.Tiers {
@@ -45,7 +45,7 @@ func (c Multi) Lookup(t internal.TileRequest) (*internal.Image, error) {
 	return nil, allErrors
 }
 
-func (c Multi) Save(t internal.TileRequest, img *internal.Image) error {
+func (c Multi) Save(t pkg.TileRequest, img *pkg.Image) error {
 	var allErrors error
 
 	for _, cache := range c.Tiers {

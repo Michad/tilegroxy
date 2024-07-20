@@ -23,9 +23,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/caches"
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 )
 
 type layerSegment struct {
@@ -200,7 +200,7 @@ func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.Cli
 	return &Layer{rawConfig.Id, segments, validator, rawConfig, provider, nil, errorMessages, ProviderContext{}, sync.Mutex{}}, nil
 }
 
-func (l *Layer) authWithProvider(ctx *internal.RequestContext) error {
+func (l *Layer) authWithProvider(ctx *pkg.RequestContext) error {
 	var err error
 
 	if !l.providerContext.AuthBypass {
@@ -214,7 +214,7 @@ func (l *Layer) authWithProvider(ctx *internal.RequestContext) error {
 	return err
 }
 
-func (l *Layer) MatchesName(ctx *internal.RequestContext, layerName string) bool {
+func (l *Layer) MatchesName(ctx *pkg.RequestContext, layerName string) bool {
 
 	if doesMatch, matches := match(l.Pattern, layerName); doesMatch {
 		if validateParamMatches(matches, l.ParamValidator) {
@@ -227,8 +227,8 @@ func (l *Layer) MatchesName(ctx *internal.RequestContext, layerName string) bool
 	return false
 }
 
-func (l *Layer) RenderTileNoCache(ctx *internal.RequestContext, tileRequest internal.TileRequest) (*internal.Image, error) {
-	var img *internal.Image
+func (l *Layer) RenderTileNoCache(ctx *pkg.RequestContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+	var img *pkg.Image
 	var err error
 
 	err = l.authWithProvider(ctx)

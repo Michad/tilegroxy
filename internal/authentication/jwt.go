@@ -23,9 +23,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/config"
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/maypok86/otter"
 )
@@ -53,7 +53,7 @@ type Jwt struct {
 }
 
 func init() {
-	pkg.Register(pkg.EntityAuth, JWTRegistration{})
+	entities.Register(entities.EntityAuth, JWTRegistration{})
 }
 
 type JWTRegistration struct {
@@ -102,7 +102,7 @@ func (s JWTRegistration) Initialize(configAny any, errorMessages config.ErrorMes
 	}
 }
 
-func (c Jwt) CheckAuthentication(req *http.Request, ctx *internal.RequestContext) bool {
+func (c Jwt) CheckAuthentication(req *http.Request, ctx *pkg.RequestContext) bool {
 	authHeader := req.Header[c.HeaderName]
 	if len(authHeader) != 1 {
 		return false
@@ -229,7 +229,7 @@ func (c Jwt) CheckAuthentication(req *http.Request, ctx *internal.RequestContext
 	return true
 }
 
-func (c Jwt) validateScope(rawClaim jwt.MapClaims, ctx *internal.RequestContext) bool {
+func (c Jwt) validateScope(rawClaim jwt.MapClaims, ctx *pkg.RequestContext) bool {
 	scope := rawClaim["scope"]
 	scopeStr, ok := scope.(string)
 
@@ -268,7 +268,7 @@ func (c Jwt) validateScope(rawClaim jwt.MapClaims, ctx *internal.RequestContext)
 	return true
 }
 
-func (c Jwt) validateGeohash(rawClaim jwt.MapClaims, ctx *internal.RequestContext) bool {
+func (c Jwt) validateGeohash(rawClaim jwt.MapClaims, ctx *pkg.RequestContext) bool {
 	hash := rawClaim["geohash"]
 
 	if hash == nil {
@@ -281,7 +281,7 @@ func (c Jwt) validateGeohash(rawClaim jwt.MapClaims, ctx *internal.RequestContex
 		slog.InfoContext(ctx, "Request contains invalid geohash type")
 		return false
 	} else {
-		bounds, err := internal.NewBoundsFromGeohash(hashStr)
+		bounds, err := pkg.NewBoundsFromGeohash(hashStr)
 
 		if err != nil {
 			slog.InfoContext(ctx, "Request contains invalid geohash "+hashStr)

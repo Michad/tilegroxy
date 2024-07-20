@@ -12,14 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package authentication
+package secrets
 
 import (
-	"net/http"
+	"fmt"
 
-	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
 )
 
 type NoopConfig struct {
@@ -27,27 +25,13 @@ type NoopConfig struct {
 
 type Noop struct {
 	NoopConfig
+	errorMessages config.ErrorMessages
 }
 
-func init() {
-	entities.Register[Authentication](entities.EntityAuth, NoopRegistration{})
+func ConstructNoopConfig(cfg NoopConfig, errorMessages config.ErrorMessages) (*Noop, error) {
+	return &Noop{cfg, errorMessages}, nil
 }
 
-type NoopRegistration struct {
-}
-
-func (s NoopRegistration) InitializeConfig() any {
-	return NoopConfig{}
-}
-
-func (s NoopRegistration) Name() string {
-	return "none"
-}
-
-func (s NoopRegistration) Initialize(config any, errorMessages config.ErrorMessages) (Authentication, error) {
-	return &Noop{config.(NoopConfig)}, nil
-}
-
-func (c Noop) CheckAuthentication(req *http.Request, ctx *pkg.RequestContext) bool {
-	return true
+func (s Noop) Lookup(key string) (string, error) {
+	return "", fmt.Errorf(s.errorMessages.ParamRequired, key)
 }

@@ -19,7 +19,7 @@ import (
 
 	"github.com/Michad/tilegroxy/internal/authentication"
 	"github.com/Michad/tilegroxy/internal/caches"
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg/config"
 )
 
 func ConfigToEntities(cfg config.Config) (*LayerGroup, authentication.Authentication, error) {

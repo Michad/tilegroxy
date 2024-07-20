@@ -26,8 +26,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 )
 
 type CGIConfig struct {
@@ -48,7 +48,7 @@ type CGI struct {
 }
 
 type SLogWriter struct {
-	ctx   *internal.RequestContext
+	ctx   *pkg.RequestContext
 	level slog.Level
 }
 
@@ -119,11 +119,11 @@ func ConstructCGI(cfg CGIConfig, clientConfig config.ClientConfig, errorMessages
 	return &CGI{cfg, h, clientConfig}, nil
 }
 
-func (t CGI) PreAuth(ctx *internal.RequestContext, providerContext ProviderContext) (ProviderContext, error) {
+func (t CGI) PreAuth(ctx *pkg.RequestContext, providerContext ProviderContext) (ProviderContext, error) {
 	return ProviderContext{AuthBypass: true}, nil
 }
 
-func (t CGI) GenerateTile(ctx *internal.RequestContext, providerContext ProviderContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+func (t CGI) GenerateTile(ctx *pkg.RequestContext, providerContext ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	var err error
 
 	h := t.handler

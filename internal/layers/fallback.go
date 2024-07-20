@@ -19,8 +19,8 @@ import (
 	"log/slog"
 	"slices"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 )
 
 type CacheMode string
@@ -36,9 +36,9 @@ var allCacheModes = []CacheMode{CacheModeAlways, CacheModeUnlessError, CacheMode
 type FallbackConfig struct {
 	Primary   map[string]interface{}
 	Secondary map[string]interface{}
-	Zoom      string          //Only use Primary for requests in the given range of zoom levels
-	Bounds    internal.Bounds //Allows any tile that intersects these bounds
-	Cache     CacheMode       //When to skip cache-ing (in fallback scenarios)
+	Zoom      string     //Only use Primary for requests in the given range of zoom levels
+	Bounds    pkg.Bounds //Allows any tile that intersects these bounds
+	Cache     CacheMode  //When to skip cache-ing (in fallback scenarios)
 }
 
 type Fallback struct {
@@ -53,13 +53,13 @@ func ConstructFallback(config FallbackConfig, clientConfig config.ClientConfig, 
 
 	if config.Zoom != "" {
 		var err error
-		zoom, err = internal.ParseZoomString(config.Zoom)
+		zoom, err = pkg.ParseZoomString(config.Zoom)
 
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		for z := 0; z <= internal.MaxZoom; z++ {
+		for z := 0; z <= pkg.MaxZoom; z++ {
 			zoom = append(zoom, z)
 		}
 	}
@@ -75,11 +75,11 @@ func ConstructFallback(config FallbackConfig, clientConfig config.ClientConfig, 
 	return &Fallback{config, zoom, primary, secondary}, nil
 }
 
-func (t Fallback) PreAuth(ctx *internal.RequestContext, ProviderContext ProviderContext) (ProviderContext, error) {
+func (t Fallback) PreAuth(ctx *pkg.RequestContext, ProviderContext ProviderContext) (ProviderContext, error) {
 	return t.Primary.PreAuth(ctx, ProviderContext)
 }
 
-func (t Fallback) GenerateTile(ctx *internal.RequestContext, ProviderContext ProviderContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+func (t Fallback) GenerateTile(ctx *pkg.RequestContext, ProviderContext ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	ok := true
 
 	if !slices.Contains(t.zoomLevels, tileRequest.Z) {
@@ -103,7 +103,7 @@ func (t Fallback) GenerateTile(ctx *internal.RequestContext, ProviderContext Pro
 		}
 	}
 
-	var img *internal.Image
+	var img *pkg.Image
 
 	if ok {
 		img, err = t.Primary.GenerateTile(ctx, ProviderContext, tileRequest)

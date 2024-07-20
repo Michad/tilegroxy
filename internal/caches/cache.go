@@ -18,18 +18,18 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/mitchellh/mapstructure"
 )
 
 type Cache interface {
-	Lookup(t internal.TileRequest) (*internal.Image, error)
-	Save(t internal.TileRequest, img *internal.Image) error
+	Lookup(t pkg.TileRequest) (*pkg.Image, error)
+	Save(t pkg.TileRequest, img *pkg.Image) error
 }
 
 func ConstructCache(rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (Cache, error) {
-	rawConfig = internal.ReplaceEnv(rawConfig)
+	rawConfig = pkg.ReplaceEnv(rawConfig)
 
 	if rawConfig["name"] == "none" || rawConfig["name"] == "test" {
 		return Noop{}, nil

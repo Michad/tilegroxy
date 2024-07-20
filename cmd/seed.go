@@ -21,7 +21,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/Michad/tilegroxy/internal"
+	"github.com/Michad/tilegroxy/pkg"
 	"github.com/spf13/cobra"
 )
 
@@ -56,7 +56,7 @@ func runSeed(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	ctx := internal.BackgroundContext()
+	ctx := pkg.BackgroundContext()
 
 	_, layerGroup, _, err := parseConfigIntoStructs(cmd)
 
@@ -80,13 +80,13 @@ func runSeed(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	b := internal.Bounds{South: float64(minLat), West: float64(minLon), North: float64(maxLat), East: float64(maxLon)}
+	b := pkg.Bounds{South: float64(minLat), West: float64(minLon), North: float64(maxLat), East: float64(maxLon)}
 
-	tileRequests := make([]internal.TileRequest, 0)
+	tileRequests := make([]pkg.TileRequest, 0)
 
 	for _, z := range zoom {
-		if z > internal.MaxZoom {
-			fmt.Fprintf(out, "Error: zoom must be less than %v\n", internal.MaxZoom)
+		if z > pkg.MaxZoom {
+			fmt.Fprintf(out, "Error: zoom must be less than %v\n", pkg.MaxZoom)
 			exit(1)
 			return
 		}
@@ -100,7 +100,7 @@ func runSeed(cmd *cobra.Command, args []string) {
 			count := len(tileRequests)
 
 			if err != nil {
-				var tilesError internal.TooManyTilesError
+				var tilesError pkg.TooManyTilesError
 
 				if errors.As(err, &tilesError) {
 					count = int(tilesError.NumTiles)
@@ -113,8 +113,8 @@ func runSeed(cmd *cobra.Command, args []string) {
 
 			fmt.Fprintf(out, "Too many tiles to seed (%v > %v). %v\n",
 				count,
-				internal.Ternary(count > math.MaxInt32, math.MaxInt32, 10000),
-				internal.Ternary(count > math.MaxInt32, "", "Run with --force if you're sure you want to generate this many tiles"))
+				pkg.Ternary(count > math.MaxInt32, math.MaxInt32, 10000),
+				pkg.Ternary(count > math.MaxInt32, "", "Run with --force if you're sure you want to generate this many tiles"))
 			exit(1)
 			return
 		}
@@ -133,7 +133,7 @@ func runSeed(cmd *cobra.Command, args []string) {
 
 	chunkSize := int(math.Floor(float64(numReq) / float64(numThread)))
 
-	var reqSplit [][]internal.TileRequest
+	var reqSplit [][]pkg.TileRequest
 
 	for i := 0; i < int(numThread); i++ {
 		chunkStart := i * chunkSize
@@ -151,12 +151,12 @@ func runSeed(cmd *cobra.Command, args []string) {
 
 	for t := int(0); t < len(reqSplit); t++ {
 		wg.Add(1)
-		go func(t int, myReqs []internal.TileRequest) {
+		go func(t int, myReqs []pkg.TileRequest) {
 			if verbose {
 				fmt.Fprintf(out, "Created thread %v with %v tiles\n", t, len(myReqs))
 			}
 			for _, req := range myReqs {
-				_, tileErr := layerGroup.RenderTile(internal.BackgroundContext(), req)
+				_, tileErr := layerGroup.RenderTile(pkg.BackgroundContext(), req)
 
 				if verbose {
 					var status string

@@ -17,8 +17,8 @@ package caches
 import (
 	"fmt"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/bradfitz/gomemcache/memcache"
 )
 
@@ -73,18 +73,18 @@ func ConstructMemcache(config MemcacheConfig, errorMessages config.ErrorMessages
 
 }
 
-func (c Memcache) Lookup(t internal.TileRequest) (*internal.Image, error) {
+func (c Memcache) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
 	it, err := c.client.Get(c.KeyPrefix + t.String())
 
 	if err != nil {
 		return nil, err
 	}
 
-	result := internal.Image(it.Value)
+	result := pkg.Image(it.Value)
 
 	return &result, nil
 }
 
-func (c Memcache) Save(t internal.TileRequest, img *internal.Image) error {
+func (c Memcache) Save(t pkg.TileRequest, img *pkg.Image) error {
 	return c.client.Set(&memcache.Item{Key: c.KeyPrefix + t.String(), Value: *img, Expiration: int32(c.Ttl)})
 }

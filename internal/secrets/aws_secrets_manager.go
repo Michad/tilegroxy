@@ -21,9 +21,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/config"
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities"
 	"github.com/maypok86/otter"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -52,7 +52,7 @@ type AWSSecretsManager struct {
 }
 
 func init() {
-	pkg.Register[Secreter](pkg.EntitySecret, AWSSecretsManagerSecreter{})
+	entities.Register[Secreter](entities.EntitySecret, AWSSecretsManagerSecreter{})
 }
 
 type AWSSecretsManagerSecreter struct {
@@ -75,7 +75,7 @@ func (s AWSSecretsManagerSecreter) Initialize(cfgAny any, errorMessages config.E
 		cfg.TTL = 60 * 60
 	}
 
-	awsConfig, err := awsconfig.LoadDefaultConfig(internal.BackgroundContext(), func(lo *awsconfig.LoadOptions) error {
+	awsConfig, err := awsconfig.LoadDefaultConfig(pkg.BackgroundContext(), func(lo *awsconfig.LoadOptions) error {
 		if cfg.Profile != "" {
 			lo.SharedConfigProfile = cfg.Profile
 		}
@@ -109,7 +109,7 @@ func (s AWSSecretsManagerSecreter) Initialize(cfgAny any, errorMessages config.E
 	return &AWSSecretsManager{cfg, svc, nil}, nil
 }
 
-func (s AWSSecretsManager) Lookup(ctx *internal.RequestContext, key string) (string, error) {
+func (s AWSSecretsManager) Lookup(ctx *pkg.RequestContext, key string) (string, error) {
 	keySplit := strings.Split(key, s.Separator)
 
 	secretName := keySplit[0]

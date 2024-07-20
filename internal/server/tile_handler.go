@@ -22,8 +22,8 @@ import (
 	"runtime/debug"
 	"strconv"
 
-	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/layers"
+	"github.com/Michad/tilegroxy/pkg"
 )
 
 type tileHandler struct {
@@ -31,7 +31,7 @@ type tileHandler struct {
 }
 
 func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	ctx := req.Context().(*internal.RequestContext)
+	ctx := req.Context().(*pkg.RequestContext)
 	slog.DebugContext(ctx, "server: tile handler started")
 	defer slog.DebugContext(ctx, "server: tile handler ended")
 
@@ -66,12 +66,12 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	tileReq := internal.TileRequest{LayerName: layerName, Z: z, X: x, Y: y}
+	tileReq := pkg.TileRequest{LayerName: layerName, Z: z, X: x, Y: y}
 
 	_, err = tileReq.GetBounds()
 
 	if err != nil {
-		var re internal.RangeError
+		var re pkg.RangeError
 		if errors.As(err, &re) {
 			writeError(ctx, w, &h.config.Error, TypeOfErrorBounds, fmt.Sprintf(h.config.Error.Messages.RangeError, re.ParamName, re.MinValue, re.MaxValue))
 		} else {
@@ -103,7 +103,7 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if !h.config.Server.Production {
-		version, _, _ := internal.GetVersionInformation()
+		version, _, _ := pkg.GetVersionInformation()
 		w.Header().Add("X-Powered-By", "tilegroxy "+version)
 	}
 

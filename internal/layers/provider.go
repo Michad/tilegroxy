@@ -28,20 +28,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/mitchellh/mapstructure"
 )
 
 type Provider interface {
 	// Performs authentication before tiles are ever generated. The calling code ensures this is only called once at a time and only when needed
 	// based on the expiration in ProviderContext and when an AuthError is returned from GenerateTile
-	PreAuth(ctx *internal.RequestContext, providerContext ProviderContext) (ProviderContext, error)
-	GenerateTile(ctx *internal.RequestContext, providerContext ProviderContext, tileRequest internal.TileRequest) (*internal.Image, error)
+	PreAuth(ctx *pkg.RequestContext, providerContext ProviderContext) (ProviderContext, error)
+	GenerateTile(ctx *pkg.RequestContext, providerContext ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error)
 }
 
 func ConstructProvider(rawConfig map[string]interface{}, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup) (Provider, error) {
-	rawConfig = internal.ReplaceEnv(rawConfig)
+	rawConfig = pkg.ReplaceEnv(rawConfig)
 
 	if rawConfig["name"] == "url template" {
 		var config UrlTemplateConfig
@@ -200,7 +200,7 @@ var envRegex, _ = regexp.Compile(`{env\.[^{}}]*}`)
 var ctxRegex, _ = regexp.Compile(`{ctx\.[^{}}]*}`)
 var lyrRegex, _ = regexp.Compile(`{layer\.[^{}}]*}`)
 
-func replaceUrlPlaceholders(ctx *internal.RequestContext, tileRequest internal.TileRequest, url string, invertY bool) (string, error) {
+func replaceUrlPlaceholders(ctx *pkg.RequestContext, tileRequest pkg.TileRequest, url string, invertY bool) (string, error) {
 	b, err := tileRequest.GetBounds()
 
 	if err != nil {
@@ -266,7 +266,7 @@ func replaceUrlPlaceholders(ctx *internal.RequestContext, tileRequest internal.T
  * Performs a GET operation against a given URL. Implementing providers should call this when possible. It has
  * standard reusable logic around various config options
  */
-func getTile(ctx *internal.RequestContext, clientConfig config.ClientConfig, url string, authHeaders map[string]string) (*internal.Image, error) {
+func getTile(ctx *pkg.RequestContext, clientConfig config.ClientConfig, url string, authHeaders map[string]string) (*pkg.Image, error) {
 	slog.DebugContext(ctx, fmt.Sprintf("Calling url %v\n", url))
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)

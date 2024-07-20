@@ -17,23 +17,23 @@ package secrets
 import (
 	"fmt"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/config"
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities"
 	"github.com/mitchellh/mapstructure"
 )
 
 type Secreter interface {
-	Lookup(ctx *internal.RequestContext, key string) (string, error)
+	Lookup(ctx *pkg.RequestContext, key string) (string, error)
 }
 
 func ConstructSecreter[C any](rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (Secreter, error) {
-	rawConfig = internal.ReplaceEnv(rawConfig)
+	rawConfig = pkg.ReplaceEnv(rawConfig)
 
 	name, ok := rawConfig["name"].(string)
 
 	if ok {
-		reg, ok := pkg.Registration[Secreter](pkg.EntitySecret, name)
+		reg, ok := entities.Registration[Secreter](entities.EntitySecret, name)
 		if ok {
 			cfg := reg.InitializeConfig()
 			err := mapstructure.Decode(rawConfig, &cfg)
