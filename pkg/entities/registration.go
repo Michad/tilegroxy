@@ -16,13 +16,13 @@ package entities
 
 import "github.com/Michad/tilegroxy/pkg/config"
 
-type EntityType int
+type entityType int
 
 const (
-	EntityAuth = iota
-	EntityProvider
-	EntityCache
-	EntitySecret
+	entityAuth = iota
+	entityProvider
+	entityCache
+	entitySecret
 )
 
 type EntityRegistration[T any] interface {
@@ -31,23 +31,40 @@ type EntityRegistration[T any] interface {
 	InitializeConfig() any
 }
 
-var registrations map[EntityType]map[string]interface{} = make(map[EntityType]map[string]interface{})
+var registrations map[entityType]map[string]interface{} = make(map[entityType]map[string]interface{})
 
 func init() {
-	for i := EntityAuth; i <= EntitySecret; i++ {
-		registrations[EntityType(i)] = make(map[string]interface{})
+	for i := entityAuth; i <= entitySecret; i++ {
+		registrations[entityType(i)] = make(map[string]interface{})
 	}
 }
 
-func Register[T any](entity EntityType, reg EntityRegistration[T]) {
-	registrations[entity][reg.Name()] = reg
+func RegisterAuthentication(reg EntityRegistration[Authentication]) {
+	registrations[entityAuth][reg.Name()] = reg
 }
 
-func Registration[T any](entity EntityType, name string) (EntityRegistration[T], bool) {
-	o, ok := registrations[entity][name]
+func RegisterProvider(reg EntityRegistration[Provider]) {
+	registrations[entityProvider][reg.Name()] = reg
+}
 
-	if ok {
-		return o.(EntityRegistration[T]), true
+func RegisterCache(reg EntityRegistration[Cache]) {
+	registrations[entityCache][reg.Name()] = reg
+}
+func RegisterSecret(reg EntityRegistration[Secreter]) {
+	registrations[entitySecret][reg.Name()] = reg
+}
+
+func Registration[T any](name string) (EntityRegistration[T], bool) {
+	for i := entityAuth; i <= entitySecret; i++ {
+		o, ok := registrations[entityType(i)][name]
+
+		if ok {
+			e, ok := o.(EntityRegistration[T])
+			if ok {
+				return e, true
+			}
+		}
 	}
+
 	return nil, false
 }

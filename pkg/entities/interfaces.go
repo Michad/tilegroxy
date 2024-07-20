@@ -43,3 +43,7 @@ type ProviderContext struct {
 	AuthToken      string                 //The main auth token that comes back from the preauth and is used by the generate method. Details are up to the provider
 	Other          map[string]interface{} //A generic holder in cases where a provider needs extra storage - for instance Blend which needs Context for child providers
 }
+
+type Secreter interface {
+	Lookup(ctx *pkg.RequestContext, key string) (string, error)
+}

@@ -53,7 +53,7 @@ type Jwt struct {
 }
 
 func init() {
-	entities.Register(entities.EntityAuth, JWTRegistration{})
+	entities.RegisterAuthentication(JWTRegistration{})
 }
 
 type JWTRegistration struct {

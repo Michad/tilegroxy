@@ -23,17 +23,13 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-type Secreter interface {
-	Lookup(ctx *pkg.RequestContext, key string) (string, error)
-}
-
-func ConstructSecreter[C any](rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (Secreter, error) {
+func ConstructSecreter[C any](rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (entities.Secreter, error) {
 	rawConfig = pkg.ReplaceEnv(rawConfig)
 
 	name, ok := rawConfig["name"].(string)
 
 	if ok {
-		reg, ok := entities.Registration[Secreter](entities.EntitySecret, name)
+		reg, ok := entities.Registration[entities.Secreter](name)
 		if ok {
 			cfg := reg.InitializeConfig()
 			err := mapstructure.Decode(rawConfig, &cfg)

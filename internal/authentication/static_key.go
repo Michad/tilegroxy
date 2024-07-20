@@ -34,7 +34,7 @@ type StaticKey struct {
 }
 
 func init() {
-	entities.Register(entities.EntityAuth, StaticKeyRegistration{})
+	entities.RegisterAuthentication(StaticKeyRegistration{})
 }
 
 type StaticKeyRegistration struct {

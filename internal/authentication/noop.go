@@ -30,7 +30,7 @@ type Noop struct {
 }
 
 func init() {
-	entities.Register[entities.Authentication](entities.EntityAuth, NoopRegistration{})
+	entities.RegisterAuthentication(NoopRegistration{})
 }
 
 type NoopRegistration struct {

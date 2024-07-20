@@ -122,7 +122,7 @@ func extractToken(req *http.Request, ctx *pkg.RequestContext, tokenExtract map[s
 }
 
 func init() {
-	entities.Register(entities.EntityAuth, CustomRegistration{})
+	entities.RegisterAuthentication(CustomRegistration{})
 }
 
 type CustomRegistration struct {

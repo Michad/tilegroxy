@@ -29,7 +29,7 @@ func ConstructAuth(rawConfig map[string]interface{}, errorMessages config.ErrorM
 	name, ok := rawConfig["name"].(string)
 
 	if ok {
-		reg, ok := entities.Registration[entities.Authentication](entities.EntityAuth, name)
+		reg, ok := entities.Registration[entities.Authentication](name)
 		if ok {
 			cfg := reg.InitializeConfig()
 			err := mapstructure.Decode(rawConfig, &cfg)
