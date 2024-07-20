@@ -18,6 +18,7 @@ import (
 	"errors"
 
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities"
 )
 
@@ -27,6 +28,39 @@ type MultiConfig struct {
 
 type Multi struct {
 	Tiers []entities.Cache
+}
+
+func init() {
+	entities.RegisterCache(MultiRegistration{})
+}
+
+type MultiRegistration struct {
+}
+
+func (s MultiRegistration) InitializeConfig() any {
+	return MultiConfig{}
+}
+
+func (s MultiRegistration) Name() string {
+	return "multi"
+}
+
+func (s MultiRegistration) Initialize(configAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (entities.Cache, error) {
+	config := configAny.(MultiConfig)
+
+	tierCaches := make([]entities.Cache, len(config.Tiers))
+
+	for i, tierRawConfig := range config.Tiers {
+		tierCache, err := ConstructCache(tierRawConfig, clientConfig, errorMessages)
+
+		if err != nil {
+			return nil, err
+		}
+
+		tierCaches[i] = tierCache
+	}
+
+	return Multi{tierCaches}, nil
 }
 
 func (c Multi) Lookup(t pkg.TileRequest) (*pkg.Image, error) {

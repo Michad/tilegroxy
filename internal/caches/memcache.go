@@ -19,6 +19,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities"
 	"github.com/bradfitz/gomemcache/memcache"
 )
 
@@ -41,7 +42,24 @@ type Memcache struct {
 	client *memcache.Client
 }
 
-func ConstructMemcache(config MemcacheConfig, errorMessages config.ErrorMessages) (*Memcache, error) {
+func init() {
+	entities.RegisterCache(MemcacheRegistration{})
+}
+
+type MemcacheRegistration struct {
+}
+
+func (s MemcacheRegistration) InitializeConfig() any {
+	return MemcacheConfig{}
+}
+
+func (s MemcacheRegistration) Name() string {
+	return "memcache"
+}
+
+func (s MemcacheRegistration) Initialize(configAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (entities.Cache, error) {
+	config := configAny.(MemcacheConfig)
+
 	if config.Servers == nil || len(config.Servers) == 0 {
 		if config.Host == "" {
 			config.Host = memcacheDefaultHost

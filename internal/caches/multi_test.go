@@ -25,12 +25,12 @@ import (
 func TestMultiSaveAndLookup(t *testing.T) {
 	memConfig1 := MemoryConfig{}
 
-	mem1, err := ConstructMemory(memConfig1, config.ErrorMessages{})
+	mem1, err := MemoryRegistration{}.Initialize(memConfig1, config.ClientConfig{}, config.ErrorMessages{})
 	assert.NoError(t, err)
 
 	memConfig2 := MemoryConfig{}
 
-	mem2, err := ConstructMemory(memConfig2, config.ErrorMessages{})
+	mem2, err := MemoryRegistration{}.Initialize(memConfig2, config.ClientConfig{}, config.ErrorMessages{})
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -49,12 +49,12 @@ func TestMultiSaveAndLookup(t *testing.T) {
 func TestMultiIn1(t *testing.T) {
 	memConfig1 := MemoryConfig{}
 
-	mem1, err := ConstructMemory(memConfig1, config.ErrorMessages{})
+	mem1, err := MemoryRegistration{}.Initialize(memConfig1, config.ClientConfig{}, config.ErrorMessages{})
 	assert.NoError(t, err)
 
 	memConfig2 := MemoryConfig{}
 
-	mem2, err := ConstructMemory(memConfig2, config.ErrorMessages{})
+	mem2, err := MemoryRegistration{}.Initialize(memConfig2, config.ClientConfig{}, config.ErrorMessages{})
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -71,12 +71,12 @@ func TestMultiIn1(t *testing.T) {
 func TestMultiIn2(t *testing.T) {
 	memConfig1 := MemoryConfig{}
 
-	mem1, err := ConstructMemory(memConfig1, config.ErrorMessages{})
+	mem1, err := MemoryRegistration{}.Initialize(memConfig1, config.ClientConfig{}, config.ErrorMessages{})
 	assert.NoError(t, err)
 
 	memConfig2 := MemoryConfig{}
 
-	mem2, err := ConstructMemory(memConfig2, config.ErrorMessages{})
+	mem2, err := MemoryRegistration{}.Initialize(memConfig2, config.ClientConfig{}, config.ErrorMessages{})
 	if !assert.NoError(t, err) {
 		return
 	}

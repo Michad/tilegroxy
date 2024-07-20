@@ -25,7 +25,7 @@ import (
 func TestMemory(t *testing.T) {
 	cfg := MemoryConfig{}
 
-	r, err := ConstructMemory(cfg, config.ErrorMessages{})
+	r, err := MemoryRegistration{}.Initialize(cfg, config.ClientConfig{}, config.ErrorMessages{})
 	assert.NoError(t, err)
 
 	validateSaveAndLookup(t, r)
@@ -34,7 +34,7 @@ func TestMemory(t *testing.T) {
 func TestTtl(t *testing.T) {
 	cfg := MemoryConfig{Ttl: 1}
 
-	r, err := ConstructMemory(cfg, config.ErrorMessages{})
+	r, err := MemoryRegistration{}.Initialize(cfg, config.ClientConfig{}, config.ErrorMessages{})
 	assert.NoError(t, err)
 
 	tile := makeReq(53)

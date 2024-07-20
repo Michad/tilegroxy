@@ -23,6 +23,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities"
 
 	"github.com/go-redis/cache/v9"
 	"github.com/redis/go-redis/v9"
@@ -59,7 +60,24 @@ type Redis struct {
 	cache *cache.Cache
 }
 
-func ConstructRedis(config RedisConfig, errorMessages config.ErrorMessages) (*Redis, error) {
+func init() {
+	entities.RegisterCache(RedisRegistration{})
+}
+
+type RedisRegistration struct {
+}
+
+func (s RedisRegistration) InitializeConfig() any {
+	return RedisConfig{}
+}
+
+func (s RedisRegistration) Name() string {
+	return "redis"
+}
+
+func (s RedisRegistration) Initialize(configAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (entities.Cache, error) {
+	config := configAny.(RedisConfig)
+
 	var tileCache *cache.Cache
 
 	if config.Mode == "" {

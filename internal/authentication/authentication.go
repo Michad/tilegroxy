@@ -23,7 +23,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-func ConstructAuth(rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (entities.Authentication, error) {
+func ConstructAuth(rawConfig map[string]interface{}, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (entities.Authentication, error) {
 	rawConfig = pkg.ReplaceEnv(rawConfig)
 
 	name, ok := rawConfig["name"].(string)
@@ -36,11 +36,11 @@ func ConstructAuth(rawConfig map[string]interface{}, errorMessages config.ErrorM
 			if err != nil {
 				return nil, err
 			}
-			a, err := reg.Initialize(cfg, errorMessages)
+			a, err := reg.Initialize(cfg, clientConfig, errorMessages)
 			return a, err
 		}
 	}
 
 	nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
-	return nil, fmt.Errorf(errorMessages.InvalidParam, "authentication.name", nameCoerce)
+	return nil, fmt.Errorf(errorMessages.EnumError, "authentication.name", nameCoerce, entities.RegisteredAuthenticationNames())
 }

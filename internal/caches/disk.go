@@ -24,6 +24,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities"
 )
 
 type DiskConfig struct {
@@ -39,7 +40,24 @@ func requestToFilename(t pkg.TileRequest) string {
 	return t.LayerName + "_" + strconv.Itoa(t.Z) + "_" + strconv.Itoa(t.X) + "_" + strconv.Itoa(t.Y)
 }
 
-func ConstructDisk(config DiskConfig, ErrorMessages config.ErrorMessages) (*Disk, error) {
+func init() {
+	entities.RegisterCache(DiskRegistration{})
+}
+
+type DiskRegistration struct {
+}
+
+func (s DiskRegistration) InitializeConfig() any {
+	return DiskConfig{}
+}
+
+func (s DiskRegistration) Name() string {
+	return "disk"
+}
+
+func (s DiskRegistration) Initialize(configAny any, clientConfig config.ClientConfig, ErrorMessages config.ErrorMessages) (entities.Cache, error) {
+	config := configAny.(DiskConfig)
+
 	if config.Path == "" {
 		return nil, fmt.Errorf(ErrorMessages.InvalidParam, "Cache.Disk.path", config.Path)
 	}

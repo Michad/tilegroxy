@@ -25,12 +25,12 @@ import (
 )
 
 func ConfigToEntities(cfg config.Config) (*layers.LayerGroup, entities.Authentication, error) {
-	cache, err := caches.ConstructCache(cfg.Cache, cfg.Error.Messages)
+	cache, err := caches.ConstructCache(cfg.Cache, cfg.Client, cfg.Error.Messages)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error constructing cache: %v", err)
 	}
 
-	auth, err := authentication.ConstructAuth(cfg.Authentication, cfg.Error.Messages)
+	auth, err := authentication.ConstructAuth(cfg.Authentication, cfg.Client, cfg.Error.Messages)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error constructing auth: %v", err)
 	}

@@ -23,7 +23,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-func ConstructSecreter[C any](rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (entities.Secreter, error) {
+func ConstructSecreter[C any](rawConfig map[string]interface{}, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (entities.Secreter, error) {
 	rawConfig = pkg.ReplaceEnv(rawConfig)
 
 	name, ok := rawConfig["name"].(string)
@@ -36,7 +36,7 @@ func ConstructSecreter[C any](rawConfig map[string]interface{}, errorMessages co
 			if err != nil {
 				return nil, err
 			}
-			return reg.Initialize(cfg, errorMessages)
+			return reg.Initialize(cfg, clientConfig, errorMessages)
 		}
 	}
 
@@ -51,5 +51,5 @@ func ConstructSecreter[C any](rawConfig map[string]interface{}, errorMessages co
 	// }
 
 	nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
-	return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.name", nameCoerce)
+	return nil, fmt.Errorf(errorMessages.EnumError, "secret.name", nameCoerce, entities.RegisteredSecretNames())
 }

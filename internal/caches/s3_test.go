@@ -46,17 +46,17 @@ func init() {
 }
 
 func Test_S3Validate(t *testing.T) {
-	s3, err := ConstructS3(S3Config{}, config.ErrorMessages{})
+	s3, err := S3Registration{}.Initialize(S3Config{}, config.ClientConfig{}, config.ErrorMessages{})
 
 	assert.Nil(t, s3)
 	assert.Error(t, err)
 
-	s3, err = ConstructS3(S3Config{Bucket: "test", Access: "AJIASAFASF"}, config.ErrorMessages{})
+	s3, err = S3Registration{}.Initialize(S3Config{Bucket: "test", Access: "AJIASAFASF"}, config.ClientConfig{}, config.ErrorMessages{})
 
 	assert.Nil(t, s3)
 	assert.Error(t, err)
 
-	s3, err = ConstructS3(S3Config{Bucket: "test", Access: "AJIASAFASF", Secret: "hunter2", StorageClass: "fakeyfake"}, config.ErrorMessages{})
+	s3, err = S3Registration{}.Initialize(S3Config{Bucket: "test", Access: "AJIASAFASF", Secret: "hunter2", StorageClass: "fakeyfake"}, config.ClientConfig{}, config.ErrorMessages{})
 
 	assert.Nil(t, s3)
 	assert.Error(t, err)
@@ -65,7 +65,7 @@ func Test_S3Validate(t *testing.T) {
 func Test_S3ValidateProfile(t *testing.T) {
 	//Currently invalid profile fails when using it for the first time vs on construct. Would rather have it fail in constructor but not sure how to best validate that without potentially impacting s3-compatible use cases. For now leaving this test assuming the failure happens in one of two places
 	var err2 error
-	s3, err1 := ConstructS3(S3Config{Bucket: "test", Profile: "fakeyfake"}, config.ErrorMessages{})
+	s3, err1 := S3Registration{}.Initialize(S3Config{Bucket: "test", Profile: "fakeyfake"}, config.ClientConfig{}, config.ErrorMessages{})
 	if s3 != nil {
 		_, err2 = s3.Lookup(pkg.TileRequest{})
 	}
@@ -98,19 +98,19 @@ func Test_S3Execute(t *testing.T) {
 	endpoint, err := c.PortEndpoint(ctx, nat.Port("4566/tcp"), "http")
 	assert.NoError(t, err)
 
-	s3, err := ConstructS3(S3Config{
+	s3, err := S3Registration{}.Initialize(S3Config{
 		Access:       "test",
 		Secret:       "test",
 		Bucket:       "test",
 		Endpoint:     endpoint, //"http://localhost:4566",
 		Region:       "us-east-1",
 		UsePathStyle: true,
-	}, config.ErrorMessages{})
+	}, config.ClientConfig{}, config.ErrorMessages{})
 
 	assert.NotNil(t, s3)
 	assert.NoError(t, err)
 
-	err = s3.makeBucket()
+	err = s3.(*S3).makeBucket()
 	assert.NoError(t, err)
 
 	validateSaveAndLookup(t, s3)

@@ -27,7 +27,7 @@ const (
 
 type EntityRegistration[T any] interface {
 	Name() string
-	Initialize(config any, errorMessages config.ErrorMessages) (T, error)
+	Initialize(config any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (T, error)
 	InitializeConfig() any
 }
 
@@ -67,4 +67,28 @@ func Registration[T any](name string) (EntityRegistration[T], bool) {
 	}
 
 	return nil, false
+}
+
+func listNames(t entityType) []string {
+	names := make([]string, 0, len(registrations[t]))
+	for n := range registrations[t] {
+		names = append(names, n)
+	}
+	return names
+}
+
+func RegisteredAuthenticationNames() []string {
+	return listNames(entityAuth)
+}
+
+func RegisteredProviderNames() []string {
+	return listNames(entityProvider)
+}
+
+func RegisteredCacheNames() []string {
+	return listNames(entityCache)
+}
+
+func RegisteredSecretNames() []string {
+	return listNames(entitySecret)
 }

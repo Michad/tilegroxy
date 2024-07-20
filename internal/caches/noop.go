@@ -16,9 +16,35 @@ package caches
 
 import (
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities"
 )
 
+type NoopConfig struct {
+}
+
 type Noop struct {
+	NoopConfig
+}
+
+func init() {
+	entities.RegisterCache(NoopRegistration{})
+}
+
+type NoopRegistration struct {
+}
+
+func (s NoopRegistration) InitializeConfig() any {
+	return NoopConfig{}
+}
+
+func (s NoopRegistration) Name() string {
+	return "none"
+}
+
+func (s NoopRegistration) Initialize(configAny any, clientConfig config.ClientConfig, ErrorMessages config.ErrorMessages) (entities.Cache, error) {
+	config := configAny.(NoopConfig)
+	return Noop{config}, nil
 }
 
 func (c Noop) Lookup(t pkg.TileRequest) (*pkg.Image, error) {

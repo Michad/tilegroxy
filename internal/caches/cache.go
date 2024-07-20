@@ -24,69 +24,30 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-func ConstructCache(rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (entities.Cache, error) {
+func ConstructCache(rawConfig map[string]interface{}, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (entities.Cache, error) {
 	rawConfig = pkg.ReplaceEnv(rawConfig)
 
-	if rawConfig["name"] == "none" || rawConfig["name"] == "test" {
-		return Noop{}, nil
-	} else if rawConfig["name"] == "disk" {
-		var config DiskConfig
-		err := mapstructure.Decode(rawConfig, &config)
-		if err != nil {
-			return nil, err
-		}
-		return ConstructDisk(config, errorMessages)
-	} else if rawConfig["name"] == "memory" {
-		var config MemoryConfig
-		err := mapstructure.Decode(rawConfig, &config)
-		if err != nil {
-			return nil, err
-		}
-		return ConstructMemory(config, errorMessages)
-	} else if rawConfig["name"] == "multi" {
-		var config MultiConfig
-		err := mapstructure.Decode(rawConfig, &config)
-		if err != nil {
-			return nil, err
-		}
-		tierCaches := make([]entities.Cache, len(config.Tiers))
+	name, ok := rawConfig["name"].(string)
 
-		for i, tierRawConfig := range config.Tiers {
-			tierCache, err := ConstructCache(tierRawConfig, errorMessages)
+	if ok {
+		if name == "test" || name == "Test" {
+			name = "none"
+		}
 
+		reg, ok := entities.Registration[entities.Cache](name)
+		if ok {
+			cfg := reg.InitializeConfig()
+			err := mapstructure.Decode(rawConfig, &cfg)
 			if err != nil {
 				return nil, err
 			}
-
-			tierCaches[i] = tierCache
+			a, err := reg.Initialize(cfg, clientConfig, errorMessages)
+			return a, err
 		}
-
-		return Multi{tierCaches}, nil
-	} else if rawConfig["name"] == "s3" {
-		var config S3Config
-		err := mapstructure.Decode(rawConfig, &config)
-		if err != nil {
-			return nil, err
-		}
-		return ConstructS3(config, errorMessages)
-	} else if rawConfig["name"] == "redis" {
-		var config RedisConfig
-		err := mapstructure.Decode(rawConfig, &config)
-		if err != nil {
-			return nil, err
-		}
-		return ConstructRedis(config, errorMessages)
-	} else if rawConfig["name"] == "memcache" {
-		var config MemcacheConfig
-		err := mapstructure.Decode(rawConfig, &config)
-		if err != nil {
-			return nil, err
-		}
-		return ConstructMemcache(config, errorMessages)
 	}
 
-	name := fmt.Sprintf("%#v", rawConfig["name"])
-	return nil, fmt.Errorf(errorMessages.InvalidParam, "cache.name", name)
+	nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
+	return nil, fmt.Errorf(errorMessages.EnumError, "cache.name", nameCoerce, entities.RegisteredCacheNames())
 }
 
 // Utility type used in a couple caches
