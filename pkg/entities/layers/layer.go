@@ -25,7 +25,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
 )
 
 type layerSegment struct {
@@ -160,7 +160,7 @@ type Layer struct {
 	ParamValidator  map[string]*regexp.Regexp
 	Config          config.LayerConfig
 	Provider        Provider
-	Cache           entities.Cache
+	Cache           cache.Cache
 	ErrorMessages   config.ErrorMessages
 	providerContext ProviderContext
 	authMutex       sync.Mutex

@@ -17,15 +17,14 @@ package tg
 import (
 	"fmt"
 
-	"github.com/Michad/tilegroxy/internal/authentication"
-	"github.com/Michad/tilegroxy/internal/caches"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
 	"github.com/Michad/tilegroxy/pkg/entities/layers"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
+	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 )
 
-func ConfigToEntities(cfg config.Config) (*layers.LayerGroup, entities.Authentication, error) {
-	cache, err := caches.ConstructCache(cfg.Cache, cfg.Client, cfg.Error.Messages)
+func ConfigToEntities(cfg config.Config) (*layers.LayerGroup, authentication.Authentication, error) {
+	cache, err := cache.ConstructCache(cfg.Cache, cfg.Client, cfg.Error.Messages)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error constructing cache: %v", err)
 	}

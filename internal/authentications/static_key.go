@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package authentication
+package authentications
 
 import (
 	"context"
@@ -22,7 +22,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 )
 
 type StaticKeyConfig struct {
@@ -34,7 +34,7 @@ type StaticKey struct {
 }
 
 func init() {
-	entities.RegisterAuthentication(StaticKeyRegistration{})
+	authentication.RegisterAuthentication(StaticKeyRegistration{})
 }
 
 type StaticKeyRegistration struct {
@@ -48,7 +48,7 @@ func (s StaticKeyRegistration) Name() string {
 	return "static key"
 }
 
-func (s StaticKeyRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (entities.Authentication, error) {
+func (s StaticKeyRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (authentication.Authentication, error) {
 	cfg := cfgAny.(StaticKeyConfig)
 	if cfg.Key == "" {
 		keyStr := pkg.RandomString()

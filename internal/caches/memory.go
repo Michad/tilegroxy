@@ -19,7 +19,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
 
 	"github.com/maypok86/otter"
 )
@@ -35,7 +35,7 @@ type Memory struct {
 }
 
 func init() {
-	entities.RegisterCache(MemoryRegistration{})
+	cache.RegisterCache(MemoryRegistration{})
 }
 
 type MemoryRegistration struct {
@@ -49,7 +49,7 @@ func (s MemoryRegistration) Name() string {
 	return "memory"
 }
 
-func (s MemoryRegistration) Initialize(configAny any, clientConfig config.ClientConfig, ErrorMessages config.ErrorMessages) (entities.Cache, error) {
+func (s MemoryRegistration) Initialize(configAny any, clientConfig config.ClientConfig, ErrorMessages config.ErrorMessages) (cache.Cache, error) {
 	config := configAny.(MemoryConfig)
 
 	if config.MaxSize < 1 {

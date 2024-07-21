@@ -24,7 +24,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
 )
 
 type DiskConfig struct {
@@ -41,7 +41,7 @@ func requestToFilename(t pkg.TileRequest) string {
 }
 
 func init() {
-	entities.RegisterCache(DiskRegistration{})
+	cache.RegisterCache(DiskRegistration{})
 }
 
 type DiskRegistration struct {
@@ -55,7 +55,7 @@ func (s DiskRegistration) Name() string {
 	return "disk"
 }
 
-func (s DiskRegistration) Initialize(configAny any, clientConfig config.ClientConfig, ErrorMessages config.ErrorMessages) (entities.Cache, error) {
+func (s DiskRegistration) Initialize(configAny any, clientConfig config.ClientConfig, ErrorMessages config.ErrorMessages) (cache.Cache, error) {
 	config := configAny.(DiskConfig)
 
 	if config.Path == "" {

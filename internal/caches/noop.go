@@ -17,7 +17,7 @@ package caches
 import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
 )
 
 type NoopConfig struct {
@@ -28,7 +28,7 @@ type Noop struct {
 }
 
 func init() {
-	entities.RegisterCache(NoopRegistration{})
+	cache.RegisterCache(NoopRegistration{})
 }
 
 type NoopRegistration struct {
@@ -42,7 +42,7 @@ func (s NoopRegistration) Name() string {
 	return "none"
 }
 
-func (s NoopRegistration) Initialize(configAny any, clientConfig config.ClientConfig, ErrorMessages config.ErrorMessages) (entities.Cache, error) {
+func (s NoopRegistration) Initialize(configAny any, clientConfig config.ClientConfig, ErrorMessages config.ErrorMessages) (cache.Cache, error) {
 	config := configAny.(NoopConfig)
 	return Noop{config}, nil
 }

@@ -20,14 +20,14 @@ import (
 	"net/http"
 
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 	"github.com/Michad/tilegroxy/pkg/entities/layers"
 )
 
 type defaultHandler struct {
 	config     *config.Config
 	layerGroup *layers.LayerGroup
-	auth       entities.Authentication
+	auth       authentication.Authentication
 }
 
 func (h *defaultHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {

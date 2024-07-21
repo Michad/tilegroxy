@@ -19,7 +19,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/bradfitz/gomemcache/memcache"
 )
 
@@ -43,7 +43,7 @@ type Memcache struct {
 }
 
 func init() {
-	entities.RegisterCache(MemcacheRegistration{})
+	cache.RegisterCache(MemcacheRegistration{})
 }
 
 type MemcacheRegistration struct {
@@ -57,7 +57,7 @@ func (s MemcacheRegistration) Name() string {
 	return "memcache"
 }
 
-func (s MemcacheRegistration) Initialize(configAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (entities.Cache, error) {
+func (s MemcacheRegistration) Initialize(configAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (cache.Cache, error) {
 	config := configAny.(MemcacheConfig)
 
 	if config.Servers == nil || len(config.Servers) == 0 {

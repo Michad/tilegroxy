@@ -19,7 +19,10 @@ import (
 	"flag"
 	"os"
 
+	_ "github.com/Michad/tilegroxy/internal/authentications"
+	_ "github.com/Michad/tilegroxy/internal/caches"
 	_ "github.com/Michad/tilegroxy/internal/providers"
+	_ "github.com/Michad/tilegroxy/internal/secrets"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/spf13/cobra"
 )

@@ -23,9 +23,9 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
 
-	"github.com/go-redis/cache/v9"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
+	rediscache "github.com/go-redis/cache/v9"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -57,11 +57,11 @@ const (
 
 type Redis struct {
 	RedisConfig
-	cache *cache.Cache
+	cache *rediscache.Cache
 }
 
 func init() {
-	entities.RegisterCache(RedisRegistration{})
+	cache.RegisterCache(RedisRegistration{})
 }
 
 type RedisRegistration struct {
@@ -75,10 +75,10 @@ func (s RedisRegistration) Name() string {
 	return "redis"
 }
 
-func (s RedisRegistration) Initialize(configAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (entities.Cache, error) {
+func (s RedisRegistration) Initialize(configAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (cache.Cache, error) {
 	config := configAny.(RedisConfig)
 
-	var tileCache *cache.Cache
+	var tileCache *rediscache.Cache
 
 	if config.Mode == "" {
 		config.Mode = ModeStandalone
@@ -124,7 +124,7 @@ func (s RedisRegistration) Initialize(configAny any, clientConfig config.ClientC
 		})
 
 		//TODO: Open bug with go-redis about `rediser` type being private so the below isn't needlessly repeated
-		tileCache = cache.New(&cache.Options{
+		tileCache = rediscache.New(&rediscache.Options{
 			Redis: client,
 		})
 	} else if config.Mode == ModeRing {
@@ -146,7 +146,7 @@ func (s RedisRegistration) Initialize(configAny any, clientConfig config.ClientC
 		})
 
 		//TODO: Open bug with go-redis about `rediser` type being private so the below isn't needlessly repeated
-		tileCache = cache.New(&cache.Options{
+		tileCache = rediscache.New(&rediscache.Options{
 			Redis: client,
 		})
 	} else {
@@ -158,7 +158,7 @@ func (s RedisRegistration) Initialize(configAny any, clientConfig config.ClientC
 		})
 
 		//TODO: Open bug with go-redis about `rediser` type being private so the below isn't needlessly repeated
-		tileCache = cache.New(&cache.Options{
+		tileCache = rediscache.New(&rediscache.Options{
 			Redis: client,
 		})
 	}
@@ -176,7 +176,7 @@ func (c Redis) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
 
 	err := c.cache.Get(ctx, key, &obj)
 
-	if err == cache.ErrCacheMiss {
+	if err == rediscache.ErrCacheMiss {
 		return nil, nil
 	}
 
@@ -192,7 +192,7 @@ func (c Redis) Save(t pkg.TileRequest, img *pkg.Image) error {
 
 	key := c.KeyPrefix + t.String()
 
-	err := c.cache.Set(&cache.Item{
+	err := c.cache.Set(&rediscache.Item{
 		Ctx:   ctx,
 		Key:   key,
 		Value: *img,

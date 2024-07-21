@@ -27,7 +27,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
@@ -56,7 +56,7 @@ type S3 struct {
 }
 
 func init() {
-	entities.RegisterCache(S3Registration{})
+	cache.RegisterCache(S3Registration{})
 }
 
 type S3Registration struct {
@@ -70,7 +70,7 @@ func (s S3Registration) Name() string {
 	return "s3"
 }
 
-func (s S3Registration) Initialize(configAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (entities.Cache, error) {
+func (s S3Registration) Initialize(configAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (cache.Cache, error) {
 	config := configAny.(S3Config)
 	if (config.Access != "" && config.Secret == "") || (config.Access == "" && config.Secret != "") {
 		return nil, fmt.Errorf(errorMessages.ParamsBothOrNeither, "cache.s3.access", "cache.s3.secret")

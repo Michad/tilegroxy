@@ -12,19 +12,55 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package caches
+package cache
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
 	"github.com/mitchellh/mapstructure"
 )
 
-func ConstructCache(rawConfig map[string]interface{}, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (entities.Cache, error) {
+type Cache interface {
+	Lookup(t pkg.TileRequest) (*pkg.Image, error)
+	Save(t pkg.TileRequest, img *pkg.Image) error
+}
+
+type CacheRegistration interface {
+	Name() string
+	Initialize(config any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (Cache, error)
+	InitializeConfig() any
+}
+
+var registrations map[string]interface{} = make(map[string]interface{})
+
+func RegisterCache(reg CacheRegistration) {
+	registrations[reg.Name()] = reg
+}
+
+func RegisteredCache(name string) (CacheRegistration, bool) {
+	o, ok := registrations[name]
+
+	if ok {
+		e, ok := o.(CacheRegistration)
+		if ok {
+			return e, true
+		}
+	}
+
+	return nil, false
+}
+
+func RegisteredCacheNames() []string {
+	names := make([]string, 0, len(registrations))
+	for n := range registrations {
+		names = append(names, n)
+	}
+	return names
+}
+
+func ConstructCache(rawConfig map[string]interface{}, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (Cache, error) {
 	rawConfig = pkg.ReplaceEnv(rawConfig)
 
 	name, ok := rawConfig["name"].(string)
@@ -34,7 +70,7 @@ func ConstructCache(rawConfig map[string]interface{}, clientConfig config.Client
 			name = "none"
 		}
 
-		reg, ok := entities.Registration[entities.Cache](name)
+		reg, ok := RegisteredCache(name)
 		if ok {
 			cfg := reg.InitializeConfig()
 			err := mapstructure.Decode(rawConfig, &cfg)
@@ -47,25 +83,5 @@ func ConstructCache(rawConfig map[string]interface{}, clientConfig config.Client
 	}
 
 	nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
-	return nil, fmt.Errorf(errorMessages.EnumError, "cache.name", nameCoerce, entities.RegisteredCacheNames())
-}
-
-// Utility type used in a couple caches
-type HostAndPort struct {
-	Host string
-	Port uint16
-}
-
-func (hp HostAndPort) String() string {
-	return hp.Host + ":" + strconv.Itoa(int(hp.Port))
-}
-
-func HostAndPortArrayToStringArray(servers []HostAndPort) []string {
-	addrs := make([]string, len(servers))
-
-	for i, addr := range servers {
-		addrs[i] = addr.String()
-	}
-
-	return addrs
+	return nil, fmt.Errorf(errorMessages.EnumError, "cache.name", nameCoerce, RegisteredCacheNames())
 }

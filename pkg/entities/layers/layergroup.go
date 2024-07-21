@@ -21,14 +21,14 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
 )
 
 type LayerGroup struct {
 	layers []*Layer
 }
 
-func ConstructLayerGroup(cfg config.Config, layers []config.LayerConfig, cache entities.Cache) (*LayerGroup, error) {
+func ConstructLayerGroup(cfg config.Config, layers []config.LayerConfig, cache cache.Cache) (*LayerGroup, error) {
 	var err error
 	var layerGroup LayerGroup
 	layerObjects := make([]*Layer, len(cfg.Layers))

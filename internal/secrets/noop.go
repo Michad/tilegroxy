@@ -19,7 +19,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/secret"
 )
 
 type NoopConfig struct {
@@ -31,7 +31,7 @@ type Noop struct {
 }
 
 func init() {
-	entities.RegisterSecret(NoopRegistration{})
+	secret.RegisterSecreter(NoopRegistration{})
 }
 
 type NoopRegistration struct {
@@ -45,7 +45,7 @@ func (s NoopRegistration) Name() string {
 	return "none"
 }
 
-func (s NoopRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (entities.Secreter, error) {
+func (s NoopRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (secret.Secreter, error) {
 	cfg := cfgAny.(NoopConfig)
 	return Noop{cfg, errorMessages}, nil
 }

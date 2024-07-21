@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package authentication
+package authentications
 
 import (
 	"net/http"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 )
 
 type NoopConfig struct {
@@ -30,7 +30,7 @@ type Noop struct {
 }
 
 func init() {
-	entities.RegisterAuthentication(NoopRegistration{})
+	authentication.RegisterAuthentication(NoopRegistration{})
 }
 
 type NoopRegistration struct {
@@ -44,7 +44,7 @@ func (s NoopRegistration) Name() string {
 	return "none"
 }
 
-func (s NoopRegistration) Initialize(config any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (entities.Authentication, error) {
+func (s NoopRegistration) Initialize(config any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (authentication.Authentication, error) {
 	return &Noop{config.(NoopConfig)}, nil
 }
 

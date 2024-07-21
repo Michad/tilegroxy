@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package authentication
+package authentications
 
 import (
 	"fmt"
@@ -25,7 +25,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/maypok86/otter"
 )
@@ -53,7 +53,7 @@ type Jwt struct {
 }
 
 func init() {
-	entities.RegisterAuthentication(JWTRegistration{})
+	authentication.RegisterAuthentication(JWTRegistration{})
 }
 
 type JWTRegistration struct {
@@ -67,7 +67,7 @@ func (s JWTRegistration) Name() string {
 	return "jwt"
 }
 
-func (s JWTRegistration) Initialize(configAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (entities.Authentication, error) {
+func (s JWTRegistration) Initialize(configAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (authentication.Authentication, error) {
 	config := configAny.(JwtConfig)
 
 	if !slices.Contains([]string{"HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "EdDSA"}, config.Algorithm) {

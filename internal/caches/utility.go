@@ -12,24 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package entities
+package caches
 
 import (
-	"net/http"
-
-	"github.com/Michad/tilegroxy/pkg"
+	"strconv"
 )
 
-type Authentication interface {
-	CheckAuthentication(req *http.Request, ctx *pkg.RequestContext) bool
+// Utility type used in a couple caches
+type HostAndPort struct {
+	Host string
+	Port uint16
 }
 
-type Cache interface {
-	Lookup(t pkg.TileRequest) (*pkg.Image, error)
-	Save(t pkg.TileRequest, img *pkg.Image) error
+func (hp HostAndPort) String() string {
+	return hp.Host + ":" + strconv.Itoa(int(hp.Port))
 }
 
+func HostAndPortArrayToStringArray(servers []HostAndPort) []string {
+	addrs := make([]string, len(servers))
 
-type Secreter interface {
-	Lookup(ctx *pkg.RequestContext, key string) (string, error)
+	for i, addr := range servers {
+		addrs[i] = addr.String()
+	}
+
+	return addrs
 }

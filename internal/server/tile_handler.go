@@ -24,7 +24,10 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 
+	_ "github.com/Michad/tilegroxy/internal/authentications"
+	_ "github.com/Michad/tilegroxy/internal/caches"
 	_ "github.com/Michad/tilegroxy/internal/providers"
+	_ "github.com/Michad/tilegroxy/internal/secrets"
 )
 
 type tileHandler struct {

@@ -23,18 +23,19 @@ import (
 	"os"
 	"testing"
 
-	"github.com/Michad/tilegroxy/internal/authentication"
+	"github.com/Michad/tilegroxy/internal/authentications"
 	"github.com/Michad/tilegroxy/internal/caches"
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/authentication"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/Michad/tilegroxy/pkg/entities/layers"
 	"github.com/stretchr/testify/assert"
 )
 
-func configToEntities(cfg config.Config) (*layers.LayerGroup, entities.Authentication, error) {
-	cache, err1 := caches.ConstructCache(cfg.Cache, cfg.Client, cfg.Error.Messages)
+func configToEntities(cfg config.Config) (*layers.LayerGroup, authentication.Authentication, error) {
+	cache, err1 := cache.ConstructCache(cfg.Cache, cfg.Client, cfg.Error.Messages)
 	auth, err2 := authentication.ConstructAuth(cfg.Authentication, cfg.Client, cfg.Error.Messages)
 	layerGroup, err3 := layers.ConstructLayerGroup(cfg, cfg.Layers, cache)
 
@@ -47,9 +48,9 @@ func Test_TileHandler_AllowedArea(t *testing.T) {
 	mainProvider["name"] = "static"
 	mainProvider["color"] = "FFF"
 	cfg.Layers = append(cfg.Layers, config.LayerConfig{Id: "main", Provider: mainProvider})
-	var auth entities.Authentication
-	var cache entities.Cache
-	auth = authentication.Noop{}
+	var auth authentication.Authentication
+	var cache cache.Cache
+	auth = authentications.Noop{}
 	cache = caches.Noop{}
 	lg, err := layers.ConstructLayerGroup(cfg, cfg.Layers, cache)
 	assert.NoError(t, err)
@@ -102,9 +103,9 @@ func Test_TileHandler_Proxy(t *testing.T) {
 	os.Setenv("TEST", "t")
 	mainProvider["url"] = ts.URL + "?a={layer.a}&b={ctx.user}&t={env.TEST}&z={z}&y={y}&x={x}"
 	cfg.Layers = append(cfg.Layers, config.LayerConfig{Id: "main", Pattern: "main_{a}", Provider: mainProvider, Client: &cfg.Client})
-	var auth entities.Authentication
-	var cache entities.Cache
-	auth = authentication.Noop{}
+	var auth authentication.Authentication
+	var cache cache.Cache
+	auth = authentications.Noop{}
 	cache = caches.Noop{}
 	lg, err := layers.ConstructLayerGroup(cfg, cfg.Layers, cache)
 	assert.NoError(t, err)
@@ -137,9 +138,9 @@ func Test_TileHandler_RefToStatic(t *testing.T) {
 	refProvider["layer"] = "main_white"
 	cfg.Layers = append(cfg.Layers, config.LayerConfig{Id: "main", Pattern: "main_{something}", Provider: mainProvider})
 	cfg.Layers = append(cfg.Layers, config.LayerConfig{Id: "ref", Pattern: "test", Provider: refProvider})
-	var auth entities.Authentication
-	var cache entities.Cache
-	auth = authentication.Noop{}
+	var auth authentication.Authentication
+	var cache cache.Cache
+	auth = authentications.Noop{}
 	cache = caches.Noop{}
 	lg, err := layers.ConstructLayerGroup(cfg, cfg.Layers, cache)
 	assert.NoError(t, err)

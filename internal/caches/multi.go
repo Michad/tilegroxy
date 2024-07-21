@@ -19,7 +19,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
 )
 
 type MultiConfig struct {
@@ -27,11 +27,11 @@ type MultiConfig struct {
 }
 
 type Multi struct {
-	Tiers []entities.Cache
+	Tiers []cache.Cache
 }
 
 func init() {
-	entities.RegisterCache(MultiRegistration{})
+	cache.RegisterCache(MultiRegistration{})
 }
 
 type MultiRegistration struct {
@@ -45,13 +45,13 @@ func (s MultiRegistration) Name() string {
 	return "multi"
 }
 
-func (s MultiRegistration) Initialize(configAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (entities.Cache, error) {
+func (s MultiRegistration) Initialize(configAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (cache.Cache, error) {
 	config := configAny.(MultiConfig)
 
-	tierCaches := make([]entities.Cache, len(config.Tiers))
+	tierCaches := make([]cache.Cache, len(config.Tiers))
 
 	for i, tierRawConfig := range config.Tiers {
-		tierCache, err := ConstructCache(tierRawConfig, clientConfig, errorMessages)
+		tierCache, err := cache.ConstructCache(tierRawConfig, clientConfig, errorMessages)
 
 		if err != nil {
 			return nil, err

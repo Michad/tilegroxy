@@ -32,7 +32,7 @@ import (
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 	"github.com/Michad/tilegroxy/pkg/entities/layers"
 	"golang.org/x/crypto/acme/autocert"
 
@@ -277,7 +277,7 @@ func (h httpRedirectHandler) ServeHTTP(w http.ResponseWriter, req *http.Request)
 	http.Redirect(w, req, h.protoAndHost+req.RequestURI, http.StatusMovedPermanently)
 }
 
-func ListenAndServe(config *config.Config, layerGroup *layers.LayerGroup, auth entities.Authentication) error {
+func ListenAndServe(config *config.Config, layerGroup *layers.LayerGroup, auth authentication.Authentication) error {
 	if config.Server.Encrypt != nil && config.Server.Encrypt.Domain == "" {
 		return fmt.Errorf(config.Error.Messages.ParamRequired, "server.encrypt.domain")
 	}

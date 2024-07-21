@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package authentication
+package authentications
 
 import (
 	"fmt"
@@ -24,7 +24,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 	"github.com/maypok86/otter"
 	"github.com/traefik/yaegi/interp"
 	"github.com/traefik/yaegi/stdlib"
@@ -122,7 +122,7 @@ func extractToken(req *http.Request, ctx *pkg.RequestContext, tokenExtract map[s
 }
 
 func init() {
-	entities.RegisterAuthentication(CustomRegistration{})
+	authentication.RegisterAuthentication(CustomRegistration{})
 }
 
 type CustomRegistration struct {
@@ -136,7 +136,7 @@ func (s CustomRegistration) Name() string {
 	return "custom"
 }
 
-func (s CustomRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (entities.Authentication, error) {
+func (s CustomRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (authentication.Authentication, error) {
 	cfg := cfgAny.(CustomConfig)
 	var err error
 
