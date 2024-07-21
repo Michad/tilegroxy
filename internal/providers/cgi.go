@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package layers
+package providers
 
 import (
 	"bytes"
@@ -28,7 +28,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/layers"
 )
 
 type CGIConfig struct {
@@ -84,7 +84,7 @@ func (r *response) WriteHeader(code int) {
 }
 
 func init() {
-	entities.RegisterProvider(CGIRegistration{})
+	layers.RegisterProvider(CGIRegistration{})
 }
 
 type CGIRegistration struct {
@@ -98,7 +98,7 @@ func (s CGIRegistration) Name() string {
 	return "cgi"
 }
 
-func (s CGIRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (entities.Provider, error) {
+func (s CGIRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layers.LayerGroup) (layers.Provider, error) {
 	cfg := cfgAny.(CGIConfig)
 	env := make([]string, 0)
 	inheritEnv := make([]string, 0)
@@ -136,11 +136,11 @@ func (s CGIRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig
 	return &CGI{cfg, h, clientConfig}, nil
 }
 
-func (t CGI) PreAuth(ctx *pkg.RequestContext, providerContext entities.ProviderContext) (entities.ProviderContext, error) {
-	return entities.ProviderContext{AuthBypass: true}, nil
+func (t CGI) PreAuth(ctx *pkg.RequestContext, providerContext layers.ProviderContext) (layers.ProviderContext, error) {
+	return layers.ProviderContext{AuthBypass: true}, nil
 }
 
-func (t CGI) GenerateTile(ctx *pkg.RequestContext, providerContext entities.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t CGI) GenerateTile(ctx *pkg.RequestContext, providerContext layers.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	var err error
 
 	h := t.handler

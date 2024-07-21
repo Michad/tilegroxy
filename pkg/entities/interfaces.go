@@ -16,7 +16,6 @@ package entities
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/Michad/tilegroxy/pkg"
 )
@@ -30,19 +29,6 @@ type Cache interface {
 	Save(t pkg.TileRequest, img *pkg.Image) error
 }
 
-type Provider interface {
-	// Performs authentication before tiles are ever generated. The calling code ensures this is only called once at a time and only when needed
-	// based on the expiration in entities.ProviderContext and when an AuthError is returned from GenerateTile
-	PreAuth(ctx *pkg.RequestContext, providerContext ProviderContext) (ProviderContext, error)
-	GenerateTile(ctx *pkg.RequestContext, providerContext ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error)
-}
-
-type ProviderContext struct {
-	AuthBypass     bool                   //If true, avoids ever calling preauth again
-	AuthExpiration time.Time              //When next to trigger preauth
-	AuthToken      string                 //The main auth token that comes back from the preauth and is used by the generate method. Details are up to the provider
-	Other          map[string]interface{} //A generic holder in cases where a provider needs extra storage - for instance Blend which needs Context for child providers
-}
 
 type Secreter interface {
 	Lookup(ctx *pkg.RequestContext, key string) (string, error)

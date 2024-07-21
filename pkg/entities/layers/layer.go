@@ -159,10 +159,10 @@ type Layer struct {
 	Pattern         []layerSegment
 	ParamValidator  map[string]*regexp.Regexp
 	Config          config.LayerConfig
-	Provider        entities.Provider
+	Provider        Provider
 	Cache           entities.Cache
 	ErrorMessages   config.ErrorMessages
-	providerContext entities.ProviderContext
+	providerContext ProviderContext
 	authMutex       sync.Mutex
 }
 
@@ -171,7 +171,10 @@ func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.Cli
 		rawConfig.Client = &defaultClientConfig
 	} else {
 		rawConfig.Client.MergeDefaultsFrom(defaultClientConfig)
+
 	}
+
+	// var err error
 	provider, err := ConstructProvider(rawConfig.Provider, *rawConfig.Client, errorMessages, layerGroup)
 
 	if err != nil {
@@ -197,7 +200,7 @@ func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.Cli
 		}
 	}
 
-	return &Layer{rawConfig.Id, segments, validator, rawConfig, provider, nil, errorMessages, entities.ProviderContext{}, sync.Mutex{}}, nil
+	return &Layer{rawConfig.Id, segments, validator, rawConfig, provider, nil, errorMessages, ProviderContext{}, sync.Mutex{}}, nil
 }
 
 func (l *Layer) authWithProvider(ctx *pkg.RequestContext) error {

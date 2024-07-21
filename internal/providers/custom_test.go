@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package layers
+package providers
 
 import (
 	"fmt"
@@ -20,17 +20,17 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/layers"
 	"github.com/stretchr/testify/assert"
 )
 
 func Test_CustomValidate(t *testing.T) {
-	c, err := CustomRegistration{}.Initialize(CustomConfig{}, testClientConfig, testErrMessages)
+	c, err := CustomRegistration{}.Initialize(CustomConfig{}, testClientConfig, testErrMessages, nil)
 
 	assert.Nil(t, c)
 	assert.Error(t, err)
 
-	c, err = CustomRegistration{}.Initialize(CustomConfig{Script: "package custom"}, testClientConfig, testErrMessages)
+	c, err = CustomRegistration{}.Initialize(CustomConfig{Script: "package custom"}, testClientConfig, testErrMessages, nil)
 
 	assert.Nil(t, c)
 	assert.Error(t, err)
@@ -55,7 +55,7 @@ func preAuth(ctx *tilegroxy.RequestContext, providerContext tilegroxy.ProviderCo
 func generateTile(ctx *tilegroxy.RequestContext, providerContext tilegroxy.ProviderContext, tileRequest tilegroxy.TileRequest, params map[string]interface{}, clientConfig tilegroxy.ClientConfig, errorMessages tilegroxy.ErrorMessages ) (*tilegroxy.Image, error ) {
 	return &[]byte{0x01,0x02}, nil
 }
-	`}, config.ClientConfig{}, testErrMessages)
+	`}, config.ClientConfig{}, testErrMessages, nil)
 
 	if err != nil {
 		fmt.Println(err)
@@ -64,7 +64,7 @@ func generateTile(ctx *tilegroxy.RequestContext, providerContext tilegroxy.Provi
 	assert.NotNil(t, c)
 	assert.NoError(t, err)
 
-	pc, err := c.PreAuth(pkg.BackgroundContext(), entities.ProviderContext{})
+	pc, err := c.PreAuth(pkg.BackgroundContext(), layers.ProviderContext{})
 	assert.NoError(t, err)
 	assert.NotNil(t, pc)
 	assert.True(t, pc.AuthBypass)

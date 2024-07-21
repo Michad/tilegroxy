@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package layers
+package providers
 
 import (
 	"bufio"
@@ -30,7 +30,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/layers"
 
 	"github.com/anthonynsimon/bild/blend"
 	"github.com/anthonynsimon/bild/transform"
@@ -51,47 +51,76 @@ type BlendConfig struct {
 
 type Blend struct {
 	BlendConfig
-	providers []entities.Provider
+	providers []layers.Provider
 }
 
 var allBlendModes = []string{"add", "color burn", "color dodge", "darken", "difference", "divide", "exclusion", "lighten", "linear burn", "linear light", "multiply", "normal", "opacity", "overlay", "screen", "soft light", "subtract"}
 
-func ConstructBlend(config BlendConfig, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, providers []entities.Provider, layerGroup *LayerGroup) (*Blend, error) {
-	var err error
-	if !slices.Contains(allBlendModes, config.Mode) {
-		return nil, fmt.Errorf(errorMessages.EnumError, "provider.blend.mode", config.Mode, allBlendModes)
-	}
-	if config.Mode != "opacity" && config.Opacity != 0 {
-		return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "provider.blend.opacity", config.Mode)
-	}
-	if config.Layer != nil {
-		providers = make([]entities.Provider, len(config.Layer.Values))
-		for i, lay := range config.Layer.Values {
-			var ref entities.Provider
+func init() {
+	layers.RegisterProvider(BlendRegistration{})
+}
 
-			layerName := config.Layer.Pattern
+type BlendRegistration struct {
+}
+
+func (s BlendRegistration) InitializeConfig() any {
+	return BlendConfig{}
+}
+
+func (s BlendRegistration) Name() string {
+	return "blend"
+}
+
+func (s BlendRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layers.LayerGroup) (layers.Provider, error) {
+	cfg := cfgAny.(BlendConfig)
+	var err error
+	if !slices.Contains(allBlendModes, cfg.Mode) {
+		return nil, fmt.Errorf(errorMessages.EnumError, "provider.blend.mode", cfg.Mode, allBlendModes)
+	}
+	if cfg.Mode != "opacity" && cfg.Opacity != 0 {
+		return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "provider.blend.opacity", cfg.Mode)
+	}
+	var providers []layers.Provider
+	if cfg.Layer != nil {
+		providers = make([]layers.Provider, len(cfg.Layer.Values))
+		for i, lay := range cfg.Layer.Values {
+			var ref layers.Provider
+
+			layerName := cfg.Layer.Pattern
 
 			for k, v := range lay {
 				layerName = strings.ReplaceAll(layerName, "{"+k+"}", v)
 			}
 
-			cfg := RefConfig{Layer: layerName}
-			ref, err = ConstructRef(cfg, clientConfig, errorMessages, layerGroup)
+			ref, err = layers.ConstructProvider(map[string]interface{}{"name": "ref", "layer": layerName}, clientConfig, errorMessages, layerGroup)
 			if err != nil {
 				return nil, err
 			}
 			providers[i] = ref
 		}
+	} else {
+		var errorSlice []error
+		for _, p := range cfg.Providers {
+			provider, err := layers.ConstructProvider(p, clientConfig, errorMessages, layerGroup)
+			providers = append(providers, provider)
+			errorSlice = append(errorSlice, err)
+		}
+
+		errorsFlat := errors.Join(errorSlice...)
+		if errorsFlat != nil {
+			return nil, errorsFlat
+		}
+
 	}
 
 	if len(providers) < 2 || len(providers) > 100 {
 		return nil, fmt.Errorf(errorMessages.RangeError, "provider.blend.providers.length", 2, 100)
 	}
 
-	return &Blend{config, providers}, nil
+	return &Blend{cfg, providers}, nil
 }
 
-func (t Blend) PreAuth(ctx *pkg.RequestContext, providerContext entities.ProviderContext) (entities.ProviderContext, error) {
+func (t Blend) PreAuth(ctx *pkg.RequestContext, providerContext layers.ProviderContext) (layers.ProviderContext, error) {
 	if providerContext.Other == nil {
 		providerContext.Other = map[string]interface{}{}
 	}
@@ -100,12 +129,12 @@ func (t Blend) PreAuth(ctx *pkg.RequestContext, providerContext entities.Provide
 	errs := make(chan error, len(t.providers))
 	acResults := make(chan struct {
 		int
-		entities.ProviderContext
+		layers.ProviderContext
 	}, len(t.providers))
 
 	for i, p := range t.providers {
 		wg.Add(1)
-		go func(acObj interface{}, index int, p entities.Provider) {
+		go func(acObj interface{}, index int, p layers.Provider) {
 			defer func() {
 				if r := recover(); r != nil {
 					errs <- fmt.Errorf("unexpected blend error %v", r)
@@ -114,17 +143,17 @@ func (t Blend) PreAuth(ctx *pkg.RequestContext, providerContext entities.Provide
 			}()
 
 			var err error
-			ac, ok := acObj.(entities.ProviderContext)
+			ac, ok := acObj.(layers.ProviderContext)
 
 			if ok {
 				ac, err = p.PreAuth(ctx, ac)
 			} else {
-				ac, err = p.PreAuth(ctx, entities.ProviderContext{})
+				ac, err = p.PreAuth(ctx, layers.ProviderContext{})
 			}
 
 			acResults <- struct {
 				int
-				entities.ProviderContext
+				layers.ProviderContext
 			}{index, ac}
 
 			errs <- err
@@ -144,7 +173,7 @@ func (t Blend) PreAuth(ctx *pkg.RequestContext, providerContext entities.Provide
 	return providerContext, errors.Join(errSlice...)
 }
 
-func (t Blend) GenerateTile(ctx *pkg.RequestContext, providerContext entities.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t Blend) GenerateTile(ctx *pkg.RequestContext, providerContext layers.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	slog.DebugContext(ctx, fmt.Sprintf("Blending together %v providers", len(t.providers)))
 
 	wg := sync.WaitGroup{}
@@ -156,7 +185,7 @@ func (t Blend) GenerateTile(ctx *pkg.RequestContext, providerContext entities.Pr
 
 	for i, p := range t.providers {
 		wg.Add(1)
-		go func(key string, i int, p entities.Provider) {
+		go func(key string, i int, p layers.Provider) {
 			defer func() {
 				if r := recover(); r != nil {
 					errs <- fmt.Errorf("unexpected blend error %v", r)
@@ -166,12 +195,12 @@ func (t Blend) GenerateTile(ctx *pkg.RequestContext, providerContext entities.Pr
 
 			var img *pkg.Image
 			var err error
-			ac, ok := providerContext.Other[key].(entities.ProviderContext)
+			ac, ok := providerContext.Other[key].(layers.ProviderContext)
 
 			if ok {
 				img, err = p.GenerateTile(ctx, ac, tileRequest)
 			} else {
-				img, err = p.GenerateTile(ctx, entities.ProviderContext{}, tileRequest)
+				img, err = p.GenerateTile(ctx, layers.ProviderContext{}, tileRequest)
 			}
 
 			if img != nil {

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package layers
+package providers
 
 import (
 	"fmt"
@@ -20,7 +20,7 @@ import (
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/layers"
 )
 
 type StaticConfig struct {
@@ -34,7 +34,7 @@ type Static struct {
 }
 
 func init() {
-	entities.RegisterProvider(StaticRegistration{})
+	layers.RegisterProvider(StaticRegistration{})
 }
 
 type StaticRegistration struct {
@@ -48,7 +48,7 @@ func (s StaticRegistration) Name() string {
 	return "static"
 }
 
-func (s StaticRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (entities.Provider, error) {
+func (s StaticRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layers.LayerGroup) (layers.Provider, error) {
 	cfg := cfgAny.(StaticConfig)
 	if cfg.Image == "" {
 		if cfg.Color != "" {
@@ -67,10 +67,10 @@ func (s StaticRegistration) Initialize(cfgAny any, clientConfig config.ClientCon
 	return &Static{cfg, img}, nil
 }
 
-func (t Static) PreAuth(ctx *pkg.RequestContext, providerContext entities.ProviderContext) (entities.ProviderContext, error) {
-	return entities.ProviderContext{AuthBypass: true}, nil
+func (t Static) PreAuth(ctx *pkg.RequestContext, providerContext layers.ProviderContext) (layers.ProviderContext, error) {
+	return layers.ProviderContext{AuthBypass: true}, nil
 }
 
-func (t Static) GenerateTile(ctx *pkg.RequestContext, providerContext entities.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t Static) GenerateTile(ctx *pkg.RequestContext, providerContext layers.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	return t.img, nil
 }

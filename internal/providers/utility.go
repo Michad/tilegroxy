@@ -12,10 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package layers
+package providers
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -30,98 +29,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
-	"github.com/mitchellh/mapstructure"
 )
-
-func ConstructProvider(rawConfig map[string]interface{}, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup) (entities.Provider, error) {
-	rawConfig = pkg.ReplaceEnv(rawConfig)
-
-	name, ok := rawConfig["name"].(string)
-
-	if ok {
-		reg, ok := entities.Registration[entities.Provider](name)
-		if ok {
-			cfg := reg.InitializeConfig()
-			err := mapstructure.Decode(rawConfig, &cfg)
-			if err != nil {
-				return nil, err
-			}
-			return reg.Initialize(cfg, clientConfig, errorMessages)
-		} else if rawConfig["name"] == "ref" {
-			var config RefConfig
-			err := mapstructure.Decode(rawConfig, &config)
-			if err != nil {
-				return nil, err
-			}
-			return ConstructRef(config, clientConfig, errorMessages, layerGroup)
-		} else if rawConfig["name"] == "fallback" {
-			var config FallbackConfig
-			err := mapstructure.Decode(rawConfig, &config)
-			if err != nil {
-				return nil, err
-			}
-			primary, err := ConstructProvider(config.Primary, clientConfig, errorMessages, layerGroup)
-			if err != nil {
-				return nil, err
-			}
-			secondary, err := ConstructProvider(config.Secondary, clientConfig, errorMessages, layerGroup)
-			if err != nil {
-				return nil, err
-			}
-
-			return ConstructFallback(config, clientConfig, errorMessages, primary, secondary)
-		} else if rawConfig["name"] == "blend" {
-			var config BlendConfig
-			err := mapstructure.Decode(rawConfig, &config)
-			if err != nil {
-				return nil, err
-			}
-			var providers []entities.Provider
-			var errorSlice []error
-			for _, p := range config.Providers {
-				provider, err := ConstructProvider(p, clientConfig, errorMessages, layerGroup)
-				providers = append(providers, provider)
-				errorSlice = append(errorSlice, err)
-			}
-
-			errorsFlat := errors.Join(errorSlice...)
-			if errorsFlat != nil {
-				return nil, errorsFlat
-			}
-
-			return ConstructBlend(config, clientConfig, errorMessages, providers, layerGroup)
-		} else if rawConfig["name"] == "effect" {
-			var config EffectConfig
-			err := mapstructure.Decode(rawConfig, &config)
-			if err != nil {
-				return nil, err
-			}
-			child, err := ConstructProvider(config.Provider, clientConfig, errorMessages, layerGroup)
-			if err != nil {
-				return nil, err
-			}
-
-			return ConstructEffect(config, clientConfig, errorMessages, child)
-		} else if rawConfig["name"] == "transform" {
-			var config TransformConfig
-			err := mapstructure.Decode(rawConfig, &config)
-			if err != nil {
-				return nil, err
-			}
-
-			child, err := ConstructProvider(config.Provider, clientConfig, errorMessages, layerGroup)
-			if err != nil {
-				return nil, err
-			}
-
-			return ConstructTransform(config, clientConfig, errorMessages, child)
-		}
-	}
-
-	nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
-	return nil, fmt.Errorf(errorMessages.EnumError, "provider.name", nameCoerce, entities.RegisteredProviderNames())
-}
 
 var envRegex, _ = regexp.Compile(`{env\.[^{}}]*}`)
 var ctxRegex, _ = regexp.Compile(`{ctx\.[^{}}]*}`)
@@ -234,11 +142,11 @@ func getTile(ctx *pkg.RequestContext, clientConfig config.ClientConfig, url stri
 
 	if resp.ContentLength == -1 {
 		if !clientConfig.UnknownLength {
-			return nil, &pkg.InvalidContentLengthError{-1}
+			return nil, &pkg.InvalidContentLengthError{Length: -1}
 		}
 	} else {
 		if resp.ContentLength > int64(clientConfig.MaxLength) {
-			return nil, &pkg.InvalidContentLengthError{int(resp.ContentLength)}
+			return nil, &pkg.InvalidContentLengthError{Length: int(resp.ContentLength)}
 		}
 	}
 
@@ -249,7 +157,7 @@ func getTile(ctx *pkg.RequestContext, clientConfig config.ClientConfig, url stri
 	}
 
 	if len(img) > int(clientConfig.MaxLength) {
-		return nil, &pkg.InvalidContentLengthError{int(len(img))}
+		return nil, &pkg.InvalidContentLengthError{Length: int(len(img))}
 	}
 
 	return &img, nil

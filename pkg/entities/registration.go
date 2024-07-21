@@ -14,7 +14,9 @@
 
 package entities
 
-import "github.com/Michad/tilegroxy/pkg/config"
+import (
+	"github.com/Michad/tilegroxy/pkg/config"
+)
 
 type entityType int
 
@@ -41,10 +43,6 @@ func init() {
 
 func RegisterAuthentication(reg EntityRegistration[Authentication]) {
 	registrations[entityAuth][reg.Name()] = reg
-}
-
-func RegisterProvider(reg EntityRegistration[Provider]) {
-	registrations[entityProvider][reg.Name()] = reg
 }
 
 func RegisterCache(reg EntityRegistration[Cache]) {
@@ -79,10 +77,6 @@ func listNames(t entityType) []string {
 
 func RegisteredAuthenticationNames() []string {
 	return listNames(entityAuth)
-}
-
-func RegisteredProviderNames() []string {
-	return listNames(entityProvider)
 }
 
 func RegisteredCacheNames() []string {

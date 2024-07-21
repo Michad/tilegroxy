@@ -20,9 +20,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/layers"
 )
 
 type defaultHandler struct {

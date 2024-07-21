@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package layers
+package providers
 
 import (
 	"errors"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/layers"
 )
 
 var testErrMessages = config.DefaultConfig().Error.Messages
@@ -34,17 +34,33 @@ type Fail struct {
 	FailConfig
 }
 
-func ConstructFail(config FailConfig, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (*Fail, error) {
+func init() {
+	layers.RegisterProvider(FailRegistration{})
+}
+
+type FailRegistration struct {
+}
+
+func (s FailRegistration) InitializeConfig() any {
+	return FailConfig{}
+}
+
+func (s FailRegistration) Name() string {
+	return "fail"
+}
+
+func (s FailRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layers.LayerGroup) (layers.Provider, error) {
+	config := cfgAny.(FailConfig)
 	return &Fail{config}, nil
 }
 
-func (t Fail) PreAuth(ctx *pkg.RequestContext, providerContext entities.ProviderContext) (entities.ProviderContext, error) {
+func (t Fail) PreAuth(ctx *pkg.RequestContext, providerContext layers.ProviderContext) (layers.ProviderContext, error) {
 	if t.OnAuth {
 		return providerContext, errors.New(t.Message)
 	}
 	return providerContext, nil
 }
 
-func (t Fail) GenerateTile(ctx *pkg.RequestContext, providerContext entities.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t Fail) GenerateTile(ctx *pkg.RequestContext, providerContext layers.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	return nil, errors.New(t.Message)
 }

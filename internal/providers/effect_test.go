@@ -12,30 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package layers
+package providers
 
 import (
 	"testing"
 
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/Michad/tilegroxy/pkg"
-	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/layers"
 	"github.com/stretchr/testify/assert"
 )
 
-func makeEffectProvider() entities.Provider {
-	p, _ := StaticRegistration{}.Initialize(StaticConfig{Color: "F00"}, testClientConfig, testErrMessages)
-	return p
+func makeEffectProvider() map[string]interface{} {
+	return map[string]interface{}{
+		"name":  "static",
+		"color": "F00",
+	}
 }
 
 func Test_EffectValidate(t *testing.T) {
 	s := makeEffectProvider()
-	c, err := ConstructEffect(EffectConfig{}, testClientConfig, testErrMessages, s)
+	c, err := EffectRegistration{}.Initialize(EffectConfig{Provider: s}, testClientConfig, testErrMessages, nil)
 
 	assert.Nil(t, c)
 	assert.Error(t, err)
 
-	c, err = ConstructEffect(EffectConfig{Mode: "emboss", Intensity: 24}, testClientConfig, testErrMessages, s)
+	c, err = EffectRegistration{}.Initialize(EffectConfig{Mode: "emboss", Intensity: 24, Provider: s}, testClientConfig, testErrMessages, nil)
 
 	assert.Nil(t, c)
 	assert.Error(t, err)
@@ -43,12 +45,12 @@ func Test_EffectValidate(t *testing.T) {
 
 func Test_EffectExecuteGreyscale(t *testing.T) {
 	s := makeEffectProvider()
-	c, err := ConstructEffect(EffectConfig{Mode: "grayscale"}, testClientConfig, testErrMessages, s)
+	c, err := EffectRegistration{}.Initialize(EffectConfig{Mode: "grayscale", Provider: s}, testClientConfig, testErrMessages, nil)
 
 	assert.NotNil(t, c)
 	assert.NoError(t, err)
 
-	pc, err := c.PreAuth(pkg.BackgroundContext(), entities.ProviderContext{})
+	pc, err := c.PreAuth(pkg.BackgroundContext(), layers.ProviderContext{})
 	assert.NotNil(t, pc)
 	assert.NoError(t, err)
 
@@ -63,12 +65,12 @@ func Test_EffectExecuteGreyscale(t *testing.T) {
 func Test_EffectExecuteAll(t *testing.T) {
 	s := makeEffectProvider()
 	for _, mode := range allEffectModes {
-		c, err := ConstructEffect(EffectConfig{Mode: mode}, testClientConfig, testErrMessages, s)
+		c, err := EffectRegistration{}.Initialize(EffectConfig{Mode: mode, Provider: s}, testClientConfig, testErrMessages, nil)
 
 		assert.NotNil(t, c)
 		assert.NoError(t, err)
 
-		pc, err := c.PreAuth(pkg.BackgroundContext(), entities.ProviderContext{})
+		pc, err := c.PreAuth(pkg.BackgroundContext(), layers.ProviderContext{})
 		assert.NotNil(t, pc)
 		assert.NoError(t, err)
 

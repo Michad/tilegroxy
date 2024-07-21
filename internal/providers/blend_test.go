@@ -12,35 +12,40 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package layers
+package providers
 
 import (
 	"testing"
 
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/Michad/tilegroxy/pkg"
-	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/layers"
 	"github.com/stretchr/testify/assert"
 )
 
-func makeBlendProviders() []entities.Provider {
-	a, _ := StaticRegistration{}.Initialize(StaticConfig{Color: "F00"}, testClientConfig, testErrMessages)
-	b, _ := StaticRegistration{}.Initialize(StaticConfig{Color: "0F0"}, testClientConfig, testErrMessages)
-
-	return []entities.Provider{a, b}
+func makeBlendProviders() []map[string]interface{} {
+	return []map[string]interface{}{{
+		"name":  "static",
+		"color": "F00",
+	}, {
+		"name":  "static",
+		"color": "0F0",
+	},
+	}
 }
 
 func Test_BlendValidate(t *testing.T) {
-	b, err := ConstructBlend(BlendConfig{}, testClientConfig, testErrMessages, makeBlendProviders(), nil)
+	providers := makeBlendProviders()
+	b, err := BlendRegistration{}.Initialize(BlendConfig{Providers: providers}, testClientConfig, testErrMessages, nil)
 	assert.Nil(t, b)
 	assert.Error(t, err)
-	b, err = ConstructBlend(BlendConfig{Mode: "fake"}, testClientConfig, testErrMessages, makeBlendProviders(), nil)
+	b, err = BlendRegistration{}.Initialize(BlendConfig{Mode: "fake", Providers: providers}, testClientConfig, testErrMessages, nil)
 	assert.Nil(t, b)
 	assert.Error(t, err)
-	b, err = ConstructBlend(BlendConfig{Mode: "add", Opacity: 23}, testClientConfig, testErrMessages, makeBlendProviders(), nil)
+	b, err = BlendRegistration{}.Initialize(BlendConfig{Mode: "add", Opacity: 23, Providers: providers}, testClientConfig, testErrMessages, nil)
 	assert.Nil(t, b)
 	assert.Error(t, err)
-	b, err = ConstructBlend(BlendConfig{Mode: "opacity", Opacity: 23}, testClientConfig, testErrMessages, []entities.Provider{}, nil)
+	b, err = BlendRegistration{}.Initialize(BlendConfig{Mode: "opacity", Opacity: 23, Providers: []map[string]interface{}{}}, testClientConfig, testErrMessages, nil)
 	assert.Nil(t, b)
 	assert.Error(t, err)
 }
@@ -53,26 +58,28 @@ func Test_Blend_Layers(t *testing.T) {
 	v2["a"] = "goodbye"
 	v2["b"] = "world"
 
-	b, err := ConstructBlend(BlendConfig{
-		Mode: "normal",
+	b, err := BlendRegistration{}.Initialize(BlendConfig{
+		Providers: makeBlendProviders(),
+		Mode:      "normal",
 		Layer: &BlendLayerConfig{
 			Pattern: "something_{a}_{b}",
 			Values:  []map[string]string{v1, v2},
-		}}, testClientConfig, testErrMessages, makeBlendProviders(), nil)
+		}}, testClientConfig, testErrMessages, nil)
 	assert.NotNil(t, b)
 	assert.NoError(t, err)
+	bb := b.(*Blend)
 
-	assert.Equal(t, 2, len(b.providers))
-	assert.Equal(t, &Ref{RefConfig{"something_hello_world"}, nil}, b.providers[0])
-	assert.Equal(t, &Ref{RefConfig{"something_goodbye_world"}, nil}, b.providers[1])
+	assert.Equal(t, 2, len(bb.providers))
+	assert.Equal(t, &Ref{RefConfig{"something_hello_world"}, nil}, bb.providers[0])
+	assert.Equal(t, &Ref{RefConfig{"something_goodbye_world"}, nil}, bb.providers[1])
 }
 
 func Test_BlendExecute_Add(t *testing.T) {
-	b, err := ConstructBlend(BlendConfig{Mode: "add"}, testClientConfig, testErrMessages, makeBlendProviders(), nil)
+	b, err := BlendRegistration{}.Initialize(BlendConfig{Mode: "add", Providers: makeBlendProviders()}, testClientConfig, testErrMessages, nil)
 	assert.NotNil(t, b)
 	assert.NoError(t, err)
 
-	ctx, err := b.PreAuth(pkg.BackgroundContext(), entities.ProviderContext{})
+	ctx, err := b.PreAuth(pkg.BackgroundContext(), layers.ProviderContext{})
 	assert.NoError(t, err)
 	assert.NotNil(t, ctx)
 	assert.NotEmpty(t, ctx.Other)
@@ -90,10 +97,10 @@ func Test_BlendExecute_Add(t *testing.T) {
 
 func Test_BlendExecute_All(t *testing.T) {
 	for _, mode := range allBlendModes {
-		b, err := ConstructBlend(BlendConfig{Mode: mode}, testClientConfig, testErrMessages, makeBlendProviders(), nil)
+		b, err := BlendRegistration{}.Initialize(BlendConfig{Mode: mode, Providers: makeBlendProviders()}, testClientConfig, testErrMessages, nil)
 		assert.NotNil(t, b)
 		assert.NoError(t, err)
-		i, err := b.GenerateTile(pkg.BackgroundContext(), entities.ProviderContext{}, pkg.TileRequest{LayerName: "", Z: 4, X: 2, Y: 3})
+		i, err := b.GenerateTile(pkg.BackgroundContext(), layers.ProviderContext{}, pkg.TileRequest{LayerName: "", Z: 4, X: 2, Y: 3})
 		assert.NoError(t, err)
 		assert.NotNil(t, i)
 		assert.Greater(t, len(*i), 1000)

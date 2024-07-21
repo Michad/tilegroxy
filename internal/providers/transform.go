@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package layers
+package providers
 
 import (
 	"bufio"
@@ -29,7 +29,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/layers"
 	"github.com/traefik/yaegi/interp"
 	"github.com/traefik/yaegi/stdlib"
 )
@@ -43,15 +43,36 @@ type TransformConfig struct {
 
 type Transform struct {
 	TransformConfig
-	provider      entities.Provider
+	provider      layers.Provider
 	transformFunc func(uint8, uint8, uint8, uint8) (uint8, uint8, uint8, uint8)
 }
 
-func ConstructTransform(cfg TransformConfig, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, provider entities.Provider) (*Transform, error) {
+func init() {
+	layers.RegisterProvider(TransformRegistration{})
+}
+
+type TransformRegistration struct {
+}
+
+func (s TransformRegistration) InitializeConfig() any {
+	return TransformConfig{}
+}
+
+func (s TransformRegistration) Name() string {
+	return "transform"
+}
+
+func (s TransformRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layers.LayerGroup) (layers.Provider, error) {
+	cfg := cfgAny.(TransformConfig)
 	var err error
 
 	if cfg.Threads == 0 {
 		cfg.Threads = 1
+	}
+
+	provider, err := layers.ConstructProvider(cfg.Provider, clientConfig, errorMessages, layerGroup)
+	if err != nil {
+		return nil, err
 	}
 
 	i := interp.New(interp.Options{Unrestricted: true})
@@ -84,7 +105,7 @@ func ConstructTransform(cfg TransformConfig, clientConfig config.ClientConfig, e
 	return &Transform{cfg, provider, transformFunc}, nil
 }
 
-func (t Transform) PreAuth(ctx *pkg.RequestContext, providerContext entities.ProviderContext) (entities.ProviderContext, error) {
+func (t Transform) PreAuth(ctx *pkg.RequestContext, providerContext layers.ProviderContext) (layers.ProviderContext, error) {
 	return t.provider.PreAuth(ctx, providerContext)
 }
 
@@ -104,7 +125,7 @@ func (t Transform) transform(ctx *pkg.RequestContext, col color.Color) color.Col
 	return result
 }
 
-func (t Transform) GenerateTile(ctx *pkg.RequestContext, providerContext entities.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t Transform) GenerateTile(ctx *pkg.RequestContext, providerContext layers.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	img, err := t.provider.GenerateTile(ctx, providerContext, tileRequest)
 
 	if err != nil {

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package layers
+package providers
 
 import (
 	"fmt"
@@ -21,7 +21,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/layers"
 )
 
 type CacheMode string
@@ -45,16 +45,32 @@ type FallbackConfig struct {
 type Fallback struct {
 	FallbackConfig
 	zoomLevels []int
-	Primary    entities.Provider
-	Secondary  entities.Provider
+	Primary    layers.Provider
+	Secondary  layers.Provider
 }
 
-func ConstructFallback(config FallbackConfig, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, primary entities.Provider, secondary entities.Provider) (*Fallback, error) {
+func init() {
+	layers.RegisterProvider(FallbackRegistration{})
+}
+
+type FallbackRegistration struct {
+}
+
+func (s FallbackRegistration) InitializeConfig() any {
+	return FallbackConfig{}
+}
+
+func (s FallbackRegistration) Name() string {
+	return "fallback"
+}
+
+func (s FallbackRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layers.LayerGroup) (layers.Provider, error) {
+	cfg := cfgAny.(FallbackConfig)
 	var zoom []int
 
-	if config.Zoom != "" {
+	if cfg.Zoom != "" {
 		var err error
-		zoom, err = pkg.ParseZoomString(config.Zoom)
+		zoom, err = pkg.ParseZoomString(cfg.Zoom)
 
 		if err != nil {
 			return nil, err
@@ -65,22 +81,31 @@ func ConstructFallback(config FallbackConfig, clientConfig config.ClientConfig, 
 		}
 	}
 
-	if config.Cache == "" {
-		config.Cache = CacheModeUnlessError
+	if cfg.Cache == "" {
+		cfg.Cache = CacheModeUnlessError
 	}
 
-	if !slices.Contains(allCacheModes, config.Cache) {
-		return nil, fmt.Errorf(errorMessages.EnumError, "provider.fallback.cachemode", config.Cache, allCacheModes)
+	if !slices.Contains(allCacheModes, cfg.Cache) {
+		return nil, fmt.Errorf(errorMessages.EnumError, "provider.fallback.cachemode", cfg.Cache, allCacheModes)
 	}
 
-	return &Fallback{config, zoom, primary, secondary}, nil
+	primary, err := layers.ConstructProvider(cfg.Primary, clientConfig, errorMessages, layerGroup)
+	if err != nil {
+		return nil, err
+	}
+	secondary, err := layers.ConstructProvider(cfg.Secondary, clientConfig, errorMessages, layerGroup)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Fallback{cfg, zoom, primary, secondary}, nil
 }
 
-func (t Fallback) PreAuth(ctx *pkg.RequestContext, providerContext entities.ProviderContext) (entities.ProviderContext, error) {
+func (t Fallback) PreAuth(ctx *pkg.RequestContext, providerContext layers.ProviderContext) (layers.ProviderContext, error) {
 	return t.Primary.PreAuth(ctx, providerContext)
 }
 
-func (t Fallback) GenerateTile(ctx *pkg.RequestContext, providerContext entities.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t Fallback) GenerateTile(ctx *pkg.RequestContext, providerContext layers.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	ok := true
 
 	if !slices.Contains(t.zoomLevels, tileRequest.Z) {

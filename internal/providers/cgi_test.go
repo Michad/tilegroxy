@@ -14,13 +14,13 @@
 
 //go:build !unit
 
-package layers
+package providers
 
 import (
 	"testing"
 
 	"github.com/Michad/tilegroxy/pkg"
-	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/layers"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -29,7 +29,7 @@ func Test_CGI_Validate(t *testing.T) {
 		Uri: "/?map=mapfiles/{layer.file}.map&MODE=tile&layers={layer.layer}&TILEMODE=gmap&TILE={x}+{y}+{z}",
 	}
 
-	cgi, err := CGIRegistration{}.Initialize(cfg, testClientConfig, testErrMessages)
+	cgi, err := CGIRegistration{}.Initialize(cfg, testClientConfig, testErrMessages, nil)
 	assert.Error(t, err)
 	assert.Nil(t, cgi)
 
@@ -37,7 +37,7 @@ func Test_CGI_Validate(t *testing.T) {
 		Exec: "test_files/mapserv_via_docker.sh",
 	}
 
-	cgi, err = CGIRegistration{}.Initialize(cfg, testClientConfig, testErrMessages)
+	cgi, err = CGIRegistration{}.Initialize(cfg, testClientConfig, testErrMessages, nil)
 	assert.Error(t, err)
 	assert.Nil(t, cgi)
 }
@@ -53,7 +53,7 @@ func Test_CGI_Mapserv(t *testing.T) {
 		Env:  env,
 	}
 
-	cgi, err := CGIRegistration{}.Initialize(cfg, testClientConfig, testErrMessages)
+	cgi, err := CGIRegistration{}.Initialize(cfg, testClientConfig, testErrMessages, nil)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, cgi)
@@ -62,7 +62,7 @@ func Test_CGI_Mapserv(t *testing.T) {
 	ctx.LayerPatternMatches["file"] = "states"
 	ctx.LayerPatternMatches["layer"] = "all"
 
-	pc, err := cgi.PreAuth(ctx, entities.ProviderContext{})
+	pc, err := cgi.PreAuth(ctx, layers.ProviderContext{})
 	assert.NoError(t, err)
 
 	img, err := cgi.GenerateTile(ctx, pc, pkg.TileRequest{LayerName: "states", Z: 8, X: 58, Y: 96})
@@ -79,7 +79,7 @@ func Test_CGI_InvalidMapserv(t *testing.T) {
 		InvalidAsError: true,
 	}
 
-	cgi, err := CGIRegistration{}.Initialize(cfg, testClientConfig, testErrMessages)
+	cgi, err := CGIRegistration{}.Initialize(cfg, testClientConfig, testErrMessages, nil)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, cgi)
@@ -88,7 +88,7 @@ func Test_CGI_InvalidMapserv(t *testing.T) {
 	ctx.LayerPatternMatches["file"] = "fstates"
 	ctx.LayerPatternMatches["layer"] = "all"
 
-	pc, err := cgi.PreAuth(ctx, entities.ProviderContext{})
+	pc, err := cgi.PreAuth(ctx, layers.ProviderContext{})
 	assert.NoError(t, err)
 
 	img, err := cgi.GenerateTile(ctx, pc, pkg.TileRequest{LayerName: "states", Z: 8, X: 58, Y: 96})

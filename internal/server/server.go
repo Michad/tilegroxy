@@ -30,10 +30,10 @@ import (
 	"time"
 
 	"github.com/Michad/tilegroxy/internal/images"
-	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/layers"
 	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/gorilla/handlers"

@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package layers
+package providers
 
 import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/layers"
 )
 
 type RefConfig struct {
@@ -28,18 +28,34 @@ type RefConfig struct {
 
 type Ref struct {
 	RefConfig
-	layerGroup *LayerGroup
+	layerGroup *layers.LayerGroup
 }
 
-func ConstructRef(config RefConfig, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup) (*Ref, error) {
-	return &Ref{config, layerGroup}, nil
+func init() {
+	layers.RegisterProvider(RefRegistration{})
 }
 
-func (t Ref) PreAuth(ctx *pkg.RequestContext, providerContext entities.ProviderContext) (entities.ProviderContext, error) {
-	return entities.ProviderContext{AuthBypass: true}, nil
+type RefRegistration struct {
 }
 
-func (t Ref) GenerateTile(ctx *pkg.RequestContext, providerContext entities.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (s RefRegistration) InitializeConfig() any {
+	return RefConfig{}
+}
+
+func (s RefRegistration) Name() string {
+	return "ref"
+}
+
+func (s RefRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layers.LayerGroup) (layers.Provider, error) {
+	cfg := cfgAny.(RefConfig)
+	return &Ref{cfg, layerGroup}, nil
+}
+
+func (t Ref) PreAuth(ctx *pkg.RequestContext, providerContext layers.ProviderContext) (layers.ProviderContext, error) {
+	return layers.ProviderContext{AuthBypass: true}, nil
+}
+
+func (t Ref) GenerateTile(ctx *pkg.RequestContext, providerContext layers.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	newRequest := pkg.TileRequest{LayerName: t.Layer, Z: tileRequest.Z, X: tileRequest.X, Y: tileRequest.Y}
 	newCtx := *ctx
 	return t.layerGroup.RenderTile(&newCtx, newRequest)

@@ -19,6 +19,7 @@ import (
 	"flag"
 	"os"
 
+	_ "github.com/Michad/tilegroxy/internal/providers"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/spf13/cobra"
 )

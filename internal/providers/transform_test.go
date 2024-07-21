@@ -12,29 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package layers
+package providers
 
 import (
 	"testing"
 
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/Michad/tilegroxy/pkg"
-	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/layers"
 	"github.com/stretchr/testify/assert"
 )
 
-func makeTransformProvider() entities.Provider {
-	p, _ := StaticRegistration{}.Initialize(StaticConfig{Color: "F00"}, testClientConfig, testErrMessages)
-	return p
+func makeTransformProvider() map[string]interface{} {
+	return map[string]interface{}{
+		"name":  "static",
+		"color": "F00",
+	}
 }
 
 func Test_Transform_Validate(t *testing.T) {
 	p := makeTransformProvider()
-	tr, err := ConstructTransform(TransformConfig{}, testClientConfig, testErrMessages, p)
+	tr, err := TransformRegistration{}.Initialize(TransformConfig{Provider: p}, testClientConfig, testErrMessages, nil)
 
 	assert.Nil(t, tr)
 	assert.Error(t, err)
-	tr, err = ConstructTransform(TransformConfig{Formula: "package custom"}, testClientConfig, testErrMessages, p)
+	tr, err = TransformRegistration{}.Initialize(TransformConfig{Formula: "package custom", Provider: p}, testClientConfig, testErrMessages, nil)
 
 	assert.Nil(t, tr)
 	assert.Error(t, err)
@@ -42,14 +44,14 @@ func Test_Transform_Validate(t *testing.T) {
 
 func Test_Transform_Execute(t *testing.T) {
 	p := makeTransformProvider()
-	tr, err := ConstructTransform(TransformConfig{Formula: `func transform(r, g, b, a uint8) (uint8, uint8, uint8, uint8) { return g,b,r,a }`}, testClientConfig, testErrMessages, p)
+	tr, err := TransformRegistration{}.Initialize(TransformConfig{Provider: p, Formula: `func transform(r, g, b, a uint8) (uint8, uint8, uint8, uint8) { return g,b,r,a }`}, testClientConfig, testErrMessages, nil)
 
 	assert.NotNil(t, tr)
 	assert.NoError(t, err)
 
 	exp, _ := images.GetStaticImage("color:00F")
 
-	pc, err := tr.PreAuth(pkg.BackgroundContext(), entities.ProviderContext{})
+	pc, err := tr.PreAuth(pkg.BackgroundContext(), layers.ProviderContext{})
 	assert.NotNil(t, pc)
 	assert.NoError(t, err)
 

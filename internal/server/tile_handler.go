@@ -23,6 +23,8 @@ import (
 	"strconv"
 
 	"github.com/Michad/tilegroxy/pkg"
+
+	_ "github.com/Michad/tilegroxy/internal/providers"
 )
 
 type tileHandler struct {

@@ -14,14 +14,14 @@
 
 //go:build !unit
 
-package layers
+package providers
 
 import (
 	"testing"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/layers"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -29,18 +29,18 @@ import (
 const testTemplate = "https://tigerweb.geo.census.gov/arcgis/services/TIGERweb/tigerWMS_PhysicalFeatures/MapServer/WMSServer?VERSION=1.3.0&SERVICE=WMS&REQUEST=GetMap&LAYERS=19&STYLES=&CRS=$srs&BBOX=$xmin,$ymin,$xmax,$ymax&WIDTH=$width&HEIGHT=$height&FORMAT=image/png"
 
 func Test_UrlTemplateValidate(t *testing.T) {
-	p, err := UrlTemplateRegistration{}.Initialize(UrlTemplateConfig{}, config.ClientConfig{}, testErrMessages)
+	p, err := UrlTemplateRegistration{}.Initialize(UrlTemplateConfig{}, config.ClientConfig{}, testErrMessages, nil)
 
 	assert.Nil(t, p)
 	assert.Error(t, err)
 }
 func Test_UrlTemplateExecute(t *testing.T) {
-	p, err := UrlTemplateRegistration{}.Initialize(UrlTemplateConfig{Template: testTemplate}, config.ClientConfig{StatusCodes: []int{200}, MaxLength: 2000, ContentTypes: []string{"image/png"}, UnknownLength: true}, testErrMessages)
+	p, err := UrlTemplateRegistration{}.Initialize(UrlTemplateConfig{Template: testTemplate}, config.ClientConfig{StatusCodes: []int{200}, MaxLength: 2000, ContentTypes: []string{"image/png"}, UnknownLength: true}, testErrMessages, nil)
 
 	assert.NotNil(t, p)
 	assert.NoError(t, err)
 
-	pc, err := p.PreAuth(pkg.BackgroundContext(), entities.ProviderContext{})
+	pc, err := p.PreAuth(pkg.BackgroundContext(), layers.ProviderContext{})
 	assert.NotNil(t, pc)
 	assert.NoError(t, err)
 
@@ -51,29 +51,29 @@ func Test_UrlTemplateExecute(t *testing.T) {
 
 func Test_UrlTemplateConfigOptions(t *testing.T) {
 	var clientConfig = config.ClientConfig{StatusCodes: []int{400}, MaxLength: 2000, ContentTypes: []string{"image/png"}, UnknownLength: true}
-	p, err := UrlTemplateRegistration{}.Initialize(UrlTemplateConfig{Template: testTemplate}, clientConfig, testErrMessages)
+	p, err := UrlTemplateRegistration{}.Initialize(UrlTemplateConfig{Template: testTemplate}, clientConfig, testErrMessages, nil)
 	assert.NotNil(t, p)
 	assert.NoError(t, err)
 
-	img, err := p.GenerateTile(pkg.BackgroundContext(), entities.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 6, X: 10, Y: 10})
+	img, err := p.GenerateTile(pkg.BackgroundContext(), layers.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 6, X: 10, Y: 10})
 	assert.Nil(t, img)
 	assert.Error(t, err)
 
 	clientConfig.StatusCodes = []int{200}
 	clientConfig.MaxLength = 2
-	img, err = p.GenerateTile(pkg.BackgroundContext(), entities.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 6, X: 10, Y: 10})
+	img, err = p.GenerateTile(pkg.BackgroundContext(), layers.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 6, X: 10, Y: 10})
 	assert.Nil(t, img)
 	assert.Error(t, err)
 
 	clientConfig.MaxLength = 2000
 	clientConfig.UnknownLength = false
-	img, err = p.GenerateTile(pkg.BackgroundContext(), entities.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 6, X: 10, Y: 10})
+	img, err = p.GenerateTile(pkg.BackgroundContext(), layers.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 6, X: 10, Y: 10})
 	assert.Nil(t, img)
 	assert.Error(t, err)
 
 	clientConfig.UnknownLength = true
 	clientConfig.ContentTypes = []string{"text/plain"}
-	img, err = p.GenerateTile(pkg.BackgroundContext(), entities.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 6, X: 10, Y: 10})
+	img, err = p.GenerateTile(pkg.BackgroundContext(), layers.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 6, X: 10, Y: 10})
 	assert.Nil(t, img)
 	assert.Error(t, err)
 }
