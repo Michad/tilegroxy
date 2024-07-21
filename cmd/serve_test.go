@@ -231,6 +231,11 @@ layers:
 }
 
 func Test_ServeCommand_ExecuteNoContentRoute(t *testing.T) {
+	tmpLog, err := os.CreateTemp("", "tilegroxy-test-serve-nocontent-*.log")
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer os.Remove(tmpLog.Name())
 
 	cfg := `server:
   port: 12341
@@ -238,6 +243,7 @@ func Test_ServeCommand_ExecuteNoContentRoute(t *testing.T) {
   timeout: 1
 Logging:
   main:
+    path: %v
     level: debug
     format: json
     Headers:
@@ -271,6 +277,7 @@ layers:
             return &[]byte{0x01,0x02}, nil
         }
 `
+	cfg = fmt.Sprintf(cfg, tmpLog.Name())
 
 	resp, postFunc, err := coreServeTest(cfg, 12341, "http://localhost:12341/")
 	defer postFunc()
@@ -288,7 +295,9 @@ layers:
 	assert.Nil(t, resp.Header["X-Powered-By"])
 	resp.Body.Close()
 
-	//TODO: find some way to validate log output is in json
+	fileInfo, err := os.Stat(tmpLog.Name())
+	assert.NoError(t, err)
+	assert.NotZero(t, fileInfo.Size())
 
 	req, err = http.NewRequest(http.MethodGet, "http://localhost:12341/tiles/l/8/12/32", nil)
 	assert.NoError(t, err)

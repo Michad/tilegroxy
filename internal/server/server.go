@@ -132,20 +132,30 @@ func (h slogContextHandler) Handle(ctx context.Context, r slog.Record) error {
 	return h.Handler.Handle(ctx, r)
 }
 
+func makeLogFileWriter(path string, alsoStdOut bool) (io.Writer, error) {
+	logFile, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+
+	if err != nil {
+		return nil, err
+	}
+	var out io.Writer
+
+	if alsoStdOut {
+		out = io.MultiWriter(os.Stdout, logFile)
+	} else {
+		out = logFile
+	}
+	return out, nil
+}
+
 func configureMainLogging(cfg *config.Config) error {
+	var err error
 	if cfg.Logging.Main.Console || len(cfg.Logging.Main.Path) > 0 {
 		var out io.Writer
 		if len(cfg.Logging.Main.Path) > 0 {
-			logFile, err := os.OpenFile(cfg.Logging.Main.Path, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
-
+			out, err = makeLogFileWriter(cfg.Logging.Main.Path, cfg.Logging.Main.Console)
 			if err != nil {
 				return err
-			}
-
-			if cfg.Logging.Main.Console {
-				out = io.MultiWriter(os.Stdout, logFile)
-			} else {
-				out = logFile
 			}
 		} else if cfg.Logging.Main.Console {
 			out = os.Stdout
@@ -220,17 +230,12 @@ func configureMainLogging(cfg *config.Config) error {
 func configureAccessLogging(cfg config.AccessConfig, errorMessages config.ErrorMessages, rootHandler http.Handler) (http.Handler, error) {
 	if cfg.Console || len(cfg.Path) > 0 {
 		var out io.Writer
+		var err error
 		if len(cfg.Path) > 0 {
-			logFile, err := os.OpenFile(cfg.Path, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+			out, err = makeLogFileWriter(cfg.Path, cfg.Console)
 
 			if err != nil {
 				return nil, err
-			}
-
-			if cfg.Console {
-				out = io.MultiWriter(os.Stdout, logFile)
-			} else {
-				out = logFile
 			}
 		} else {
 			out = os.Stdout

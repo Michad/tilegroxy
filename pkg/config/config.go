@@ -78,7 +78,7 @@ func (c *ClientConfig) MergeDefaultsFrom(o ClientConfig) {
 // Modes for error reporting
 const (
 	ModeErrorPlainText   = "text"         //Response will be text/plain with the error message in the body
-	ModeErrorNoError     = "none"         //Response will not include any data but wil return status code.
+	ModeErrorNoError     = "none"         //Response will not include any data but will return status code.
 	ModeErrorImage       = "image"        //Response will return an image but not the error itself
 	ModeErrorImageHeader = "image+header" //Response will return an image and include the error inside x-error-message
 )
