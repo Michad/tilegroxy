@@ -57,54 +57,54 @@ const (
 	TypeOfErrorOther
 )
 
-func writeError(ctx *pkg.RequestContext, w http.ResponseWriter, cfg *config.ErrorConfig, errorType TypeOfError, message string, args ...any) {
+func errorVars(cfg *config.ErrorConfig, errorType TypeOfError) (int, slog.Level, string) {
 	var status int
 	var level slog.Level
-	if !cfg.AlwaysOk {
-		if errorType == TypeOfErrorAuth {
-			level = slog.LevelDebug
-			status = http.StatusUnauthorized
-		} else if errorType == TypeOfErrorBounds {
-			level = slog.LevelDebug
-			status = http.StatusBadRequest
-		} else if errorType == TypeOfErrorProvider {
-			level = slog.LevelInfo
-			status = http.StatusInternalServerError
-		} else if errorType == TypeOfErrorOtherBadRequest {
-			level = slog.LevelDebug
-			status = http.StatusBadRequest
-		} else {
-			level = slog.LevelWarn
-			status = http.StatusInternalServerError
-		}
-	} else {
-		level = config.LevelTrace
+	var imgPath string
+
+	switch errorType {
+	case TypeOfErrorAuth:
+		level = slog.LevelDebug
+		status = http.StatusUnauthorized
+		imgPath = cfg.Images.Authentication
+	case TypeOfErrorBounds:
+		level = slog.LevelDebug
+		status = http.StatusBadRequest
+		imgPath = cfg.Images.OutOfBounds
+	case TypeOfErrorProvider:
+		level = slog.LevelInfo
+		status = http.StatusInternalServerError
+		imgPath = cfg.Images.Provider
+	case TypeOfErrorOtherBadRequest:
+		level = slog.LevelDebug
+		status = http.StatusBadRequest
+		imgPath = cfg.Images.Other
+	default:
+		level = slog.LevelWarn
+		status = http.StatusInternalServerError
+		imgPath = cfg.Images.Other
+	}
+
+	if cfg.AlwaysOk {
 		status = http.StatusOK
 	}
+
+	return status, level, imgPath
+}
+
+func writeError(ctx *pkg.RequestContext, w http.ResponseWriter, cfg *config.ErrorConfig, errorType TypeOfError, message string, args ...any) {
+	status, level, imgPath := errorVars(cfg, errorType)
 
 	slog.Log(ctx, level, message, args...)
 
 	if cfg.Mode == config.ModeErrorPlainText {
 		w.WriteHeader(status)
 		w.Write([]byte(message))
-	} else if cfg.Mode == config.ModeErrorNoError {
-		w.WriteHeader(status)
 	} else if cfg.Mode == config.ModeErrorImageHeader || cfg.Mode == config.ModeErrorImage {
 		if cfg.Mode == config.ModeErrorImageHeader {
 			w.Header().Add("x-error-message", message)
 		}
 		w.WriteHeader(status)
-
-		var imgPath string
-		if errorType == TypeOfErrorBounds {
-			imgPath = cfg.Images.OutOfBounds
-		} else if errorType == TypeOfErrorAuth {
-			imgPath = cfg.Images.Authentication
-		} else if errorType == TypeOfErrorProvider {
-			imgPath = cfg.Images.Provider
-		} else {
-			imgPath = cfg.Images.Other
-		}
 
 		img, err2 := images.GetStaticImage(imgPath)
 		if img != nil {
@@ -116,7 +116,6 @@ func writeError(ctx *pkg.RequestContext, w http.ResponseWriter, cfg *config.Erro
 		}
 	} else {
 		w.WriteHeader(status)
-		slog.ErrorContext(ctx, "Invalid error mode! Falling back to none!")
 	}
 }
 
@@ -132,6 +131,7 @@ func (h slogContextHandler) Handle(ctx context.Context, r slog.Record) error {
 
 	return h.Handler.Handle(ctx, r)
 }
+
 func configureMainLogging(cfg *config.Config) error {
 	if cfg.Logging.Main.Console || len(cfg.Logging.Main.Path) > 0 {
 		var out io.Writer
@@ -232,10 +232,8 @@ func configureAccessLogging(cfg config.AccessConfig, errorMessages config.ErrorM
 			} else {
 				out = logFile
 			}
-		} else if cfg.Console {
-			out = os.Stdout
 		} else {
-			panic("Impossible logic error")
+			out = os.Stdout
 		}
 
 		if cfg.Format == config.AccessFormatCommon {
