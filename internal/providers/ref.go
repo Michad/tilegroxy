@@ -17,7 +17,7 @@ package providers
 import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/layers"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
 type RefConfig struct {
@@ -28,11 +28,11 @@ type RefConfig struct {
 
 type Ref struct {
 	RefConfig
-	layerGroup *layers.LayerGroup
+	layerGroup *layer.LayerGroup
 }
 
 func init() {
-	layers.RegisterProvider(RefRegistration{})
+	layer.RegisterProvider(RefRegistration{})
 }
 
 type RefRegistration struct {
@@ -46,16 +46,16 @@ func (s RefRegistration) Name() string {
 	return "ref"
 }
 
-func (s RefRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layers.LayerGroup) (layers.Provider, error) {
+func (s RefRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layer.LayerGroup) (layer.Provider, error) {
 	cfg := cfgAny.(RefConfig)
 	return &Ref{cfg, layerGroup}, nil
 }
 
-func (t Ref) PreAuth(ctx *pkg.RequestContext, providerContext layers.ProviderContext) (layers.ProviderContext, error) {
-	return layers.ProviderContext{AuthBypass: true}, nil
+func (t Ref) PreAuth(ctx *pkg.RequestContext, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
+	return layer.ProviderContext{AuthBypass: true}, nil
 }
 
-func (t Ref) GenerateTile(ctx *pkg.RequestContext, providerContext layers.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t Ref) GenerateTile(ctx *pkg.RequestContext, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	newRequest := pkg.TileRequest{LayerName: t.Layer, Z: tileRequest.Z, X: tileRequest.X, Y: tileRequest.Y}
 	newCtx := *ctx
 	return t.layerGroup.RenderTile(&newCtx, newRequest)

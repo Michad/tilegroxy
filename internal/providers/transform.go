@@ -29,7 +29,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/layers"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/traefik/yaegi/interp"
 	"github.com/traefik/yaegi/stdlib"
 )
@@ -43,12 +43,12 @@ type TransformConfig struct {
 
 type Transform struct {
 	TransformConfig
-	provider      layers.Provider
+	provider      layer.Provider
 	transformFunc func(uint8, uint8, uint8, uint8) (uint8, uint8, uint8, uint8)
 }
 
 func init() {
-	layers.RegisterProvider(TransformRegistration{})
+	layer.RegisterProvider(TransformRegistration{})
 }
 
 type TransformRegistration struct {
@@ -62,7 +62,7 @@ func (s TransformRegistration) Name() string {
 	return "transform"
 }
 
-func (s TransformRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layers.LayerGroup) (layers.Provider, error) {
+func (s TransformRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layer.LayerGroup) (layer.Provider, error) {
 	cfg := cfgAny.(TransformConfig)
 	var err error
 
@@ -70,7 +70,7 @@ func (s TransformRegistration) Initialize(cfgAny any, clientConfig config.Client
 		cfg.Threads = 1
 	}
 
-	provider, err := layers.ConstructProvider(cfg.Provider, clientConfig, errorMessages, layerGroup)
+	provider, err := layer.ConstructProvider(cfg.Provider, clientConfig, errorMessages, layerGroup)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +105,7 @@ func (s TransformRegistration) Initialize(cfgAny any, clientConfig config.Client
 	return &Transform{cfg, provider, transformFunc}, nil
 }
 
-func (t Transform) PreAuth(ctx *pkg.RequestContext, providerContext layers.ProviderContext) (layers.ProviderContext, error) {
+func (t Transform) PreAuth(ctx *pkg.RequestContext, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
 	return t.provider.PreAuth(ctx, providerContext)
 }
 
@@ -125,7 +125,7 @@ func (t Transform) transform(ctx *pkg.RequestContext, col color.Color) color.Col
 	return result
 }
 
-func (t Transform) GenerateTile(ctx *pkg.RequestContext, providerContext layers.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t Transform) GenerateTile(ctx *pkg.RequestContext, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	img, err := t.provider.GenerateTile(ctx, providerContext, tileRequest)
 
 	if err != nil {

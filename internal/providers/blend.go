@@ -30,7 +30,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/layers"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
 
 	"github.com/anthonynsimon/bild/blend"
 	"github.com/anthonynsimon/bild/transform"
@@ -51,13 +51,13 @@ type BlendConfig struct {
 
 type Blend struct {
 	BlendConfig
-	providers []layers.Provider
+	providers []layer.Provider
 }
 
 var allBlendModes = []string{"add", "color burn", "color dodge", "darken", "difference", "divide", "exclusion", "lighten", "linear burn", "linear light", "multiply", "normal", "opacity", "overlay", "screen", "soft light", "subtract"}
 
 func init() {
-	layers.RegisterProvider(BlendRegistration{})
+	layer.RegisterProvider(BlendRegistration{})
 }
 
 type BlendRegistration struct {
@@ -71,7 +71,7 @@ func (s BlendRegistration) Name() string {
 	return "blend"
 }
 
-func (s BlendRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layers.LayerGroup) (layers.Provider, error) {
+func (s BlendRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layer.LayerGroup) (layer.Provider, error) {
 	cfg := cfgAny.(BlendConfig)
 	var err error
 	if !slices.Contains(allBlendModes, cfg.Mode) {
@@ -80,11 +80,11 @@ func (s BlendRegistration) Initialize(cfgAny any, clientConfig config.ClientConf
 	if cfg.Mode != "opacity" && cfg.Opacity != 0 {
 		return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "provider.blend.opacity", cfg.Mode)
 	}
-	var providers []layers.Provider
+	var providers []layer.Provider
 	if cfg.Layer != nil {
-		providers = make([]layers.Provider, len(cfg.Layer.Values))
+		providers = make([]layer.Provider, len(cfg.Layer.Values))
 		for i, lay := range cfg.Layer.Values {
-			var ref layers.Provider
+			var ref layer.Provider
 
 			layerName := cfg.Layer.Pattern
 
@@ -92,7 +92,7 @@ func (s BlendRegistration) Initialize(cfgAny any, clientConfig config.ClientConf
 				layerName = strings.ReplaceAll(layerName, "{"+k+"}", v)
 			}
 
-			ref, err = layers.ConstructProvider(map[string]interface{}{"name": "ref", "layer": layerName}, clientConfig, errorMessages, layerGroup)
+			ref, err = layer.ConstructProvider(map[string]interface{}{"name": "ref", "layer": layerName}, clientConfig, errorMessages, layerGroup)
 			if err != nil {
 				return nil, err
 			}
@@ -101,7 +101,7 @@ func (s BlendRegistration) Initialize(cfgAny any, clientConfig config.ClientConf
 	} else {
 		var errorSlice []error
 		for _, p := range cfg.Providers {
-			provider, err := layers.ConstructProvider(p, clientConfig, errorMessages, layerGroup)
+			provider, err := layer.ConstructProvider(p, clientConfig, errorMessages, layerGroup)
 			providers = append(providers, provider)
 			errorSlice = append(errorSlice, err)
 		}
@@ -120,7 +120,7 @@ func (s BlendRegistration) Initialize(cfgAny any, clientConfig config.ClientConf
 	return &Blend{cfg, providers}, nil
 }
 
-func (t Blend) PreAuth(ctx *pkg.RequestContext, providerContext layers.ProviderContext) (layers.ProviderContext, error) {
+func (t Blend) PreAuth(ctx *pkg.RequestContext, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
 	if providerContext.Other == nil {
 		providerContext.Other = map[string]interface{}{}
 	}
@@ -129,12 +129,12 @@ func (t Blend) PreAuth(ctx *pkg.RequestContext, providerContext layers.ProviderC
 	errs := make(chan error, len(t.providers))
 	acResults := make(chan struct {
 		int
-		layers.ProviderContext
+		layer.ProviderContext
 	}, len(t.providers))
 
 	for i, p := range t.providers {
 		wg.Add(1)
-		go func(acObj interface{}, index int, p layers.Provider) {
+		go func(acObj interface{}, index int, p layer.Provider) {
 			defer func() {
 				if r := recover(); r != nil {
 					errs <- fmt.Errorf("unexpected blend error %v", r)
@@ -143,17 +143,17 @@ func (t Blend) PreAuth(ctx *pkg.RequestContext, providerContext layers.ProviderC
 			}()
 
 			var err error
-			ac, ok := acObj.(layers.ProviderContext)
+			ac, ok := acObj.(layer.ProviderContext)
 
 			if ok {
 				ac, err = p.PreAuth(ctx, ac)
 			} else {
-				ac, err = p.PreAuth(ctx, layers.ProviderContext{})
+				ac, err = p.PreAuth(ctx, layer.ProviderContext{})
 			}
 
 			acResults <- struct {
 				int
-				layers.ProviderContext
+				layer.ProviderContext
 			}{index, ac}
 
 			errs <- err
@@ -173,7 +173,7 @@ func (t Blend) PreAuth(ctx *pkg.RequestContext, providerContext layers.ProviderC
 	return providerContext, errors.Join(errSlice...)
 }
 
-func (t Blend) GenerateTile(ctx *pkg.RequestContext, providerContext layers.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t Blend) GenerateTile(ctx *pkg.RequestContext, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	slog.DebugContext(ctx, fmt.Sprintf("Blending together %v providers", len(t.providers)))
 
 	wg := sync.WaitGroup{}
@@ -185,7 +185,7 @@ func (t Blend) GenerateTile(ctx *pkg.RequestContext, providerContext layers.Prov
 
 	for i, p := range t.providers {
 		wg.Add(1)
-		go func(key string, i int, p layers.Provider) {
+		go func(key string, i int, p layer.Provider) {
 			defer func() {
 				if r := recover(); r != nil {
 					errs <- fmt.Errorf("unexpected blend error %v", r)
@@ -195,12 +195,12 @@ func (t Blend) GenerateTile(ctx *pkg.RequestContext, providerContext layers.Prov
 
 			var img *pkg.Image
 			var err error
-			ac, ok := providerContext.Other[key].(layers.ProviderContext)
+			ac, ok := providerContext.Other[key].(layer.ProviderContext)
 
 			if ok {
 				img, err = p.GenerateTile(ctx, ac, tileRequest)
 			} else {
-				img, err = p.GenerateTile(ctx, layers.ProviderContext{}, tileRequest)
+				img, err = p.GenerateTile(ctx, layer.ProviderContext{}, tileRequest)
 			}
 
 			if img != nil {

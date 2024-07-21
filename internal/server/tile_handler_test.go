@@ -30,14 +30,14 @@ import (
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
-	"github.com/Michad/tilegroxy/pkg/entities/layers"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
 )
 
-func configToEntities(cfg config.Config) (*layers.LayerGroup, authentication.Authentication, error) {
+func configToEntities(cfg config.Config) (*layer.LayerGroup, authentication.Authentication, error) {
 	cache, err1 := cache.ConstructCache(cfg.Cache, cfg.Client, cfg.Error.Messages)
 	auth, err2 := authentication.ConstructAuth(cfg.Authentication, cfg.Client, cfg.Error.Messages)
-	layerGroup, err3 := layers.ConstructLayerGroup(cfg, cfg.Layers, cache)
+	layerGroup, err3 := layer.ConstructLayerGroup(cfg, cfg.Layers, cache)
 
 	return layerGroup, auth, errors.Join(err1, err2, err3)
 }
@@ -52,7 +52,7 @@ func Test_TileHandler_AllowedArea(t *testing.T) {
 	var cache cache.Cache
 	auth = authentications.Noop{}
 	cache = caches.Noop{}
-	lg, err := layers.ConstructLayerGroup(cfg, cfg.Layers, cache)
+	lg, err := layer.ConstructLayerGroup(cfg, cfg.Layers, cache)
 	assert.NoError(t, err)
 
 	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
@@ -107,7 +107,7 @@ func Test_TileHandler_Proxy(t *testing.T) {
 	var cache cache.Cache
 	auth = authentications.Noop{}
 	cache = caches.Noop{}
-	lg, err := layers.ConstructLayerGroup(cfg, cfg.Layers, cache)
+	lg, err := layer.ConstructLayerGroup(cfg, cfg.Layers, cache)
 	assert.NoError(t, err)
 
 	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
@@ -142,7 +142,7 @@ func Test_TileHandler_RefToStatic(t *testing.T) {
 	var cache cache.Cache
 	auth = authentications.Noop{}
 	cache = caches.Noop{}
-	lg, err := layers.ConstructLayerGroup(cfg, cfg.Layers, cache)
+	lg, err := layer.ConstructLayerGroup(cfg, cfg.Layers, cache)
 	assert.NoError(t, err)
 
 	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
@@ -210,7 +210,7 @@ func Test_TileHandler_ExecuteCustom(t *testing.T) {
     }`
 
 	cache := caches.Noop{}
-	lg, err := layers.ConstructLayerGroup(cfg, cfg.Layers, cache)
+	lg, err := layer.ConstructLayerGroup(cfg, cfg.Layers, cache)
 	assert.NoError(t, err)
 
 	authO, err := authentication.ConstructAuth(auth, cfg.Client, cfg.Error.Messages)

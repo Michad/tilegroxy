@@ -19,7 +19,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/layers"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
 type ProxyConfig struct {
@@ -33,7 +33,7 @@ type Proxy struct {
 }
 
 func init() {
-	layers.RegisterProvider(ProxyRegistration{})
+	layer.RegisterProvider(ProxyRegistration{})
 }
 
 type ProxyRegistration struct {
@@ -47,7 +47,7 @@ func (s ProxyRegistration) Name() string {
 	return "proxy"
 }
 
-func (s ProxyRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layers.LayerGroup) (layers.Provider, error) {
+func (s ProxyRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layer.LayerGroup) (layer.Provider, error) {
 	cfg := cfgAny.(ProxyConfig)
 	if cfg.Url == "" {
 		return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.proxy.url", "")
@@ -56,11 +56,11 @@ func (s ProxyRegistration) Initialize(cfgAny any, clientConfig config.ClientConf
 	return &Proxy{cfg, clientConfig}, nil
 }
 
-func (t Proxy) PreAuth(ctx *pkg.RequestContext, providerContext layers.ProviderContext) (layers.ProviderContext, error) {
-	return layers.ProviderContext{AuthBypass: true}, nil
+func (t Proxy) PreAuth(ctx *pkg.RequestContext, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
+	return layer.ProviderContext{AuthBypass: true}, nil
 }
 
-func (t Proxy) GenerateTile(ctx *pkg.RequestContext, providerContext layers.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t Proxy) GenerateTile(ctx *pkg.RequestContext, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	url, err := replaceUrlPlaceholders(ctx, tileRequest, t.Url, t.InvertY)
 	if err != nil {
 		return nil, err

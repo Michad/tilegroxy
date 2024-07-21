@@ -18,12 +18,12 @@ import (
 	"fmt"
 
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/layers"
-	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
-func ConfigToEntities(cfg config.Config) (*layers.LayerGroup, authentication.Authentication, error) {
+func ConfigToEntities(cfg config.Config) (*layer.LayerGroup, authentication.Authentication, error) {
 	cache, err := cache.ConstructCache(cfg.Cache, cfg.Client, cfg.Error.Messages)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error constructing cache: %v", err)
@@ -34,7 +34,7 @@ func ConfigToEntities(cfg config.Config) (*layers.LayerGroup, authentication.Aut
 		return nil, nil, fmt.Errorf("error constructing auth: %v", err)
 	}
 
-	layerGroup, err := layers.ConstructLayerGroup(cfg, cfg.Layers, cache)
+	layerGroup, err := layer.ConstructLayerGroup(cfg, cfg.Layers, cache)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error constructing layers: %v", err)
 	}

@@ -19,7 +19,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/layers"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
 var testErrMessages = config.DefaultConfig().Error.Messages
@@ -35,7 +35,7 @@ type Fail struct {
 }
 
 func init() {
-	layers.RegisterProvider(FailRegistration{})
+	layer.RegisterProvider(FailRegistration{})
 }
 
 type FailRegistration struct {
@@ -49,18 +49,18 @@ func (s FailRegistration) Name() string {
 	return "fail"
 }
 
-func (s FailRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layers.LayerGroup) (layers.Provider, error) {
+func (s FailRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layer.LayerGroup) (layer.Provider, error) {
 	config := cfgAny.(FailConfig)
 	return &Fail{config}, nil
 }
 
-func (t Fail) PreAuth(ctx *pkg.RequestContext, providerContext layers.ProviderContext) (layers.ProviderContext, error) {
+func (t Fail) PreAuth(ctx *pkg.RequestContext, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
 	if t.OnAuth {
 		return providerContext, errors.New(t.Message)
 	}
 	return providerContext, nil
 }
 
-func (t Fail) GenerateTile(ctx *pkg.RequestContext, providerContext layers.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t Fail) GenerateTile(ctx *pkg.RequestContext, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	return nil, errors.New(t.Message)
 }

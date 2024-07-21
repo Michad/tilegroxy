@@ -19,7 +19,7 @@ import (
 
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/Michad/tilegroxy/pkg"
-	"github.com/Michad/tilegroxy/pkg/entities/layers"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -79,7 +79,7 @@ func Test_BlendExecute_Add(t *testing.T) {
 	assert.NotNil(t, b)
 	assert.NoError(t, err)
 
-	ctx, err := b.PreAuth(pkg.BackgroundContext(), layers.ProviderContext{})
+	ctx, err := b.PreAuth(pkg.BackgroundContext(), layer.ProviderContext{})
 	assert.NoError(t, err)
 	assert.NotNil(t, ctx)
 	assert.NotEmpty(t, ctx.Other)
@@ -100,7 +100,7 @@ func Test_BlendExecute_All(t *testing.T) {
 		b, err := BlendRegistration{}.Initialize(BlendConfig{Mode: mode, Providers: makeBlendProviders()}, testClientConfig, testErrMessages, nil)
 		assert.NotNil(t, b)
 		assert.NoError(t, err)
-		i, err := b.GenerateTile(pkg.BackgroundContext(), layers.ProviderContext{}, pkg.TileRequest{LayerName: "", Z: 4, X: 2, Y: 3})
+		i, err := b.GenerateTile(pkg.BackgroundContext(), layer.ProviderContext{}, pkg.TileRequest{LayerName: "", Z: 4, X: 2, Y: 3})
 		assert.NoError(t, err)
 		assert.NotNil(t, i)
 		assert.Greater(t, len(*i), 1000)

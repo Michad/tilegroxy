@@ -19,7 +19,7 @@ import (
 
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/Michad/tilegroxy/pkg"
-	"github.com/Michad/tilegroxy/pkg/entities/layers"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -51,7 +51,7 @@ func Test_Transform_Execute(t *testing.T) {
 
 	exp, _ := images.GetStaticImage("color:00F")
 
-	pc, err := tr.PreAuth(pkg.BackgroundContext(), layers.ProviderContext{})
+	pc, err := tr.PreAuth(pkg.BackgroundContext(), layer.ProviderContext{})
 	assert.NotNil(t, pc)
 	assert.NoError(t, err)
 

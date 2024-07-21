@@ -21,12 +21,12 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
-	"github.com/Michad/tilegroxy/pkg/entities/layers"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
 type defaultHandler struct {
 	config     *config.Config
-	layerGroup *layers.LayerGroup
+	layerGroup *layer.LayerGroup
 	auth       authentication.Authentication
 }
 

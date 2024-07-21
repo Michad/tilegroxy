@@ -20,7 +20,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/layers"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
 
 	"github.com/traefik/yaegi/interp"
 	"github.com/traefik/yaegi/stdlib"
@@ -37,12 +37,12 @@ type Custom struct {
 	clientConfig     config.ClientConfig
 	errorMessages    config.ErrorMessages
 	interp           *interp.Interpreter
-	preAuthFunc      func(*pkg.RequestContext, layers.ProviderContext, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (layers.ProviderContext, error)
-	generateTileFunc func(*pkg.RequestContext, layers.ProviderContext, pkg.TileRequest, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (*pkg.Image, error)
+	preAuthFunc      func(*pkg.RequestContext, layer.ProviderContext, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (layer.ProviderContext, error)
+	generateTileFunc func(*pkg.RequestContext, layer.ProviderContext, pkg.TileRequest, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (*pkg.Image, error)
 }
 
 func init() {
-	layers.RegisterProvider(CustomRegistration{})
+	layer.RegisterProvider(CustomRegistration{})
 }
 
 type CustomRegistration struct {
@@ -56,14 +56,14 @@ func (s CustomRegistration) Name() string {
 	return "custom"
 }
 
-func (s CustomRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layers.LayerGroup) (layers.Provider, error) {
+func (s CustomRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layer.LayerGroup) (layer.Provider, error) {
 	cfg := cfgAny.(CustomConfig)
 	i := interp.New(interp.Options{Unrestricted: true})
 	i.Use(stdlib.Symbols)
 	i.Use(interp.Exports{
 		"tilegroxy/tilegroxy": map[string]reflect.Value{
 			"RequestContext":  reflect.ValueOf((*pkg.RequestContext)(nil)),
-			"ProviderContext": reflect.ValueOf((*layers.ProviderContext)(nil)),
+			"ProviderContext": reflect.ValueOf((*layer.ProviderContext)(nil)),
 			"TileRequest":     reflect.ValueOf((*pkg.TileRequest)(nil)),
 			"ClientConfig":    reflect.ValueOf((*config.ClientConfig)(nil)),
 			"ErrorMessages":   reflect.ValueOf((*config.ErrorMessages)(nil)),
@@ -100,18 +100,18 @@ func (s CustomRegistration) Initialize(cfgAny any, clientConfig config.ClientCon
 		return nil, err
 	}
 
-	preAuthFunc := preAuthVal.Interface().(func(*pkg.RequestContext, layers.ProviderContext, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (layers.ProviderContext, error))
+	preAuthFunc := preAuthVal.Interface().(func(*pkg.RequestContext, layer.ProviderContext, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (layer.ProviderContext, error))
 
-	generateTileFunc := generateTileVal.Interface().(func(*pkg.RequestContext, layers.ProviderContext, pkg.TileRequest, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (*pkg.Image, error))
+	generateTileFunc := generateTileVal.Interface().(func(*pkg.RequestContext, layer.ProviderContext, pkg.TileRequest, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (*pkg.Image, error))
 
 	return &Custom{cfg, clientConfig, errorMessages, i, preAuthFunc, generateTileFunc}, nil
 }
 
-func (t Custom) PreAuth(ctx *pkg.RequestContext, providerContext layers.ProviderContext) (layers.ProviderContext, error) {
+func (t Custom) PreAuth(ctx *pkg.RequestContext, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
 	return t.preAuthFunc(ctx, providerContext, t.Params, t.clientConfig, t.errorMessages)
 }
 
-func (t Custom) GenerateTile(ctx *pkg.RequestContext, providerContext layers.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t Custom) GenerateTile(ctx *pkg.RequestContext, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	img, err := t.generateTileFunc(ctx, providerContext, tileRequest, t.Params, t.clientConfig, t.errorMessages)
 
 	if err != nil {

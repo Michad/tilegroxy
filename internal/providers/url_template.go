@@ -21,7 +21,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/layers"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
 type UrlTemplateConfig struct {
@@ -33,12 +33,12 @@ type UrlTemplate struct {
 	clientConfig config.ClientConfig
 }
 
-func (t UrlTemplate) PreAuth(ctx *pkg.RequestContext, providerContext layers.ProviderContext) (layers.ProviderContext, error) {
-	return layers.ProviderContext{AuthBypass: true}, nil
+func (t UrlTemplate) PreAuth(ctx *pkg.RequestContext, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
+	return layer.ProviderContext{AuthBypass: true}, nil
 }
 
 func init() {
-	layers.RegisterProvider(UrlTemplateRegistration{})
+	layer.RegisterProvider(UrlTemplateRegistration{})
 }
 
 type UrlTemplateRegistration struct {
@@ -52,7 +52,7 @@ func (s UrlTemplateRegistration) Name() string {
 	return "url template"
 }
 
-func (s UrlTemplateRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layers.LayerGroup) (layers.Provider, error) {
+func (s UrlTemplateRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layer.LayerGroup) (layer.Provider, error) {
 	cfg := cfgAny.(UrlTemplateConfig)
 	if cfg.Template == "" {
 		return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.url template.url", "")
@@ -61,7 +61,7 @@ func (s UrlTemplateRegistration) Initialize(cfgAny any, clientConfig config.Clie
 	return &UrlTemplate{cfg, clientConfig}, nil
 }
 
-func (t UrlTemplate) GenerateTile(ctx *pkg.RequestContext, providerContext layers.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t UrlTemplate) GenerateTile(ctx *pkg.RequestContext, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	b, err := tileRequest.GetBounds()
 
 	if err != nil {

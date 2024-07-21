@@ -21,7 +21,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/layers"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
 type CacheMode string
@@ -45,12 +45,12 @@ type FallbackConfig struct {
 type Fallback struct {
 	FallbackConfig
 	zoomLevels []int
-	Primary    layers.Provider
-	Secondary  layers.Provider
+	Primary    layer.Provider
+	Secondary  layer.Provider
 }
 
 func init() {
-	layers.RegisterProvider(FallbackRegistration{})
+	layer.RegisterProvider(FallbackRegistration{})
 }
 
 type FallbackRegistration struct {
@@ -64,7 +64,7 @@ func (s FallbackRegistration) Name() string {
 	return "fallback"
 }
 
-func (s FallbackRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layers.LayerGroup) (layers.Provider, error) {
+func (s FallbackRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layer.LayerGroup) (layer.Provider, error) {
 	cfg := cfgAny.(FallbackConfig)
 	var zoom []int
 
@@ -89,11 +89,11 @@ func (s FallbackRegistration) Initialize(cfgAny any, clientConfig config.ClientC
 		return nil, fmt.Errorf(errorMessages.EnumError, "provider.fallback.cachemode", cfg.Cache, allCacheModes)
 	}
 
-	primary, err := layers.ConstructProvider(cfg.Primary, clientConfig, errorMessages, layerGroup)
+	primary, err := layer.ConstructProvider(cfg.Primary, clientConfig, errorMessages, layerGroup)
 	if err != nil {
 		return nil, err
 	}
-	secondary, err := layers.ConstructProvider(cfg.Secondary, clientConfig, errorMessages, layerGroup)
+	secondary, err := layer.ConstructProvider(cfg.Secondary, clientConfig, errorMessages, layerGroup)
 	if err != nil {
 		return nil, err
 	}
@@ -101,11 +101,11 @@ func (s FallbackRegistration) Initialize(cfgAny any, clientConfig config.ClientC
 	return &Fallback{cfg, zoom, primary, secondary}, nil
 }
 
-func (t Fallback) PreAuth(ctx *pkg.RequestContext, providerContext layers.ProviderContext) (layers.ProviderContext, error) {
+func (t Fallback) PreAuth(ctx *pkg.RequestContext, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
 	return t.Primary.PreAuth(ctx, providerContext)
 }
 
-func (t Fallback) GenerateTile(ctx *pkg.RequestContext, providerContext layers.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t Fallback) GenerateTile(ctx *pkg.RequestContext, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	ok := true
 
 	if !slices.Contains(t.zoomLevels, tileRequest.Z) {
