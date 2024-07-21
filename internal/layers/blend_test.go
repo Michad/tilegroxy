@@ -24,8 +24,8 @@ import (
 )
 
 func makeBlendProviders() []entities.Provider {
-	a, _ := ConstructStatic(StaticConfig{Color: "F00"}, testClientConfig, testErrMessages)
-	b, _ := ConstructStatic(StaticConfig{Color: "0F0"}, testClientConfig, testErrMessages)
+	a, _ := StaticRegistration{}.Initialize(StaticConfig{Color: "F00"}, testClientConfig, testErrMessages)
+	b, _ := StaticRegistration{}.Initialize(StaticConfig{Color: "0F0"}, testClientConfig, testErrMessages)
 
 	return []entities.Provider{a, b}
 }

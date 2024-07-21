@@ -33,16 +33,32 @@ type UrlTemplate struct {
 	clientConfig config.ClientConfig
 }
 
-func ConstructUrlTemplate(config UrlTemplateConfig, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (*UrlTemplate, error) {
-	if config.Template == "" {
+func (t UrlTemplate) PreAuth(ctx *pkg.RequestContext, providerContext entities.ProviderContext) (entities.ProviderContext, error) {
+	return entities.ProviderContext{AuthBypass: true}, nil
+}
+
+func init() {
+	entities.RegisterProvider(UrlTemplateRegistration{})
+}
+
+type UrlTemplateRegistration struct {
+}
+
+func (s UrlTemplateRegistration) InitializeConfig() any {
+	return UrlTemplateConfig{}
+}
+
+func (s UrlTemplateRegistration) Name() string {
+	return "url template"
+}
+
+func (s UrlTemplateRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (entities.Provider, error) {
+	cfg := cfgAny.(UrlTemplateConfig)
+	if cfg.Template == "" {
 		return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.url template.url", "")
 	}
 
-	return &UrlTemplate{config, clientConfig}, nil
-}
-
-func (t UrlTemplate) PreAuth(ctx *pkg.RequestContext, providerContext entities.ProviderContext) (entities.ProviderContext, error) {
-	return entities.ProviderContext{AuthBypass: true}, nil
+	return &UrlTemplate{cfg, clientConfig}, nil
 }
 
 func (t UrlTemplate) GenerateTile(ctx *pkg.RequestContext, providerContext entities.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {

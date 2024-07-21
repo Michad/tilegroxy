@@ -40,16 +40,6 @@ func ConstructSecreter[C any](rawConfig map[string]interface{}, clientConfig con
 		}
 	}
 
-	// if rawConfig["name"] == "awssecretsmanager" {
-	// 	var config AWSSecretsManagerConfig
-	// 	err := mapstructure.Decode(rawConfig, &config)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-
-	// 	return ConstructAWSSecretsManagerConfig(config, errorMessages)
-	// }
-
 	nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
 	return nil, fmt.Errorf(errorMessages.EnumError, "secret.name", nameCoerce, entities.RegisteredSecretNames())
 }

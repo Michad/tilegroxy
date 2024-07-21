@@ -41,7 +41,23 @@ type Custom struct {
 	generateTileFunc func(*pkg.RequestContext, entities.ProviderContext, pkg.TileRequest, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (*pkg.Image, error)
 }
 
-func ConstructCustom(cfg CustomConfig, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (*Custom, error) {
+func init() {
+	entities.RegisterProvider(CustomRegistration{})
+}
+
+type CustomRegistration struct {
+}
+
+func (s CustomRegistration) InitializeConfig() any {
+	return CustomConfig{}
+}
+
+func (s CustomRegistration) Name() string {
+	return "custom"
+}
+
+func (s CustomRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (entities.Provider, error) {
+	cfg := cfgAny.(CustomConfig)
 	i := interp.New(interp.Options{Unrestricted: true})
 	i.Use(stdlib.Symbols)
 	i.Use(interp.Exports{

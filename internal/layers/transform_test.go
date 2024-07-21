@@ -24,8 +24,8 @@ import (
 )
 
 func makeTransformProvider() entities.Provider {
-	p, _ := ConstructStatic(StaticConfig{Color: "F00"}, testClientConfig, testErrMessages)
-	return *p
+	p, _ := StaticRegistration{}.Initialize(StaticConfig{Color: "F00"}, testClientConfig, testErrMessages)
+	return p
 }
 
 func Test_Transform_Validate(t *testing.T) {

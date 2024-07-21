@@ -24,8 +24,8 @@ import (
 )
 
 func makeEffectProvider() entities.Provider {
-	p, _ := ConstructStatic(StaticConfig{Color: "F00"}, testClientConfig, testErrMessages)
-	return *p
+	p, _ := StaticRegistration{}.Initialize(StaticConfig{Color: "F00"}, testClientConfig, testErrMessages)
+	return p
 }
 
 func Test_EffectValidate(t *testing.T) {

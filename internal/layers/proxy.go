@@ -32,12 +32,28 @@ type Proxy struct {
 	clientConfig config.ClientConfig
 }
 
-func ConstructProxy(config ProxyConfig, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (*Proxy, error) {
-	if config.Url == "" {
+func init() {
+	entities.RegisterProvider(ProxyRegistration{})
+}
+
+type ProxyRegistration struct {
+}
+
+func (s ProxyRegistration) InitializeConfig() any {
+	return ProxyConfig{}
+}
+
+func (s ProxyRegistration) Name() string {
+	return "proxy"
+}
+
+func (s ProxyRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (entities.Provider, error) {
+	cfg := cfgAny.(ProxyConfig)
+	if cfg.Url == "" {
 		return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.proxy.url", "")
 	}
 
-	return &Proxy{config, clientConfig}, nil
+	return &Proxy{cfg, clientConfig}, nil
 }
 
 func (t Proxy) PreAuth(ctx *pkg.RequestContext, providerContext entities.ProviderContext) (entities.ProviderContext, error) {

@@ -25,19 +25,19 @@ import (
 )
 
 func Test_CustomValidate(t *testing.T) {
-	c, err := ConstructCustom(CustomConfig{}, testClientConfig, testErrMessages)
+	c, err := CustomRegistration{}.Initialize(CustomConfig{}, testClientConfig, testErrMessages)
 
 	assert.Nil(t, c)
 	assert.Error(t, err)
 
-	c, err = ConstructCustom(CustomConfig{Script: "package custom"}, testClientConfig, testErrMessages)
+	c, err = CustomRegistration{}.Initialize(CustomConfig{Script: "package custom"}, testClientConfig, testErrMessages)
 
 	assert.Nil(t, c)
 	assert.Error(t, err)
 }
 
 func Test_CustomExecute(t *testing.T) {
-	c, err := ConstructCustom(CustomConfig{Script: `
+	c, err := CustomRegistration{}.Initialize(CustomConfig{Script: `
 package custom
 
 import (

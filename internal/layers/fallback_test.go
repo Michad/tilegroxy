@@ -25,13 +25,13 @@ import (
 )
 
 func makeFallbackProvidersNoFail() (entities.Provider, entities.Provider) {
-	a, _ := ConstructStatic(StaticConfig{Color: "F00"}, testClientConfig, testErrMessages)
-	b, _ := ConstructStatic(StaticConfig{Color: "0F0"}, testClientConfig, testErrMessages)
+	a, _ := StaticRegistration{}.Initialize(StaticConfig{Color: "F00"}, testClientConfig, testErrMessages)
+	b, _ := StaticRegistration{}.Initialize(StaticConfig{Color: "0F0"}, testClientConfig, testErrMessages)
 
 	return a, b
 }
 func makeFallbackProvidersFail() (entities.Provider, entities.Provider) {
-	b, _ := ConstructStatic(StaticConfig{Color: "0F0"}, testClientConfig, testErrMessages)
+	b, _ := StaticRegistration{}.Initialize(StaticConfig{Color: "0F0"}, testClientConfig, testErrMessages)
 	var ap entities.Provider = Fail{FailConfig{Message: "failed intentionally"}}
 
 	return ap, b

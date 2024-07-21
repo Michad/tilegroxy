@@ -29,13 +29,13 @@ import (
 const testTemplate = "https://tigerweb.geo.census.gov/arcgis/services/TIGERweb/tigerWMS_PhysicalFeatures/MapServer/WMSServer?VERSION=1.3.0&SERVICE=WMS&REQUEST=GetMap&LAYERS=19&STYLES=&CRS=$srs&BBOX=$xmin,$ymin,$xmax,$ymax&WIDTH=$width&HEIGHT=$height&FORMAT=image/png"
 
 func Test_UrlTemplateValidate(t *testing.T) {
-	p, err := ConstructUrlTemplate(UrlTemplateConfig{}, config.ClientConfig{}, testErrMessages)
+	p, err := UrlTemplateRegistration{}.Initialize(UrlTemplateConfig{}, config.ClientConfig{}, testErrMessages)
 
 	assert.Nil(t, p)
 	assert.Error(t, err)
 }
 func Test_UrlTemplateExecute(t *testing.T) {
-	p, err := ConstructUrlTemplate(UrlTemplateConfig{Template: testTemplate}, config.ClientConfig{StatusCodes: []int{200}, MaxLength: 2000, ContentTypes: []string{"image/png"}, UnknownLength: true}, testErrMessages)
+	p, err := UrlTemplateRegistration{}.Initialize(UrlTemplateConfig{Template: testTemplate}, config.ClientConfig{StatusCodes: []int{200}, MaxLength: 2000, ContentTypes: []string{"image/png"}, UnknownLength: true}, testErrMessages)
 
 	assert.NotNil(t, p)
 	assert.NoError(t, err)
@@ -51,7 +51,7 @@ func Test_UrlTemplateExecute(t *testing.T) {
 
 func Test_UrlTemplateConfigOptions(t *testing.T) {
 	var clientConfig = config.ClientConfig{StatusCodes: []int{400}, MaxLength: 2000, ContentTypes: []string{"image/png"}, UnknownLength: true}
-	p, err := ConstructUrlTemplate(UrlTemplateConfig{Template: testTemplate}, clientConfig, testErrMessages)
+	p, err := UrlTemplateRegistration{}.Initialize(UrlTemplateConfig{Template: testTemplate}, clientConfig, testErrMessages)
 	assert.NotNil(t, p)
 	assert.NoError(t, err)
 

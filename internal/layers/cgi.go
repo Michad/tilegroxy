@@ -83,7 +83,23 @@ func (r *response) WriteHeader(code int) {
 	r.code = code
 }
 
-func ConstructCGI(cfg CGIConfig, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (*CGI, error) {
+func init() {
+	entities.RegisterProvider(CGIRegistration{})
+}
+
+type CGIRegistration struct {
+}
+
+func (s CGIRegistration) InitializeConfig() any {
+	return CGIConfig{}
+}
+
+func (s CGIRegistration) Name() string {
+	return "cgi"
+}
+
+func (s CGIRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (entities.Provider, error) {
+	cfg := cfgAny.(CGIConfig)
 	env := make([]string, 0)
 	inheritEnv := make([]string, 0)
 
