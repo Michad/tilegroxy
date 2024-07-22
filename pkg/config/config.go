@@ -20,7 +20,7 @@ import (
 	"strings"
 
 	"github.com/Michad/tilegroxy/internal/images"
-	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/static"
 	"github.com/spf13/viper"
 	_ "github.com/spf13/viper/remote"
 )
@@ -177,7 +177,7 @@ type Config struct {
 }
 
 func DefaultConfig() Config {
-	version, _, _ := pkg.GetVersionInformation()
+	version, _, _ := static.GetVersionInformation()
 
 	return Config{
 		Server: ServerConfig{
@@ -219,7 +219,7 @@ func DefaultConfig() Config {
 			Messages: ErrorMessages{
 				NotAuthorized:           "Not authorized",
 				InvalidParam:            "Invalid value supplied for parameter %v: %v",
-				RangeError:              "Parameter %v must be between %v and %v",
+				RangeError:              "%v must be between %v and %v",
 				ServerError:             "Unexpected server error: %v",
 				ProviderError:           "Provider failed to return image",
 				ParamsBothOrNeither:     "Parameters %v and %v must be either both or neither supplied",

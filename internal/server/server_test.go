@@ -29,27 +29,27 @@ func Test_ErrorVals_Execute(t *testing.T) {
 
 	cfg.Error.AlwaysOk = false
 
-	for i := TypeOfErrorBounds; i <= TypeOfErrorOther; i++ {
+	for i := pkg.TypeOfErrorBounds; i <= pkg.TypeOfErrorOther; i++ {
 		cfg.Error.AlwaysOk = false
-		status, level, imgPath := errorVars(&cfg.Error, TypeOfError(i))
+		status, level, imgPath := errorVars(&cfg.Error, pkg.TypeOfError(i))
 		assert.Greater(t, status, 300)
 		assert.NotEmpty(t, imgPath)
 		cfg.Error.AlwaysOk = true
-		status2, level2, imgPath2 := errorVars(&cfg.Error, TypeOfError(i))
+		status2, level2, imgPath2 := errorVars(&cfg.Error, pkg.TypeOfError(i))
 		assert.Equal(t, 200, status2)
 		assert.Equal(t, level2, level)
 		assert.Equal(t, imgPath, imgPath2)
 	}
 }
 
-func Test_WriteError_Execute(t *testing.T) {
+func Test_WriteErrorMessage_Execute(t *testing.T) {
 	cfg := config.DefaultConfig()
 	ctx := pkg.BackgroundContext()
 
 	rw := httptest.NewRecorder()
 
 	cfg.Error.Mode = config.ModeErrorNoError
-	writeError(ctx, rw, &cfg.Error, TypeOfErrorOther, "test")
+	writeErrorMessage(ctx, rw, &cfg.Error, pkg.TypeOfErrorOther, "test", "test", nil)
 	r := rw.Result()
 	assert.Equal(t, 500, r.StatusCode)
 	b, _ := io.ReadAll(r.Body)
@@ -57,7 +57,7 @@ func Test_WriteError_Execute(t *testing.T) {
 
 	cfg.Error.Mode = config.ModeErrorImage
 	cfg.Error.Images.Other = "safjakslfjaslkfj" //Invalid
-	writeError(ctx, rw, &cfg.Error, TypeOfErrorOther, "test")
+	writeErrorMessage(ctx, rw, &cfg.Error, pkg.TypeOfErrorOther, "test", "test", nil)
 	r = rw.Result()
 	assert.Equal(t, 500, r.StatusCode)
 	b, _ = io.ReadAll(r.Body)

@@ -68,7 +68,7 @@ func (s CustomRegistration) Initialize(cfgAny any, clientConfig config.ClientCon
 			"ClientConfig":    reflect.ValueOf((*config.ClientConfig)(nil)),
 			"ErrorMessages":   reflect.ValueOf((*config.ErrorMessages)(nil)),
 			"Image":           reflect.ValueOf((*pkg.Image)(nil)),
-			"AuthError":       reflect.ValueOf((*pkg.AuthError)(nil)),
+			"AuthError":       reflect.ValueOf((*pkg.ProviderAuthError)(nil)),
 			"GetTile":         reflect.ValueOf(getTile),
 		}})
 

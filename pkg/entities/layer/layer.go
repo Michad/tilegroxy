@@ -242,7 +242,7 @@ func (l *Layer) RenderTileNoCache(ctx *pkg.RequestContext, tileRequest pkg.TileR
 
 	img, err = l.Provider.GenerateTile(ctx, l.providerContext, tileRequest)
 
-	var authError *pkg.AuthError
+	var authError *pkg.ProviderAuthError
 	if errors.As(err, &authError) {
 		err = l.authWithProvider(ctx)
 

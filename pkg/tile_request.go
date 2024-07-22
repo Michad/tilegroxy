@@ -14,7 +14,6 @@
 package pkg
 
 import (
-	"fmt"
 	"math"
 	"strconv"
 
@@ -39,26 +38,6 @@ const (
 	MaxZoom = 21
 	delta   = .00000001
 )
-
-type RangeError struct {
-	ParamName string
-	MinValue  float64
-	MaxValue  float64
-}
-
-func (e RangeError) Error() string {
-	// notest
-	return fmt.Sprintf("Param %v must be between %v and %v", e.ParamName, e.MinValue, e.MaxValue)
-}
-
-type TooManyTilesError struct {
-	NumTiles uint64
-}
-
-func (e TooManyTilesError) Error() string {
-	// notest
-	return fmt.Sprintf("too many tiles to return (%v > 10000)", e.NumTiles)
-}
 
 func (t TileRequest) GetBounds() (*Bounds, error) {
 	if t.Z < 0 || t.Z > MaxZoom {

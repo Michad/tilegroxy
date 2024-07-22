@@ -72,7 +72,7 @@ func (lg LayerGroup) RenderTile(ctx *pkg.RequestContext, tileRequest pkg.TileReq
 	l := lg.FindLayer(ctx, tileRequest.LayerName)
 
 	if l == nil {
-		return nil, pkg.AuthError{}
+		return nil, pkg.UnauthorizedError{Message: "Layer " + tileRequest.LayerName + " does not exist"}
 	}
 
 	if l.Config.SkipCache {
@@ -115,16 +115,14 @@ func (lg LayerGroup) RenderTile(ctx *pkg.RequestContext, tileRequest pkg.TileReq
 func (LayerGroup) checkPermission(ctx *pkg.RequestContext, l *Layer, tileRequest pkg.TileRequest) error {
 	if ctx.LimitLayers {
 		if !slices.Contains(ctx.AllowedLayers, l.Id) {
-			slog.InfoContext(ctx, "Denying access to non-allowed layer")
-			return pkg.AuthError{}
+			return pkg.UnauthorizedError{Message: "Denying access to non-allowed layer"}
 		}
 	}
 
 	if !ctx.AllowedArea.IsNullIsland() {
 		bounds, err := tileRequest.GetBounds()
 		if err != nil || !ctx.AllowedArea.Contains(*bounds) {
-			slog.InfoContext(ctx, "Denying access to non-allowed area")
-			return pkg.AuthError{}
+			return pkg.UnauthorizedError{Message: "Denying access to non-allowed area"}
 		}
 	}
 	return nil
@@ -136,7 +134,7 @@ func (lg *LayerGroup) RenderTileNoCache(ctx *pkg.RequestContext, tileRequest pkg
 	l := lg.FindLayer(ctx, tileRequest.LayerName)
 
 	if l == nil {
-		return nil, pkg.AuthError{}
+		return nil, pkg.UnauthorizedError{Message: "Layer " + tileRequest.LayerName + " does not exist"}
 	}
 
 	err = lg.checkPermission(ctx, l, tileRequest)

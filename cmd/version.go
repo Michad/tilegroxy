@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/static"
 	"github.com/spf13/cobra"
 )
 
@@ -33,7 +33,7 @@ func runVersion(cmd *cobra.Command, args []string) {
 	short, _ := cmd.Flags().GetBool("short")
 	json, _ := cmd.Flags().GetBool("json")
 
-	version, ref, date := pkg.GetVersionInformation()
+	version, ref, date := static.GetVersionInformation()
 	out := rootCmd.OutOrStdout()
 
 	if json {

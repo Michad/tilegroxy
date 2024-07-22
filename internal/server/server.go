@@ -16,6 +16,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -43,39 +44,29 @@ func handleNoContent(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-type TypeOfError int
-
 // This is just here to allow tests to specify a different signal to send to kill the webserver
 // not useful in practice due to OS-specific nature of signals
 var InterruptFlags = []os.Signal{os.Interrupt}
 
-const (
-	TypeOfErrorBounds = iota
-	TypeOfErrorAuth
-	TypeOfErrorProvider
-	TypeOfErrorOtherBadRequest
-	TypeOfErrorOther
-)
-
-func errorVars(cfg *config.ErrorConfig, errorType TypeOfError) (int, slog.Level, string) {
+func errorVars(cfg *config.ErrorConfig, errorType pkg.TypeOfError) (int, slog.Level, string) {
 	var status int
 	var level slog.Level
 	var imgPath string
 
 	switch errorType {
-	case TypeOfErrorAuth:
+	case pkg.TypeOfErrorAuth:
 		level = slog.LevelDebug
 		status = http.StatusUnauthorized
 		imgPath = cfg.Images.Authentication
-	case TypeOfErrorBounds:
+	case pkg.TypeOfErrorBounds:
 		level = slog.LevelDebug
 		status = http.StatusBadRequest
 		imgPath = cfg.Images.OutOfBounds
-	case TypeOfErrorProvider:
+	case pkg.TypeOfErrorProvider:
 		level = slog.LevelInfo
 		status = http.StatusInternalServerError
 		imgPath = cfg.Images.Provider
-	case TypeOfErrorOtherBadRequest:
+	case pkg.TypeOfErrorBadRequest:
 		level = slog.LevelDebug
 		status = http.StatusBadRequest
 		imgPath = cfg.Images.Other
@@ -92,17 +83,26 @@ func errorVars(cfg *config.ErrorConfig, errorType TypeOfError) (int, slog.Level,
 	return status, level, imgPath
 }
 
-func writeError(ctx *pkg.RequestContext, w http.ResponseWriter, cfg *config.ErrorConfig, errorType TypeOfError, message string, args ...any) {
+func writeError(ctx *pkg.RequestContext, w http.ResponseWriter, cfg *config.ErrorConfig, err error) {
+	var te pkg.TypedError
+	if errors.As(err, &te) {
+		writeErrorMessage(ctx, w, cfg, te.Type(), te.Error(), te.External(cfg.Messages), debug.Stack())
+	} else {
+		writeErrorMessage(ctx, w, cfg, pkg.TypeOfErrorOther, te.Error(), fmt.Sprintf(cfg.Messages.ServerError, err), debug.Stack())
+	}
+}
+
+func writeErrorMessage(ctx *pkg.RequestContext, w http.ResponseWriter, cfg *config.ErrorConfig, errorType pkg.TypeOfError, internalMessage string, externalMessage string, stack []byte) {
 	status, level, imgPath := errorVars(cfg, errorType)
 
-	slog.Log(ctx, level, message, args...)
+	slog.Log(ctx, level, internalMessage, "stack", string(stack))
 
 	if cfg.Mode == config.ModeErrorPlainText {
 		w.WriteHeader(status)
-		w.Write([]byte(message))
+		w.Write([]byte(externalMessage))
 	} else if cfg.Mode == config.ModeErrorImageHeader || cfg.Mode == config.ModeErrorImage {
 		if cfg.Mode == config.ModeErrorImageHeader {
-			w.Header().Add("x-error-message", message)
+			w.Header().Add("x-error-message", externalMessage)
 		}
 		w.WriteHeader(status)
 
@@ -261,8 +261,7 @@ func (h httpContextHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 	reqC := pkg.NewRequestContext(req)
 	defer func() {
 		if err := recover(); err != nil {
-			slog.ErrorContext(&reqC, "Unexpected panic: "+fmt.Sprint(err))
-			writeError(&reqC, w, &h.errCfg, TypeOfErrorOther, "Unexpected Internal Server Error", "stack", string(debug.Stack()))
+			writeErrorMessage(&reqC, w, &h.errCfg, pkg.TypeOfErrorOther, fmt.Sprint(err), "Unexpected Internal Server Error", debug.Stack())
 		}
 	}()
 
