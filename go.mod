@@ -5,9 +5,9 @@ go 1.22.5
 require (
 	github.com/anthonynsimon/bild v0.14.0
 	github.com/aws/aws-sdk-go-v2 v1.30.3
-	github.com/aws/aws-sdk-go-v2/config v1.27.26
-	github.com/aws/aws-sdk-go-v2/credentials v1.17.26
-	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.17.7
+	github.com/aws/aws-sdk-go-v2/config v1.27.27
+	github.com/aws/aws-sdk-go-v2/credentials v1.17.27
+	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.17.8
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.58.2
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.32.3
 	github.com/bradfitz/gomemcache v0.0.0-20230905024940-24af94b03874
@@ -18,14 +18,14 @@ require (
 	github.com/maypok86/otter v1.2.1
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/mmcloughlin/geohash v0.10.0
-	github.com/redis/go-redis/v9 v9.5.3
+	github.com/redis/go-redis/v9 v9.6.0
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.19.0
 	github.com/stretchr/testify v1.9.0
 	github.com/testcontainers/testcontainers-go v0.32.0
 	github.com/traefik/yaegi v0.16.1
 	go.etcd.io/etcd/client/v3 v3.5.14
-	golang.org/x/crypto v0.24.0
+	golang.org/x/crypto v0.25.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/utils v0.0.0-20240502163921-fe8a2dddb1d0
 )
@@ -50,7 +50,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.3.17 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.11.17 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.17.15 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.22.3 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.22.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.26.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.30.3 // indirect
 	github.com/aws/smithy-go v1.20.3 // indirect
@@ -154,7 +154,7 @@ require (
 	golang.org/x/net v0.26.0 // indirect
 	golang.org/x/oauth2 v0.20.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
-	golang.org/x/sys v0.21.0 // indirect
+	golang.org/x/sys v0.22.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	google.golang.org/api v0.171.0 // indirect
