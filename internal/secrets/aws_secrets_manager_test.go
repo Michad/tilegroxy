@@ -81,8 +81,8 @@ func Test_SecretManager_Execute(t *testing.T) {
 	assert.NoError(t, err)
 
 	so, err := AWSSecretsManagerSecreter{}.Initialize(AWSSecretsManagerConfig{
-		Access:   "",
-		Secret:   "",
+		Access:   "a",
+		Secret:   "a",
 		Region:   "us-east-1",
 		Endpoint: endpoint,
 	}, config.ErrorMessages{})
@@ -106,8 +106,8 @@ func Test_SecretManager_Execute(t *testing.T) {
 	assert.Equal(t, "val", v3)
 
 	so, err = AWSSecretsManagerSecreter{}.Initialize(AWSSecretsManagerConfig{
-		Access:   "",
-		Secret:   "",
+		Access:   "a",
+		Secret:   "a",
 		Region:   "us-east-1",
 		Endpoint: endpoint,
 		TTL:      -1,
