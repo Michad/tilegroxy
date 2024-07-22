@@ -2,7 +2,7 @@
 
 Tilegroxy is heavily configuration driven. This document describes the various configuration options available. [Complete examples are available here.](../examples/configurations/)
 
-Some configuration sections ([authentication](#authentication), [provider](#provider), and [cache](#cache)) support selecting different methods of operation that change the full list of parameters available. For example,  a "proxy" provider requires a `url` parameter to get a map tile from another server while a "static" provider takes in a `image` to return for every request. You select these operating modes using a parameter called `name`. In addition, since these sections are too dynamic to have fixed environment variables and frequently may require a secret to operate, any string parameters can be made to use an environment variable by specifying a value in the format of `env.ENV_VAR_NAME`.
+Some configuration sections ([authentication](#authentication), [provider](#provider), [cache](#cache), and [secret](#secret)) support selecting different methods of operation that change the full list of parameters available. For example,  a "proxy" provider requires a `url` parameter to get a map tile from another server while a "static" provider takes in a `image` to return for every request. You select these operating modes using a parameter called `name`. Since these entities are too dynamic to have fixed environment variables and frequently may require a secret to operate, any string parameters can be made to use an environment variable by specifying a value in the format of `env.ENV_VAR_NAME`.  You can also use an external secret store [if configured](#secret) by specifying a value in the format `secret.SECRET_NAME`
 
 Configuration key names are case-insensitive unless indicated otherwise. Names are always lower case. 
 
@@ -15,6 +15,7 @@ server:  ...
 client:  ...
 logging:  ...
 error:  ...
+secret: ...
 authentication:  ...
 cache:  ...
 layers:  
@@ -644,6 +645,35 @@ authentication:
   token:
     header: X-Token
 ```
+
+## Secret
+
+Configuring a Secret source allows you to pull keys, passwords, or any other sensitive value from an external secret store rather than placing them in your configuration directly.  This is similar to the way you can reference environmental variables.  Secrets loaded in this way are never written to disk.  Properly externalizing secrets allows you to place your configuration into source control without modification.
+
+Once a Secret source is configured, you can utilize it by including a configuration value like `secret.key-name`. The secret source will then be queried for a secret named `key-name`. If the secret store has no secret by that name, it will prevent the application from starting up. This effect applies to any other "entity" (cache, authentication, provider), for obvious reasons you can't use a secret in the configuration for your secret source.
+
+### AWS Secrets Manager
+
+This secret source utilizes the [AWS Secrets Manager](https://aws.amazon.com/secrets-manager/) service.  
+
+This source includes a cache for values. This avoids repeatedly querying for the same value e.g. if it's used by multiple providers.  Currently secrets are only pulled at once at startup, however in the future this might be changed to re-pull periodically or upon configuration changes. Therefore it is advised to think through how often your secrets might rotate when configuring the TTL value, even though currently it only need to be a small value to span the initial start-up of the application.
+
+Secrets Manager places secrets inside a JSON structure if configured through the console.  To support that keys should be in the structure of `id:key` with `id` being the ID of the secret as a whole and `key` being the key from the JSON Object stored in the secret.  If the secret isn't JSON then you only need to supply the `id` by itself.  You can override the separator used to be any value rather than a colon (`:`).
+
+This supports the standard means of authenticating with AWS.  Ensure your user/role includes permission both to retrieve the secrets as well as permission to use the relevant KMS key to decrypt it.
+
+Name should be "awssecretsmanager"
+
+Configuration options:
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| separator | string | No | : | How to separate the Id of the secret from the JSON key in the secret name as a whole |
+| ttl | int | No | 1 hour | How long to cache secrets in seconds. Cache disabled if less than 0. |
+| region | string | No | None | The AWS region containing the bucket. Required if region is not specified via other means. Consult [AWS documentation](https://docs.aws.amazon.com/general/latest/gr/rande.html#regional-endpoints) for possible values |
+| access | string | No | None | The AWS Access Key ID to authenticate with. This is not recommended; it is offered as a fallback authentication method only. Consult [AWS documentation](https://docs.aws.amazon.com/cli/v1/userguide/cli-chap-authentication.html) for better options |
+| secret | string | No | None | The AWS Secret Key to authenticate with. This is not recommended; it is offered as a fallback authentication method only. Consult [AWS documentation](https://docs.aws.amazon.com/cli/v1/userguide/cli-chap-authentication.html) for better options |
+| profile | string | No | None | The profile to use to authenticate against the AWS API. Consult [AWS documentation for specifics](https://docs.aws.amazon.com/sdkref/latest/guide/file-format.html#file-format-profile) |
 
 ## Server
 

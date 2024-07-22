@@ -26,6 +26,7 @@ import (
 	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/caches"
 	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/internal/secrets"
 )
 
 type layerSegment struct {
@@ -166,12 +167,22 @@ type Layer struct {
 	authMutex       sync.Mutex
 }
 
-func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup) (*Layer, error) {
+func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup, secreter secrets.Secreter) (*Layer, error) {
+	var err error
 	if rawConfig.Client == nil {
 		rawConfig.Client = &defaultClientConfig
 	} else {
 		rawConfig.Client.MergeDefaultsFrom(defaultClientConfig)
 	}
+
+	rawConfig.Provider = internal.ReplaceEnv(rawConfig.Provider)
+	if secreter != nil {
+		rawConfig.Provider, err = internal.ReplaceConfigValues(rawConfig.Provider, "secret", secreter.Lookup)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	provider, err := ConstructProvider(rawConfig.Provider, *rawConfig.Client, errorMessages, layerGroup)
 
 	if err != nil {

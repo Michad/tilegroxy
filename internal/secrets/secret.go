@@ -12,47 +12,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package authentication
+package secrets
 
 import (
 	"fmt"
-	"net/http"
 
-	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/config"
 	"github.com/mitchellh/mapstructure"
 )
 
-type Authentication interface {
-	CheckAuthentication(req *http.Request, ctx *internal.RequestContext) bool
+type Secreter interface {
+	Lookup(key string) (string, error)
 }
 
-func ConstructAuth(rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (Authentication, error) {
+func ConstructSecreter(rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (Secreter, error) {
 	if rawConfig["name"] == "none" {
-		return Noop{}, nil
-	} else if rawConfig["name"] == "static key" {
-		var config StaticKeyConfig
+		var config NoopConfig
 		err := mapstructure.Decode(rawConfig, &config)
 		if err != nil {
 			return nil, err
 		}
-		return ConstructStaticKey(config, errorMessages)
-	} else if rawConfig["name"] == "jwt" {
-		var config JwtConfig
+
+		return ConstructNoopConfig(config, errorMessages)
+	} else if rawConfig["name"] == "awssecretsmanager" {
+		var config AWSSecretsManagerConfig
 		err := mapstructure.Decode(rawConfig, &config)
 		if err != nil {
 			return nil, err
 		}
-		return ConstructJwt(config, errorMessages)
-	} else if rawConfig["name"] == "custom" {
-		var config CustomConfig
-		err := mapstructure.Decode(rawConfig, &config)
-		if err != nil {
-			return nil, err
-		}
-		return ConstructCustom(config, errorMessages)
+
+		return ConstructAWSSecretsManager(config, errorMessages)
 	}
 
 	name := fmt.Sprintf("%#v", rawConfig["name"])
-	return nil, fmt.Errorf(errorMessages.InvalidParam, "authentication.name", name)
+	return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.name", name)
 }

@@ -17,15 +17,35 @@ package layers
 import (
 	"fmt"
 
+	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/authentication"
 	"github.com/Michad/tilegroxy/internal/caches"
 	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/internal/secrets"
 )
 
 func ConfigToEntities(cfg config.Config) (*LayerGroup, authentication.Authentication, error) {
+	cfg.Secret = internal.ReplaceEnv(cfg.Secret)
+	secreter, err := secrets.ConstructSecreter(cfg.Secret, cfg.Error.Messages)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error constructing secret: %v", err)
+	}
+
+	cfg.Cache = internal.ReplaceEnv(cfg.Cache)
+	cfg.Cache, err = internal.ReplaceConfigValues(cfg.Cache, "secret", secreter.Lookup)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	cache, err := caches.ConstructCache(cfg.Cache, cfg.Error.Messages)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error constructing cache: %v", err)
+	}
+
+	cfg.Authentication = internal.ReplaceEnv(cfg.Authentication)
+	cfg.Authentication, err = internal.ReplaceConfigValues(cfg.Authentication, "secret", secreter.Lookup)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	auth, err := authentication.ConstructAuth(cfg.Authentication, cfg.Error.Messages)
@@ -33,7 +53,7 @@ func ConfigToEntities(cfg config.Config) (*LayerGroup, authentication.Authentica
 		return nil, nil, fmt.Errorf("error constructing auth: %v", err)
 	}
 
-	layerGroup, err := ConstructLayerGroup(cfg, cfg.Layers, cache)
+	layerGroup, err := ConstructLayerGroup(cfg, cfg.Layers, cache, secreter)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error constructing layers: %v", err)
 	}
