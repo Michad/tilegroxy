@@ -28,7 +28,7 @@ func Seed(cfg *config.Config, opts SeedOptions, out io.Writer) error {
 		return errors.New("threads must be above 0")
 	}
 
-	layerGroup, _, err := ConfigToEntities(*cfg)
+	layerGroup, _, err := configToEntities(*cfg)
 
 	if err != nil {
 		return err

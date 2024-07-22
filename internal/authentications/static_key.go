@@ -48,7 +48,7 @@ func (s StaticKeyRegistration) Name() string {
 	return "static key"
 }
 
-func (s StaticKeyRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (authentication.Authentication, error) {
+func (s StaticKeyRegistration) Initialize(cfgAny any, errorMessages config.ErrorMessages) (authentication.Authentication, error) {
 	cfg := cfgAny.(StaticKeyConfig)
 	if cfg.Key == "" {
 		keyStr := pkg.RandomString()

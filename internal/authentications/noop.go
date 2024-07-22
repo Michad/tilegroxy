@@ -44,7 +44,7 @@ func (s NoopRegistration) Name() string {
 	return "none"
 }
 
-func (s NoopRegistration) Initialize(config any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (authentication.Authentication, error) {
+func (s NoopRegistration) Initialize(config any, errorMessages config.ErrorMessages) (authentication.Authentication, error) {
 	return &Noop{config.(NoopConfig)}, nil
 }
 

@@ -136,7 +136,7 @@ func (s CustomRegistration) Name() string {
 	return "custom"
 }
 
-func (s CustomRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (authentication.Authentication, error) {
+func (s CustomRegistration) Initialize(cfgAny any, errorMessages config.ErrorMessages) (authentication.Authentication, error) {
 	cfg := cfgAny.(CustomConfig)
 	var err error
 

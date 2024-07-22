@@ -42,7 +42,7 @@ func (s NoopRegistration) Name() string {
 	return "none"
 }
 
-func (s NoopRegistration) Initialize(configAny any, clientConfig config.ClientConfig, ErrorMessages config.ErrorMessages) (cache.Cache, error) {
+func (s NoopRegistration) Initialize(configAny any, errorMessages config.ErrorMessages) (cache.Cache, error) {
 	config := configAny.(NoopConfig)
 	return Noop{config}, nil
 }

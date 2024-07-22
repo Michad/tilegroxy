@@ -75,7 +75,7 @@ func (s RedisRegistration) Name() string {
 	return "redis"
 }
 
-func (s RedisRegistration) Initialize(configAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (cache.Cache, error) {
+func (s RedisRegistration) Initialize(configAny any, errorMessages config.ErrorMessages) (cache.Cache, error) {
 	config := configAny.(RedisConfig)
 
 	var tileCache *rediscache.Cache

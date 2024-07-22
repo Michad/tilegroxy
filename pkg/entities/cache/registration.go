@@ -29,7 +29,7 @@ type Cache interface {
 
 type CacheRegistration interface {
 	Name() string
-	Initialize(config any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (Cache, error)
+	Initialize(config any, errorMessages config.ErrorMessages) (Cache, error)
 	InitializeConfig() any
 }
 
@@ -60,7 +60,7 @@ func RegisteredCacheNames() []string {
 	return names
 }
 
-func ConstructCache(rawConfig map[string]interface{}, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (Cache, error) {
+func ConstructCache(rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (Cache, error) {
 	rawConfig = pkg.ReplaceEnv(rawConfig)
 
 	name, ok := rawConfig["name"].(string)
@@ -77,7 +77,7 @@ func ConstructCache(rawConfig map[string]interface{}, clientConfig config.Client
 			if err != nil {
 				return nil, err
 			}
-			a, err := reg.Initialize(cfg, clientConfig, errorMessages)
+			a, err := reg.Initialize(cfg, errorMessages)
 			return a, err
 		}
 	}

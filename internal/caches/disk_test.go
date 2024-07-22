@@ -32,7 +32,7 @@ func TestDisk(t *testing.T) {
 
 	cfg := DiskConfig{Path: dir}
 
-	c, err := DiskRegistration{}.Initialize(cfg, config.ClientConfig{}, config.ErrorMessages{})
+	c, err := DiskRegistration{}.Initialize(cfg, config.ErrorMessages{})
 	_ = assert.NoError(t, err) &&
 		validateSaveAndLookup(t, c)
 }

@@ -28,7 +28,7 @@ type TestOptions struct {
 func Test(cfg *config.Config, opts TestOptions, out io.Writer) (uint32, error) {
 	ctx := pkg.BackgroundContext()
 
-	layerObjects, _, err := ConfigToEntities(*cfg)
+	layerObjects, _, err := configToEntities(*cfg)
 
 	if err != nil {
 		return 0, err

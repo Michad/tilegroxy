@@ -70,7 +70,7 @@ func (s S3Registration) Name() string {
 	return "s3"
 }
 
-func (s S3Registration) Initialize(configAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (cache.Cache, error) {
+func (s S3Registration) Initialize(configAny any, errorMessages config.ErrorMessages) (cache.Cache, error) {
 	config := configAny.(S3Config)
 	if (config.Access != "" && config.Secret == "") || (config.Access == "" && config.Secret != "") {
 		return nil, fmt.Errorf(errorMessages.ParamsBothOrNeither, "cache.s3.access", "cache.s3.secret")

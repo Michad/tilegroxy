@@ -84,7 +84,7 @@ func TestMemcacheWithContainerHostAndPort(t *testing.T) {
 		HostAndPort: extractHostAndPort(t, endpoint),
 	}
 
-	r, err := MemcacheRegistration{}.Initialize(cfg, config.ClientConfig{}, config.ErrorMessages{})
+	r, err := MemcacheRegistration{}.Initialize(cfg, config.ErrorMessages{})
 	_ = assert.NoError(t, err) &&
 		validateSaveAndLookup(t, r)
 }
@@ -107,7 +107,7 @@ func TestMemcacheWithContainerSingleServersArr(t *testing.T) {
 		Servers: []HostAndPort{extractHostAndPort(t, endpoint)},
 	}
 
-	r, err := MemcacheRegistration{}.Initialize(cfg, config.ClientConfig{}, config.ErrorMessages{})
+	r, err := MemcacheRegistration{}.Initialize(cfg, config.ErrorMessages{})
 	_ = assert.NoError(t, err) &&
 		validateSaveAndLookup(t, r)
 }
@@ -131,7 +131,7 @@ func TestMemcacheWithContainerDiffPrefix(t *testing.T) {
 		KeyPrefix:   "first_",
 	}
 
-	r, err := MemcacheRegistration{}.Initialize(cfg, config.ClientConfig{}, config.ErrorMessages{})
+	r, err := MemcacheRegistration{}.Initialize(cfg, config.ErrorMessages{})
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -141,7 +141,7 @@ func TestMemcacheWithContainerDiffPrefix(t *testing.T) {
 		KeyPrefix:   "second_",
 	}
 
-	r2, err := MemcacheRegistration{}.Initialize(config2, config.ClientConfig{}, config.ErrorMessages{})
+	r2, err := MemcacheRegistration{}.Initialize(config2, config.ErrorMessages{})
 	_ = assert.NoError(t, err) &&
 		validateSaveAndLookup(t, r) &&
 		validateSaveAndLookup(t, r2)

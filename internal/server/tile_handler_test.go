@@ -35,8 +35,8 @@ import (
 )
 
 func configToEntities(cfg config.Config) (*layer.LayerGroup, authentication.Authentication, error) {
-	cache, err1 := cache.ConstructCache(cfg.Cache, cfg.Client, cfg.Error.Messages)
-	auth, err2 := authentication.ConstructAuth(cfg.Authentication, cfg.Client, cfg.Error.Messages)
+	cache, err1 := cache.ConstructCache(cfg.Cache, cfg.Error.Messages)
+	auth, err2 := authentication.ConstructAuth(cfg.Authentication, cfg.Error.Messages)
 	layerGroup, err3 := layer.ConstructLayerGroup(cfg, cfg.Layers, cache)
 
 	return layerGroup, auth, errors.Join(err1, err2, err3)
@@ -213,7 +213,7 @@ func Test_TileHandler_ExecuteCustom(t *testing.T) {
 	lg, err := layer.ConstructLayerGroup(cfg, cfg.Layers, cache)
 	assert.NoError(t, err)
 
-	authO, err := authentication.ConstructAuth(auth, cfg.Client, cfg.Error.Messages)
+	authO, err := authentication.ConstructAuth(auth, cfg.Error.Messages)
 	assert.NoError(t, err)
 
 	handler := tileHandler{defaultHandler{config: &cfg, auth: authO, layerGroup: lg}}

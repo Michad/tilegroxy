@@ -57,7 +57,7 @@ func runTest(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	errCount, err := tg.Test(cfg, tg.TestOptions{layerNames, int(z), int(x), int(y), numThread, noCache}, out)
+	errCount, err := tg.Test(cfg, tg.TestOptions{LayerNames: layerNames, Z: int(z), X: int(x), Y: int(y), NumThread: numThread, NoCache: noCache}, out)
 
 	if err != nil {
 		fmt.Fprintf(out, "Error: %v", err)

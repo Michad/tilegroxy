@@ -55,11 +55,11 @@ func (s DiskRegistration) Name() string {
 	return "disk"
 }
 
-func (s DiskRegistration) Initialize(configAny any, clientConfig config.ClientConfig, ErrorMessages config.ErrorMessages) (cache.Cache, error) {
+func (s DiskRegistration) Initialize(configAny any, errorMessages config.ErrorMessages) (cache.Cache, error) {
 	config := configAny.(DiskConfig)
 
 	if config.Path == "" {
-		return nil, fmt.Errorf(ErrorMessages.InvalidParam, "Cache.Disk.path", config.Path)
+		return nil, fmt.Errorf(errorMessages.InvalidParam, "Cache.Disk.path", config.Path)
 	}
 	if config.FileMode == 0 {
 		config.FileMode = 0777

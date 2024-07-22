@@ -23,13 +23,13 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
-func ConfigToEntities(cfg config.Config) (*layer.LayerGroup, authentication.Authentication, error) {
-	cache, err := cache.ConstructCache(cfg.Cache, cfg.Client, cfg.Error.Messages)
+func configToEntities(cfg config.Config) (*layer.LayerGroup, authentication.Authentication, error) {
+	cache, err := cache.ConstructCache(cfg.Cache, cfg.Error.Messages)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error constructing cache: %v", err)
 	}
 
-	auth, err := authentication.ConstructAuth(cfg.Authentication, cfg.Client, cfg.Error.Messages)
+	auth, err := authentication.ConstructAuth(cfg.Authentication, cfg.Error.Messages)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error constructing auth: %v", err)
 	}

@@ -57,7 +57,7 @@ func (s MemcacheRegistration) Name() string {
 	return "memcache"
 }
 
-func (s MemcacheRegistration) Initialize(configAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (cache.Cache, error) {
+func (s MemcacheRegistration) Initialize(configAny any, errorMessages config.ErrorMessages) (cache.Cache, error) {
 	config := configAny.(MemcacheConfig)
 
 	if config.Servers == nil || len(config.Servers) == 0 {

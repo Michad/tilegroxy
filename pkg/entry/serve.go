@@ -11,7 +11,7 @@ type ServeOptions struct {
 }
 
 func Serve(cfg *config.Config, opts ServeOptions, out io.Writer) error {
-	layerObjects, auth, err := ConfigToEntities(*cfg)
+	layerObjects, auth, err := configToEntities(*cfg)
 	if err != nil {
 		return err
 	}

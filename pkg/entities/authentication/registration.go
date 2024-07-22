@@ -29,7 +29,7 @@ type Authentication interface {
 
 type AuthenticationRegistration interface {
 	Name() string
-	Initialize(config any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (Authentication, error)
+	Initialize(config any, errorMessages config.ErrorMessages) (Authentication, error)
 	InitializeConfig() any
 }
 
@@ -60,7 +60,7 @@ func RegisteredAuthenticationNames() []string {
 	return names
 }
 
-func ConstructAuth(rawConfig map[string]interface{}, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (Authentication, error) {
+func ConstructAuth(rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (Authentication, error) {
 	rawConfig = pkg.ReplaceEnv(rawConfig)
 
 	name, ok := rawConfig["name"].(string)
@@ -73,7 +73,7 @@ func ConstructAuth(rawConfig map[string]interface{}, clientConfig config.ClientC
 			if err != nil {
 				return nil, err
 			}
-			a, err := reg.Initialize(cfg, clientConfig, errorMessages)
+			a, err := reg.Initialize(cfg, errorMessages)
 			return a, err
 		}
 	}
