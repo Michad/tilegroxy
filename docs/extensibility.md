@@ -47,5 +47,74 @@ The following types are available for custom providers:
 
 ### Custom Authentication
 
+A custom authentication works much the same way as a custom provider.  The code you need to supply only has access to the standard library.  The package must be "custom" and you must include the following function:
+
+```
+func validate(string) (bool, time.Time, string, []string)
+```
+
+The `validate` method will be supplied with a single token.  The function should then return (in order):
+
+* pass (bool): Whether the token is valid and should allow the request to proceed
+* expiration (time.Time): When the authentication status of the token expires and the validate method should be called again. `validate` should return pass=false for already expired tokens
+* user identifier (string): An identifier for the user being authenticated. By default this is only used for logging.
+* allowed layers ([]string): The specific layer IDs to allow access to with this specific token. Return an empty array to allow access to all of them.
+
+The method how tokens are extracted from the request is configurable. The following modes are available and if multiple are specified the first one (given the order indicated) in the request is utilized:
+
+| Order | Key | Value | 
+| --- | --- | --- | 
+| 1 | header | Header Name (in Header-Case) | 
+| 2 | cookie | Cookie Name |
+| 3 | query | Query Parameter Key |
+| 4 | path | None (set as empty string) |
+
+No custom types or methods are available.
 
 ## Using tilegroxy as a library
+
+Tilegroxy exposes the critical classes needed to create your own executable using tilegroxy that has a different CLI interface or that includes your own custom providers, cache, authentication, or secret sources.  Extending tilegroxy in this way is more complex and requires you to implement your own entry points but allows you to bring in third party libraries as needed and allows you to have fully custom caches. 
+
+Tilegroxy uses a registration system to find and construct its main entities.  As long as you supply a struct that implements the XXXRegistration interface you can call the RegisterXXX method on startup to allow the tilegroxy internal to locate the struct.  For example, here is a minimal Provider implemented in this way:
+
+```
+
+type FailConfig struct {
+}
+
+type Fail struct {
+	FailConfig
+}
+
+func init() {
+	layer.RegisterProvider(FailRegistration{})
+}
+
+type FailRegistration struct {
+}
+
+func (s FailRegistration) InitializeConfig() any {
+	return FailConfig{}
+}
+
+func (s FailRegistration) Name() string {
+	return "fail"
+}
+
+func (s FailRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layer.LayerGroup) (layer.Provider, error) {
+	config := cfgAny.(FailConfig)
+	return &Fail{config}, nil
+}
+
+func (t Fail) PreAuth(ctx *pkg.RequestContext, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
+	return providerContext, nil
+}
+
+func (t Fail) GenerateTile(ctx *pkg.RequestContext, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+	return nil, errors.New("TODO")
+}
+```
+
+From here, implementing the provider is the same as implementing a Custom provider.  The other entities can be specified in the same way.
+
+See the [pkg package](../pkg) for other structs and methods available for customizing tilegroxy.
