@@ -17,16 +17,36 @@ package tg
 import (
 	"fmt"
 
+	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
+	"github.com/Michad/tilegroxy/pkg/entities/secret"
 )
 
 func configToEntities(cfg config.Config) (*layer.LayerGroup, authentication.Authentication, error) {
+	cfg.Secret = pkg.ReplaceEnv(cfg.Secret)
+	secreter, err := secret.ConstructSecreter(cfg.Secret, cfg.Error.Messages)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error constructing secret: %v", err)
+	}
+
+	cfg.Cache = pkg.ReplaceEnv(cfg.Cache)
+	cfg.Cache, err = pkg.ReplaceConfigValues(cfg.Cache, "secret", secreter.Lookup)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	cache, err := cache.ConstructCache(cfg.Cache, cfg.Error.Messages)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error constructing cache: %v", err)
+	}
+
+	cfg.Authentication = pkg.ReplaceEnv(cfg.Authentication)
+	cfg.Authentication, err = pkg.ReplaceConfigValues(cfg.Authentication, "secret", secreter.Lookup)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	auth, err := authentication.ConstructAuth(cfg.Authentication, cfg.Error.Messages)
@@ -34,7 +54,7 @@ func configToEntities(cfg config.Config) (*layer.LayerGroup, authentication.Auth
 		return nil, nil, fmt.Errorf("error constructing auth: %v", err)
 	}
 
-	layerGroup, err := layer.ConstructLayerGroup(cfg, cfg.Layers, cache)
+	layerGroup, err := layer.ConstructLayerGroup(cfg, cfg.Layers, cache, secreter)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error constructing layers: %v", err)
 	}

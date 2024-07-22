@@ -17,7 +17,6 @@ package secrets
 import (
 	"fmt"
 
-	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
 )
@@ -38,18 +37,18 @@ type NoopRegistration struct {
 }
 
 func (s NoopRegistration) InitializeConfig() any {
-	return AWSSecretsManagerConfig{}
+	return NoopConfig{}
 }
 
 func (s NoopRegistration) Name() string {
 	return "none"
 }
 
-func (s NoopRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (secret.Secreter, error) {
+func (s NoopRegistration) Initialize(cfgAny any, errorMessages config.ErrorMessages) (secret.Secreter, error) {
 	cfg := cfgAny.(NoopConfig)
 	return Noop{cfg, errorMessages}, nil
 }
 
-func (s Noop) Lookup(ctx *pkg.RequestContext, key string) (string, error) {
+func (s Noop) Lookup(key string) (string, error) {
 	return "", fmt.Errorf(s.errorMessages.ParamRequired, key)
 }

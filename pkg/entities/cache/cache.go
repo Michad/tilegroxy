@@ -53,8 +53,6 @@ func RegisteredCacheNames() []string {
 }
 
 func ConstructCache(rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (Cache, error) {
-	rawConfig = pkg.ReplaceEnv(rawConfig)
-
 	name, ok := rawConfig["name"].(string)
 
 	if ok {

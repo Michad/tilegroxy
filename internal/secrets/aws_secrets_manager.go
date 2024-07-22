@@ -24,6 +24,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
+
 	"github.com/maypok86/otter"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -43,6 +44,8 @@ type AWSSecretsManagerConfig struct {
 	Profile string
 
 	Separator string
+
+	Endpoint string //For non-AWS (e.g. localstack)
 }
 
 type AWSSecretsManager struct {
@@ -66,7 +69,7 @@ func (s AWSSecretsManagerSecreter) Name() string {
 	return "awssecretsmanager"
 }
 
-func (s AWSSecretsManagerSecreter) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (secret.Secreter, error) {
+func (s AWSSecretsManagerSecreter) Initialize(cfgAny any, errorMessages config.ErrorMessages) (secret.Secreter, error) {
 	cfg := cfgAny.(AWSSecretsManagerConfig)
 	if cfg.Separator == "" {
 		cfg.Separator = ":"
@@ -95,7 +98,11 @@ func (s AWSSecretsManagerSecreter) Initialize(cfgAny any, clientConfig config.Cl
 		return nil, err
 	}
 
-	svc := secretsmanager.NewFromConfig(awsConfig)
+	svc := secretsmanager.NewFromConfig(awsConfig, func(o *secretsmanager.Options) {
+		if cfg.Endpoint != "" {
+			o.BaseEndpoint = &cfg.Endpoint
+		}
+	})
 
 	if cfg.TTL > 0 {
 		cache, err := otter.MustBuilder[string, string](cacheSize).WithTTL(time.Duration(cfg.TTL) * time.Second).Build()
@@ -109,7 +116,8 @@ func (s AWSSecretsManagerSecreter) Initialize(cfgAny any, clientConfig config.Cl
 	return &AWSSecretsManager{cfg, svc, nil}, nil
 }
 
-func (s AWSSecretsManager) Lookup(ctx *pkg.RequestContext, key string) (string, error) {
+func (s AWSSecretsManager) Lookup(key string) (string, error) {
+	ctx := pkg.BackgroundContext()
 	keySplit := strings.Split(key, s.Separator)
 
 	secretName := keySplit[0]
@@ -145,4 +153,13 @@ func (s AWSSecretsManager) Lookup(ctx *pkg.RequestContext, key string) (string, 
 	}
 
 	return secretString, nil
+}
+
+// Just for testing purposes
+func (c AWSSecretsManager) makeSecret(key, val string) error {
+	_, err := c.client.CreateSecret(pkg.BackgroundContext(), &secretsmanager.CreateSecretInput{
+		Name:         &key,
+		SecretString: &val,
+	})
+	return err
 }

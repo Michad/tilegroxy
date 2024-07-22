@@ -118,7 +118,9 @@ func (s S3Registration) Initialize(configAny any, errorMessages config.ErrorMess
 	}
 
 	client := s3.NewFromConfig(awsConfig, func(o *s3.Options) {
-		o.BaseEndpoint = &config.Endpoint
+		if config.Endpoint != "" {
+			o.BaseEndpoint = &config.Endpoint
+		}
 		o.UsePathStyle = config.UsePathStyle
 	})
 

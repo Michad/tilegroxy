@@ -53,8 +53,6 @@ func RegisteredAuthenticationNames() []string {
 }
 
 func ConstructAuth(rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (Authentication, error) {
-	rawConfig = pkg.ReplaceEnv(rawConfig)
-
 	name, ok := rawConfig["name"].(string)
 
 	if ok {

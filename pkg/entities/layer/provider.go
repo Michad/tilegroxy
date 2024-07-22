@@ -63,8 +63,6 @@ func RegisteredProviderNames() []string {
 }
 
 func ConstructProvider(rawConfig map[string]interface{}, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup) (Provider, error) {
-	rawConfig = pkg.ReplaceEnv(rawConfig)
-
 	name, ok := rawConfig["name"].(string)
 
 	if ok {

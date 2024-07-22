@@ -74,18 +74,22 @@ func ParseZoomString(str string) ([]int, error) {
 	return result, nil
 }
 
-// Find any string values that start with `env.` and interpret the rest as an environment variable. Replaces the full value with the contents of the respective environment variable. Useful for avoiding secrets in config so your configuration can be placed in source control
-func ReplaceEnv(rawConfig map[string]interface{}) map[string]interface{} {
+// Find any string values that start with `keyTag.keyName` and replace it with replacer(keyName). Replaces the full value. Used for avoiding secrets in config so your configuration can be placed in source control
+func ReplaceConfigValues(rawConfig map[string]interface{}, keyTag string, replacer func(string) (string, error)) (map[string]interface{}, error) {
+	var err error
 	result := make(map[string]interface{})
 	for k, v := range rawConfig {
 		if vMap, ok := v.(map[string]interface{}); ok {
-			result[k] = ReplaceEnv(vMap)
+			result[k], err = ReplaceConfigValues(vMap, keyTag, replacer)
 		} else if vStr, ok := v.(string); ok {
-			if strings.Index(vStr, "env.") == 0 {
-				envVar := vStr[4:]
-				slog.Debug("Replacing env var " + envVar)
+			if strings.Index(vStr, keyTag+".") == 0 {
+				varName := vStr[len(keyTag)+1:]
+				slog.Debug("Replacing " + keyTag + " var " + varName)
 
-				result[k] = os.Getenv(envVar)
+				result[k], err = replacer(varName)
+				if err != nil {
+					break
+				}
 			} else {
 				result[k] = vStr
 			}
@@ -93,6 +97,13 @@ func ReplaceEnv(rawConfig map[string]interface{}) map[string]interface{} {
 			result[k] = v
 		}
 	}
+
+	return result, err
+}
+
+// Find any string values that start with `env.` and interpret the rest as an environment variable. Replaces the full value with the contents of the respective environment variable. Useful for avoiding secrets in config so your configuration can be placed in source control
+func ReplaceEnv(rawConfig map[string]interface{}) map[string]interface{} {
+	result, _ := ReplaceConfigValues(rawConfig, "env", func(s string) (string, error) { return os.Getenv(s), nil })
 
 	return result
 }

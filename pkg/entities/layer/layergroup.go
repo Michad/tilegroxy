@@ -22,19 +22,20 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
+	"github.com/Michad/tilegroxy/pkg/entities/secret"
 )
 
 type LayerGroup struct {
 	layers []*Layer
 }
 
-func ConstructLayerGroup(cfg config.Config, layers []config.LayerConfig, cache cache.Cache) (*LayerGroup, error) {
+func ConstructLayerGroup(cfg config.Config, layers []config.LayerConfig, cache cache.Cache, secreter secret.Secreter) (*LayerGroup, error) {
 	var err error
 	var layerGroup LayerGroup
 	layerObjects := make([]*Layer, len(cfg.Layers))
 
 	for i, l := range cfg.Layers {
-		layerObjects[i], err = ConstructLayer(l, cfg.Client, cfg.Error.Messages, &layerGroup)
+		layerObjects[i], err = ConstructLayer(l, cfg.Client, cfg.Error.Messages, &layerGroup, secreter)
 		if err != nil {
 			return nil, fmt.Errorf("error constructing layer %v: %v", i, err)
 		}

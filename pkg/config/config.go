@@ -171,6 +171,7 @@ type Config struct {
 	Client         ClientConfig
 	Logging        LogConfig
 	Error          ErrorConfig
+	Secret         map[string]interface{}
 	Authentication map[string]interface{}
 	Cache          map[string]interface{}
 	Layers         []LayerConfig
@@ -237,6 +238,9 @@ func DefaultConfig() Config {
 				Other:          images.KeyImageError,
 			},
 			AlwaysOk: false,
+		},
+		Secret: map[string]interface{}{
+			"name": "none",
 		},
 		Authentication: map[string]interface{}{
 			"name": "none",

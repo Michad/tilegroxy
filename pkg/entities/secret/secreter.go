@@ -23,12 +23,12 @@ import (
 )
 
 type Secreter interface {
-	Lookup(ctx *pkg.RequestContext, key string) (string, error)
+	Lookup(key string) (string, error)
 }
 
 type SecreterRegistration interface {
 	Name() string
-	Initialize(config any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (Secreter, error)
+	Initialize(config any, errorMessages config.ErrorMessages) (Secreter, error)
 	InitializeConfig() any
 }
 
@@ -51,7 +51,7 @@ func RegisteredSecreterNames() []string {
 	return names
 }
 
-func ConstructSecreter(rawConfig map[string]interface{}, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (Secreter, error) {
+func ConstructSecreter(rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (Secreter, error) {
 	rawConfig = pkg.ReplaceEnv(rawConfig)
 
 	name, ok := rawConfig["name"].(string)
@@ -64,7 +64,7 @@ func ConstructSecreter(rawConfig map[string]interface{}, clientConfig config.Cli
 			if err != nil {
 				return nil, err
 			}
-			return reg.Initialize(cfg, clientConfig, errorMessages)
+			return reg.Initialize(cfg, errorMessages)
 		}
 	}
 

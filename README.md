@@ -28,16 +28,14 @@ Tilegroxy shines when you consume maps from multiple sources.  It isn't tied to 
 * Support for both raster and vector format tiles
 * Run as HTTPS including Let's Encrypt support
 * Configurable timeout, logging, and error handling rules
-* Override configuration via environment variables to enable IaC/CaC
+* Override configuration via environment variables
+* Externalize passwords/keys using AWS Secrets Manager
 * Container deployment
 
 The following are on the roadmap and expected before a 1.0 release:
 
-* Providers that composite/modify vector layers formats such as [MVT](https://github.com/mapbox/vector-tile-spec) or tiled GeoJSON
 * OpenTelemetry support
-* Support for external secret stores such as AWS Secrets Manager
-
-
+* Example k8s deployment file
 
 ## Configuration
 
