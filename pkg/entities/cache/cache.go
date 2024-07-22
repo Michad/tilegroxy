@@ -33,7 +33,7 @@ type CacheRegistration interface {
 	InitializeConfig() any
 }
 
-var registrations map[string]interface{} = make(map[string]interface{})
+var registrations map[string]CacheRegistration = make(map[string]CacheRegistration)
 
 func RegisterCache(reg CacheRegistration) {
 	registrations[reg.Name()] = reg
@@ -41,15 +41,7 @@ func RegisterCache(reg CacheRegistration) {
 
 func RegisteredCache(name string) (CacheRegistration, bool) {
 	o, ok := registrations[name]
-
-	if ok {
-		e, ok := o.(CacheRegistration)
-		if ok {
-			return e, true
-		}
-	}
-
-	return nil, false
+	return o, ok
 }
 
 func RegisteredCacheNames() []string {

@@ -12,47 +12,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package authentication
+package secret
 
 import (
 	"fmt"
-	"net/http"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/mitchellh/mapstructure"
 )
 
-type Authentication interface {
-	CheckAuthentication(req *http.Request, ctx *pkg.RequestContext) bool
+type Secreter interface {
+	Lookup(ctx *pkg.RequestContext, key string) (string, error)
 }
 
-type AuthenticationRegistration interface {
+type SecreterRegistration interface {
 	Name() string
-	Initialize(config any, errorMessages config.ErrorMessages) (Authentication, error)
+	Initialize(config any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (Secreter, error)
 	InitializeConfig() any
 }
 
-var registrations map[string]interface{} = make(map[string]interface{})
+var registrations map[string]SecreterRegistration = make(map[string]SecreterRegistration)
 
-func RegisterAuthentication(reg AuthenticationRegistration) {
+func RegisterSecreter(reg SecreterRegistration) {
 	registrations[reg.Name()] = reg
 }
 
-func RegisteredAuthentication(name string) (AuthenticationRegistration, bool) {
+func RegisteredSecreter(name string) (SecreterRegistration, bool) {
 	o, ok := registrations[name]
-
-	if ok {
-		e, ok := o.(AuthenticationRegistration)
-		if ok {
-			return e, true
-		}
-	}
-
-	return nil, false
+	return o, ok
 }
 
-func RegisteredAuthenticationNames() []string {
+func RegisteredSecreterNames() []string {
 	names := make([]string, 0, len(registrations))
 	for n := range registrations {
 		names = append(names, n)
@@ -60,24 +51,23 @@ func RegisteredAuthenticationNames() []string {
 	return names
 }
 
-func ConstructAuth(rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (Authentication, error) {
+func ConstructSecreter(rawConfig map[string]interface{}, clientConfig config.ClientConfig, errorMessages config.ErrorMessages) (Secreter, error) {
 	rawConfig = pkg.ReplaceEnv(rawConfig)
 
 	name, ok := rawConfig["name"].(string)
 
 	if ok {
-		reg, ok := RegisteredAuthentication(name)
+		reg, ok := RegisteredSecreter(name)
 		if ok {
 			cfg := reg.InitializeConfig()
 			err := mapstructure.Decode(rawConfig, &cfg)
 			if err != nil {
 				return nil, err
 			}
-			a, err := reg.Initialize(cfg, errorMessages)
-			return a, err
+			return reg.Initialize(cfg, clientConfig, errorMessages)
 		}
 	}
 
 	nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
-	return nil, fmt.Errorf(errorMessages.EnumError, "authentication.name", nameCoerce, RegisteredAuthenticationNames())
+	return nil, fmt.Errorf(errorMessages.EnumError, "secret.name", nameCoerce, RegisteredSecreterNames())
 }

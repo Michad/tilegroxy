@@ -43,23 +43,15 @@ type ProviderRegistration interface {
 	InitializeConfig() any
 }
 
-var registrations map[string]interface{} = make(map[string]interface{})
+var registrations map[string]ProviderRegistration = make(map[string]ProviderRegistration)
 
 func RegisterProvider(reg ProviderRegistration) {
 	registrations[reg.Name()] = reg
 }
 
-func RegistrationProvider(name string) (ProviderRegistration, bool) {
+func RegisteredProvider(name string) (ProviderRegistration, bool) {
 	o, ok := registrations[name]
-
-	if ok {
-		e, ok := o.(ProviderRegistration)
-		if ok {
-			return e, true
-		}
-	}
-
-	return nil, false
+	return o, ok
 }
 
 func RegisteredProviderNames() []string {
@@ -76,7 +68,7 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig config.Cli
 	name, ok := rawConfig["name"].(string)
 
 	if ok {
-		reg, ok := RegistrationProvider(name)
+		reg, ok := RegisteredProvider(name)
 		if ok {
 			cfg := reg.InitializeConfig()
 			err := mapstructure.Decode(rawConfig, &cfg)
