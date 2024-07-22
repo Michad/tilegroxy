@@ -41,7 +41,7 @@ func ConstructSecreter(rawConfig map[string]interface{}, errorMessages config.Er
 			return nil, err
 		}
 
-		return ConstructAWSSecretsManagerConfig(config, errorMessages)
+		return ConstructAWSSecretsManager(config, errorMessages)
 	}
 
 	name := fmt.Sprintf("%#v", rawConfig["name"])

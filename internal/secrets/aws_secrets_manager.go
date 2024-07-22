@@ -40,6 +40,8 @@ type AWSSecretsManagerConfig struct {
 	Profile string
 
 	Separator string
+
+	Endpoint string //For non-AWS (e.g. localstack)
 }
 
 type AWSSecretsManager struct {
@@ -48,7 +50,7 @@ type AWSSecretsManager struct {
 	cache  *otter.Cache[string, string]
 }
 
-func ConstructAWSSecretsManagerConfig(cfg AWSSecretsManagerConfig, errorMessages config.ErrorMessages) (*AWSSecretsManager, error) {
+func ConstructAWSSecretsManager(cfg AWSSecretsManagerConfig, errorMessages config.ErrorMessages) (*AWSSecretsManager, error) {
 	if cfg.Separator == "" {
 		cfg.Separator = ":"
 	}
@@ -76,7 +78,11 @@ func ConstructAWSSecretsManagerConfig(cfg AWSSecretsManagerConfig, errorMessages
 		return nil, err
 	}
 
-	svc := secretsmanager.NewFromConfig(awsConfig)
+	svc := secretsmanager.NewFromConfig(awsConfig, func(o *secretsmanager.Options) {
+		if cfg.Endpoint != "" {
+			o.BaseEndpoint = &cfg.Endpoint
+		}
+	})
 
 	if cfg.TTL > 0 {
 		cache, err := otter.MustBuilder[string, string](cacheSize).WithTTL(time.Duration(cfg.TTL) * time.Second).Build()
@@ -127,4 +133,13 @@ func (s AWSSecretsManager) Lookup(key string) (string, error) {
 	}
 
 	return secretString, nil
+}
+
+// Just for testing purposes
+func (c AWSSecretsManager) makeSecret(key, val string) error {
+	_, err := c.client.CreateSecret(internal.BackgroundContext(), &secretsmanager.CreateSecretInput{
+		Name:         &key,
+		SecretString: &val,
+	})
+	return err
 }
