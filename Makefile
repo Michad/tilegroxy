@@ -13,7 +13,7 @@ test:
 	@go test ./internal/... ./pkg/... ./cmd/... -v -count=1 -tags viper_bind_struct
 
 unit:
-	@go test ./internal/... ./pkg/... ./cmd/... -v -count=1 -tags "unit,viper_bind_struct"
+	@go test github.com/Michad/tilegroxy/... -v -count=1 -tags "unit,viper_bind_struct"
 
 cover:
 	@go install github.com/dave/courtney@latest
