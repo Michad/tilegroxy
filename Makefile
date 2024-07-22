@@ -7,7 +7,7 @@ DATE := $(shell date -Iseconds --u)
 all: clean test build version
 
 build:
-	go build -v -o ${OUT} -ldflags="-X \"${PKG}/pkg.tilegroxyVersion=${VERSION}\" -X \"${PKG}/pkg.tilegroxyBuildRef=${REF}\" -X \"${PKG}/pkg.tilegroxyBuildDate=${DATE}\"" -tags viper_bind_struct
+	go build -v -o ${OUT} -ldflags="-X \"${PKG}/pkg/static.tilegroxyVersion=${VERSION}\" -X \"${PKG}/pkg/static.tilegroxyBuildRef=${REF}\" -X \"${PKG}/pkg/static.tilegroxyBuildDate=${DATE}\"" -tags viper_bind_struct
 
 test:
 	@go test ./internal/... ./pkg/... ./cmd/... -v -count=1 -tags viper_bind_struct
