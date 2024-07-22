@@ -17,7 +17,8 @@ package secrets
 import (
 	"fmt"
 
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/secret"
 )
 
 type NoopConfig struct {
@@ -28,8 +29,24 @@ type Noop struct {
 	errorMessages config.ErrorMessages
 }
 
-func ConstructNoopConfig(cfg NoopConfig, errorMessages config.ErrorMessages) (*Noop, error) {
-	return &Noop{cfg, errorMessages}, nil
+func init() {
+	secret.RegisterSecreter(NoopRegistration{})
+}
+
+type NoopRegistration struct {
+}
+
+func (s NoopRegistration) InitializeConfig() any {
+	return NoopConfig{}
+}
+
+func (s NoopRegistration) Name() string {
+	return "none"
+}
+
+func (s NoopRegistration) Initialize(cfgAny any, errorMessages config.ErrorMessages) (secret.Secreter, error) {
+	cfg := cfgAny.(NoopConfig)
+	return Noop{cfg, errorMessages}, nil
 }
 
 func (s Noop) Lookup(key string) (string, error) {

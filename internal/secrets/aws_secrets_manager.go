@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build !no_aws
+
 package secrets
 
 import (
@@ -19,8 +21,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/secret"
+
 	"github.com/maypok86/otter"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -50,7 +54,23 @@ type AWSSecretsManager struct {
 	cache  *otter.Cache[string, string]
 }
 
-func ConstructAWSSecretsManager(cfg AWSSecretsManagerConfig, errorMessages config.ErrorMessages) (*AWSSecretsManager, error) {
+func init() {
+	secret.RegisterSecreter(AWSSecretsManagerSecreter{})
+}
+
+type AWSSecretsManagerSecreter struct {
+}
+
+func (s AWSSecretsManagerSecreter) InitializeConfig() any {
+	return AWSSecretsManagerConfig{}
+}
+
+func (s AWSSecretsManagerSecreter) Name() string {
+	return "awssecretsmanager"
+}
+
+func (s AWSSecretsManagerSecreter) Initialize(cfgAny any, errorMessages config.ErrorMessages) (secret.Secreter, error) {
+	cfg := cfgAny.(AWSSecretsManagerConfig)
 	if cfg.Separator == "" {
 		cfg.Separator = ":"
 	}
@@ -58,7 +78,7 @@ func ConstructAWSSecretsManager(cfg AWSSecretsManagerConfig, errorMessages confi
 		cfg.TTL = 60 * 60
 	}
 
-	awsConfig, err := awsconfig.LoadDefaultConfig(internal.BackgroundContext(), func(lo *awsconfig.LoadOptions) error {
+	awsConfig, err := awsconfig.LoadDefaultConfig(pkg.BackgroundContext(), func(lo *awsconfig.LoadOptions) error {
 		if cfg.Profile != "" {
 			lo.SharedConfigProfile = cfg.Profile
 		}
@@ -97,7 +117,7 @@ func ConstructAWSSecretsManager(cfg AWSSecretsManagerConfig, errorMessages confi
 }
 
 func (s AWSSecretsManager) Lookup(key string) (string, error) {
-	ctx := internal.BackgroundContext()
+	ctx := pkg.BackgroundContext()
 	keySplit := strings.Split(key, s.Separator)
 
 	secretName := keySplit[0]
@@ -137,7 +157,7 @@ func (s AWSSecretsManager) Lookup(key string) (string, error) {
 
 // Just for testing purposes
 func (c AWSSecretsManager) makeSecret(key, val string) error {
-	_, err := c.client.CreateSecret(internal.BackgroundContext(), &secretsmanager.CreateSecretInput{
+	_, err := c.client.CreateSecret(pkg.BackgroundContext(), &secretsmanager.CreateSecretInput{
 		Name:         &key,
 		SecretString: &val,
 	})

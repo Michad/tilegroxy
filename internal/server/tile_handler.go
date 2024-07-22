@@ -15,15 +15,17 @@
 package server
 
 import (
-	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
-	"runtime/debug"
 	"strconv"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/layers"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/static"
+
+	_ "github.com/Michad/tilegroxy/internal/authentications"
+	_ "github.com/Michad/tilegroxy/internal/caches"
+	_ "github.com/Michad/tilegroxy/internal/providers"
+	_ "github.com/Michad/tilegroxy/internal/secrets"
 )
 
 type tileHandler struct {
@@ -31,12 +33,12 @@ type tileHandler struct {
 }
 
 func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	ctx := req.Context().(*internal.RequestContext)
+	ctx := req.Context().(*pkg.RequestContext)
 	slog.DebugContext(ctx, "server: tile handler started")
 	defer slog.DebugContext(ctx, "server: tile handler ended")
 
 	if !h.auth.CheckAuthentication(req, ctx) {
-		writeError(ctx, w, &h.config.Error, TypeOfErrorAuth, h.config.Error.Messages.NotAuthorized)
+		writeError(ctx, w, &h.config.Error, pkg.UnauthorizedError{Message: "CheckAuthentication returned false"})
 		return
 	}
 
@@ -48,53 +50,42 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	z, err := strconv.Atoi(zStr)
 
 	if err != nil {
-		writeError(ctx, w, &h.config.Error, TypeOfErrorBounds, fmt.Sprintf(h.config.Error.Messages.InvalidParam, "z", zStr))
+		writeError(ctx, w, &h.config.Error, pkg.InvalidArgumentError{Name: "z", Value: zStr})
 		return
 	}
 
 	x, err := strconv.Atoi(xStr)
 
 	if err != nil {
-		writeError(ctx, w, &h.config.Error, TypeOfErrorBounds, fmt.Sprintf(h.config.Error.Messages.InvalidParam, "x", xStr))
+		writeError(ctx, w, &h.config.Error, pkg.InvalidArgumentError{Name: "x", Value: xStr})
 		return
 	}
 
 	y, err := strconv.Atoi(yStr)
 
 	if err != nil {
-		writeError(ctx, w, &h.config.Error, TypeOfErrorBounds, fmt.Sprintf(h.config.Error.Messages.InvalidParam, "y", yStr))
+		writeError(ctx, w, &h.config.Error, pkg.InvalidArgumentError{Name: "y", Value: yStr})
 		return
 	}
 
-	tileReq := internal.TileRequest{LayerName: layerName, Z: z, X: x, Y: y}
+	tileReq := pkg.TileRequest{LayerName: layerName, Z: z, X: x, Y: y}
 
 	_, err = tileReq.GetBounds()
 
 	if err != nil {
-		var re internal.RangeError
-		if errors.As(err, &re) {
-			writeError(ctx, w, &h.config.Error, TypeOfErrorBounds, fmt.Sprintf(h.config.Error.Messages.RangeError, re.ParamName, re.MinValue, re.MaxValue))
-		} else {
-			writeError(ctx, w, &h.config.Error, TypeOfErrorOther, fmt.Sprintf(h.config.Error.Messages.ServerError, err), "stack", string(debug.Stack()))
-		}
+		writeError(ctx, w, &h.config.Error, err)
 		return
 	}
 
 	img, err := h.layerGroup.RenderTile(ctx, tileReq)
 
 	if err != nil {
-		var ae layers.AuthError
-		if errors.As(err, &ae) {
-			writeError(ctx, w, &h.config.Error, TypeOfErrorAuth, h.config.Error.Messages.NotAuthorized)
-		} else {
-			writeError(ctx, w, &h.config.Error, TypeOfErrorOther, fmt.Sprintf(h.config.Error.Messages.ServerError, err), "stack", string(debug.Stack()))
-		}
-
+		writeError(ctx, w, &h.config.Error, err)
 		return
 	}
 
 	if img == nil {
-		writeError(ctx, w, &h.config.Error, TypeOfErrorProvider, h.config.Error.Messages.ProviderError)
+		writeErrorMessage(ctx, w, &h.config.Error, pkg.TypeOfErrorProvider, "Tile rendered as nil but no error returned", h.config.Error.Messages.ProviderError, nil)
 		return
 	}
 
@@ -103,7 +94,7 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if !h.config.Server.Production {
-		version, _, _ := internal.GetVersionInformation()
+		version, _, _ := static.GetVersionInformation()
 		w.Header().Add("X-Powered-By", "tilegroxy "+version)
 	}
 

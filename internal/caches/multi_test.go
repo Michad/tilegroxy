@@ -17,24 +17,25 @@ package caches
 import (
 	"testing"
 
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestMultiSaveAndLookup(t *testing.T) {
 	memConfig1 := MemoryConfig{}
 
-	mem1, err := ConstructMemory(memConfig1, config.ErrorMessages{})
+	mem1, err := MemoryRegistration{}.Initialize(memConfig1, config.ErrorMessages{})
 	assert.NoError(t, err)
 
 	memConfig2 := MemoryConfig{}
 
-	mem2, err := ConstructMemory(memConfig2, config.ErrorMessages{})
+	mem2, err := MemoryRegistration{}.Initialize(memConfig2, config.ErrorMessages{})
 	if !assert.NoError(t, err) {
 		return
 	}
 
-	multi := Multi{Tiers: []Cache{mem1, mem2}}
+	multi := Multi{Tiers: []cache.Cache{mem1, mem2}}
 
 	tile := makeReq(53)
 	img := makeImg(24)
@@ -48,17 +49,17 @@ func TestMultiSaveAndLookup(t *testing.T) {
 func TestMultiIn1(t *testing.T) {
 	memConfig1 := MemoryConfig{}
 
-	mem1, err := ConstructMemory(memConfig1, config.ErrorMessages{})
+	mem1, err := MemoryRegistration{}.Initialize(memConfig1, config.ErrorMessages{})
 	assert.NoError(t, err)
 
 	memConfig2 := MemoryConfig{}
 
-	mem2, err := ConstructMemory(memConfig2, config.ErrorMessages{})
+	mem2, err := MemoryRegistration{}.Initialize(memConfig2, config.ErrorMessages{})
 	if !assert.NoError(t, err) {
 		return
 	}
 
-	multi := Multi{Tiers: []Cache{mem1, mem2}}
+	multi := Multi{Tiers: []cache.Cache{mem1, mem2}}
 
 	tile := makeReq(53)
 	img := makeImg(24)
@@ -70,17 +71,17 @@ func TestMultiIn1(t *testing.T) {
 func TestMultiIn2(t *testing.T) {
 	memConfig1 := MemoryConfig{}
 
-	mem1, err := ConstructMemory(memConfig1, config.ErrorMessages{})
+	mem1, err := MemoryRegistration{}.Initialize(memConfig1, config.ErrorMessages{})
 	assert.NoError(t, err)
 
 	memConfig2 := MemoryConfig{}
 
-	mem2, err := ConstructMemory(memConfig2, config.ErrorMessages{})
+	mem2, err := MemoryRegistration{}.Initialize(memConfig2, config.ErrorMessages{})
 	if !assert.NoError(t, err) {
 		return
 	}
 
-	multi := Multi{Tiers: []Cache{mem1, mem2}}
+	multi := Multi{Tiers: []cache.Cache{mem1, mem2}}
 
 	tile := makeReq(53)
 	img := makeImg(24)

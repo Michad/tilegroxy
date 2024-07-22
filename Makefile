@@ -7,17 +7,17 @@ DATE := $(shell date -Iseconds --u)
 all: clean test build version
 
 build:
-	go build -v -o ${OUT} -ldflags="-X \"${PKG}/internal.tilegroxyVersion=${VERSION}\" -X \"${PKG}/internal.tilegroxyBuildRef=${REF}\" -X \"${PKG}/internal.tilegroxyBuildDate=${DATE}\"" -tags viper_bind_struct
+	go build -v -o ${OUT} -ldflags="-X \"${PKG}/pkg/static.tilegroxyVersion=${VERSION}\" -X \"${PKG}/pkg/static.tilegroxyBuildRef=${REF}\" -X \"${PKG}/pkg/static.tilegroxyBuildDate=${DATE}\"" -tags viper_bind_struct
 
 test:
-	@go test ./internal/... ./cmd/... -v -count=1 -tags viper_bind_struct
+	@go test ./internal/... ./pkg/... ./cmd/... -v -count=1 -tags viper_bind_struct
 
 unit:
-	@go test ./internal/... ./cmd/... -v -count=1 -tags "unit,viper_bind_struct"
+	@go test ./internal/... $(go list ./pkg/... | grep -v mod) ./cmd/... -v -count=1 -tags "unit,viper_bind_struct"
 
 cover:
 	@go install github.com/dave/courtney@latest
-	@courtney ./internal/... ./cmd/...
+	@courtney ./internal/... ./pkg/... ./cmd/...
 	@go tool cover -func=coverage.out -o=coveragef.out
 
 cover-out:

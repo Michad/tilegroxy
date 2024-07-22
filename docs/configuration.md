@@ -603,28 +603,7 @@ Allows you to specify your own logic controlling how auth tokens should be extra
 
 To help mitigate the performance impact of calling the interpreted `validate` method, a cache is utilized by default. In turn, to avoid concurrent requests that utilize the same token from causing repetitive calls to `validate`, a pool of locks are utilized when the cache is enabled. The size of the lock pool is equal to the number of CPUs.
 
-The code you need to supply only has access to the standard library.  The package must be "custom" and you must include the following function:
-
-```
-func validate(string) (bool, time.Time, string, []string)
-```
-
-The `validate` method will be supplied with a single token.  The function should then return (in order):
-
-* pass (bool): Whether the token is valid and should allow the request to proceed
-* expiration (time.Time): When the authentication status of the token expires and the validate method should be called again. `validate` should return pass=false for already expired tokens
-* user identifier (string): An identifier for the user being authenticated. By default this is only used for logging.
-* allowed layers ([]string): The specific layer IDs to allow access to with this specific token. Return an empty array to allow access to all of them.
-
-The method how tokens are extracted from the request is configurable. The following modes are available and if multiple are specified the first one (given the order indicated) in the request is utilized:
-
-| Order | Key | Value | 
-| --- | --- | --- | 
-| 1 | header | Header Name (in Header-Case) | 
-| 2 | cookie | Cookie Name |
-| 3 | query | Query Parameter Key |
-| 4 | path | None (set as empty string) |
-
+For more details on implementing the code for a custom authentication, see [Extensibility](./extensibility.md#custom-authentication)
 
 Name should be "custom"
 

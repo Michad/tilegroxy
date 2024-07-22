@@ -21,10 +21,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 
-	"github.com/go-redis/cache/v9"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
+	rediscache "github.com/go-redis/cache/v9"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -56,11 +57,28 @@ const (
 
 type Redis struct {
 	RedisConfig
-	cache *cache.Cache
+	cache *rediscache.Cache
 }
 
-func ConstructRedis(config RedisConfig, errorMessages config.ErrorMessages) (*Redis, error) {
-	var tileCache *cache.Cache
+func init() {
+	cache.RegisterCache(RedisRegistration{})
+}
+
+type RedisRegistration struct {
+}
+
+func (s RedisRegistration) InitializeConfig() any {
+	return RedisConfig{}
+}
+
+func (s RedisRegistration) Name() string {
+	return "redis"
+}
+
+func (s RedisRegistration) Initialize(configAny any, errorMessages config.ErrorMessages) (cache.Cache, error) {
+	config := configAny.(RedisConfig)
+
+	var tileCache *rediscache.Cache
 
 	if config.Mode == "" {
 		config.Mode = ModeStandalone
@@ -106,7 +124,7 @@ func ConstructRedis(config RedisConfig, errorMessages config.ErrorMessages) (*Re
 		})
 
 		//TODO: Open bug with go-redis about `rediser` type being private so the below isn't needlessly repeated
-		tileCache = cache.New(&cache.Options{
+		tileCache = rediscache.New(&rediscache.Options{
 			Redis: client,
 		})
 	} else if config.Mode == ModeRing {
@@ -128,7 +146,7 @@ func ConstructRedis(config RedisConfig, errorMessages config.ErrorMessages) (*Re
 		})
 
 		//TODO: Open bug with go-redis about `rediser` type being private so the below isn't needlessly repeated
-		tileCache = cache.New(&cache.Options{
+		tileCache = rediscache.New(&rediscache.Options{
 			Redis: client,
 		})
 	} else {
@@ -140,7 +158,7 @@ func ConstructRedis(config RedisConfig, errorMessages config.ErrorMessages) (*Re
 		})
 
 		//TODO: Open bug with go-redis about `rediser` type being private so the below isn't needlessly repeated
-		tileCache = cache.New(&cache.Options{
+		tileCache = rediscache.New(&rediscache.Options{
 			Redis: client,
 		})
 	}
@@ -150,15 +168,15 @@ func ConstructRedis(config RedisConfig, errorMessages config.ErrorMessages) (*Re
 	return &r, nil
 }
 
-func (c Redis) Lookup(t internal.TileRequest) (*internal.Image, error) {
+func (c Redis) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
 	ctx := context.TODO()
 
 	key := c.KeyPrefix + t.String()
-	var obj internal.Image
+	var obj pkg.Image
 
 	err := c.cache.Get(ctx, key, &obj)
 
-	if err == cache.ErrCacheMiss {
+	if err == rediscache.ErrCacheMiss {
 		return nil, nil
 	}
 
@@ -169,12 +187,12 @@ func (c Redis) Lookup(t internal.TileRequest) (*internal.Image, error) {
 	return &obj, nil
 }
 
-func (c Redis) Save(t internal.TileRequest, img *internal.Image) error {
+func (c Redis) Save(t pkg.TileRequest, img *pkg.Image) error {
 	ctx := context.TODO()
 
 	key := c.KeyPrefix + t.String()
 
-	err := c.cache.Set(&cache.Item{
+	err := c.cache.Set(&rediscache.Item{
 		Ctx:   ctx,
 		Key:   key,
 		Value: *img,

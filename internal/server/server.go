@@ -16,6 +16,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -29,11 +30,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/authentication"
-	"github.com/Michad/tilegroxy/internal/config"
 	"github.com/Michad/tilegroxy/internal/images"
-	"github.com/Michad/tilegroxy/internal/layers"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/authentication"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/gorilla/handlers"
@@ -43,68 +44,67 @@ func handleNoContent(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-type TypeOfError int
-
 // This is just here to allow tests to specify a different signal to send to kill the webserver
 // not useful in practice due to OS-specific nature of signals
 var InterruptFlags = []os.Signal{os.Interrupt}
 
-const (
-	TypeOfErrorBounds = iota
-	TypeOfErrorAuth
-	TypeOfErrorProvider
-	TypeOfErrorOtherBadRequest
-	TypeOfErrorOther
-)
-
-func writeError(ctx *internal.RequestContext, w http.ResponseWriter, cfg *config.ErrorConfig, errorType TypeOfError, message string, args ...any) {
+func errorVars(cfg *config.ErrorConfig, errorType pkg.TypeOfError) (int, slog.Level, string) {
 	var status int
 	var level slog.Level
-	if !cfg.AlwaysOk {
-		if errorType == TypeOfErrorAuth {
-			level = slog.LevelDebug
-			status = http.StatusUnauthorized
-		} else if errorType == TypeOfErrorBounds {
-			level = slog.LevelDebug
-			status = http.StatusBadRequest
-		} else if errorType == TypeOfErrorProvider {
-			level = slog.LevelInfo
-			status = http.StatusInternalServerError
-		} else if errorType == TypeOfErrorOtherBadRequest {
-			level = slog.LevelDebug
-			status = http.StatusBadRequest
-		} else {
-			level = slog.LevelWarn
-			status = http.StatusInternalServerError
-		}
-	} else {
-		level = config.LevelTrace
+	var imgPath string
+
+	switch errorType {
+	case pkg.TypeOfErrorAuth:
+		level = slog.LevelDebug
+		status = http.StatusUnauthorized
+		imgPath = cfg.Images.Authentication
+	case pkg.TypeOfErrorBounds:
+		level = slog.LevelDebug
+		status = http.StatusBadRequest
+		imgPath = cfg.Images.OutOfBounds
+	case pkg.TypeOfErrorProvider:
+		level = slog.LevelInfo
+		status = http.StatusInternalServerError
+		imgPath = cfg.Images.Provider
+	case pkg.TypeOfErrorBadRequest:
+		level = slog.LevelDebug
+		status = http.StatusBadRequest
+		imgPath = cfg.Images.Other
+	default:
+		level = slog.LevelWarn
+		status = http.StatusInternalServerError
+		imgPath = cfg.Images.Other
+	}
+
+	if cfg.AlwaysOk {
 		status = http.StatusOK
 	}
 
-	slog.Log(ctx, level, message, args...)
+	return status, level, imgPath
+}
+
+func writeError(ctx *pkg.RequestContext, w http.ResponseWriter, cfg *config.ErrorConfig, err error) {
+	var te pkg.TypedError
+	if errors.As(err, &te) {
+		writeErrorMessage(ctx, w, cfg, te.Type(), te.Error(), te.External(cfg.Messages), debug.Stack())
+	} else {
+		writeErrorMessage(ctx, w, cfg, pkg.TypeOfErrorOther, te.Error(), fmt.Sprintf(cfg.Messages.ServerError, err), debug.Stack())
+	}
+}
+
+func writeErrorMessage(ctx *pkg.RequestContext, w http.ResponseWriter, cfg *config.ErrorConfig, errorType pkg.TypeOfError, internalMessage string, externalMessage string, stack []byte) {
+	status, level, imgPath := errorVars(cfg, errorType)
+
+	slog.Log(ctx, level, internalMessage, "stack", string(stack))
 
 	if cfg.Mode == config.ModeErrorPlainText {
 		w.WriteHeader(status)
-		w.Write([]byte(message))
-	} else if cfg.Mode == config.ModeErrorNoError {
-		w.WriteHeader(status)
+		w.Write([]byte(externalMessage))
 	} else if cfg.Mode == config.ModeErrorImageHeader || cfg.Mode == config.ModeErrorImage {
 		if cfg.Mode == config.ModeErrorImageHeader {
-			w.Header().Add("x-error-message", message)
+			w.Header().Add("x-error-message", externalMessage)
 		}
 		w.WriteHeader(status)
-
-		var imgPath string
-		if errorType == TypeOfErrorBounds {
-			imgPath = cfg.Images.OutOfBounds
-		} else if errorType == TypeOfErrorAuth {
-			imgPath = cfg.Images.Authentication
-		} else if errorType == TypeOfErrorProvider {
-			imgPath = cfg.Images.Provider
-		} else {
-			imgPath = cfg.Images.Other
-		}
 
 		img, err2 := images.GetStaticImage(imgPath)
 		if img != nil {
@@ -116,7 +116,6 @@ func writeError(ctx *internal.RequestContext, w http.ResponseWriter, cfg *config
 		}
 	} else {
 		w.WriteHeader(status)
-		slog.ErrorContext(ctx, "Invalid error mode! Falling back to none!")
 	}
 }
 
@@ -132,20 +131,31 @@ func (h slogContextHandler) Handle(ctx context.Context, r slog.Record) error {
 
 	return h.Handler.Handle(ctx, r)
 }
+
+func makeLogFileWriter(path string, alsoStdOut bool) (io.Writer, error) {
+	logFile, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+
+	if err != nil {
+		return nil, err
+	}
+	var out io.Writer
+
+	if alsoStdOut {
+		out = io.MultiWriter(os.Stdout, logFile)
+	} else {
+		out = logFile
+	}
+	return out, nil
+}
+
 func configureMainLogging(cfg *config.Config) error {
+	var err error
 	if cfg.Logging.Main.Console || len(cfg.Logging.Main.Path) > 0 {
 		var out io.Writer
 		if len(cfg.Logging.Main.Path) > 0 {
-			logFile, err := os.OpenFile(cfg.Logging.Main.Path, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
-
+			out, err = makeLogFileWriter(cfg.Logging.Main.Path, cfg.Logging.Main.Console)
 			if err != nil {
 				return err
-			}
-
-			if cfg.Logging.Main.Console {
-				out = io.MultiWriter(os.Stdout, logFile)
-			} else {
-				out = logFile
 			}
 		} else if cfg.Logging.Main.Console {
 			out = os.Stdout
@@ -220,22 +230,15 @@ func configureMainLogging(cfg *config.Config) error {
 func configureAccessLogging(cfg config.AccessConfig, errorMessages config.ErrorMessages, rootHandler http.Handler) (http.Handler, error) {
 	if cfg.Console || len(cfg.Path) > 0 {
 		var out io.Writer
+		var err error
 		if len(cfg.Path) > 0 {
-			logFile, err := os.OpenFile(cfg.Path, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+			out, err = makeLogFileWriter(cfg.Path, cfg.Console)
 
 			if err != nil {
 				return nil, err
 			}
-
-			if cfg.Console {
-				out = io.MultiWriter(os.Stdout, logFile)
-			} else {
-				out = logFile
-			}
-		} else if cfg.Console {
-			out = os.Stdout
 		} else {
-			panic("Impossible logic error")
+			out = os.Stdout
 		}
 
 		if cfg.Format == config.AccessFormatCommon {
@@ -255,11 +258,10 @@ type httpContextHandler struct {
 }
 
 func (h httpContextHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	reqC := internal.NewRequestContext(req)
+	reqC := pkg.NewRequestContext(req)
 	defer func() {
 		if err := recover(); err != nil {
-			slog.ErrorContext(&reqC, "Unexpected panic: "+fmt.Sprint(err))
-			writeError(&reqC, w, &h.errCfg, TypeOfErrorOther, "Unexpected Internal Server Error", "stack", string(debug.Stack()))
+			writeErrorMessage(&reqC, w, &h.errCfg, pkg.TypeOfErrorOther, fmt.Sprint(err), "Unexpected Internal Server Error", debug.Stack())
 		}
 	}()
 
@@ -274,7 +276,7 @@ func (h httpRedirectHandler) ServeHTTP(w http.ResponseWriter, req *http.Request)
 	http.Redirect(w, req, h.protoAndHost+req.RequestURI, http.StatusMovedPermanently)
 }
 
-func ListenAndServe(config *config.Config, layerGroup *layers.LayerGroup, auth authentication.Authentication) error {
+func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth authentication.Authentication) error {
 	if config.Server.Encrypt != nil && config.Server.Encrypt.Domain == "" {
 		return fmt.Errorf(config.Error.Messages.ParamRequired, "server.encrypt.domain")
 	}
@@ -316,7 +318,7 @@ func ListenAndServe(config *config.Config, layerGroup *layers.LayerGroup, auth a
 		return err
 	}
 
-	ctx, stop := signal.NotifyContext(internal.BackgroundContext(), InterruptFlags...)
+	ctx, stop := signal.NotifyContext(pkg.BackgroundContext(), InterruptFlags...)
 	defer stop()
 
 	srv := &http.Server{

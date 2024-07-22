@@ -15,9 +15,9 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 
+	tg "github.com/Michad/tilegroxy/pkg/entry"
 	"github.com/spf13/cobra"
 )
 
@@ -32,20 +32,19 @@ func runCheck(cmd *cobra.Command, args []string) {
 	echo, _ := cmd.Flags().GetBool("echo")
 	out := cmd.OutOrStdout()
 
-	cfg, _, _, err := parseConfigIntoStructs(cmd)
-
+	cfg, err := extractConfigFromCommand(cmd)
 	if err != nil {
 		fmt.Fprintf(out, "Invalid configuration: %v\n", err.Error())
 		exit(1)
 		return
 	}
 
-	if cfg != nil && echo {
-		enc := json.NewEncoder(out)
-		enc.SetIndent(" ", "  ")
-		enc.Encode(cfg)
-	} else {
-		fmt.Fprintln(out, "Valid")
+	err = tg.CheckConfig(cfg, tg.CheckOptions{Echo: echo}, out)
+
+	if err != nil {
+		fmt.Fprintf(out, "Invalid configuration: %v\n", err.Error())
+		exit(1)
+		return
 	}
 }
 

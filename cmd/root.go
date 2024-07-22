@@ -19,9 +19,11 @@ import (
 	"flag"
 	"os"
 
-	"github.com/Michad/tilegroxy/internal/authentication"
-	"github.com/Michad/tilegroxy/internal/config"
-	"github.com/Michad/tilegroxy/internal/layers"
+	_ "github.com/Michad/tilegroxy/internal/authentications"
+	_ "github.com/Michad/tilegroxy/internal/caches"
+	_ "github.com/Michad/tilegroxy/internal/providers"
+	_ "github.com/Michad/tilegroxy/internal/secrets"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/spf13/cobra"
 )
 
@@ -68,8 +70,8 @@ func initRoot() {
 	rootCmd.MarkFlagsMutuallyExclusive("config", "raw-config", "remote-provider")
 }
 
-// A common utility for use by multiple commands to bootstrap the core application entities
-func parseConfigIntoStructs(cmd *cobra.Command) (*config.Config, *layers.LayerGroup, authentication.Authentication, error) {
+// A common utility for use by multiple commands to bootstrap the core application config
+func extractConfigFromCommand(cmd *cobra.Command) (*config.Config, error) {
 	var err error
 	configPath, err1 := cmd.Flags().GetString("config")
 	configRaw, err2 := cmd.Flags().GetString("raw-config")
@@ -79,7 +81,7 @@ func parseConfigIntoStructs(cmd *cobra.Command) (*config.Config, *layers.LayerGr
 	remoteType, err6 := cmd.Flags().GetString("remote-type")
 
 	if err = errors.Join(err1, err2, err3, err4, err5, err6); err != nil {
-		return nil, nil, nil, err
+		return nil, err
 	}
 
 	var cfg config.Config
@@ -91,13 +93,11 @@ func parseConfigIntoStructs(cmd *cobra.Command) (*config.Config, *layers.LayerGr
 	} else if configPath != "" {
 		cfg, err = config.LoadConfigFromFile(configPath)
 	} else {
-		return nil, nil, nil, errors.New("no configuration supplied")
+		return nil, errors.New("no configuration supplied")
 	}
 
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, err
 	}
-
-	l, a, e := layers.ConfigToEntities(cfg)
-	return &cfg, l, a, e
+	return &cfg, nil
 }

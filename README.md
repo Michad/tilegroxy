@@ -41,7 +41,7 @@ The following are on the roadmap and expected before a 1.0 release:
 
 Configuration is required to define your layers, cache, authentication, and service operation.  The configuration should be supplied as a JSON or YAML file either directly or through an external service such as etcd or consul. Configuration can also be partially supplied via Environment Variables. 
 
-Details can be found in [documentation](./docs/configuration.md) or through [examples](./examples/configurations/). 
+Details can be found in [Configuration documentation](./docs/configuration.md) or through [examples](./examples/configurations/). For help converting from tilestache see the documentation on [Migrating From Tilestache](./docs/migrate-tilestache.md).
 
 You can also use `tilegroxy config create` to help get started.
 
@@ -289,99 +289,9 @@ Flags:
 
 ```
 
+## Extending tilegroxy
 
-## Custom Providers
-
-For cases where the built-in providers don't suffice for your needs you can write your own custom providers with code that is loaded dynamically at runtime.  
-
-Custom providers must be written in Go and are interpreted using [Yaegi](https://github.com/traefik/yaegi).  Yaegi offers a full featured implementation of the Go specification without the need to precompile.  
-
-Example custom providers can be found within [examples/providers](./examples/providers/).  A custom provider must live within a single file and can call the entire standard library.  This includes potentially dangerous function calls such as `exec` and `unsafe`; be as cautious using custom providers from third party as you would be executing any other third party software.  
-
-Custom providers must be within the `custom` package and must import the `tilegroxy/tilegroxy` package for mandatory datatypes. There are two mandatory functions:
-
-```go
-func preAuth(*internal.RequestContext, tilegroxy.ProviderContext, map[string]interface{}, tilegroxy.ClientConfig, tilegroxy.ErrorMessages) (tilegroxy.ProviderContext, error)
-
-func generateTile(*internal.RequestContext, tilegroxy.ProviderContext, tilegroxy.TileRequest, map[string]interface{}, tilegroxy.ClientConfig,tilegroxy.ErrorMessages) (*tilegroxy.Image, error)
-```
-
-The `preAuth` function is responsible for authenticating outgoing requests and returning a token or whatever else is needed. It is called when needed by the application when either `expiration` is reached or an `AuthError` is returned by `generateTile`. A given instance of tilegroxy will only call this method once at a time and then shares the result among threads. However, ProviderContext is not shared between instances of tilegroxy. 
-
-The `generateTile` function is the main function which returns an image for a given tile request. You should never trigger a call to `preAuth` yourself from `generateTile` (instead return an `AuthError`) to prevent excessive calls to the upstream provider from multiple tiles.
-
-The following types are available for custom providers:
-
-| Type | Description |
-| --- | --- |
-| [RequestContext](./internal/request_context.go) | Contains contextual information specific to the incoming request. Can retrieve headers via the Value method and authz information if configured properly. Do note there won't be a request when seed and test commands are run, this context will be a "Background Context" at those times |
-| [ProviderContext](./internal/layers/provider.go) | A struct for on the fly, provider-specific information. It is primarily used to facilitate authentication. Includes an Expiration field to inform the application when to re-auth via the preAuth method (this should occur before auth actually expires). Also includes an auth token field, a auth Bypass field (for un-authed usecases), and a map |
-| [TileRequest](./internal/tile_request.go) | The parameters from the user indicating the layer being requested as well as the specific tile coordinate |
-| [ClientConfig](./internal/config/config.go) | A struct from the configuration which indicates settings such as static headers and timeouts. See `Client` in [Configuration documentation](./docs/configuration.md) for details |
-| [ErrorMessages](./internal/config/config.go) | A struct from the configuration which indicates common error messages. See `Error Messages` in [Configuration documentation](./docs/configuration.md) for details |
-| [Image](./internal/utility.go) | The imagery for a given tile. Currently type mapped to []byte |
-| [AuthError](./internal/layers/provider.go) | An Error type to indicate an upstream provider returned an auth error that should trigger a new call to preAuth |
-| [GetTile](./internal/layers/provider.go) | A utility method that performs an HTTP GET request to a given URL. Use this when possible to ensure all standard Client configurations are honored |
-
-There is a performance cost of using a custom provider vs a built-in provider. The exact cost depends on the complexity of your provider, however it is typically below 10 milliseconds while tile generation as a whole is usually more than order of magnitude slower. Due to the custom providers being written in Go, it is easy to convert a custom provider to a built-in provider if your use-case is highly performance critical.
-
-## Migrating from tilestache
-
-An important difference between tilegroxy and tilestache is that tilegroxy can only be run as a standalone executable rather than running as a module in another webserver.  
-
-The configuration in tilegroxy is meant to be highly compatible with the configuration of tilestache, however there are significant differences. The tilegroxy configuration supports a variety of options that are not available in tilestache and while we try to keep most parameters optional and have sane and safe defaults, it is highly advised you familiarize yourself with the various options documented above.
-
-The following are the known incompatibilities with tilestache configurations:
-
-* Unsupported providers:
-    * Mapnik
-    * Vector
-    * MBTiles
-    * Mapnik Grid
-    * Goodies providers
-* Unsupported caches:
-    * LimitedDisk
-* "Names" are always in all lowercase 
-* Configuration keys are case insensitive and have no spaces
-* Configuring projections is currently unsupported
-* Cache contents are not guaranteed to be transferrable
-* Layers:
-    * Layers are supplied as a flat array of layer objects with an `id` parameter for the URL-safe layer name instead of them being supplied as an Object with the id being a key. 
-    * Most parameters unavailable. Some can be configured via the `Client` configuration and others will be added in future versions.
-    * The `write cache` parameter is replaced with `skipcache` with inverted value
-    * No `bounds` parameter - instead use the `fallback` provider but note it applies on a per-tile level only (not per-pixel)
-    * No `pixel effects` parameter - instead use the `effect` provider
-* URL Template provider:
-    * No `referer` parameter - instead specify the referer header via the `Client` configuration
-    * No `timeout` parameter - instead specify the timeout via the `Client` configuration
-    * No `source projection` parameter - Might be added in the future
-* Sandwich provider:
-    * No direct equivalent to the sandwich provider is available but most if not all functionality is available by combining Blend and Static providers
-* Proxy provider:
-    * No `provider` parameter 
-    * No `timeout` parameter - instead specify the timeout via the `Client` configuration
-* Test cache:
-    * It's recommended but not required to change the `name` to "none" instead of "test"
-    * No 'verbose' parameter - Instead use the `Logging` configuration to turn on debug logging if needed
-* Disk cache:
-    * No `umode` parameter - Instead use `filemode` with Go numerics instead of unix numerics. Might be added in the future
-    * No `dirs` parameter - Files are currently stored in a flat structure rather than creating separate directories
-    * No `gzip` parameter - Might be added in the future
-    * The `path` parameter must be supplied as a file path, not a URI
-* Memcache cache:
-    * No `revision` parameter - Put the revision inside the key prefix
-    * The `key prefix` parameter is replaced with `keyprefix`
-    * The `servers` array is now an array of objects containing `host` and `port` instead of an array of strings with those combined
-* Redis cache:
-    * Supports a wider variety of configuration options. It's recommended but not required that you consider utilizing a Cluster or Ring deployment if you previously used a single server.
-    * The `key prefix` parameter is replaced with `keyprefix`
-* S3 cache:
-    * No `use_locks` parameter - Caches are currently lockless
-    * No `reduced_redundancy` parameter - Instead use the more flexible `storageclass` parameter with the "REDUCED_REDUNDANCY" option
-    * While supported, it's recommended you don't use the `access` and `secret` parameters. All standard methods of supplying AWS credentials are supported.
-
-
-
+One of the top design goals of tilegroxy is to be highly flexible. If there's functionality you need, there's a couple different ways you can add it in.  See the [extensibility documentation](./docs/extensibility.md) for instructions.
 
 ## Troubleshooting
 

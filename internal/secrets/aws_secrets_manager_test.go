@@ -23,7 +23,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/assert"
 	"github.com/testcontainers/testcontainers-go"
@@ -44,7 +44,7 @@ func init() {
 }
 
 func Test_SecretManager_Validate(t *testing.T) {
-	s, err := ConstructAWSSecretsManager(AWSSecretsManagerConfig{
+	s, err := AWSSecretsManagerSecreter{}.Initialize(AWSSecretsManagerConfig{
 		Access:  "asffasfa",
 		Secret:  "asfasfas",
 		Region:  "safasfasfasf",
@@ -80,12 +80,13 @@ func Test_SecretManager_Execute(t *testing.T) {
 	endpoint, err := c.PortEndpoint(ctx, nat.Port("4566/tcp"), "http")
 	assert.NoError(t, err)
 
-	s, err := ConstructAWSSecretsManager(AWSSecretsManagerConfig{
+	so, err := AWSSecretsManagerSecreter{}.Initialize(AWSSecretsManagerConfig{
 		Access:   "a",
 		Secret:   "a",
 		Region:   "us-east-1",
 		Endpoint: endpoint,
 	}, config.ErrorMessages{})
+	s := so.(*AWSSecretsManager)
 
 	assert.NoError(t, err)
 
@@ -104,7 +105,7 @@ func Test_SecretManager_Execute(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "val", v3)
 
-	s, err = ConstructAWSSecretsManager(AWSSecretsManagerConfig{
+	so, err = AWSSecretsManagerSecreter{}.Initialize(AWSSecretsManagerConfig{
 		Access:   "a",
 		Secret:   "a",
 		Region:   "us-east-1",
@@ -112,6 +113,7 @@ func Test_SecretManager_Execute(t *testing.T) {
 		TTL:      -1,
 	}, config.ErrorMessages{})
 	assert.NoError(t, err)
+	s = so.(*AWSSecretsManager)
 
 	v4, err := s.Lookup("test2:key")
 	assert.NoError(t, err)

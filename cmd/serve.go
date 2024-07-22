@@ -19,7 +19,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/Michad/tilegroxy/internal/server"
+	tg "github.com/Michad/tilegroxy/pkg/entry"
 )
 
 var serveCmd = &cobra.Command{
@@ -36,15 +36,14 @@ var serveCmd = &cobra.Command{
 func runServe(cmd *cobra.Command, args []string) {
 	out := rootCmd.OutOrStdout()
 
-	cfg, layerObjects, auth, err := parseConfigIntoStructs(cmd)
-
+	cfg, err := extractConfigFromCommand(cmd)
 	if err != nil {
 		fmt.Fprintf(out, "Error: %v\n", err.Error())
 		exit(1)
 		return
 	}
 
-	err = server.ListenAndServe(cfg, layerObjects, auth)
+	err = tg.Serve(cfg, tg.ServeOptions{}, out)
 
 	if err != nil {
 		fmt.Fprintf(out, "Error: %v\n", err.Error())
