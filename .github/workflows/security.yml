@@ -35,7 +35,7 @@ jobs:
           retention-days: 5
       - name: "Upload to code-scanning"
         if: github.event_name != 'pull_request'
-        uses: github/codeql-action/upload-sarif@4fa2a7953630fd2f3fb380f21be14ede0169dd4f # v3.25.12
+        uses: github/codeql-action/upload-sarif@2d790406f505036ef40ecba973cc774a50395aac # v3.25.13
         with:
           sarif_file: results.sarif
   dependency-review:
@@ -65,13 +65,13 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@4fa2a7953630fd2f3fb380f21be14ede0169dd4f # v3.25.12
+        uses: github/codeql-action/init@2d790406f505036ef40ecba973cc774a50395aac # v3.25.13
         with:
           languages: ${{ matrix.language }}
       - name: Autobuild
-        uses: github/codeql-action/autobuild@4fa2a7953630fd2f3fb380f21be14ede0169dd4f # v3.25.12
+        uses: github/codeql-action/autobuild@2d790406f505036ef40ecba973cc774a50395aac # v3.25.13
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@4fa2a7953630fd2f3fb380f21be14ede0169dd4f # v3.25.12
+        uses: github/codeql-action/analyze@2d790406f505036ef40ecba973cc774a50395aac # v3.25.13
         with:
           category: "/language:${{matrix.language}}"
 
@@ -97,7 +97,7 @@ jobs:
           cp govuln.sarif govuln2.sarif
         fi
     - name: Upload result to GitHub Code Scanning
-      uses: github/codeql-action/upload-sarif@4fa2a7953630fd2f3fb380f21be14ede0169dd4f # v3.25.12
+      uses: github/codeql-action/upload-sarif@2d790406f505036ef40ecba973cc774a50395aac # v3.25.13
       with:
         sarif_file: govuln2.sarif
   # Disabled because its free version is too limited and it keeps failing due to exceeding run limit
@@ -126,6 +126,6 @@ jobs:
   #       sed -i 's/"security-severity": "null"/"security-severity": "0"/g' snyk.sarif
   #       sed -i 's/"security-severity": "undefined"/"security-severity": "0"/g' snyk.sarif
   #   - name: Upload result to GitHub Code Scanning
-  #     uses: github/codeql-action/upload-sarif@4fa2a7953630fd2f3fb380f21be14ede0169dd4f # v3.25.12
+  #     uses: github/codeql-action/upload-sarif@2d790406f505036ef40ecba973cc774a50395aac # v3.25.13
   #     with:
   #       sarif_file: snyk.sarif
