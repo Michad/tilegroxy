@@ -1,0 +1,13 @@
+dirs:
+  - .
+useGitIgnore: true
+ignorePatterns:
+  - pattern: "^http://example\\.(net|com|org|edu)"
+  - pattern: "example\\.md$"
+  - pattern: "^https://example\\.(net|com|org|edu)"
+  - pattern: "^https://s3.*\\.amazonaws\\.com"
+aliveStatusCodes:
+  - 200
+  - 201
+  - 204
+  - 304
