@@ -9,8 +9,6 @@ Tilegroxy lives between your map and your mapping providers to deliver a consist
 💡 Inspired by [tilestache](https://github.com/tilestache/tilestache)   
 🛠️ This project is still a work in progress. Changes may occur prior to the 1.0 release.
 
-[test link](http://fakewebsitethatisntrealsafjlkasjflak.com/test)
-
 ## Why tilegroxy?
 
 Tilegroxy shines when you consume maps from multiple sources.  It isn't tied to any one mapping backend and can pull data from any protocol, whether the standard alphabet soup or a proprietary, authenticated API. Rather than make your frontend aware of every single vendor and exposing your keys, utilize tilegroxy and provide a uniform API with a configuration-driven backend that can be augmented by code when necessary.  
