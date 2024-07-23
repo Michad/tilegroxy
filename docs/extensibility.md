@@ -18,7 +18,7 @@ Custom caches are not currently possible. This is because it's most likely you w
 
 For cases where the built-in providers don't suffice, you can write your own custom providers.
 
-Example custom providers can be found within [examples/providers](./examples/providers/).   
+Example custom providers can be found within [examples/providers](../examples/providers/).   
 
 Custom providers must be within the `custom` package and must import the `tilegroxy/tilegroxy` package for mandatory datatypes. There are two mandatory functions:
 
@@ -36,14 +36,14 @@ The following types are available for custom providers:
 
 | Type | Description |
 | --- | --- |
-| [RequestContext](./internal/request_context.go) | Contains contextual information specific to the incoming request. Can retrieve headers via the Value method and authz information if configured properly. Do note there won't be a request when seed and test commands are run, this context will be a "Background Context" at those times |
-| [ProviderContext](./internal/layers/provider.go) | A struct for on the fly, provider-specific information. It is primarily used to facilitate authentication. Includes an Expiration field to inform the application when to re-auth via the preAuth method (this should occur before auth actually expires). Also includes an auth token field, a auth Bypass field (for un-authed usecases), and a map |
-| [TileRequest](./internal/tile_request.go) | The parameters from the user indicating the layer being requested as well as the specific tile coordinate |
-| [ClientConfig](./internal/config/config.go) | A struct from the configuration which indicates settings such as static headers and timeouts. See `Client` in [Configuration documentation](./docs/configuration.md) for details |
-| [ErrorMessages](./internal/config/config.go) | A struct from the configuration which indicates common error messages. See `Error Messages` in [Configuration documentation](./docs/configuration.md) for details |
-| [Image](./internal/utility.go) | The imagery for a given tile. Currently type mapped to []byte |
-| [AuthError](./internal/layers/provider.go) | An Error type to indicate an upstream provider returned an auth error that should trigger a new call to preAuth |
-| [GetTile](./internal/layers/provider.go) | A utility method that performs an HTTP GET request to a given URL. Use this when possible to ensure all standard Client configurations are honored |
+| [RequestContext](../pkg/request_context.go) | Contains contextual information specific to the incoming request. Can retrieve headers via the Value method and authz information if configured properly. Do note there won't be a request when seed and test commands are run, this context will be a "Background Context" at those times |
+| [ProviderContext](../pkg/entities/layer/provider.go) | A struct for on the fly, provider-specific information. It is primarily used to facilitate authentication. Includes an Expiration field to inform the application when to re-auth via the preAuth method (this should occur before auth actually expires). Also includes an auth token field, a auth Bypass field (for un-authed usecases), and a map |
+| [TileRequest](../pkg/tile_request.go) | The parameters from the user indicating the layer being requested as well as the specific tile coordinate |
+| [ClientConfig](../pkg/config/config.go) | A struct from the configuration which indicates settings such as static headers and timeouts. See `Client` in [Configuration documentation](./configuration.md) for details |
+| [ErrorMessages](../pkg/config/config.go) | A struct from the configuration which indicates common error messages. See `Error Messages` in [Configuration documentation](./configuration.md) for details |
+| [Image](../pkg/utility.go) | The imagery for a given tile. Currently type mapped to []byte |
+| [AuthError](../pkg/entities/layer/provider.go) | An Error type to indicate an upstream provider returned an auth error that should trigger a new call to preAuth |
+| [GetTile](../internal/providers/utility.go) | A utility method that performs an HTTP GET request to a given URL. Use this when possible to ensure all standard Client configurations are honored |
 
 ### Custom Authentication
 
