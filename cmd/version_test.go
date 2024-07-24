@@ -33,7 +33,6 @@ func Test_ExecuteVersionCommand(t *testing.T) {
 	b := bytes.NewBufferString("")
 	cmd.SetOutput(b)
 	cmd.SetArgs([]string{"version", "--json"})
-	
 	cmd.Execute()
 
 	out, err := io.ReadAll(b)
