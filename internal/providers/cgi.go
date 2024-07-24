@@ -32,14 +32,14 @@ import (
 )
 
 type CGIConfig struct {
-	Exec           string              //The path to the CGI executable
-	Args           []string            //Arguments to pass into the executable in standard "split on spaces" format
-	Uri            string              //The URI (path + query) to pass into the CGI for the fake request - think mod_rewrite style invocation of the CGI
-	Domain         string              //The host to pass into the CGI for the fake request. Defaults to localhost
-	Headers        map[string][]string //Extra headers to pass into the CGI for the fake request
-	Env            map[string]string   //Environment variables to supply to the CGI invocations. If the value is an empty string it passes along the value from the main tilegroxy invocation
-	WorkingDir     string              //Working directory for the CGI invocation
-	InvalidAsError bool                //If true, if the CGI response includes a content type that isn't in the Client's list of acceptable content types then it treats the response body as an error message
+	Exec           string              // The path to the CGI executable
+	Args           []string            // Arguments to pass into the executable in standard "split on spaces" format
+	Uri            string              // The URI (path + query) to pass into the CGI for the fake request - think mod_rewrite style invocation of the CGI
+	Domain         string              // The host to pass into the CGI for the fake request. Defaults to localhost
+	Headers        map[string][]string // Extra headers to pass into the CGI for the fake request
+	Env            map[string]string   // Environment variables to supply to the CGI invocations. If the value is an empty string it passes along the value from the main tilegroxy invocation
+	WorkingDir     string              // Working directory for the CGI invocation
+	InvalidAsError bool                // If true, if the CGI response includes a content type that isn't in the Client's list of acceptable content types then it treats the response body as an error message
 }
 
 type CGI struct {

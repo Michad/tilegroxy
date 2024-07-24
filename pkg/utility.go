@@ -25,7 +25,6 @@ import (
 
 type Image = []byte
 
-
 func ParseZoomString(str string) ([]int, error) {
 	const errorMessage = "could not parse zoom %v"
 

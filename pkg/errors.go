@@ -24,15 +24,15 @@ import (
 type TypeOfError int
 
 const (
-	//Indicates an error with the geographic extent or tile coordinates requested. Generally a 400
+	// Indicates an error with the geographic extent or tile coordinates requested. Generally a 400
 	TypeOfErrorBounds = iota
-	//Indicates an authentication related issue - note this is incoming auth, not outgoing auth. Generally a 401
+	// Indicates an authentication related issue - note this is incoming auth, not outgoing auth. Generally a 401
 	TypeOfErrorAuth
-	//Indicates a provider did something unexpected. Maybe the API we're calling is down. Generally a 500
+	// Indicates a provider did something unexpected. Maybe the API we're calling is down. Generally a 500
 	TypeOfErrorProvider
-	//Indicates something wrong with the incoming request besides what's covered in bounds
+	// Indicates something wrong with the incoming request besides what's covered in bounds
 	TypeOfErrorBadRequest
-	//Indicates something that doesn't fall into the above categories. This is usually a real problem that the operator needs to be aware of. Generally a 500
+	// Indicates something that doesn't fall into the above categories. This is usually a real problem that the operator needs to be aware of. Generally a 500
 	TypeOfErrorOther
 )
 

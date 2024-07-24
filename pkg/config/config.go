@@ -27,33 +27,33 @@ import (
 
 // Configuration for TLS (HTTPS) operation. If this is configured then TLS is enabled. This can operate either with a static certificate and keyfile via the filesystem or via ACME/Let's Encrypt
 type EncryptionConfig struct {
-	Domain      string //The domain name you're operating with (the domain end-users use). Required
-	Cache       string //The path to a directory to cache certificates in if using let's encrypt. Defaults to ./certs
-	Certificate string //The file path to get to the TLS certificate
-	KeyFile     string //The file path to get to the keyfile
-	HttpPort    int    //The port used for non-encrypted traffic. Required if using Let's Encrypt for ACME challenge and needs to indirectly be 80 (that is, it could be 8080 if something else redirects 80 to 8080). Everything except .well-known will be redirected to the main port when set.
+	Domain      string // The domain name you're operating with (the domain end-users use). Required
+	Cache       string // The path to a directory to cache certificates in if using let's encrypt. Defaults to ./certs
+	Certificate string // The file path to get to the TLS certificate
+	KeyFile     string // The file path to get to the keyfile
+	HttpPort    int    // The port used for non-encrypted traffic. Required if using Let's Encrypt for ACME challenge and needs to indirectly be 80 (that is, it could be 8080 if something else redirects 80 to 8080). Everything except .well-known will be redirected to the main port when set.
 }
 
 type ServerConfig struct {
-	Encrypt    *EncryptionConfig //Whether and how to use TLS. Defaults to none AKA no encryption.
-	BindHost   string            //IP address to bind HTTP server to
-	Port       int               //Port to bind HTTP server to
-	RootPath   string            //Root HTTP Path to apply to all endpoints. Defaults to /
-	TilePath   string            //HTTP Path to serve tiles under (in addition to RootPath). Defaults to tiles which means /tiles/{layer}/{z}/{x}/{y}.
-	Headers    map[string]string //Include these headers in all response from server
-	Production bool              //Controls serving splash page, documentation, x-powered-by header. Defaults to false, set true to harden for prod
-	Timeout    uint              //How long (in seconds) a request can be in flight before we cancel it and return an error
-	Gzip       bool              //Whether to apply gzip compression. Not super helpful when just serving up raster images
+	Encrypt    *EncryptionConfig // Whether and how to use TLS. Defaults to none AKA no encryption.
+	BindHost   string            // IP address to bind HTTP server to
+	Port       int               // Port to bind HTTP server to
+	RootPath   string            // Root HTTP Path to apply to all endpoints. Defaults to /
+	TilePath   string            // HTTP Path to serve tiles under (in addition to RootPath). Defaults to tiles which means /tiles/{layer}/{z}/{x}/{y}.
+	Headers    map[string]string // Include these headers in all response from server
+	Production bool              // Controls serving splash page, documentation, x-powered-by header. Defaults to false, set true to harden for prod
+	Timeout    uint              // How long (in seconds) a request can be in flight before we cancel it and return an error
+	Gzip       bool              // Whether to apply gzip compression. Not super helpful when just serving up raster images
 }
 
 type ClientConfig struct {
-	UserAgent     string            //The user agent to include in outgoing http requests. Separate from Headers to avoid omitting this.
-	MaxLength     int               //The maximum Content-Length to allow incoming responses. Default: 10 Megabytes
-	UnknownLength bool              //If true, allow responses that are missing a Content-Length header, this could lead to memory overruns. Default: false
-	ContentTypes  []string          //The content-types to allow servers to return. Anything else will be interpreted as an error
-	StatusCodes   []int             //The status codes from the remote server to consider successful.  Defaults to just 200
-	Headers       map[string]string //Include these headers in requests. Defaults to none
-	Timeout       uint              //How long (in seconds) a request can be in flight before we cancel it and return an error
+	UserAgent     string            // The user agent to include in outgoing http requests. Separate from Headers to avoid omitting this.
+	MaxLength     int               // The maximum Content-Length to allow incoming responses. Default: 10 Megabytes
+	UnknownLength bool              // If true, allow responses that are missing a Content-Length header, this could lead to memory overruns. Default: false
+	ContentTypes  []string          // The content-types to allow servers to return. Anything else will be interpreted as an error
+	StatusCodes   []int             // The status codes from the remote server to consider successful.  Defaults to just 200
+	Headers       map[string]string // Include these headers in requests. Defaults to none
+	Timeout       uint              // How long (in seconds) a request can be in flight before we cancel it and return an error
 }
 
 // TODO: handle this better. Not foolproof in detecting default values and very manual. Probably need to do a mapstructure method for this
@@ -77,10 +77,10 @@ func (c *ClientConfig) MergeDefaultsFrom(o ClientConfig) {
 
 // Modes for error reporting
 const (
-	ModeErrorPlainText   = "text"         //Response will be text/plain with the error message in the body
-	ModeErrorNoError     = "none"         //Response will not include any data but will return status code.
-	ModeErrorImage       = "image"        //Response will return an image but not the error itself
-	ModeErrorImageHeader = "image+header" //Response will return an image and include the error inside x-error-message
+	ModeErrorPlainText   = "text"         // Response will be text/plain with the error message in the body
+	ModeErrorNoError     = "none"         // Response will not include any data but will return status code.
+	ModeErrorImage       = "image"        // Response will return an image but not the error itself
+	ModeErrorImageHeader = "image+header" // Response will return an image and include the error inside x-error-message
 )
 
 // This is a poor-man's i8n solution. It allows replacing the error messages our app generates in the main `serve` mode.
@@ -103,17 +103,17 @@ type ErrorMessages struct {
 
 // Selects what image to return when various errors occur. These should either be an embedded:XXX value reflecting an image in `internal/layers/images` or the path to an image in the runtime filesystem
 type ErrorImages struct {
-	OutOfBounds    string //A request for a zoom level or tile coordinate that's invalid for the requested layer
-	Authentication string //Auth failed
-	Provider       string //Provider specific errors
-	Other          string //Catch-all for unexpected system errors
+	OutOfBounds    string // A request for a zoom level or tile coordinate that's invalid for the requested layer
+	Authentication string // Auth failed
+	Provider       string // Provider specific errors
+	Other          string // Catch-all for unexpected system errors
 }
 
 type ErrorConfig struct {
-	Mode     string        //How errors should be returned.  See the consts above for options
-	Messages ErrorMessages //Patterns to use for error messages in logs and responses. Not used for utility commands.
-	Images   ErrorImages   //Only used if Mode is image or image+header
-	AlwaysOk bool          //If set we always return 200 regardless of what happens
+	Mode     string        // How errors should be returned.  See the consts above for options
+	Messages ErrorMessages // Patterns to use for error messages in logs and responses. Not used for utility commands.
+	Images   ErrorImages   // Only used if Mode is image or image+header
+	AlwaysOk bool          // If set we always return 200 regardless of what happens
 }
 
 // Formats for outputting the access log
@@ -123,9 +123,9 @@ const (
 )
 
 type AccessConfig struct {
-	Console bool   //If true, write access logs to standard out. Defaults to true
-	Path    string //The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth. Defaults to none
-	Format  string //The format to output access logs in. Applies to both standard out and file out. Possible values: common, combined. Defaults to common
+	Console bool   // If true, write access logs to standard out. Defaults to true
+	Path    string // The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth. Defaults to none
+	Format  string // The format to output access logs in. Applies to both standard out and file out. Possible values: common, combined. Defaults to common
 }
 
 // Formats for outputting the main log
@@ -143,12 +143,12 @@ var CustomLogLevel = map[string]slog.Level{
 }
 
 type MainConfig struct {
-	Console bool     //If true, write access logs to standard out. Defaults to true
-	Path    string   //The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth. Defaults to none
-	Format  string   //The format to output access logs in. Applies to both standard out and file out. Possible values: plain, json. Defaults to plain
-	Level   string   //logging level. one of: debug, info, warn, error, trace, absurd
-	Request string   //Can be "true", "false" or "auto". If false, don't include any extra attributes based on request parameters (excluding the ones requested below). If auto (default) it defaults true if format is json, false otherwise
-	Headers []string //Headers to include in the logs. Useful for a transaction/request/trace/correlation ID or user identifiers
+	Console bool     // If true, write access logs to standard out. Defaults to true
+	Path    string   // The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth. Defaults to none
+	Format  string   // The format to output access logs in. Applies to both standard out and file out. Possible values: plain, json. Defaults to plain
+	Level   string   // logging level. one of: debug, info, warn, error, trace, absurd
+	Request string   // Can be "true", "false" or "auto". If false, don't include any extra attributes based on request parameters (excluding the ones requested below). If auto (default) it defaults true if format is json, false otherwise
+	Headers []string // Headers to include in the logs. Useful for a transaction/request/trace/correlation ID or user identifiers
 }
 
 type LogConfig struct {
@@ -158,12 +158,12 @@ type LogConfig struct {
 
 // Defines a layer to be served up by the application
 type LayerConfig struct {
-	Id             string            //A distinct identifier for this layer. If no pattern is defined this is used to match against the layer name. Also used
-	Pattern        string            //A pattern to match against for layer names in incoming requests. Includes placeholders from which values can be extracted when matching. Not regular expressions, placeholders are simply wrapped in curly braces
-	ParamValidator map[string]string //A mapping of regular expressions to use for each value extracted from the pattern. Keys must match the placeholders in pattern. This is external from the pattern itself to keep parsing the pattern simple and less error prone. If a key of "*" is defined it applies to all placeholders
-	Provider       map[string]any    //Raw config parameters for the provider to use. Name determines the specific schema
-	SkipCache      bool              //If true, don't use the cache
-	Client         *ClientConfig     //If specified, the default Client is overridden.
+	Id             string            // A distinct identifier for this layer. If no pattern is defined this is used to match against the layer name. Also used
+	Pattern        string            // A pattern to match against for layer names in incoming requests. Includes placeholders from which values can be extracted when matching. Not regular expressions, placeholders are simply wrapped in curly braces
+	ParamValidator map[string]string // A mapping of regular expressions to use for each value extracted from the pattern. Keys must match the placeholders in pattern. This is external from the pattern itself to keep parsing the pattern simple and less error prone. If a key of "*" is defined it applies to all placeholders
+	Provider       map[string]any    // Raw config parameters for the provider to use. Name determines the specific schema
+	SkipCache      bool              // If true, don't use the cache
+	Client         *ClientConfig     // If specified, the default Client is overridden.
 }
 
 type Config struct {

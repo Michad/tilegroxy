@@ -56,7 +56,7 @@ func Test_WriteErrorMessage_Execute(t *testing.T) {
 	assert.Empty(t, b)
 
 	cfg.Error.Mode = config.ModeErrorImage
-	cfg.Error.Images.Other = "safjakslfjaslkfj" //Invalid
+	cfg.Error.Images.Other = "safjakslfjaslkfj" // Invalid
 	writeErrorMessage(ctx, rw, &cfg.Error, pkg.TypeOfErrorOther, "test", "test", nil)
 	r = rw.Result()
 	assert.Equal(t, 500, r.StatusCode)

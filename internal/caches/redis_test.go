@@ -30,7 +30,7 @@ import (
 )
 
 func init() {
-	//This is a hack to help with vscode test execution. Put a .env in repo root w/ anything you need for test containers
+	// This is a hack to help with vscode test execution. Put a .env in repo root w/ anything you need for test containers
 	if env, err := os.ReadFile("../../.env"); err == nil {
 		envs := strings.Split(string(env), "\n")
 		for _, e := range envs {

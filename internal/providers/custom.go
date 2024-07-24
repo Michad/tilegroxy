@@ -28,7 +28,7 @@ import (
 
 type CustomConfig struct {
 	File   string
-	Script string                 //Contains the go code of the provider inline.
+	Script string                 // Contains the go code of the provider inline.
 	Params map[string]interface{} `mapstructure:",remain"`
 }
 

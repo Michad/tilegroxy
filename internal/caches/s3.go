@@ -44,8 +44,8 @@ type S3Config struct {
 	Path         string
 	Profile      string
 	StorageClass string
-	Endpoint     string //For directory buckets or non-s3
-	UsePathStyle bool   //For testing purposes and maybe real non-S3 usage
+	Endpoint     string // For directory buckets or non-s3
+	UsePathStyle bool   // For testing purposes and maybe real non-S3 usage
 }
 
 type S3 struct {
@@ -76,7 +76,7 @@ func (s S3Registration) Initialize(configAny any, errorMessages config.ErrorMess
 		return nil, fmt.Errorf(errorMessages.ParamsBothOrNeither, "cache.s3.access", "cache.s3.secret")
 	}
 
-	//Ensure path doesn't start with / but does end with one
+	// Ensure path doesn't start with / but does end with one
 	if strings.Index(config.Path, "/") == 0 && len(config.Path) > 0 {
 		config.Path = config.Path[1:]
 	}
@@ -154,7 +154,7 @@ func (c S3) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
 	if err != nil {
 		var requestFailure *types.NoSuchKey
 		if errors.As(err, &requestFailure) {
-			//Simple cache miss
+			// Simple cache miss
 			return nil, nil
 		}
 

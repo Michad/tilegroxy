@@ -38,14 +38,14 @@ const (
 var AllModes = []string{ModeStandalone, ModeCluster, ModeRing}
 
 type RedisConfig struct {
-	HostAndPort `mapstructure:",squash"` //Host and Port for a single server. A convenience equivalent to supplying Servers with a single entry
-	Db          int                      //Database number, defaults to 0
-	KeyPrefix   string                   //Prefix to keynames stored in cache
-	Username    string                   //Username to use to authenticate
-	Password    string                   //Password to use to authenticate
-	Mode        string                   //Controls operating mode. One of AllModes. Defaults to standalone
-	Ttl         uint32                   //Cache expiration in seconds. Max of 1 year. Default to 1 day
-	Servers     []HostAndPort            //The list of servers to use.
+	HostAndPort `mapstructure:",squash"` // Host and Port for a single server. A convenience equivalent to supplying Servers with a single entry
+	Db          int                      // Database number, defaults to 0
+	KeyPrefix   string                   // Prefix to keynames stored in cache
+	Username    string                   // Username to use to authenticate
+	Password    string                   // Password to use to authenticate
+	Mode        string                   // Controls operating mode. One of AllModes. Defaults to standalone
+	Ttl         uint32                   // Cache expiration in seconds. Max of 1 year. Default to 1 day
+	Servers     []HostAndPort            // The list of servers to use.
 }
 
 const (
@@ -129,7 +129,7 @@ func (s RedisRegistration) Initialize(configAny any, errorMessages config.ErrorM
 		})
 	} else if config.Mode == ModeRing {
 		if len(config.Servers) < 2 {
-			//Not the best error message but the typical user of this should be able to figure it out
+			// Not the best error message but the typical user of this should be able to figure it out
 			return nil, fmt.Errorf(errorMessages.InvalidParam, "length(cache.redis.servers)", len(config.Servers))
 		}
 

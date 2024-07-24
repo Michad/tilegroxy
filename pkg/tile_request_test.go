@@ -186,7 +186,7 @@ func FuzzToBoundsAndBack(f *testing.F) {
 		b, err := orig.GetBounds()
 		assert.NoError(t, err)
 
-		//Small delta to avoid floating point rounding errors causing an extra tile
+		// Small delta to avoid floating point rounding errors causing an extra tile
 		b.West += 0.000000001
 		b.South += 0.000000001
 		b.East -= 0.000000001

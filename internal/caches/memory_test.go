@@ -49,4 +49,4 @@ func TestTtl(t *testing.T) {
 	validateNoLookup(t, r, tile)
 }
 
-//We intentionally don't test the maxsize property as the otter library doesn't offer guarantees on how capacity settings are honored.  See https://github.com/maypok86/otter/issues/88 for more details
+// We intentionally don't test the maxsize property as the otter library doesn't offer guarantees on how capacity settings are honored.  See https://github.com/maypok86/otter/issues/88 for more details

@@ -40,7 +40,7 @@ import (
 func init() {
 	server.InterruptFlags = append(server.InterruptFlags, syscall.SIGUSR1)
 
-	//This is a hack to help with vscode test execution. Put a .env in repo root w/ anything you need for test containers
+	// This is a hack to help with vscode test execution. Put a .env in repo root w/ anything you need for test containers
 	if env, err := os.ReadFile("../.env"); err == nil {
 		envs := strings.Split(string(env), "\n")
 		for _, e := range envs {
@@ -61,7 +61,7 @@ func coreServeTest(cfg string, port int, url string) (*http.Response, func(), er
 
 	rootCmd.SetArgs([]string{"serve", "--raw-config", cfg})
 
-	//This isn't proper goroutine practice but done this way since we only care about errors that happen at startup of the server
+	// This isn't proper goroutine practice but done this way since we only care about errors that happen at startup of the server
 	var bindErr error
 	exited := false
 

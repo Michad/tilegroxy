@@ -55,7 +55,7 @@ func TestGoodJwts(t *testing.T) {
 	jwtConfig := JwtConfig{
 		Algorithm:     "HS256",
 		Key:           "hunter2",
-		MaxExpiration: 4294967295, //136 years from now
+		MaxExpiration: 4294967295, // 136 years from now
 	}
 	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
 
@@ -69,7 +69,7 @@ func TestGoodJwts(t *testing.T) {
 		return
 	}
 
-	req.Header["Authorization"] = []string{"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjMwMDAwMDAwMDB9.npKpCaeyhdn-CsbEc_AuPz3Nkmpeh6K73SYCaBMqWoE"} //Valid JWT with same key with expiration in the distant future
+	req.Header["Authorization"] = []string{"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjMwMDAwMDAwMDB9.npKpCaeyhdn-CsbEc_AuPz3Nkmpeh6K73SYCaBMqWoE"} // Valid JWT with same key with expiration in the distant future
 	assert.True(t, jwt.CheckAuthentication(req, pkg.BackgroundContext()))
 }
 
@@ -93,13 +93,13 @@ func TestBadJwts(t *testing.T) {
 	req.Header["Authorization"] = []string{"unparseable"}
 	assert.False(t, jwt.CheckAuthentication(req, pkg.BackgroundContext()))
 
-	req.Header["Authorization"] = []string{"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.TsbkW6Baw6npF0SUva-SdB9gZ9MLtLFUMu3BtUnspzk"} //Valid JWT but with a different key
+	req.Header["Authorization"] = []string{"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.TsbkW6Baw6npF0SUva-SdB9gZ9MLtLFUMu3BtUnspzk"} // Valid JWT but with a different key
 	assert.False(t, jwt.CheckAuthentication(req, pkg.BackgroundContext()))
 
-	req.Header["Authorization"] = []string{"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.sCuKLbsVsWuzV45ZtOEslD0WHPyPYa4gkEBZNP084os"} //Valid JWT with same key but no expiration
+	req.Header["Authorization"] = []string{"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.sCuKLbsVsWuzV45ZtOEslD0WHPyPYa4gkEBZNP084os"} // Valid JWT with same key but no expiration
 	assert.False(t, jwt.CheckAuthentication(req, pkg.BackgroundContext()))
 
-	req.Header["Authorization"] = []string{"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjMwMDAwMDAwMDB9.npKpCaeyhdn-CsbEc_AuPz3Nkmpeh6K73SYCaBMqWoE"} //Valid JWT with same key with expiration in the distant future
+	req.Header["Authorization"] = []string{"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjMwMDAwMDAwMDB9.npKpCaeyhdn-CsbEc_AuPz3Nkmpeh6K73SYCaBMqWoE"} // Valid JWT with same key with expiration in the distant future
 	assert.False(t, jwt.CheckAuthentication(req, pkg.BackgroundContext()))
 }
 
@@ -107,7 +107,7 @@ func TestGoodJwtClaims(t *testing.T) {
 	jwtConfig := JwtConfig{
 		Algorithm:        "HS256",
 		Key:              "hunter2",
-		MaxExpiration:    4294967295, //136 years from now
+		MaxExpiration:    4294967295, // 136 years from now
 		ExpectedAudience: "audience",
 		ExpectedSubject:  "subject",
 		ExpectedIssuer:   "issuer",
@@ -125,7 +125,7 @@ func TestGoodJwtClaims(t *testing.T) {
 		return
 	}
 
-	req.Header["Authorization"] = []string{"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdWJqZWN0IiwiYXVkIjoiYXVkaWVuY2UiLCJpc3MiOiJpc3N1ZXIiLCJzY29wZSI6InNvbWV0aGluZyB0aWxlIG90aGVyIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjQyOTQ5NjcyOTV9.6jOBwjsvFcJXGkaleXB-75F6J3CjaQYuRELJPfvOfQE"} //Valid JWT with all claims
+	req.Header["Authorization"] = []string{"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdWJqZWN0IiwiYXVkIjoiYXVkaWVuY2UiLCJpc3MiOiJpc3N1ZXIiLCJzY29wZSI6InNvbWV0aGluZyB0aWxlIG90aGVyIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjQyOTQ5NjcyOTV9.6jOBwjsvFcJXGkaleXB-75F6J3CjaQYuRELJPfvOfQE"} // Valid JWT with all claims
 	assert.True(t, jwt.CheckAuthentication(req, pkg.BackgroundContext()))
 }
 
@@ -133,7 +133,7 @@ func TestGoodJwtClaimsWithCache(t *testing.T) {
 	jwtConfig := JwtConfig{
 		Algorithm:        "HS256",
 		Key:              "hunter2",
-		MaxExpiration:    4294967295, //136 years from now
+		MaxExpiration:    4294967295, // 136 years from now
 		ExpectedAudience: "audience",
 		ExpectedSubject:  "subject",
 		ExpectedIssuer:   "issuer",
@@ -153,7 +153,7 @@ func TestGoodJwtClaimsWithCache(t *testing.T) {
 		return
 	}
 
-	req.Header["Authorization"] = []string{"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdWJqZWN0IiwiYXVkIjoiYXVkaWVuY2UiLCJpc3MiOiJpc3N1ZXIiLCJzY29wZSI6InNvbWV0aGluZyB0aWxlIG90aGVyIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjQyOTQ5NjcyOTV9.6jOBwjsvFcJXGkaleXB-75F6J3CjaQYuRELJPfvOfQE"} //Valid JWT with all claims
+	req.Header["Authorization"] = []string{"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdWJqZWN0IiwiYXVkIjoiYXVkaWVuY2UiLCJpc3MiOiJpc3N1ZXIiLCJzY29wZSI6InNvbWV0aGluZyB0aWxlIG90aGVyIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjQyOTQ5NjcyOTV9.6jOBwjsvFcJXGkaleXB-75F6J3CjaQYuRELJPfvOfQE"} // Valid JWT with all claims
 	assert.True(t, jwt.CheckAuthentication(req, pkg.BackgroundContext()))
 	assert.True(t, jwt.CheckAuthentication(req, pkg.BackgroundContext()))
 
@@ -167,7 +167,7 @@ func TestGoodJwtScopeLimit(t *testing.T) {
 	jwtConfig := JwtConfig{
 		Algorithm:     "HS256",
 		Key:           "hunter2",
-		MaxExpiration: 4294967295, //136 years from now
+		MaxExpiration: 4294967295, // 136 years from now
 		LayerScope:    true,
 		ScopePrefix:   "tile/",
 		UserId:        "name",
@@ -186,7 +186,7 @@ func TestGoodJwtScopeLimit(t *testing.T) {
 
 	ctx := pkg.BackgroundContext()
 
-	req.Header["Authorization"] = []string{"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdWJqZWN0IiwiYXVkIjoiYXVkaWVuY2UiLCJpc3MiOiJpc3N1ZXIiLCJzY29wZSI6InRpbGUvdGVzdCIsIm5hbWUiOiJKb2huIERvZSIsImlhdCI6MTUxNjIzOTAyMiwiZXhwIjo0Mjk0OTY3Mjk1fQ.j_-4ERnaVdkscbfjMKavieAtVH7GhZIBr5kwnKNHEAI"} //Valid JWT with scope=tile/test
+	req.Header["Authorization"] = []string{"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdWJqZWN0IiwiYXVkIjoiYXVkaWVuY2UiLCJpc3MiOiJpc3N1ZXIiLCJzY29wZSI6InRpbGUvdGVzdCIsIm5hbWUiOiJKb2huIERvZSIsImlhdCI6MTUxNjIzOTAyMiwiZXhwIjo0Mjk0OTY3Mjk1fQ.j_-4ERnaVdkscbfjMKavieAtVH7GhZIBr5kwnKNHEAI"} // Valid JWT with scope=tile/test
 	assert.True(t, jwt.CheckAuthentication(req, ctx))
 
 	assert.True(t, ctx.LimitLayers)
@@ -202,7 +202,7 @@ func TestBadJwtClaims(t *testing.T) {
 	jwtConfig := JwtConfig{
 		Algorithm:        "HS256",
 		Key:              "hunter2",
-		MaxExpiration:    4294967295, //136 years from now
+		MaxExpiration:    4294967295, // 136 years from now
 		ExpectedAudience: "audience",
 		ExpectedSubject:  "subject",
 		ExpectedIssuer:   "issuer",
@@ -251,7 +251,7 @@ BZUXaiwMlBDaFQJBEsb3v0XrJ7H4/CRIipgRf6o/+SIv1FlPkgtyXmLMuWpM7iYA
 hBcM4yPXyRd2KGlrbwJ/m1VSNjCI6wRkyHvM8ZgYezOHBcvlHlPATPsPK9r+bN7k
 vxNWUY5rv006ZwPuWVEhno8CAwEAAQ==
 -----END PUBLIC KEY-----`,
-		MaxExpiration: 4294967295, //136 years from now
+		MaxExpiration: 4294967295, // 136 years from now
 	}
 	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
 
@@ -278,7 +278,7 @@ func TestGoodJwtClaimsES256(t *testing.T) {
 MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEMAa5en4smiUzzuOfKKjDrzGW+Hx2
 rqGjrzwgkmGypGsfnplZv4okkdfUrPb0VX1PICa0vTotAH97umIvEDBB3Q==
 -----END PUBLIC KEY-----`,
-		MaxExpiration: 4294967295, //136 years from now
+		MaxExpiration: 4294967295, // 136 years from now
 	}
 	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
 
@@ -315,7 +315,7 @@ BZUXaiwMlBDaFQJBEsb3v0XrJ7H4/CRIipgRf6o/+SIv1FlPkgtyXmLMuWpM7iYA
 hBcM4yPXyRd2KGlrbwJ/m1VSNjCI6wRkyHvM8ZgYezOHBcvlHlPATPsPK9r+bN7k
 vxNWUY5rv006ZwPuWVEhno8CAwEAAQ==
 -----END PUBLIC KEY-----`,
-		MaxExpiration: 4294967295, //136 years from now
+		MaxExpiration: 4294967295, // 136 years from now
 	}
 	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
 
@@ -352,7 +352,7 @@ BZUXaiwMlBDaFQJBEsb3v0XrJ7H4/CRIipgRf6o/+SIv1FlPkgtyXmLMuWpM7iYA
 hBcM4yPXyRd2KGlrbwJ/m1VSNjCI6wRkyHvM8ZgYezOHBcvlHlPATPsPK9r+bN7k
 vxNWUY5rv006ZwPuWVEhno8CAwEAAQ==
 -----END PUBLIC KEY-----`,
-		MaxExpiration: 4294967295, //136 years from now
+		MaxExpiration: 4294967295, // 136 years from now
 	}
 	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
 

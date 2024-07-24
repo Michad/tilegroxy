@@ -32,9 +32,9 @@ const (
 
 type MemcacheConfig struct {
 	HostAndPort `mapstructure:",squash"`
-	Servers     []HostAndPort //The list of servers to use.
-	KeyPrefix   string        //Prefix to keynames stored in cache
-	Ttl         uint32        //Cache expiration in seconds. Max of 30 days. Default to 1 day
+	Servers     []HostAndPort // The list of servers to use.
+	KeyPrefix   string        // Prefix to keynames stored in cache
+	Ttl         uint32        // Cache expiration in seconds. Max of 30 days. Default to 1 day
 }
 
 type Memcache struct {

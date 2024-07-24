@@ -58,7 +58,7 @@ func runCreate(cmd *cobra.Command, args []string) {
 
 		if ext == ".json" {
 			forceJson = true
-		} //Check for extension being yaml isn't needed because we default to yaml
+		} // Check for extension being yaml isn't needed because we default to yaml
 	}
 
 	//TODO: populate example config here

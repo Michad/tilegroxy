@@ -72,7 +72,7 @@ func (t TileRequest) GetBounds() (*Bounds, error) {
 }
 
 func (t TileRequest) IntersectsBounds(b Bounds) (bool, error) {
-	//Treat null-island only bounds as everything
+	// Treat null-island only bounds as everything
 	if b.North == 0 && b.East == 0 && b.South == 0 && b.West == 0 {
 		return true, nil
 	}

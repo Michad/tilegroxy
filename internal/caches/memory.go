@@ -25,8 +25,8 @@ import (
 )
 
 type MemoryConfig struct {
-	MaxSize uint16 //Maximum number of tiles to hold in the cache. Defaults to 100
-	Ttl     uint32 //Maximum time to live of a tile in seconds. Defaults to 3600 (1 hour)
+	MaxSize uint16 // Maximum number of tiles to hold in the cache. Defaults to 100
+	Ttl     uint32 // Maximum time to live of a tile in seconds. Defaults to 3600 (1 hour)
 }
 
 type Memory struct {
