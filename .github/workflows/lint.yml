@@ -22,8 +22,8 @@ jobs:
           github_token: ${{ secrets.github_token }}
           reporter: github-pr-review
           fail_on_error: true
-  golintmandatory:
-    name: Go / Mandatory
+  golint:
+    name: Go
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -46,27 +46,9 @@ jobs:
           fail_on_error: true
           cache: false
           filter_mode: added
-      - uses: reviewdog/action-suggester@63b8f8cc21dfa052ac44436e65ed31edcffcb6c1 # v1.17.0
-        if: success() || failure()
-        with:
-          tool_name: Go Lint Issues 
-          github_token: ${{ secrets.github_token }}
-  golintsuggestion:
-    name: Go / Suggestions
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      checks: write
-      issues: write
-      pull-requests: write
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
-        with:
-          fetch-depth: 0
-          fetch-tags: true
       - name: Suggestions 
         uses: reviewdog/action-golangci-lint@7708105983c614f7a2725e2172908b7709d1c3e4 # v2.6.2
+        if: success() || failure()
         with:
           github_token: ${{ secrets.github_token }}
           golangci_lint_flags: "--fix --timeout 2m0s -E gocritic,godox,maintidx"
@@ -79,5 +61,5 @@ jobs:
       - uses: reviewdog/action-suggester@63b8f8cc21dfa052ac44436e65ed31edcffcb6c1 # v1.17.0
         if: success() || failure()
         with:
-          tool_name: Go Lint Suggestions 
+          tool_name: Go Lint Issues 
           github_token: ${{ secrets.github_token }}
