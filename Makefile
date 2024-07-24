@@ -30,6 +30,10 @@ libyears:
 	@go install github.com/nieomylnieja/go-libyear/cmd/go-libyear@latest
 	@go-libyear --json go.mod < /dev/null
 
+lint:
+	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.59.1
+	@golangci-lint run --fix -E asciicheck,bidichk,bodyclose,canonicalheader,dogsled,exhaustive,gocheckcompilerdirectives,gocritic,godox,gofmt,durationcheck,errname,errorlint,fatcontext,goheader,interfacebloat,intrange,maintidx,makezero,mirror,misspell,nonamedreturns,prealloc,predeclared,unconvert,wastedassign
+
 version:
 	@./${OUT} version --json
 
