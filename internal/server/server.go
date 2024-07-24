@@ -97,24 +97,28 @@ func writeErrorMessage(ctx *pkg.RequestContext, w http.ResponseWriter, cfg *conf
 
 	slog.Log(ctx, level, internalMessage, "stack", string(stack))
 
-	if cfg.Mode == config.ModeErrorPlainText {
+	switch cfg.Mode {
+	case config.ModeErrorPlainText:
 		w.WriteHeader(status)
-		w.Write([]byte(externalMessage))
-	} else if cfg.Mode == config.ModeErrorImageHeader || cfg.Mode == config.ModeErrorImage {
+		_, err := w.Write([]byte(externalMessage))
+		if err != nil {
+			slog.WarnContext(ctx, fmt.Sprintf("error writing error %v", err))
+		}
+	case config.ModeErrorImage, config.ModeErrorImageHeader:
 		if cfg.Mode == config.ModeErrorImageHeader {
-			w.Header().Add("x-error-message", externalMessage)
+			w.Header().Add("X-Error-Message", externalMessage)
 		}
 		w.WriteHeader(status)
 
 		img, err2 := images.GetStaticImage(imgPath)
-		if img != nil {
-			w.Write(*img)
+		if img != nil && err2 == nil {
+			_, err2 = w.Write(*img)
 		}
 
 		if err2 != nil {
 			slog.ErrorContext(ctx, err2.Error())
 		}
-	} else {
+	default:
 		w.WriteHeader(status)
 	}
 }
@@ -341,36 +345,7 @@ func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth au
 		slog.InfoContext(context.Background(), "Binding...")
 
 		if config.Server.Encrypt != nil {
-			httpPort := config.Server.Encrypt.HttpPort
-			httpHostPort := net.JoinHostPort(config.Server.BindHost, strconv.Itoa(httpPort))
-
-			if config.Server.Encrypt.Certificate != "" && config.Server.Encrypt.KeyFile != "" {
-				if httpPort != 0 {
-					go http.ListenAndServe(httpHostPort, httpRedirectHandler{protoAndHost: "https://" + config.Server.Encrypt.Domain})
-				}
-
-				srvErr <- srv.ListenAndServeTLS(config.Server.Encrypt.Certificate, config.Server.Encrypt.KeyFile)
-			} else {
-				// Let's Encrypt workflow
-				cacheDir := "certs"
-				if config.Server.Encrypt.Cache != "" {
-					cacheDir = config.Server.Encrypt.Cache
-				}
-
-				certManager := autocert.Manager{
-					Prompt:     autocert.AcceptTOS,
-					HostPolicy: autocert.HostWhitelist(config.Server.Encrypt.Domain),
-					Cache:      autocert.DirCache(cacheDir),
-				}
-
-				if httpPort != 0 {
-					go http.ListenAndServe(httpHostPort, certManager.HTTPHandler(nil))
-				}
-
-				srv.TLSConfig = certManager.TLSConfig()
-
-				srvErr <- srv.ListenAndServeTLS("", "")
-			}
+			listenAndServeTLS(config, srvErr, srv)
 		} else {
 			srvErr <- srv.ListenAndServe()
 		}
@@ -385,4 +360,40 @@ func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth au
 
 	err = srv.Shutdown(context.Background())
 	return err
+}
+
+func listenAndServeTLS(config *config.Config, srvErr chan error, srv *http.Server) {
+	httpPort := config.Server.Encrypt.HttpPort
+	httpHostPort := net.JoinHostPort(config.Server.BindHost, strconv.Itoa(httpPort))
+
+	if config.Server.Encrypt.Certificate != "" && config.Server.Encrypt.KeyFile != "" {
+		if httpPort != 0 {
+			go func() {
+				srvErr <- http.ListenAndServe(httpHostPort, httpRedirectHandler{protoAndHost: "https://" + config.Server.Encrypt.Domain})
+			}()
+		}
+
+		srvErr <- srv.ListenAndServeTLS(config.Server.Encrypt.Certificate, config.Server.Encrypt.KeyFile)
+	} else {
+		// Let's Encrypt workflow
+
+		cacheDir := "certs"
+		if config.Server.Encrypt.Cache != "" {
+			cacheDir = config.Server.Encrypt.Cache
+		}
+
+		certManager := autocert.Manager{
+			Prompt:     autocert.AcceptTOS,
+			HostPolicy: autocert.HostWhitelist(config.Server.Encrypt.Domain),
+			Cache:      autocert.DirCache(cacheDir),
+		}
+
+		if httpPort != 0 {
+			go func() { srvErr <- http.ListenAndServe(httpHostPort, certManager.HTTPHandler(nil)) }()
+		}
+
+		srv.TLSConfig = certManager.TLSConfig()
+
+		srvErr <- srv.ListenAndServeTLS("", "")
+	}
 }

@@ -18,20 +18,21 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_ParsePattern(t *testing.T) {
 	segments, err := parsePattern("hello")
 	assert.Equal(t, []layerSegment{{value: "hello", placeholder: false}}, segments)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	segments, err = parsePattern("{hello}")
 	assert.Equal(t, []layerSegment{{value: "hello", placeholder: true}}, segments)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	segments, err = parsePattern("{hello")
 	assert.Equal(t, []layerSegment{{value: "hello", placeholder: true}}, segments)
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	segments, err = parsePattern("pre{hello}suf")
 	assert.Equal(t, []layerSegment{
@@ -39,7 +40,7 @@ func Test_ParsePattern(t *testing.T) {
 		{value: "hello", placeholder: true},
 		{value: "suf", placeholder: false},
 	}, segments)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	segments, err = parsePattern("a{b}c{d}e{f}")
 	assert.Equal(t, []layerSegment{
@@ -50,15 +51,15 @@ func Test_ParsePattern(t *testing.T) {
 		{value: "e", placeholder: false},
 		{value: "f", placeholder: true},
 	}, segments)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	segments, err = parsePattern("")
 	assert.Equal(t, []layerSegment{}, segments)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	segments, err = parsePattern("}")
 	assert.Equal(t, []layerSegment{{value: "}", placeholder: false}}, segments)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	_, err = parsePattern("a{b}c{d}e{d}")
 	assert.Error(t, err)
@@ -82,7 +83,7 @@ func Test_MatchPattern(t *testing.T) {
 
 	doesMatch, matches := match(pattern, "aHELLOcWORLDeTEST")
 	assert.True(t, doesMatch)
-	assert.Equal(t, 3, len(matches))
+	assert.Len(t, matches, 3)
 	assert.Equal(t, "HELLO", matches["b"])
 	assert.Equal(t, "WORLD", matches["d"])
 	assert.Equal(t, "TEST", matches["f"])
@@ -92,7 +93,7 @@ func Test_MatchPattern(t *testing.T) {
 
 	doesMatch, matches = match(pattern, "aHELLOcWORLDe")
 	assert.True(t, doesMatch)
-	assert.Equal(t, 3, len(matches))
+	assert.Len(t, matches, 3)
 	assert.Equal(t, "HELLO", matches["b"])
 	assert.Equal(t, "WORLD", matches["d"])
 	assert.Equal(t, "", matches["f"])
@@ -107,7 +108,7 @@ func Test_MatchPattern(t *testing.T) {
 
 	doesMatch, matches = match(pattern, "HELLOcWORLDeTEST")
 	assert.True(t, doesMatch)
-	assert.Equal(t, 3, len(matches))
+	assert.Len(t, matches, 3)
 	assert.Equal(t, "HELLO", matches["b"])
 	assert.Equal(t, "WORLD", matches["d"])
 	assert.Equal(t, "TEST", matches["f"])
@@ -118,15 +119,15 @@ func Test_MatchPattern(t *testing.T) {
 
 	doesMatch, matches = match(pattern, "c")
 	assert.True(t, doesMatch)
-	assert.Equal(t, 0, len(matches))
+	assert.Empty(t, matches)
 
 	doesMatch, matches = match(pattern, "ac")
 	assert.False(t, doesMatch)
-	assert.Equal(t, 0, len(matches))
+	assert.Empty(t, matches)
 
 	doesMatch, matches = match(pattern, "ca")
 	assert.False(t, doesMatch)
-	assert.Equal(t, 0, len(matches))
+	assert.Empty(t, matches)
 }
 
 func Test_ValidateMatches(t *testing.T) {

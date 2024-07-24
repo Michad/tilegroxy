@@ -26,6 +26,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
@@ -51,7 +52,7 @@ func Test_SecretManager_Validate(t *testing.T) {
 		Profile: "sfjasklfjaslkfjla",
 	}, config.ErrorMessages{})
 
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, s)
 }
 
@@ -68,9 +69,7 @@ func Test_SecretManager_Execute(t *testing.T) {
 		ContainerRequest: req,
 		Started:          true,
 	})
-	if err != nil {
-		assert.NoError(t, err)
-	}
+	assert.NoError(t, err)
 	defer func(c testcontainers.Container, ctx context.Context) {
 		if err := c.Terminate(ctx); err != nil {
 			fmt.Println(err)
@@ -78,7 +77,7 @@ func Test_SecretManager_Execute(t *testing.T) {
 	}(c, ctx)
 
 	endpoint, err := c.PortEndpoint(ctx, nat.Port("4566/tcp"), "http")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	so, err := AWSSecretsManagerSecreter{}.Initialize(AWSSecretsManagerConfig{
 		Access:   "a",
@@ -88,21 +87,21 @@ func Test_SecretManager_Execute(t *testing.T) {
 	}, config.ErrorMessages{})
 	s := so.(*AWSSecretsManager)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = s.makeSecret("test", "test")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	v, err := s.Lookup("test")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "test", v)
 	v2, err := s.Lookup("test")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, v, v2)
 
 	err = s.makeSecret("test2", `{"key":"val"}`)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	v3, err := s.Lookup("test2:key")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "val", v3)
 
 	so, err = AWSSecretsManagerSecreter{}.Initialize(AWSSecretsManagerConfig{
@@ -112,10 +111,10 @@ func Test_SecretManager_Execute(t *testing.T) {
 		Endpoint: endpoint,
 		TTL:      -1,
 	}, config.ErrorMessages{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	s = so.(*AWSSecretsManager)
 
 	v4, err := s.Lookup("test2:key")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "val", v4)
 }

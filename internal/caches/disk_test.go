@@ -23,10 +23,10 @@ import (
 )
 
 func TestDisk(t *testing.T) {
-	dir, error := os.MkdirTemp("", "tilegroxy-test-disk")
+	dir, err := os.MkdirTemp("", "tilegroxy-test-disk")
 	defer os.RemoveAll(dir)
 
-	if !assert.Nil(t, error) {
+	if !assert.Nil(t, err) {
 		return
 	}
 

@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_ExecuteVersionCommand(t *testing.T) {
@@ -42,7 +43,7 @@ func Test_ExecuteVersionCommand(t *testing.T) {
 
 	var res map[string]string
 	err = json.Unmarshal(out, &res)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.NotEmpty(t, res["version"])
 	assert.NotEmpty(t, res["ref"])
@@ -68,7 +69,7 @@ func Test_ExecuteVersionCommandShort(t *testing.T) {
 
 	var res map[string]string
 	err = json.Unmarshal(out, &res)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.NotEmpty(t, res["version"])
 	assert.Empty(t, res["ref"])

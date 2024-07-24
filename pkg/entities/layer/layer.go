@@ -122,7 +122,7 @@ func constructValidation(raw map[string]string) (map[string]*regexp.Regexp, erro
 			v = "^" + v
 		}
 		if v[len(v)-1] != '$' {
-			v = v + "$"
+			v += "$"
 		}
 
 		res[k], err = regexp.Compile(v)

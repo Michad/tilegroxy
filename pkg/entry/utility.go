@@ -29,7 +29,7 @@ func configToEntities(cfg config.Config) (*layer.LayerGroup, authentication.Auth
 	cfg.Secret = pkg.ReplaceEnv(cfg.Secret)
 	secreter, err := secret.ConstructSecreter(cfg.Secret, cfg.Error.Messages)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error constructing secret: %v", err)
+		return nil, nil, fmt.Errorf("error constructing secret: %w", err)
 	}
 
 	cfg.Cache = pkg.ReplaceEnv(cfg.Cache)
@@ -40,7 +40,7 @@ func configToEntities(cfg config.Config) (*layer.LayerGroup, authentication.Auth
 
 	cache, err := cache.ConstructCache(cfg.Cache, cfg.Error.Messages)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error constructing cache: %v", err)
+		return nil, nil, fmt.Errorf("error constructing cache: %w", err)
 	}
 
 	cfg.Authentication = pkg.ReplaceEnv(cfg.Authentication)
@@ -51,12 +51,12 @@ func configToEntities(cfg config.Config) (*layer.LayerGroup, authentication.Auth
 
 	auth, err := authentication.ConstructAuth(cfg.Authentication, cfg.Error.Messages)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error constructing auth: %v", err)
+		return nil, nil, fmt.Errorf("error constructing auth: %w", err)
 	}
 
 	layerGroup, err := layer.ConstructLayerGroup(cfg, cfg.Layers, cache, secreter)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error constructing layers: %v", err)
+		return nil, nil, fmt.Errorf("error constructing layers: %w", err)
 	}
 
 	return layerGroup, auth, err

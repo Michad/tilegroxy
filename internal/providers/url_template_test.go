@@ -23,6 +23,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TODO: change this to something less likely to change
@@ -38,7 +39,7 @@ func Test_UrlTemplateExecute(t *testing.T) {
 	p, err := UrlTemplateRegistration{}.Initialize(UrlTemplateConfig{Template: testTemplate}, config.ClientConfig{StatusCodes: []int{200}, MaxLength: 2000, ContentTypes: []string{"image/png"}, UnknownLength: true}, testErrMessages, nil)
 
 	assert.NotNil(t, p)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	pc, err := p.PreAuth(pkg.BackgroundContext(), layer.ProviderContext{})
 	assert.NotNil(t, pc)
@@ -53,7 +54,7 @@ func Test_UrlTemplateConfigOptions(t *testing.T) {
 	var clientConfig = config.ClientConfig{StatusCodes: []int{400}, MaxLength: 2000, ContentTypes: []string{"image/png"}, UnknownLength: true}
 	p, err := UrlTemplateRegistration{}.Initialize(UrlTemplateConfig{Template: testTemplate}, clientConfig, testErrMessages, nil)
 	assert.NotNil(t, p)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	img, err := p.GenerateTile(pkg.BackgroundContext(), layer.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 6, X: 10, Y: 10})
 	assert.Nil(t, img)

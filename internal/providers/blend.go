@@ -99,7 +99,9 @@ func (s BlendRegistration) Initialize(cfgAny any, clientConfig config.ClientConf
 			providers[i] = ref
 		}
 	} else {
-		var errorSlice []error
+		providers = make([]layer.Provider, 0, len(cfg.Providers))
+		errorSlice := make([]error, 0)
+
 		for _, p := range cfg.Providers {
 			provider, err := layer.ConstructProvider(p, clientConfig, errorMessages, layerGroup)
 			providers = append(providers, provider)
@@ -110,7 +112,6 @@ func (s BlendRegistration) Initialize(cfgAny any, clientConfig config.ClientConf
 		if errorsFlat != nil {
 			return nil, errorsFlat
 		}
-
 	}
 
 	if len(providers) < 2 || len(providers) > 100 {

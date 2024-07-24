@@ -69,7 +69,7 @@ func Test_Blend_Layers(t *testing.T) {
 	assert.NoError(t, err)
 	bb := b.(*Blend)
 
-	assert.Equal(t, 2, len(bb.providers))
+	assert.Len(t, bb.providers, 2)
 	assert.Equal(t, &Ref{RefConfig{"something_hello_world"}, nil}, bb.providers[0])
 	assert.Equal(t, &Ref{RefConfig{"something_goodbye_world"}, nil}, bb.providers[1])
 }

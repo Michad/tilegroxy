@@ -85,7 +85,7 @@ func Test_ExecuteTestCommand(t *testing.T) {
 	fmt.Println(string(out))
 
 	assert.Greater(t, len(out), 69)
-	assert.Equal(t, exitStatus, 1)
+	assert.Equal(t, 1, exitStatus)
 }
 
 func Test_ExecuteTestWithMultiCache(t *testing.T) {
@@ -215,5 +215,5 @@ func Test_TestCommand_InvalidConfig(t *testing.T) {
 	}
 
 	assert.NotEmpty(t, out)
-	assert.Equal(t, exitStatus, 1)
+	assert.Equal(t, 1, exitStatus)
 }

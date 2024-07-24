@@ -32,6 +32,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func configToEntities(cfg config.Config) (*layer.LayerGroup, authentication.Authentication, error) {
@@ -475,9 +476,9 @@ layers:
 `
 
 	cfg, err := config.LoadConfig(configRaw)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	lg, auth, err := configToEntities(cfg)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
 
 	req1 := httptest.NewRequest("GET", "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
@@ -491,7 +492,7 @@ layers:
 	resp := w1.Result()
 	fmt.Printf("Header %v\n", resp.Header)
 	body, err := io.ReadAll(resp.Body)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	img, _ := images.GetStaticImage(images.KeyImageUnauthorized)
 
 	assert.Equal(t, 401, resp.StatusCode)

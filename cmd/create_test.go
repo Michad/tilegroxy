@@ -33,7 +33,7 @@ func Test_CreateCommand_Execute(t *testing.T) {
 	b := bytes.NewBufferString("")
 	rootCmd.SetOutput(b)
 	rootCmd.SetArgs([]string{"config", "create"})
-	assert.Nil(t, rootCmd.Execute())
+	assert.NoError(t, rootCmd.Execute())
 	out, err := io.ReadAll(b)
 	if err != nil {
 		t.Fatal(err)
@@ -52,7 +52,7 @@ func Test_CreateCommand_ExecuteJson(t *testing.T) {
 	b := bytes.NewBufferString("")
 	rootCmd.SetOutput(b)
 	rootCmd.SetArgs([]string{"config", "create", "--json"})
-	assert.Nil(t, rootCmd.Execute())
+	assert.NoError(t, rootCmd.Execute())
 	out, err := io.ReadAll(b)
 	if err != nil {
 		t.Fatal(err)
@@ -72,7 +72,7 @@ func Test_CreateCommand_ExecuteYml(t *testing.T) {
 	b := bytes.NewBufferString("")
 	rootCmd.SetOutput(b)
 	rootCmd.SetArgs([]string{"config", "create", "--yaml"})
-	assert.Nil(t, rootCmd.Execute())
+	assert.NoError(t, rootCmd.Execute())
 	out, err := io.ReadAll(b)
 	if err != nil {
 		t.Fatal(err)
@@ -97,7 +97,7 @@ func Test_CreateCommand_ExecuteJsonFile(t *testing.T) {
 	b := bytes.NewBufferString("")
 	rootCmd.SetOutput(b)
 	rootCmd.SetArgs([]string{"config", "create", "-o", fil.Name()})
-	assert.Nil(t, rootCmd.Execute())
+	assert.NoError(t, rootCmd.Execute())
 	_, err = io.ReadAll(b)
 	if err != nil {
 		t.Fatal(err)

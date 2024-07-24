@@ -16,6 +16,7 @@ package caches
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"strconv"
@@ -176,7 +177,7 @@ func (c Redis) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
 
 	err := c.cache.Get(ctx, key, &obj)
 
-	if err == rediscache.ErrCacheMiss {
+	if errors.Is(err, rediscache.ErrCacheMiss) {
 		return nil, nil
 	}
 
