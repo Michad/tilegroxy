@@ -45,7 +45,7 @@ jobs:
           tool_name: Go Lint Issues
           fail_on_error: true
           cache: false
-          filter_mode: diff_context
+          filter_mode: added
       - uses: reviewdog/action-suggester@63b8f8cc21dfa052ac44436e65ed31edcffcb6c1 # v1.17.0
         if: success() || failure()
         with:
