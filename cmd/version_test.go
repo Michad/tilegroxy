@@ -34,6 +34,7 @@ func Test_ExecuteVersionCommand(t *testing.T) {
 	cmd.SetOutput(b)
 	cmd.SetArgs([]string{"version", "--json"})
 	cmd.Execute()
+
 	out, err := io.ReadAll(b)
 	if err != nil {
 		t.Fatal(err)

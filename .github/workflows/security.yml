@@ -100,32 +100,25 @@ jobs:
       uses: github/codeql-action/upload-sarif@2d790406f505036ef40ecba973cc774a50395aac # v3.25.13
       with:
         sarif_file: govuln2.sarif
-  # Disabled because its free version is too limited and it keeps failing due to exceeding run limit
-  # snyk:
-  #   permissions:
-  #     contents: read
-  #     security-events: write 
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #   - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
-  #   - name: Build a Docker image
-  #     run: docker build -t michad/tilegroxy .
-  #   - name: Run Snyk to check Docker image for vulnerabilities
-  #     continue-on-error: true
-  #     uses: snyk/actions/docker@a1346e4eaf761d462da22c34c681dc06849b6851
-  #     env:
-  #       SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-  #     with:
-  #       image: michad/tilegroxy
-  #       args: --file=Dockerfile
-  #     # Snyk sometimes generates invalid severity scores that tank the upload step. And they're insistent on not fixing the bug. So we need to post-process it to avoid build failures
-  #     # See https://github.com/github/codeql-action/issues/2187 for more context.
-  #   - name: Post-process sarif output
-  #     run: |
-  #       sed -i 's/"security-severity": null/"security-severity": "0"/g' snyk.sarif
-  #       sed -i 's/"security-severity": "null"/"security-severity": "0"/g' snyk.sarif
-  #       sed -i 's/"security-severity": "undefined"/"security-severity": "0"/g' snyk.sarif
-  #   - name: Upload result to GitHub Code Scanning
-  #     uses: github/codeql-action/upload-sarif@2d790406f505036ef40ecba973cc774a50395aac # v3.25.13
-  #     with:
-  #       sarif_file: snyk.sarif
+  gosec:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write 
+    env:
+      GO111MODULE: on
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Run Gosec Security Scanner
+        uses: securego/gosec@6fbd381238e97e1d1f3358f0d6d65de78dcf9245 # v2.20.0
+        with:
+          args: '-no-fail -exclude=G504 -fmt sarif -out results.sarif ./...'
+      - name: Upload SARIF file
+        if: github.event_name != 'pull_request'
+        uses: github/codeql-action/upload-sarif@2d790406f505036ef40ecba973cc774a50395aac # v3.25.13
+        with:
+          sarif_file: results.sarif

@@ -1,0 +1,13 @@
+{{ ws }}Copyright {{ YEAR }} {{ AUTHOR }}
+{{ ws }}
+{{ ws }}Licensed under the Apache License, Version 2.0 (the "License");
+{{ ws }}you may not use this file except in compliance with the License.
+{{ ws }}You may obtain a copy of the License at
+{{ ws }}
+{{ ws }}http://www.apache.org/licenses/LICENSE-2.0
+{{ ws }}
+{{ ws }}Unless required by applicable law or agreed to in writing, software
+{{ ws }}distributed under the License is distributed on an "AS IS" BASIS,
+{{ ws }}WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+{{ ws }}See the License for the specific language governing permissions and
+{{ ws }}limitations under the License.
