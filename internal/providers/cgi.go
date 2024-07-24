@@ -54,7 +54,7 @@ type SLogWriter struct {
 }
 
 // TODO: look into some ways to buffer and decrease num of calls to slog
-func (w SLogWriter) Write(p []byte) (n int, err error) {
+func (w SLogWriter) Write(p []byte) (int, error) {
 	slog.Log(w.ctx, w.level, string(p))
 
 	return len(p), nil
@@ -74,7 +74,7 @@ func (r *response) Header() http.Header {
 	return r.headers
 }
 
-func (r *response) Write(p []byte) (n int, err error) {
+func (r *response) Write(p []byte) (int, error) {
 	// fmt.Println(string(p))
 	return r.buff.Write(p)
 }
