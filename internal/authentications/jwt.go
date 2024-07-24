@@ -103,19 +103,8 @@ func (s JWTRegistration) Initialize(configAny any, errorMessages config.ErrorMes
 }
 
 func (c Jwt) CheckAuthentication(req *http.Request, ctx *pkg.RequestContext) bool {
-	authHeader := req.Header[c.HeaderName]
-	if len(authHeader) != 1 {
-		return false
-	}
-
-	var tokenStr string
-	if c.HeaderName == "Authorization" {
-		tokenStr = strings.Replace(authHeader[0], "Bearer ", "", 1)
-	} else {
-		tokenStr = authHeader[0]
-	}
-
-	if len(tokenStr) < 1 {
+	tokenStr, ok := c.extractToken(req)
+	if !ok {
 		return false
 	}
 
@@ -132,6 +121,38 @@ func (c Jwt) CheckAuthentication(req *http.Request, ctx *pkg.RequestContext) boo
 		}
 	}
 
+	exp, ok := c.checkAuthenticationWithoutCache(tokenStr, ctx)
+	if !ok {
+		return false
+	}
+
+	if c.Cache != nil {
+		c.Cache.SetIfAbsent(tokenStr, *exp)
+	}
+
+	return true
+}
+
+func (c Jwt) extractToken(req *http.Request) (string, bool) {
+	authHeader := req.Header[c.HeaderName]
+	if len(authHeader) != 1 {
+		return "", false
+	}
+
+	var tokenStr string
+	if c.HeaderName == "Authorization" {
+		tokenStr = strings.Replace(authHeader[0], "Bearer ", "", 1)
+	} else {
+		tokenStr = authHeader[0]
+	}
+
+	if len(tokenStr) < 1 {
+		return "", false
+	}
+	return tokenStr, true
+}
+
+func (c Jwt) checkAuthenticationWithoutCache(tokenStr string, ctx *pkg.RequestContext) (*jwt.NumericDate, bool) {
 	parserOptions := make([]jwt.ParserOption, 0)
 	parserOptions = append(parserOptions, jwt.WithLeeway(5*time.Second))
 	parserOptions = append(parserOptions, jwt.WithExpirationRequired())
@@ -147,44 +168,26 @@ func (c Jwt) CheckAuthentication(req *http.Request, ctx *pkg.RequestContext) boo
 		parserOptions = append(parserOptions, jwt.WithIssuer(c.ExpectedIssuer))
 	}
 
-	tokenJwt, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
-		if strings.Index(c.Algorithm, "HS") == 0 {
-			return []byte(c.Key), nil
-		}
-		if strings.Index(c.Algorithm, "RS") == 0 {
-			return jwt.ParseRSAPublicKeyFromPEM([]byte(c.Key))
-		}
-		if strings.Index(c.Algorithm, "ES") == 0 {
-			return jwt.ParseECPublicKeyFromPEM([]byte(c.Key))
-		}
-		if strings.Index(c.Algorithm, "PS") == 0 {
-			return jwt.ParseRSAPublicKeyFromPEM([]byte(c.Key))
-		}
-		if c.Algorithm == "EdDSA" {
-			return jwt.ParseEdPublicKeyFromPEM([]byte(c.Key))
-		}
-
-		return nil, fmt.Errorf(c.errorMessages.InvalidParam, "jwt.alg", c.Algorithm)
-	}, parserOptions...)
+	tokenJwt, err := jwt.Parse(tokenStr, c.parseKey, parserOptions...)
 
 	if err != nil {
 		slog.InfoContext(ctx, "JWT parsing error: "+err.Error())
-		return false
+		return nil, false
 	}
 
 	exp, err := tokenJwt.Claims.GetExpirationTime()
 
 	if err != nil {
-		return false
+		return nil, false
 	}
 
 	if exp.Before(time.Now()) {
-		return false
+		return nil, false
 	}
 
 	if time.Until(exp.Time) > time.Duration(c.MaxExpiration)*time.Second {
 		slog.InfoContext(ctx, "JWT parsing error: distant expiration")
-		return false
+		return nil, false
 	}
 
 	if c.LayerScope {
@@ -196,12 +199,12 @@ func (c Jwt) CheckAuthentication(req *http.Request, ctx *pkg.RequestContext) boo
 	if ok {
 		validatePassed := c.validateScope(rawClaim, ctx)
 		if !validatePassed {
-			return false
+			return nil, false
 		}
 
 		validatePassed = c.validateGeohash(rawClaim, ctx)
 		if !validatePassed {
-			return false
+			return nil, false
 		}
 
 		rawUid := rawClaim[c.UserId]
@@ -209,24 +212,44 @@ func (c Jwt) CheckAuthentication(req *http.Request, ctx *pkg.RequestContext) boo
 			ctx.UserIdentifier, _ = rawUid.(string)
 		}
 	} else {
-		// notest
-		var debugType string
-		if t := reflect.TypeOf(tokenJwt.Claims); t.Kind() == reflect.Ptr {
-			debugType = "*" + t.Elem().Name()
-		} else {
-			debugType = t.Name()
-		}
+		return logInvalidClaimsType(tokenJwt, ctx)
+	}
+	return exp, true
+}
 
-		slog.ErrorContext(ctx, "An unexpected state has occurred. Please report this to https://github.com/Michad/tilegroxy/issues : JWT authentication might not be fully working as expected because claims are of type "+debugType)
-
-		return false
+func (c Jwt) parseKey(t *jwt.Token) (interface{}, error) {
+	if strings.Index(c.Algorithm, "HS") == 0 {
+		return []byte(c.Key), nil
+	}
+	if strings.Index(c.Algorithm, "RS") == 0 {
+		return jwt.ParseRSAPublicKeyFromPEM([]byte(c.Key))
+	}
+	if strings.Index(c.Algorithm, "ES") == 0 {
+		return jwt.ParseECPublicKeyFromPEM([]byte(c.Key))
+	}
+	if strings.Index(c.Algorithm, "PS") == 0 {
+		return jwt.ParseRSAPublicKeyFromPEM([]byte(c.Key))
+	}
+	if c.Algorithm == "EdDSA" {
+		return jwt.ParseEdPublicKeyFromPEM([]byte(c.Key))
 	}
 
-	if c.Cache != nil {
-		c.Cache.SetIfAbsent(tokenStr, *exp)
+	return nil, fmt.Errorf(c.errorMessages.InvalidParam, "jwt.alg", c.Algorithm)
+}
+
+func logInvalidClaimsType(tokenJwt *jwt.Token, ctx *pkg.RequestContext) (*jwt.NumericDate, bool) {
+	// notest
+
+	var debugType string
+	if t := reflect.TypeOf(tokenJwt.Claims); t.Kind() == reflect.Ptr {
+		debugType = "*" + t.Elem().Name()
+	} else {
+		debugType = t.Name()
 	}
 
-	return true
+	slog.ErrorContext(ctx, "An unexpected state has occurred. Please report this to https://github.com/Michad/tilegroxy/issues : JWT authentication might not be fully working as expected because claims are of type "+debugType)
+
+	return nil, false
 }
 
 func (c Jwt) validateScope(rawClaim jwt.MapClaims, ctx *pkg.RequestContext) bool {
