@@ -101,7 +101,7 @@ func Seed(cfg *config.Config, opts SeedOptions, out io.Writer) error {
 
 	var reqSplit [][]pkg.TileRequest
 
-	for i := 0; i < int(opts.NumThread); i++ {
+	for i := range int(opts.NumThread) {
 		chunkStart := i * chunkSize
 		var chunkEnd uint
 		if i == int(opts.NumThread)-1 {
@@ -115,7 +115,7 @@ func Seed(cfg *config.Config, opts SeedOptions, out io.Writer) error {
 
 	var wg sync.WaitGroup
 
-	for t := int(0); t < len(reqSplit); t++ {
+	for t := range len(reqSplit) {
 		wg.Add(1)
 		go func(t int, myReqs []pkg.TileRequest) {
 			if opts.Verbose {

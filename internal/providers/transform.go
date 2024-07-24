@@ -149,7 +149,7 @@ func (t Transform) GenerateTile(ctx *pkg.RequestContext, providerContext layer.P
 	numPixelPerThread := int(math.Floor(float64(pixelCount) / float64(t.Threads)))
 	var pixelSplit [][]int
 
-	for i := 0; i < t.Threads; i++ {
+	for i := range t.Threads {
 		chunkStart := i * numPixelPerThread
 		var chunkEnd int
 		if i == int(t.Threads)-1 {
@@ -164,7 +164,7 @@ func (t Transform) GenerateTile(ctx *pkg.RequestContext, providerContext layer.P
 	var wg sync.WaitGroup
 	wg.Add(t.Threads)
 
-	for tid := 0; tid < t.Threads; tid++ {
+	for tid := range t.Threads {
 		pixelRange := pixelSplit[tid]
 
 		go func(iStart int, iEnd int) {

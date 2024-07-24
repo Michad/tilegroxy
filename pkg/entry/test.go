@@ -83,7 +83,7 @@ func Test(cfg *config.Config, opts TestOptions, out io.Writer) (uint32, error) {
 	numReqPerThread := int(math.Floor(float64(numReq) / float64(opts.NumThread)))
 	var reqSplit [][]pkg.TileRequest
 
-	for i := 0; i < int(opts.NumThread); i++ {
+	for i := range int(opts.NumThread) {
 		chunkStart := i * numReqPerThread
 		var chunkEnd uint
 		if i == int(opts.NumThread)-1 {
@@ -102,7 +102,7 @@ func Test(cfg *config.Config, opts TestOptions, out io.Writer) (uint32, error) {
 	writer := tabwriter.NewWriter(out, 1, 4, 4, ' ', tabwriter.StripEscape)
 	fmt.Fprintln(writer, "Thread\tLayer\tGenerated\tCache Write\tCache Read\tError\t")
 
-	for t := int(0); t < len(reqSplit); t++ {
+	for t := range len(reqSplit) {
 		wg.Add(1)
 		go func(t int, myReqs []pkg.TileRequest) {
 			ctx2 := pkg.BackgroundContext()

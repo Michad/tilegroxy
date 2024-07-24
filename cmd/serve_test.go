@@ -345,7 +345,7 @@ func Test_ServeCommand_RemoteProvider(t *testing.T) {
 	var etcdC testcontainers.Container
 	var err error
 
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		etcdC, err = setupEtcd(ctx)
 		time.Sleep(time.Second)
 		if err == nil {
