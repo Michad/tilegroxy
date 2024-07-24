@@ -149,6 +149,7 @@ func makeLogFileWriter(path string, alsoStdOut bool) (io.Writer, error) {
 }
 
 func configureMainLogging(cfg *config.Config) error {
+
 	var err error
 	if cfg.Logging.Main.Console || len(cfg.Logging.Main.Path) > 0 {
 		var out io.Writer
