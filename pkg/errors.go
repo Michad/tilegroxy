@@ -40,7 +40,7 @@ const (
 type TypedError interface {
 	error
 	Type() TypeOfError
-	External(config.ErrorMessages) string
+	External(errorMessages config.ErrorMessages) string
 }
 
 // General error for incoming auth issues. Avoids returning specifics through the API so as not to help attackers.
