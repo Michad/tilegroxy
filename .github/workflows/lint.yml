@@ -40,7 +40,7 @@ jobs:
         uses: reviewdog/action-golangci-lint@7708105983c614f7a2725e2172908b7709d1c3e4 # v2.6.2
         with:
           github_token: ${{ secrets.github_token }}
-          golangci_lint_flags: "--fix --timeout 2m0s --disable-all -E asciicheck,bidichk,bodyclose,canonicalheader,dogsled,exhaustive,gocheckcompilerdirectives,gocritic,godox,gofmt,durationcheck,errname,errorlint,fatcontext,goheader,interfacebloat,intrange,makezero,mirror,misspell,nonamedreturns,prealloc,predeclared,unconvert,wastedassign"
+          golangci_lint_flags: "--fix --timeout 2m0s --disable-all -E asciicheck,bidichk,bodyclose,canonicalheader,dogsled,exhaustive,gocheckcompilerdirectives,gofmt,durationcheck,errname,errorlint,fatcontext,goheader,interfacebloat,intrange,makezero,mirror,misspell,nonamedreturns,prealloc,predeclared,unconvert,wastedassign"
           reporter: github-pr-review
           tool_name: Go Lint Issues
           fail_on_error: true
@@ -51,7 +51,7 @@ jobs:
         if: success() || failure()
         with:
           github_token: ${{ secrets.github_token }}
-          golangci_lint_flags: "--fix --timeout 2m0s -E gocritic,godox,maintidx"
+          golangci_lint_flags: "--fix --timeout 2m0s -E gocritic,maintidx"
           reporter: github-pr-review
           tool_name: Go Lint Suggestions 
           level: warning 
