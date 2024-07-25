@@ -70,7 +70,7 @@ type ProviderAuthError struct {
 
 func (e ProviderAuthError) Error() string {
 	// notest
-	return fmt.Sprintf("Provider Error - %s", e.Message)
+	return "Provider Error - " + e.Message
 }
 
 func (e ProviderAuthError) Type() TypeOfError {

@@ -79,7 +79,7 @@ func replaceURLPlaceholders(ctx *pkg.RequestContext, tileRequest pkg.TileRequest
 
 			slog.Debug("Replacing layer var " + layerVar)
 
-			url = strings.Replace(url, layerMatch, fmt.Sprint(ctx.LayerPatternMatches[layerVar]), 1)
+			url = strings.Replace(url, layerMatch, ctx.LayerPatternMatches[layerVar], 1)
 		}
 	}
 
