@@ -54,6 +54,11 @@ type Blend struct {
 	providers []layer.Provider
 }
 
+type indexedImg struct {
+	int
+	image.Image
+}
+
 var allBlendModes = []string{"add", "color burn", "color dodge", "darken", "difference", "divide", "exclusion", "lighten", "linear burn", "linear light", "multiply", "normal", "opacity", "overlay", "screen", "soft light", "subtract"}
 
 func init() {
@@ -179,43 +184,11 @@ func (t Blend) GenerateTile(ctx *pkg.RequestContext, providerContext layer.Provi
 
 	wg := sync.WaitGroup{}
 	errs := make(chan error, len(t.providers))
-	imgs := make(chan struct {
-		int
-		image.Image
-	}, len(t.providers))
+	imgs := make(chan indexedImg, len(t.providers))
 
 	for i, p := range t.providers {
 		wg.Add(1)
-		go func(key string, i int, p layer.Provider) {
-			defer func() {
-				if r := recover(); r != nil {
-					errs <- fmt.Errorf("unexpected blend error %v", r)
-				}
-				wg.Done()
-			}()
-
-			var img *pkg.Image
-			var err error
-			ac, ok := providerContext.Other[key].(layer.ProviderContext)
-
-			if ok {
-				img, err = p.GenerateTile(ctx, ac, tileRequest)
-			} else {
-				img, err = p.GenerateTile(ctx, layer.ProviderContext{}, tileRequest)
-			}
-
-			if img != nil {
-				realImage, _, err2 := image.Decode(bytes.NewReader(*img))
-				err = errors.Join(err, err2)
-
-				imgs <- struct {
-					int
-					image.Image
-				}{i, realImage}
-			}
-
-			errs <- err
-		}(strconv.Itoa(i), i, p)
+		go callProvider(ctx, providerContext, tileRequest, p, i, imgs, errs, &wg)
 	}
 
 	wg.Wait()
@@ -254,51 +227,7 @@ func (t Blend) GenerateTile(ctx *pkg.RequestContext, providerContext layer.Provi
 	slog.Log(ctx, config.LevelTrace, fmt.Sprintf("Blended size: %v", size))
 
 	for _, img := range imgSlice {
-		if img.Bounds().Max != size {
-			slog.DebugContext(ctx, fmt.Sprintf("Resizing from %v to %v", img.Bounds().Max, size))
-			img = transform.Resize(img, size.X, size.Y, transform.NearestNeighbor)
-		}
-
-		if combinedImg == nil {
-			combinedImg = img
-		} else {
-			switch t.Mode {
-			case "add":
-				combinedImg = blend.Add(img, combinedImg)
-			case "color burn":
-				combinedImg = blend.ColorBurn(img, combinedImg)
-			case "color dodge":
-				combinedImg = blend.ColorDodge(img, combinedImg)
-			case "darken":
-				combinedImg = blend.Darken(img, combinedImg)
-			case "difference":
-				combinedImg = blend.Difference(img, combinedImg)
-			case "divide":
-				combinedImg = blend.Divide(img, combinedImg)
-			case "exclusion":
-				combinedImg = blend.Exclusion(img, combinedImg)
-			case "lighten":
-				combinedImg = blend.Lighten(img, combinedImg)
-			case "linear burn":
-				combinedImg = blend.LinearBurn(img, combinedImg)
-			case "linear light":
-				combinedImg = blend.LinearLight(img, combinedImg)
-			case "multiply":
-				combinedImg = blend.Multiply(img, combinedImg)
-			case "normal":
-				combinedImg = blend.Normal(img, combinedImg)
-			case "opacity":
-				combinedImg = blend.Opacity(img, combinedImg, t.Opacity)
-			case "overlay":
-				combinedImg = blend.Overlay(img, combinedImg)
-			case "screen":
-				combinedImg = blend.Screen(img, combinedImg)
-			case "soft light":
-				combinedImg = blend.SoftLight(img, combinedImg)
-			case "subtract":
-				combinedImg = blend.Subtract(img, combinedImg)
-			}
-		}
+		combinedImg = t.blendImage(img, size, ctx, combinedImg)
 	}
 
 	var buf bytes.Buffer
@@ -309,4 +238,86 @@ func (t Blend) GenerateTile(ctx *pkg.RequestContext, providerContext layer.Provi
 	output := buf.Bytes()
 
 	return &output, err
+}
+
+func (t Blend) blendImage(img image.Image, size image.Point, ctx *pkg.RequestContext, combinedImg image.Image) image.Image {
+	if img.Bounds().Max != size {
+		slog.DebugContext(ctx, fmt.Sprintf("Resizing from %v to %v", img.Bounds().Max, size))
+		img = transform.Resize(img, size.X, size.Y, transform.NearestNeighbor)
+	}
+
+	if combinedImg == nil {
+		combinedImg = img
+	} else {
+		switch t.Mode {
+		case "add":
+			combinedImg = blend.Add(img, combinedImg)
+		case "color burn":
+			combinedImg = blend.ColorBurn(img, combinedImg)
+		case "color dodge":
+			combinedImg = blend.ColorDodge(img, combinedImg)
+		case "darken":
+			combinedImg = blend.Darken(img, combinedImg)
+		case "difference":
+			combinedImg = blend.Difference(img, combinedImg)
+		case "divide":
+			combinedImg = blend.Divide(img, combinedImg)
+		case "exclusion":
+			combinedImg = blend.Exclusion(img, combinedImg)
+		case "lighten":
+			combinedImg = blend.Lighten(img, combinedImg)
+		case "linear burn":
+			combinedImg = blend.LinearBurn(img, combinedImg)
+		case "linear light":
+			combinedImg = blend.LinearLight(img, combinedImg)
+		case "multiply":
+			combinedImg = blend.Multiply(img, combinedImg)
+		case "normal":
+			combinedImg = blend.Normal(img, combinedImg)
+		case "opacity":
+			combinedImg = blend.Opacity(img, combinedImg, t.Opacity)
+		case "overlay":
+			combinedImg = blend.Overlay(img, combinedImg)
+		case "screen":
+			combinedImg = blend.Screen(img, combinedImg)
+		case "soft light":
+			combinedImg = blend.SoftLight(img, combinedImg)
+		case "subtract":
+			combinedImg = blend.Subtract(img, combinedImg)
+		}
+	}
+	return combinedImg
+}
+
+func callProvider(ctx *pkg.RequestContext, providerContext layer.ProviderContext, tileRequest pkg.TileRequest, provider layer.Provider, i int, imgs chan indexedImg, errs chan error, wg *sync.WaitGroup) {
+	defer func() {
+		if r := recover(); r != nil {
+			errs <- fmt.Errorf("unexpected blend error %v", r)
+		}
+		wg.Done()
+	}()
+
+	key := strconv.Itoa(i)
+
+	var img *pkg.Image
+	var err error
+	ac, ok := providerContext.Other[key].(layer.ProviderContext)
+
+	if ok {
+		img, err = provider.GenerateTile(ctx, ac, tileRequest)
+	} else {
+		img, err = provider.GenerateTile(ctx, layer.ProviderContext{}, tileRequest)
+	}
+
+	if img != nil {
+		realImage, _, err2 := image.Decode(bytes.NewReader(*img))
+		err = errors.Join(err, err2)
+
+		imgs <- struct {
+			int
+			image.Image
+		}{i, realImage}
+	}
+
+	errs <- err
 }
