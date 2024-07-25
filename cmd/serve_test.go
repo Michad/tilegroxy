@@ -368,7 +368,9 @@ func Test_ServeCommand_RemoteProvider(t *testing.T) {
 
 	require.NoError(t, err)
 
-	defer require.NoError(t, etcdC.Terminate(ctx))
+	defer func() {
+		require.NoError(t, etcdC.Terminate(ctx))
+	}()
 
 	cfg := `server:
   port: 12342

@@ -156,7 +156,9 @@ func Test_ExecuteTestWithRedisCache(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	defer require.NoError(t, redisC.Terminate(ctx))
+	defer func() {
+		require.NoError(t, redisC.Terminate(ctx))
+	}()
 
 	endpoint, err := redisC.Endpoint(ctx, "")
 	require.NoError(t, err)
