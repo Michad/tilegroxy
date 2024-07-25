@@ -96,7 +96,8 @@ func Test_TileHandler_Proxy(t *testing.T) {
 		query = r.URL.RawQuery
 		w.WriteHeader(200)
 		b, _ := images.GetStaticImage("color:FFF")
-		w.Write(*b)
+		_, err := w.Write(*b)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 

@@ -37,7 +37,7 @@ func TestMultiSaveAndLookup(t *testing.T) {
 
 	tile := makeReq(53)
 	img := makeImg(24)
-	multi.Save(tile, &img)
+	require.NoError(t, multi.Save(tile, &img))
 
 	validateLookup(t, multi, tile, &img)
 	validateLookup(t, mem1, tile, &img)
@@ -59,7 +59,7 @@ func TestMultiIn1(t *testing.T) {
 
 	tile := makeReq(53)
 	img := makeImg(24)
-	mem1.Save(tile, &img)
+	require.NoError(t, mem1.Save(tile, &img))
 
 	validateLookup(t, multi, tile, &img)
 }
@@ -79,7 +79,7 @@ func TestMultiIn2(t *testing.T) {
 
 	tile := makeReq(53)
 	img := makeImg(24)
-	mem2.Save(tile, &img)
+	require.NoError(t, mem2.Save(tile, &img))
 
 	validateLookup(t, multi, tile, &img)
 }

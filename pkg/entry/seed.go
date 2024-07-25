@@ -60,7 +60,7 @@ func Seed(cfg *config.Config, opts SeedOptions, out io.Writer) error {
 		if z > pkg.MaxZoom {
 			return fmt.Errorf("zoom must be less than %v", pkg.MaxZoom)
 		}
-		newTiles, err := opts.Bounds.FindTiles(opts.LayerName, uint(z), opts.Force)
+		newTiles, err := opts.Bounds.FindTiles(opts.LayerName, z, opts.Force)
 
 		if newTiles != nil {
 			tileRequests = append(tileRequests, (*newTiles)...)

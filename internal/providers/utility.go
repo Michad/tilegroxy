@@ -156,8 +156,8 @@ func getTile(ctx *pkg.RequestContext, clientConfig config.ClientConfig, url stri
 		return nil, &pkg.RemoteServerError{StatusCode: resp.StatusCode}
 	}
 
-	if len(img) > int(clientConfig.MaxLength) {
-		return nil, &pkg.InvalidContentLengthError{Length: int(len(img))}
+	if len(img) > clientConfig.MaxLength {
+		return nil, &pkg.InvalidContentLengthError{Length: len(img)}
 	}
 
 	return &img, nil

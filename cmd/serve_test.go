@@ -362,13 +362,13 @@ func Test_ServeCommand_RemoteProvider(t *testing.T) {
 			break
 		}
 		if etcdC != nil {
-			etcdC.Terminate(ctx)
+			err = etcdC.Terminate(ctx)
 		}
 	}
 
 	require.NoError(t, err)
 
-	defer etcdC.Terminate(ctx)
+	defer require.NoError(t, etcdC.Terminate(ctx))
 
 	cfg := `server:
   port: 12342
@@ -404,7 +404,7 @@ layers:
 	resp, err := http.DefaultClient.Do(req)
 
 	defer func() {
-		syscall.Kill(syscall.Getpid(), syscall.SIGUSR1)
+		require.NoError(t, syscall.Kill(syscall.Getpid(), syscall.SIGUSR1))
 		if resp != nil {
 			resp.Body.Close()
 		}

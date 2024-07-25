@@ -40,7 +40,7 @@ func TestTtl(t *testing.T) {
 	tile := makeReq(53)
 	img := makeImg(53)
 
-	r.Save(tile, &img)
+	require.NoError(t, r.Save(tile, &img))
 
 	validateLookup(t, r, tile, &img)
 	time.Sleep(time.Duration(2) * time.Second)

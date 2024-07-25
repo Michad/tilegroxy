@@ -37,7 +37,11 @@ func CheckConfig(cfg *config.Config, opts CheckOptions, out io.Writer) error {
 	if cfg != nil && opts.Echo {
 		enc := json.NewEncoder(out)
 		enc.SetIndent(" ", "  ")
-		enc.Encode(cfg)
+		err := enc.Encode(cfg)
+
+		if err != nil {
+			return err
+		}
 	} else {
 		fmt.Fprintln(out, "Valid")
 	}

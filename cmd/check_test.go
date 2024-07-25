@@ -152,7 +152,7 @@ layers:
 	fmt.Println(string(out))
 
 	var echoed map[string]interface{}
-	json.Unmarshal(out, &echoed)
+	require.NoError(t, json.Unmarshal(out, &echoed))
 
 	assert.Equal(t, "multi", echoed["Cache"].(map[string]interface{})["name"])
 	assert.Equal(t, "osm", echoed["Layers"].([]interface{})[0].(map[string]interface{})["Id"])

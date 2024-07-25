@@ -76,7 +76,10 @@ func (s TransformRegistration) Initialize(cfgAny any, clientConfig config.Client
 	}
 
 	i := interp.New(interp.Options{Unrestricted: true})
-	i.Use(stdlib.Symbols)
+	err = i.Use(stdlib.Symbols)
+	if err != nil {
+		return nil, err
+	}
 
 	var script string
 
@@ -152,8 +155,8 @@ func (t Transform) GenerateTile(ctx *pkg.RequestContext, providerContext layer.P
 	for i := range t.Threads {
 		chunkStart := i * numPixelPerThread
 		var chunkEnd int
-		if i == int(t.Threads)-1 {
-			chunkEnd = int(pixelCount)
+		if i == t.Threads-1 {
+			chunkEnd = pixelCount
 		} else {
 			chunkEnd = int(math.Min(float64(chunkStart+numPixelPerThread), float64(pixelCount)))
 		}

@@ -145,7 +145,10 @@ func (s CustomRegistration) Initialize(cfgAny any, errorMessages config.ErrorMes
 	}
 
 	i := interp.New(interp.Options{Unrestricted: true})
-	i.Use(stdlib.Symbols)
+	err = i.Use(stdlib.Symbols)
+	if err != nil {
+		return nil, err
+	}
 
 	var script string
 
@@ -187,7 +190,7 @@ func (s CustomRegistration) Initialize(cfgAny any, errorMessages config.ErrorMes
 	} else {
 		lock := keymutex.NewHashed(-1)
 
-		cache, err := otter.MustBuilder[string, ValidationResult](int(cfg.CacheSize)).Build()
+		cache, err := otter.MustBuilder[string, ValidationResult](cfg.CacheSize).Build()
 		if err != nil {
 			return nil, err
 		}
@@ -205,7 +208,12 @@ func (c Custom) CheckAuthentication(req *http.Request, ctx *pkg.RequestContext) 
 
 		if c.cache != nil {
 			c.locks.LockKey(tok)
-			defer c.locks.UnlockKey(tok)
+			defer func() {
+				err := c.locks.UnlockKey(tok)
+				if err != nil {
+					slog.ErrorContext(ctx, "Unable to release auth lock - this token might encounter issues going forward", "error", err)
+				}
+			}()
 
 			valResult, inCache = c.cache.Get(tok)
 			if !inCache {
