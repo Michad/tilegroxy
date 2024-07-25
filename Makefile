@@ -10,7 +10,7 @@ build:
 	go build -v -o ${OUT} -ldflags="-X \"${PKG}/pkg/static.tilegroxyVersion=${VERSION}\" -X \"${PKG}/pkg/static.tilegroxyBuildRef=${REF}\" -X \"${PKG}/pkg/static.tilegroxyBuildDate=${DATE}\"" -tags viper_bind_struct
 
 test:
-	@go test ./internal/... ./pkg/... ./cmd/... -v -count=1 -tags viper_bind_struct
+	@go test ./internal/... ./pkg/... ./cmd/... -count=1 -tags viper_bind_struct
 
 unit:
 	@go test ./internal/... $(go list ./pkg/... | grep -v mod) ./cmd/... -v -count=1 -tags "unit,viper_bind_struct"
@@ -32,7 +32,7 @@ libyears:
 
 lint:
 	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.59.1
-	@golangci-lint run --fix -E asciicheck,bidichk,bodyclose,canonicalheader,dogsled,exhaustive,gocheckcompilerdirectives,gocritic,gofmt,durationcheck,errname,errorlint,fatcontext,goheader,interfacebloat,intrange,maintidx,makezero,mirror,misspell,nonamedreturns,prealloc,predeclared,tenv,testifylint,unconvert,wastedassign
+	@golangci-lint run --fix -E asciicheck,bidichk,bodyclose,canonicalheader,dogsled,exhaustive,gocheckcompilerdirectives,gocritic,gofmt,durationcheck,errname,errorlint,fatcontext,goheader,interfacebloat,intrange,maintidx,makezero,mirror,misspell,nonamedreturns,prealloc,predeclared,tenv,testifylint,usestdlibvars,unconvert,wastedassign
 
 version:
 	@./${OUT} version --json
