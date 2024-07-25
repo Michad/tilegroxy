@@ -15,6 +15,7 @@ package pkg
 
 import (
 	"math"
+	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -113,7 +114,7 @@ func TestBoundsIntersect(t *testing.T) {
 	assert.True(t, Bounds{0, 1, 0, 0.1}.Intersects(Bounds{0, 1, 0, 1}))
 	assert.True(t, Bounds{0, 1, 0.9, 2}.Intersects(Bounds{0, 1, 0, 1}))
 
-	assert.False(t, Bounds{0, 1, 0, 1}.Intersects(Bounds{101, 200, 10, 354}))
+	assert.False(t, Bounds{0, 1, 0, 1}.Intersects(Bounds{101, http.StatusOK, 10, 354}))
 	assert.False(t, Bounds{0, 1, 0, 1}.Intersects(Bounds{0, 1, 1, 2}))
 	assert.False(t, Bounds{0, 1, 0, 1}.Intersects(Bounds{0, 1, -1, 0}))
 	assert.False(t, Bounds{0, 1, 0, 1}.Intersects(Bounds{1, 2, 0, 1}))
@@ -138,7 +139,7 @@ func TestBoundsContains(t *testing.T) {
 	assert.False(t, Bounds{0, 1, 0, 0.1}.Contains(Bounds{0, 1, 0, 1}))
 	assert.False(t, Bounds{0, 1, 0.9, 2}.Contains(Bounds{0, 1, 0, 1}))
 
-	assert.False(t, Bounds{0, 1, 0, 1}.Contains(Bounds{101, 200, 10, 354}))
+	assert.False(t, Bounds{0, 1, 0, 1}.Contains(Bounds{101, http.StatusOK, 10, 354}))
 	assert.False(t, Bounds{0, 1, 0, 1}.Contains(Bounds{0, 1, 1, 2}))
 	assert.False(t, Bounds{0, 1, 0, 1}.Contains(Bounds{0, 1, -1, 0}))
 	assert.False(t, Bounds{0, 1, 0, 1}.Contains(Bounds{1, 2, 0, 1}))

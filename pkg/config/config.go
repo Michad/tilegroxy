@@ -17,6 +17,7 @@ package config
 import (
 	"bytes"
 	"log/slog"
+	"net/http"
 	"strings"
 
 	"github.com/Michad/tilegroxy/internal/images"
@@ -196,7 +197,7 @@ func DefaultConfig() Config {
 			MaxLength:     1024 * 1024 * 10,
 			UnknownLength: false,
 			ContentTypes:  []string{"image/png", "image/jpg", "image/jpeg"},
-			StatusCodes:   []int{200},
+			StatusCodes:   []int{http.StatusOK},
 			Headers:       map[string]string{},
 			Timeout:       10,
 		},

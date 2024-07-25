@@ -17,6 +17,7 @@
 package providers
 
 import (
+	"net/http"
 	"testing"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -36,7 +37,7 @@ func Test_UrlTemplateValidate(t *testing.T) {
 	require.Error(t, err)
 }
 func Test_UrlTemplateExecute(t *testing.T) {
-	p, err := UrlTemplateRegistration{}.Initialize(UrlTemplateConfig{Template: testTemplate}, config.ClientConfig{StatusCodes: []int{200}, MaxLength: 2000, ContentTypes: []string{"image/png"}, UnknownLength: true}, testErrMessages, nil)
+	p, err := UrlTemplateRegistration{}.Initialize(UrlTemplateConfig{Template: testTemplate}, config.ClientConfig{StatusCodes: []int{http.StatusOK}, MaxLength: 2000, ContentTypes: []string{"image/png"}, UnknownLength: true}, testErrMessages, nil)
 
 	assert.NotNil(t, p)
 	require.NoError(t, err)
@@ -60,7 +61,7 @@ func Test_UrlTemplateConfigOptions(t *testing.T) {
 	assert.Nil(t, img)
 	require.Error(t, err)
 
-	clientConfig.StatusCodes = []int{200}
+	clientConfig.StatusCodes = []int{http.StatusOK}
 	clientConfig.MaxLength = 2
 	img, err = p.GenerateTile(pkg.BackgroundContext(), layer.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 6, X: 10, Y: 10})
 	assert.Nil(t, img)

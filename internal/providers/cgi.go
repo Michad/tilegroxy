@@ -160,7 +160,7 @@ func (t CGI) GenerateTile(ctx *pkg.RequestContext, providerContext layer.Provide
 
 	slog.DebugContext(ctx, fmt.Sprintf("Calling %v", uri))
 
-	req, err := http.NewRequestWithContext(ctx, "GET", "http://"+t.Domain+uri, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+t.Domain+uri, nil)
 	if err != nil {
 		return nil, err
 	}

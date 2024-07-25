@@ -173,7 +173,7 @@ layers:
 	require.NoError(t, err)
 	assert.NotNil(t, resp)
 
-	assert.Equal(t, 200, resp.StatusCode)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	assert.Equal(t, "image/png", resp.Header["Content-Type"][0])
 	assert.Equal(t, "result", resp.Header["X-Test"][0])
@@ -225,14 +225,14 @@ layers:
 	require.NoError(t, err)
 	resp, err = http.DefaultClient.Do(req)
 	require.NoError(t, err)
-	assert.Equal(t, 200, resp.StatusCode)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	resp.Body.Close()
 
 	req, err = http.NewRequest(http.MethodGet, "http://localhost:12342/root", nil)
 	require.NoError(t, err)
 	resp, err = http.DefaultClient.Do(req)
 	require.NoError(t, err)
-	assert.Equal(t, 200, resp.StatusCode)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	resp.Body.Close()
 }
 
@@ -295,7 +295,7 @@ layers:
 	require.NoError(t, err)
 	resp, err = http.DefaultClient.Do(req)
 	require.NoError(t, err)
-	assert.Equal(t, 200, resp.StatusCode)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Nil(t, resp.Header["X-Powered-By"])
 	resp.Body.Close()
 
@@ -414,7 +414,7 @@ layers:
 
 	require.NoError(t, err)
 	if assert.NotNil(t, resp) {
-		assert.Equal(t, 200, resp.StatusCode)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
 		assert.Equal(t, "image/png", resp.Header["Content-Type"][0])
 	}
 }

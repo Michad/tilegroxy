@@ -16,6 +16,7 @@ package server
 
 import (
 	"io"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -37,7 +38,7 @@ func Test_ErrorVals_Execute(t *testing.T) {
 		assert.NotEmpty(t, imgPath)
 		cfg.Error.AlwaysOk = true
 		status2, level2, imgPath2 := errorVars(&cfg.Error, pkg.TypeOfError(i))
-		assert.Equal(t, 200, status2)
+		assert.Equal(t, http.StatusOK, status2)
 		assert.Equal(t, level2, level)
 		assert.Equal(t, imgPath, imgPath2)
 	}
