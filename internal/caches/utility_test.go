@@ -53,7 +53,7 @@ func makeReq(seed int) pkg.TileRequest {
 	z := 20
 	x := seed
 	y := seed
-	return pkg.TileRequest{LayerName: "test", Z: int(z), X: x, Y: y}
+	return pkg.TileRequest{LayerName: "test", Z: z, X: x, Y: y}
 }
 
 func makeImg(seed int) pkg.Image {

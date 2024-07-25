@@ -161,7 +161,7 @@ func (c S3) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
 		return nil, err
 	}
 
-	img := pkg.Image(writer.Bytes())
+	img := writer.Bytes()
 
 	return &img, nil
 }

@@ -98,9 +98,7 @@ func (c Memcache) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
 		return nil, err
 	}
 
-	result := pkg.Image(it.Value)
-
-	return &result, nil
+	return &it.Value, nil
 }
 
 func (c Memcache) Save(t pkg.TileRequest, img *pkg.Image) error {
