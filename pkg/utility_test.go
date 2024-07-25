@@ -18,41 +18,42 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParseZoom(t *testing.T) {
 	zooms, err := ParseZoomString("1")
 	assert.Equal(t, []int{1}, zooms)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	zooms, err = ParseZoomString("1-2")
 	assert.Equal(t, []int{1, 2}, zooms)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	zooms, err = ParseZoomString("1,2")
 	assert.Equal(t, []int{1, 2}, zooms)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	_, err = ParseZoomString("2-1")
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	_, err = ParseZoomString("fish")
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	_, err = ParseZoomString("f")
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	_, err = ParseZoomString("-1")
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	_, err = ParseZoomString("25")
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	_, err = ParseZoomString("2-30")
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	_, err = ParseZoomString("-1-1")
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func Test_ReplaceEnv_Nothing(t *testing.T) {

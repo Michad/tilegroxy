@@ -22,6 +22,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_CGI_Validate(t *testing.T) {
@@ -30,7 +31,7 @@ func Test_CGI_Validate(t *testing.T) {
 	}
 
 	cgi, err := CGIRegistration{}.Initialize(cfg, testClientConfig, testErrMessages, nil)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, cgi)
 
 	cfg = CGIConfig{
@@ -38,7 +39,7 @@ func Test_CGI_Validate(t *testing.T) {
 	}
 
 	cgi, err = CGIRegistration{}.Initialize(cfg, testClientConfig, testErrMessages, nil)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, cgi)
 }
 
@@ -55,7 +56,7 @@ func Test_CGI_Mapserv(t *testing.T) {
 
 	cgi, err := CGIRegistration{}.Initialize(cfg, testClientConfig, testErrMessages, nil)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, cgi)
 
 	ctx := pkg.BackgroundContext()
@@ -63,10 +64,10 @@ func Test_CGI_Mapserv(t *testing.T) {
 	ctx.LayerPatternMatches["layer"] = "all"
 
 	pc, err := cgi.PreAuth(ctx, layer.ProviderContext{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	img, err := cgi.GenerateTile(ctx, pc, pkg.TileRequest{LayerName: "states", Z: 8, X: 58, Y: 96})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.NotNil(t, img)
 
@@ -81,7 +82,7 @@ func Test_CGI_InvalidMapserv(t *testing.T) {
 
 	cgi, err := CGIRegistration{}.Initialize(cfg, testClientConfig, testErrMessages, nil)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, cgi)
 
 	ctx := pkg.BackgroundContext()
@@ -89,10 +90,10 @@ func Test_CGI_InvalidMapserv(t *testing.T) {
 	ctx.LayerPatternMatches["layer"] = "all"
 
 	pc, err := cgi.PreAuth(ctx, layer.ProviderContext{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	img, err := cgi.GenerateTile(ctx, pc, pkg.TileRequest{LayerName: "states", Z: 8, X: 58, Y: 96})
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	assert.Nil(t, img)
 

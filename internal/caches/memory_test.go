@@ -19,14 +19,14 @@ import (
 	"time"
 
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMemory(t *testing.T) {
 	cfg := MemoryConfig{}
 
 	r, err := MemoryRegistration{}.Initialize(cfg, config.ErrorMessages{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	validateSaveAndLookup(t, r)
 }
@@ -35,16 +35,14 @@ func TestTtl(t *testing.T) {
 	cfg := MemoryConfig{Ttl: 1}
 
 	r, err := MemoryRegistration{}.Initialize(cfg, config.ErrorMessages{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	tile := makeReq(53)
 	img := makeImg(53)
 
 	r.Save(tile, &img)
 
-	if !validateLookup(t, r, tile, &img) {
-		return
-	}
+	validateLookup(t, r, tile, &img)
 	time.Sleep(time.Duration(2) * time.Second)
 	validateNoLookup(t, r, tile)
 }

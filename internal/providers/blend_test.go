@@ -21,6 +21,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func makeBlendProviders() []map[string]interface{} {
@@ -38,16 +39,16 @@ func Test_BlendValidate(t *testing.T) {
 	providers := makeBlendProviders()
 	b, err := BlendRegistration{}.Initialize(BlendConfig{Providers: providers}, testClientConfig, testErrMessages, nil)
 	assert.Nil(t, b)
-	assert.Error(t, err)
+	require.Error(t, err)
 	b, err = BlendRegistration{}.Initialize(BlendConfig{Mode: "fake", Providers: providers}, testClientConfig, testErrMessages, nil)
 	assert.Nil(t, b)
-	assert.Error(t, err)
+	require.Error(t, err)
 	b, err = BlendRegistration{}.Initialize(BlendConfig{Mode: "add", Opacity: 23, Providers: providers}, testClientConfig, testErrMessages, nil)
 	assert.Nil(t, b)
-	assert.Error(t, err)
+	require.Error(t, err)
 	b, err = BlendRegistration{}.Initialize(BlendConfig{Mode: "opacity", Opacity: 23, Providers: []map[string]interface{}{}}, testClientConfig, testErrMessages, nil)
 	assert.Nil(t, b)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func Test_Blend_Layers(t *testing.T) {
@@ -66,7 +67,7 @@ func Test_Blend_Layers(t *testing.T) {
 			Values:  []map[string]string{v1, v2},
 		}}, testClientConfig, testErrMessages, nil)
 	assert.NotNil(t, b)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	bb := b.(*Blend)
 
 	assert.Len(t, bb.providers, 2)
@@ -77,20 +78,20 @@ func Test_Blend_Layers(t *testing.T) {
 func Test_BlendExecute_Add(t *testing.T) {
 	b, err := BlendRegistration{}.Initialize(BlendConfig{Mode: "add", Providers: makeBlendProviders()}, testClientConfig, testErrMessages, nil)
 	assert.NotNil(t, b)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	ctx, err := b.PreAuth(pkg.BackgroundContext(), layer.ProviderContext{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, ctx)
 	assert.NotEmpty(t, ctx.Other)
 	ctx, err = b.PreAuth(pkg.BackgroundContext(), ctx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, ctx)
 	assert.NotEmpty(t, ctx.Other)
 
 	exp, _ := images.GetStaticImage("color:FF0")
 	i, err := b.GenerateTile(pkg.BackgroundContext(), ctx, pkg.TileRequest{LayerName: "", Z: 4, X: 2, Y: 3})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, *exp, *i)
 }
@@ -99,9 +100,9 @@ func Test_BlendExecute_All(t *testing.T) {
 	for _, mode := range allBlendModes {
 		b, err := BlendRegistration{}.Initialize(BlendConfig{Mode: mode, Providers: makeBlendProviders()}, testClientConfig, testErrMessages, nil)
 		assert.NotNil(t, b)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		i, err := b.GenerateTile(pkg.BackgroundContext(), layer.ProviderContext{}, pkg.TileRequest{LayerName: "", Z: 4, X: 2, Y: 3})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.NotNil(t, i)
 		assert.Greater(t, len(*i), 1000)
 	}

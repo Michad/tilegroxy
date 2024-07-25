@@ -18,69 +18,70 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestColors(t *testing.T) {
 	col, err := parseColor(KeyPrefixColor + "FFF")
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, color.RGBA{255, 255, 255, 255}, col)
 
 	col, err = parseColor(KeyPrefixColor + "fff")
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, color.RGBA{255, 255, 255, 255}, col)
 
 	col, err = parseColor(KeyPrefixColor + "FFFFFF")
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, color.RGBA{255, 255, 255, 255}, col)
 
 	col, err = parseColor(KeyPrefixColor + "ffffff")
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, color.RGBA{255, 255, 255, 255}, col)
 
 	col, err = parseColor(KeyPrefixColor + "FFFF")
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, color.RGBA{255, 255, 255, 255}, col)
 
 	col, err = parseColor(KeyPrefixColor + "ffff")
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, color.RGBA{255, 255, 255, 255}, col)
 
 	col, err = parseColor(KeyPrefixColor + "ffffffff")
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, color.RGBA{255, 255, 255, 255}, col)
 
 	col, err = parseColor(KeyPrefixColor + "f01")
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, color.RGBA{255, 0, 17, 255}, col)
 
 	col, err = parseColor(KeyPrefixColor + "aaaa")
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, color.RGBA{0xaa, 0xaa, 0xaa, 0xaa}, col)
 
 	_, err = parseColor(KeyPrefixColor + "hello")
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	_, err = parseColor(KeyPrefixColor + "ffffffffff")
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	_, err = parseColor(KeyPrefixColor + "")
-	assert.Error(t, err)
+	require.Error(t, err)
 
 }
 
 func TestImageLoad(t *testing.T) {
 	img, err := GetStaticImage("error.png")
 	assert.NotNil(t, img)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, imageError, *img)
 }

@@ -25,6 +25,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
@@ -54,15 +55,13 @@ func setupMemcacheContainer(ctx context.Context, t *testing.T) (testcontainers.C
 		ContainerRequest: req,
 		Started:          true,
 	})
-	if !assert.NoError(t, err) {
-		return nil, nil
-	}
+	require.NoError(t, err)
 
 	return memcacheC, func(t *testing.T) {
 		t.Log("teardown container")
 
 		err := memcacheC.Terminate(ctx)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}
 }
 
@@ -76,17 +75,15 @@ func TestMemcacheWithContainerHostAndPort(t *testing.T) {
 	defer cleanupF(t)
 
 	endpoint, err := memcacheC.Endpoint(ctx, "")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	cfg := MemcacheConfig{
 		HostAndPort: extractHostAndPort(t, endpoint),
 	}
 
 	r, err := MemcacheRegistration{}.Initialize(cfg, config.ErrorMessages{})
-	_ = assert.NoError(t, err) &&
-		validateSaveAndLookup(t, r)
+	require.NoError(t, err)
+	validateSaveAndLookup(t, r)
 }
 
 func TestMemcacheWithContainerSingleServersArr(t *testing.T) {
@@ -99,17 +96,15 @@ func TestMemcacheWithContainerSingleServersArr(t *testing.T) {
 	defer cleanupF(t)
 
 	endpoint, err := memcacheC.Endpoint(ctx, "")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	cfg := MemcacheConfig{
 		Servers: []HostAndPort{extractHostAndPort(t, endpoint)},
 	}
 
 	r, err := MemcacheRegistration{}.Initialize(cfg, config.ErrorMessages{})
-	_ = assert.NoError(t, err) &&
-		validateSaveAndLookup(t, r)
+	require.NoError(t, err)
+	validateSaveAndLookup(t, r)
 }
 
 func TestMemcacheWithContainerDiffPrefix(t *testing.T) {
@@ -122,9 +117,7 @@ func TestMemcacheWithContainerDiffPrefix(t *testing.T) {
 	defer cleanupF(t)
 
 	endpoint, err := memcacheC.Endpoint(ctx, "")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	cfg := MemcacheConfig{
 		HostAndPort: extractHostAndPort(t, endpoint),
@@ -132,9 +125,7 @@ func TestMemcacheWithContainerDiffPrefix(t *testing.T) {
 	}
 
 	r, err := MemcacheRegistration{}.Initialize(cfg, config.ErrorMessages{})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	config2 := MemcacheConfig{
 		HostAndPort: extractHostAndPort(t, endpoint),
@@ -142,7 +133,7 @@ func TestMemcacheWithContainerDiffPrefix(t *testing.T) {
 	}
 
 	r2, err := MemcacheRegistration{}.Initialize(config2, config.ErrorMessages{})
-	_ = assert.NoError(t, err) &&
-		validateSaveAndLookup(t, r) &&
-		validateSaveAndLookup(t, r2)
+	require.NoError(t, err)
+	validateSaveAndLookup(t, r)
+	validateSaveAndLookup(t, r2)
 }

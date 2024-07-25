@@ -62,13 +62,13 @@ func Test_ParsePattern(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = parsePattern("a{b}c{d}e{d}")
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	_, err = parsePattern("a{b}{c}d")
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	_, err = parsePattern("{")
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func Test_MatchPattern(t *testing.T) {
@@ -140,53 +140,53 @@ func Test_ValidateMatches(t *testing.T) {
 	rules["*"] = "[a-zA-Z0-9]*"
 
 	regex, err := constructValidation(rules)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, validateParamMatches(matches, regex))
 
 	rules["*"] = "^[a-zA-Z0-9]*$"
 
 	regex, err = constructValidation(rules)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, validateParamMatches(matches, regex))
 
 	rules["*"] = "[a-zA-Z]*"
 	regex, err = constructValidation(rules)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.False(t, validateParamMatches(matches, regex))
 
 	delete(rules, "*")
 	regex, err = constructValidation(rules)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, validateParamMatches(matches, regex))
 
 	regex, err = constructValidation(nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, validateParamMatches(matches, regex))
 
 	rules["test1"] = "[a-zA-Z]*"
 	regex, err = constructValidation(rules)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, validateParamMatches(matches, regex))
 
 	rules["test1"] = "a"
 	regex, err = constructValidation(rules)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.False(t, validateParamMatches(matches, regex))
 
 	rules["test1"] = "[a-zA-Z]*"
 	rules["test2"] = "[a-zA-Z0-9]*"
 	regex, err = constructValidation(rules)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, validateParamMatches(matches, regex))
 
 	rules["*"] = "aaa"
 	regex, err = constructValidation(rules)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.False(t, validateParamMatches(matches, regex))
 
 	delete(rules, "*")
 	rules["test3"] = ".+"
 	regex, err = constructValidation(rules)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.False(t, validateParamMatches(matches, regex))
 }

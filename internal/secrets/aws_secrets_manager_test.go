@@ -69,7 +69,7 @@ func Test_SecretManager_Execute(t *testing.T) {
 		ContainerRequest: req,
 		Started:          true,
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer func(c testcontainers.Container, ctx context.Context) {
 		if err := c.Terminate(ctx); err != nil {
 			fmt.Println(err)

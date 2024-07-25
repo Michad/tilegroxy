@@ -19,21 +19,19 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMultiSaveAndLookup(t *testing.T) {
 	memConfig1 := MemoryConfig{}
 
 	mem1, err := MemoryRegistration{}.Initialize(memConfig1, config.ErrorMessages{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	memConfig2 := MemoryConfig{}
 
 	mem2, err := MemoryRegistration{}.Initialize(memConfig2, config.ErrorMessages{})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	multi := Multi{Tiers: []cache.Cache{mem1, mem2}}
 
@@ -41,23 +39,21 @@ func TestMultiSaveAndLookup(t *testing.T) {
 	img := makeImg(24)
 	multi.Save(tile, &img)
 
-	_ = validateLookup(t, multi, tile, &img) &&
-		validateLookup(t, mem1, tile, &img) &&
-		validateLookup(t, mem2, tile, &img)
+	validateLookup(t, multi, tile, &img)
+	validateLookup(t, mem1, tile, &img)
+	validateLookup(t, mem2, tile, &img)
 }
 
 func TestMultiIn1(t *testing.T) {
 	memConfig1 := MemoryConfig{}
 
 	mem1, err := MemoryRegistration{}.Initialize(memConfig1, config.ErrorMessages{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	memConfig2 := MemoryConfig{}
 
 	mem2, err := MemoryRegistration{}.Initialize(memConfig2, config.ErrorMessages{})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	multi := Multi{Tiers: []cache.Cache{mem1, mem2}}
 
@@ -72,14 +68,12 @@ func TestMultiIn2(t *testing.T) {
 	memConfig1 := MemoryConfig{}
 
 	mem1, err := MemoryRegistration{}.Initialize(memConfig1, config.ErrorMessages{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	memConfig2 := MemoryConfig{}
 
 	mem2, err := MemoryRegistration{}.Initialize(memConfig2, config.ErrorMessages{})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	multi := Multi{Tiers: []cache.Cache{mem1, mem2}}
 

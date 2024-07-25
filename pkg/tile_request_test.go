@@ -93,11 +93,11 @@ func TestTileRequestRangeError(t *testing.T) {
 	b, err := r.GetBounds()
 
 	assert.Equal(t, (*Bounds)(nil), b)
-	require.NoError(t, err)
+	require.Error(t, err)
 	assert.IsType(t, RangeError{}, err)
 
 	var re RangeError
-	assert.ErrorAs(t, err, &re)
+	require.ErrorAs(t, err, &re)
 	assert.Equal(t, "Y", re.ParamName)
 	assert.InDelta(t, 0.0, re.MinValue, 0.00001)
 	assert.InDelta(t, 3.0, re.MaxValue, 0.00001)
@@ -171,7 +171,7 @@ func TestGeohashToBounds(t *testing.T) {
 	assert.InDelta(t, 45, bbox.South, 0.000001)
 
 	bbox, err = NewBoundsFromGeohash("some nonsense")
-	require.NoError(t, err)
+	require.Error(t, err)
 	assert.True(t, bbox.IsNullIsland())
 }
 
@@ -194,7 +194,7 @@ func FuzzToBoundsAndBack(f *testing.F) {
 
 		newTiles, err := b.FindTiles(orig.LayerName, uint(orig.Z), false)
 
-		assert.Nil(t, err, "Error getting tiles for %v at %v", b, orig.Z)
+		require.NoError(t, err, "Error getting tiles for %v at %v", b, orig.Z)
 		require.Len(t, *newTiles, 1)
 		assert.Equal(t, orig, (*newTiles)[0])
 	})

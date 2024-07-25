@@ -22,18 +22,19 @@ import (
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_CustomValidate(t *testing.T) {
 	c, err := CustomRegistration{}.Initialize(CustomConfig{}, testClientConfig, testErrMessages, nil)
 
 	assert.Nil(t, c)
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	c, err = CustomRegistration{}.Initialize(CustomConfig{Script: "package custom"}, testClientConfig, testErrMessages, nil)
 
 	assert.Nil(t, c)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func Test_CustomExecute(t *testing.T) {
@@ -62,15 +63,15 @@ func generateTile(ctx *tilegroxy.RequestContext, providerContext tilegroxy.Provi
 	}
 
 	assert.NotNil(t, c)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	pc, err := c.PreAuth(pkg.BackgroundContext(), layer.ProviderContext{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, pc)
 	assert.True(t, pc.AuthBypass)
 
 	img, err := c.GenerateTile(pkg.BackgroundContext(), pc, pkg.TileRequest{LayerName: "l", Z: 3, X: 1, Y: 2})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, img)
 	assert.Equal(t, []byte{0x01, 0x02}, *img)
 

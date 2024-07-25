@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_CheckCommand_Execute(t *testing.T) {
@@ -34,7 +35,7 @@ func Test_CheckCommand_Execute(t *testing.T) {
 	b := bytes.NewBufferString("")
 	rootCmd.SetOutput(b)
 	rootCmd.SetArgs([]string{"config", "check", "-c", "../examples/configurations/simple.json"})
-	assert.NoError(t, rootCmd.Execute())
+	require.NoError(t, rootCmd.Execute())
 	out, err := io.ReadAll(b)
 	if err != nil {
 		t.Fatal(err)
@@ -69,7 +70,7 @@ layers:
         url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
 `
 	rootCmd.SetArgs([]string{"config", "check", "--raw-config", cfg})
-	assert.NoError(t, rootCmd.Execute())
+	require.NoError(t, rootCmd.Execute())
 	out, err := io.ReadAll(b)
 	if err != nil {
 		t.Fatal(err)
@@ -105,7 +106,7 @@ func Test_CheckCommand_ExecuteInlineJson(t *testing.T) {
 	}
 `
 	rootCmd.SetArgs([]string{"config", "check", "--raw-config", cfg})
-	assert.NoError(t, rootCmd.Execute())
+	require.NoError(t, rootCmd.Execute())
 	out, err := io.ReadAll(b)
 	if err != nil {
 		t.Fatal(err)
@@ -140,7 +141,7 @@ layers:
         url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
 `
 	rootCmd.SetArgs([]string{"config", "check", "--raw-config", cfg, "--echo"})
-	assert.NoError(t, rootCmd.Execute())
+	require.NoError(t, rootCmd.Execute())
 	out, err := io.ReadAll(b)
 	if err != nil {
 		t.Fatal(err)
@@ -183,7 +184,7 @@ layers:
 `
 
 	rootCmd.SetArgs([]string{"config", "check", "--raw-config", cfg})
-	assert.NoError(t, rootCmd.Execute())
+	require.NoError(t, rootCmd.Execute())
 	out, err := io.ReadAll(b)
 	if err != nil {
 		t.Fatal(err)

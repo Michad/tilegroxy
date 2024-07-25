@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
@@ -53,7 +54,7 @@ func Test_ExecuteTestCommandNoCache(t *testing.T) {
 	b := bytes.NewBufferString("")
 	cmd.SetOutput(b)
 	cmd.SetArgs([]string{"test", "-c", "../examples/configurations/simple.json", "--no-cache"})
-	assert.Nil(t, cmd.Execute())
+	require.NoError(t, cmd.Execute())
 	out, err := io.ReadAll(b)
 	if err != nil {
 		t.Fatal(err)
@@ -76,7 +77,7 @@ func Test_ExecuteTestCommand(t *testing.T) {
 	b := bytes.NewBufferString("")
 	cmd.SetOutput(b)
 	cmd.SetArgs([]string{"test", "-c", "../examples/configurations/simple.json"})
-	assert.Nil(t, cmd.Execute())
+	require.NoError(t, cmd.Execute())
 	out, err := io.ReadAll(b)
 	if err != nil {
 		t.Fatal(err)
@@ -97,7 +98,7 @@ func Test_ExecuteTestWithMultiCache(t *testing.T) {
 
 	dir, err := os.MkdirTemp(os.TempDir(), "tilegroxy-tests")
 	defer os.RemoveAll(dir)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	cfg := fmt.Sprintf(
 		`cache:
@@ -119,7 +120,7 @@ layers:
 	b := bytes.NewBufferString("")
 	cmd.SetOutput(b)
 	cmd.SetArgs([]string{"test", "--raw-config", cfg})
-	assert.Nil(t, cmd.Execute())
+	require.NoError(t, cmd.Execute())
 	out, err := io.ReadAll(b)
 	if err != nil {
 		t.Fatal(err)
@@ -153,16 +154,12 @@ func Test_ExecuteTestWithRedisCache(t *testing.T) {
 		ContainerRequest: req,
 		Started:          true,
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	defer redisC.Terminate(ctx)
 
 	endpoint, err := redisC.Endpoint(ctx, "")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 	endSplit := strings.Split(endpoint, ":")
 
 	cfg := fmt.Sprintf(
@@ -182,7 +179,7 @@ layers:
 	b := bytes.NewBufferString("")
 	cmd.SetOutput(b)
 	cmd.SetArgs([]string{"test", "--raw-config", cfg})
-	assert.Nil(t, cmd.Execute())
+	require.NoError(t, cmd.Execute())
 	out, err := io.ReadAll(b)
 	if err != nil {
 		t.Fatal(err)
@@ -208,7 +205,7 @@ func Test_TestCommand_InvalidConfig(t *testing.T) {
 	b := bytes.NewBufferString("")
 	cmd.SetOutput(b)
 	cmd.SetArgs([]string{"test", "-c", "not real file"})
-	assert.Nil(t, cmd.Execute())
+	require.NoError(t, cmd.Execute())
 	out, err := io.ReadAll(b)
 	if err != nil {
 		t.Fatal(err)

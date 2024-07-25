@@ -21,6 +21,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func makeEffectProvider() map[string]interface{} {
@@ -35,12 +36,12 @@ func Test_EffectValidate(t *testing.T) {
 	c, err := EffectRegistration{}.Initialize(EffectConfig{Provider: s}, testClientConfig, testErrMessages, nil)
 
 	assert.Nil(t, c)
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	c, err = EffectRegistration{}.Initialize(EffectConfig{Mode: "emboss", Intensity: 24, Provider: s}, testClientConfig, testErrMessages, nil)
 
 	assert.Nil(t, c)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func Test_EffectExecuteGreyscale(t *testing.T) {
@@ -48,16 +49,16 @@ func Test_EffectExecuteGreyscale(t *testing.T) {
 	c, err := EffectRegistration{}.Initialize(EffectConfig{Mode: "grayscale", Provider: s}, testClientConfig, testErrMessages, nil)
 
 	assert.NotNil(t, c)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	pc, err := c.PreAuth(pkg.BackgroundContext(), layer.ProviderContext{})
 	assert.NotNil(t, pc)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	exp, _ := images.GetStaticImage("color:4d4d4d")
 	img, err := c.GenerateTile(pkg.BackgroundContext(), pc, pkg.TileRequest{LayerName: "l", Z: 5, X: 3, Y: 1})
 	assert.NotNil(t, img)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, *exp, *img)
 }
@@ -68,14 +69,14 @@ func Test_EffectExecuteAll(t *testing.T) {
 		c, err := EffectRegistration{}.Initialize(EffectConfig{Mode: mode, Provider: s}, testClientConfig, testErrMessages, nil)
 
 		assert.NotNil(t, c)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		pc, err := c.PreAuth(pkg.BackgroundContext(), layer.ProviderContext{})
 		assert.NotNil(t, pc)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		img, err := c.GenerateTile(pkg.BackgroundContext(), pc, pkg.TileRequest{LayerName: "l", Z: 5, X: 3, Y: 1})
 		assert.NotNil(t, img)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}
 }

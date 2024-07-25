@@ -32,6 +32,7 @@ import (
 	"github.com/Michad/tilegroxy/internal/server"
 	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -137,7 +138,7 @@ layers:
 
 	_, _, err := coreServeTest(cfg, 12340, "http://localhost:12340/")
 
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Equal(t, 1, exitStatus)
 }
 
@@ -164,7 +165,7 @@ layers:
 	resp, postFunc, err := coreServeTest(cfg, 12342, "http://localhost:12342/root/tiles/color/8/12/32")
 	defer postFunc()
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, resp)
 
 	assert.Equal(t, 200, resp.StatusCode)
@@ -174,67 +175,65 @@ layers:
 	assert.Equal(t, "tilegroxy v0.X.Y", resp.Header["X-Powered-By"][0])
 
 	req, err := http.NewRequest(http.MethodGet, "http://localhost:12342/root/tiles/color/hgkgh/12/32", nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	resp, err = http.DefaultClient.Do(req)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
 	resp.Body.Close()
 
 	req, err = http.NewRequest(http.MethodGet, "http://localhost:12342/root/tiles/color/8/ghj/32", nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	resp, err = http.DefaultClient.Do(req)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
 	resp.Body.Close()
 
 	req, err = http.NewRequest(http.MethodGet, "http://localhost:12342/root/tiles/color/8/12/dfg", nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	resp, err = http.DefaultClient.Do(req)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
 	resp.Body.Close()
 
 	req, err = http.NewRequest(http.MethodGet, "http://localhost:12342/root/tiles/asfas/8/12/32", nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	resp, err = http.DefaultClient.Do(req)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 401, resp.StatusCode)
 	resp.Body.Close()
 
 	req, err = http.NewRequest(http.MethodGet, "http://localhost:12342/root/tiles/color/800/12/32", nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	resp, err = http.DefaultClient.Do(req)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
 	resp.Body.Close()
 
 	req, err = http.NewRequest(http.MethodGet, "http://localhost:12342/root/tiles/color/8/1234567/32", nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	resp, err = http.DefaultClient.Do(req)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 400, resp.StatusCode)
 	resp.Body.Close()
 
 	req, err = http.NewRequest(http.MethodGet, "http://localhost:12342/root/tiles/meta/8/1/32", nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	resp, err = http.DefaultClient.Do(req)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
 	resp.Body.Close()
 
 	req, err = http.NewRequest(http.MethodGet, "http://localhost:12342/root", nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	resp, err = http.DefaultClient.Do(req)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
 	resp.Body.Close()
 }
 
 func Test_ServeCommand_ExecuteNoContentRoute(t *testing.T) {
 	tmpLog, err := os.CreateTemp("", "tilegroxy-test-serve-nocontent-*.log")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 	defer os.Remove(tmpLog.Name())
 
 	cfg := `server:
@@ -282,25 +281,25 @@ layers:
 	resp, postFunc, err := coreServeTest(cfg, 12341, "http://localhost:12341/")
 	defer postFunc()
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, resp)
 
 	assert.Equal(t, 204, resp.StatusCode)
 
 	req, err := http.NewRequest(http.MethodGet, "http://localhost:12341/tiles/color/8/12/32", nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	resp, err = http.DefaultClient.Do(req)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
 	assert.Nil(t, resp.Header["X-Powered-By"])
 	resp.Body.Close()
 
 	fileInfo, err := os.Stat(tmpLog.Name())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotZero(t, fileInfo.Size())
 
 	req, err = http.NewRequest(http.MethodGet, "http://localhost:12341/tiles/l/8/12/32", nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	start := time.Now()
 	resp2, _ := http.DefaultClient.Do(req)
@@ -359,9 +358,7 @@ func Test_ServeCommand_RemoteProvider(t *testing.T) {
 		}
 	}
 
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	defer etcdC.Terminate(ctx)
 
@@ -380,12 +377,12 @@ layers:
 		Endpoints:   []string{endpoint},
 		DialTimeout: 5 * time.Second,
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer cli.Close()
 	ctx2, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	_, err = cli.Put(ctx2, "sample_key", cfg)
 	cancel()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	rootCmd.SetArgs([]string{"serve", "--remote-provider", "etcd3", "--remote-path", "sample_key", "--remote-endpoint", "http://" + endpoint})
 
@@ -394,7 +391,7 @@ layers:
 	time.Sleep(1 * time.Second)
 
 	req, err := http.NewRequest(http.MethodGet, "http://localhost:12342/tiles/color/8/12/32", nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	resp, err := http.DefaultClient.Do(req)
 
@@ -405,7 +402,7 @@ layers:
 		}
 	}()
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	if assert.NotNil(t, resp) {
 		assert.Equal(t, 200, resp.StatusCode)
 		assert.Equal(t, "image/png", resp.Header["Content-Type"][0])

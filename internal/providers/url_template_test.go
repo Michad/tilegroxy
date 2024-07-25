@@ -33,7 +33,7 @@ func Test_UrlTemplateValidate(t *testing.T) {
 	p, err := UrlTemplateRegistration{}.Initialize(UrlTemplateConfig{}, config.ClientConfig{}, testErrMessages, nil)
 
 	assert.Nil(t, p)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 func Test_UrlTemplateExecute(t *testing.T) {
 	p, err := UrlTemplateRegistration{}.Initialize(UrlTemplateConfig{Template: testTemplate}, config.ClientConfig{StatusCodes: []int{200}, MaxLength: 2000, ContentTypes: []string{"image/png"}, UnknownLength: true}, testErrMessages, nil)
@@ -43,11 +43,11 @@ func Test_UrlTemplateExecute(t *testing.T) {
 
 	pc, err := p.PreAuth(pkg.BackgroundContext(), layer.ProviderContext{})
 	assert.NotNil(t, pc)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	img, err := p.GenerateTile(pkg.BackgroundContext(), pc, pkg.TileRequest{LayerName: "layer", Z: 6, X: 10, Y: 10})
 	assert.NotNil(t, img)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func Test_UrlTemplateConfigOptions(t *testing.T) {
@@ -58,23 +58,23 @@ func Test_UrlTemplateConfigOptions(t *testing.T) {
 
 	img, err := p.GenerateTile(pkg.BackgroundContext(), layer.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 6, X: 10, Y: 10})
 	assert.Nil(t, img)
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	clientConfig.StatusCodes = []int{200}
 	clientConfig.MaxLength = 2
 	img, err = p.GenerateTile(pkg.BackgroundContext(), layer.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 6, X: 10, Y: 10})
 	assert.Nil(t, img)
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	clientConfig.MaxLength = 2000
 	clientConfig.UnknownLength = false
 	img, err = p.GenerateTile(pkg.BackgroundContext(), layer.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 6, X: 10, Y: 10})
 	assert.Nil(t, img)
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	clientConfig.UnknownLength = true
 	clientConfig.ContentTypes = []string{"text/plain"}
 	img, err = p.GenerateTile(pkg.BackgroundContext(), layer.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 6, X: 10, Y: 10})
 	assert.Nil(t, img)
-	assert.Error(t, err)
+	require.Error(t, err)
 }

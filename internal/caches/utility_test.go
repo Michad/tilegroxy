@@ -24,6 +24,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHostAndPortToString(t *testing.T) {
@@ -43,7 +44,7 @@ func TestHostAndPortToStringArr(t *testing.T) {
 func extractHostAndPort(t *testing.T, endpoint string) HostAndPort {
 	split := strings.Split(endpoint, ":")
 	port, err := strconv.Atoi(split[1])
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	return HostAndPort{Host: split[0], Port: uint16(port)}
 }
@@ -59,38 +60,27 @@ func makeImg(seed int) pkg.Image {
 	return make([]byte, seed)
 }
 
-func validateSaveAndLookup(t *testing.T, c cache.Cache) bool {
+func validateSaveAndLookup(t *testing.T, c cache.Cache) {
 	//TODO: reconsider use of rand
 	tile := makeReq(rand.Intn(10000))
 	img := makeImg(rand.Intn(100))
 
 	err := c.Save(tile, &img)
-	if !assert.Nil(t, err, "Cache save returned an error") {
-		return false
-	}
+	require.NoError(t, err, "Cache save returned an error")
 
-	return validateLookup(t, c, tile, &img)
+	validateLookup(t, c, tile, &img)
 }
 
-func validateLookup(t *testing.T, c cache.Cache, tile pkg.TileRequest, expected *pkg.Image) bool {
+func validateLookup(t *testing.T, c cache.Cache, tile pkg.TileRequest, expected *pkg.Image) {
 	img2, err := c.Lookup(tile)
-	if !assert.Nil(t, err, "Cache lookup returned an error") {
-		return false
-	}
-	if !assert.NotNil(t, img2, "Cache lookup didn't return an image") {
-		return false
-	}
+	require.NoError(t, err, "Cache lookup returned an error")
+	require.NotNil(t, img2, "Cache lookup didn't return an image")
 
-	return assert.True(t, slices.Equal(*expected, *img2), "Result before and after cache don't match")
+	require.True(t, slices.Equal(*expected, *img2), "Result before and after cache don't match")
 }
 
-func validateNoLookup(t *testing.T, c cache.Cache, tile pkg.TileRequest) bool {
+func validateNoLookup(t *testing.T, c cache.Cache, tile pkg.TileRequest) {
 	img2, err := c.Lookup(tile)
-	if !assert.Nil(t, err, "Cache lookup returned an error") {
-		return false
-	}
-	if !assert.Nil(t, img2, "Cache lookup returned a result when it shouldn't") {
-		return false
-	}
-	return true
+	require.NoError(t, err, "Cache lookup returned an error")
+	require.Nil(t, img2, "Cache lookup returned a result when it shouldn't")
 }

@@ -30,7 +30,7 @@ func TestFailMissingArgs(t *testing.T) {
 	jwtConfig := JwtConfig{}
 	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
 
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, jwt)
 }
 func TestFailMissingKey(t *testing.T) {
@@ -39,7 +39,7 @@ func TestFailMissingKey(t *testing.T) {
 	}
 	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
 
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, jwt)
 }
 func TestFailMissingAlg(t *testing.T) {
