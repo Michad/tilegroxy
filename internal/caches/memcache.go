@@ -32,9 +32,9 @@ const (
 
 type MemcacheConfig struct {
 	HostAndPort `mapstructure:",squash"`
-	Servers     []HostAndPort //The list of servers to use.
-	KeyPrefix   string        //Prefix to keynames stored in cache
-	Ttl         uint32        //Cache expiration in seconds. Max of 30 days. Default to 1 day
+	Servers     []HostAndPort // The list of servers to use.
+	KeyPrefix   string        // Prefix to keynames stored in cache
+	Ttl         uint32        // Cache expiration in seconds. Max of 30 days. Default to 1 day
 }
 
 type Memcache struct {
@@ -69,10 +69,8 @@ func (s MemcacheRegistration) Initialize(configAny any, errorMessages config.Err
 		}
 
 		config.Servers = []HostAndPort{{config.Host, config.Port}}
-	} else {
-		if config.Host != "" {
-			return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "config.memcache.host", "config.memcache.servers")
-		}
+	} else if config.Host != "" {
+		return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "config.memcache.host", "config.memcache.servers")
 	}
 
 	if config.Ttl == 0 {
@@ -98,9 +96,7 @@ func (c Memcache) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
 		return nil, err
 	}
 
-	result := pkg.Image(it.Value)
-
-	return &result, nil
+	return &it.Value, nil
 }
 
 func (c Memcache) Save(t pkg.TileRequest, img *pkg.Image) error {

@@ -37,9 +37,9 @@ var allCacheModes = []CacheMode{CacheModeAlways, CacheModeUnlessError, CacheMode
 type FallbackConfig struct {
 	Primary   map[string]interface{}
 	Secondary map[string]interface{}
-	Zoom      string     //Only use Primary for requests in the given range of zoom levels
-	Bounds    pkg.Bounds //Allows any tile that intersects these bounds
-	Cache     CacheMode  //When to skip cache-ing (in fallback scenarios)
+	Zoom      string     // Only use Primary for requests in the given range of zoom levels
+	Bounds    pkg.Bounds // Allows any tile that intersects these bounds
+	Cache     CacheMode  // When to skip cache-ing (in fallback scenarios)
 }
 
 type Fallback struct {

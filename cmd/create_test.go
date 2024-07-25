@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_CreateCommand_Execute(t *testing.T) {
@@ -33,7 +34,7 @@ func Test_CreateCommand_Execute(t *testing.T) {
 	b := bytes.NewBufferString("")
 	rootCmd.SetOutput(b)
 	rootCmd.SetArgs([]string{"config", "create"})
-	assert.Nil(t, rootCmd.Execute())
+	require.NoError(t, rootCmd.Execute())
 	out, err := io.ReadAll(b)
 	if err != nil {
 		t.Fatal(err)
@@ -52,7 +53,7 @@ func Test_CreateCommand_ExecuteJson(t *testing.T) {
 	b := bytes.NewBufferString("")
 	rootCmd.SetOutput(b)
 	rootCmd.SetArgs([]string{"config", "create", "--json"})
-	assert.Nil(t, rootCmd.Execute())
+	require.NoError(t, rootCmd.Execute())
 	out, err := io.ReadAll(b)
 	if err != nil {
 		t.Fatal(err)
@@ -72,7 +73,7 @@ func Test_CreateCommand_ExecuteYml(t *testing.T) {
 	b := bytes.NewBufferString("")
 	rootCmd.SetOutput(b)
 	rootCmd.SetArgs([]string{"config", "create", "--yaml"})
-	assert.Nil(t, rootCmd.Execute())
+	require.NoError(t, rootCmd.Execute())
 	out, err := io.ReadAll(b)
 	if err != nil {
 		t.Fatal(err)
@@ -90,14 +91,14 @@ func Test_CreateCommand_ExecuteJsonFile(t *testing.T) {
 	initCreate()
 
 	fil, err := os.CreateTemp(os.TempDir(), "*-test-create.json")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	fil.Close()
 	defer os.Remove(fil.Name())
 
 	b := bytes.NewBufferString("")
 	rootCmd.SetOutput(b)
 	rootCmd.SetArgs([]string{"config", "create", "-o", fil.Name()})
-	assert.Nil(t, rootCmd.Execute())
+	require.NoError(t, rootCmd.Execute())
 	_, err = io.ReadAll(b)
 	if err != nil {
 		t.Fatal(err)
@@ -105,7 +106,7 @@ func Test_CreateCommand_ExecuteJsonFile(t *testing.T) {
 
 	c, err := os.ReadFile(fil.Name())
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotEmpty(t, c)
 	assert.Equal(t, -1, exitStatus)
 }
@@ -117,14 +118,14 @@ func Test_CreateCommand_ExecuteYmlFile(t *testing.T) {
 	initCreate()
 
 	fil, err := os.CreateTemp(os.TempDir(), "*-test-create.yml")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	fil.Close()
 	defer os.Remove(fil.Name())
 
 	b := bytes.NewBufferString("")
 	rootCmd.SetOutput(b)
 	rootCmd.SetArgs([]string{"config", "create", "--default", "--yaml", "-o", fil.Name()})
-	assert.Nil(t, rootCmd.Execute())
+	require.NoError(t, rootCmd.Execute())
 	_, err = io.ReadAll(b)
 	if err != nil {
 		t.Fatal(err)
@@ -132,7 +133,7 @@ func Test_CreateCommand_ExecuteYmlFile(t *testing.T) {
 
 	c, err := os.ReadFile(fil.Name())
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotEmpty(t, c)
 	assert.Equal(t, -1, exitStatus)
 }

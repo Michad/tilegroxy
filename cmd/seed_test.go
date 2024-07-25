@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_SeedCommand_Execute(t *testing.T) {
@@ -33,7 +34,7 @@ func Test_SeedCommand_Execute(t *testing.T) {
 	b := bytes.NewBufferString("")
 	rootCmd.SetOutput(b)
 	rootCmd.SetArgs([]string{"seed", "--verbose", "-c", "../examples/configurations/simple.json", "-l", "osm", "-z", "1"})
-	assert.Nil(t, rootCmd.Execute())
+	require.NoError(t, rootCmd.Execute())
 	out, err := io.ReadAll(b)
 	if err != nil {
 		t.Fatal(err)
@@ -53,7 +54,7 @@ func Test_SeedCommand_MissingArgs(t *testing.T) {
 	initSeed()
 
 	rootCmd.SetArgs([]string{"seed", "--verbose", "-c", "../examples/configurations/simple.json"})
-	assert.NotNil(t, rootCmd.Execute())
+	require.Error(t, rootCmd.Execute())
 }
 
 func Test_SeedCommand_InvalidLayer(t *testing.T) {
@@ -66,7 +67,7 @@ func Test_SeedCommand_InvalidLayer(t *testing.T) {
 	b := bytes.NewBufferString("")
 	rootCmd.SetOutput(b)
 	rootCmd.SetArgs([]string{"seed", "--verbose", "-c", "../examples/configurations/simple.json", "-l", "hello"})
-	assert.Nil(t, rootCmd.Execute())
+	require.NoError(t, rootCmd.Execute())
 	out, err := io.ReadAll(b)
 	if err != nil {
 		t.Fatal(err)
@@ -74,7 +75,7 @@ func Test_SeedCommand_InvalidLayer(t *testing.T) {
 
 	fmt.Println(string(out))
 
-	assert.Greater(t, len(out), 0)
+	assert.NotEmpty(t, out)
 	assert.Equal(t, 1, exitStatus)
 }
 
@@ -88,7 +89,7 @@ func Test_SeedCommand_InvalidThread(t *testing.T) {
 	b := bytes.NewBufferString("")
 	rootCmd.SetOutput(b)
 	rootCmd.SetArgs([]string{"seed", "--verbose", "-c", "../examples/configurations/simple.json", "-l", "osm", "-t", "0"})
-	assert.Nil(t, rootCmd.Execute())
+	require.NoError(t, rootCmd.Execute())
 	out, err := io.ReadAll(b)
 	if err != nil {
 		t.Fatal(err)
@@ -96,7 +97,7 @@ func Test_SeedCommand_InvalidThread(t *testing.T) {
 
 	fmt.Println(string(out))
 
-	assert.Greater(t, len(out), 0)
+	assert.NotEmpty(t, out)
 	assert.Equal(t, 1, exitStatus)
 }
 
@@ -110,7 +111,7 @@ func Test_SeedCommand_InvalidZoom(t *testing.T) {
 	b := bytes.NewBufferString("")
 	rootCmd.SetOutput(b)
 	rootCmd.SetArgs([]string{"seed", "--verbose", "-c", "../examples/configurations/simple.json", "-l", "osm", "-z", "200"})
-	assert.Nil(t, rootCmd.Execute())
+	require.NoError(t, rootCmd.Execute())
 	out, err := io.ReadAll(b)
 	if err != nil {
 		t.Fatal(err)
@@ -118,7 +119,7 @@ func Test_SeedCommand_InvalidZoom(t *testing.T) {
 
 	fmt.Println(string(out))
 
-	assert.Greater(t, len(out), 0)
+	assert.NotEmpty(t, out)
 	assert.Equal(t, 1, exitStatus)
 }
 
@@ -132,7 +133,7 @@ func Test_SeedCommand_InvalidConfig(t *testing.T) {
 	b := bytes.NewBufferString("")
 	rootCmd.SetOutput(b)
 	rootCmd.SetArgs([]string{"seed", "--verbose", "--raw-config", "asfasfas", "-l", "osm"})
-	assert.Nil(t, rootCmd.Execute())
+	require.NoError(t, rootCmd.Execute())
 	out, err := io.ReadAll(b)
 	if err != nil {
 		t.Fatal(err)
@@ -140,7 +141,7 @@ func Test_SeedCommand_InvalidConfig(t *testing.T) {
 
 	fmt.Println(string(out))
 
-	assert.Greater(t, len(out), 0)
+	assert.NotEmpty(t, out)
 	assert.Equal(t, 1, exitStatus)
 }
 
@@ -154,7 +155,7 @@ func Test_SeedCommand_ExcessTiles(t *testing.T) {
 	b := bytes.NewBufferString("")
 	rootCmd.SetOutput(b)
 	rootCmd.SetArgs([]string{"seed", "--verbose", "-c", "../examples/configurations/simple.json", "-l", "osm", "-z", "20"})
-	assert.Nil(t, rootCmd.Execute())
+	require.NoError(t, rootCmd.Execute())
 	out, err := io.ReadAll(b)
 	if err != nil {
 		t.Fatal(err)
@@ -162,6 +163,6 @@ func Test_SeedCommand_ExcessTiles(t *testing.T) {
 
 	fmt.Println(string(out))
 
-	assert.Greater(t, len(out), 0)
+	assert.NotEmpty(t, out)
 	assert.Equal(t, 1, exitStatus)
 }

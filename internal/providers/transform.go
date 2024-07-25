@@ -76,7 +76,10 @@ func (s TransformRegistration) Initialize(cfgAny any, clientConfig config.Client
 	}
 
 	i := interp.New(interp.Options{Unrestricted: true})
-	i.Use(stdlib.Symbols)
+	err = i.Use(stdlib.Symbols)
+	if err != nil {
+		return nil, err
+	}
 
 	var script string
 
@@ -145,15 +148,15 @@ func (t Transform) GenerateTile(ctx *pkg.RequestContext, providerContext layer.P
 	size := max.Sub(min)
 	pixelCount := size.X * size.Y
 
-	//Split up all the requests for N threads
+	// Split up all the requests for N threads
 	numPixelPerThread := int(math.Floor(float64(pixelCount) / float64(t.Threads)))
-	var pixelSplit [][]int
+	pixelSplit := make([][]int, 0, t.Threads)
 
-	for i := 0; i < t.Threads; i++ {
+	for i := range t.Threads {
 		chunkStart := i * numPixelPerThread
 		var chunkEnd int
-		if i == int(t.Threads)-1 {
-			chunkEnd = int(pixelCount)
+		if i == t.Threads-1 {
+			chunkEnd = pixelCount
 		} else {
 			chunkEnd = int(math.Min(float64(chunkStart+numPixelPerThread), float64(pixelCount)))
 		}
@@ -164,7 +167,7 @@ func (t Transform) GenerateTile(ctx *pkg.RequestContext, providerContext layer.P
 	var wg sync.WaitGroup
 	wg.Add(t.Threads)
 
-	for tid := 0; tid < t.Threads; tid++ {
+	for tid := range t.Threads {
 		pixelRange := pixelSplit[tid]
 
 		go func(iStart int, iEnd int) {

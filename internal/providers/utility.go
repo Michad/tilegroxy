@@ -31,9 +31,9 @@ import (
 	"github.com/Michad/tilegroxy/pkg/config"
 )
 
-var envRegex, _ = regexp.Compile(`{env\.[^{}}]*}`)
-var ctxRegex, _ = regexp.Compile(`{ctx\.[^{}}]*}`)
-var lyrRegex, _ = regexp.Compile(`{layer\.[^{}}]*}`)
+var envRegex = regexp.MustCompile(`{env\.[^{}}]*}`)
+var ctxRegex = regexp.MustCompile(`{ctx\.[^{}}]*}`)
+var lyrRegex = regexp.MustCompile(`{layer\.[^{}}]*}`)
 
 func replaceUrlPlaceholders(ctx *pkg.RequestContext, tileRequest pkg.TileRequest, url string, invertY bool) (string, error) {
 	b, err := tileRequest.GetBounds()
@@ -156,8 +156,8 @@ func getTile(ctx *pkg.RequestContext, clientConfig config.ClientConfig, url stri
 		return nil, &pkg.RemoteServerError{StatusCode: resp.StatusCode}
 	}
 
-	if len(img) > int(clientConfig.MaxLength) {
-		return nil, &pkg.InvalidContentLengthError{Length: int(len(img))}
+	if len(img) > clientConfig.MaxLength {
+		return nil, &pkg.InvalidContentLengthError{Length: len(img)}
 	}
 
 	return &img, nil

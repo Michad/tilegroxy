@@ -14,11 +14,11 @@
 package pkg
 
 import (
-	"errors"
 	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBoundsToTileZoom0(t *testing.T) {
@@ -27,7 +27,7 @@ func TestBoundsToTileZoom0(t *testing.T) {
 	tilesArr, _ := b.FindTiles("test", 0, false)
 	tiles := *tilesArr
 
-	assert.Equal(t, 1, len(tiles))
+	assert.Len(t, tiles, 1)
 	assert.Equal(t, "test", tiles[0].LayerName)
 	assert.Equal(t, 0, tiles[0].X)
 	assert.Equal(t, 0, tiles[0].Y)
@@ -39,7 +39,7 @@ func TestBoundsToTileZoom1(t *testing.T) {
 	tilesArr, _ := b.FindTiles("test", 1, false)
 	tiles := *tilesArr
 
-	assert.Equal(t, 4, len(tiles))
+	assert.Len(t, tiles, 4)
 	assert.Equal(t, "test", tiles[0].LayerName)
 	assert.Equal(t, 1, tiles[0].Z)
 
@@ -57,7 +57,7 @@ func TestBoundsToTileZoom8(t *testing.T) {
 	tilesArr, _ := b.FindTiles("test", 8, false)
 	tiles := *tilesArr
 
-	assert.Equal(t, 1, len(tiles))
+	assert.Len(t, tiles, 1)
 	assert.Equal(t, "test", tiles[0].LayerName)
 	assert.Equal(t, 132, tiles[0].X)
 	assert.Equal(t, 85, tiles[0].Y)
@@ -69,18 +69,18 @@ func TestTileToBoundsZoom0(t *testing.T) {
 
 	b, err := r.GetBounds()
 
-	assert.Equal(t, nil, err)
+	require.NoError(t, err)
 	assert.InDelta(t, -85.0511, b.South, .0001)
 	assert.InDelta(t, 85.0511, b.North, .0001)
-	assert.Equal(t, -180.0, b.West)
-	assert.Equal(t, 180.0, b.East)
+	assert.InDelta(t, -180.0, b.West, .0001)
+	assert.InDelta(t, 180.0, b.East, .0001)
 }
 func TestTileToBoundsZoom8(t *testing.T) {
 	r := TileRequest{"layer", 8, 132, 85}
 
 	b, err := r.GetBounds()
 
-	assert.Equal(t, nil, err)
+	require.NoError(t, err)
 	assert.InDelta(t, 50.736455, .0001, b.South)
 	assert.InDelta(t, 51.618016, .0001, b.North)
 	assert.InDelta(t, 5.625000, .0001, b.West)
@@ -93,14 +93,14 @@ func TestTileRequestRangeError(t *testing.T) {
 	b, err := r.GetBounds()
 
 	assert.Equal(t, (*Bounds)(nil), b)
-	assert.NotEqual(t, nil, err)
+	require.Error(t, err)
 	assert.IsType(t, RangeError{}, err)
 
 	var re RangeError
-	assert.True(t, errors.As(err, &re))
+	require.ErrorAs(t, err, &re)
 	assert.Equal(t, "Y", re.ParamName)
-	assert.Equal(t, 0.0, re.MinValue)
-	assert.Equal(t, 3.0, re.MaxValue)
+	assert.InDelta(t, 0.0, re.MinValue, 0.00001)
+	assert.InDelta(t, 3.0, re.MaxValue, 0.00001)
 }
 
 func TestBoundsIntersect(t *testing.T) {
@@ -156,22 +156,22 @@ func TestBoundsContains(t *testing.T) {
 func TestGeohashToBounds(t *testing.T) {
 	bbox, err := NewBoundsFromGeohash("gbsuv7z")
 
-	assert.NoError(t, err)
-	assert.InDelta(t, bbox.West, -4.329986572265625, 0.000001)
-	assert.InDelta(t, bbox.East, -4.32861328125, 0.000001)
-	assert.InDelta(t, bbox.North, 48.66943359375, 0.000001)
-	assert.InDelta(t, bbox.South, 48.668060302734375, 0.000001)
+	require.NoError(t, err)
+	assert.InDelta(t, -4.329986572265625, bbox.West, 0.000001)
+	assert.InDelta(t, -4.32861328125, bbox.East, 0.000001)
+	assert.InDelta(t, 48.66943359375, bbox.North, 0.000001)
+	assert.InDelta(t, 48.668060302734375, bbox.South, 0.000001)
 
 	bbox, err = NewBoundsFromGeohash("gb")
 
-	assert.NoError(t, err)
-	assert.InDelta(t, bbox.West, -11.25, 0.000001)
-	assert.InDelta(t, bbox.East, 0, 0.000001)
-	assert.InDelta(t, bbox.North, 50.625, 0.000001)
-	assert.InDelta(t, bbox.South, 45, 0.000001)
+	require.NoError(t, err)
+	assert.InDelta(t, -11.25, bbox.West, 0.000001)
+	assert.InDelta(t, 0, bbox.East, 0.000001)
+	assert.InDelta(t, 50.625, bbox.North, 0.000001)
+	assert.InDelta(t, 45, bbox.South, 0.000001)
 
 	bbox, err = NewBoundsFromGeohash("some nonsense")
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.True(t, bbox.IsNullIsland())
 }
 
@@ -184,9 +184,9 @@ func FuzzToBoundsAndBack(f *testing.F) {
 	f.Fuzz(func(t *testing.T, z int, x int, y int) {
 		orig := TileRequest{"layer", z, x, y}
 		b, err := orig.GetBounds()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
-		//Small delta to avoid floating point rounding errors causing an extra tile
+		// Small delta to avoid floating point rounding errors causing an extra tile
 		b.West += 0.000000001
 		b.South += 0.000000001
 		b.East -= 0.000000001
@@ -194,8 +194,8 @@ func FuzzToBoundsAndBack(f *testing.F) {
 
 		newTiles, err := b.FindTiles(orig.LayerName, uint(orig.Z), false)
 
-		assert.Nil(t, err, "Error getting tiles for %v at %v", b, orig.Z)
-		assert.Equal(t, 1, len(*newTiles))
+		require.NoError(t, err, "Error getting tiles for %v at %v", b, orig.Z)
+		require.Len(t, *newTiles, 1)
 		assert.Equal(t, orig, (*newTiles)[0])
 	})
 }

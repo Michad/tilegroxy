@@ -39,6 +39,8 @@ Example:
 }
 
 func runCreate(cmd *cobra.Command, args []string) {
+	var err error
+
 	includeDefault, _ := cmd.Flags().GetBool("default")
 	noPretty, _ := cmd.Flags().GetBool("no-pretty")
 	forceJson, _ := cmd.Flags().GetBool("json")
@@ -50,7 +52,11 @@ func runCreate(cmd *cobra.Command, args []string) {
 	cfg := make(map[string]interface{})
 
 	if includeDefault {
-		mapstructure.Decode(config.DefaultConfig(), &cfg)
+		err = mapstructure.Decode(config.DefaultConfig(), &cfg)
+
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	if writePath != "" && !forceJson && !forceYml {
@@ -58,13 +64,12 @@ func runCreate(cmd *cobra.Command, args []string) {
 
 		if ext == ".json" {
 			forceJson = true
-		} //Check for extension being yaml isn't needed because we default to yaml
+		} // Check for extension being yaml isn't needed because we default to yaml
 	}
 
 	//TODO: populate example config here
 
 	var file *os.File
-	var err error
 
 	if writePath != "" {
 		file, err = os.OpenFile(writePath, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0666)
@@ -87,7 +92,7 @@ func runCreate(cmd *cobra.Command, args []string) {
 		if !noPretty {
 			enc.SetIndent(" ", "  ")
 		}
-		enc.Encode(cfg)
+		err = enc.Encode(cfg)
 	} else {
 		var enc *yaml.Encoder
 
@@ -96,7 +101,11 @@ func runCreate(cmd *cobra.Command, args []string) {
 		} else {
 			enc = yaml.NewEncoder(out)
 		}
-		enc.Encode(cfg)
+		err = enc.Encode(cfg)
+	}
+
+	if err != nil {
+		panic(err)
 	}
 }
 

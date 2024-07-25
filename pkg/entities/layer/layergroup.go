@@ -37,7 +37,7 @@ func ConstructLayerGroup(cfg config.Config, layers []config.LayerConfig, cache c
 	for i, l := range cfg.Layers {
 		layerObjects[i], err = ConstructLayer(l, cfg.Client, cfg.Error.Messages, &layerGroup, secreter)
 		if err != nil {
-			return nil, fmt.Errorf("error constructing layer %v: %v", i, err)
+			return nil, fmt.Errorf("error constructing layer %v: %w", i, err)
 		}
 
 		layerObjects[i].Cache = cache
@@ -59,7 +59,7 @@ func (lg LayerGroup) FindLayer(ctx *pkg.RequestContext, layerName string) *Layer
 }
 
 func (lg LayerGroup) ListLayerIds() []string {
-	var r []string
+	r := make([]string, 0, len(lg.layers))
 	for _, l := range lg.layers {
 		r = append(r, l.Id)
 	}

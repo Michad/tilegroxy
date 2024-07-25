@@ -28,7 +28,7 @@ import (
 
 type CustomConfig struct {
 	File   string
-	Script string                 //Contains the go code of the provider inline.
+	Script string                 // Contains the go code of the provider inline.
 	Params map[string]interface{} `mapstructure:",remain"`
 }
 
@@ -58,9 +58,17 @@ func (s CustomRegistration) Name() string {
 
 func (s CustomRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layer.LayerGroup) (layer.Provider, error) {
 	cfg := cfgAny.(CustomConfig)
+
+	var err error
+	var script string
+
 	i := interp.New(interp.Options{Unrestricted: true})
-	i.Use(stdlib.Symbols)
-	i.Use(interp.Exports{
+	err = i.Use(stdlib.Symbols)
+	if err != nil {
+		return nil, err
+	}
+
+	err = i.Use(interp.Exports{
 		"tilegroxy/tilegroxy": map[string]reflect.Value{
 			"RequestContext":  reflect.ValueOf((*pkg.RequestContext)(nil)),
 			"ProviderContext": reflect.ValueOf((*layer.ProviderContext)(nil)),
@@ -71,9 +79,9 @@ func (s CustomRegistration) Initialize(cfgAny any, clientConfig config.ClientCon
 			"AuthError":       reflect.ValueOf((*pkg.ProviderAuthError)(nil)),
 			"GetTile":         reflect.ValueOf(getTile),
 		}})
-
-	var err error
-	var script string
+	if err != nil {
+		return nil, err
+	}
 
 	if cfg.File != "" {
 		scriptBytes, err := os.ReadFile(cfg.File)

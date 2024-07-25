@@ -87,7 +87,7 @@ func initSeed() {
 	rootCmd.AddCommand(seedCmd)
 
 	seedCmd.Flags().StringP("layer", "l", "", "The ID of the layer to seed")
-	seedCmd.MarkFlagRequired("layer")
+	seedCmd.MarkFlagRequired("layer") //nolint:errcheck
 	seedCmd.Flags().BoolP("verbose", "v", false, "Output verbose information including every tile being requested and success or error status")
 	seedCmd.Flags().UintSliceP("zoom", "z", []uint{0, 1, 2, 3, 4, 5}, "The zoom level(s) to seed")
 	seedCmd.Flags().Float32P("min-latitude", "s", -90, "The minimum latitude to seed. The south side of the bounding box")

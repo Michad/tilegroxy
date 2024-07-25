@@ -22,6 +22,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_ErrorVals_Execute(t *testing.T) {
@@ -51,14 +52,16 @@ func Test_WriteErrorMessage_Execute(t *testing.T) {
 	cfg.Error.Mode = config.ModeErrorNoError
 	writeErrorMessage(ctx, rw, &cfg.Error, pkg.TypeOfErrorOther, "test", "test", nil)
 	r := rw.Result()
+	defer func() { require.NoError(t, r.Body.Close()) }()
 	assert.Equal(t, 500, r.StatusCode)
 	b, _ := io.ReadAll(r.Body)
 	assert.Empty(t, b)
 
 	cfg.Error.Mode = config.ModeErrorImage
-	cfg.Error.Images.Other = "safjakslfjaslkfj" //Invalid
+	cfg.Error.Images.Other = "safjakslfjaslkfj" // Invalid
 	writeErrorMessage(ctx, rw, &cfg.Error, pkg.TypeOfErrorOther, "test", "test", nil)
 	r = rw.Result()
+	defer func() { require.NoError(t, r.Body.Close()) }()
 	assert.Equal(t, 500, r.StatusCode)
 	b, _ = io.ReadAll(r.Body)
 	assert.Empty(t, b)
@@ -69,5 +72,5 @@ func Test_ListenAndServe_Validate(t *testing.T) {
 	cfg := config.DefaultConfig()
 	cfg.Server.Encrypt = &config.EncryptionConfig{Certificate: "asfjaslkf", Domain: ""}
 
-	assert.Error(t, ListenAndServe(&cfg, nil, nil))
+	require.Error(t, ListenAndServe(&cfg, nil, nil))
 }

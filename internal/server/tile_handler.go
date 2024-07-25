@@ -15,6 +15,7 @@
 package server
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -100,5 +101,9 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 
-	w.Write(*img)
+	_, err = w.Write(*img)
+
+	if err != nil {
+		slog.WarnContext(ctx, fmt.Sprintf("Unable to write to request due to %v", err))
+	}
 }

@@ -97,24 +97,28 @@ func writeErrorMessage(ctx *pkg.RequestContext, w http.ResponseWriter, cfg *conf
 
 	slog.Log(ctx, level, internalMessage, "stack", string(stack))
 
-	if cfg.Mode == config.ModeErrorPlainText {
+	switch cfg.Mode {
+	case config.ModeErrorPlainText:
 		w.WriteHeader(status)
-		w.Write([]byte(externalMessage))
-	} else if cfg.Mode == config.ModeErrorImageHeader || cfg.Mode == config.ModeErrorImage {
+		_, err := w.Write([]byte(externalMessage))
+		if err != nil {
+			slog.WarnContext(ctx, fmt.Sprintf("error writing error %v", err))
+		}
+	case config.ModeErrorImage, config.ModeErrorImageHeader:
 		if cfg.Mode == config.ModeErrorImageHeader {
-			w.Header().Add("x-error-message", externalMessage)
+			w.Header().Add("X-Error-Message", externalMessage)
 		}
 		w.WriteHeader(status)
 
 		img, err2 := images.GetStaticImage(imgPath)
-		if img != nil {
-			w.Write(*img)
+		if img != nil && err2 == nil {
+			_, err2 = w.Write(*img)
 		}
 
 		if err2 != nil {
 			slog.ErrorContext(ctx, err2.Error())
 		}
-	} else {
+	default:
 		w.WriteHeader(status)
 	}
 }
@@ -149,82 +153,82 @@ func makeLogFileWriter(path string, alsoStdOut bool) (io.Writer, error) {
 }
 
 func configureMainLogging(cfg *config.Config) error {
+	if !cfg.Logging.Main.Console && len(cfg.Logging.Main.Path) == 0 {
+		slog.SetLogLoggerLevel(10)
+		return nil
+	}
 
 	var err error
-	if cfg.Logging.Main.Console || len(cfg.Logging.Main.Path) > 0 {
-		var out io.Writer
-		if len(cfg.Logging.Main.Path) > 0 {
-			out, err = makeLogFileWriter(cfg.Logging.Main.Path, cfg.Logging.Main.Console)
-			if err != nil {
-				return err
-			}
-		} else if cfg.Logging.Main.Console {
-			out = os.Stdout
-		} else {
-			panic("Impossible logic error")
+	var out io.Writer
+	if len(cfg.Logging.Main.Path) > 0 {
+		out, err = makeLogFileWriter(cfg.Logging.Main.Path, cfg.Logging.Main.Console)
+		if err != nil {
+			return err
 		}
-
-		var level slog.Level
-		custLogLevel, ok := config.CustomLogLevel[strings.ToLower(cfg.Logging.Main.Level)]
-
-		if ok {
-			level = custLogLevel
-		} else {
-			err := level.UnmarshalText([]byte(cfg.Logging.Main.Level))
-
-			if err != nil {
-				return err
-			}
-		}
-
-		opt := slog.HandlerOptions{
-			AddSource: true,
-			Level:     level,
-			ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
-				if groups == nil && a.Key == "msg" {
-					return slog.Attr{Key: "message", Value: a.Value}
-				}
-				return a
-			},
-		}
-
-		var logHandler slog.Handler
-
-		if cfg.Logging.Main.Format == config.MainFormatPlain {
-			logHandler = slog.NewTextHandler(out, &opt)
-		} else if cfg.Logging.Main.Format == config.MainFormatJson {
-			logHandler = slog.NewJSONHandler(out, &opt)
-			if cfg.Logging.Main.Request == "auto" {
-				cfg.Logging.Main.Request = "true"
-			}
-		} else {
-			return fmt.Errorf(cfg.Error.Messages.InvalidParam, "logging.main.format", cfg.Logging.Main.Format)
-		}
-
-		var attr []string
-
-		if cfg.Logging.Main.Request == "true" || cfg.Logging.Main.Request == "1" {
-			attr = slices.Concat(attr, []string{
-				"uri",
-				"path",
-				"query",
-				"proto",
-				"ip",
-				"method",
-				"host",
-				"elapsed",
-				"user",
-			})
-		}
-
-		attr = slices.Concat(attr, cfg.Logging.Main.Headers)
-
-		logHandler = slogContextHandler{logHandler, attr}
-
-		slog.SetDefault(slog.New(logHandler))
 	} else {
-		slog.SetLogLoggerLevel(10)
+		out = os.Stdout
 	}
+
+	var level slog.Level
+	custLogLevel, ok := config.CustomLogLevel[strings.ToLower(cfg.Logging.Main.Level)]
+
+	if ok {
+		level = custLogLevel
+	} else {
+		err := level.UnmarshalText([]byte(cfg.Logging.Main.Level))
+
+		if err != nil {
+			return err
+		}
+	}
+
+	opt := slog.HandlerOptions{
+		AddSource: true,
+		Level:     level,
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			if groups == nil && a.Key == "msg" {
+				return slog.Attr{Key: "message", Value: a.Value}
+			}
+			return a
+		},
+	}
+
+	var logHandler slog.Handler
+
+	switch cfg.Logging.Main.Format {
+	case config.MainFormatPlain:
+		logHandler = slog.NewTextHandler(out, &opt)
+	case config.MainFormatJson:
+		logHandler = slog.NewJSONHandler(out, &opt)
+		if cfg.Logging.Main.Request == "auto" {
+			cfg.Logging.Main.Request = "true"
+		}
+	default:
+		return fmt.Errorf(cfg.Error.Messages.InvalidParam, "logging.main.format", cfg.Logging.Main.Format)
+	}
+
+	var attr []string
+
+	if cfg.Logging.Main.Request == "true" || cfg.Logging.Main.Request == "1" {
+		attr = slices.Concat(attr, []string{
+			"uri",
+			"path",
+			"query",
+			"proto",
+			"ip",
+			"method",
+			"host",
+			"elapsed",
+			"user",
+		})
+	}
+
+	attr = slices.Concat(attr, cfg.Logging.Main.Headers)
+
+	logHandler = slogContextHandler{logHandler, attr}
+
+	slog.SetDefault(slog.New(logHandler))
+
 	return nil
 }
 
@@ -242,11 +246,12 @@ func configureAccessLogging(cfg config.AccessConfig, errorMessages config.ErrorM
 			out = os.Stdout
 		}
 
-		if cfg.Format == config.AccessFormatCommon {
+		switch cfg.Format {
+		case config.AccessFormatCommon:
 			rootHandler = handlers.LoggingHandler(out, rootHandler)
-		} else if cfg.Format == config.AccessFormatCombined {
+		case config.AccessFormatCombined:
 			rootHandler = handlers.CombinedLoggingHandler(out, rootHandler)
-		} else {
+		default:
 			return nil, fmt.Errorf(errorMessages.InvalidParam, "logging.access.format", cfg.Format)
 		}
 	}
@@ -340,36 +345,7 @@ func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth au
 		slog.InfoContext(context.Background(), "Binding...")
 
 		if config.Server.Encrypt != nil {
-			httpPort := config.Server.Encrypt.HttpPort
-			httpHostPort := net.JoinHostPort(config.Server.BindHost, strconv.Itoa(httpPort))
-
-			if config.Server.Encrypt.Certificate != "" && config.Server.Encrypt.KeyFile != "" {
-				if httpPort != 0 {
-					go http.ListenAndServe(httpHostPort, httpRedirectHandler{protoAndHost: "https://" + config.Server.Encrypt.Domain})
-				}
-
-				srvErr <- srv.ListenAndServeTLS(config.Server.Encrypt.Certificate, config.Server.Encrypt.KeyFile)
-			} else {
-				//Let's Encrypt workflow
-				cacheDir := "certs"
-				if config.Server.Encrypt.Cache != "" {
-					cacheDir = config.Server.Encrypt.Cache
-				}
-
-				certManager := autocert.Manager{
-					Prompt:     autocert.AcceptTOS,
-					HostPolicy: autocert.HostWhitelist(config.Server.Encrypt.Domain),
-					Cache:      autocert.DirCache(cacheDir),
-				}
-
-				if httpPort != 0 {
-					go http.ListenAndServe(httpHostPort, certManager.HTTPHandler(nil))
-				}
-
-				srv.TLSConfig = certManager.TLSConfig()
-
-				srvErr <- srv.ListenAndServeTLS("", "")
-			}
+			listenAndServeTLS(config, srvErr, srv)
 		} else {
 			srvErr <- srv.ListenAndServe()
 		}
@@ -384,4 +360,40 @@ func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth au
 
 	err = srv.Shutdown(context.Background())
 	return err
+}
+
+func listenAndServeTLS(config *config.Config, srvErr chan error, srv *http.Server) {
+	httpPort := config.Server.Encrypt.HttpPort
+	httpHostPort := net.JoinHostPort(config.Server.BindHost, strconv.Itoa(httpPort))
+
+	if config.Server.Encrypt.Certificate != "" && config.Server.Encrypt.KeyFile != "" {
+		if httpPort != 0 {
+			go func() {
+				srvErr <- http.ListenAndServe(httpHostPort, httpRedirectHandler{protoAndHost: "https://" + config.Server.Encrypt.Domain})
+			}()
+		}
+
+		srvErr <- srv.ListenAndServeTLS(config.Server.Encrypt.Certificate, config.Server.Encrypt.KeyFile)
+	} else {
+		// Let's Encrypt workflow
+
+		cacheDir := "certs"
+		if config.Server.Encrypt.Cache != "" {
+			cacheDir = config.Server.Encrypt.Cache
+		}
+
+		certManager := autocert.Manager{
+			Prompt:     autocert.AcceptTOS,
+			HostPolicy: autocert.HostWhitelist(config.Server.Encrypt.Domain),
+			Cache:      autocert.DirCache(cacheDir),
+		}
+
+		if httpPort != 0 {
+			go func() { srvErr <- http.ListenAndServe(httpHostPort, certManager.HTTPHandler(nil)) }()
+		}
+
+		srv.TLSConfig = certManager.TLSConfig()
+
+		srvErr <- srv.ListenAndServeTLS("", "")
+	}
 }

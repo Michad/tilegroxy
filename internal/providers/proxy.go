@@ -24,7 +24,7 @@ import (
 
 type ProxyConfig struct {
 	Url     string
-	InvertY bool //Used for TMS
+	InvertY bool // Used for TMS
 }
 
 type Proxy struct {

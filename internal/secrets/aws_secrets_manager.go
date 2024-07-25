@@ -45,7 +45,7 @@ type AWSSecretsManagerConfig struct {
 
 	Separator string
 
-	Endpoint string //For non-AWS (e.g. localstack)
+	Endpoint string // For non-AWS (e.g. localstack)
 }
 
 type AWSSecretsManager struct {

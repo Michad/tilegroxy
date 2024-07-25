@@ -39,16 +39,16 @@ const (
 )
 
 type CustomConfig struct {
-	Token     map[string]string //How to extract the auth token from the request. Key should be one of the ExtractMode and Value is the specific identifier (or blank if inapplicable)
-	CacheSize int               //Configures the size of the cache of already verified tokens to avoid re-verifying every request. Set to -1 to disable. Defaults to 100
-	File      string            //Contains the go code to perform validation of the auth token as a file.
-	Script    string            //Contains the go code to perform validation of the auth token inline.
+	Token     map[string]string // How to extract the auth token from the request. Key should be one of the ExtractMode and Value is the specific identifier (or blank if inapplicable)
+	CacheSize int               // Configures the size of the cache of already verified tokens to avoid re-verifying every request. Set to -1 to disable. Defaults to 100
+	File      string            // Contains the go code to perform validation of the auth token as a file.
+	Script    string            // Contains the go code to perform validation of the auth token inline.
 }
 
 type Custom struct {
 	CustomConfig
 	cache *otter.Cache[string, ValidationResult]
-	//Only used when cache is used to avoid multiple calls to the validation func for the same token at once
+	// Only used when cache is used to avoid multiple calls to the validation func for the same token at once
 	locks          keymutex.KeyMutex
 	validationFunc func(string) (bool, time.Time, string, []string)
 }
@@ -111,7 +111,7 @@ func extractToken(req *http.Request, ctx *pkg.RequestContext, tokenExtract map[s
 
 		lastVal := pathSplit[len(pathSplit)-1]
 
-		//This is a little hacky, make sure we're getting a suffix and not just the last tile coordinate. Surely the token won't be an integer
+		// This is a little hacky, make sure we're getting a suffix and not just the last tile coordinate. Surely the token won't be an integer
 		yVal := req.PathValue("y")
 		if yVal != lastVal {
 			return lastVal, true
@@ -145,7 +145,10 @@ func (s CustomRegistration) Initialize(cfgAny any, errorMessages config.ErrorMes
 	}
 
 	i := interp.New(interp.Options{Unrestricted: true})
-	i.Use(stdlib.Symbols)
+	err = i.Use(stdlib.Symbols)
+	if err != nil {
+		return nil, err
+	}
 
 	var script string
 
@@ -187,7 +190,7 @@ func (s CustomRegistration) Initialize(cfgAny any, errorMessages config.ErrorMes
 	} else {
 		lock := keymutex.NewHashed(-1)
 
-		cache, err := otter.MustBuilder[string, ValidationResult](int(cfg.CacheSize)).Build()
+		cache, err := otter.MustBuilder[string, ValidationResult](cfg.CacheSize).Build()
 		if err != nil {
 			return nil, err
 		}
@@ -205,7 +208,12 @@ func (c Custom) CheckAuthentication(req *http.Request, ctx *pkg.RequestContext) 
 
 		if c.cache != nil {
 			c.locks.LockKey(tok)
-			defer c.locks.UnlockKey(tok)
+			defer func() {
+				err := c.locks.UnlockKey(tok)
+				if err != nil {
+					slog.ErrorContext(ctx, "Unable to release auth lock - this token might encounter issues going forward", "error", err)
+				}
+			}()
 
 			valResult, inCache = c.cache.Get(tok)
 			if !inCache {

@@ -68,7 +68,7 @@ func (t UrlTemplate) GenerateTile(ctx *pkg.RequestContext, providerContext layer
 		return nil, err
 	}
 
-	//width, height (in pixels), srs (in PROJ.4 format), xmin, ymin, xmax, ymax (in projected map units), and zoom
+	// width, height (in pixels), srs (in PROJ.4 format), xmin, ymin, xmax, ymax (in projected map units), and zoom
 	url := strings.ReplaceAll(t.Template, "$xmin", fmt.Sprintf("%f", b.West))
 	url = strings.ReplaceAll(url, "$xmax", fmt.Sprintf("%f", b.East))
 	url = strings.ReplaceAll(url, "$ymin", fmt.Sprintf("%f", b.South))

@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_ExecuteVersionCommand(t *testing.T) {
@@ -33,7 +34,7 @@ func Test_ExecuteVersionCommand(t *testing.T) {
 	b := bytes.NewBufferString("")
 	cmd.SetOutput(b)
 	cmd.SetArgs([]string{"version", "--json"})
-	cmd.Execute()
+	require.NoError(t, cmd.Execute())
 
 	out, err := io.ReadAll(b)
 	if err != nil {
@@ -42,7 +43,7 @@ func Test_ExecuteVersionCommand(t *testing.T) {
 
 	var res map[string]string
 	err = json.Unmarshal(out, &res)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.NotEmpty(t, res["version"])
 	assert.NotEmpty(t, res["ref"])
@@ -60,7 +61,7 @@ func Test_ExecuteVersionCommandShort(t *testing.T) {
 	b := bytes.NewBufferString("")
 	cmd.SetOutput(b)
 	cmd.SetArgs([]string{"version", "--json", "--short"})
-	cmd.Execute()
+	require.NoError(t, cmd.Execute())
 	out, err := io.ReadAll(b)
 	if err != nil {
 		t.Fatal(err)
@@ -68,7 +69,7 @@ func Test_ExecuteVersionCommandShort(t *testing.T) {
 
 	var res map[string]string
 	err = json.Unmarshal(out, &res)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.NotEmpty(t, res["version"])
 	assert.Empty(t, res["ref"])
@@ -86,7 +87,7 @@ func Test_ExecuteVersionCommandShortNoJson(t *testing.T) {
 	b := bytes.NewBufferString("")
 	cmd.SetOutput(b)
 	cmd.SetArgs([]string{"version", "--short"})
-	cmd.Execute()
+	require.NoError(t, cmd.Execute())
 	out, err := io.ReadAll(b)
 	if err != nil {
 		t.Fatal(err)
@@ -104,7 +105,7 @@ func Test_ExecuteVersionCommandNoJson(t *testing.T) {
 	b := bytes.NewBufferString("")
 	cmd.SetOutput(b)
 	cmd.SetArgs([]string{"version"})
-	cmd.Execute()
+	require.NoError(t, cmd.Execute())
 	out, err := io.ReadAll(b)
 	if err != nil {
 		t.Fatal(err)

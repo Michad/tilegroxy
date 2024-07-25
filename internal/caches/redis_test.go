@@ -25,12 +25,13 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 func init() {
-	//This is a hack to help with vscode test execution. Put a .env in repo root w/ anything you need for test containers
+	// This is a hack to help with vscode test execution. Put a .env in repo root w/ anything you need for test containers
 	if env, err := os.ReadFile("../../.env"); err == nil {
 		envs := strings.Split(string(env), "\n")
 		for _, e := range envs {
@@ -54,15 +55,13 @@ func setupRedisContainer(ctx context.Context, t *testing.T) (testcontainers.Cont
 		ContainerRequest: req,
 		Started:          true,
 	})
-	if !assert.NoError(t, err) {
-		return nil, nil
-	}
+	require.NoError(t, err)
 
 	return redisC, func(t *testing.T) {
 		t.Log("teardown container")
 
 		err := redisC.Terminate(ctx)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}
 }
 
@@ -76,18 +75,14 @@ func TestRedisWithContainerHostAndPort(t *testing.T) {
 	defer cleanupF(t)
 
 	endpoint, err := redisC.Endpoint(ctx, "")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	cfg := RedisConfig{
 		HostAndPort: extractHostAndPort(t, endpoint),
 	}
 
 	r, err := RedisRegistration{}.Initialize(cfg, config.ErrorMessages{})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	validateSaveAndLookup(t, r)
 }
@@ -102,18 +97,14 @@ func TestRedisWithContainerSingleServersArr(t *testing.T) {
 	defer cleanupF(t)
 
 	endpoint, err := redisC.Endpoint(ctx, "")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	cfg := RedisConfig{
 		Servers: []HostAndPort{extractHostAndPort(t, endpoint)},
 	}
 
 	r, err := RedisRegistration{}.Initialize(cfg, config.ErrorMessages{})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	validateSaveAndLookup(t, r)
 }
@@ -130,13 +121,9 @@ func TestRedisWithContainerRing(t *testing.T) {
 	defer cleanupF2(t)
 
 	endpoint, err := redisC.Endpoint(ctx, "")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 	endpoint2, err := redisC2.Endpoint(ctx, "")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	cfg := RedisConfig{
 		Mode:    ModeRing,
@@ -144,9 +131,7 @@ func TestRedisWithContainerRing(t *testing.T) {
 	}
 
 	r, err := RedisRegistration{}.Initialize(cfg, config.ErrorMessages{})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	validateSaveAndLookup(t, r)
 }
@@ -161,9 +146,7 @@ func TestRedisWithContainerDiffPrefix(t *testing.T) {
 	defer cleanupF(t)
 
 	endpoint, err := redisC.Endpoint(ctx, "")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	cfg := RedisConfig{
 		HostAndPort: extractHostAndPort(t, endpoint),
@@ -171,9 +154,7 @@ func TestRedisWithContainerDiffPrefix(t *testing.T) {
 	}
 
 	r, err := RedisRegistration{}.Initialize(cfg, config.ErrorMessages{})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	config2 := RedisConfig{
 		HostAndPort: extractHostAndPort(t, endpoint),
@@ -181,12 +162,10 @@ func TestRedisWithContainerDiffPrefix(t *testing.T) {
 	}
 
 	r2, err := RedisRegistration{}.Initialize(config2, config.ErrorMessages{})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
-	_ = validateSaveAndLookup(t, r) &&
-		validateSaveAndLookup(t, r2)
+	validateSaveAndLookup(t, r)
+	validateSaveAndLookup(t, r2)
 }
 func TestRedisWithContainerDiffDb(t *testing.T) {
 	ctx := context.Background()
@@ -198,9 +177,7 @@ func TestRedisWithContainerDiffDb(t *testing.T) {
 	defer cleanupF(t)
 
 	endpoint, err := redisC.Endpoint(ctx, "")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	cfg := RedisConfig{
 		HostAndPort: extractHostAndPort(t, endpoint),
@@ -208,9 +185,7 @@ func TestRedisWithContainerDiffDb(t *testing.T) {
 	}
 
 	r, err := RedisRegistration{}.Initialize(cfg, config.ErrorMessages{})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	config2 := RedisConfig{
 		HostAndPort: extractHostAndPort(t, endpoint),
@@ -218,7 +193,7 @@ func TestRedisWithContainerDiffDb(t *testing.T) {
 	}
 
 	r2, err := RedisRegistration{}.Initialize(config2, config.ErrorMessages{})
-	_ = assert.NoError(t, err) &&
-		validateSaveAndLookup(t, r) &&
-		validateSaveAndLookup(t, r2)
+	require.NoError(t, err)
+	validateSaveAndLookup(t, r)
+	validateSaveAndLookup(t, r2)
 }

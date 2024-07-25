@@ -28,12 +28,13 @@ import (
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 func init() {
-	//This is a hack to help with vscode test execution. Put a .env in repo root w/ anything you need for test containers
+	// This is a hack to help with vscode test execution. Put a .env in repo root w/ anything you need for test containers
 	if env, err := os.ReadFile("../../.env"); err == nil {
 		envs := strings.Split(string(env), "\n")
 		for _, e := range envs {
@@ -49,28 +50,28 @@ func Test_S3Validate(t *testing.T) {
 	s3, err := S3Registration{}.Initialize(S3Config{}, config.ErrorMessages{})
 
 	assert.Nil(t, s3)
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	s3, err = S3Registration{}.Initialize(S3Config{Bucket: "test", Access: "AJIASAFASF"}, config.ErrorMessages{})
 
 	assert.Nil(t, s3)
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	s3, err = S3Registration{}.Initialize(S3Config{Bucket: "test", Access: "AJIASAFASF", Secret: "hunter2", StorageClass: "fakeyfake"}, config.ErrorMessages{})
 
 	assert.Nil(t, s3)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func Test_S3ValidateProfile(t *testing.T) {
-	//Currently invalid profile fails when using it for the first time vs on construct. Would rather have it fail in constructor but not sure how to best validate that without potentially impacting s3-compatible use cases. For now leaving this test assuming the failure happens in one of two places
+	// Currently invalid profile fails when using it for the first time vs on construct. Would rather have it fail in constructor but not sure how to best validate that without potentially impacting s3-compatible use cases. For now leaving this test assuming the failure happens in one of two places
 	var err2 error
 	s3, err1 := S3Registration{}.Initialize(S3Config{Bucket: "test", Profile: "fakeyfake"}, config.ErrorMessages{})
 	if s3 != nil {
 		_, err2 = s3.Lookup(pkg.TileRequest{})
 	}
 
-	assert.Error(t, errors.Join(err1, err2))
+	require.Error(t, errors.Join(err1, err2))
 }
 
 func Test_S3Execute(t *testing.T) {
@@ -87,7 +88,7 @@ func Test_S3Execute(t *testing.T) {
 		Started:          true,
 	})
 	if err != nil {
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}
 	defer func(c testcontainers.Container, ctx context.Context) {
 		if err := c.Terminate(ctx); err != nil {
@@ -96,25 +97,25 @@ func Test_S3Execute(t *testing.T) {
 	}(c, ctx)
 
 	endpoint, err := c.PortEndpoint(ctx, nat.Port("4566/tcp"), "http")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	s3, err := S3Registration{}.Initialize(S3Config{
 		Access:       "test",
 		Secret:       "test",
 		Bucket:       "test",
-		Endpoint:     endpoint, //"http://localhost:4566",
+		Endpoint:     endpoint, // "http://localhost:4566",
 		Region:       "us-east-1",
 		UsePathStyle: true,
 	}, config.ErrorMessages{})
 
 	assert.NotNil(t, s3)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = s3.(*S3).makeBucket()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	validateSaveAndLookup(t, s3)
 	img, err := s3.Lookup(pkg.TileRequest{LayerName: "layer", Z: 93, X: 53, Y: 12345})
 	assert.Nil(t, img)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }

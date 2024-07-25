@@ -32,7 +32,7 @@ func GetVersionInformation() (string, string, string) {
 	myVersion := tilegroxyVersion
 
 	if myVersion == "" {
-		myVersion = "v" + strconv.Itoa(majorVersion) + ".X.Y" //Default if building locally
+		myVersion = "v" + strconv.Itoa(majorVersion) + ".X.Y" // Default if building locally
 	}
 
 	myRef := tilegroxyBuildRef

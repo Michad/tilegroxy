@@ -21,6 +21,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func makeTransformProvider() map[string]interface{} {
@@ -35,11 +36,11 @@ func Test_Transform_Validate(t *testing.T) {
 	tr, err := TransformRegistration{}.Initialize(TransformConfig{Provider: p}, testClientConfig, testErrMessages, nil)
 
 	assert.Nil(t, tr)
-	assert.Error(t, err)
+	require.Error(t, err)
 	tr, err = TransformRegistration{}.Initialize(TransformConfig{Formula: "package custom", Provider: p}, testClientConfig, testErrMessages, nil)
 
 	assert.Nil(t, tr)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func Test_Transform_Execute(t *testing.T) {
@@ -47,16 +48,16 @@ func Test_Transform_Execute(t *testing.T) {
 	tr, err := TransformRegistration{}.Initialize(TransformConfig{Provider: p, Formula: `func transform(r, g, b, a uint8) (uint8, uint8, uint8, uint8) { return g,b,r,a }`}, testClientConfig, testErrMessages, nil)
 
 	assert.NotNil(t, tr)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	exp, _ := images.GetStaticImage("color:00F")
 
 	pc, err := tr.PreAuth(pkg.BackgroundContext(), layer.ProviderContext{})
 	assert.NotNil(t, pc)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	img, err := tr.GenerateTile(pkg.BackgroundContext(), pc, pkg.TileRequest{LayerName: "l", Z: 9, X: 23, Y: 32})
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, *exp, *img)
 }

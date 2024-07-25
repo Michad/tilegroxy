@@ -312,8 +312,8 @@ As this is a young project any contribution via an Issue or Pull Request is very
 
 A few please and thank yous: 
 
-* Follow [go conventions](https://go.dev/doc/effective_go) and the patterns you see elsewhere in the codebase.  
-* Use [semantic](https://gist.github.com/joshbuchea/6f47e86d2510bce28f8e7f42ae84c716) or [conventional](https://www.conventionalcommits.org/en/v1.0.0/) commit messages. 
+* Follow [go conventions](https://go.dev/doc/effective_go) and the patterns you see elsewhere in the codebase.  Linters are configured in Github Actions, they can be run locally with `make lint`
+* Use [semantic](https://gist.github.com/joshbuchea/6f47e86d2510bce28f8e7f42ae84c716)/[conventional](https://www.conventionalcommits.org/en/v1.0.0/) commit messages. 
 * Open an issue for discussion before making large, fundamental change/refactors
 * Ensure you add tests. You can use `make coverage` to ensure you're not dropping coverage.
 

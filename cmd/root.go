@@ -86,7 +86,7 @@ func extractConfigFromCommand(cmd *cobra.Command) (*config.Config, error) {
 
 	var cfg config.Config
 
-	if configRaw != "" {
+	if configRaw != "" { //nolint:gocritic
 		cfg, err = config.LoadConfig(configRaw)
 	} else if remoteProvider != "" {
 		cfg, err = config.LoadConfigFromRemote(remoteProvider, remoteEndpoint, remotePath, remoteType)

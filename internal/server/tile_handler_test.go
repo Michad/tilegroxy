@@ -32,6 +32,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func configToEntities(cfg config.Config) (*layer.LayerGroup, authentication.Authentication, error) {
@@ -53,7 +54,7 @@ func Test_TileHandler_AllowedArea(t *testing.T) {
 	auth = authentications.Noop{}
 	cache = caches.Noop{}
 	lg, err := layer.ConstructLayerGroup(cfg, cfg.Layers, cache, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
 
@@ -70,7 +71,9 @@ func Test_TileHandler_AllowedArea(t *testing.T) {
 
 	handler.ServeHTTP(w1, req1)
 
-	assert.Equal(t, 401, w1.Result().StatusCode)
+	r1 := w1.Result()
+	defer func() { require.NoError(t, r1.Body.Close()) }()
+	assert.Equal(t, 401, r1.StatusCode)
 
 	req2 := httptest.NewRequest("GET", "http://example.com/tiles/main/10/12/12", nil).WithContext(ctx)
 	req2.SetPathValue("layer", "main")
@@ -81,7 +84,9 @@ func Test_TileHandler_AllowedArea(t *testing.T) {
 	w2 := httptest.NewRecorder()
 
 	handler.ServeHTTP(w2, req2)
-	assert.Equal(t, 200, w2.Result().StatusCode)
+	r2 := w2.Result()
+	defer func() { require.NoError(t, r2.Body.Close()) }()
+	assert.Equal(t, 200, r2.StatusCode)
 }
 
 func Test_TileHandler_Proxy(t *testing.T) {
@@ -91,7 +96,8 @@ func Test_TileHandler_Proxy(t *testing.T) {
 		query = r.URL.RawQuery
 		w.WriteHeader(200)
 		b, _ := images.GetStaticImage("color:FFF")
-		w.Write(*b)
+		_, err := w.Write(*b)
+		assert.NoError(t, err)
 	}))
 	defer ts.Close()
 
@@ -108,7 +114,7 @@ func Test_TileHandler_Proxy(t *testing.T) {
 	auth = authentications.Noop{}
 	cache = caches.Noop{}
 	lg, err := layer.ConstructLayerGroup(cfg, cfg.Layers, cache, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
 
@@ -124,7 +130,9 @@ func Test_TileHandler_Proxy(t *testing.T) {
 
 	handler.ServeHTTP(w1, req1)
 
-	assert.Equal(t, 200, w1.Result().StatusCode)
+	r1 := w1.Result()
+	defer func() { require.NoError(t, r1.Body.Close()) }()
+	assert.Equal(t, 200, r1.StatusCode)
 	assert.Equal(t, "a=test&b=hi&t=t&z=10&y=10&x=10", query)
 }
 
@@ -143,7 +151,7 @@ func Test_TileHandler_RefToStatic(t *testing.T) {
 	auth = authentications.Noop{}
 	cache = caches.Noop{}
 	lg, err := layer.ConstructLayerGroup(cfg, cfg.Layers, cache, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
 
@@ -157,10 +165,11 @@ func Test_TileHandler_RefToStatic(t *testing.T) {
 
 	handler.ServeHTTP(w1, req1)
 	res1 := w1.Result()
+	defer func() { require.NoError(t, res1.Body.Close()) }()
 
 	assert.Equal(t, 200, res1.StatusCode)
 	b1, err := io.ReadAll(res1.Body)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	req2 := httptest.NewRequest("GET", "http://example.com/tiles/main_a/10/10/10", nil).WithContext(pkg.BackgroundContext())
 	req2.SetPathValue("layer", "main_a")
@@ -173,10 +182,11 @@ func Test_TileHandler_RefToStatic(t *testing.T) {
 	handler.ServeHTTP(w2, req2)
 
 	res2 := w2.Result()
+	defer func() { require.NoError(t, res2.Body.Close()) }()
 
 	assert.Equal(t, 200, res2.StatusCode)
 	b2, err := io.ReadAll(res2.Body)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, b2, b1)
 
@@ -211,10 +221,10 @@ func Test_TileHandler_ExecuteCustom(t *testing.T) {
 
 	cache := caches.Noop{}
 	lg, err := layer.ConstructLayerGroup(cfg, cfg.Layers, cache, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	authO, err := authentication.ConstructAuth(auth, cfg.Error.Messages)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	handler := tileHandler{defaultHandler{config: &cfg, auth: authO, layerGroup: lg}}
 
@@ -227,6 +237,7 @@ func Test_TileHandler_ExecuteCustom(t *testing.T) {
 	w1 := httptest.NewRecorder()
 	handler.ServeHTTP(w1, req1)
 	res1 := w1.Result()
+	defer func() { require.NoError(t, res1.Body.Close()) }()
 	assert.Equal(t, 401, res1.StatusCode)
 
 	req2 := httptest.NewRequest("GET", "http://localhost:12341/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
@@ -239,6 +250,7 @@ func Test_TileHandler_ExecuteCustom(t *testing.T) {
 	w2 := httptest.NewRecorder()
 	handler.ServeHTTP(w2, req2)
 	res2 := w2.Result()
+	defer func() { require.NoError(t, res2.Body.Close()) }()
 	assert.Equal(t, 200, res2.StatusCode)
 
 	req3 := httptest.NewRequest("GET", "http://localhost:12341/tiles/color2/8/12/32", nil).WithContext(pkg.BackgroundContext())
@@ -251,6 +263,7 @@ func Test_TileHandler_ExecuteCustom(t *testing.T) {
 	w3 := httptest.NewRecorder()
 	handler.ServeHTTP(w3, req3)
 	res3 := w3.Result()
+	defer func() { require.NoError(t, res3.Body.Close()) }()
 	assert.Equal(t, 401, res3.StatusCode)
 }
 
@@ -273,9 +286,9 @@ layers:
       color: "FFFFFF"
 `
 	cfg, err := config.LoadConfig(configRaw)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	lg, auth, err := configToEntities(cfg)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
 
 	req1 := httptest.NewRequest("GET", "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
@@ -287,6 +300,7 @@ layers:
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req1)
 	resp1 := w.Result()
+	defer func() { require.NoError(t, resp1.Body.Close()) }()
 
 	assert.Equal(t, 401, resp1.StatusCode)
 
@@ -300,6 +314,7 @@ layers:
 	w2 := httptest.NewRecorder()
 	handler.ServeHTTP(w2, req2)
 	resp2 := w2.Result()
+	defer func() { require.NoError(t, resp2.Body.Close()) }()
 
 	assert.Equal(t, 200, resp2.StatusCode)
 }
@@ -319,9 +334,9 @@ layers:
 `
 
 	cfg, err := config.LoadConfig(configRaw)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	lg, auth, err := configToEntities(cfg)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
 
 	req1 := httptest.NewRequest("GET", "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
@@ -333,6 +348,7 @@ layers:
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req1)
 	resp := w.Result()
+	defer func() { require.NoError(t, resp.Body.Close()) }()
 
 	assert.Equal(t, 401, resp.StatusCode)
 }
@@ -352,9 +368,9 @@ layers:
 `
 
 	cfg, err := config.LoadConfig(configRaw)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	lg, auth, err := configToEntities(cfg)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
 
 	req1 := httptest.NewRequest("GET", "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
@@ -366,6 +382,7 @@ layers:
 	w1 := httptest.NewRecorder()
 	handler.ServeHTTP(w1, req1)
 	resp1 := w1.Result()
+	defer func() { require.NoError(t, resp1.Body.Close()) }()
 
 	assert.Equal(t, 401, resp1.StatusCode)
 
@@ -379,6 +396,7 @@ layers:
 	w2 := httptest.NewRecorder()
 	handler.ServeHTTP(w2, req2)
 	resp2 := w2.Result()
+	defer func() { require.NoError(t, resp2.Body.Close()) }()
 
 	assert.Equal(t, 200, resp2.StatusCode)
 }
@@ -398,9 +416,9 @@ layers:
 `
 
 	cfg, err := config.LoadConfig(configRaw)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	lg, auth, err := configToEntities(cfg)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
 
 	req1 := httptest.NewRequest("GET", "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
@@ -412,9 +430,10 @@ layers:
 	w1 := httptest.NewRecorder()
 	handler.ServeHTTP(w1, req1)
 	resp := w1.Result()
+	defer func() { require.NoError(t, resp.Body.Close()) }()
 	fmt.Printf("Header %v\n", resp.Header)
 	body, err := io.ReadAll(resp.Body)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, 401, resp.StatusCode)
 	assert.Equal(t, "Not authorized", string(body))
@@ -436,9 +455,9 @@ layers:
 `
 
 	cfg, err := config.LoadConfig(configRaw)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	lg, auth, err := configToEntities(cfg)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
 
 	req1 := httptest.NewRequest("GET", "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
@@ -450,9 +469,10 @@ layers:
 	w1 := httptest.NewRecorder()
 	handler.ServeHTTP(w1, req1)
 	resp := w1.Result()
+	defer func() { require.NoError(t, resp.Body.Close()) }()
 	fmt.Printf("Header %v\n", resp.Header)
 	body, err := io.ReadAll(resp.Body)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	img, _ := images.GetStaticImage(images.KeyImageUnauthorized)
 
 	assert.Equal(t, 401, resp.StatusCode)
@@ -475,9 +495,9 @@ layers:
 `
 
 	cfg, err := config.LoadConfig(configRaw)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	lg, auth, err := configToEntities(cfg)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
 
 	req1 := httptest.NewRequest("GET", "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
@@ -489,9 +509,10 @@ layers:
 	w1 := httptest.NewRecorder()
 	handler.ServeHTTP(w1, req1)
 	resp := w1.Result()
+	defer func() { require.NoError(t, resp.Body.Close()) }()
 	fmt.Printf("Header %v\n", resp.Header)
 	body, err := io.ReadAll(resp.Body)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	img, _ := images.GetStaticImage(images.KeyImageUnauthorized)
 
 	assert.Equal(t, 401, resp.StatusCode)
