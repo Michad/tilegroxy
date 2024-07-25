@@ -7,3 +7,26 @@ linters-settings:
     template-path: ./.preamble.txt
   maintidx:
     under: 30
+  mnd:    
+    ignored-numbers:
+      - '0600'
+      - '0666'
+      - '0700'
+      - '42'
+      - '2'
+      - '1'
+      - '180'
+      - '90'
+      - '60'
+      - '360'
+      - '255'
+issues:
+  exclude-rules:
+    - path: (.+)_test.go
+      linters:
+        - noctx
+        - mnd
+        - dupl
+    - path: config.go
+      linters:
+        - mnd
