@@ -32,7 +32,7 @@ libyears:
 
 lint:
 	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.59.1
-	@golangci-lint run --fix -E asciicheck,bidichk,bodyclose,canonicalheader,dogsled,dupl,exhaustive,gocheckcompilerdirectives,gocritic,gofmt,durationcheck,errname,errorlint,fatcontext,goheader,inamedparam,interfacebloat,intrange,maintidx,makezero,mirror,misspell,mnd,nlreturn,noctx,nonamedreturns,perfsprint,prealloc,predeclared,revive,stylecheck,tenv,testifylint,usestdlibvars,unconvert,wastedassign
+	@golangci-lint run --fix -E asciicheck,bidichk,bodyclose,canonicalheader,dogsled,dupl,exhaustive,gocheckcompilerdirectives,gocritic,gofmt,durationcheck,errname,errorlint,fatcontext,goheader,inamedparam,interfacebloat,intrange,maintidx,makezero,mirror,misspell,mnd,noctx,nonamedreturns,perfsprint,prealloc,predeclared,revive,stylecheck,tenv,testifylint,usestdlibvars,unconvert,wastedassign
 
 version:
 	@./${OUT} version --json

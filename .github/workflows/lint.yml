@@ -51,7 +51,7 @@ jobs:
         if: success() || failure()
         with:
           github_token: ${{ secrets.github_token }}
-          golangci_lint_flags: "--fix --timeout 2m0s -E dupl,gocritic,maintidx,mnd,nlreturn,perfsprint,revive,stylecheck"
+          golangci_lint_flags: "--fix --timeout 2m0s -E dupl,gocritic,maintidx,mnd,perfsprint,revive,stylecheck"
           reporter: github-pr-review
           tool_name: Go Lint Suggestions 
           level: warning 
