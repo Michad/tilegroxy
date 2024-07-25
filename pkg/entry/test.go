@@ -28,6 +28,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
 type TestOptions struct {
@@ -104,59 +105,61 @@ func Test(cfg *config.Config, opts TestOptions, out io.Writer) (uint32, error) {
 
 	for t := range len(reqSplit) {
 		wg.Add(1)
-		go func(t int, myReqs []pkg.TileRequest) {
-			ctx2 := pkg.BackgroundContext()
-
-			for _, req := range myReqs {
-				layer := layerObjects.FindLayer(ctx2, req.LayerName)
-				img, layerErr := layer.RenderTileNoCache(ctx2, req)
-				var cacheWriteError error
-				var cacheReadError error
-
-				if !opts.NoCache && layerErr == nil {
-					cacheWriteError = layer.Cache.Save(req, img)
-					if cacheWriteError == nil {
-						var img2 *pkg.Image
-						img2, cacheReadError = layer.Cache.Lookup(req)
-						if cacheReadError == nil {
-							if img2 == nil {
-								cacheReadError = errors.New("no result from cache lookup")
-							} else if !slices.Equal(*img, *img2) {
-								cacheReadError = errors.New("cache result doesn't match what we put into cache")
-							}
-						}
-					}
-				}
-
-				if layerErr != nil || cacheWriteError != nil || cacheReadError != nil {
-					atomic.AddUint32(&errCount, 1)
-				}
-
-				// Output the result into the table
-				resultStr := strconv.Itoa(t) + "\t" + req.LayerName + "\t"
-				if layerErr != nil {
-					resultStr += "No\tN/A\tN/A\t\xff" + layerErr.Error() + "\xff\t"
-				} else {
-					if opts.NoCache { //nolint:gocritic
-						resultStr += "Yes\tN/A\tN/A\tNone\t"
-					} else if cacheWriteError != nil {
-						resultStr += "Yes\tNo\tN/A\t\xff" + cacheWriteError.Error() + "\xff\t"
-					} else if cacheReadError != nil {
-						resultStr += "Yes\tYes\tNo\t\xff" + cacheReadError.Error() + "\xff\t"
-					} else {
-						resultStr += "Yes\tYes\tYes\tNone\t"
-					}
-				}
-				fmt.Fprintln(writer, resultStr)
-
-			}
-
-			wg.Done()
-		}(t, reqSplit[t])
+		go testTileRequests(layerObjects, opts, errCount, writer, &wg, t, reqSplit[t])
 	}
 
 	wg.Wait()
 
 	writer.Flush()
 	return errCount, nil
+}
+
+func testTileRequests(layerObjects *layer.LayerGroup, opts TestOptions, errCount uint32, writer *tabwriter.Writer, wg *sync.WaitGroup, t int, myReqs []pkg.TileRequest) {
+	ctx := pkg.BackgroundContext()
+
+	for _, req := range myReqs {
+		layer := layerObjects.FindLayer(ctx, req.LayerName)
+		img, layerErr := layer.RenderTileNoCache(ctx, req)
+		var cacheWriteError error
+		var cacheReadError error
+
+		if !opts.NoCache && layerErr == nil {
+			cacheWriteError = layer.Cache.Save(req, img)
+			if cacheWriteError == nil {
+				var img2 *pkg.Image
+				img2, cacheReadError = layer.Cache.Lookup(req)
+				if cacheReadError == nil {
+					if img2 == nil {
+						cacheReadError = errors.New("no result from cache lookup")
+					} else if !slices.Equal(*img, *img2) {
+						cacheReadError = errors.New("cache result doesn't match what we put into cache")
+					}
+				}
+			}
+		}
+
+		if layerErr != nil || cacheWriteError != nil || cacheReadError != nil {
+			atomic.AddUint32(&errCount, 1)
+		}
+
+		// Output the result into the table
+		resultStr := strconv.Itoa(t) + "\t" + req.LayerName + "\t"
+		if layerErr != nil {
+			resultStr += "No\tN/A\tN/A\t\xff" + layerErr.Error() + "\xff\t"
+		} else {
+			if opts.NoCache { //nolint:gocritic
+				resultStr += "Yes\tN/A\tN/A\tNone\t"
+			} else if cacheWriteError != nil {
+				resultStr += "Yes\tNo\tN/A\t\xff" + cacheWriteError.Error() + "\xff\t"
+			} else if cacheReadError != nil {
+				resultStr += "Yes\tYes\tNo\t\xff" + cacheReadError.Error() + "\xff\t"
+			} else {
+				resultStr += "Yes\tYes\tYes\tNone\t"
+			}
+		}
+		fmt.Fprintln(writer, resultStr)
+
+	}
+
+	wg.Done()
 }
