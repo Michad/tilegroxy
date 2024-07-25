@@ -72,7 +72,7 @@ func Test_TileHandler_AllowedArea(t *testing.T) {
 	handler.ServeHTTP(w1, req1)
 
 	r1 := w1.Result()
-	defer assert.NoError(t, r1.Body.Close())
+	defer func() { require.NoError(t, r1.Body.Close()) }()
 	assert.Equal(t, 401, r1.StatusCode)
 
 	req2 := httptest.NewRequest("GET", "http://example.com/tiles/main/10/12/12", nil).WithContext(ctx)
@@ -85,7 +85,7 @@ func Test_TileHandler_AllowedArea(t *testing.T) {
 
 	handler.ServeHTTP(w2, req2)
 	r2 := w2.Result()
-	defer assert.NoError(t, r2.Body.Close())
+	defer func() { require.NoError(t, r2.Body.Close()) }()
 	assert.Equal(t, 200, r2.StatusCode)
 }
 
@@ -97,7 +97,7 @@ func Test_TileHandler_Proxy(t *testing.T) {
 		w.WriteHeader(200)
 		b, _ := images.GetStaticImage("color:FFF")
 		_, err := w.Write(*b)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	}))
 	defer ts.Close()
 
@@ -131,7 +131,7 @@ func Test_TileHandler_Proxy(t *testing.T) {
 	handler.ServeHTTP(w1, req1)
 
 	r1 := w1.Result()
-	defer assert.NoError(t, r1.Body.Close())
+	defer func() { require.NoError(t, r1.Body.Close()) }()
 	assert.Equal(t, 200, r1.StatusCode)
 	assert.Equal(t, "a=test&b=hi&t=t&z=10&y=10&x=10", query)
 }
@@ -165,7 +165,7 @@ func Test_TileHandler_RefToStatic(t *testing.T) {
 
 	handler.ServeHTTP(w1, req1)
 	res1 := w1.Result()
-	defer assert.NoError(t, res1.Body.Close())
+	defer func() { require.NoError(t, res1.Body.Close()) }()
 
 	assert.Equal(t, 200, res1.StatusCode)
 	b1, err := io.ReadAll(res1.Body)
@@ -182,7 +182,7 @@ func Test_TileHandler_RefToStatic(t *testing.T) {
 	handler.ServeHTTP(w2, req2)
 
 	res2 := w2.Result()
-	defer assert.NoError(t, res2.Body.Close())
+	defer func() { require.NoError(t, res2.Body.Close()) }()
 
 	assert.Equal(t, 200, res2.StatusCode)
 	b2, err := io.ReadAll(res2.Body)
@@ -237,7 +237,7 @@ func Test_TileHandler_ExecuteCustom(t *testing.T) {
 	w1 := httptest.NewRecorder()
 	handler.ServeHTTP(w1, req1)
 	res1 := w1.Result()
-	defer assert.NoError(t, res1.Body.Close())
+	defer func() { require.NoError(t, res1.Body.Close()) }()
 	assert.Equal(t, 401, res1.StatusCode)
 
 	req2 := httptest.NewRequest("GET", "http://localhost:12341/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
@@ -250,7 +250,7 @@ func Test_TileHandler_ExecuteCustom(t *testing.T) {
 	w2 := httptest.NewRecorder()
 	handler.ServeHTTP(w2, req2)
 	res2 := w2.Result()
-	defer assert.NoError(t, res2.Body.Close())
+	defer func() { require.NoError(t, res2.Body.Close()) }()
 	assert.Equal(t, 200, res2.StatusCode)
 
 	req3 := httptest.NewRequest("GET", "http://localhost:12341/tiles/color2/8/12/32", nil).WithContext(pkg.BackgroundContext())
@@ -263,7 +263,7 @@ func Test_TileHandler_ExecuteCustom(t *testing.T) {
 	w3 := httptest.NewRecorder()
 	handler.ServeHTTP(w3, req3)
 	res3 := w3.Result()
-	defer assert.NoError(t, res3.Body.Close())
+	defer func() { require.NoError(t, res3.Body.Close()) }()
 	assert.Equal(t, 401, res3.StatusCode)
 }
 
@@ -300,7 +300,7 @@ layers:
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req1)
 	resp1 := w.Result()
-	defer assert.NoError(t, resp1.Body.Close())
+	defer func() { require.NoError(t, resp1.Body.Close()) }()
 
 	assert.Equal(t, 401, resp1.StatusCode)
 
@@ -314,7 +314,7 @@ layers:
 	w2 := httptest.NewRecorder()
 	handler.ServeHTTP(w2, req2)
 	resp2 := w2.Result()
-	defer assert.NoError(t, resp2.Body.Close())
+	defer func() { require.NoError(t, resp2.Body.Close()) }()
 
 	assert.Equal(t, 200, resp2.StatusCode)
 }
@@ -348,7 +348,7 @@ layers:
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req1)
 	resp := w.Result()
-	defer assert.NoError(t, resp.Body.Close())
+	defer func() { require.NoError(t, resp.Body.Close()) }()
 
 	assert.Equal(t, 401, resp.StatusCode)
 }
@@ -382,7 +382,7 @@ layers:
 	w1 := httptest.NewRecorder()
 	handler.ServeHTTP(w1, req1)
 	resp1 := w1.Result()
-	defer assert.NoError(t, resp1.Body.Close())
+	defer func() { require.NoError(t, resp1.Body.Close()) }()
 
 	assert.Equal(t, 401, resp1.StatusCode)
 
@@ -396,7 +396,7 @@ layers:
 	w2 := httptest.NewRecorder()
 	handler.ServeHTTP(w2, req2)
 	resp2 := w2.Result()
-	defer assert.NoError(t, resp2.Body.Close())
+	defer func() { require.NoError(t, resp2.Body.Close()) }()
 
 	assert.Equal(t, 200, resp2.StatusCode)
 }
@@ -430,7 +430,7 @@ layers:
 	w1 := httptest.NewRecorder()
 	handler.ServeHTTP(w1, req1)
 	resp := w1.Result()
-	defer assert.NoError(t, resp.Body.Close())
+	defer func() { require.NoError(t, resp.Body.Close()) }()
 	fmt.Printf("Header %v\n", resp.Header)
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
@@ -469,7 +469,7 @@ layers:
 	w1 := httptest.NewRecorder()
 	handler.ServeHTTP(w1, req1)
 	resp := w1.Result()
-	defer assert.NoError(t, resp.Body.Close())
+	defer func() { require.NoError(t, resp.Body.Close()) }()
 	fmt.Printf("Header %v\n", resp.Header)
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
@@ -509,7 +509,7 @@ layers:
 	w1 := httptest.NewRecorder()
 	handler.ServeHTTP(w1, req1)
 	resp := w1.Result()
-	defer assert.NoError(t, resp.Body.Close())
+	defer func() { require.NoError(t, resp.Body.Close()) }()
 	fmt.Printf("Header %v\n", resp.Header)
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)

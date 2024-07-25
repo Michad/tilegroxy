@@ -52,7 +52,7 @@ func Test_WriteErrorMessage_Execute(t *testing.T) {
 	cfg.Error.Mode = config.ModeErrorNoError
 	writeErrorMessage(ctx, rw, &cfg.Error, pkg.TypeOfErrorOther, "test", "test", nil)
 	r := rw.Result()
-	defer assert.NoError(t, r.Body.Close())
+	defer func() { require.NoError(t, r.Body.Close()) }()
 	assert.Equal(t, 500, r.StatusCode)
 	b, _ := io.ReadAll(r.Body)
 	assert.Empty(t, b)
@@ -61,7 +61,7 @@ func Test_WriteErrorMessage_Execute(t *testing.T) {
 	cfg.Error.Images.Other = "safjakslfjaslkfj" // Invalid
 	writeErrorMessage(ctx, rw, &cfg.Error, pkg.TypeOfErrorOther, "test", "test", nil)
 	r = rw.Result()
-	defer assert.NoError(t, r.Body.Close())
+	defer func() { require.NoError(t, r.Body.Close()) }()
 	assert.Equal(t, 500, r.StatusCode)
 	b, _ = io.ReadAll(r.Body)
 	assert.Empty(t, b)
