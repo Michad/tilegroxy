@@ -53,7 +53,7 @@ func init() {
 	}
 }
 
-func coreServeTest(cfg string, port int, url string) (*http.Response, func(), error) {
+func coreServeTest(t *testing.T, cfg string, port int, url string) (*http.Response, func(), error) {
 	exitStatus = -1
 	rootCmd.ResetFlags()
 	seedCmd.ResetFlags()
@@ -118,7 +118,9 @@ func coreServeTest(cfg string, port int, url string) (*http.Response, func(), er
 	}
 
 	return resp, func() {
-		syscall.Kill(syscall.Getpid(), syscall.SIGUSR1)
+		err = syscall.Kill(syscall.Getpid(), syscall.SIGUSR1)
+		require.NoError(t, err)
+
 		if resp != nil {
 			resp.Body.Close()
 		}
@@ -136,7 +138,10 @@ layers:
       color: "FFFFFF"
 `
 
-	_, _, err := coreServeTest(cfg, 12340, "http://localhost:12340/")
+	_, f, err := coreServeTest(t, cfg, 12340, "http://localhost:12340/") //nolint:bodyclose // Linter doesn't detect this right
+	if f != nil {
+		defer f()
+	}
 
 	require.Error(t, err)
 	assert.Equal(t, 1, exitStatus)
@@ -162,7 +167,7 @@ layers:
 `
 	os.Setenv("KEY", "hunter2")
 
-	resp, postFunc, err := coreServeTest(cfg, 12342, "http://localhost:12342/root/tiles/color/8/12/32")
+	resp, postFunc, err := coreServeTest(t, cfg, 12342, "http://localhost:12342/root/tiles/color/8/12/32") //nolint:bodyclose // Linter doesn't detect this right
 	defer postFunc()
 
 	require.NoError(t, err)
@@ -278,7 +283,7 @@ layers:
 `
 	cfg = fmt.Sprintf(cfg, tmpLog.Name())
 
-	resp, postFunc, err := coreServeTest(cfg, 12341, "http://localhost:12341/")
+	resp, postFunc, err := coreServeTest(t, cfg, 12341, "http://localhost:12341/") //nolint:bodyclose // Linter doesn't detect this right
 	defer postFunc()
 
 	require.NoError(t, err)
@@ -307,6 +312,9 @@ layers:
 	assert.Greater(t, 2.0, end.Sub(start).Seconds())
 	if resp2 != nil {
 		assert.Equal(t, 503, resp2.StatusCode)
+		if resp2.Body != nil {
+			assert.NoError(t, resp2.Body.Close())
+		}
 	}
 }
 
