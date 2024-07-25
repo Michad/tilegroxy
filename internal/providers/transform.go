@@ -150,7 +150,7 @@ func (t Transform) GenerateTile(ctx *pkg.RequestContext, providerContext layer.P
 
 	// Split up all the requests for N threads
 	numPixelPerThread := int(math.Floor(float64(pixelCount) / float64(t.Threads)))
-	var pixelSplit [][]int
+	pixelSplit := make([][]int, 0, t.Threads)
 
 	for i := range t.Threads {
 		chunkStart := i * numPixelPerThread

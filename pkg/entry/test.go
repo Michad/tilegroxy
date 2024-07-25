@@ -81,7 +81,7 @@ func Test(cfg *config.Config, opts TestOptions, out io.Writer) (uint32, error) {
 
 	// Split up all the requests for N threads
 	numReqPerThread := int(math.Floor(float64(numReq) / float64(opts.NumThread)))
-	var reqSplit [][]pkg.TileRequest
+	reqSplit := make([][]pkg.TileRequest, 0, int(opts.NumThread))
 
 	for i := range int(opts.NumThread) {
 		chunkStart := i * numReqPerThread

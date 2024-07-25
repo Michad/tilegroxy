@@ -104,7 +104,7 @@ func (s BlendRegistration) Initialize(cfgAny any, clientConfig config.ClientConf
 
 		for _, p := range cfg.Providers {
 			provider, err := layer.ConstructProvider(p, clientConfig, errorMessages, layerGroup)
-			providers = append(providers, provider)
+			providers = append(providers, provider) //nolint:makezero //Linter is easily confused if initialized before the make
 			errorSlice = append(errorSlice, err)
 		}
 

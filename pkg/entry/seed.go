@@ -99,7 +99,7 @@ func Seed(cfg *config.Config, opts SeedOptions, out io.Writer) error {
 
 	chunkSize := int(math.Floor(float64(numReq) / float64(opts.NumThread)))
 
-	var reqSplit [][]pkg.TileRequest
+	reqSplit := make([][]pkg.TileRequest, 0, int(opts.NumThread))
 
 	for i := range int(opts.NumThread) {
 		chunkStart := i * chunkSize

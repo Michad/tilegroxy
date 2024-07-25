@@ -59,7 +59,7 @@ func (lg LayerGroup) FindLayer(ctx *pkg.RequestContext, layerName string) *Layer
 }
 
 func (lg LayerGroup) ListLayerIds() []string {
-	var r []string
+	r := make([]string, 0, len(lg.layers))
 	for _, l := range lg.layers {
 		r = append(r, l.Id)
 	}
