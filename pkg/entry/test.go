@@ -137,7 +137,7 @@ func Test(cfg *config.Config, opts TestOptions, out io.Writer) (uint32, error) {
 				if layerErr != nil {
 					resultStr += "No\tN/A\tN/A\t\xff" + layerErr.Error() + "\xff\t"
 				} else {
-					if opts.NoCache {
+					if opts.NoCache { //nolint:gocritic
 						resultStr += "Yes\tN/A\tN/A\tNone\t"
 					} else if cacheWriteError != nil {
 						resultStr += "Yes\tNo\tN/A\t\xff" + cacheWriteError.Error() + "\xff\t"

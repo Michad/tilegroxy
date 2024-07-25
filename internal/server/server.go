@@ -165,10 +165,8 @@ func configureMainLogging(cfg *config.Config) error {
 		if err != nil {
 			return err
 		}
-	} else if cfg.Logging.Main.Console {
-		out = os.Stdout
 	} else {
-		panic("Impossible logic error")
+		out = os.Stdout
 	}
 
 	var level slog.Level
@@ -197,14 +195,15 @@ func configureMainLogging(cfg *config.Config) error {
 
 	var logHandler slog.Handler
 
-	if cfg.Logging.Main.Format == config.MainFormatPlain {
+	switch cfg.Logging.Main.Format {
+	case config.MainFormatPlain:
 		logHandler = slog.NewTextHandler(out, &opt)
-	} else if cfg.Logging.Main.Format == config.MainFormatJson {
+	case config.MainFormatJson:
 		logHandler = slog.NewJSONHandler(out, &opt)
 		if cfg.Logging.Main.Request == "auto" {
 			cfg.Logging.Main.Request = "true"
 		}
-	} else {
+	default:
 		return fmt.Errorf(cfg.Error.Messages.InvalidParam, "logging.main.format", cfg.Logging.Main.Format)
 	}
 
@@ -247,11 +246,12 @@ func configureAccessLogging(cfg config.AccessConfig, errorMessages config.ErrorM
 			out = os.Stdout
 		}
 
-		if cfg.Format == config.AccessFormatCommon {
+		switch cfg.Format {
+		case config.AccessFormatCommon:
 			rootHandler = handlers.LoggingHandler(out, rootHandler)
-		} else if cfg.Format == config.AccessFormatCombined {
+		case config.AccessFormatCombined:
 			rootHandler = handlers.CombinedLoggingHandler(out, rootHandler)
-		} else {
+		default:
 			return nil, fmt.Errorf(errorMessages.InvalidParam, "logging.access.format", cfg.Format)
 		}
 	}

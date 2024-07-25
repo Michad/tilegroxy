@@ -69,10 +69,8 @@ func (s MemcacheRegistration) Initialize(configAny any, errorMessages config.Err
 		}
 
 		config.Servers = []HostAndPort{{config.Host, config.Port}}
-	} else {
-		if config.Host != "" {
-			return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "config.memcache.host", "config.memcache.servers")
-		}
+	} else if config.Host != "" {
+		return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "config.memcache.host", "config.memcache.servers")
 	}
 
 	if config.Ttl == 0 {

@@ -35,7 +35,8 @@ func ParseZoomString(str string) ([]int, error) {
 	for _, entry := range commaSplit {
 		dashSplit := strings.Split(entry, "-")
 
-		if len(dashSplit) == 1 {
+		switch len(dashSplit) {
+		case 1:
 			singleZoom, err := strconv.Atoi(dashSplit[0])
 
 			if singleZoom < 0 || singleZoom > MaxZoom {
@@ -47,7 +48,7 @@ func ParseZoomString(str string) ([]int, error) {
 			} else {
 				return nil, fmt.Errorf(errorMessage, entry)
 			}
-		} else if len(dashSplit) == 2 {
+		case 2:
 			start, err := strconv.Atoi(dashSplit[0])
 			end, err2 := strconv.Atoi(dashSplit[1])
 			if err != nil || err2 != nil {
@@ -65,7 +66,7 @@ func ParseZoomString(str string) ([]int, error) {
 			for i := start; i <= end; i++ {
 				result = append(result, i)
 			}
-		} else {
+		default:
 			return nil, fmt.Errorf(errorMessage, entry)
 		}
 	}

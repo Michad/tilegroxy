@@ -81,7 +81,7 @@ func (s S3Registration) Initialize(configAny any, errorMessages config.ErrorMess
 		config.Path = config.Path[1:]
 	}
 	if strings.LastIndex(config.Path, "/") != len(config.Path)-1 {
-		config.Path = config.Path + "/"
+		config.Path += "/"
 	}
 
 	if config.Bucket == "" {

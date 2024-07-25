@@ -35,20 +35,20 @@ type layerSegment struct {
 }
 
 // Utility method that prepends with checking for dupe segments and propagating errors along
-func prependLayerSegment(arr []layerSegment, new layerSegment, errs error) ([]layerSegment, error) {
-	if new.placeholder {
-		if len(arr) > 0 && arr[0].placeholder {
+func prependLayerSegment(existingSegments []layerSegment, newSegment layerSegment, errs error) ([]layerSegment, error) {
+	if newSegment.placeholder {
+		if len(existingSegments) > 0 && existingSegments[0].placeholder {
 			errs = errors.Join(errs, errors.New("placeholders without separators"))
 		}
 
-		for _, cur := range arr {
-			if cur.placeholder && new.value == cur.value {
-				errs = errors.Join(errs, errors.New("dupe: "+new.value))
+		for _, cur := range existingSegments {
+			if cur.placeholder && newSegment.value == cur.value {
+				errs = errors.Join(errs, errors.New("dupe: "+newSegment.value))
 			}
 		}
 	}
 
-	return slices.Concat([]layerSegment{new}, arr), errs
+	return slices.Concat([]layerSegment{newSegment}, existingSegments), errs
 }
 
 // Breaks a pattern string into a series of segments, each of which is either a placeholder or a literal string value

@@ -98,10 +98,8 @@ func (s RedisRegistration) Initialize(configAny any, errorMessages config.ErrorM
 		}
 
 		config.Servers = []HostAndPort{{config.Host, config.Port}}
-	} else {
-		if config.Host != "" {
-			return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "config.redis.host", "config.redis.servers")
-		}
+	} else if config.Host != "" {
+		return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "config.redis.host", "config.redis.servers")
 	}
 
 	if config.Ttl == 0 {
@@ -111,7 +109,8 @@ func (s RedisRegistration) Initialize(configAny any, errorMessages config.ErrorM
 		config.Ttl = redisMaxTtl
 	}
 
-	if config.Mode == ModeCluster {
+	switch config.Mode {
+	case ModeCluster:
 		if config.Db != 0 {
 			return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "cache.redis.db", "cache.redis.cluster")
 		}
@@ -128,7 +127,7 @@ func (s RedisRegistration) Initialize(configAny any, errorMessages config.ErrorM
 		tileCache = rediscache.New(&rediscache.Options{
 			Redis: client,
 		})
-	} else if config.Mode == ModeRing {
+	case ModeRing:
 		if len(config.Servers) < 2 {
 			// Not the best error message but the typical user of this should be able to figure it out
 			return nil, fmt.Errorf(errorMessages.InvalidParam, "length(cache.redis.servers)", len(config.Servers))
@@ -150,7 +149,7 @@ func (s RedisRegistration) Initialize(configAny any, errorMessages config.ErrorM
 		tileCache = rediscache.New(&rediscache.Options{
 			Redis: client,
 		})
-	} else {
+	default:
 		client := redis.NewClient(&redis.Options{
 			Addr:     config.Servers[0].Host + ":" + strconv.Itoa(int(config.Servers[0].Port)),
 			Username: config.Username,
