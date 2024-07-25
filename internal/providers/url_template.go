@@ -24,44 +24,44 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
-type UrlTemplateConfig struct {
+type URLTemplateConfig struct {
 	Template string
 }
 
-type UrlTemplate struct {
-	UrlTemplateConfig
+type URLTemplate struct {
+	URLTemplateConfig
 	clientConfig config.ClientConfig
 }
 
-func (t UrlTemplate) PreAuth(ctx *pkg.RequestContext, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
+func (t URLTemplate) PreAuth(ctx *pkg.RequestContext, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
 	return layer.ProviderContext{AuthBypass: true}, nil
 }
 
 func init() {
-	layer.RegisterProvider(UrlTemplateRegistration{})
+	layer.RegisterProvider(URLTemplateRegistration{})
 }
 
-type UrlTemplateRegistration struct {
+type URLTemplateRegistration struct {
 }
 
-func (s UrlTemplateRegistration) InitializeConfig() any {
-	return UrlTemplateConfig{}
+func (s URLTemplateRegistration) InitializeConfig() any {
+	return URLTemplateConfig{}
 }
 
-func (s UrlTemplateRegistration) Name() string {
+func (s URLTemplateRegistration) Name() string {
 	return "url template"
 }
 
-func (s UrlTemplateRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layer.LayerGroup) (layer.Provider, error) {
-	cfg := cfgAny.(UrlTemplateConfig)
+func (s URLTemplateRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layer.LayerGroup) (layer.Provider, error) {
+	cfg := cfgAny.(URLTemplateConfig)
 	if cfg.Template == "" {
 		return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.url template.url", "")
 	}
 
-	return &UrlTemplate{cfg, clientConfig}, nil
+	return &URLTemplate{cfg, clientConfig}, nil
 }
 
-func (t UrlTemplate) GenerateTile(ctx *pkg.RequestContext, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t URLTemplate) GenerateTile(ctx *pkg.RequestContext, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	b, err := tileRequest.GetBounds()
 
 	if err != nil {

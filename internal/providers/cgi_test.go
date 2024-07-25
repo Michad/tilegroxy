@@ -27,7 +27,7 @@ import (
 
 func Test_CGI_Validate(t *testing.T) {
 	cfg := CGIConfig{
-		Uri: "/?map=mapfiles/{layer.file}.map&MODE=tile&layers={layer.layer}&TILEMODE=gmap&TILE={x}+{y}+{z}",
+		URI: "/?map=mapfiles/{layer.file}.map&MODE=tile&layers={layer.layer}&TILEMODE=gmap&TILE={x}+{y}+{z}",
 	}
 
 	cgi, err := CGIRegistration{}.Initialize(cfg, testClientConfig, testErrMessages, nil)
@@ -50,7 +50,7 @@ func Test_CGI_Mapserv(t *testing.T) {
 
 	cfg := CGIConfig{
 		Exec: "test_files/mapserv_via_docker.sh",
-		Uri:  "?map=mapfiles/{layer.file}.map&MODE=tile&layers={layer.layer}&TILEMODE=gmap&TILE={x}+{y}+{z}",
+		URI:  "?map=mapfiles/{layer.file}.map&MODE=tile&layers={layer.layer}&TILEMODE=gmap&TILE={x}+{y}+{z}",
 		Env:  env,
 	}
 
@@ -76,7 +76,7 @@ func Test_CGI_Mapserv(t *testing.T) {
 func Test_CGI_InvalidMapserv(t *testing.T) {
 	cfg := CGIConfig{
 		Exec:           "test_files/mapserv_via_docker.sh",
-		Uri:            "/?map=mapfiles/{layer.file}.map&MODE=tile&layers={layer.layer}&TILEMODE=gmap&TILE={x}+{y}+{z}",
+		URI:            "/?map=mapfiles/{layer.file}.map&MODE=tile&layers={layer.layer}&TILEMODE=gmap&TILE={x}+{y}+{z}",
 		InvalidAsError: true,
 	}
 

@@ -30,7 +30,7 @@ import (
 	"github.com/maypok86/otter"
 )
 
-type JwtConfig struct {
+type JWTConfig struct {
 	//TODO: Performance profile if the cache is actually worthwhile
 	CacheSize        uint16 // Configures the size of the cache of already verified JWTs to avoid re-verifying keys for every token. Expiration still applies. Set to 0 to disable. Defaults to 0
 	Key              string // The key for verifying the signature. The public key if using asymmetric signing. Required
@@ -43,11 +43,11 @@ type JwtConfig struct {
 	ExpectedScope    string // If specified, require the "scope" grant to contain this string.
 	LayerScope       bool   // If specified, the "scope" grant is used to limit access to layer
 	ScopePrefix      string // If LayerScope is true, this prefix indicates scopes to use
-	UserId           string // Use the specified grant as the user identifier. Defaults to sub
+	UserID           string // Use the specified grant as the user identifier. Defaults to sub
 }
 
-type Jwt struct {
-	JwtConfig
+type JWT struct {
+	JWTConfig
 	Cache         *otter.Cache[string, jwt.NumericDate]
 	errorMessages config.ErrorMessages
 }
@@ -60,7 +60,7 @@ type JWTRegistration struct {
 }
 
 func (s JWTRegistration) InitializeConfig() any {
-	return JwtConfig{}
+	return JWTConfig{}
 }
 
 func (s JWTRegistration) Name() string {
@@ -68,7 +68,7 @@ func (s JWTRegistration) Name() string {
 }
 
 func (s JWTRegistration) Initialize(configAny any, errorMessages config.ErrorMessages) (authentication.Authentication, error) {
-	config := configAny.(JwtConfig)
+	config := configAny.(JWTConfig)
 
 	if !slices.Contains([]string{"HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "EdDSA"}, config.Algorithm) {
 		return nil, fmt.Errorf(errorMessages.InvalidParam, "authentication.algorithm", config.Algorithm)
@@ -86,23 +86,23 @@ func (s JWTRegistration) Initialize(configAny any, errorMessages config.ErrorMes
 		config.MaxExpiration = 24 * 60 * 60
 	}
 
-	if config.UserId == "" {
-		config.UserId = "sub"
+	if config.UserID == "" {
+		config.UserID = "sub"
 	}
 
 	if config.CacheSize == 0 {
-		return &Jwt{config, nil, errorMessages}, nil
+		return &JWT{config, nil, errorMessages}, nil
 	} else {
 		cache, err := otter.MustBuilder[string, jwt.NumericDate](int(config.CacheSize)).Build()
 		if err != nil {
 			return nil, err
 		}
 
-		return &Jwt{config, &cache, errorMessages}, nil
+		return &JWT{config, &cache, errorMessages}, nil
 	}
 }
 
-func (c Jwt) CheckAuthentication(req *http.Request, ctx *pkg.RequestContext) bool {
+func (c JWT) CheckAuthentication(req *http.Request, ctx *pkg.RequestContext) bool {
 	tokenStr, ok := c.extractToken(req)
 	if !ok {
 		return false
@@ -133,7 +133,7 @@ func (c Jwt) CheckAuthentication(req *http.Request, ctx *pkg.RequestContext) boo
 	return true
 }
 
-func (c Jwt) extractToken(req *http.Request) (string, bool) {
+func (c JWT) extractToken(req *http.Request) (string, bool) {
 	authHeader := req.Header[c.HeaderName]
 	if len(authHeader) != 1 {
 		return "", false
@@ -152,7 +152,7 @@ func (c Jwt) extractToken(req *http.Request) (string, bool) {
 	return tokenStr, true
 }
 
-func (c Jwt) checkAuthenticationWithoutCache(tokenStr string, ctx *pkg.RequestContext) (*jwt.NumericDate, bool) {
+func (c JWT) checkAuthenticationWithoutCache(tokenStr string, ctx *pkg.RequestContext) (*jwt.NumericDate, bool) {
 	parserOptions := make([]jwt.ParserOption, 0)
 	parserOptions = append(parserOptions, jwt.WithLeeway(5*time.Second))
 	parserOptions = append(parserOptions, jwt.WithExpirationRequired())
@@ -207,9 +207,9 @@ func (c Jwt) checkAuthenticationWithoutCache(tokenStr string, ctx *pkg.RequestCo
 			return nil, false
 		}
 
-		rawUid := rawClaim[c.UserId]
-		if rawUid != nil {
-			ctx.UserIdentifier, _ = rawUid.(string)
+		rawUID := rawClaim[c.UserID]
+		if rawUID != nil {
+			ctx.UserIdentifier, _ = rawUID.(string)
 		}
 	} else {
 		return logInvalidClaimsType(tokenJwt, ctx)
@@ -217,7 +217,7 @@ func (c Jwt) checkAuthenticationWithoutCache(tokenStr string, ctx *pkg.RequestCo
 	return exp, true
 }
 
-func (c Jwt) parseKey(t *jwt.Token) (interface{}, error) {
+func (c JWT) parseKey(t *jwt.Token) (interface{}, error) {
 	if strings.Index(c.Algorithm, "HS") == 0 {
 		return []byte(c.Key), nil
 	}
@@ -252,7 +252,7 @@ func logInvalidClaimsType(tokenJwt *jwt.Token, ctx *pkg.RequestContext) (*jwt.Nu
 	return nil, false
 }
 
-func (c Jwt) validateScope(rawClaim jwt.MapClaims, ctx *pkg.RequestContext) bool {
+func (c JWT) validateScope(rawClaim jwt.MapClaims, ctx *pkg.RequestContext) bool {
 	scope := rawClaim["scope"]
 	scopeStr, ok := scope.(string)
 
@@ -291,7 +291,7 @@ func (c Jwt) validateScope(rawClaim jwt.MapClaims, ctx *pkg.RequestContext) bool
 	return true
 }
 
-func (c Jwt) validateGeohash(rawClaim jwt.MapClaims, ctx *pkg.RequestContext) bool {
+func (c JWT) validateGeohash(rawClaim jwt.MapClaims, ctx *pkg.RequestContext) bool {
 	hash := rawClaim["geohash"]
 
 	if hash == nil {

@@ -29,14 +29,14 @@ import (
 func Test_ErrorVals_Execute(t *testing.T) {
 	cfg := config.DefaultConfig()
 
-	cfg.Error.AlwaysOk = false
+	cfg.Error.AlwaysOK = false
 
 	for i := pkg.TypeOfErrorBounds; i <= pkg.TypeOfErrorOther; i++ {
-		cfg.Error.AlwaysOk = false
+		cfg.Error.AlwaysOK = false
 		status, level, imgPath := errorVars(&cfg.Error, pkg.TypeOfError(i))
 		assert.Greater(t, status, 300)
 		assert.NotEmpty(t, imgPath)
-		cfg.Error.AlwaysOk = true
+		cfg.Error.AlwaysOK = true
 		status2, level2, imgPath2 := errorVars(&cfg.Error, pkg.TypeOfError(i))
 		assert.Equal(t, http.StatusOK, status2)
 		assert.Equal(t, level2, level)

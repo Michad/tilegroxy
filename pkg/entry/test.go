@@ -50,7 +50,7 @@ func Test(cfg *config.Config, opts TestOptions, out io.Writer) (uint32, error) {
 	}
 
 	if len(opts.LayerNames) == 0 {
-		opts.LayerNames = layerObjects.ListLayerIds()
+		opts.LayerNames = layerObjects.ListLayerIDs()
 	}
 
 	// Generate the full list of requests to process

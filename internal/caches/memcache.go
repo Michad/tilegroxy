@@ -26,15 +26,15 @@ import (
 const (
 	memcacheDefaultHost = "127.0.0.1"
 	memcacheDefaultPort = 11211
-	memcacheDefaultTtl  = 60 * 60 * 24
-	memcacheMaxTtl      = 30 * 60 * 60 * 24
+	memcacheDefaultTTL  = 60 * 60 * 24
+	memcacheMaxTTL      = 30 * 60 * 60 * 24
 )
 
 type MemcacheConfig struct {
 	HostAndPort `mapstructure:",squash"`
 	Servers     []HostAndPort // The list of servers to use.
 	KeyPrefix   string        // Prefix to keynames stored in cache
-	Ttl         uint32        // Cache expiration in seconds. Max of 30 days. Default to 1 day
+	TTL         uint32        // Cache expiration in seconds. Max of 30 days. Default to 1 day
 }
 
 type Memcache struct {
@@ -73,11 +73,11 @@ func (s MemcacheRegistration) Initialize(configAny any, errorMessages config.Err
 		return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "config.memcache.host", "config.memcache.servers")
 	}
 
-	if config.Ttl == 0 {
-		config.Ttl = memcacheDefaultTtl
+	if config.TTL == 0 {
+		config.TTL = memcacheDefaultTTL
 	}
-	if config.Ttl > memcacheMaxTtl {
-		config.Ttl = memcacheMaxTtl
+	if config.TTL > memcacheMaxTTL {
+		config.TTL = memcacheMaxTTL
 	}
 
 	addrs := HostAndPortArrayToStringArray(config.Servers)
@@ -100,5 +100,5 @@ func (c Memcache) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
 }
 
 func (c Memcache) Save(t pkg.TileRequest, img *pkg.Image) error {
-	return c.client.Set(&memcache.Item{Key: c.KeyPrefix + t.String(), Value: *img, Expiration: int32(c.Ttl)})
+	return c.client.Set(&memcache.Item{Key: c.KeyPrefix + t.String(), Value: *img, Expiration: int32(c.TTL)})
 }

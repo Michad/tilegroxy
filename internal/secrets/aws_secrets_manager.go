@@ -156,8 +156,8 @@ func (s AWSSecretsManager) Lookup(key string) (string, error) {
 }
 
 // Just for testing purposes
-func (c AWSSecretsManager) makeSecret(key, val string) error {
-	_, err := c.client.CreateSecret(pkg.BackgroundContext(), &secretsmanager.CreateSecretInput{
+func (s AWSSecretsManager) makeSecret(key, val string) error {
+	_, err := s.client.CreateSecret(pkg.BackgroundContext(), &secretsmanager.CreateSecretInput{
 		Name:         &key,
 		SecretString: &val,
 	})

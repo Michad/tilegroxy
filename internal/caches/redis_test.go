@@ -181,7 +181,7 @@ func TestRedisWithContainerDiffDb(t *testing.T) {
 
 	cfg := RedisConfig{
 		HostAndPort: extractHostAndPort(t, endpoint),
-		Db:          0,
+		DB:          0,
 	}
 
 	r, err := RedisRegistration{}.Initialize(cfg, config.ErrorMessages{})
@@ -189,7 +189,7 @@ func TestRedisWithContainerDiffDb(t *testing.T) {
 
 	config2 := RedisConfig{
 		HostAndPort: extractHostAndPort(t, endpoint),
-		Db:          1,
+		DB:          1,
 	}
 
 	r2, err := RedisRegistration{}.Initialize(config2, config.ErrorMessages{})

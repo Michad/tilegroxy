@@ -156,7 +156,7 @@ func validateParamMatches(values map[string]string, regexp map[string]*regexp.Re
 }
 
 type Layer struct {
-	Id              string
+	ID              string
 	Pattern         []layerSegment
 	ParamValidator  map[string]*regexp.Regexp
 	Config          config.LayerConfig
@@ -191,13 +191,13 @@ func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.Cli
 	}
 
 	var segments []layerSegment
-	if rawConfig.Pattern != "" && rawConfig.Pattern != rawConfig.Id {
+	if rawConfig.Pattern != "" && rawConfig.Pattern != rawConfig.ID {
 		segments, err = parsePattern(rawConfig.Pattern)
 		if err != nil {
 			return nil, fmt.Errorf(errorMessages.InvalidParam, "layer.pattern", rawConfig.Pattern)
 		}
 	} else {
-		segments = []layerSegment{{value: rawConfig.Id, placeholder: false}}
+		segments = []layerSegment{{value: rawConfig.ID, placeholder: false}}
 	}
 
 	var validator map[string]*regexp.Regexp
@@ -209,7 +209,7 @@ func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.Cli
 		}
 	}
 
-	return &Layer{rawConfig.Id, segments, validator, rawConfig, provider, nil, errorMessages, ProviderContext{}, sync.Mutex{}}, nil
+	return &Layer{rawConfig.ID, segments, validator, rawConfig, provider, nil, errorMessages, ProviderContext{}, sync.Mutex{}}, nil
 }
 
 func (l *Layer) authWithProvider(ctx *pkg.RequestContext) error {

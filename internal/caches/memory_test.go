@@ -32,7 +32,7 @@ func TestMemory(t *testing.T) {
 }
 
 func TestTtl(t *testing.T) {
-	cfg := MemoryConfig{Ttl: 1}
+	cfg := MemoryConfig{TTL: 1}
 
 	r, err := MemoryRegistration{}.Initialize(cfg, config.ErrorMessages{})
 	require.NoError(t, err)

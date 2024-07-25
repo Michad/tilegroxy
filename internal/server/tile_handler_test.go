@@ -47,7 +47,7 @@ func Test_TileHandler_AllowedArea(t *testing.T) {
 	mainProvider := make(map[string]interface{})
 	mainProvider["name"] = "static"
 	mainProvider["color"] = "FFF"
-	cfg.Layers = append(cfg.Layers, config.LayerConfig{Id: "main", Provider: mainProvider})
+	cfg.Layers = append(cfg.Layers, config.LayerConfig{ID: "main", Provider: mainProvider})
 	var auth authentication.Authentication
 	var cache cache.Cache
 	auth = authentications.Noop{}
@@ -107,7 +107,7 @@ func Test_TileHandler_Proxy(t *testing.T) {
 	mainProvider["name"] = "proxy"
 	t.Setenv("TEST", "t")
 	mainProvider["url"] = ts.URL + "?a={layer.a}&b={ctx.user}&t={env.TEST}&z={z}&y={y}&x={x}"
-	cfg.Layers = append(cfg.Layers, config.LayerConfig{Id: "main", Pattern: "main_{a}", Provider: mainProvider, Client: &cfg.Client})
+	cfg.Layers = append(cfg.Layers, config.LayerConfig{ID: "main", Pattern: "main_{a}", Provider: mainProvider, Client: &cfg.Client})
 	var auth authentication.Authentication
 	var cache cache.Cache
 	auth = authentications.Noop{}
@@ -143,8 +143,8 @@ func Test_TileHandler_RefToStatic(t *testing.T) {
 	refProvider := make(map[string]interface{})
 	refProvider["name"] = "ref"
 	refProvider["layer"] = "main_white"
-	cfg.Layers = append(cfg.Layers, config.LayerConfig{Id: "main", Pattern: "main_{something}", Provider: mainProvider})
-	cfg.Layers = append(cfg.Layers, config.LayerConfig{Id: "ref", Pattern: "test", Provider: refProvider})
+	cfg.Layers = append(cfg.Layers, config.LayerConfig{ID: "main", Pattern: "main_{something}", Provider: mainProvider})
+	cfg.Layers = append(cfg.Layers, config.LayerConfig{ID: "ref", Pattern: "test", Provider: refProvider})
 	var auth authentication.Authentication
 	var cache cache.Cache
 	auth = authentications.Noop{}
@@ -198,8 +198,8 @@ func Test_TileHandler_ExecuteCustom(t *testing.T) {
 	mainProvider := make(map[string]interface{})
 	mainProvider["name"] = "static"
 	mainProvider["color"] = "FFF"
-	cfg.Layers = append(cfg.Layers, config.LayerConfig{Id: "color2", SkipCache: true, Provider: mainProvider})
-	cfg.Layers = append(cfg.Layers, config.LayerConfig{Id: "color", SkipCache: true, Provider: mainProvider})
+	cfg.Layers = append(cfg.Layers, config.LayerConfig{ID: "color2", SkipCache: true, Provider: mainProvider})
+	cfg.Layers = append(cfg.Layers, config.LayerConfig{ID: "color", SkipCache: true, Provider: mainProvider})
 	auth := make(map[string]interface{})
 	auth["name"] = "custom"
 	authToken := make(map[string]interface{})
