@@ -14,7 +14,6 @@
 package pkg
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -73,8 +72,8 @@ func Test_ReplaceEnv_Nothing(t *testing.T) {
 }
 
 func Test_ReplaceEnv_WithVals(t *testing.T) {
-	os.Setenv("TEST", "val")
-	os.Setenv("TEST2", "val2")
+	t.Setenv("TEST", "val")
+	t.Setenv("TEST2", "val2")
 	raw := make(map[string]interface{})
 	child := make(map[string]interface{})
 

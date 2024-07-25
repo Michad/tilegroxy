@@ -165,7 +165,7 @@ layers:
       name: proxy
       url: http://localhost:12342/root/tiles/color/{z}/{x}/{y}?agent={ctx.User-Agent}&key={env.KEY}
 `
-	os.Setenv("KEY", "hunter2")
+	t.Setenv("KEY", "hunter2")
 
 	resp, postFunc, err := coreServeTest(t, cfg, 12342, "http://localhost:12342/root/tiles/color/8/12/32") //nolint:bodyclose // Linter doesn't detect this right
 	defer postFunc()
