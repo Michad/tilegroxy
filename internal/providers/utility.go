@@ -104,7 +104,7 @@ func replaceUrlPlaceholders(ctx *pkg.RequestContext, tileRequest pkg.TileRequest
 func getTile(ctx *pkg.RequestContext, clientConfig config.ClientConfig, url string, authHeaders map[string]string) (*pkg.Image, error) {
 	slog.DebugContext(ctx, fmt.Sprintf("Calling url %v\n", url))
 
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
