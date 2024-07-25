@@ -105,7 +105,7 @@ func Test(cfg *config.Config, opts TestOptions, out io.Writer) (uint32, error) {
 
 	for t := range len(reqSplit) {
 		wg.Add(1)
-		go testTileRequests(layerObjects, opts, errCount, writer, &wg, t, reqSplit[t])
+		go testTileRequests(layerObjects, opts, &errCount, writer, &wg, t, reqSplit[t])
 	}
 
 	wg.Wait()
@@ -114,7 +114,7 @@ func Test(cfg *config.Config, opts TestOptions, out io.Writer) (uint32, error) {
 	return errCount, nil
 }
 
-func testTileRequests(layerObjects *layer.LayerGroup, opts TestOptions, errCount uint32, writer *tabwriter.Writer, wg *sync.WaitGroup, t int, myReqs []pkg.TileRequest) {
+func testTileRequests(layerObjects *layer.LayerGroup, opts TestOptions, errCount *uint32, writer *tabwriter.Writer, wg *sync.WaitGroup, t int, myReqs []pkg.TileRequest) {
 	ctx := pkg.BackgroundContext()
 
 	for _, req := range myReqs {
@@ -139,7 +139,7 @@ func testTileRequests(layerObjects *layer.LayerGroup, opts TestOptions, errCount
 		}
 
 		if layerErr != nil || cacheWriteError != nil || cacheReadError != nil {
-			atomic.AddUint32(&errCount, 1)
+			atomic.AddUint32(errCount, 1)
 		}
 
 		// Output the result into the table
