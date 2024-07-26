@@ -15,81 +15,138 @@
 package providers
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"slices"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
+
+type CacheMode string
+
+const (
+	CacheModeAlways         = "always"          // Always cache as normal regardless of fallback status
+	CacheModeUnlessError    = "unless-error"    // Cache unless the primary provider returns an error
+	CacheModeUnlessFallback = "unless-fallback" // Never cache if a fallback occurs (whether due to error, bounds, or zoom)
+)
+
+var allCacheModes = []CacheMode{CacheModeAlways, CacheModeUnlessError, CacheModeUnlessFallback}
 
 type FallbackConfig struct {
 	Primary   map[string]interface{}
 	Secondary map[string]interface{}
-	Zoom      string
-	Bounds    internal.Bounds //Allows any tile that intersects these bounds
+	Zoom      string     // Only use Primary for requests in the given range of zoom levels
+	Bounds    pkg.Bounds // Allows any tile that intersects these bounds
+	Cache     CacheMode  // When to skip cache-ing (in fallback scenarios)
 }
 
 type Fallback struct {
-	zoom      []int
-	bounds    internal.Bounds
-	Primary   *Provider
-	Secondary *Provider
+	FallbackConfig
+	zoomLevels []int
+	Primary    layer.Provider
+	Secondary  layer.Provider
 }
 
-func ConstructFallback(config FallbackConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, primary *Provider, secondary *Provider) (*Fallback, error) {
+func init() {
+	layer.RegisterProvider(FallbackRegistration{})
+}
+
+type FallbackRegistration struct {
+}
+
+func (s FallbackRegistration) InitializeConfig() any {
+	return FallbackConfig{}
+}
+
+func (s FallbackRegistration) Name() string {
+	return "fallback"
+}
+
+func (s FallbackRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layer.LayerGroup) (layer.Provider, error) {
+	cfg := cfgAny.(FallbackConfig)
 	var zoom []int
 
-	if config.Zoom != "" {
+	if cfg.Zoom != "" {
 		var err error
-		zoom, err = internal.ParseZoomString(config.Zoom)
+		zoom, err = pkg.ParseZoomString(cfg.Zoom)
 
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		for z := 0; z <= internal.MaxZoom; z++ {
+		for z := 0; z <= pkg.MaxZoom; z++ {
 			zoom = append(zoom, z)
 		}
 	}
 
-	return &Fallback{zoom, config.Bounds, primary, secondary}, nil
-}
-
-func (t Fallback) PreAuth(ctx context.Context, authContext AuthContext) (AuthContext, error) {
-	return (*t.Primary).PreAuth(ctx, authContext)
-}
-
-func (t Fallback) GenerateTile(ctx context.Context, authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
-	ok := true
-
-	if !slices.Contains(t.zoom, tileRequest.Z) {
-		slog.DebugContext(ctx, "Fallback provider falling back due to zoom")
-		ok = false
+	if cfg.Cache == "" {
+		cfg.Cache = CacheModeUnlessError
 	}
 
-	intersects, err := tileRequest.IntersectsBounds(t.bounds)
+	if !slices.Contains(allCacheModes, cfg.Cache) {
+		return nil, fmt.Errorf(errorMessages.EnumError, "provider.fallback.cachemode", cfg.Cache, allCacheModes)
+	}
+
+	primary, err := layer.ConstructProvider(cfg.Primary, clientConfig, errorMessages, layerGroup)
+	if err != nil {
+		return nil, err
+	}
+	secondary, err := layer.ConstructProvider(cfg.Secondary, clientConfig, errorMessages, layerGroup)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Fallback{cfg, zoom, primary, secondary}, nil
+}
+
+func (t Fallback) PreAuth(ctx *pkg.RequestContext, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
+	return t.Primary.PreAuth(ctx, providerContext)
+}
+
+func (t Fallback) GenerateTile(ctx *pkg.RequestContext, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+	ok := true
+
+	if !slices.Contains(t.zoomLevels, tileRequest.Z) {
+		slog.DebugContext(ctx, "Fallback provider falling back due to zoom")
+		ok = false
+
+		if t.Cache == CacheModeUnlessFallback {
+			ctx.SkipCacheSave = true
+		}
+	}
+
+	intersects, err := tileRequest.IntersectsBounds(t.Bounds)
 
 	if !intersects || err != nil {
 		b, _ := tileRequest.GetBounds()
-		slog.DebugContext(ctx, fmt.Sprintf("Fallback provider falling back due to bounds - request %v (%v) vs limit %v", tileRequest, b, t.bounds))
+		slog.DebugContext(ctx, fmt.Sprintf("Fallback provider falling back due to bounds - request %v (%v) vs limit %v", tileRequest, b, t.Bounds))
 		ok = false
+
+		if t.Cache == CacheModeUnlessFallback {
+			ctx.SkipCacheSave = true
+		}
 	}
 
-	var img *internal.Image
+	var img *pkg.Image
 
 	if ok {
-		img, err = (*t.Primary).GenerateTile(ctx, authContext, tileRequest)
+		img, err = t.Primary.GenerateTile(ctx, providerContext, tileRequest)
 
 		if err != nil {
 			ok = false
+			if t.Cache != CacheModeAlways {
+				ctx.SkipCacheSave = true
+			}
+
 			slog.DebugContext(ctx, fmt.Sprintf("Fallback provider falling back due to error: %v", err.Error()))
 		}
 	}
 
 	if !ok {
-		return (*t.Secondary).GenerateTile(ctx, authContext, tileRequest)
+
+		return t.Secondary.GenerateTile(ctx, providerContext, tileRequest)
 	}
 
 	return img, err

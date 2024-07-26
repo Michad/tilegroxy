@@ -15,44 +15,60 @@
 package providers
 
 import (
-	"context"
 	"fmt"
 	"strconv"
 	"strings"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
-type UrlTemplateConfig struct {
+type URLTemplateConfig struct {
 	Template string
 }
 
-type UrlTemplate struct {
-	UrlTemplateConfig
-	clientConfig *config.ClientConfig
+type URLTemplate struct {
+	URLTemplateConfig
+	clientConfig config.ClientConfig
 }
 
-func ConstructUrlTemplate(config UrlTemplateConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages) (*UrlTemplate, error) {
-	if config.Template == "" {
+func (t URLTemplate) PreAuth(_ *pkg.RequestContext, _ layer.ProviderContext) (layer.ProviderContext, error) {
+	return layer.ProviderContext{AuthBypass: true}, nil
+}
+
+func init() {
+	layer.RegisterProvider(URLTemplateRegistration{})
+}
+
+type URLTemplateRegistration struct {
+}
+
+func (s URLTemplateRegistration) InitializeConfig() any {
+	return URLTemplateConfig{}
+}
+
+func (s URLTemplateRegistration) Name() string {
+	return "url template"
+}
+
+func (s URLTemplateRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, _ *layer.LayerGroup) (layer.Provider, error) {
+	cfg := cfgAny.(URLTemplateConfig)
+	if cfg.Template == "" {
 		return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.url template.url", "")
 	}
 
-	return &UrlTemplate{config, clientConfig}, nil
+	return &URLTemplate{cfg, clientConfig}, nil
 }
 
-func (t UrlTemplate) PreAuth(ctx context.Context, authContext AuthContext) (AuthContext, error) {
-	return AuthContext{Bypass: true}, nil
-}
-
-func (t UrlTemplate) GenerateTile(ctx context.Context, authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+func (t URLTemplate) GenerateTile(ctx *pkg.RequestContext, _ layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	b, err := tileRequest.GetBounds()
 
 	if err != nil {
 		return nil, err
 	}
 
-	//width, height (in pixels), srs (in PROJ.4 format), xmin, ymin, xmax, ymax (in projected map units), and zoom
+	// width, height (in pixels), srs (in PROJ.4 format), xmin, ymin, xmax, ymax (in projected map units), and zoom
 	url := strings.ReplaceAll(t.Template, "$xmin", fmt.Sprintf("%f", b.West))
 	url = strings.ReplaceAll(url, "$xmax", fmt.Sprintf("%f", b.East))
 	url = strings.ReplaceAll(url, "$ymin", fmt.Sprintf("%f", b.South))

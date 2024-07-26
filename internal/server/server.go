@@ -30,83 +30,97 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Michad/tilegroxy/internal/authentication"
-	"github.com/Michad/tilegroxy/internal/config"
 	"github.com/Michad/tilegroxy/internal/images"
-	"github.com/Michad/tilegroxy/internal/layers"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/authentication"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/gorilla/handlers"
 )
 
-func handleNoContent(w http.ResponseWriter, req *http.Request) {
+func handleNoContent(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-type TypeOfError int
+// This is just here to allow tests to specify a different signal to send to kill the webserver
+// not useful in practice due to OS-specific nature of signals
+var InterruptFlags = []os.Signal{os.Interrupt}
 
-const (
-	TypeOfErrorBounds = iota
-	TypeOfErrorAuth
-	TypeOfErrorProvider
-	TypeOfErrorOtherBadRequest
-	TypeOfErrorOther
-)
-
-func writeError(ctx context.Context, w http.ResponseWriter, cfg *config.ErrorConfig, errorType TypeOfError, message string, args ...any) {
+func errorVars(cfg *config.ErrorConfig, errorType pkg.TypeOfError) (int, slog.Level, string) {
 	var status int
-	if !cfg.SuppressStatusCode {
-		if errorType == TypeOfErrorAuth {
-			status = http.StatusUnauthorized
-		} else if errorType == TypeOfErrorBounds {
-			status = http.StatusBadRequest
-		} else if errorType == TypeOfErrorProvider {
-			status = http.StatusInternalServerError
-		} else if errorType == TypeOfErrorOtherBadRequest {
-			status = http.StatusBadRequest
-		} else {
-			status = http.StatusInternalServerError
-		}
-	} else {
+	var level slog.Level
+	var imgPath string
+
+	switch errorType {
+	case pkg.TypeOfErrorAuth:
+		level = slog.LevelDebug
+		status = http.StatusUnauthorized
+		imgPath = cfg.Images.Authentication
+	case pkg.TypeOfErrorBounds:
+		level = slog.LevelDebug
+		status = http.StatusBadRequest
+		imgPath = cfg.Images.OutOfBounds
+	case pkg.TypeOfErrorProvider:
+		level = slog.LevelInfo
+		status = http.StatusInternalServerError
+		imgPath = cfg.Images.Provider
+	case pkg.TypeOfErrorBadRequest:
+		level = slog.LevelDebug
+		status = http.StatusBadRequest
+		imgPath = cfg.Images.Other
+	default:
+		level = slog.LevelWarn
+		status = http.StatusInternalServerError
+		imgPath = cfg.Images.Other
+	}
+
+	if cfg.AlwaysOK {
 		status = http.StatusOK
 	}
 
-	// fullMessage := fmt.Sprintf(message, args...)
-	slog.WarnContext(ctx, message, args...)
+	return status, level, imgPath
+}
 
-	if cfg.Mode == config.ModeErrorPlainText {
+func writeError(ctx *pkg.RequestContext, w http.ResponseWriter, cfg *config.ErrorConfig, err error) {
+	var te pkg.TypedError
+	if errors.As(err, &te) {
+		writeErrorMessage(ctx, w, cfg, te.Type(), te.Error(), te.External(cfg.Messages), debug.Stack())
+	} else {
+		writeErrorMessage(ctx, w, cfg, pkg.TypeOfErrorOther, te.Error(), fmt.Sprintf(cfg.Messages.ServerError, err), debug.Stack())
+	}
+}
+
+func writeErrorMessage(ctx *pkg.RequestContext, w http.ResponseWriter, cfg *config.ErrorConfig, errorType pkg.TypeOfError, internalMessage string, externalMessage string, stack []byte) {
+	status, level, imgPath := errorVars(cfg, errorType)
+
+	slog.Log(ctx, level, internalMessage, "stack", string(stack))
+
+	switch cfg.Mode {
+	case config.ModeErrorPlainText:
 		w.WriteHeader(status)
-		w.Write([]byte(message))
-	} else if cfg.Mode == config.ModeErrorNoError {
-		w.WriteHeader(status)
-	} else if cfg.Mode == config.ModeErrorImageHeader || cfg.Mode == config.ModeErrorImage {
+		_, err := w.Write([]byte(externalMessage))
+		if err != nil {
+			slog.WarnContext(ctx, fmt.Sprintf("error writing error %v", err))
+		}
+	case config.ModeErrorImage, config.ModeErrorImageHeader:
 		if cfg.Mode == config.ModeErrorImageHeader {
-			w.Header().Add("x-error-message", message)
+			w.Header().Add("X-Error-Message", externalMessage)
 		}
 		w.WriteHeader(status)
-
-		var imgPath string
-		if errorType == TypeOfErrorBounds {
-			imgPath = cfg.Images.OutOfBounds
-		} else if errorType == TypeOfErrorAuth {
-			imgPath = cfg.Images.Authentication
-		} else if errorType == TypeOfErrorProvider {
-			imgPath = cfg.Images.Provider
-		} else {
-			imgPath = cfg.Images.Other
-		}
 
 		img, err2 := images.GetStaticImage(imgPath)
-		if img != nil {
-			w.Write(*img)
+		if img != nil && err2 == nil {
+			_, err2 = w.Write(*img)
 		}
 
 		if err2 != nil {
 			slog.ErrorContext(ctx, err2.Error())
 		}
-	} else {
+	default:
 		w.WriteHeader(status)
-		slog.ErrorContext(ctx, "Invalid error mode! Falling back to none!")
 	}
 }
 
@@ -122,164 +136,127 @@ func (h slogContextHandler) Handle(ctx context.Context, r slog.Record) error {
 
 	return h.Handler.Handle(ctx, r)
 }
-func configureMainLogging(cfg *config.Config) error {
-	if cfg.Logging.MainLog.EnableStandardOut || len(cfg.Logging.MainLog.Path) > 0 {
-		var out io.Writer
-		if len(cfg.Logging.MainLog.Path) > 0 {
-			logFile, err := os.OpenFile(cfg.Logging.MainLog.Path, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
 
-			if err != nil {
-				return err
-			}
+func makeLogFileWriter(path string, alsoStdOut bool) (io.Writer, error) {
+	logFile, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
 
-			if cfg.Logging.MainLog.EnableStandardOut {
-				out = io.MultiWriter(os.Stdout, out)
-			} else {
-				out = logFile
-			}
-		} else if cfg.Logging.MainLog.EnableStandardOut {
-			out = os.Stdout
-		} else {
-			panic("Impossible logic error")
-		}
-
-		var level slog.Level
-		custLogLevel, ok := config.CustomLogLevel[strings.ToLower(cfg.Logging.MainLog.Level)]
-
-		if ok {
-			level = custLogLevel
-		} else {
-			err := level.UnmarshalText([]byte(cfg.Logging.MainLog.Level))
-
-			if err != nil {
-				return err
-			}
-		}
-
-		opt := slog.HandlerOptions{
-			AddSource: true,
-			Level:     level,
-			ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
-				if groups == nil && a.Key == "msg" {
-					return slog.Attr{Key: "message", Value: a.Value}
-				}
-				return a
-			},
-		}
-
-		var logHandler slog.Handler
-
-		if cfg.Logging.MainLog.Format == config.MainLogFormatPlain {
-			logHandler = slog.NewTextHandler(out, &opt)
-		} else if cfg.Logging.MainLog.Format == config.MainLogFormatJson {
-			logHandler = slog.NewJSONHandler(out, &opt)
-			if cfg.Logging.MainLog.IncludeRequestAttributes == "auto" {
-				cfg.Logging.MainLog.IncludeRequestAttributes = "true"
-			}
-		} else {
-			return fmt.Errorf(cfg.Error.Messages.InvalidParam, "logging.mainlog.format", cfg.Logging.MainLog.Format)
-		}
-
-		var attr []string
-
-		if cfg.Logging.MainLog.IncludeRequestAttributes == "true" || cfg.Logging.MainLog.IncludeRequestAttributes == "1" {
-			attr = slices.Concat(attr, []string{
-				"uri",
-				"path",
-				"query",
-				"proto",
-				"ip",
-				"method",
-				"host",
-				"elapsed",
-			})
-		}
-
-		attr = slices.Concat(attr, cfg.Logging.MainLog.IncludeHeaders)
-
-		logHandler = slogContextHandler{logHandler, attr}
-
-		slog.SetDefault(slog.New(logHandler))
-	} else {
-		slog.SetLogLoggerLevel(10)
+	if err != nil {
+		return nil, err
 	}
+	var out io.Writer
+
+	if alsoStdOut {
+		out = io.MultiWriter(os.Stdout, logFile)
+	} else {
+		out = logFile
+	}
+	return out, nil
+}
+
+func configureMainLogging(cfg *config.Config) error {
+	if !cfg.Logging.Main.Console && len(cfg.Logging.Main.Path) == 0 {
+		slog.SetLogLoggerLevel(slog.LevelError + 1)
+		return nil
+	}
+
+	var err error
+	var out io.Writer
+	if len(cfg.Logging.Main.Path) > 0 {
+		out, err = makeLogFileWriter(cfg.Logging.Main.Path, cfg.Logging.Main.Console)
+		if err != nil {
+			return err
+		}
+	} else {
+		out = os.Stdout
+	}
+
+	var level slog.Level
+	custLogLevel, ok := config.CustomLogLevel[strings.ToLower(cfg.Logging.Main.Level)]
+
+	if ok {
+		level = custLogLevel
+	} else {
+		err := level.UnmarshalText([]byte(cfg.Logging.Main.Level))
+
+		if err != nil {
+			return err
+		}
+	}
+
+	opt := slog.HandlerOptions{
+		AddSource: true,
+		Level:     level,
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			if groups == nil && a.Key == "msg" {
+				return slog.Attr{Key: "message", Value: a.Value}
+			}
+			return a
+		},
+	}
+
+	var logHandler slog.Handler
+
+	switch cfg.Logging.Main.Format {
+	case config.MainFormatPlain:
+		logHandler = slog.NewTextHandler(out, &opt)
+	case config.MainFormatJSON:
+		logHandler = slog.NewJSONHandler(out, &opt)
+		if cfg.Logging.Main.Request == "auto" {
+			cfg.Logging.Main.Request = "true"
+		}
+	default:
+		return fmt.Errorf(cfg.Error.Messages.InvalidParam, "logging.main.format", cfg.Logging.Main.Format)
+	}
+
+	var attr []string
+
+	if cfg.Logging.Main.Request == "true" || cfg.Logging.Main.Request == "1" {
+		attr = slices.Concat(attr, []string{
+			"uri",
+			"path",
+			"query",
+			"proto",
+			"ip",
+			"method",
+			"host",
+			"elapsed",
+			"user",
+		})
+	}
+
+	attr = slices.Concat(attr, cfg.Logging.Main.Headers)
+
+	logHandler = slogContextHandler{logHandler, attr}
+
+	slog.SetDefault(slog.New(logHandler))
+
 	return nil
 }
 
-func configureAccessLogging(cfg config.AccessLogConfig, errorMessages config.ErrorMessages, rootHandler http.Handler) (http.Handler, error) {
-	if cfg.EnableStandardOut || len(cfg.Path) > 0 {
+func configureAccessLogging(cfg config.AccessConfig, errorMessages config.ErrorMessages, rootHandler http.Handler) (http.Handler, error) {
+	if cfg.Console || len(cfg.Path) > 0 {
 		var out io.Writer
+		var err error
 		if len(cfg.Path) > 0 {
-			logFile, err := os.OpenFile(cfg.Path, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+			out, err = makeLogFileWriter(cfg.Path, cfg.Console)
 
 			if err != nil {
 				return nil, err
 			}
-
-			if cfg.EnableStandardOut {
-				out = io.MultiWriter(os.Stdout, out)
-			} else {
-				out = logFile
-			}
-		} else if cfg.EnableStandardOut {
-			out = os.Stdout
 		} else {
-			panic("Impossible logic error")
+			out = os.Stdout
 		}
 
-		if cfg.Format == config.AccessLogFormatCommon {
+		switch cfg.Format {
+		case config.AccessFormatCommon:
 			rootHandler = handlers.LoggingHandler(out, rootHandler)
-		} else if cfg.Format == config.AccessLogFormatCombined {
+		case config.AccessFormatCombined:
 			rootHandler = handlers.CombinedLoggingHandler(out, rootHandler)
-		} else {
-			return nil, fmt.Errorf(errorMessages.InvalidParam, "logging.accesslog.format", cfg.Format)
+		default:
+			return nil, fmt.Errorf(errorMessages.InvalidParam, "logging.access.format", cfg.Format)
 		}
 	}
 	return rootHandler, nil
-}
-
-// Custom context type. Links back to request so we can pull attrs into the structured log
-type reqCtx struct {
-	context.Context
-	req       *http.Request
-	startTime time.Time
-}
-
-func (c *reqCtx) Value(keyAny any) any {
-	key, ok := keyAny.(string)
-	if !ok {
-		return nil
-	}
-
-	switch key {
-	case "uri":
-		return c.req.RequestURI
-	case "path":
-		return c.req.URL.Path
-	case "query":
-		return c.req.URL.Query()
-	case "proto":
-		return c.req.Proto
-	case "ip":
-		return strings.Split(c.req.RemoteAddr, ":")[0]
-	case "method":
-		return c.req.Method
-	case "host":
-		return c.req.Host
-	case "elapsed":
-		return time.Since(c.startTime).Seconds()
-	}
-
-	h := c.req.Header[key]
-
-	if h != nil {
-		if len(h) == 1 {
-			return h[0]
-		}
-		return h
-	}
-
-	return nil
 }
 
 type httpContextHandler struct {
@@ -288,59 +265,56 @@ type httpContextHandler struct {
 }
 
 func (h httpContextHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	reqC := reqCtx{req.Context(), req, time.Now()}
+	reqC := pkg.NewRequestContext(req)
 	defer func() {
 		if err := recover(); err != nil {
-			writeError(&reqC, w, &h.errCfg, TypeOfErrorOther, "Unexpected Internal Server Error", "stack", string(debug.Stack()))
+			writeErrorMessage(&reqC, w, &h.errCfg, pkg.TypeOfErrorOther, fmt.Sprint(err), "Unexpected Internal Server Error", debug.Stack())
 		}
 	}()
 
 	h.Handler.ServeHTTP(w, req.WithContext(&reqC))
 }
 
-func ListenAndServe(config *config.Config, layerList []*layers.Layer, auth *authentication.Authentication) error {
-	// Handle SIGINT (CTRL+C) gracefully.
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
-	defer stop()
+type httpRedirectHandler struct {
+	protoAndHost string
+}
 
-	// Set up OpenTelemetry.
-	otelShutdown, err := setupOTelSDK(ctx)
-	if err != nil {
-		return err
+func (h httpRedirectHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	http.Redirect(w, req, h.protoAndHost+req.RequestURI, http.StatusMovedPermanently)
+}
+
+func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth authentication.Authentication) error {
+	if config.Server.Encrypt != nil && config.Server.Encrypt.Domain == "" {
+		return fmt.Errorf(config.Error.Messages.ParamRequired, "server.encrypt.domain")
 	}
 
-	// Handle shutdown properly so nothing leaks.
-	defer func() {
-		err = errors.Join(err, otelShutdown(context.Background()))
-	}()
-
-	serveMux := http.ServeMux{}
-
-	layerMap := make(map[string]*layers.Layer)
-	for _, l := range layerList {
-		layerMap[l.Id] = l
-	}
+	r := http.ServeMux{}
 
 	if config.Server.Production {
-		handleNoContentHandler := otelhttp.WithRouteTag("/", http.HandlerFunc(handleNoContent))
-		serveMux.Handle("/", handleNoContentHandler)
+		handleNoContentHandler := otelhttp.WithRouteTag(config.Server.RootPath, http.HandlerFunc(handleNoContent))
+		r.Handle(config.Server.RootPath, handleNoContentHandler)
 	} else {
-		serveMux.Handle("/", otelhttp.WithRouteTag("/", &defaultHandler{config, layerMap, auth}))
+		r.Handle(config.Server.RootPath, otelhttp.WithRouteTag(config.Server.RootPath, &defaultHandler{config, layerGroup, auth}))
 		// r.HandleFunc("/documentation", defaultHandler)
 	}
-	tileRoute := config.Server.ContextRoot + "/{layer}/{z}/{x}/{y}"
-	serveMux.Handle(tileRoute, otelhttp.WithRouteTag(tileRoute, &tileHandler{defaultHandler{config, layerMap, auth}}))
+
+	tilePath := config.Server.RootPath + config.Server.TilePath + "/{layer}/{z}/{x}/{y}"
+	myTileHandler := tileHandler{defaultHandler{config, layerGroup, auth}}
+
+	r.Handle(tilePath, otelhttp.WithRouteTag(tilePath, &myTileHandler))
+	r.Handle(tilePath+"/", otelhttp.WithRouteTag(tilePath+"/", &myTileHandler))
 
 	var rootHandler http.Handler
 
-	rootHandler = &serveMux
+	rootHandler = &r
 
 	if config.Server.Gzip {
 		rootHandler = handlers.CompressHandler(rootHandler)
 	}
 
-	rootHandler, err = configureAccessLogging(config.Logging.AccessLog, config.Error.Messages, rootHandler)
 	rootHandler = httpContextHandler{rootHandler, config.Error}
+	rootHandler = http.TimeoutHandler(rootHandler, time.Duration(config.Server.Timeout)*time.Second, config.Error.Messages.Timeout)
+	rootHandler, err := configureAccessLogging(config.Logging.Access, config.Error.Messages, rootHandler)
 
 	if err != nil {
 		return err
@@ -352,19 +326,37 @@ func ListenAndServe(config *config.Config, layerList []*layers.Layer, auth *auth
 		return err
 	}
 
+	ctx, stop := signal.NotifyContext(pkg.BackgroundContext(), InterruptFlags...)
+	defer stop()
+
+	// Set up OpenTelemetry.
+	otelShutdown, err := setupOTelSDK(ctx)
+	if err != nil {
+		return err
+	}
+
 	srv := &http.Server{
-		Addr:         config.Server.BindHost + ":" + strconv.Itoa(config.Server.Port),
-		BaseContext:  func(_ net.Listener) context.Context { return ctx },
-		ReadTimeout:  time.Second,
-		WriteTimeout: time.Duration(config.Server.Timeout) * time.Second,
-		Handler:      rootHandler,
+		Addr:        config.Server.BindHost + ":" + strconv.Itoa(config.Server.Port),
+		BaseContext: func(_ net.Listener) context.Context { return ctx },
+		Handler:     rootHandler,
 	}
 
 	srvErr := make(chan error, 1)
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				srvErr <- fmt.Errorf("unexpected server error %v \n %v", r, string(debug.Stack()))
+			}
+		}()
+
 		slog.InfoContext(context.Background(), "Binding...")
-		srvErr <- srv.ListenAndServe()
+
+		if config.Server.Encrypt != nil {
+			listenAndServeTLS(config, srvErr, srv)
+		} else {
+			srvErr <- srv.ListenAndServe()
+		}
 	}()
 
 	select {
@@ -375,5 +367,42 @@ func ListenAndServe(config *config.Config, layerList []*layers.Layer, auth *auth
 	}
 
 	err = srv.Shutdown(context.Background())
+	err = errors.Join(err, otelShutdown(context.Background()))
 	return err
+}
+
+func listenAndServeTLS(config *config.Config, srvErr chan error, srv *http.Server) {
+	httpPort := config.Server.Encrypt.HTTPPort
+	httpHostPort := net.JoinHostPort(config.Server.BindHost, strconv.Itoa(httpPort))
+
+	if config.Server.Encrypt.Certificate != "" && config.Server.Encrypt.KeyFile != "" {
+		if httpPort != 0 {
+			go func() {
+				srvErr <- http.ListenAndServe(httpHostPort, httpRedirectHandler{protoAndHost: "https://" + config.Server.Encrypt.Domain})
+			}()
+		}
+
+		srvErr <- srv.ListenAndServeTLS(config.Server.Encrypt.Certificate, config.Server.Encrypt.KeyFile)
+	} else {
+		// Let's Encrypt workflow
+
+		cacheDir := "certs"
+		if config.Server.Encrypt.Cache != "" {
+			cacheDir = config.Server.Encrypt.Cache
+		}
+
+		certManager := autocert.Manager{
+			Prompt:     autocert.AcceptTOS,
+			HostPolicy: autocert.HostWhitelist(config.Server.Encrypt.Domain),
+			Cache:      autocert.DirCache(cacheDir),
+		}
+
+		if httpPort != 0 {
+			go func() { srvErr <- http.ListenAndServe(httpHostPort, certManager.HTTPHandler(nil)) }()
+		}
+
+		srv.TLSConfig = certManager.TLSConfig()
+
+		srvErr <- srv.ListenAndServeTLS("", "")
+	}
 }

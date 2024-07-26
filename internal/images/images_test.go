@@ -18,61 +18,70 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestColors(t *testing.T) {
 	col, err := parseColor(KeyPrefixColor + "FFF")
 
-	assert.Nil(t, err)
-	assert.Equal(t, col, color.RGBA{255, 255, 255, 255})
+	require.NoError(t, err)
+	assert.Equal(t, color.RGBA{255, 255, 255, 255}, col)
 
 	col, err = parseColor(KeyPrefixColor + "fff")
 
-	assert.Nil(t, err)
-	assert.Equal(t, col, color.RGBA{255, 255, 255, 255})
+	require.NoError(t, err)
+	assert.Equal(t, color.RGBA{255, 255, 255, 255}, col)
 
 	col, err = parseColor(KeyPrefixColor + "FFFFFF")
 
-	assert.Nil(t, err)
-	assert.Equal(t, col, color.RGBA{255, 255, 255, 255})
+	require.NoError(t, err)
+	assert.Equal(t, color.RGBA{255, 255, 255, 255}, col)
 
 	col, err = parseColor(KeyPrefixColor + "ffffff")
 
-	assert.Nil(t, err)
-	assert.Equal(t, col, color.RGBA{255, 255, 255, 255})
+	require.NoError(t, err)
+	assert.Equal(t, color.RGBA{255, 255, 255, 255}, col)
 
 	col, err = parseColor(KeyPrefixColor + "FFFF")
 
-	assert.Nil(t, err)
-	assert.Equal(t, col, color.RGBA{255, 255, 255, 255})
+	require.NoError(t, err)
+	assert.Equal(t, color.RGBA{255, 255, 255, 255}, col)
 
 	col, err = parseColor(KeyPrefixColor + "ffff")
 
-	assert.Nil(t, err)
-	assert.Equal(t, col, color.RGBA{255, 255, 255, 255})
+	require.NoError(t, err)
+	assert.Equal(t, color.RGBA{255, 255, 255, 255}, col)
 
 	col, err = parseColor(KeyPrefixColor + "ffffffff")
 
-	assert.Nil(t, err)
-	assert.Equal(t, col, color.RGBA{255, 255, 255, 255})
+	require.NoError(t, err)
+	assert.Equal(t, color.RGBA{255, 255, 255, 255}, col)
 
 	col, err = parseColor(KeyPrefixColor + "f01")
 
-	assert.Nil(t, err)
-	assert.Equal(t, col, color.RGBA{255, 0, 17, 255})
+	require.NoError(t, err)
+	assert.Equal(t, color.RGBA{255, 0, 17, 255}, col)
 
 	col, err = parseColor(KeyPrefixColor + "aaaa")
 
-	assert.Nil(t, err)
-	assert.Equal(t, col, color.RGBA{0xaa, 0xaa, 0xaa, 0xaa})
+	require.NoError(t, err)
+	assert.Equal(t, color.RGBA{0xaa, 0xaa, 0xaa, 0xaa}, col)
 
 	_, err = parseColor(KeyPrefixColor + "hello")
-	assert.NotNil(t, err)
+	require.Error(t, err)
 
 	_, err = parseColor(KeyPrefixColor + "ffffffffff")
-	assert.NotNil(t, err)
+	require.Error(t, err)
 
 	_, err = parseColor(KeyPrefixColor + "")
-	assert.NotNil(t, err)
+	require.Error(t, err)
 
+}
+
+func TestImageLoad(t *testing.T) {
+	img, err := GetStaticImage("error.png")
+	assert.NotNil(t, img)
+	require.NoError(t, err)
+
+	assert.Equal(t, imageError, *img)
 }

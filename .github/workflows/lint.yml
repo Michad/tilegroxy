@@ -1,0 +1,65 @@
+name: Linter
+on:
+  pull_request:
+    branches: [ "main" ]
+permissions:
+  contents: read
+jobs:
+  check-links:
+    name: Markdown / Link
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Run linkspector
+        uses: umbrelladocs/action-linkspector@edd00b453149a11ab419183d1e8e46159e609ec0 # v1.1.3
+        with:
+          github_token: ${{ secrets.github_token }}
+          reporter: github-pr-review
+          fail_on_error: true
+  golint:
+    name: Go
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Requirements
+        uses: reviewdog/action-golangci-lint@7708105983c614f7a2725e2172908b7709d1c3e4 # v2.6.2
+        with:
+          github_token: ${{ secrets.github_token }}
+          golangci_lint_flags: "--fix --timeout 2m0s --disable-all -E asciicheck,bidichk,bodyclose,canonicalheader,dogsled,exhaustive,gocheckcompilerdirectives,gofmt,durationcheck,errname,errorlint,fatcontext,goheader,inamedparam,interfacebloat,intrange,makezero,mirror,misspell,noctx,nonamedreturns,prealloc,predeclared,tenv,testifylint,unconvert,usestdlibvars,wastedassign"
+          reporter: github-pr-review
+          tool_name: Go Lint Issues
+          fail_on_error: true
+          cache: false
+          filter_mode: added
+      - name: Suggestions 
+        uses: reviewdog/action-golangci-lint@7708105983c614f7a2725e2172908b7709d1c3e4 # v2.6.2
+        if: success() || failure()
+        with:
+          github_token: ${{ secrets.github_token }}
+          golangci_lint_flags: "--fix --timeout 2m0s -E dupl,gocritic,maintidx,mnd,perfsprint,revive,stylecheck"
+          reporter: github-pr-review
+          tool_name: Go Lint Suggestions 
+          level: warning 
+          fail_on_error: false
+          cache: false
+          filter_mode: file
+      - uses: reviewdog/action-suggester@63b8f8cc21dfa052ac44436e65ed31edcffcb6c1 # v1.17.0
+        if: success() || failure()
+        with:
+          tool_name: Go Lint Issues 
+          github_token: ${{ secrets.github_token }}

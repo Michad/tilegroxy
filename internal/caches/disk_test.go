@@ -18,20 +18,18 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDisk(t *testing.T) {
-	dir, error := os.MkdirTemp("", "tilegroxy-test-disk")
+	dir, err := os.MkdirTemp("", "tilegroxy-test-disk")
 	defer os.RemoveAll(dir)
 
-	if !assert.Nil(t, error) {
-		return
-	}
+	require.NoError(t, err)
+	cfg := DiskConfig{Path: dir}
 
-	config := DiskConfig{Path: dir}
-
-	c, err := ConstructDisk(config, nil)
-	_ = assert.Nil(t, err) &&
-		validateSaveAndLookup(t, c)
+	c, err := DiskRegistration{}.Initialize(cfg, config.ErrorMessages{})
+	require.NoError(t, err)
+	validateSaveAndLookup(t, c)
 }

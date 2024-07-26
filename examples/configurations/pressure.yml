@@ -1,7 +1,7 @@
 cache:
     name: memory
 logging:
-  mainlog:
+  main:
     level: info #For super slow debugging output of every pixel set to "absurd"
 layers:
   - id: pressure

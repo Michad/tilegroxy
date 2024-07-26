@@ -17,82 +17,155 @@ package providers
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"image"
 	_ "image/jpeg"
 	"image/png"
+	"log/slog"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
 
 	"github.com/anthonynsimon/bild/blend"
+	"github.com/anthonynsimon/bild/transform"
 )
+
+const maxProviders = 100
+
+// Allow you to directly reference another layer that uses a pattern with multiple concrete values for the pattern
+type BlendLayerConfig struct {
+	Pattern string
+	Values  []map[string]string
+}
 
 type BlendConfig struct {
 	Opacity   float64
 	Mode      string
 	Providers []map[string]interface{}
+	Layer     *BlendLayerConfig
 }
 
 type Blend struct {
 	BlendConfig
-	providers []*Provider
+	providers []layer.Provider
+}
+
+type indexedImg struct {
+	int
+	image.Image
 }
 
 var allBlendModes = []string{"add", "color burn", "color dodge", "darken", "difference", "divide", "exclusion", "lighten", "linear burn", "linear light", "multiply", "normal", "opacity", "overlay", "screen", "soft light", "subtract"}
 
-func ConstructBlend(config BlendConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, providers []*Provider) (*Blend, error) {
-	if !slices.Contains(allBlendModes, config.Mode) {
-		return nil, fmt.Errorf(errorMessages.EnumError, "provider.blend.mode", config.Mode, allBlendModes)
-	}
-	if config.Mode != "opacity" && config.Opacity != 0 {
-		return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "provider.blend.opacity", config.Mode)
-	}
-	if len(providers) < 2 || len(providers) > 100 {
-		return nil, fmt.Errorf(errorMessages.RangeError, "provider.blend.providers.length", 2, 100)
-	}
-
-	return &Blend{config, providers}, nil
+func init() {
+	layer.RegisterProvider(BlendRegistration{})
 }
 
-func (t Blend) PreAuth(ctx context.Context, authContext AuthContext) (AuthContext, error) {
-	if authContext.Other == nil {
-		authContext.Other = map[string]interface{}{}
+type BlendRegistration struct {
+}
+
+func (s BlendRegistration) InitializeConfig() any {
+	return BlendConfig{}
+}
+
+func (s BlendRegistration) Name() string {
+	return "blend"
+}
+
+func (s BlendRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layer.LayerGroup) (layer.Provider, error) {
+	cfg := cfgAny.(BlendConfig)
+	var err error
+	if !slices.Contains(allBlendModes, cfg.Mode) {
+		return nil, fmt.Errorf(errorMessages.EnumError, "provider.blend.mode", cfg.Mode, allBlendModes)
+	}
+	if cfg.Mode != "opacity" && cfg.Opacity != 0 {
+		return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "provider.blend.opacity", cfg.Mode)
+	}
+	var providers []layer.Provider
+	if cfg.Layer != nil {
+		providers = make([]layer.Provider, len(cfg.Layer.Values))
+		for i, lay := range cfg.Layer.Values {
+			var ref layer.Provider
+
+			layerName := cfg.Layer.Pattern
+
+			for k, v := range lay {
+				layerName = strings.ReplaceAll(layerName, "{"+k+"}", v)
+			}
+
+			ref, err = layer.ConstructProvider(map[string]interface{}{"name": "ref", "layer": layerName}, clientConfig, errorMessages, layerGroup)
+			if err != nil {
+				return nil, err
+			}
+			providers[i] = ref
+		}
+	} else {
+		providers = make([]layer.Provider, 0, len(cfg.Providers))
+		errorSlice := make([]error, 0)
+
+		for _, p := range cfg.Providers {
+			provider, err := layer.ConstructProvider(p, clientConfig, errorMessages, layerGroup)
+			providers = append(providers, provider) //nolint:makezero //Linter is easily confused if initialized before the make
+			errorSlice = append(errorSlice, err)
+		}
+
+		errorsFlat := errors.Join(errorSlice...)
+		if errorsFlat != nil {
+			return nil, errorsFlat
+		}
+	}
+
+	if len(providers) < 2 || len(providers) > maxProviders {
+		return nil, fmt.Errorf(errorMessages.RangeError, "provider.blend.providers.length", 2, maxProviders)
+	}
+
+	return &Blend{cfg, providers}, nil
+}
+
+func (t Blend) PreAuth(ctx *pkg.RequestContext, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
+	if providerContext.Other == nil {
+		providerContext.Other = map[string]interface{}{}
 	}
 
 	wg := sync.WaitGroup{}
 	errs := make(chan error, len(t.providers))
 	acResults := make(chan struct {
 		int
-		AuthContext
+		layer.ProviderContext
 	}, len(t.providers))
 
 	for i, p := range t.providers {
 		wg.Add(1)
-		go func(acObj interface{}, index int, p *Provider) {
+		go func(acObj interface{}, index int, p layer.Provider) {
+			defer func() {
+				if r := recover(); r != nil {
+					errs <- fmt.Errorf("unexpected blend error %v", r)
+				}
+				wg.Done()
+			}()
+
 			var err error
-			ac, ok := acObj.(AuthContext)
+			ac, ok := acObj.(layer.ProviderContext)
 
 			if ok {
-				ac, err = (*p).PreAuth(ctx, ac)
+				ac, err = p.PreAuth(ctx, ac)
 			} else {
-				ac, err = (*p).PreAuth(ctx, AuthContext{})
+				ac, err = p.PreAuth(ctx, layer.ProviderContext{})
 			}
 
 			acResults <- struct {
 				int
-				AuthContext
+				layer.ProviderContext
 			}{index, ac}
 
 			errs <- err
-
-			wg.Done()
-		}(authContext.Other[strconv.Itoa(i)], i, p)
+		}(providerContext.Other[strconv.Itoa(i)], i, p)
 	}
 
 	wg.Wait()
@@ -102,44 +175,22 @@ func (t Blend) PreAuth(ctx context.Context, authContext AuthContext) (AuthContex
 		errSlice[i] = <-errs
 
 		acStruct := <-acResults
-		authContext.Other[strconv.Itoa(i)] = acStruct.AuthContext
+		providerContext.Other[strconv.Itoa(i)] = acStruct.ProviderContext
 	}
 
-	return authContext, errors.Join(errSlice...)
+	return providerContext, errors.Join(errSlice...)
 }
 
-func (t Blend) GenerateTile(ctx context.Context, authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+func (t Blend) GenerateTile(ctx *pkg.RequestContext, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+	slog.DebugContext(ctx, fmt.Sprintf("Blending together %v providers", len(t.providers)))
+
 	wg := sync.WaitGroup{}
 	errs := make(chan error, len(t.providers))
-	imgs := make(chan struct {
-		int
-		image.Image
-	}, len(t.providers))
+	imgs := make(chan indexedImg, len(t.providers))
 
 	for i, p := range t.providers {
 		wg.Add(1)
-		go func(key string, i int, p *Provider) {
-			var img *internal.Image
-			var err error
-			ac, ok := authContext.Other[key].(AuthContext)
-
-			if ok {
-				img, err = (*p).GenerateTile(ctx, ac, tileRequest)
-			} else {
-				img, err = (*p).GenerateTile(ctx, AuthContext{}, tileRequest)
-			}
-
-			realImage, _, err2 := image.Decode(bytes.NewReader(*img))
-
-			imgs <- struct {
-				int
-				image.Image
-			}{i, realImage}
-
-			errs <- errors.Join(err, err2)
-
-			wg.Done()
-		}(strconv.Itoa(i), i, p)
+		go callProvider(ctx, providerContext, tileRequest, p, i, imgs, errs, &wg)
 	}
 
 	wg.Wait()
@@ -164,47 +215,21 @@ func (t Blend) GenerateTile(ctx context.Context, authContext AuthContext, tileRe
 	var combinedImg image.Image
 	combinedImg = nil
 
-	for _, img := range imgSlice {
-		if combinedImg == nil {
-			combinedImg = img
-		} else {
-			switch t.Mode {
-			case "add":
-				combinedImg = blend.Add(img, combinedImg)
-			case "color burn":
-				combinedImg = blend.ColorBurn(img, combinedImg)
-			case "color dodge":
-				combinedImg = blend.ColorDodge(img, combinedImg)
-			case "darken":
-				combinedImg = blend.Darken(img, combinedImg)
-			case "difference":
-				combinedImg = blend.Difference(img, combinedImg)
-			case "divide":
-				combinedImg = blend.Divide(img, combinedImg)
-			case "exclusion":
-				combinedImg = blend.Exclusion(img, combinedImg)
-			case "lighten":
-				combinedImg = blend.Lighten(img, combinedImg)
-			case "linear burn":
-				combinedImg = blend.LinearBurn(img, combinedImg)
-			case "linear light":
-				combinedImg = blend.LinearLight(img, combinedImg)
-			case "multiply":
-				combinedImg = blend.Multiply(img, combinedImg)
-			case "normal":
-				combinedImg = blend.Normal(img, combinedImg)
-			case "opacity":
-				combinedImg = blend.Opacity(img, combinedImg, t.Opacity)
-			case "overlay":
-				combinedImg = blend.Overlay(img, combinedImg)
-			case "screen":
-				combinedImg = blend.Screen(img, combinedImg)
-			case "soft light":
-				combinedImg = blend.SoftLight(img, combinedImg)
-			case "subtract":
-				combinedImg = blend.Subtract(img, combinedImg)
-			}
+	var size image.Point
+	for i, img := range imgSlice {
+		curSize := img.Bounds().Max
+		slog.Log(ctx, config.LevelTrace, fmt.Sprintf("Image %v size: %v", i, curSize))
+		if curSize.X > size.X {
+			size.X = curSize.X
 		}
+		if curSize.Y > size.Y {
+			size.Y = curSize.Y
+		}
+	}
+	slog.Log(ctx, config.LevelTrace, fmt.Sprintf("Blended size: %v", size))
+
+	for _, img := range imgSlice {
+		combinedImg = t.blendImage(img, size, ctx, combinedImg)
 	}
 
 	var buf bytes.Buffer
@@ -215,4 +240,86 @@ func (t Blend) GenerateTile(ctx context.Context, authContext AuthContext, tileRe
 	output := buf.Bytes()
 
 	return &output, err
+}
+
+func (t Blend) blendImage(img image.Image, size image.Point, ctx *pkg.RequestContext, combinedImg image.Image) image.Image {
+	if img.Bounds().Max != size {
+		slog.DebugContext(ctx, fmt.Sprintf("Resizing from %v to %v", img.Bounds().Max, size))
+		img = transform.Resize(img, size.X, size.Y, transform.NearestNeighbor)
+	}
+
+	if combinedImg == nil {
+		combinedImg = img
+	} else {
+		switch t.Mode {
+		case "add":
+			combinedImg = blend.Add(img, combinedImg)
+		case "color burn":
+			combinedImg = blend.ColorBurn(img, combinedImg)
+		case "color dodge":
+			combinedImg = blend.ColorDodge(img, combinedImg)
+		case "darken":
+			combinedImg = blend.Darken(img, combinedImg)
+		case "difference":
+			combinedImg = blend.Difference(img, combinedImg)
+		case "divide":
+			combinedImg = blend.Divide(img, combinedImg)
+		case "exclusion":
+			combinedImg = blend.Exclusion(img, combinedImg)
+		case "lighten":
+			combinedImg = blend.Lighten(img, combinedImg)
+		case "linear burn":
+			combinedImg = blend.LinearBurn(img, combinedImg)
+		case "linear light":
+			combinedImg = blend.LinearLight(img, combinedImg)
+		case "multiply":
+			combinedImg = blend.Multiply(img, combinedImg)
+		case "normal":
+			combinedImg = blend.Normal(img, combinedImg)
+		case "opacity":
+			combinedImg = blend.Opacity(img, combinedImg, t.Opacity)
+		case "overlay":
+			combinedImg = blend.Overlay(img, combinedImg)
+		case "screen":
+			combinedImg = blend.Screen(img, combinedImg)
+		case "soft light":
+			combinedImg = blend.SoftLight(img, combinedImg)
+		case "subtract":
+			combinedImg = blend.Subtract(img, combinedImg)
+		}
+	}
+	return combinedImg
+}
+
+func callProvider(ctx *pkg.RequestContext, providerContext layer.ProviderContext, tileRequest pkg.TileRequest, provider layer.Provider, i int, imgs chan indexedImg, errs chan error, wg *sync.WaitGroup) {
+	defer func() {
+		if r := recover(); r != nil {
+			errs <- fmt.Errorf("unexpected blend error %v", r)
+		}
+		wg.Done()
+	}()
+
+	key := strconv.Itoa(i)
+
+	var img *pkg.Image
+	var err error
+	ac, ok := providerContext.Other[key].(layer.ProviderContext)
+
+	if ok {
+		img, err = provider.GenerateTile(ctx, ac, tileRequest)
+	} else {
+		img, err = provider.GenerateTile(ctx, layer.ProviderContext{}, tileRequest)
+	}
+
+	if img != nil {
+		realImage, _, err2 := image.Decode(bytes.NewReader(*img))
+		err = errors.Join(err, err2)
+
+		imgs <- struct {
+			int
+			image.Image
+		}{i, realImage}
+	}
+
+	errs <- err
 }

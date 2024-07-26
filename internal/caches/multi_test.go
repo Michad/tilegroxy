@@ -17,51 +17,49 @@ package caches
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMultiSaveAndLookup(t *testing.T) {
 	memConfig1 := MemoryConfig{}
 
-	mem1, err := ConstructMemory(memConfig1, nil)
-	assert.Nil(t, err)
+	mem1, err := MemoryRegistration{}.Initialize(memConfig1, config.ErrorMessages{})
+	require.NoError(t, err)
 
 	memConfig2 := MemoryConfig{}
 
-	mem2, err := ConstructMemory(memConfig2, nil)
-	if !assert.Nil(t, err) {
-		return
-	}
+	mem2, err := MemoryRegistration{}.Initialize(memConfig2, config.ErrorMessages{})
+	require.NoError(t, err)
 
-	multi := Multi{Tiers: []Cache{mem1, mem2}}
+	multi := Multi{Tiers: []cache.Cache{mem1, mem2}}
 
 	tile := makeReq(53)
 	img := makeImg(24)
-	multi.Save(tile, &img)
+	require.NoError(t, multi.Save(tile, &img))
 
-	_ = validateLookup(t, multi, tile, &img) &&
-		validateLookup(t, mem1, tile, &img) &&
-		validateLookup(t, mem2, tile, &img)
+	validateLookup(t, multi, tile, &img)
+	validateLookup(t, mem1, tile, &img)
+	validateLookup(t, mem2, tile, &img)
 }
 
 func TestMultiIn1(t *testing.T) {
 	memConfig1 := MemoryConfig{}
 
-	mem1, err := ConstructMemory(memConfig1, nil)
-	assert.Nil(t, err)
+	mem1, err := MemoryRegistration{}.Initialize(memConfig1, config.ErrorMessages{})
+	require.NoError(t, err)
 
 	memConfig2 := MemoryConfig{}
 
-	mem2, err := ConstructMemory(memConfig2, nil)
-	if !assert.Nil(t, err) {
-		return
-	}
+	mem2, err := MemoryRegistration{}.Initialize(memConfig2, config.ErrorMessages{})
+	require.NoError(t, err)
 
-	multi := Multi{Tiers: []Cache{mem1, mem2}}
+	multi := Multi{Tiers: []cache.Cache{mem1, mem2}}
 
 	tile := makeReq(53)
 	img := makeImg(24)
-	mem1.Save(tile, &img)
+	require.NoError(t, mem1.Save(tile, &img))
 
 	validateLookup(t, multi, tile, &img)
 }
@@ -69,21 +67,19 @@ func TestMultiIn1(t *testing.T) {
 func TestMultiIn2(t *testing.T) {
 	memConfig1 := MemoryConfig{}
 
-	mem1, err := ConstructMemory(memConfig1, nil)
-	assert.Nil(t, err)
+	mem1, err := MemoryRegistration{}.Initialize(memConfig1, config.ErrorMessages{})
+	require.NoError(t, err)
 
 	memConfig2 := MemoryConfig{}
 
-	mem2, err := ConstructMemory(memConfig2, nil)
-	if !assert.Nil(t, err) {
-		return
-	}
+	mem2, err := MemoryRegistration{}.Initialize(memConfig2, config.ErrorMessages{})
+	require.NoError(t, err)
 
-	multi := Multi{Tiers: []Cache{mem1, mem2}}
+	multi := Multi{Tiers: []cache.Cache{mem1, mem2}}
 
 	tile := makeReq(53)
 	img := makeImg(24)
-	mem2.Save(tile, &img)
+	require.NoError(t, mem2.Save(tile, &img))
 
 	validateLookup(t, multi, tile, &img)
 }

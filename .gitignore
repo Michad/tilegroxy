@@ -23,9 +23,13 @@ go.work
 .vscode/
 
 disK_tile_cache2/
-
 disK_tile_cache/
+disk_tile_cache/
 
 tilegroxy
-
 test_config.yml
+.env
+
+certs/
+
+*.log

@@ -1,0 +1,41 @@
+version: 2
+before:
+  hooks:
+    - go mod tidy
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    tags:
+      - viper_bind_struct
+    ldflags:
+      - -s -w -X {{.Env.PKG}}/pkg/static.tilegroxyVersion={{.Env.VERSION}} -X {{.Env.PKG}}/pkg/static.tilegroxyBuildRef={{.Env.REF}} -X {{.Env.PKG}}/pkg/static.tilegroxyBuildDate={{.Env.DATE}}
+archives:
+  - builds_info:
+      mode: 0744
+    format_overrides:
+      - goos: windows
+        format: zip
+changelog:
+  use: github-native
+release:
+  github:
+    owner: michad
+    name: tilegroxy
+  draft: true
+  replace_existing_draft: true
+  extra_files:
+    - glob: ./LICENSE
+signs:
+  - artifacts: checksum
+    args:
+      - "--batch"
+      - "--local-user"
+      - "{{ .Env.GPG_FINGERPRINT }}" 
+      - "--output"
+      - "${signature}"
+      - "--detach-sign"
+      - "${artifact}"

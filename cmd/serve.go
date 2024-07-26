@@ -1,12 +1,25 @@
+// Copyright 2024 Michael Davis
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package cmd
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 
-	"github.com/Michad/tilegroxy/internal/server"
+	tg "github.com/Michad/tilegroxy/pkg/entry"
 )
 
 var serveCmd = &cobra.Command{
@@ -17,23 +30,32 @@ var serveCmd = &cobra.Command{
 	The process will run blocking in the foreground until terminated. The majority of configuration should be supplied via a configuration file.
 	
 	`,
-	Run: func(cmd *cobra.Command, args []string) {
-		cfg, layerObjects, auth, err := parseConfigIntoStructs(cmd)
+	Run: runServe,
+}
 
-		if err != nil {
-			fmt.Printf("Error: %v\n", err.Error())
-			os.Exit(1)
-		}
+func runServe(cmd *cobra.Command, _ []string) {
+	out := rootCmd.OutOrStdout()
 
-		err = server.ListenAndServe(cfg, layerObjects, auth)
+	cfg, err := extractConfigFromCommand(cmd)
+	if err != nil {
+		fmt.Fprintf(out, "Error: %v\n", err.Error())
+		exit(1)
+		return
+	}
 
-		if err != nil {
-			fmt.Printf("Error: %v\n", err.Error())
-			os.Exit(1)
-		}
-	},
+	err = tg.Serve(cfg, tg.ServeOptions{}, out)
+
+	if err != nil {
+		fmt.Fprintf(out, "Error: %v\n", err.Error())
+		exit(1)
+		return
+	}
 }
 
 func init() {
+	initServe()
+}
+
+func initServe() {
 	rootCmd.AddCommand(serveCmd)
 }

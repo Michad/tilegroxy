@@ -15,12 +15,12 @@
 package providers
 
 import (
-	"context"
 	"fmt"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/config"
 	"github.com/Michad/tilegroxy/internal/images"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
 type StaticConfig struct {
@@ -30,31 +30,47 @@ type StaticConfig struct {
 
 type Static struct {
 	StaticConfig
-	img *internal.Image
+	img *pkg.Image
 }
 
-func ConstructStatic(config StaticConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages) (*Static, error) {
-	if config.Image == "" {
-		if config.Color != "" {
-			config.Image = images.KeyPrefixColor + config.Color
+func init() {
+	layer.RegisterProvider(StaticRegistration{})
+}
+
+type StaticRegistration struct {
+}
+
+func (s StaticRegistration) InitializeConfig() any {
+	return StaticConfig{}
+}
+
+func (s StaticRegistration) Name() string {
+	return "static"
+}
+
+func (s StaticRegistration) Initialize(cfgAny any, _ config.ClientConfig, errorMessages config.ErrorMessages, _ *layer.LayerGroup) (layer.Provider, error) {
+	cfg := cfgAny.(StaticConfig)
+	if cfg.Image == "" {
+		if cfg.Color != "" {
+			cfg.Image = images.KeyPrefixColor + cfg.Color
 		} else {
-			return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "provider.static.image", "")
+			return nil, fmt.Errorf(errorMessages.OneOfRequired, []string{"provider.static.image", "provider.static.color"})
 		}
 	}
 
-	img, err := images.GetStaticImage(config.Image)
+	img, err := images.GetStaticImage(cfg.Image)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return &Static{config, img}, nil
+	return &Static{cfg, img}, nil
 }
 
-func (t Static) PreAuth(ctx context.Context, authContext AuthContext) (AuthContext, error) {
-	return AuthContext{Bypass: true}, nil
+func (t Static) PreAuth(_ *pkg.RequestContext, _ layer.ProviderContext) (layer.ProviderContext, error) {
+	return layer.ProviderContext{AuthBypass: true}, nil
 }
 
-func (t Static) GenerateTile(ctx context.Context, authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
+func (t Static) GenerateTile(_ *pkg.RequestContext, _ layer.ProviderContext, _ pkg.TileRequest) (*pkg.Image, error) {
 	return t.img, nil
 }

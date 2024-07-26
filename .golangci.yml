@@ -1,0 +1,62 @@
+linters-settings:
+  goheader:
+    values:
+      regexp:
+        ws: "[ 	]*" # Space and tab, not using \s to avoid allowing other forms of whitespace such as newlines
+        AUTHOR: .*
+    template-path: ./.preamble.txt
+  maintidx:
+    under: 30
+  mnd:    
+    ignored-numbers:
+      - '0600'
+      - '0666'
+      - '0700'
+      - '42'
+      - '2'
+      - '1'
+      - '180'
+      - '90'
+      - '60'
+      - '360'
+      - '255'
+  revive:
+    rules:
+      - name: call-to-gc
+      # - name: comments-density
+      - name: confusing-naming
+      - name: constant-logical-expr
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: deep-exit
+      - name: defer
+      - name: dot-imports
+      - name: duplicated-imports
+      - name: empty-block
+      - name: errorf
+      - name: exported
+        arguments:
+          - "disableStutteringCheck"
+      - name: increment-decrement
+      - name: indent-error-flow
+      - name: package-comments
+      - name: range
+      - name: receiver-naming
+      - name: string-of-int
+      - name: struct-tag
+      - name: superfluous-else
+      - name: time-naming
+      - name: unexported-return
+      - name: unreachable-code
+      - name: unused-parameter
+      - name: var-declaration
+issues:
+  exclude-rules:
+    - path: (.+)_test.go
+      linters:
+        - noctx
+        - mnd
+        - dupl
+    - path: config.go
+      linters:
+        - mnd

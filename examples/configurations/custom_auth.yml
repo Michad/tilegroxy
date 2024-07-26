@@ -1,0 +1,21 @@
+logging:
+  main:
+    level: trace
+    format: json
+authentication:
+  name: custom
+  file: examples/auth/custom_from_file.go
+  token:
+    header: X-Token
+    cookie: token
+    query: token
+    path: ""
+layers:
+  - id: osm
+    provider:
+        name: proxy
+        url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+  - id: osm2
+    provider:
+        name: proxy
+        url: https://tile.openstreetmap.org/{z}/{x}/{y}.png

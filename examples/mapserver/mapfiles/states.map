@@ -1,0 +1,46 @@
+MAP
+  IMAGETYPE PNGA
+  SIZE 256 256
+  
+  OUTPUTFORMAT
+    NAME "PNGA"
+    DRIVER AGG/PNG
+    MIMETYPE "image/png"
+    IMAGEMODE RGBA
+    EXTENSION "png"
+    TRANSPARENT ON
+  END
+  
+  PROJECTION
+    "init=epsg:3857"
+  END 
+
+  LAYER 
+    NAME         "states"
+    DATA         "../data/cb_2018_us_state_20m.shp"
+    STATUS       ON
+    TYPE         POLYGON
+
+    PROJECTION
+      "init=epsg:4269"
+    END
+
+    METADATA
+      "gml_include_items" "all"
+    END
+
+    CLASSITEM    "NAME"
+    CLASS
+      EXPRESSION 'Nebraska'
+      STYLE
+        COLOR 51 51 51
+        OUTLINECOLOR 32 32 32
+      END
+    END
+    CLASS
+      STYLE
+        OUTLINECOLOR 32 32 32
+      END
+    END
+  END 
+END 

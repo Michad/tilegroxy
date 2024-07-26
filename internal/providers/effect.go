@@ -17,15 +17,15 @@ package providers
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"fmt"
 	"image"
 	_ "image/jpeg"
 	"image/png"
 	"slices"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/anthonynsimon/bild/adjust"
 	"github.com/anthonynsimon/bild/blur"
 	"github.com/anthonynsimon/bild/effect"
@@ -44,10 +44,26 @@ type EffectConfig struct {
 
 type Effect struct {
 	EffectConfig
-	provider *Provider
+	provider layer.Provider
 }
 
-func ConstructEffect(config EffectConfig, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, provider *Provider) (*Effect, error) {
+func init() {
+	layer.RegisterProvider(EffectRegistration{})
+}
+
+type EffectRegistration struct {
+}
+
+func (s EffectRegistration) InitializeConfig() any {
+	return EffectConfig{}
+}
+
+func (s EffectRegistration) Name() string {
+	return "effect"
+}
+
+func (s EffectRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layer.LayerGroup) (layer.Provider, error) {
+	config := cfgAny.(EffectConfig)
 	if !slices.Contains(allEffectModes, config.Mode) {
 		return nil, fmt.Errorf(errorMessages.EnumError, "provider.effect.mode", config.Mode, allEffectModes)
 	}
@@ -56,15 +72,20 @@ func ConstructEffect(config EffectConfig, clientConfig *config.ClientConfig, err
 		return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "provider.effect.intensity", "provider.effect.mode="+config.Mode)
 	}
 
+	provider, err := layer.ConstructProvider(config.Provider, clientConfig, errorMessages, layerGroup)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Effect{config, provider}, nil
 }
 
-func (t Effect) PreAuth(ctx context.Context, authContext AuthContext) (AuthContext, error) {
-	return (*t.provider).PreAuth(ctx, authContext)
+func (t Effect) PreAuth(ctx *pkg.RequestContext, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
+	return t.provider.PreAuth(ctx, providerContext)
 }
 
-func (t Effect) GenerateTile(ctx context.Context, authContext AuthContext, tileRequest internal.TileRequest) (*internal.Image, error) {
-	img, err := (*t.provider).GenerateTile(ctx, authContext, tileRequest)
+func (t Effect) GenerateTile(ctx *pkg.RequestContext, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+	img, err := t.provider.GenerateTile(ctx, providerContext, tileRequest)
 
 	if err != nil {
 		return img, err
