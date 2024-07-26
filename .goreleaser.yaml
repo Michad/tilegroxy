@@ -12,7 +12,7 @@ builds:
     tags:
       - viper_bind_struct
     ldflags:
-      - -s -w -X {{.Env.PKG}}/internal.tilegroxyVersion={{.Env.VERSION}} -X {{.Env.PKG}}/internal.tilegroxyBuildRef={{.Env.REF}} -X {{.Env.PKG}}/internal.tilegroxyBuildDate={{.Env.DATE}}
+      - -s -w -X {{.Env.PKG}}/pkg/static.tilegroxyVersion={{.Env.VERSION}} -X {{.Env.PKG}}/pkg/static.tilegroxyBuildRef={{.Env.REF}} -X {{.Env.PKG}}/pkg/static.tilegroxyBuildDate={{.Env.DATE}}
 archives:
   - builds_info:
       mode: 0744
