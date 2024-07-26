@@ -22,6 +22,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const maxExitCode = 125
+
 var testCmd = &cobra.Command{
 	Use:   "test",
 	Short: "Test layers and cache work",
@@ -68,8 +70,8 @@ func runTest(cmd *cobra.Command, args []string) {
 	fmt.Fprintf(out, "Completed with %v failures\n", errCount)
 
 	if errCount > 0 {
-		if errCount > 125 {
-			exit(125)
+		if errCount > maxExitCode {
+			exit(maxExitCode)
 			return
 		}
 		exit(int(errCount))
@@ -85,9 +87,9 @@ func initTest() {
 	rootCmd.AddCommand(testCmd)
 
 	testCmd.Flags().StringSliceP("layer", "l", []string{}, "The ID(s) of the layer to test. Tests all layers by default")
-	testCmd.Flags().UintP("z-coordinate", "z", 10, "The z coordinate to use to test")
-	testCmd.Flags().UintP("x-coordinate", "x", 123, "The x coordinate to use to test")
-	testCmd.Flags().UintP("y-coordinate", "y", 534, "The y coordinate to use to test")
+	testCmd.Flags().UintP("z-coordinate", "z", 10, "The z coordinate to use to test")  //nolint:mnd
+	testCmd.Flags().UintP("x-coordinate", "x", 123, "The x coordinate to use to test") //nolint:mnd
+	testCmd.Flags().UintP("y-coordinate", "y", 534, "The y coordinate to use to test") //nolint:mnd
 	testCmd.Flags().Bool("no-cache", false, "Don't write to the cache. The Cache configuration must still be syntactically valid")
 	testCmd.Flags().Uint16P("threads", "t", 1, "How many layers to test at once. Be mindful of spamming upstream providers")
 	//TODO: output in custom format or write to file

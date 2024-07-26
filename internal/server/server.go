@@ -154,7 +154,7 @@ func makeLogFileWriter(path string, alsoStdOut bool) (io.Writer, error) {
 
 func configureMainLogging(cfg *config.Config) error {
 	if !cfg.Logging.Main.Console && len(cfg.Logging.Main.Path) == 0 {
-		slog.SetLogLoggerLevel(10)
+		slog.SetLogLoggerLevel(slog.LevelError+1)
 		return nil
 	}
 

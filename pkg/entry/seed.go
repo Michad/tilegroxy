@@ -28,6 +28,8 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
+const maxCount = 10000
+
 type SeedOptions struct {
 	Zoom      []uint
 	Bounds    pkg.Bounds
@@ -113,7 +115,7 @@ func createTileRequests(z uint, curCount int, opts SeedOptions) (*[]pkg.TileRequ
 	}
 	tileRequests, err := opts.Bounds.FindTiles(opts.LayerName, z, opts.Force)
 
-	if err != nil || (curCount > 10000 && !opts.Force) {
+	if err != nil || (curCount > maxCount && !opts.Force) {
 		count := curCount
 
 		if err != nil {
@@ -128,7 +130,7 @@ func createTileRequests(z uint, curCount int, opts SeedOptions) (*[]pkg.TileRequ
 
 		return nil, fmt.Errorf("too many tiles to seed (%v > %v). %v",
 			count,
-			pkg.Ternary(count > math.MaxInt32, math.MaxInt32, 10000),
+			pkg.Ternary(count > math.MaxInt32, math.MaxInt32, maxCount),
 			pkg.Ternary(count > math.MaxInt32, "", "Run with --force if you're sure you want to generate this many tiles"))
 	}
 	return tileRequests, nil

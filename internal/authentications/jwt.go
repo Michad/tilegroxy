@@ -30,6 +30,9 @@ import (
 	"github.com/maypok86/otter"
 )
 
+const defaultExpiration = 24 * 60 * 60
+const defaultLeeway = 5 * time.Second
+
 type JWTConfig struct {
 	//TODO: Performance profile if the cache is actually worthwhile
 	CacheSize        uint16 // Configures the size of the cache of already verified JWTs to avoid re-verifying keys for every token. Expiration still applies. Set to 0 to disable. Defaults to 0
@@ -83,7 +86,7 @@ func (s JWTRegistration) Initialize(configAny any, errorMessages config.ErrorMes
 	}
 
 	if config.MaxExpiration == 0 {
-		config.MaxExpiration = 24 * 60 * 60
+		config.MaxExpiration = defaultExpiration
 	}
 
 	if config.UserID == "" {
@@ -154,7 +157,7 @@ func (c JWT) extractToken(req *http.Request) (string, bool) {
 
 func (c JWT) checkAuthenticationWithoutCache(tokenStr string, ctx *pkg.RequestContext) (*jwt.NumericDate, bool) {
 	parserOptions := make([]jwt.ParserOption, 0)
-	parserOptions = append(parserOptions, jwt.WithLeeway(5*time.Second))
+	parserOptions = append(parserOptions, jwt.WithLeeway(defaultLeeway))
 	parserOptions = append(parserOptions, jwt.WithExpirationRequired())
 	parserOptions = append(parserOptions, jwt.WithValidMethods([]string{c.Algorithm}))
 

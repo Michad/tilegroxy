@@ -37,6 +37,8 @@ type Bounds struct {
 const (
 	MaxZoom = 21
 	delta   = .00000001
+	maxLat  = 85.0511
+	minLat  = -85.0511
 )
 
 func (t TileRequest) GetBounds() (*Bounds, error) {
@@ -108,8 +110,8 @@ func (b Bounds) FindTiles(layerName string, zoom uint, force bool) (*[]TileReque
 	}
 
 	n := math.Exp2(z)
-	latMin := math.Min(85.0511, math.Max(-85.0511, b.South)) * math.Pi / 180.0
-	latMax := math.Min(85.0511, math.Max(-85.0511, b.North)) * math.Pi / 180.0
+	latMin := math.Min(maxLat, math.Max(minLat, b.South)) * math.Pi / 180
+	latMax := math.Min(maxLat, math.Max(minLat, b.North)) * math.Pi / 180
 
 	x1 := n * ((lonMin + 180) / 360)
 	x2 := n * ((lonMax + 180) / 360)
