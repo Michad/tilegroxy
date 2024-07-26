@@ -188,7 +188,7 @@ func (s CustomRegistration) Initialize(cfgAny any, errorMessages config.ErrorMes
 	if cfg.CacheSize < 0 {
 		return &Custom{cfg, nil, nil, validationFunc}, nil
 	}
-	
+
 	lock := keymutex.NewHashed(-1)
 
 	cache, err := otter.MustBuilder[string, ValidationResult](cfg.CacheSize).Build()
