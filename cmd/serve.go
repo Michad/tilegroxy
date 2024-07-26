@@ -33,7 +33,7 @@ var serveCmd = &cobra.Command{
 	Run: runServe,
 }
 
-func runServe(cmd *cobra.Command, args []string) {
+func runServe(cmd *cobra.Command, _ []string) {
 	out := rootCmd.OutOrStdout()
 
 	cfg, err := extractConfigFromCommand(cmd)

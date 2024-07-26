@@ -29,7 +29,7 @@ type LayerGroup struct {
 	layers []*Layer
 }
 
-func ConstructLayerGroup(cfg config.Config, layers []config.LayerConfig, cache cache.Cache, secreter secret.Secreter) (*LayerGroup, error) {
+func ConstructLayerGroup(cfg config.Config, cache cache.Cache, secreter secret.Secreter) (*LayerGroup, error) {
 	var err error
 	var layerGroup LayerGroup
 	layerObjects := make([]*Layer, len(cfg.Layers))
@@ -58,10 +58,10 @@ func (lg LayerGroup) FindLayer(ctx *pkg.RequestContext, layerName string) *Layer
 	return nil
 }
 
-func (lg LayerGroup) ListLayerIds() []string {
+func (lg LayerGroup) ListLayerIDs() []string {
 	r := make([]string, 0, len(lg.layers))
 	for _, l := range lg.layers {
-		r = append(r, l.Id)
+		r = append(r, l.ID)
 	}
 	return r
 }
@@ -115,7 +115,7 @@ func (lg LayerGroup) RenderTile(ctx *pkg.RequestContext, tileRequest pkg.TileReq
 
 func (LayerGroup) checkPermission(ctx *pkg.RequestContext, l *Layer, tileRequest pkg.TileRequest) error {
 	if ctx.LimitLayers {
-		if !slices.Contains(ctx.AllowedLayers, l.Id) {
+		if !slices.Contains(ctx.AllowedLayers, l.ID) {
 			return pkg.UnauthorizedError{Message: "Denying access to non-allowed layer"}
 		}
 	}

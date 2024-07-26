@@ -38,13 +38,13 @@ Example:
 	Run: runCreate,
 }
 
-func runCreate(cmd *cobra.Command, args []string) {
+func runCreate(cmd *cobra.Command, _ []string) {
 	var err error
 
 	includeDefault, _ := cmd.Flags().GetBool("default")
 	noPretty, _ := cmd.Flags().GetBool("no-pretty")
-	forceJson, _ := cmd.Flags().GetBool("json")
-	forceYml, _ := cmd.Flags().GetBool("yaml")
+	forceJSON, _ := cmd.Flags().GetBool("json")
+	forceYML, _ := cmd.Flags().GetBool("yaml")
 	writePath, _ := cmd.Flags().GetString("output")
 
 	out := cmd.OutOrStdout()
@@ -59,11 +59,11 @@ func runCreate(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	if writePath != "" && !forceJson && !forceYml {
+	if writePath != "" && !forceJSON && !forceYML {
 		ext := strings.ToLower(filepath.Ext(writePath))
 
 		if ext == ".json" {
-			forceJson = true
+			forceJSON = true
 		} // Check for extension being yaml isn't needed because we default to yaml
 	}
 
@@ -81,7 +81,7 @@ func runCreate(cmd *cobra.Command, args []string) {
 		defer file.Close()
 	}
 
-	if forceJson {
+	if forceJSON {
 		var enc *json.Encoder
 
 		if writePath != "" {

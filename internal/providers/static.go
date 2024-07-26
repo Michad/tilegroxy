@@ -48,7 +48,7 @@ func (s StaticRegistration) Name() string {
 	return "static"
 }
 
-func (s StaticRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layer.LayerGroup) (layer.Provider, error) {
+func (s StaticRegistration) Initialize(cfgAny any, _ config.ClientConfig, errorMessages config.ErrorMessages, _ *layer.LayerGroup) (layer.Provider, error) {
 	cfg := cfgAny.(StaticConfig)
 	if cfg.Image == "" {
 		if cfg.Color != "" {
@@ -67,10 +67,10 @@ func (s StaticRegistration) Initialize(cfgAny any, clientConfig config.ClientCon
 	return &Static{cfg, img}, nil
 }
 
-func (t Static) PreAuth(ctx *pkg.RequestContext, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
+func (t Static) PreAuth(_ *pkg.RequestContext, _ layer.ProviderContext) (layer.ProviderContext, error) {
 	return layer.ProviderContext{AuthBypass: true}, nil
 }
 
-func (t Static) GenerateTile(ctx *pkg.RequestContext, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t Static) GenerateTile(_ *pkg.RequestContext, _ layer.ProviderContext, _ pkg.TileRequest) (*pkg.Image, error) {
 	return t.img, nil
 }

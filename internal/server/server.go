@@ -40,7 +40,7 @@ import (
 	"github.com/gorilla/handlers"
 )
 
-func handleNoContent(w http.ResponseWriter, req *http.Request) {
+func handleNoContent(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -76,7 +76,7 @@ func errorVars(cfg *config.ErrorConfig, errorType pkg.TypeOfError) (int, slog.Le
 		imgPath = cfg.Images.Other
 	}
 
-	if cfg.AlwaysOk {
+	if cfg.AlwaysOK {
 		status = http.StatusOK
 	}
 
@@ -154,7 +154,7 @@ func makeLogFileWriter(path string, alsoStdOut bool) (io.Writer, error) {
 
 func configureMainLogging(cfg *config.Config) error {
 	if !cfg.Logging.Main.Console && len(cfg.Logging.Main.Path) == 0 {
-		slog.SetLogLoggerLevel(10)
+		slog.SetLogLoggerLevel(slog.LevelError + 1)
 		return nil
 	}
 
@@ -198,7 +198,7 @@ func configureMainLogging(cfg *config.Config) error {
 	switch cfg.Logging.Main.Format {
 	case config.MainFormatPlain:
 		logHandler = slog.NewTextHandler(out, &opt)
-	case config.MainFormatJson:
+	case config.MainFormatJSON:
 		logHandler = slog.NewJSONHandler(out, &opt)
 		if cfg.Logging.Main.Request == "auto" {
 			cfg.Logging.Main.Request = "true"
@@ -363,7 +363,7 @@ func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth au
 }
 
 func listenAndServeTLS(config *config.Config, srvErr chan error, srv *http.Server) {
-	httpPort := config.Server.Encrypt.HttpPort
+	httpPort := config.Server.Encrypt.HTTPPort
 	httpHostPort := net.JoinHostPort(config.Server.BindHost, strconv.Itoa(httpPort))
 
 	if config.Server.Encrypt.Certificate != "" && config.Server.Encrypt.KeyFile != "" {

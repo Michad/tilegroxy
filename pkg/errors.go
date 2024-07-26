@@ -40,7 +40,7 @@ const (
 type TypedError interface {
 	error
 	Type() TypeOfError
-	External(config.ErrorMessages) string
+	External(errorMessages config.ErrorMessages) string
 }
 
 // General error for incoming auth issues. Avoids returning specifics through the API so as not to help attackers.
@@ -70,7 +70,7 @@ type ProviderAuthError struct {
 
 func (e ProviderAuthError) Error() string {
 	// notest
-	return fmt.Sprintf("Provider Error - %s", e.Message)
+	return "Provider Error - " + e.Message
 }
 
 func (e ProviderAuthError) Type() TypeOfError {
@@ -78,7 +78,7 @@ func (e ProviderAuthError) Type() TypeOfError {
 	return TypeOfErrorProvider
 }
 
-func (e ProviderAuthError) External(messages config.ErrorMessages) string {
+func (e ProviderAuthError) External(_ config.ErrorMessages) string {
 	// notest
 	return e.Error()
 }

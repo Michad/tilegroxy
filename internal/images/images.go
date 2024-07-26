@@ -29,6 +29,10 @@ import (
 	"strings"
 )
 
+const numRGB = 3
+const numRGBA = 4
+const defaultImageSize = 512
+
 //go:embed error.png
 var imageError []byte
 
@@ -65,23 +69,23 @@ func parseColor(fullStr string) (color.Color, error) {
 
 	colObj := color.RGBA{R: 255, G: 255, B: 255, A: 255}
 
-	if len(col) == 3 {
+	if len(col) == numRGB {
 		col = string(col[0]) + string(col[0]) + string(col[1]) + string(col[1]) + string(col[2]) + string(col[2])
-	} else if len(col) == 4 {
+	} else if len(col) == numRGBA {
 		col = string(col[0]) + string(col[0]) + string(col[1]) + string(col[1]) + string(col[2]) + string(col[2]) + string(col[3]) + string(col[3])
 	}
 
-	if len(col) == 6 {
+	if len(col) == 2*numRGB {
 		numMatch, err := fmt.Sscanf(col, "%02x%02x%02x", &colObj.R, &colObj.G, &colObj.B)
-		if numMatch != 3 {
+		if numMatch != numRGB {
 			return colObj, errors.New("mismatch")
 		}
 		return colObj, err
 	}
 
-	if len(col) == 8 {
+	if len(col) == 2*numRGBA {
 		numMatch, err := fmt.Sscanf(col, "%02x%02x%02x%02x", &colObj.R, &colObj.G, &colObj.B, &colObj.A)
-		if numMatch != 4 {
+		if numMatch != numRGBA {
 			return colObj, errors.New("mismatch")
 		}
 		return colObj, err
@@ -119,29 +123,7 @@ func GetStaticImage(path string) (*[]byte, error) {
 	}
 
 	if strings.Index(path, KeyPrefixColor) == 0 {
-		colObj, err := parseColor(path)
-
-		if err != nil {
-			return nil, fmt.Errorf("invalid color %v", path)
-		}
-
-		img := image.NewRGBA(image.Rect(0, 0, 512, 512))
-		draw.Draw(img, img.Rect, image.NewUniform(colObj), img.Rect.Min, draw.Src)
-
-		var buf bytes.Buffer
-		writer := bufio.NewWriter(&buf)
-
-		err = png.Encode(writer, img)
-
-		if err != nil {
-			return nil, err
-		}
-
-		writer.Flush()
-		output := buf.Bytes()
-
-		dynamicImages[path] = &output
-		return &output, nil
+		return getColorImage(path)
 	}
 
 	img, err := os.ReadFile(path)
@@ -157,4 +139,30 @@ func GetStaticImage(path string) (*[]byte, error) {
 	}
 
 	return nil, errors.New("image failed to load")
+}
+
+func getColorImage(path string) (*[]byte, error) {
+	colObj, err := parseColor(path)
+
+	if err != nil {
+		return nil, fmt.Errorf("invalid color %v", path)
+	}
+
+	img := image.NewRGBA(image.Rect(0, 0, defaultImageSize, defaultImageSize))
+	draw.Draw(img, img.Rect, image.NewUniform(colObj), img.Rect.Min, draw.Src)
+
+	var buf bytes.Buffer
+	writer := bufio.NewWriter(&buf)
+
+	err = png.Encode(writer, img)
+
+	if err != nil {
+		return nil, err
+	}
+
+	writer.Flush()
+	output := buf.Bytes()
+
+	dynamicImages[path] = &output
+	return &output, nil
 }

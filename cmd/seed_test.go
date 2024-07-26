@@ -110,7 +110,7 @@ func Test_SeedCommand_InvalidZoom(t *testing.T) {
 
 	b := bytes.NewBufferString("")
 	rootCmd.SetOutput(b)
-	rootCmd.SetArgs([]string{"seed", "--verbose", "-c", "../examples/configurations/simple.json", "-l", "osm", "-z", "200"})
+	rootCmd.SetArgs([]string{"seed", "--verbose", "-c", "../examples/configurations/simple.json", "-l", "osm", "-z", "2000"})
 	require.NoError(t, rootCmd.Execute())
 	out, err := io.ReadAll(b)
 	if err != nil {

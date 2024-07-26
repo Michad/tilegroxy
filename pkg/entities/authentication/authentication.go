@@ -33,7 +33,7 @@ type AuthenticationRegistration interface {
 	InitializeConfig() any
 }
 
-var registrations map[string]AuthenticationRegistration = make(map[string]AuthenticationRegistration)
+var registrations = make(map[string]AuthenticationRegistration)
 
 func RegisterAuthentication(reg AuthenticationRegistration) {
 	registrations[reg.Name()] = reg

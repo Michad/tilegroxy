@@ -88,15 +88,14 @@ func coreServeTest(t *testing.T, cfg string, port int, url string) (*http.Respon
 
 		conn, err := net.DialTimeout("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)), 1*time.Second)
 		if conn != nil {
-			defer conn.Close()
+			conn.Close()
 		}
 		if err == nil {
 			ok = true
 			break
-		} else {
-			fmt.Printf("Didn't connect to tcp: %v\n", err)
 		}
 
+		fmt.Printf("Didn't connect to tcp: %v\n", err)
 		time.Sleep(time.Duration(i*i*100) * time.Millisecond)
 	}
 
@@ -165,7 +164,7 @@ layers:
       name: proxy
       url: http://localhost:12342/root/tiles/color/{z}/{x}/{y}?agent={ctx.User-Agent}&key={env.KEY}
 `
-	os.Setenv("KEY", "hunter2")
+	t.Setenv("KEY", "hunter2")
 
 	resp, postFunc, err := coreServeTest(t, cfg, 12342, "http://localhost:12342/root/tiles/color/8/12/32") //nolint:bodyclose // Linter doesn't detect this right
 	defer postFunc()
@@ -173,7 +172,7 @@ layers:
 	require.NoError(t, err)
 	assert.NotNil(t, resp)
 
-	assert.Equal(t, 200, resp.StatusCode)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	assert.Equal(t, "image/png", resp.Header["Content-Type"][0])
 	assert.Equal(t, "result", resp.Header["X-Test"][0])
@@ -225,14 +224,14 @@ layers:
 	require.NoError(t, err)
 	resp, err = http.DefaultClient.Do(req)
 	require.NoError(t, err)
-	assert.Equal(t, 200, resp.StatusCode)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	resp.Body.Close()
 
 	req, err = http.NewRequest(http.MethodGet, "http://localhost:12342/root", nil)
 	require.NoError(t, err)
 	resp, err = http.DefaultClient.Do(req)
 	require.NoError(t, err)
-	assert.Equal(t, 200, resp.StatusCode)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	resp.Body.Close()
 }
 
@@ -295,7 +294,7 @@ layers:
 	require.NoError(t, err)
 	resp, err = http.DefaultClient.Do(req)
 	require.NoError(t, err)
-	assert.Equal(t, 200, resp.StatusCode)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Nil(t, resp.Header["X-Powered-By"])
 	resp.Body.Close()
 
@@ -414,7 +413,7 @@ layers:
 
 	require.NoError(t, err)
 	if assert.NotNil(t, resp) {
-		assert.Equal(t, 200, resp.StatusCode)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
 		assert.Equal(t, "image/png", resp.Header["Content-Type"][0])
 	}
 }

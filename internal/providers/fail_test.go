@@ -49,18 +49,18 @@ func (s FailRegistration) Name() string {
 	return "fail"
 }
 
-func (s FailRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layer.LayerGroup) (layer.Provider, error) {
+func (s FailRegistration) Initialize(cfgAny any, _ config.ClientConfig, _ config.ErrorMessages, _ *layer.LayerGroup) (layer.Provider, error) {
 	config := cfgAny.(FailConfig)
 	return &Fail{config}, nil
 }
 
-func (t Fail) PreAuth(ctx *pkg.RequestContext, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
+func (t Fail) PreAuth(_ *pkg.RequestContext, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
 	if t.OnAuth {
 		return providerContext, errors.New(t.Message)
 	}
 	return providerContext, nil
 }
 
-func (t Fail) GenerateTile(ctx *pkg.RequestContext, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t Fail) GenerateTile(_ *pkg.RequestContext, _ layer.ProviderContext, _ pkg.TileRequest) (*pkg.Image, error) {
 	return nil, errors.New(t.Message)
 }

@@ -50,7 +50,7 @@ func Test(cfg *config.Config, opts TestOptions, out io.Writer) (uint32, error) {
 	}
 
 	if len(opts.LayerNames) == 0 {
-		opts.LayerNames = layerObjects.ListLayerIds()
+		opts.LayerNames = layerObjects.ListLayerIDs()
 	}
 
 	// Generate the full list of requests to process
@@ -100,7 +100,7 @@ func Test(cfg *config.Config, opts TestOptions, out io.Writer) (uint32, error) {
 	var wg sync.WaitGroup
 	errCount := uint32(0)
 
-	writer := tabwriter.NewWriter(out, 1, 4, 4, ' ', tabwriter.StripEscape)
+	writer := tabwriter.NewWriter(out, 1, 4, 4, ' ', tabwriter.StripEscape) //nolint:mnd
 	fmt.Fprintln(writer, "Thread\tLayer\tGenerated\tCache Write\tCache Read\tError\t")
 
 	for t := range len(reqSplit) {

@@ -29,7 +29,7 @@ var versionCmd = &cobra.Command{
 	Run:   runVersion,
 }
 
-func runVersion(cmd *cobra.Command, args []string) {
+func runVersion(cmd *cobra.Command, _ []string) {
 	short, _ := cmd.Flags().GetBool("short")
 	json, _ := cmd.Flags().GetBool("json")
 

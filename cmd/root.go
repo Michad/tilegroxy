@@ -46,8 +46,9 @@ func Execute() {
 	}
 }
 
-var exitStatus int = -1
+var exitStatus = -1
 
+//nolint:revive
 func exit(status int) {
 	if flag.Lookup("test.v") == nil {
 		os.Exit(status)

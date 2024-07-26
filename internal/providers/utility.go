@@ -35,7 +35,7 @@ var envRegex = regexp.MustCompile(`{env\.[^{}}]*}`)
 var ctxRegex = regexp.MustCompile(`{ctx\.[^{}}]*}`)
 var lyrRegex = regexp.MustCompile(`{layer\.[^{}}]*}`)
 
-func replaceUrlPlaceholders(ctx *pkg.RequestContext, tileRequest pkg.TileRequest, url string, invertY bool) (string, error) {
+func replaceURLPlaceholders(ctx *pkg.RequestContext, tileRequest pkg.TileRequest, url string, invertY bool) (string, error) {
 	b, err := tileRequest.GetBounds()
 
 	if err != nil {
@@ -79,7 +79,7 @@ func replaceUrlPlaceholders(ctx *pkg.RequestContext, tileRequest pkg.TileRequest
 
 			slog.Debug("Replacing layer var " + layerVar)
 
-			url = strings.Replace(url, layerMatch, fmt.Sprint(ctx.LayerPatternMatches[layerVar]), 1)
+			url = strings.Replace(url, layerMatch, ctx.LayerPatternMatches[layerVar], 1)
 		}
 	}
 
@@ -104,7 +104,7 @@ func replaceUrlPlaceholders(ctx *pkg.RequestContext, tileRequest pkg.TileRequest
 func getTile(ctx *pkg.RequestContext, clientConfig config.ClientConfig, url string, authHeaders map[string]string) (*pkg.Image, error) {
 	slog.DebugContext(ctx, fmt.Sprintf("Calling url %v\n", url))
 
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}

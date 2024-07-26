@@ -69,7 +69,7 @@ func (s AWSSecretsManagerSecreter) Name() string {
 	return "awssecretsmanager"
 }
 
-func (s AWSSecretsManagerSecreter) Initialize(cfgAny any, errorMessages config.ErrorMessages) (secret.Secreter, error) {
+func (s AWSSecretsManagerSecreter) Initialize(cfgAny any, _ config.ErrorMessages) (secret.Secreter, error) {
 	cfg := cfgAny.(AWSSecretsManagerConfig)
 	if cfg.Separator == "" {
 		cfg.Separator = ":"
@@ -156,8 +156,8 @@ func (s AWSSecretsManager) Lookup(key string) (string, error) {
 }
 
 // Just for testing purposes
-func (c AWSSecretsManager) makeSecret(key, val string) error {
-	_, err := c.client.CreateSecret(pkg.BackgroundContext(), &secretsmanager.CreateSecretInput{
+func (s AWSSecretsManager) makeSecret(key, val string) error {
+	_, err := s.client.CreateSecret(pkg.BackgroundContext(), &secretsmanager.CreateSecretInput{
 		Name:         &key,
 		SecretString: &val,
 	})

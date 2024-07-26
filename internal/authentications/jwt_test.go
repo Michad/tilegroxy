@@ -27,14 +27,14 @@ import (
 //note: JWTs here will expire in the year 2065. They will need to be updated on the off-chance this is still used 40 years from now
 
 func TestFailMissingArgs(t *testing.T) {
-	jwtConfig := JwtConfig{}
+	jwtConfig := JWTConfig{}
 	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
 
 	require.Error(t, err)
 	assert.Nil(t, jwt)
 }
 func TestFailMissingKey(t *testing.T) {
-	jwtConfig := JwtConfig{
+	jwtConfig := JWTConfig{
 		Algorithm: "HS256",
 	}
 	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
@@ -43,7 +43,7 @@ func TestFailMissingKey(t *testing.T) {
 	assert.Nil(t, jwt)
 }
 func TestFailMissingAlg(t *testing.T) {
-	jwtConfig := JwtConfig{
+	jwtConfig := JWTConfig{
 		Key: "hunter2",
 	}
 	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
@@ -53,7 +53,7 @@ func TestFailMissingAlg(t *testing.T) {
 }
 
 func TestGoodJwts(t *testing.T) {
-	jwtConfig := JwtConfig{
+	jwtConfig := JWTConfig{
 		Algorithm:     "HS256",
 		Key:           "hunter2",
 		MaxExpiration: 4294967295, // 136 years from now
@@ -73,7 +73,7 @@ func TestGoodJwts(t *testing.T) {
 }
 
 func TestBadJwts(t *testing.T) {
-	jwtConfig := JwtConfig{
+	jwtConfig := JWTConfig{
 		Algorithm: "HS256",
 		Key:       "hunter2",
 	}
@@ -101,7 +101,7 @@ func TestBadJwts(t *testing.T) {
 }
 
 func TestGoodJwtClaims(t *testing.T) {
-	jwtConfig := JwtConfig{
+	jwtConfig := JWTConfig{
 		Algorithm:        "HS256",
 		Key:              "hunter2",
 		MaxExpiration:    4294967295, // 136 years from now
@@ -125,7 +125,7 @@ func TestGoodJwtClaims(t *testing.T) {
 }
 
 func TestGoodJwtClaimsWithCache(t *testing.T) {
-	jwtConfig := JwtConfig{
+	jwtConfig := JWTConfig{
 		Algorithm:        "HS256",
 		Key:              "hunter2",
 		MaxExpiration:    4294967295, // 136 years from now
@@ -136,7 +136,7 @@ func TestGoodJwtClaimsWithCache(t *testing.T) {
 		CacheSize:        100,
 	}
 	jwtAny, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
-	jwt := jwtAny.(*Jwt)
+	jwt := jwtAny.(*JWT)
 
 	require.NoError(t, err)
 	require.NotNil(t, jwt)
@@ -157,13 +157,13 @@ func TestGoodJwtClaimsWithCache(t *testing.T) {
 }
 
 func TestGoodJwtScopeLimit(t *testing.T) {
-	jwtConfig := JwtConfig{
+	jwtConfig := JWTConfig{
 		Algorithm:     "HS256",
 		Key:           "hunter2",
 		MaxExpiration: 4294967295, // 136 years from now
 		LayerScope:    true,
 		ScopePrefix:   "tile/",
-		UserId:        "name",
+		UserID:        "name",
 	}
 	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
 
@@ -190,7 +190,7 @@ func TestGoodJwtScopeLimit(t *testing.T) {
 }
 
 func TestBadJwtClaims(t *testing.T) {
-	jwtConfig := JwtConfig{
+	jwtConfig := JWTConfig{
 		Algorithm:        "HS256",
 		Key:              "hunter2",
 		MaxExpiration:    4294967295, // 136 years from now
@@ -224,7 +224,7 @@ func TestBadJwtClaims(t *testing.T) {
 }
 
 func TestGoodJwtClaimsRS256(t *testing.T) {
-	jwtConfig := JwtConfig{
+	jwtConfig := JWTConfig{
 		Algorithm: "RS256",
 		Key: `-----BEGIN PUBLIC KEY-----
 MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAzhZBQzvlt1KBBCJd6dWs
@@ -259,7 +259,7 @@ vxNWUY5rv006ZwPuWVEhno8CAwEAAQ==
 }
 
 func TestGoodJwtClaimsES256(t *testing.T) {
-	jwtConfig := JwtConfig{
+	jwtConfig := JWTConfig{
 		Algorithm: "ES256",
 		Key: `-----BEGIN PUBLIC KEY-----
 MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEMAa5en4smiUzzuOfKKjDrzGW+Hx2
@@ -284,7 +284,7 @@ rqGjrzwgkmGypGsfnplZv4okkdfUrPb0VX1PICa0vTotAH97umIvEDBB3Q==
 }
 
 func TestGoodJwtClaimsPS256(t *testing.T) {
-	jwtConfig := JwtConfig{
+	jwtConfig := JWTConfig{
 		Algorithm: "PS256",
 		Key: `-----BEGIN PUBLIC KEY-----
 MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAzhZBQzvlt1KBBCJd6dWs
@@ -319,7 +319,7 @@ vxNWUY5rv006ZwPuWVEhno8CAwEAAQ==
 }
 
 func TestGoodJwtClaimsWithGeohash(t *testing.T) {
-	jwtConfig := JwtConfig{
+	jwtConfig := JWTConfig{
 		Algorithm: "RS256",
 		Key: `-----BEGIN PUBLIC KEY-----
 MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAzhZBQzvlt1KBBCJd6dWs

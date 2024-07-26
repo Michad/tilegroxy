@@ -34,7 +34,7 @@ import (
 type CGIConfig struct {
 	Exec           string              // The path to the CGI executable
 	Args           []string            // Arguments to pass into the executable in standard "split on spaces" format
-	Uri            string              // The URI (path + query) to pass into the CGI for the fake request - think mod_rewrite style invocation of the CGI
+	URI            string              // The URI (path + query) to pass into the CGI for the fake request - think mod_rewrite style invocation of the CGI
 	Domain         string              // The host to pass into the CGI for the fake request. Defaults to localhost
 	Headers        map[string][]string // Extra headers to pass into the CGI for the fake request
 	Env            map[string]string   // Environment variables to supply to the CGI invocations. If the value is an empty string it passes along the value from the main tilegroxy invocation
@@ -98,7 +98,7 @@ func (s CGIRegistration) Name() string {
 	return "cgi"
 }
 
-func (s CGIRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layer.LayerGroup) (layer.Provider, error) {
+func (s CGIRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, _ *layer.LayerGroup) (layer.Provider, error) {
 	cfg := cfgAny.(CGIConfig)
 	env := make([]string, 0)
 	inheritEnv := make([]string, 0)
@@ -107,7 +107,7 @@ func (s CGIRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig
 		return nil, fmt.Errorf(errorMessages.ParamRequired, "provider.cgi.exec")
 	}
 
-	if cfg.Uri == "" {
+	if cfg.URI == "" {
 		return nil, fmt.Errorf(errorMessages.ParamRequired, "provider.cgi.uri")
 	}
 
@@ -136,11 +136,11 @@ func (s CGIRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig
 	return &CGI{cfg, h, clientConfig}, nil
 }
 
-func (t CGI) PreAuth(ctx *pkg.RequestContext, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
+func (t CGI) PreAuth(_ *pkg.RequestContext, _ layer.ProviderContext) (layer.ProviderContext, error) {
 	return layer.ProviderContext{AuthBypass: true}, nil
 }
 
-func (t CGI) GenerateTile(ctx *pkg.RequestContext, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t CGI) GenerateTile(ctx *pkg.RequestContext, _ layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	var err error
 
 	h := t.handler
@@ -148,19 +148,19 @@ func (t CGI) GenerateTile(ctx *pkg.RequestContext, providerContext layer.Provide
 	h.Stderr = SLogWriter{ctx, slog.LevelError.Level()}
 	h.Logger = log.New(h.Stderr, "", 0)
 
-	uri := t.Uri
+	uri := t.URI
 	if uri[0] != '/' {
 		uri = "/" + uri
 	}
 
-	uri, err = replaceUrlPlaceholders(ctx, tileRequest, uri, false)
+	uri, err = replaceURLPlaceholders(ctx, tileRequest, uri, false)
 	if err != nil {
 		return nil, err
 	}
 
 	slog.DebugContext(ctx, fmt.Sprintf("Calling %v", uri))
 
-	req, err := http.NewRequestWithContext(ctx, "GET", "http://"+t.Domain+uri, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+t.Domain+uri, nil)
 	if err != nil {
 		return nil, err
 	}

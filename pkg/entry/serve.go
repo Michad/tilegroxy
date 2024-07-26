@@ -24,7 +24,7 @@ import (
 type ServeOptions struct {
 }
 
-func Serve(cfg *config.Config, opts ServeOptions, out io.Writer) error {
+func Serve(cfg *config.Config, _ ServeOptions, _ io.Writer) error {
 	layerObjects, auth, err := configToEntities(*cfg)
 	if err != nil {
 		return err

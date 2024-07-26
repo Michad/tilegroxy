@@ -40,20 +40,20 @@ var AllModes = []string{ModeStandalone, ModeCluster, ModeRing}
 
 type RedisConfig struct {
 	HostAndPort `mapstructure:",squash"` // Host and Port for a single server. A convenience equivalent to supplying Servers with a single entry
-	Db          int                      // Database number, defaults to 0
+	DB          int                      // Database number, defaults to 0
 	KeyPrefix   string                   // Prefix to keynames stored in cache
 	Username    string                   // Username to use to authenticate
 	Password    string                   // Password to use to authenticate
 	Mode        string                   // Controls operating mode. One of AllModes. Defaults to standalone
-	Ttl         uint32                   // Cache expiration in seconds. Max of 1 year. Default to 1 day
+	TTL         uint32                   // Cache expiration in seconds. Max of 1 year. Default to 1 day
 	Servers     []HostAndPort            // The list of servers to use.
 }
 
 const (
 	redisDefaultHost = "127.0.0.1"
 	redisDefaultPort = 6379
-	redisDefaultTtl  = 60 * 60 * 24
-	redisMaxTtl      = 60 * 60 * 24 * 365
+	redisDefaultTTL  = 60 * 60 * 24
+	redisMaxTTL      = 60 * 60 * 24 * 365
 )
 
 type Redis struct {
@@ -102,16 +102,16 @@ func (s RedisRegistration) Initialize(configAny any, errorMessages config.ErrorM
 		return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "config.redis.host", "config.redis.servers")
 	}
 
-	if config.Ttl == 0 {
-		config.Ttl = redisDefaultTtl
+	if config.TTL == 0 {
+		config.TTL = redisDefaultTTL
 	}
-	if config.Ttl > redisMaxTtl {
-		config.Ttl = redisMaxTtl
+	if config.TTL > redisMaxTTL {
+		config.TTL = redisMaxTTL
 	}
 
 	switch config.Mode {
 	case ModeCluster:
-		if config.Db != 0 {
+		if config.DB != 0 {
 			return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "cache.redis.db", "cache.redis.cluster")
 		}
 
@@ -142,7 +142,7 @@ func (s RedisRegistration) Initialize(configAny any, errorMessages config.ErrorM
 			Addrs:    addrMap,
 			Username: config.Username,
 			Password: config.Password,
-			DB:       config.Db,
+			DB:       config.DB,
 		})
 
 		//TODO: Open bug with go-redis about `rediser` type being private so the below isn't needlessly repeated
@@ -154,7 +154,7 @@ func (s RedisRegistration) Initialize(configAny any, errorMessages config.ErrorM
 			Addr:     config.Servers[0].Host + ":" + strconv.Itoa(int(config.Servers[0].Port)),
 			Username: config.Username,
 			Password: config.Password,
-			DB:       config.Db,
+			DB:       config.DB,
 		})
 
 		//TODO: Open bug with go-redis about `rediser` type being private so the below isn't needlessly repeated
@@ -196,7 +196,7 @@ func (c Redis) Save(t pkg.TileRequest, img *pkg.Image) error {
 		Ctx:   ctx,
 		Key:   key,
 		Value: *img,
-		TTL:   time.Duration(c.Ttl) * time.Second,
+		TTL:   time.Duration(c.TTL) * time.Second,
 	})
 
 	return err

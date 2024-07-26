@@ -23,7 +23,7 @@ import (
 )
 
 type ProxyConfig struct {
-	Url     string
+	URL     string
 	InvertY bool // Used for TMS
 }
 
@@ -47,21 +47,21 @@ func (s ProxyRegistration) Name() string {
 	return "proxy"
 }
 
-func (s ProxyRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layer.LayerGroup) (layer.Provider, error) {
+func (s ProxyRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, _ *layer.LayerGroup) (layer.Provider, error) {
 	cfg := cfgAny.(ProxyConfig)
-	if cfg.Url == "" {
+	if cfg.URL == "" {
 		return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.proxy.url", "")
 	}
 
 	return &Proxy{cfg, clientConfig}, nil
 }
 
-func (t Proxy) PreAuth(ctx *pkg.RequestContext, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
+func (t Proxy) PreAuth(_ *pkg.RequestContext, _ layer.ProviderContext) (layer.ProviderContext, error) {
 	return layer.ProviderContext{AuthBypass: true}, nil
 }
 
-func (t Proxy) GenerateTile(ctx *pkg.RequestContext, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
-	url, err := replaceUrlPlaceholders(ctx, tileRequest, t.Url, t.InvertY)
+func (t Proxy) GenerateTile(ctx *pkg.RequestContext, _ layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+	url, err := replaceURLPlaceholders(ctx, tileRequest, t.URL, t.InvertY)
 	if err != nil {
 		return nil, err
 	}

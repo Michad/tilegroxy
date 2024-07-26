@@ -56,7 +56,7 @@ func (s CustomRegistration) Name() string {
 	return "custom"
 }
 
-func (s CustomRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layer.LayerGroup) (layer.Provider, error) {
+func (s CustomRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, _ *layer.LayerGroup) (layer.Provider, error) {
 	cfg := cfgAny.(CustomConfig)
 
 	var err error

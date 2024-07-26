@@ -24,9 +24,13 @@ import (
 	"github.com/maypok86/otter"
 )
 
+const defaultMaxSize = 100
+const minMaxSize = 10
+const defaultTTL = 3600
+
 type MemoryConfig struct {
 	MaxSize uint16 // Maximum number of tiles to hold in the cache. Defaults to 100
-	Ttl     uint32 // Maximum time to live of a tile in seconds. Defaults to 3600 (1 hour)
+	TTL     uint32 // Maximum time to live of a tile in seconds. Defaults to 3600 (1 hour)
 }
 
 type Memory struct {
@@ -49,22 +53,22 @@ func (s MemoryRegistration) Name() string {
 	return "memory"
 }
 
-func (s MemoryRegistration) Initialize(configAny any, errorMessages config.ErrorMessages) (cache.Cache, error) {
+func (s MemoryRegistration) Initialize(configAny any, _ config.ErrorMessages) (cache.Cache, error) {
 	config := configAny.(MemoryConfig)
 
 	if config.MaxSize < 1 {
-		config.MaxSize = 100
+		config.MaxSize = defaultMaxSize
 	}
-	if config.MaxSize < 10 {
-		config.MaxSize = 10
+	if config.MaxSize < minMaxSize {
+		config.MaxSize = minMaxSize
 	}
 
-	if config.Ttl < 1 {
-		config.Ttl = 3600
+	if config.TTL < 1 {
+		config.TTL = defaultTTL
 	}
 
 	cache, err := otter.MustBuilder[string, pkg.Image](int(config.MaxSize)).
-		WithTTL(time.Duration(config.Ttl) * time.Second).
+		WithTTL(time.Duration(config.TTL) * time.Second).
 		Build()
 	if err != nil {
 		return nil, err

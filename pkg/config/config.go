@@ -17,6 +17,7 @@ package config
 import (
 	"bytes"
 	"log/slog"
+	"net/http"
 	"strings"
 
 	"github.com/Michad/tilegroxy/internal/images"
@@ -31,7 +32,7 @@ type EncryptionConfig struct {
 	Cache       string // The path to a directory to cache certificates in if using let's encrypt. Defaults to ./certs
 	Certificate string // The file path to get to the TLS certificate
 	KeyFile     string // The file path to get to the keyfile
-	HttpPort    int    // The port used for non-encrypted traffic. Required if using Let's Encrypt for ACME challenge and needs to indirectly be 80 (that is, it could be 8080 if something else redirects 80 to 8080). Everything except .well-known will be redirected to the main port when set.
+	HTTPPort    int    // The port used for non-encrypted traffic. Required if using Let's Encrypt for ACME challenge and needs to indirectly be 80 (that is, it could be 8080 if something else redirects 80 to 8080). Everything except .well-known will be redirected to the main port when set.
 }
 
 type ServerConfig struct {
@@ -113,7 +114,7 @@ type ErrorConfig struct {
 	Mode     string        // How errors should be returned.  See the consts above for options
 	Messages ErrorMessages // Patterns to use for error messages in logs and responses. Not used for utility commands.
 	Images   ErrorImages   // Only used if Mode is image or image+header
-	AlwaysOk bool          // If set we always return 200 regardless of what happens
+	AlwaysOK bool          // If set we always return 200 regardless of what happens
 }
 
 // Formats for outputting the access log
@@ -131,7 +132,7 @@ type AccessConfig struct {
 // Formats for outputting the main log
 const (
 	MainFormatPlain = "plain"
-	MainFormatJson  = "json"
+	MainFormatJSON  = "json"
 )
 
 const LevelTrace slog.Level = slog.LevelDebug - 5
@@ -158,7 +159,7 @@ type LogConfig struct {
 
 // Defines a layer to be served up by the application
 type LayerConfig struct {
-	Id             string            // A distinct identifier for this layer. If no pattern is defined this is used to match against the layer name. Also used
+	ID             string            // A distinct identifier for this layer. If no pattern is defined this is used to match against the layer name. Also used
 	Pattern        string            // A pattern to match against for layer names in incoming requests. Includes placeholders from which values can be extracted when matching. Not regular expressions, placeholders are simply wrapped in curly braces
 	ParamValidator map[string]string // A mapping of regular expressions to use for each value extracted from the pattern. Keys must match the placeholders in pattern. This is external from the pattern itself to keep parsing the pattern simple and less error prone. If a key of "*" is defined it applies to all placeholders
 	Provider       map[string]any    // Raw config parameters for the provider to use. Name determines the specific schema
@@ -196,7 +197,7 @@ func DefaultConfig() Config {
 			MaxLength:     1024 * 1024 * 10,
 			UnknownLength: false,
 			ContentTypes:  []string{"image/png", "image/jpg", "image/jpeg"},
-			StatusCodes:   []int{200},
+			StatusCodes:   []int{http.StatusOK},
 			Headers:       map[string]string{},
 			Timeout:       10,
 		},
@@ -237,7 +238,7 @@ func DefaultConfig() Config {
 				Provider:       images.KeyImageError,
 				Other:          images.KeyImageError,
 			},
-			AlwaysOk: false,
+			AlwaysOK: false,
 		},
 		Secret: map[string]interface{}{
 			"name": "none",

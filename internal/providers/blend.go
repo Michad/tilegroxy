@@ -36,6 +36,8 @@ import (
 	"github.com/anthonynsimon/bild/transform"
 )
 
+const maxProviders = 100
+
 // Allow you to directly reference another layer that uses a pattern with multiple concrete values for the pattern
 type BlendLayerConfig struct {
 	Pattern string
@@ -119,8 +121,8 @@ func (s BlendRegistration) Initialize(cfgAny any, clientConfig config.ClientConf
 		}
 	}
 
-	if len(providers) < 2 || len(providers) > 100 {
-		return nil, fmt.Errorf(errorMessages.RangeError, "provider.blend.providers.length", 2, 100)
+	if len(providers) < 2 || len(providers) > maxProviders {
+		return nil, fmt.Errorf(errorMessages.RangeError, "provider.blend.providers.length", 2, maxProviders)
 	}
 
 	return &Blend{cfg, providers}, nil

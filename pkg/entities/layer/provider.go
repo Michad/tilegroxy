@@ -43,7 +43,7 @@ type ProviderRegistration interface {
 	InitializeConfig() any
 }
 
-var registrations map[string]ProviderRegistration = make(map[string]ProviderRegistration)
+var registrations = make(map[string]ProviderRegistration)
 
 func RegisterProvider(reg ProviderRegistration) {
 	registrations[reg.Name()] = reg
