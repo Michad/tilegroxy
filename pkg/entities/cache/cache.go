@@ -33,7 +33,7 @@ type CacheRegistration interface {
 	InitializeConfig() any
 }
 
-var registrations map[string]CacheRegistration = make(map[string]CacheRegistration)
+var registrations = make(map[string]CacheRegistration)
 
 func RegisterCache(reg CacheRegistration) {
 	registrations[reg.Name()] = reg

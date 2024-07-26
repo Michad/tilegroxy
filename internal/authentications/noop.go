@@ -44,10 +44,10 @@ func (s NoopRegistration) Name() string {
 	return "none"
 }
 
-func (s NoopRegistration) Initialize(config any, errorMessages config.ErrorMessages) (authentication.Authentication, error) {
+func (s NoopRegistration) Initialize(config any, _ config.ErrorMessages) (authentication.Authentication, error) {
 	return &Noop{config.(NoopConfig)}, nil
 }
 
-func (c Noop) CheckAuthentication(req *http.Request, ctx *pkg.RequestContext) bool {
+func (c Noop) CheckAuthentication(_ *http.Request, _ *pkg.RequestContext) bool {
 	return true
 }

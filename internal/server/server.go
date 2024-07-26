@@ -40,7 +40,7 @@ import (
 	"github.com/gorilla/handlers"
 )
 
-func handleNoContent(w http.ResponseWriter, req *http.Request) {
+func handleNoContent(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 

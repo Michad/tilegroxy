@@ -48,7 +48,7 @@ func (s StaticKeyRegistration) Name() string {
 	return "static key"
 }
 
-func (s StaticKeyRegistration) Initialize(cfgAny any, errorMessages config.ErrorMessages) (authentication.Authentication, error) {
+func (s StaticKeyRegistration) Initialize(cfgAny any, _ config.ErrorMessages) (authentication.Authentication, error) {
 	cfg := cfgAny.(StaticKeyConfig)
 	if cfg.Key == "" {
 		keyStr := pkg.RandomString()
@@ -60,7 +60,7 @@ func (s StaticKeyRegistration) Initialize(cfgAny any, errorMessages config.Error
 	return &StaticKey{cfg}, nil
 }
 
-func (c StaticKey) CheckAuthentication(req *http.Request, ctx *pkg.RequestContext) bool {
+func (c StaticKey) CheckAuthentication(req *http.Request, _ *pkg.RequestContext) bool {
 	h := req.Header["Authorization"]
 	return len(h) > 0 && h[0] == "Bearer "+c.Key
 }

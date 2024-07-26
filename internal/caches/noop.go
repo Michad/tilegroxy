@@ -42,15 +42,15 @@ func (s NoopRegistration) Name() string {
 	return "none"
 }
 
-func (s NoopRegistration) Initialize(configAny any, errorMessages config.ErrorMessages) (cache.Cache, error) {
+func (s NoopRegistration) Initialize(configAny any, _ config.ErrorMessages) (cache.Cache, error) {
 	config := configAny.(NoopConfig)
 	return Noop{config}, nil
 }
 
-func (c Noop) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
+func (c Noop) Lookup(_ pkg.TileRequest) (*pkg.Image, error) {
 	return nil, nil
 }
 
-func (c Noop) Save(t pkg.TileRequest, img *pkg.Image) error {
+func (c Noop) Save(_ pkg.TileRequest, _ *pkg.Image) error {
 	return nil
 }

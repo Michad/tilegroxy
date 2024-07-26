@@ -187,16 +187,16 @@ func (s CustomRegistration) Initialize(cfgAny any, errorMessages config.ErrorMes
 
 	if cfg.CacheSize < 0 {
 		return &Custom{cfg, nil, nil, validationFunc}, nil
-	} else {
-		lock := keymutex.NewHashed(-1)
-
-		cache, err := otter.MustBuilder[string, ValidationResult](cfg.CacheSize).Build()
-		if err != nil {
-			return nil, err
-		}
-
-		return &Custom{cfg, &cache, lock, validationFunc}, nil
 	}
+	
+	lock := keymutex.NewHashed(-1)
+
+	cache, err := otter.MustBuilder[string, ValidationResult](cfg.CacheSize).Build()
+	if err != nil {
+		return nil, err
+	}
+
+	return &Custom{cfg, &cache, lock, validationFunc}, nil
 }
 
 func (c Custom) CheckAuthentication(req *http.Request, ctx *pkg.RequestContext) bool {

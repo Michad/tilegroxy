@@ -54,7 +54,7 @@ func configToEntities(cfg config.Config) (*layer.LayerGroup, authentication.Auth
 		return nil, nil, fmt.Errorf("error constructing auth: %w", err)
 	}
 
-	layerGroup, err := layer.ConstructLayerGroup(cfg, cfg.Layers, cache, secreter)
+	layerGroup, err := layer.ConstructLayerGroup(cfg, cache, secreter)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error constructing layers: %w", err)
 	}

@@ -36,7 +36,7 @@ Example:
 	Run: runSeed,
 }
 
-func runSeed(cmd *cobra.Command, args []string) {
+func runSeed(cmd *cobra.Command, _ []string) {
 	layerName, err1 := cmd.Flags().GetString("layer")
 	zoom, err2 := cmd.Flags().GetUintSlice("zoom")
 	minLat, err3 := cmd.Flags().GetFloat32("min-latitude")

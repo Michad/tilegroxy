@@ -28,7 +28,7 @@ var checkCmd = &cobra.Command{
 	Run:   runCheck,
 }
 
-func runCheck(cmd *cobra.Command, args []string) {
+func runCheck(cmd *cobra.Command, _ []string) {
 	echo, _ := cmd.Flags().GetBool("echo")
 	out := cmd.OutOrStdout()
 

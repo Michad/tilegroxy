@@ -29,7 +29,7 @@ type LayerGroup struct {
 	layers []*Layer
 }
 
-func ConstructLayerGroup(cfg config.Config, layers []config.LayerConfig, cache cache.Cache, secreter secret.Secreter) (*LayerGroup, error) {
+func ConstructLayerGroup(cfg config.Config, cache cache.Cache, secreter secret.Secreter) (*LayerGroup, error) {
 	var err error
 	var layerGroup LayerGroup
 	layerObjects := make([]*Layer, len(cfg.Layers))

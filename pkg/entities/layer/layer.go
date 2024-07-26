@@ -69,9 +69,9 @@ func parsePattern(pattern string) ([]layerSegment, error) {
 			seg := layerSegment{value: pattern[1:firstClosing], placeholder: true}
 			next, err := parsePattern(pattern[firstClosing+1:])
 			return prependLayerSegment(next, seg, err)
-		} else {
-			return []layerSegment{{value: pattern[1:], placeholder: true}}, errors.New("missing }")
 		}
+
+		return []layerSegment{{value: pattern[1:], placeholder: true}}, errors.New("missing }")
 	}
 
 	return []layerSegment{{value: pattern, placeholder: false}}, nil

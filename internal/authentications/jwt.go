@@ -95,14 +95,14 @@ func (s JWTRegistration) Initialize(configAny any, errorMessages config.ErrorMes
 
 	if config.CacheSize == 0 {
 		return &JWT{config, nil, errorMessages}, nil
-	} else {
-		cache, err := otter.MustBuilder[string, jwt.NumericDate](int(config.CacheSize)).Build()
-		if err != nil {
-			return nil, err
-		}
-
-		return &JWT{config, &cache, errorMessages}, nil
 	}
+
+	cache, err := otter.MustBuilder[string, jwt.NumericDate](int(config.CacheSize)).Build()
+	if err != nil {
+		return nil, err
+	}
+
+	return &JWT{config, &cache, errorMessages}, nil
 }
 
 func (c JWT) CheckAuthentication(req *http.Request, ctx *pkg.RequestContext) bool {
@@ -116,11 +116,7 @@ func (c JWT) CheckAuthentication(req *http.Request, ctx *pkg.RequestContext) boo
 
 		if ok {
 			slog.DebugContext(ctx, "JWT Cache hit")
-			if date.After(time.Now()) {
-				return true
-			} else {
-				return false
-			}
+			return date.After(time.Now())
 		}
 	}
 
@@ -220,7 +216,7 @@ func (c JWT) checkAuthenticationWithoutCache(tokenStr string, ctx *pkg.RequestCo
 	return exp, true
 }
 
-func (c JWT) parseKey(t *jwt.Token) (interface{}, error) {
+func (c JWT) parseKey(_ *jwt.Token) (interface{}, error) {
 	if strings.Index(c.Algorithm, "HS") == 0 {
 		return []byte(c.Key), nil
 	}
@@ -306,16 +302,16 @@ func (c JWT) validateGeohash(rawClaim jwt.MapClaims, ctx *pkg.RequestContext) bo
 	if !ok {
 		slog.InfoContext(ctx, "Request contains invalid geohash type")
 		return false
-	} else {
-		bounds, err := pkg.NewBoundsFromGeohash(hashStr)
-
-		if err != nil {
-			slog.InfoContext(ctx, "Request contains invalid geohash "+hashStr)
-			return false
-		}
-
-		ctx.AllowedArea = bounds
 	}
+
+	bounds, err := pkg.NewBoundsFromGeohash(hashStr)
+
+	if err != nil {
+		slog.InfoContext(ctx, "Request contains invalid geohash "+hashStr)
+		return false
+	}
+
+	ctx.AllowedArea = bounds
 
 	return true
 }

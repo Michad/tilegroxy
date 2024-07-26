@@ -37,7 +37,7 @@ Example:
 	Run: runTest,
 }
 
-func runTest(cmd *cobra.Command, args []string) {
+func runTest(cmd *cobra.Command, _ []string) {
 	layerNames, err1 := cmd.Flags().GetStringSlice("layer")
 	z, err2 := cmd.Flags().GetUint("z-coordinate")
 	x, err3 := cmd.Flags().GetUint("y-coordinate")

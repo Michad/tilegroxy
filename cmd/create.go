@@ -38,7 +38,7 @@ Example:
 	Run: runCreate,
 }
 
-func runCreate(cmd *cobra.Command, args []string) {
+func runCreate(cmd *cobra.Command, _ []string) {
 	var err error
 
 	includeDefault, _ := cmd.Flags().GetBool("default")

@@ -78,7 +78,7 @@ func (e ProviderAuthError) Type() TypeOfError {
 	return TypeOfErrorProvider
 }
 
-func (e ProviderAuthError) External(messages config.ErrorMessages) string {
+func (e ProviderAuthError) External(_ config.ErrorMessages) string {
 	// notest
 	return e.Error()
 }

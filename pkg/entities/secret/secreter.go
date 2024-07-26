@@ -32,7 +32,7 @@ type SecreterRegistration interface {
 	InitializeConfig() any
 }
 
-var registrations map[string]SecreterRegistration = make(map[string]SecreterRegistration)
+var registrations = make(map[string]SecreterRegistration)
 
 func RegisterSecreter(reg SecreterRegistration) {
 	registrations[reg.Name()] = reg
