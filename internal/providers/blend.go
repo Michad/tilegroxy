@@ -17,6 +17,7 @@ package providers
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"image"
@@ -128,7 +129,7 @@ func (s BlendRegistration) Initialize(cfgAny any, clientConfig config.ClientConf
 	return &Blend{cfg, providers}, nil
 }
 
-func (t Blend) PreAuth(ctx *pkg.RequestContext, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
+func (t Blend) PreAuth(ctx context.Context, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
 	if providerContext.Other == nil {
 		providerContext.Other = map[string]interface{}{}
 	}
@@ -181,7 +182,7 @@ func (t Blend) PreAuth(ctx *pkg.RequestContext, providerContext layer.ProviderCo
 	return providerContext, errors.Join(errSlice...)
 }
 
-func (t Blend) GenerateTile(ctx *pkg.RequestContext, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t Blend) GenerateTile(ctx context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	slog.DebugContext(ctx, fmt.Sprintf("Blending together %v providers", len(t.providers)))
 
 	wg := sync.WaitGroup{}
@@ -242,7 +243,7 @@ func (t Blend) GenerateTile(ctx *pkg.RequestContext, providerContext layer.Provi
 	return &output, err
 }
 
-func (t Blend) blendImage(img image.Image, size image.Point, ctx *pkg.RequestContext, combinedImg image.Image) image.Image {
+func (t Blend) blendImage(img image.Image, size image.Point, ctx context.Context, combinedImg image.Image) image.Image {
 	if img.Bounds().Max != size {
 		slog.DebugContext(ctx, fmt.Sprintf("Resizing from %v to %v", img.Bounds().Max, size))
 		img = transform.Resize(img, size.X, size.Y, transform.NearestNeighbor)
@@ -291,7 +292,7 @@ func (t Blend) blendImage(img image.Image, size image.Point, ctx *pkg.RequestCon
 	return combinedImg
 }
 
-func callProvider(ctx *pkg.RequestContext, providerContext layer.ProviderContext, tileRequest pkg.TileRequest, provider layer.Provider, i int, imgs chan indexedImg, errs chan error, wg *sync.WaitGroup) {
+func callProvider(ctx context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest, provider layer.Provider, i int, imgs chan indexedImg, errs chan error, wg *sync.WaitGroup) {
 	defer func() {
 		if r := recover(); r != nil {
 			errs <- fmt.Errorf("unexpected blend error %v", r)

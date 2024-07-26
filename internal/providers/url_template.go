@@ -15,6 +15,7 @@
 package providers
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -33,7 +34,7 @@ type URLTemplate struct {
 	clientConfig config.ClientConfig
 }
 
-func (t URLTemplate) PreAuth(_ *pkg.RequestContext, _ layer.ProviderContext) (layer.ProviderContext, error) {
+func (t URLTemplate) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.ProviderContext, error) {
 	return layer.ProviderContext{AuthBypass: true}, nil
 }
 
@@ -61,7 +62,7 @@ func (s URLTemplateRegistration) Initialize(cfgAny any, clientConfig config.Clie
 	return &URLTemplate{cfg, clientConfig}, nil
 }
 
-func (t URLTemplate) GenerateTile(ctx *pkg.RequestContext, _ layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t URLTemplate) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	b, err := tileRequest.GetBounds()
 
 	if err != nil {

@@ -23,9 +23,9 @@ Example custom providers can be found within [examples/providers](../examples/pr
 Custom providers must be within the `custom` package and must import the `tilegroxy/tilegroxy` package for mandatory datatypes. There are two mandatory functions:
 
 ```go
-func preAuth(*pkg.RequestContext, tilegroxy.ProviderContext, map[string]interface{}, tilegroxy.ClientConfig, tilegroxy.ErrorMessages) (tilegroxy.ProviderContext, error)
+func preAuth(tilegroxy.Context, tilegroxy.ProviderContext, map[string]interface{}, tilegroxy.ClientConfig, tilegroxy.ErrorMessages) (tilegroxy.ProviderContext, error)
 
-func generateTile(*pkg.RequestContext, tilegroxy.ProviderContext, tilegroxy.TileRequest, map[string]interface{}, tilegroxy.ClientConfig,tilegroxy.ErrorMessages) (*tilegroxy.Image, error)
+func generateTile(tilegroxy.Context, tilegroxy.ProviderContext, tilegroxy.TileRequest, map[string]interface{}, tilegroxy.ClientConfig,tilegroxy.ErrorMessages) (*tilegroxy.Image, error)
 ```
 
 The `preAuth` function is responsible for authenticating outgoing requests and returning a token or whatever else is needed. It is called when needed by the application when either `expiration` is reached or an `AuthError` is returned by `generateTile`. A given instance of tilegroxy will only call this method once at a time and then shares the result among threads. However, ProviderContext is not shared between instances of tilegroxy. 
@@ -36,7 +36,7 @@ The following types are available for custom providers:
 
 | Type | Description |
 | --- | --- |
-| [RequestContext](../pkg/request_context.go) | Contains contextual information specific to the incoming request. Can retrieve headers via the Value method and authz information if configured properly. Do note there won't be a request when seed and test commands are run, this context will be a "Background Context" at those times |
+| [Context](../pkg/request_context.go) | A context.Context with special values applied. Contains contextual information specific to the incoming request. Can retrieve headers via the Value method and authz information if configured properly. Do note there won't be a request when seed and test commands are run, this context will be a "Background Context" at those times |
 | [ProviderContext](../pkg/entities/layer/provider.go) | A struct for on the fly, provider-specific information. It is primarily used to facilitate authentication. Includes an Expiration field to inform the application when to re-auth via the preAuth method (this should occur before auth actually expires). Also includes an auth token field, a auth Bypass field (for un-authed usecases), and a map |
 | [TileRequest](../pkg/tile_request.go) | The parameters from the user indicating the layer being requested as well as the specific tile coordinate |
 | [ClientConfig](../pkg/config/config.go) | A struct from the configuration which indicates settings such as static headers and timeouts. See `Client` in [Configuration documentation](./configuration.md) for details |
@@ -106,11 +106,11 @@ func (s FailRegistration) Initialize(cfgAny any, clientConfig config.ClientConfi
 	return &Fail{config}, nil
 }
 
-func (t Fail) PreAuth(ctx *pkg.RequestContext, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
+func (t Fail) PreAuth(ctx *context.Context, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
 	return providerContext, nil
 }
 
-func (t Fail) GenerateTile(ctx *pkg.RequestContext, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t Fail) GenerateTile(ctx *context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	return nil, errors.New("TODO")
 }
 ```

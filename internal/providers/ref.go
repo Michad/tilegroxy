@@ -15,6 +15,8 @@
 package providers
 
 import (
+	"context"
+
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
@@ -51,12 +53,15 @@ func (s RefRegistration) Initialize(cfgAny any, _ config.ClientConfig, _ config.
 	return &Ref{cfg, layerGroup}, nil
 }
 
-func (t Ref) PreAuth(_ *pkg.RequestContext, _ layer.ProviderContext) (layer.ProviderContext, error) {
+func (t Ref) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.ProviderContext, error) {
 	return layer.ProviderContext{AuthBypass: true}, nil
 }
 
-func (t Ref) GenerateTile(ctx *pkg.RequestContext, _ layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t Ref) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	newRequest := pkg.TileRequest{LayerName: t.Layer, Z: tileRequest.Z, X: tileRequest.X, Y: tileRequest.Y}
-	newCtx := *ctx
-	return t.layerGroup.RenderTile(&newCtx, newRequest)
+
+	req, _ := pkg.ReqFromContext(ctx)
+	newCtx := pkg.NewRequestContext(req)
+
+	return t.layerGroup.RenderTile(newCtx, newRequest)
 }

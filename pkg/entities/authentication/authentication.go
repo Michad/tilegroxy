@@ -15,16 +15,16 @@
 package authentication
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
-	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/mitchellh/mapstructure"
 )
 
 type Authentication interface {
-	CheckAuthentication(req *http.Request, ctx *pkg.RequestContext) bool
+	CheckAuthentication(req *http.Request, ctx context.Context) bool
 }
 
 type AuthenticationRegistration interface {

@@ -15,6 +15,7 @@
 package authentications
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -76,7 +77,7 @@ func (v ValidationResult) isGood() bool {
 	return true
 }
 
-func extractToken(req *http.Request, ctx *pkg.RequestContext, tokenExtract map[string]string) (string, bool) {
+func extractToken(req *http.Request, ctx context.Context, tokenExtract map[string]string) (string, bool) {
 	h, hOk := tokenExtract[ExtractModeHeader]
 	c, cOk := tokenExtract[ExtractModeCookie]
 	q, qOk := tokenExtract[ExtractModeQuery]
@@ -199,7 +200,7 @@ func (s CustomRegistration) Initialize(cfgAny any, errorMessages config.ErrorMes
 	return &Custom{cfg, &cache, lock, validationFunc}, nil
 }
 
-func (c Custom) CheckAuthentication(req *http.Request, ctx *pkg.RequestContext) bool {
+func (c Custom) CheckAuthentication(req *http.Request, ctx context.Context) bool {
 	slog.Log(ctx, config.LevelTrace, "Performing custom auth check")
 	tok, ok := extractToken(req, ctx, c.Token)
 	if ok {
@@ -231,11 +232,15 @@ func (c Custom) CheckAuthentication(req *http.Request, ctx *pkg.RequestContext) 
 		}
 
 		if valResult.isGood() {
-			ctx.UserIdentifier = valResult.uid
+			uid, _ := pkg.UserIDFromContext(ctx)
+			*uid = valResult.uid
 
 			if len(valResult.layers) > 0 {
-				ctx.LimitLayers = true
-				ctx.AllowedLayers = valResult.layers
+				limitLayers, _ := pkg.LimitLayersFromContext(ctx)
+				*limitLayers = true
+
+				allowedLayers, _ := pkg.AllowedLayersFromContext(ctx)
+				*allowedLayers = valResult.layers
 			}
 			slog.Log(ctx, config.LevelTrace, "Custom auth passed", "result", valResult)
 

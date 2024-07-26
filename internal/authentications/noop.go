@@ -15,9 +15,9 @@
 package authentications
 
 import (
+	"context"
 	"net/http"
 
-	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 )
@@ -48,6 +48,6 @@ func (s NoopRegistration) Initialize(config any, _ config.ErrorMessages) (authen
 	return &Noop{config.(NoopConfig)}, nil
 }
 
-func (c Noop) CheckAuthentication(_ *http.Request, _ *pkg.RequestContext) bool {
+func (c Noop) CheckAuthentication(_ *http.Request, _ context.Context) bool {
 	return true
 }

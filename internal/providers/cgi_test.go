@@ -60,8 +60,9 @@ func Test_CGI_Mapserv(t *testing.T) {
 	assert.NotNil(t, cgi)
 
 	ctx := pkg.BackgroundContext()
-	ctx.LayerPatternMatches["file"] = "states"
-	ctx.LayerPatternMatches["layer"] = "all"
+	ctxLayerPatternMatches, _ := pkg.LayerPatternMatchesFromContext(ctx)
+	(*ctxLayerPatternMatches)["file"] = "states"
+	(*ctxLayerPatternMatches)["layer"] = "all"
 
 	pc, err := cgi.PreAuth(ctx, layer.ProviderContext{})
 	require.NoError(t, err)
@@ -86,8 +87,9 @@ func Test_CGI_InvalidMapserv(t *testing.T) {
 	assert.NotNil(t, cgi)
 
 	ctx := pkg.BackgroundContext()
-	ctx.LayerPatternMatches["file"] = "fstates"
-	ctx.LayerPatternMatches["layer"] = "all"
+	ctxLayerPatternMatches, _ := pkg.LayerPatternMatchesFromContext(ctx)
+	(*ctxLayerPatternMatches)["file"] = "fstates"
+	(*ctxLayerPatternMatches)["layer"] = "all"
 
 	pc, err := cgi.PreAuth(ctx, layer.ProviderContext{})
 	require.NoError(t, err)

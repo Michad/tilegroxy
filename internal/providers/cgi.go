@@ -16,6 +16,7 @@ package providers
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -49,7 +50,7 @@ type CGI struct {
 }
 
 type SLogWriter struct {
-	ctx   *pkg.RequestContext
+	ctx   context.Context
 	level slog.Level
 }
 
@@ -136,11 +137,11 @@ func (s CGIRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig
 	return &CGI{cfg, h, clientConfig}, nil
 }
 
-func (t CGI) PreAuth(_ *pkg.RequestContext, _ layer.ProviderContext) (layer.ProviderContext, error) {
+func (t CGI) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.ProviderContext, error) {
 	return layer.ProviderContext{AuthBypass: true}, nil
 }
 
-func (t CGI) GenerateTile(ctx *pkg.RequestContext, _ layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t CGI) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	var err error
 
 	h := t.handler

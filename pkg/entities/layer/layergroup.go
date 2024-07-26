@@ -15,6 +15,7 @@
 package layer
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -48,7 +49,7 @@ func ConstructLayerGroup(cfg config.Config, cache cache.Cache, secreter secret.S
 	return &layerGroup, nil
 }
 
-func (lg LayerGroup) FindLayer(ctx *pkg.RequestContext, layerName string) *Layer {
+func (lg LayerGroup) FindLayer(ctx context.Context, layerName string) *Layer {
 	for _, l := range lg.layers {
 		if l.MatchesName(ctx, layerName) {
 			return l
@@ -66,7 +67,7 @@ func (lg LayerGroup) ListLayerIDs() []string {
 	return r
 }
 
-func (lg LayerGroup) RenderTile(ctx *pkg.RequestContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (lg LayerGroup) RenderTile(ctx context.Context, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	var img *pkg.Image
 	var err error
 
@@ -102,7 +103,9 @@ func (lg LayerGroup) RenderTile(ctx *pkg.RequestContext, tileRequest pkg.TileReq
 		return nil, err
 	}
 
-	if !ctx.SkipCacheSave {
+	ctxSkipCacheSave, _ := pkg.SkipCacheSaveFromContext(ctx)
+
+	if !*ctxSkipCacheSave {
 		err = l.Cache.Save(tileRequest, img)
 
 		if err != nil {
@@ -113,23 +116,27 @@ func (lg LayerGroup) RenderTile(ctx *pkg.RequestContext, tileRequest pkg.TileReq
 	return img, nil
 }
 
-func (LayerGroup) checkPermission(ctx *pkg.RequestContext, l *Layer, tileRequest pkg.TileRequest) error {
-	if ctx.LimitLayers {
-		if !slices.Contains(ctx.AllowedLayers, l.ID) {
+func (LayerGroup) checkPermission(ctx context.Context, l *Layer, tileRequest pkg.TileRequest) error {
+	ctxLimitLayers, _ := pkg.LimitLayersFromContext(ctx)
+	ctxAllowedLayers, _ := pkg.AllowedLayersFromContext(ctx)
+	ctxAllowedArea, _ := pkg.AllowedAreaFromContext(ctx)
+
+	if *ctxLimitLayers {
+		if !slices.Contains(*ctxAllowedLayers, l.ID) {
 			return pkg.UnauthorizedError{Message: "Denying access to non-allowed layer"}
 		}
 	}
 
-	if !ctx.AllowedArea.IsNullIsland() {
+	if !ctxAllowedArea.IsNullIsland() {
 		bounds, err := tileRequest.GetBounds()
-		if err != nil || !ctx.AllowedArea.Contains(*bounds) {
+		if err != nil || !ctxAllowedArea.Contains(*bounds) {
 			return pkg.UnauthorizedError{Message: "Denying access to non-allowed area"}
 		}
 	}
 	return nil
 }
 
-func (lg *LayerGroup) RenderTileNoCache(ctx *pkg.RequestContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (lg *LayerGroup) RenderTileNoCache(ctx context.Context, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	var err error
 
 	l := lg.FindLayer(ctx, tileRequest.LayerName)

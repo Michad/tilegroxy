@@ -15,6 +15,7 @@
 package authentications
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -105,7 +106,7 @@ func (s JWTRegistration) Initialize(configAny any, errorMessages config.ErrorMes
 	return &JWT{config, &cache, errorMessages}, nil
 }
 
-func (c JWT) CheckAuthentication(req *http.Request, ctx *pkg.RequestContext) bool {
+func (c JWT) CheckAuthentication(req *http.Request, ctx context.Context) bool {
 	tokenStr, ok := c.extractToken(req)
 	if !ok {
 		return false
@@ -151,7 +152,7 @@ func (c JWT) extractToken(req *http.Request) (string, bool) {
 	return tokenStr, true
 }
 
-func (c JWT) checkAuthenticationWithoutCache(tokenStr string, ctx *pkg.RequestContext) (*jwt.NumericDate, bool) {
+func (c JWT) checkAuthenticationWithoutCache(tokenStr string, ctx context.Context) (*jwt.NumericDate, bool) {
 	parserOptions := make([]jwt.ParserOption, 0)
 	parserOptions = append(parserOptions, jwt.WithLeeway(defaultLeeway))
 	parserOptions = append(parserOptions, jwt.WithExpirationRequired())
@@ -190,7 +191,8 @@ func (c JWT) checkAuthenticationWithoutCache(tokenStr string, ctx *pkg.RequestCo
 	}
 
 	if c.LayerScope {
-		ctx.LimitLayers = true
+		ctxLimitLayers, _ := pkg.LimitLayersFromContext(ctx)
+		*ctxLimitLayers = true
 	}
 
 	rawClaim, ok := tokenJwt.Claims.(jwt.MapClaims)
@@ -208,7 +210,8 @@ func (c JWT) checkAuthenticationWithoutCache(tokenStr string, ctx *pkg.RequestCo
 
 		rawUID := rawClaim[c.UserID]
 		if rawUID != nil {
-			ctx.UserIdentifier, _ = rawUID.(string)
+			ctxUserID, _ := pkg.UserIDFromContext(ctx)
+			*ctxUserID, _ = rawUID.(string)
 		}
 	} else {
 		return logInvalidClaimsType(tokenJwt, ctx)
@@ -236,7 +239,7 @@ func (c JWT) parseKey(_ *jwt.Token) (interface{}, error) {
 	return nil, fmt.Errorf(c.errorMessages.InvalidParam, "jwt.alg", c.Algorithm)
 }
 
-func logInvalidClaimsType(tokenJwt *jwt.Token, ctx *pkg.RequestContext) (*jwt.NumericDate, bool) {
+func logInvalidClaimsType(tokenJwt *jwt.Token, ctx context.Context) (*jwt.NumericDate, bool) {
 	// notest
 
 	var debugType string
@@ -251,7 +254,7 @@ func logInvalidClaimsType(tokenJwt *jwt.Token, ctx *pkg.RequestContext) (*jwt.Nu
 	return nil, false
 }
 
-func (c JWT) validateScope(rawClaim jwt.MapClaims, ctx *pkg.RequestContext) bool {
+func (c JWT) validateScope(rawClaim jwt.MapClaims, ctx context.Context) bool {
 	scope := rawClaim["scope"]
 	scopeStr, ok := scope.(string)
 
@@ -279,9 +282,10 @@ func (c JWT) validateScope(rawClaim jwt.MapClaims, ctx *pkg.RequestContext) bool
 		}
 
 		if c.LayerScope {
+			ctxAllowedLayers, _ := pkg.AllowedLayersFromContext(ctx)
 			for _, scope := range scopeSplit {
 				if c.ScopePrefix == "" || strings.Index(scope, c.ScopePrefix) == 0 {
-					ctx.AllowedLayers = append(ctx.AllowedLayers, scope[len(c.ScopePrefix):])
+					*ctxAllowedLayers = append(*ctxAllowedLayers, scope[len(c.ScopePrefix):])
 				}
 			}
 		}
@@ -290,7 +294,7 @@ func (c JWT) validateScope(rawClaim jwt.MapClaims, ctx *pkg.RequestContext) bool
 	return true
 }
 
-func (c JWT) validateGeohash(rawClaim jwt.MapClaims, ctx *pkg.RequestContext) bool {
+func (c JWT) validateGeohash(rawClaim jwt.MapClaims, ctx context.Context) bool {
 	hash := rawClaim["geohash"]
 
 	if hash == nil {
@@ -311,7 +315,8 @@ func (c JWT) validateGeohash(rawClaim jwt.MapClaims, ctx *pkg.RequestContext) bo
 		return false
 	}
 
-	ctx.AllowedArea = bounds
+	ctxAllowedArea, _ := pkg.AllowedAreaFromContext(ctx)
+	*ctxAllowedArea = bounds
 
 	return true
 }

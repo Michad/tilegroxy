@@ -84,7 +84,7 @@ func errorVars(cfg *config.ErrorConfig, errorType pkg.TypeOfError) (int, slog.Le
 	return status, level, imgPath
 }
 
-func writeError(ctx *pkg.RequestContext, w http.ResponseWriter, cfg *config.ErrorConfig, err error) {
+func writeError(ctx context.Context, w http.ResponseWriter, cfg *config.ErrorConfig, err error) {
 	var te pkg.TypedError
 	if errors.As(err, &te) {
 		writeErrorMessage(ctx, w, cfg, te.Type(), te.Error(), te.External(cfg.Messages), debug.Stack())
@@ -93,7 +93,7 @@ func writeError(ctx *pkg.RequestContext, w http.ResponseWriter, cfg *config.Erro
 	}
 }
 
-func writeErrorMessage(ctx *pkg.RequestContext, w http.ResponseWriter, cfg *config.ErrorConfig, errorType pkg.TypeOfError, internalMessage string, externalMessage string, stack []byte) {
+func writeErrorMessage(ctx context.Context, w http.ResponseWriter, cfg *config.ErrorConfig, errorType pkg.TypeOfError, internalMessage string, externalMessage string, stack []byte) {
 	status, level, imgPath := errorVars(cfg, errorType)
 
 	slog.Log(ctx, level, internalMessage, "stack", string(stack))
@@ -265,14 +265,14 @@ type httpContextHandler struct {
 }
 
 func (h httpContextHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	reqC := pkg.NewRequestContext(req)
+	reqContext := pkg.NewRequestContext(req)
 	defer func() {
 		if err := recover(); err != nil {
-			writeErrorMessage(&reqC, w, &h.errCfg, pkg.TypeOfErrorOther, fmt.Sprint(err), "Unexpected Internal Server Error", debug.Stack())
+			writeErrorMessage(reqContext, w, &h.errCfg, pkg.TypeOfErrorOther, fmt.Sprint(err), "Unexpected Internal Server Error", debug.Stack())
 		}
 	}()
 
-	h.Handler.ServeHTTP(w, req.WithContext(&reqC))
+	h.Handler.ServeHTTP(w, req.WithContext(reqContext))
 }
 
 type httpRedirectHandler struct {

@@ -15,6 +15,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -23,10 +24,21 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/static"
 
+	"go.opentelemetry.io/contrib/bridges/otelslog"
+	"go.opentelemetry.io/otel"
+
 	_ "github.com/Michad/tilegroxy/internal/authentications"
 	_ "github.com/Michad/tilegroxy/internal/caches"
 	_ "github.com/Michad/tilegroxy/internal/providers"
 	_ "github.com/Michad/tilegroxy/internal/secrets"
+)
+
+const name = "github.com/michad/tilegroxy"
+
+var (
+	tracer = otel.Tracer(name)
+	meter  = otel.Meter(name)
+	logger = otelslog.NewLogger(name)
 )
 
 type tileHandler struct {
@@ -34,7 +46,13 @@ type tileHandler struct {
 }
 
 func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	ctx := req.Context().(*pkg.RequestContext)
+	ctx := req.Context().(context.Context)
+
+	ctx2, span := tracer.Start(ctx, "tile")
+	defer span.End()
+
+	ctx = ctx2.(context.Context)
+
 	slog.DebugContext(ctx, "server: tile handler started")
 	defer slog.DebugContext(ctx, "server: tile handler ended")
 

@@ -17,6 +17,7 @@ package providers
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"image"
 	"image/color"
@@ -108,11 +109,11 @@ func (s TransformRegistration) Initialize(cfgAny any, clientConfig config.Client
 	return &Transform{cfg, provider, transformFunc}, nil
 }
 
-func (t Transform) PreAuth(ctx *pkg.RequestContext, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
+func (t Transform) PreAuth(ctx context.Context, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
 	return t.provider.PreAuth(ctx, providerContext)
 }
 
-func (t Transform) transform(ctx *pkg.RequestContext, col color.Color) color.Color {
+func (t Transform) transform(ctx context.Context, col color.Color) color.Color {
 	r1, g1, b1, a1 := col.RGBA()
 	r1b := uint8(r1)
 	g1b := uint8(g1)
@@ -128,7 +129,7 @@ func (t Transform) transform(ctx *pkg.RequestContext, col color.Color) color.Col
 	return result
 }
 
-func (t Transform) GenerateTile(ctx *pkg.RequestContext, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t Transform) GenerateTile(ctx context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	img, err := t.provider.GenerateTile(ctx, providerContext, tileRequest)
 
 	if err != nil {

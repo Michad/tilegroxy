@@ -180,13 +180,16 @@ func TestGoodJwtScopeLimit(t *testing.T) {
 	req.Header["Authorization"] = []string{"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdWJqZWN0IiwiYXVkIjoiYXVkaWVuY2UiLCJpc3MiOiJpc3N1ZXIiLCJzY29wZSI6InRpbGUvdGVzdCIsIm5hbWUiOiJKb2huIERvZSIsImlhdCI6MTUxNjIzOTAyMiwiZXhwIjo0Mjk0OTY3Mjk1fQ.j_-4ERnaVdkscbfjMKavieAtVH7GhZIBr5kwnKNHEAI"} // Valid JWT with scope=tile/test
 	assert.True(t, jwt.CheckAuthentication(req, ctx))
 
-	assert.True(t, ctx.LimitLayers)
+	ctxLimitLayers, _ := pkg.LimitLayersFromContext(ctx)
+	ctxAllowedLayers, _ := pkg.AllowedLayersFromContext(ctx)
+	ctxUserID, _ := pkg.UserIDFromContext(ctx)
+	assert.True(t, *ctxLimitLayers)
 
-	if assert.Len(t, ctx.AllowedLayers, 1) {
-		assert.Equal(t, "test", ctx.AllowedLayers[0])
+	if assert.Len(t, *ctxAllowedLayers, 1) {
+		assert.Equal(t, "test", (*ctxAllowedLayers)[0])
 	}
 
-	assert.Equal(t, "John Doe", ctx.UserIdentifier)
+	assert.Equal(t, "John Doe", *ctxUserID)
 }
 
 func TestBadJwtClaims(t *testing.T) {
@@ -351,5 +354,6 @@ vxNWUY5rv006ZwPuWVEhno8CAwEAAQ==
 
 	ctx := pkg.BackgroundContext()
 	assert.True(t, jwt.CheckAuthentication(req, ctx))
-	assert.False(t, ctx.AllowedArea.IsNullIsland())
+	ctxAllowedArea, _ := pkg.AllowedAreaFromContext(ctx)
+	assert.False(t, ctxAllowedArea.IsNullIsland())
 }

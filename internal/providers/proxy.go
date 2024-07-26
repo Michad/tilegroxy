@@ -15,6 +15,7 @@
 package providers
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -56,11 +57,11 @@ func (s ProxyRegistration) Initialize(cfgAny any, clientConfig config.ClientConf
 	return &Proxy{cfg, clientConfig}, nil
 }
 
-func (t Proxy) PreAuth(_ *pkg.RequestContext, _ layer.ProviderContext) (layer.ProviderContext, error) {
+func (t Proxy) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.ProviderContext, error) {
 	return layer.ProviderContext{AuthBypass: true}, nil
 }
 
-func (t Proxy) GenerateTile(ctx *pkg.RequestContext, _ layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t Proxy) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	url, err := replaceURLPlaceholders(ctx, tileRequest, t.URL, t.InvertY)
 	if err != nil {
 		return nil, err

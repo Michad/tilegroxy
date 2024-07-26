@@ -15,6 +15,7 @@
 package layer
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"regexp"
@@ -212,7 +213,7 @@ func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.Cli
 	return &Layer{rawConfig.ID, segments, validator, rawConfig, provider, nil, errorMessages, ProviderContext{}, sync.Mutex{}}, nil
 }
 
-func (l *Layer) authWithProvider(ctx *pkg.RequestContext) error {
+func (l *Layer) authWithProvider(ctx context.Context) error {
 	var err error
 
 	if !l.providerContext.AuthBypass {
@@ -226,12 +227,12 @@ func (l *Layer) authWithProvider(ctx *pkg.RequestContext) error {
 	return err
 }
 
-func (l *Layer) MatchesName(ctx *pkg.RequestContext, layerName string) bool {
+func (l *Layer) MatchesName(ctx context.Context, layerName string) bool {
 
 	if doesMatch, matches := match(l.Pattern, layerName); doesMatch {
 		if validateParamMatches(matches, l.ParamValidator) {
-
-			ctx.LayerPatternMatches = matches
+			layerPatternMatches, _ := pkg.LayerPatternMatchesFromContext(ctx)
+			*layerPatternMatches = matches
 			return true
 		}
 	}
@@ -239,7 +240,7 @@ func (l *Layer) MatchesName(ctx *pkg.RequestContext, layerName string) bool {
 	return false
 }
 
-func (l *Layer) RenderTileNoCache(ctx *pkg.RequestContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (l *Layer) RenderTileNoCache(ctx context.Context, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	var img *pkg.Image
 	var err error
 
