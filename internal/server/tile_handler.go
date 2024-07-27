@@ -15,7 +15,6 @@
 package server
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -26,6 +25,7 @@ import (
 
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 
 	_ "github.com/Michad/tilegroxy/internal/authentications"
 	_ "github.com/Michad/tilegroxy/internal/caches"
@@ -36,9 +36,10 @@ import (
 const name = "github.com/michad/tilegroxy"
 
 var (
-	tracer = otel.Tracer(name)
-	meter  = otel.Meter(name)
-	logger = otelslog.NewLogger(name)
+	tracer         = otel.Tracer(name)
+	meter          = otel.Meter(name)
+	logger         = otelslog.NewLogger(name)
+	tileCounter, _ = meter.Int64Counter("tiles", metric.WithUnit("requests"), metric.WithDescription("Number of total tile requests "))
 )
 
 type tileHandler struct {
@@ -46,12 +47,8 @@ type tileHandler struct {
 }
 
 func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	ctx := req.Context().(context.Context)
-
-	ctx2, span := tracer.Start(ctx, "tile")
+	ctx, span := tracer.Start(req.Context(), "tile")
 	defer span.End()
-
-	ctx = ctx2.(context.Context)
 
 	slog.DebugContext(ctx, "server: tile handler started")
 	defer slog.DebugContext(ctx, "server: tile handler ended")
@@ -124,4 +121,6 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		slog.WarnContext(ctx, fmt.Sprintf("Unable to write to request due to %v", err))
 	}
+
+	tileCounter.Add(ctx, 1)
 }

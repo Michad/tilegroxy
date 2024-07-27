@@ -7,28 +7,27 @@ import (
 
 	"go.opentelemetry.io/otel"
 
-	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
-	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
-	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	// "go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
+	// "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
+	// "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 
-	// "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
-	// "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
-	// "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
-// setupOTelSDK bootstraps the OpenTelemetry pipeline.
-// If it does not return an error, make sure to call shutdown for proper cleanup.
+const serviceName = "tilegroxy"
+
 func setupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, err error) {
 	var shutdownFuncs []func(context.Context) error
 
-	// shutdown calls cleanup functions registered via shutdownFuncs.
-	// The errors from the calls are joined.
-	// Each registered cleanup will be invoked once.
 	shutdown = func(ctx context.Context) error {
 		var err error
 		for _, fn := range shutdownFuncs {
@@ -38,16 +37,13 @@ func setupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, er
 		return err
 	}
 
-	// handleErr calls shutdown for cleanup and makes sure that all errors are returned.
 	handleErr := func(inErr error) {
 		err = errors.Join(inErr, shutdown(ctx))
 	}
 
-	// Set up propagator.
 	prop := newPropagator()
 	otel.SetTextMapPropagator(prop)
 
-	// Set up trace provider.
 	tracerProvider, err := newTraceProvider()
 	if err != nil {
 		handleErr(err)
@@ -56,7 +52,6 @@ func setupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, er
 	shutdownFuncs = append(shutdownFuncs, tracerProvider.Shutdown)
 	otel.SetTracerProvider(tracerProvider)
 
-	// Set up meter provider.
 	meterProvider, err := newMeterProvider()
 	if err != nil {
 		handleErr(err)
@@ -65,7 +60,6 @@ func setupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, er
 	shutdownFuncs = append(shutdownFuncs, meterProvider.Shutdown)
 	otel.SetMeterProvider(meterProvider)
 
-	// Set up logger provider.
 	loggerProvider, err := newLoggerProvider()
 	if err != nil {
 		handleErr(err)
@@ -85,44 +79,68 @@ func newPropagator() propagation.TextMapPropagator {
 }
 
 func newTraceProvider() (*trace.TracerProvider, error) {
-	// traceExporter, err := otlptracehttp.New(context.Background())
-	traceExporter, err := stdouttrace.New(
-		stdouttrace.WithPrettyPrint())
+	ctx := context.Background()
+	traceExporter, err := otlptracehttp.New(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	traceRes, err := resource.New(ctx,
+		resource.WithAttributes(semconv.ServiceNamespaceKey.String(serviceName)),
+	)
+
 	if err != nil {
 		return nil, err
 	}
 
 	traceProvider := trace.NewTracerProvider(
+		trace.WithResource(traceRes),
 		trace.WithBatcher(traceExporter,
-			// Default is 5s. Set to 1s for demonstrative purposes.
-			trace.WithBatchTimeout(time.Second)),
+			trace.WithBatchTimeout(10*time.Second)),
 	)
 	return traceProvider, nil
 }
 
 func newMeterProvider() (*metric.MeterProvider, error) {
-	// metricExporter, err := otlpmetrichttp.New(context.Background())
-	metricExporter, err := stdoutmetric.New()
+	ctx := context.Background()
+	metricExporter, err := otlpmetrichttp.New(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	metricRes, err := resource.New(ctx,
+		resource.WithAttributes(semconv.ServiceNamespaceKey.String(serviceName)),
+	)
+
 	if err != nil {
 		return nil, err
 	}
 
 	meterProvider := metric.NewMeterProvider(
+		metric.WithResource(metricRes),
 		metric.WithReader(metric.NewPeriodicReader(metricExporter,
-			// Default is 1m. Set to 3s for demonstrative purposes.
-			metric.WithInterval(3*time.Second))),
+			metric.WithInterval(time.Minute))),
 	)
 	return meterProvider, nil
 }
 
 func newLoggerProvider() (*log.LoggerProvider, error) {
-	// logExporter, err := otlploghttp.New(context.Background())
-	logExporter, err := stdoutlog.New()
+	ctx := context.Background()
+	logExporter, err := otlploghttp.New(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	loggingRes, err := resource.New(ctx,
+		resource.WithAttributes(semconv.ServiceNamespaceKey.String(serviceName)),
+	)
+
 	if err != nil {
 		return nil, err
 	}
 
 	loggerProvider := log.NewLoggerProvider(
+		log.WithResource(loggingRes),
 		log.WithProcessor(log.NewBatchProcessor(logExporter)),
 	)
 	return loggerProvider, nil

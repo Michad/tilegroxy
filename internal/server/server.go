@@ -35,6 +35,9 @@ import (
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
+	"github.com/Michad/tilegroxy/pkg/static"
+
+	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"golang.org/x/crypto/acme/autocert"
 
@@ -228,7 +231,10 @@ func configureMainLogging(cfg *config.Config) error {
 
 	logHandler = slogContextHandler{logHandler, attr}
 
-	slog.SetDefault(slog.New(logHandler))
+	otelHandler := otelslog.NewHandler(static.GetPackage())
+	multiHandler := MultiHandler{[]slog.Handler{logHandler, otelHandler}}
+
+	slog.SetDefault(slog.New(multiHandler))
 
 	return nil
 }
