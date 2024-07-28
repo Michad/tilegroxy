@@ -5,12 +5,15 @@ import (
 	"errors"
 	"time"
 
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/static"
 	"go.opentelemetry.io/otel"
 
 	// "go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
 	// "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	// "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
@@ -78,6 +81,20 @@ func newPropagator() propagation.TextMapPropagator {
 	)
 }
 
+var instanceId = pkg.RandomString()
+
+func standardAttributes() []attribute.KeyValue {
+	version, _, _ := static.GetVersionInformation()
+
+	return []attribute.KeyValue{
+		semconv.ServiceNamespaceKey.String(serviceName),
+		semconv.ServiceNameKey.String(serviceName),
+		semconv.ServiceVersionKey.String(version),
+		semconv.ServiceInstanceIDKey.String(instanceId),
+		semconv.TelemetrySDKLanguageGo,
+	}
+}
+
 func newTraceProvider() (*trace.TracerProvider, error) {
 	ctx := context.Background()
 	traceExporter, err := otlptracehttp.New(ctx)
@@ -86,7 +103,7 @@ func newTraceProvider() (*trace.TracerProvider, error) {
 	}
 
 	traceRes, err := resource.New(ctx,
-		resource.WithAttributes(semconv.ServiceNamespaceKey.String(serviceName)),
+		resource.WithAttributes(standardAttributes()...),
 	)
 
 	if err != nil {
@@ -109,7 +126,7 @@ func newMeterProvider() (*metric.MeterProvider, error) {
 	}
 
 	metricRes, err := resource.New(ctx,
-		resource.WithAttributes(semconv.ServiceNamespaceKey.String(serviceName)),
+		resource.WithAttributes(standardAttributes()...),
 	)
 
 	if err != nil {
@@ -132,7 +149,7 @@ func newLoggerProvider() (*log.LoggerProvider, error) {
 	}
 
 	loggingRes, err := resource.New(ctx,
-		resource.WithAttributes(semconv.ServiceNamespaceKey.String(serviceName)),
+		resource.WithAttributes(standardAttributes()...),
 	)
 
 	if err != nil {

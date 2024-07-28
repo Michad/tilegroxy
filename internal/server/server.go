@@ -231,10 +231,12 @@ func configureMainLogging(cfg *config.Config) error {
 
 	logHandler = slogContextHandler{logHandler, attr}
 
-	otelHandler := otelslog.NewHandler(static.GetPackage())
-	multiHandler := MultiHandler{[]slog.Handler{logHandler, otelHandler}}
+	if cfg.Telemetry.Enabled {
+		otelHandler := otelslog.NewHandler(static.GetPackage())
+		logHandler = MultiHandler{[]slog.Handler{logHandler, otelHandler}}
+	}
 
-	slog.SetDefault(slog.New(multiHandler))
+	slog.SetDefault(slog.New(logHandler))
 
 	return nil
 }
@@ -295,20 +297,27 @@ func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth au
 	}
 
 	r := http.ServeMux{}
+	var myRootHandler http.Handler
+	var myTileHandler http.Handler
 
 	if config.Server.Production {
-		handleNoContentHandler := otelhttp.WithRouteTag(config.Server.RootPath, http.HandlerFunc(handleNoContent))
-		r.Handle(config.Server.RootPath, handleNoContentHandler)
+		myRootHandler = http.HandlerFunc(handleNoContent)
 	} else {
-		r.Handle(config.Server.RootPath, otelhttp.WithRouteTag(config.Server.RootPath, &defaultHandler{config, layerGroup, auth}))
+		myRootHandler = &defaultHandler{config, layerGroup, auth}
 		// r.HandleFunc("/documentation", defaultHandler)
 	}
 
 	tilePath := config.Server.RootPath + config.Server.TilePath + "/{layer}/{z}/{x}/{y}"
-	myTileHandler := tileHandler{defaultHandler{config, layerGroup, auth}}
+	myTileHandler = &tileHandler{defaultHandler{config, layerGroup, auth}}
 
-	r.Handle(tilePath, otelhttp.WithRouteTag(tilePath, &myTileHandler))
-	r.Handle(tilePath+"/", otelhttp.WithRouteTag(tilePath+"/", &myTileHandler))
+	if config.Telemetry.Enabled {
+		myRootHandler = otelhttp.WithRouteTag(config.Server.RootPath, myRootHandler)
+		myTileHandler = otelhttp.WithRouteTag(tilePath, myTileHandler)
+	}
+
+	r.Handle(config.Server.RootPath, myRootHandler)
+	r.Handle(tilePath, myTileHandler)
+	r.Handle(tilePath+"/", myTileHandler)
 
 	var rootHandler http.Handler
 
@@ -335,10 +344,14 @@ func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth au
 	ctx, stop := signal.NotifyContext(pkg.BackgroundContext(), InterruptFlags...)
 	defer stop()
 
-	// Set up OpenTelemetry.
-	otelShutdown, err := setupOTelSDK(ctx)
-	if err != nil {
-		return err
+	var otelShutdown func(context.Context) error
+
+	if config.Telemetry.Enabled {
+		// Set up OpenTelemetry.
+		otelShutdown, err = setupOTelSDK(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
 	srv := &http.Server{
@@ -373,7 +386,10 @@ func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth au
 	}
 
 	err = srv.Shutdown(context.Background())
-	err = errors.Join(err, otelShutdown(context.Background()))
+
+	if config.Telemetry.Enabled {
+		err = errors.Join(err, otelShutdown(context.Background()))
+	}
 	return err
 }
 
