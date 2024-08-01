@@ -28,7 +28,12 @@ import (
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
+	"github.com/Michad/tilegroxy/pkg/static"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 )
+
+var packageName = static.GetPackage()
 
 type layerSegment struct {
 	value       string
@@ -157,15 +162,19 @@ func validateParamMatches(values map[string]string, regexp map[string]*regexp.Re
 }
 
 type Layer struct {
-	ID              string
-	Pattern         []layerSegment
-	ParamValidator  map[string]*regexp.Regexp
-	Config          config.LayerConfig
-	Provider        Provider
-	Cache           cache.Cache
-	ErrorMessages   config.ErrorMessages
-	providerContext ProviderContext
-	authMutex       sync.Mutex
+	ID                 string
+	Pattern            []layerSegment
+	ParamValidator     map[string]*regexp.Regexp
+	Config             config.LayerConfig
+	Provider           Provider
+	Cache              cache.Cache
+	ErrorMessages      config.ErrorMessages
+	providerContext    ProviderContext
+	authMutex          sync.Mutex
+	tileAllCounter     metric.Int64Counter
+	tileAuthCounter    metric.Int64Counter
+	tileErrorCounter   metric.Int64Counter
+	tileSuccessCounter metric.Int64Counter
 }
 
 func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup, secreter secret.Secreter) (*Layer, error) {
@@ -210,7 +219,14 @@ func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.Cli
 		}
 	}
 
-	return &Layer{rawConfig.ID, segments, validator, rawConfig, provider, nil, errorMessages, ProviderContext{}, sync.Mutex{}}, nil
+	meter := otel.Meter(packageName)
+
+	tileAllCounter, err1 := meter.Int64Counter("tilegroxy.tiles."+rawConfig.ID+".request", metric.WithDescription("Number of tile requests for "+rawConfig.ID))
+	tileAuthCounter, err2 := meter.Int64Counter("tilegroxy.tiles."+rawConfig.ID+".auth", metric.WithDescription("Number of tile requests that error during generation for "+rawConfig.ID))
+	tileErrorCounter, err3 := meter.Int64Counter("tilegroxy.tiles."+rawConfig.ID+".error", metric.WithDescription("Number of tile requests that error during generation for "+rawConfig.ID))
+	tileSuccessCounter, err4 := meter.Int64Counter("tilegroxy.tiles."+rawConfig.ID+".success", metric.WithDescription("Number of tile requests that result in a tile for "+rawConfig.ID))
+
+	return &Layer{rawConfig.ID, segments, validator, rawConfig, provider, nil, errorMessages, ProviderContext{}, sync.Mutex{}, tileAllCounter, tileAuthCounter, tileErrorCounter, tileSuccessCounter}, errors.Join(err1, err2, err3, err4)
 }
 
 func (l *Layer) authWithProvider(ctx context.Context) error {
@@ -219,6 +235,7 @@ func (l *Layer) authWithProvider(ctx context.Context) error {
 	if !l.providerContext.AuthBypass {
 		l.authMutex.Lock()
 		if l.providerContext.AuthExpiration.Before(time.Now()) {
+			l.tileAuthCounter.Add(ctx, 1)
 			l.providerContext, err = l.Provider.PreAuth(ctx, l.providerContext)
 		}
 		l.authMutex.Unlock()
@@ -244,6 +261,8 @@ func (l *Layer) RenderTileNoCache(ctx context.Context, tileRequest pkg.TileReque
 	var img *pkg.Image
 	var err error
 
+	l.tileAllCounter.Add(ctx, 1)
+
 	err = l.authWithProvider(ctx)
 
 	if err != nil {
@@ -263,11 +282,14 @@ func (l *Layer) RenderTileNoCache(ctx context.Context, tileRequest pkg.TileReque
 		img, err = l.Provider.GenerateTile(ctx, l.providerContext, tileRequest)
 
 		if err != nil {
+			l.tileErrorCounter.Add(ctx, 1)
 			return nil, err
 		}
 	} else if err != nil {
+		l.tileErrorCounter.Add(ctx, 1)
 		return nil, err
 	}
 
+	l.tileSuccessCounter.Add(ctx, 1)
 	return img, nil
 }

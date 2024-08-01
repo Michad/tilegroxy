@@ -55,7 +55,8 @@ func Test_TileHandler_AllowedArea(t *testing.T) {
 	lg, err := layer.ConstructLayerGroup(cfg, cache, nil)
 	require.NoError(t, err)
 
-	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
+	handler, err := NewTileHandler(defaultHandler{config: &cfg, auth: auth, layerGroup: lg})
+	require.NoError(t, err)
 
 	ctx := pkg.BackgroundContext()
 	b, _ := pkg.TileRequest{LayerName: "l", Z: 10, X: 12, Y: 12}.GetBounds()
@@ -118,7 +119,8 @@ func Test_TileHandler_Proxy(t *testing.T) {
 	lg, err := layer.ConstructLayerGroup(cfg, cache, nil)
 	require.NoError(t, err)
 
-	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
+	handler, err := NewTileHandler(defaultHandler{config: &cfg, auth: auth, layerGroup: lg})
+	require.NoError(t, err)
 
 	ctx := pkg.BackgroundContext()
 
@@ -158,7 +160,8 @@ func Test_TileHandler_RefToStatic(t *testing.T) {
 	lg, err := layer.ConstructLayerGroup(cfg, cache, nil)
 	require.NoError(t, err)
 
-	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
+	handler, err := NewTileHandler(defaultHandler{config: &cfg, auth: auth, layerGroup: lg})
+	require.NoError(t, err)
 
 	req1 := httptest.NewRequest(http.MethodGet, "http://example.com/tiles/test/10/10/10", nil).WithContext(pkg.BackgroundContext())
 	req1.SetPathValue("layer", "test")
@@ -231,7 +234,8 @@ func Test_TileHandler_ExecuteCustom(t *testing.T) {
 	authO, err := authentication.ConstructAuth(auth, cfg.Error.Messages)
 	require.NoError(t, err)
 
-	handler := tileHandler{defaultHandler{config: &cfg, auth: authO, layerGroup: lg}}
+	handler, err := NewTileHandler(defaultHandler{config: &cfg, auth: authO, layerGroup: lg})
+	require.NoError(t, err)
 
 	req1 := httptest.NewRequest(http.MethodGet, "http://localhost:12341/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
 	req1.SetPathValue("layer", "color")
@@ -294,7 +298,8 @@ layers:
 	require.NoError(t, err)
 	lg, auth, err := configToEntities(cfg)
 	require.NoError(t, err)
-	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
+	handler, err := NewTileHandler(defaultHandler{config: &cfg, auth: auth, layerGroup: lg})
+	require.NoError(t, err)
 
 	req1 := httptest.NewRequest(http.MethodGet, "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
 	req1.SetPathValue("layer", "color")
@@ -342,7 +347,8 @@ layers:
 	require.NoError(t, err)
 	lg, auth, err := configToEntities(cfg)
 	require.NoError(t, err)
-	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
+	handler, err := NewTileHandler(defaultHandler{config: &cfg, auth: auth, layerGroup: lg})
+	require.NoError(t, err)
 
 	req1 := httptest.NewRequest(http.MethodGet, "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
 	req1.SetPathValue("layer", "color")
@@ -376,7 +382,8 @@ layers:
 	require.NoError(t, err)
 	lg, auth, err := configToEntities(cfg)
 	require.NoError(t, err)
-	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
+	handler, err := NewTileHandler(defaultHandler{config: &cfg, auth: auth, layerGroup: lg})
+	require.NoError(t, err)
 
 	req1 := httptest.NewRequest(http.MethodGet, "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
 	req1.SetPathValue("layer", "color")
@@ -424,7 +431,8 @@ layers:
 	require.NoError(t, err)
 	lg, auth, err := configToEntities(cfg)
 	require.NoError(t, err)
-	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
+	handler, err := NewTileHandler(defaultHandler{config: &cfg, auth: auth, layerGroup: lg})
+	require.NoError(t, err)
 
 	req1 := httptest.NewRequest(http.MethodGet, "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
 	req1.SetPathValue("layer", "color")
@@ -463,7 +471,8 @@ layers:
 	require.NoError(t, err)
 	lg, auth, err := configToEntities(cfg)
 	require.NoError(t, err)
-	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
+	handler, err := NewTileHandler(defaultHandler{config: &cfg, auth: auth, layerGroup: lg})
+	require.NoError(t, err)
 
 	req1 := httptest.NewRequest(http.MethodGet, "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
 	req1.SetPathValue("layer", "color")
@@ -503,7 +512,8 @@ layers:
 	require.NoError(t, err)
 	lg, auth, err := configToEntities(cfg)
 	require.NoError(t, err)
-	handler := tileHandler{defaultHandler{config: &cfg, auth: auth, layerGroup: lg}}
+	handler, err := NewTileHandler(defaultHandler{config: &cfg, auth: auth, layerGroup: lg})
+	require.NoError(t, err)
 
 	req1 := httptest.NewRequest(http.MethodGet, "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
 	req1.SetPathValue("layer", "color")

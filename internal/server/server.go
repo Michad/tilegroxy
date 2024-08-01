@@ -308,11 +308,16 @@ func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth au
 	}
 
 	tilePath := config.Server.RootPath + config.Server.TilePath + "/{layer}/{z}/{x}/{y}"
-	myTileHandler = &tileHandler{defaultHandler{config, layerGroup, auth}}
+	handler, err := NewTileHandler(defaultHandler{config: config, auth: auth, layerGroup: layerGroup})
+	if err != nil {
+		return err
+	}
+
+	myTileHandler = &handler
 
 	if config.Telemetry.Enabled {
-		myRootHandler = otelhttp.WithRouteTag(config.Server.RootPath, myRootHandler)
-		myTileHandler = otelhttp.WithRouteTag(tilePath, myTileHandler)
+		myRootHandler = otelhttp.NewHandler(myRootHandler, config.Server.RootPath, otelhttp.WithMessageEvents(otelhttp.WriteEvents))
+		myTileHandler = otelhttp.NewHandler(myTileHandler, tilePath, otelhttp.WithMessageEvents(otelhttp.WriteEvents))
 	}
 
 	r.Handle(config.Server.RootPath, myRootHandler)
@@ -329,7 +334,7 @@ func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth au
 
 	rootHandler = httpContextHandler{rootHandler, config.Error}
 	rootHandler = http.TimeoutHandler(rootHandler, time.Duration(config.Server.Timeout)*time.Second, config.Error.Messages.Timeout)
-	rootHandler, err := configureAccessLogging(config.Logging.Access, config.Error.Messages, rootHandler)
+	rootHandler, err = configureAccessLogging(config.Logging.Access, config.Error.Messages, rootHandler)
 
 	if err != nil {
 		return err
