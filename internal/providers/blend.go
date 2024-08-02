@@ -140,7 +140,7 @@ func (t Blend) PreAuth(ctx *pkg.RequestContext, providerContext layer.ProviderCo
 	}, len(t.providers))
 
 	for i, p := range t.providers {
-		var thisPc interface{} = nil
+		var thisPc interface{}
 
 		if providerContext.Other != nil {
 			thisPc = providerContext.Other[strconv.Itoa(i)]
