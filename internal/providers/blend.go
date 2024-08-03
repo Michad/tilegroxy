@@ -28,6 +28,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -130,9 +131,7 @@ func (s BlendRegistration) Initialize(cfgAny any, clientConfig config.ClientConf
 }
 
 func (t Blend) PreAuth(ctx context.Context, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
-	if providerContext.Other == nil {
-		providerContext.Other = map[string]interface{}{}
-	}
+	newProviderContext := layer.ProviderContext{Other: map[string]interface{}{}}
 
 	wg := sync.WaitGroup{}
 	errs := make(chan error, len(t.providers))
@@ -142,6 +141,12 @@ func (t Blend) PreAuth(ctx context.Context, providerContext layer.ProviderContex
 	}, len(t.providers))
 
 	for i, p := range t.providers {
+		var thisPc interface{}
+
+		if providerContext.Other != nil {
+			thisPc = providerContext.Other[strconv.Itoa(i)]
+		}
+
 		wg.Add(1)
 		go func(acObj interface{}, index int, p layer.Provider) {
 			defer func() {
@@ -166,20 +171,36 @@ func (t Blend) PreAuth(ctx context.Context, providerContext layer.ProviderContex
 			}{index, ac}
 
 			errs <- err
-		}(providerContext.Other[strconv.Itoa(i)], i, p)
+		}(thisPc, i, p)
 	}
 
 	wg.Wait()
 
 	errSlice := make([]error, len(t.providers))
+	allBypass := true
+	nextExp := time.Now().Add(time.Hour)
 	for i := range t.providers {
 		errSlice[i] = <-errs
 
 		acStruct := <-acResults
-		providerContext.Other[strconv.Itoa(i)] = acStruct.ProviderContext
+		newProviderContext.Other[strconv.Itoa(i)] = acStruct.ProviderContext
+
+		if !acStruct.AuthBypass {
+			allBypass = false
+		}
+
+		if acStruct.AuthExpiration.Before(nextExp) {
+			nextExp = acStruct.AuthExpiration
+		}
 	}
 
-	return providerContext, errors.Join(errSlice...)
+	newProviderContext.AuthExpiration = nextExp
+
+	if allBypass {
+		newProviderContext.AuthBypass = true
+	}
+
+	return newProviderContext, errors.Join(errSlice...)
 }
 
 func (t Blend) GenerateTile(ctx context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
