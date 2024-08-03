@@ -30,6 +30,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
+	"go.opentelemetry.io/otel/codes"
 )
 
 type CGIConfig struct {
@@ -144,9 +145,12 @@ func (t CGI) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.Provider
 func (t CGI) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	var err error
 
+	newCtx, span := makeChildContext(ctx, tileRequest, "cgi")
+	defer span.End()
+
 	h := t.handler
 
-	h.Stderr = SLogWriter{ctx, slog.LevelError.Level()}
+	h.Stderr = SLogWriter{newCtx, slog.LevelError.Level()}
 	h.Logger = log.New(h.Stderr, "", 0)
 
 	uri := t.URI
@@ -154,15 +158,19 @@ func (t CGI) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequ
 		uri = "/" + uri
 	}
 
-	uri, err = replaceURLPlaceholders(ctx, tileRequest, uri, false)
+	uri, err = replaceURLPlaceholders(newCtx, tileRequest, uri, false)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Error replacing placeholder before calling cgi")
 		return nil, err
 	}
 
-	slog.DebugContext(ctx, fmt.Sprintf("Calling %v", uri))
+	slog.DebugContext(newCtx, fmt.Sprintf("Calling CGI via %v", uri))
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+t.Domain+uri, nil)
+	req, err := http.NewRequestWithContext(newCtx, http.MethodGet, "http://"+t.Domain+uri, nil)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Error generating request for calling cgi")
 		return nil, err
 	}
 
@@ -174,14 +182,22 @@ func (t CGI) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequ
 	h.ServeHTTP(&rw, req)
 	b := buf.Bytes()
 
-	slog.DebugContext(ctx, fmt.Sprintf("CGI response - Status: %v Content: %v", rw.code, rw.headers["Content-Type"]))
+	slog.DebugContext(newCtx, fmt.Sprintf("CGI response - Status: %v Content: %v", rw.code, rw.headers["Content-Type"]))
 
 	if !slices.Contains(t.clientConfig.StatusCodes, rw.code) {
-		return nil, fmt.Errorf("cgi returned status code %v", rw.code)
+		err = fmt.Errorf("cgi returned status code %v", rw.code)
+
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Error from child cgi call")
+		return nil, err
 	}
 
 	if t.InvalidAsError && !slices.Contains(t.clientConfig.ContentTypes, rw.headers["Content-Type"][0]) {
-		return nil, errors.New(string(b))
+		err = errors.New(string(b))
+
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Error from child cgi call")
+		return nil, err
 	}
 
 	return &b, nil

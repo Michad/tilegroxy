@@ -33,6 +33,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/traefik/yaegi/interp"
 	"github.com/traefik/yaegi/stdlib"
+	"go.opentelemetry.io/otel/codes"
 )
 
 type TransformConfig struct {
@@ -130,7 +131,16 @@ func (t Transform) transform(ctx context.Context, col color.Color) color.Color {
 }
 
 func (t Transform) GenerateTile(ctx context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
-	img, err := t.provider.GenerateTile(ctx, providerContext, tileRequest)
+	newCtx, span := makeChildContext(ctx, tileRequest, "transform")
+
+	img, err := t.provider.GenerateTile(newCtx, providerContext, tileRequest)
+
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Error from child transform call")
+	}
+
+	span.End()
 
 	if err != nil {
 		return img, err

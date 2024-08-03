@@ -22,6 +22,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
+	"go.opentelemetry.io/otel/codes"
 
 	"github.com/traefik/yaegi/interp"
 	"github.com/traefik/yaegi/stdlib"
@@ -123,9 +124,14 @@ func (t Custom) PreAuth(ctx context.Context, providerContext layer.ProviderConte
 }
 
 func (t Custom) GenerateTile(ctx context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
-	img, err := t.generateTileFunc(ctx, providerContext, tileRequest, t.Params, t.clientConfig, t.errorMessages)
+	newCtx, span := makeChildContext(ctx, tileRequest, "custom")
+	defer span.End()
+
+	img, err := t.generateTileFunc(newCtx, providerContext, tileRequest, t.Params, t.clientConfig, t.errorMessages)
 
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Error from child custom call")
 		return nil, err
 	}
 

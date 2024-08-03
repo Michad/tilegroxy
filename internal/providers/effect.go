@@ -31,6 +31,7 @@ import (
 	"github.com/anthonynsimon/bild/blur"
 	"github.com/anthonynsimon/bild/effect"
 	"github.com/anthonynsimon/bild/segment"
+	"go.opentelemetry.io/otel/codes"
 )
 
 var intensityModes = []string{"blur", "gaussian", "brightness", "contrast", "gamma", "hue", "saturation", "dilate", "edge detection", "erode", "median", "threshold"}
@@ -86,11 +87,18 @@ func (t Effect) PreAuth(ctx context.Context, providerContext layer.ProviderConte
 }
 
 func (t Effect) GenerateTile(ctx context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
-	img, err := t.provider.GenerateTile(ctx, providerContext, tileRequest)
+	newCtx, span := makeChildContext(ctx, tileRequest, "effect")
+
+	img, err := t.provider.GenerateTile(newCtx, providerContext, tileRequest)
 
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Error from child effect call")
+		span.End()
 		return img, err
 	}
+
+	span.End()
 
 	realImage, _, err := image.Decode(bytes.NewReader(*img))
 

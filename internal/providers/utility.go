@@ -31,11 +31,44 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/static"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
+
+var packageName = static.GetPackage()
+var version, ref, buildDate = static.GetVersionInformation()
 
 var envRegex = regexp.MustCompile(`{env\.[^{}}]*}`)
 var ctxRegex = regexp.MustCompile(`{ctx\.[^{}}]*}`)
 var lyrRegex = regexp.MustCompile(`{layer\.[^{}}]*}`)
+
+var tracer trace.Tracer = otel.Tracer(packageName)
+
+// Handles making a new context and span for use in a provider that calls another provider. Make sure to End the span that is returned
+func makeChildContext(ctx context.Context, newRequest pkg.TileRequest, providerName string) (context.Context, trace.Span) {
+	req, _ := pkg.ReqFromContext(ctx)
+	newCtx := pkg.NewRequestContext(req)
+
+	newCtx, span := tracer.Start(newCtx, providerName, trace.WithSpanKind(trace.SpanKindInternal))
+
+	if span.IsRecording() {
+		span.SetAttributes(
+			attribute.String("service.name", "tilegroxy"),
+			attribute.String("service.version", version+"-"+ref),
+			attribute.String("service.build", buildDate),
+			attribute.String("code.namespace", packageName+"/internal/providers/"+providerName+".go"),
+			attribute.String("code.function", "GenerateTile"),
+			attribute.String("tilegroxy.layer.name", newRequest.LayerName),
+			attribute.Int("tilegroxy.coordinate.x", newRequest.X),
+			attribute.Int("tilegroxy.coordinate.y", newRequest.Y),
+			attribute.Int("tilegroxy.coordinate.z", newRequest.Z),
+		)
+	}
+
+	return newCtx, span
+}
 
 func replaceURLPlaceholders(ctx context.Context, tileRequest pkg.TileRequest, url string, invertY bool) (string, error) {
 	b, err := tileRequest.GetBounds()

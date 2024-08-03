@@ -16,6 +16,7 @@ package layer
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -24,14 +25,18 @@ import (
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 )
 
 type LayerGroup struct {
-	layers []*Layer
+	layers           []*Layer
+	cacheHitCounter  metric.Int64Counter
+	cacheMissCounter metric.Int64Counter
 }
 
 func ConstructLayerGroup(cfg config.Config, cache cache.Cache, secreter secret.Secreter) (*LayerGroup, error) {
-	var err error
+	var err, err1, err2 error
 	var layerGroup LayerGroup
 	layerObjects := make([]*Layer, len(cfg.Layers))
 
@@ -44,9 +49,13 @@ func ConstructLayerGroup(cfg config.Config, cache cache.Cache, secreter secret.S
 		layerObjects[i].Cache = cache
 	}
 
+	meter := otel.Meter(packageName)
+	layerGroup.cacheHitCounter, err1 = meter.Int64Counter("tilegroxy.cache.total.hit", metric.WithDescription("Number of requests that hit the cache (ignoring skips)"))
+	layerGroup.cacheMissCounter, err2 = meter.Int64Counter("tilegroxy.cache.total.miss", metric.WithDescription("Number of requests that missed the cache (ignoring skips)"))
+
 	layerGroup.layers = layerObjects
 
-	return &layerGroup, nil
+	return &layerGroup, errors.Join(err1, err2)
 }
 
 func (lg LayerGroup) FindLayer(ctx context.Context, layerName string) *Layer {
@@ -90,8 +99,11 @@ func (lg LayerGroup) RenderTile(ctx context.Context, tileRequest pkg.TileRequest
 
 	if img != nil {
 		slog.DebugContext(ctx, "Cache hit")
+		lg.cacheHitCounter.Add(ctx, 1)
 		return img, err
 	}
+
+	lg.cacheMissCounter.Add(ctx, 1)
 
 	if err != nil {
 		slog.WarnContext(ctx, fmt.Sprintf("Cache read error %v\n", err))

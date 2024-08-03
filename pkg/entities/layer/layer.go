@@ -221,10 +221,10 @@ func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.Cli
 
 	meter := otel.Meter(packageName)
 
-	tileAllCounter, err1 := meter.Int64Counter("tilegroxy.tiles."+rawConfig.ID+".request", metric.WithDescription("Number of tile requests for "+rawConfig.ID))
-	tileAuthCounter, err2 := meter.Int64Counter("tilegroxy.tiles."+rawConfig.ID+".auth", metric.WithDescription("Number of tile requests that error during generation for "+rawConfig.ID))
-	tileErrorCounter, err3 := meter.Int64Counter("tilegroxy.tiles."+rawConfig.ID+".error", metric.WithDescription("Number of tile requests that error during generation for "+rawConfig.ID))
-	tileSuccessCounter, err4 := meter.Int64Counter("tilegroxy.tiles."+rawConfig.ID+".success", metric.WithDescription("Number of tile requests that result in a tile for "+rawConfig.ID))
+	tileAllCounter, err1 := meter.Int64Counter("tilegroxy.tiles.layer."+rawConfig.ID+".request", metric.WithDescription("Number of tile requests for "+rawConfig.ID))
+	tileAuthCounter, err2 := meter.Int64Counter("tilegroxy.tiles.layer."+rawConfig.ID+".auth", metric.WithDescription("Number of tile requests that error during generation for "+rawConfig.ID))
+	tileErrorCounter, err3 := meter.Int64Counter("tilegroxy.tiles.layer."+rawConfig.ID+".error", metric.WithDescription("Number of tile requests that error during generation for "+rawConfig.ID))
+	tileSuccessCounter, err4 := meter.Int64Counter("tilegroxy.tiles.layer."+rawConfig.ID+".success", metric.WithDescription("Number of tile requests that result in a tile for "+rawConfig.ID))
 
 	return &Layer{rawConfig.ID, segments, validator, rawConfig, provider, nil, errorMessages, ProviderContext{}, sync.Mutex{}, tileAllCounter, tileAuthCounter, tileErrorCounter, tileSuccessCounter}, errors.Join(err1, err2, err3, err4)
 }

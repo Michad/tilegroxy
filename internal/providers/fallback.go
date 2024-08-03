@@ -23,6 +23,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
+	"go.opentelemetry.io/otel/codes"
 )
 
 type CacheMode string
@@ -135,7 +136,9 @@ func (t Fallback) GenerateTile(ctx context.Context, providerContext layer.Provid
 	var img *pkg.Image
 
 	if ok {
-		img, err = t.Primary.GenerateTile(ctx, providerContext, tileRequest)
+		newCtx, span := makeChildContext(ctx, tileRequest, "fallback")
+
+		img, err = t.Primary.GenerateTile(newCtx, providerContext, tileRequest)
 
 		if err != nil {
 			ok = false
@@ -143,13 +146,24 @@ func (t Fallback) GenerateTile(ctx context.Context, providerContext layer.Provid
 				*skipCacheSave = true
 			}
 
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "Error from fallback primary")
 			slog.DebugContext(ctx, fmt.Sprintf("Fallback provider falling back due to error: %v", err.Error()))
 		}
+
+		span.End()
 	}
 
 	if !ok {
+		newCtx, span := makeChildContext(ctx, tileRequest, "fallback")
 
-		return t.Secondary.GenerateTile(ctx, providerContext, tileRequest)
+		img, err = t.Secondary.GenerateTile(newCtx, providerContext, tileRequest)
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "Error from fallback secondary")
+		}
+
+		span.End()
 	}
 
 	return img, err

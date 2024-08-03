@@ -20,6 +20,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
+	"go.opentelemetry.io/otel/codes"
 )
 
 type RefConfig struct {
@@ -60,8 +61,15 @@ func (t Ref) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.Provider
 func (t Ref) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	newRequest := pkg.TileRequest{LayerName: t.Layer, Z: tileRequest.Z, X: tileRequest.X, Y: tileRequest.Y}
 
-	req, _ := pkg.ReqFromContext(ctx)
-	newCtx := pkg.NewRequestContext(req)
+	newCtx, span := makeChildContext(ctx, newRequest, "ref")
+	defer span.End()
 
-	return t.layerGroup.RenderTile(newCtx, newRequest)
+	img, err := t.layerGroup.RenderTile(newCtx, newRequest)
+
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Error from child ref call")
+	}
+
+	return img, err
 }
