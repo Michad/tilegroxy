@@ -47,11 +47,14 @@ var lyrRegex = regexp.MustCompile(`{layer\.[^{}}]*}`)
 var tracer trace.Tracer = otel.Tracer(packageName)
 
 // Handles making a new context and span for use in a provider that calls another provider. Make sure to End the span that is returned
-func makeChildContext(ctx context.Context, newRequest pkg.TileRequest, providerName string) (context.Context, trace.Span) {
-	req, _ := pkg.ReqFromContext(ctx)
-	newCtx := pkg.NewRequestContext(req)
+func makeChildSpan(ctx context.Context, newRequest pkg.TileRequest, providerName string, childSpanName string) (context.Context, trace.Span) {
+	spanName := providerName
 
-	newCtx, span := tracer.Start(newCtx, providerName, trace.WithSpanKind(trace.SpanKindInternal))
+	if childSpanName != "" {
+		spanName += "-" + childSpanName
+	}
+
+	newCtx, span := tracer.Start(ctx, spanName, trace.WithSpanKind(trace.SpanKindInternal))
 
 	if span.IsRecording() {
 		span.SetAttributes(

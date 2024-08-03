@@ -131,7 +131,7 @@ func (t Transform) transform(ctx context.Context, col color.Color) color.Color {
 }
 
 func (t Transform) GenerateTile(ctx context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
-	newCtx, span := makeChildContext(ctx, tileRequest, "transform")
+	newCtx, span := makeChildSpan(ctx, tileRequest, "transform", fmt.Sprint(t.Provider["name"]))
 
 	img, err := t.provider.GenerateTile(newCtx, providerContext, tileRequest)
 

@@ -315,7 +315,7 @@ func (t Blend) blendImage(img image.Image, size image.Point, ctx context.Context
 }
 
 func callProvider(ctx context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest, provider layer.Provider, i int, imgs chan indexedImg, errs chan error, wg *sync.WaitGroup) {
-	newCtx, span := makeChildContext(ctx, tileRequest, "blend")
+	newCtx, span := makeChildSpan(ctx, tileRequest, "blend", strconv.Itoa(i))
 
 	defer func() {
 		if r := recover(); r != nil {

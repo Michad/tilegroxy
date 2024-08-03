@@ -21,6 +21,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type RefConfig struct {
@@ -61,7 +62,15 @@ func (t Ref) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.Provider
 func (t Ref) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	newRequest := pkg.TileRequest{LayerName: t.Layer, Z: tileRequest.Z, X: tileRequest.X, Y: tileRequest.Y}
 
-	newCtx, span := makeChildContext(ctx, newRequest, "ref")
+	//We need to make a new context for the child call to avoid e.g. layer placeholder from main layer interfering with that of the child layer
+	req, _ := pkg.ReqFromContext(ctx)
+	newCtx := pkg.NewRequestContext(req)
+
+	//Copy span over from original context
+	span := trace.SpanFromContext(ctx)
+	newCtx = trace.ContextWithSpan(newCtx, span)
+
+	newCtx, span = makeChildSpan(newCtx, newRequest, "ref", "")
 	defer span.End()
 
 	img, err := t.layerGroup.RenderTile(newCtx, newRequest)

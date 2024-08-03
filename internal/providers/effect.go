@@ -87,7 +87,7 @@ func (t Effect) PreAuth(ctx context.Context, providerContext layer.ProviderConte
 }
 
 func (t Effect) GenerateTile(ctx context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
-	newCtx, span := makeChildContext(ctx, tileRequest, "effect")
+	newCtx, span := makeChildSpan(ctx, tileRequest, "effect", fmt.Sprint(t.Provider["name"]))
 
 	img, err := t.provider.GenerateTile(newCtx, providerContext, tileRequest)
 

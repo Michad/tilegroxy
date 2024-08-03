@@ -145,7 +145,7 @@ func (t CGI) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.Provider
 func (t CGI) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	var err error
 
-	newCtx, span := makeChildContext(ctx, tileRequest, "cgi")
+	newCtx, span := makeChildSpan(ctx, tileRequest, "cgi", t.Exec)
 	defer span.End()
 
 	h := t.handler

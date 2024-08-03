@@ -136,7 +136,7 @@ func (t Fallback) GenerateTile(ctx context.Context, providerContext layer.Provid
 	var img *pkg.Image
 
 	if ok {
-		newCtx, span := makeChildContext(ctx, tileRequest, "fallback")
+		newCtx, span := makeChildSpan(ctx, tileRequest, "fallback", "primary")
 
 		img, err = t.Primary.GenerateTile(newCtx, providerContext, tileRequest)
 
@@ -155,7 +155,7 @@ func (t Fallback) GenerateTile(ctx context.Context, providerContext layer.Provid
 	}
 
 	if !ok {
-		newCtx, span := makeChildContext(ctx, tileRequest, "fallback")
+		newCtx, span := makeChildSpan(ctx, tileRequest, "fallback", "secondary")
 
 		img, err = t.Secondary.GenerateTile(newCtx, providerContext, tileRequest)
 		if err != nil {

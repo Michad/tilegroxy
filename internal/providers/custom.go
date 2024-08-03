@@ -124,7 +124,7 @@ func (t Custom) PreAuth(ctx context.Context, providerContext layer.ProviderConte
 }
 
 func (t Custom) GenerateTile(ctx context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
-	newCtx, span := makeChildContext(ctx, tileRequest, "custom")
+	newCtx, span := makeChildSpan(ctx, tileRequest, "custom", t.File)
 	defer span.End()
 
 	img, err := t.generateTileFunc(newCtx, providerContext, tileRequest, t.Params, t.clientConfig, t.errorMessages)
