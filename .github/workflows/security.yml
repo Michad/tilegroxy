@@ -35,7 +35,7 @@ jobs:
           retention-days: 5
       - name: "Upload to code-scanning"
         if: github.event_name != 'pull_request'
-        uses: github/codeql-action/upload-sarif@afb54ba388a7dca6ecae48f608c4ff05ff4cc77a # v3.25.15
+        uses: github/codeql-action/upload-sarif@eb055d739abdc2e8de2e5f4ba1a8b246daa779aa # v3.26.0
         with:
           sarif_file: results.sarif
   dependency-review:
@@ -65,13 +65,13 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@afb54ba388a7dca6ecae48f608c4ff05ff4cc77a # v3.25.15
+        uses: github/codeql-action/init@eb055d739abdc2e8de2e5f4ba1a8b246daa779aa # v3.26.0
         with:
           languages: ${{ matrix.language }}
       - name: Autobuild
-        uses: github/codeql-action/autobuild@afb54ba388a7dca6ecae48f608c4ff05ff4cc77a # v3.25.15
+        uses: github/codeql-action/autobuild@eb055d739abdc2e8de2e5f4ba1a8b246daa779aa # v3.26.0
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@afb54ba388a7dca6ecae48f608c4ff05ff4cc77a # v3.25.15
+        uses: github/codeql-action/analyze@eb055d739abdc2e8de2e5f4ba1a8b246daa779aa # v3.26.0
         with:
           category: "/language:${{matrix.language}}"
 
@@ -97,7 +97,7 @@ jobs:
           cp govuln.sarif govuln2.sarif
         fi
     - name: Upload result to GitHub Code Scanning
-      uses: github/codeql-action/upload-sarif@afb54ba388a7dca6ecae48f608c4ff05ff4cc77a # v3.25.15
+      uses: github/codeql-action/upload-sarif@eb055d739abdc2e8de2e5f4ba1a8b246daa779aa # v3.26.0
       with:
         sarif_file: govuln2.sarif
   gosec:
@@ -119,6 +119,6 @@ jobs:
           args: '-no-fail -exclude=G504 -fmt sarif -out results.sarif ./...'
       - name: Upload SARIF file
         if: github.event_name != 'pull_request'
-        uses: github/codeql-action/upload-sarif@afb54ba388a7dca6ecae48f608c4ff05ff4cc77a # v3.25.15
+        uses: github/codeql-action/upload-sarif@eb055d739abdc2e8de2e5f4ba1a8b246daa779aa # v3.26.0
         with:
           sarif_file: results.sarif
