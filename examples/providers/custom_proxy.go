@@ -32,7 +32,7 @@ import (
 // This method is responsible for authenticating outgoing requests and returning a token or whatever else is needed. This method is called when needed by the application. A given instance of tilegroxy will only call this method once at a time and then shares the result among threads. However, this is not shared between instances of tilegroxy.
 func preAuth(
 	//Contextual information about the http request at play
-	ctx *tilegroxy.RequestContext,
+	ctx tilegroxy.Context,
 	//The previous ProviderContext. Will have default/empty values the first time this is called.  Included for use-cases where a refreshToken is available
 	providerContext tilegroxy.ProviderContext,
 	//The parameters included under the provider in the configuration. In this case it will only contain "url"
@@ -49,7 +49,7 @@ func preAuth(
 // This method is responsible for creating a tile
 func generateTile(
 	//Contextual information about the http request at play
-	ctx *tilegroxy.RequestContext,
+	ctx tilegroxy.Context,
 	//The Authentication Context returned from the previous call to preAuth
 	providerContext tilegroxy.ProviderContext,
 	//The main input parameters for the request at hand.  Includes LayerName as well as Z, X, and Y tile coordinates

@@ -15,6 +15,7 @@
 package providers
 
 import (
+	"context"
 	"os"
 	"reflect"
 
@@ -37,8 +38,8 @@ type Custom struct {
 	clientConfig     config.ClientConfig
 	errorMessages    config.ErrorMessages
 	interp           *interp.Interpreter
-	preAuthFunc      func(*pkg.RequestContext, layer.ProviderContext, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (layer.ProviderContext, error)
-	generateTileFunc func(*pkg.RequestContext, layer.ProviderContext, pkg.TileRequest, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (*pkg.Image, error)
+	preAuthFunc      func(context.Context, layer.ProviderContext, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (layer.ProviderContext, error)
+	generateTileFunc func(context.Context, layer.ProviderContext, pkg.TileRequest, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (*pkg.Image, error)
 }
 
 func init() {
@@ -68,9 +69,14 @@ func (s CustomRegistration) Initialize(cfgAny any, clientConfig config.ClientCon
 		return nil, err
 	}
 
+	err = i.Use(interp.Symbols)
+	if err != nil {
+		return nil, err
+	}
+
 	err = i.Use(interp.Exports{
 		"tilegroxy/tilegroxy": map[string]reflect.Value{
-			"RequestContext":  reflect.ValueOf((*pkg.RequestContext)(nil)),
+			"Context":         reflect.ValueOf((*context.Context)(nil)),
 			"ProviderContext": reflect.ValueOf((*layer.ProviderContext)(nil)),
 			"TileRequest":     reflect.ValueOf((*pkg.TileRequest)(nil)),
 			"ClientConfig":    reflect.ValueOf((*config.ClientConfig)(nil)),
@@ -108,23 +114,17 @@ func (s CustomRegistration) Initialize(cfgAny any, clientConfig config.ClientCon
 		return nil, err
 	}
 
-	preAuthFunc := preAuthVal.Interface().(func(*pkg.RequestContext, layer.ProviderContext, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (layer.ProviderContext, error))
+	preAuthFunc := preAuthVal.Interface().(func(context.Context, layer.ProviderContext, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (layer.ProviderContext, error))
 
-	generateTileFunc := generateTileVal.Interface().(func(*pkg.RequestContext, layer.ProviderContext, pkg.TileRequest, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (*pkg.Image, error))
+	generateTileFunc := generateTileVal.Interface().(func(context.Context, layer.ProviderContext, pkg.TileRequest, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (*pkg.Image, error))
 
 	return &Custom{cfg, clientConfig, errorMessages, i, preAuthFunc, generateTileFunc}, nil
 }
 
-func (t Custom) PreAuth(ctx *pkg.RequestContext, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
+func (t Custom) PreAuth(ctx context.Context, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
 	return t.preAuthFunc(ctx, providerContext, t.Params, t.clientConfig, t.errorMessages)
 }
 
-func (t Custom) GenerateTile(ctx *pkg.RequestContext, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
-	img, err := t.generateTileFunc(ctx, providerContext, tileRequest, t.Params, t.clientConfig, t.errorMessages)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return img, nil
+func (t Custom) GenerateTile(ctx context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+	return t.generateTileFunc(ctx, providerContext, tileRequest, t.Params, t.clientConfig, t.errorMessages)
 }

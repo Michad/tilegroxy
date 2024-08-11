@@ -14,7 +14,7 @@ layers:
         func transform(r, g, b, a uint8) (uint8, uint8, uint8, uint8) {
           elevation := -10000 + ((float64(r) * 256 * 256 + float64(g) * 256 + float64(b)) * 0.1)
           pressure := 101325 * math.Pow(1 - .0000225577 * elevation, 5.25588)
-          c := uint8(pressure / 1000) //kPa to Pa
+          c := uint8(pressure / 1000) //Pa to kPa
           return c,c,c,255
         }
       provider:

@@ -15,6 +15,7 @@
 package caches
 
 import (
+	"context"
 	"math/rand"
 	"slices"
 	"strconv"
@@ -65,14 +66,14 @@ func validateSaveAndLookup(t *testing.T, c cache.Cache) {
 	tile := makeReq(rand.Intn(10000))
 	img := makeImg(rand.Intn(100))
 
-	err := c.Save(tile, &img)
+	err := c.Save(context.Background(), tile, &img)
 	require.NoError(t, err, "Cache save returned an error")
 
 	validateLookup(t, c, tile, &img)
 }
 
 func validateLookup(t *testing.T, c cache.Cache, tile pkg.TileRequest, expected *pkg.Image) {
-	img2, err := c.Lookup(tile)
+	img2, err := c.Lookup(context.Background(), tile)
 	require.NoError(t, err, "Cache lookup returned an error")
 	require.NotNil(t, img2, "Cache lookup didn't return an image")
 
@@ -80,7 +81,7 @@ func validateLookup(t *testing.T, c cache.Cache, tile pkg.TileRequest, expected 
 }
 
 func validateNoLookup(t *testing.T, c cache.Cache, tile pkg.TileRequest) {
-	img2, err := c.Lookup(tile)
+	img2, err := c.Lookup(context.Background(), tile)
 	require.NoError(t, err, "Cache lookup returned an error")
 	require.Nil(t, img2, "Cache lookup returned a result when it shouldn't")
 }

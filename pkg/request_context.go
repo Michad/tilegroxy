@@ -21,76 +21,94 @@ import (
 	"time"
 )
 
-func NewRequestContext(req *http.Request) RequestContext {
-	return RequestContext{req.Context(), req, time.Now(), false, []string{}, Bounds{}, "", make(map[string]string), false}
+//lint:file-ignore SA1029 Want values to be accessible
+
+const reqKey = "req"
+const startTimeKey = "startTime"
+const limitLayersKey = "limitLayers"
+const allowedLayersKey = "allowedLayers"
+const allowedAreaKey = "allowedArea"
+const userIDKey = "user"
+const layerPatternMatchesKey = "layerPatternMatches"
+const skipCacheSaveKey = "skipCacheSave"
+
+func p[A any](val A) *A {
+	return &val
 }
 
-func BackgroundContext() *RequestContext {
-	return &RequestContext{context.Background(), nil, time.Time{}, false, []string{}, Bounds{}, "", make(map[string]string), false}
-}
+//nolint:revive,staticcheck // We want values to be accessible
+func NewRequestContext(req *http.Request) context.Context {
 
-// Custom context type. Links back to request so we can pull attrs into the structured log
-type RequestContext struct {
-	context.Context
-	req                 *http.Request
-	startTime           time.Time
-	LimitLayers         bool
-	AllowedLayers       []string
-	AllowedArea         Bounds
-	UserIdentifier      string
-	LayerPatternMatches map[string]string
-	SkipCacheSave       bool
-}
+	ctx := req.Context()
+	ctx = context.WithValue(ctx, reqKey, req)
+	ctx = context.WithValue(ctx, startTimeKey, time.Now())
+	ctx = context.WithValue(ctx, limitLayersKey, p(false))
+	ctx = context.WithValue(ctx, allowedLayersKey, &([]string{}))
+	ctx = context.WithValue(ctx, allowedAreaKey, &Bounds{})
+	ctx = context.WithValue(ctx, userIDKey, p(""))
+	ctx = context.WithValue(ctx, layerPatternMatchesKey, &map[string]string{})
+	ctx = context.WithValue(ctx, skipCacheSaveKey, p(false))
 
-func (c *RequestContext) Value(keyAny any) any {
+	ctx = context.WithValue(ctx, "uri", req.RequestURI)
+	ctx = context.WithValue(ctx, "path", req.URL.Path)
+	ctx = context.WithValue(ctx, "query", req.URL.Query())
+	ctx = context.WithValue(ctx, "proto", req.Proto)
+	ctx = context.WithValue(ctx, "ip", strings.Split(req.RemoteAddr, ":")[0])
+	ctx = context.WithValue(ctx, "method", req.Method)
+	ctx = context.WithValue(ctx, "host", req.Host)
 
-	key, ok := keyAny.(string)
-	if !ok {
-		return nil
-	}
-
-	switch key {
-	case "elapsed":
-		return time.Since(c.startTime).Seconds()
-	case "user":
-		return c.UserIdentifier
-	}
-
-	if c.req == nil {
-		return nil
-	}
-
-	switch key {
-	case "uri":
-		return c.req.RequestURI
-	case "path":
-		return c.req.URL.Path
-	case "query":
-		return c.req.URL.Query()
-	case "proto":
-		return c.req.Proto
-	case "ip":
-		return strings.Split(c.req.RemoteAddr, ":")[0]
-	case "method":
-		return c.req.Method
-	case "host":
-		return c.req.Host
-	}
-
-	h, hMatch := c.req.Header[key]
-
-	if hMatch && h != nil {
-		if len(h) == 1 {
-			return h[0]
+	for header, values := range req.Header {
+		if len(values) == 1 {
+			ctx = context.WithValue(ctx, header, values[0])
+		} else {
+			ctx = context.WithValue(ctx, header, values)
 		}
-		return h
 	}
 
-	l, lMatch := c.LayerPatternMatches[key]
+	return ctx
+}
 
-	if lMatch {
-		return l
-	}
+func ReqFromContext(ctx context.Context) (*http.Request, bool) {
+	u, ok := ctx.Value(reqKey).(*http.Request)
+	return u, ok
+}
 
-	return nil
+func StartTimeFromContext(ctx context.Context) (time.Time, bool) {
+	u, ok := ctx.Value(startTimeKey).(time.Time)
+	return u, ok
+}
+
+func LimitLayersFromContext(ctx context.Context) (*bool, bool) {
+	u, ok := ctx.Value(limitLayersKey).(*bool)
+	return u, ok
+}
+
+func AllowedLayersFromContext(ctx context.Context) (*[]string, bool) {
+	u, ok := ctx.Value(allowedLayersKey).(*[]string)
+	return u, ok
+}
+
+func AllowedAreaFromContext(ctx context.Context) (*Bounds, bool) {
+	u, ok := ctx.Value(allowedAreaKey).(*Bounds)
+	return u, ok
+}
+
+func UserIDFromContext(ctx context.Context) (*string, bool) {
+	u, ok := ctx.Value(userIDKey).(*string)
+	return u, ok
+}
+
+func LayerPatternMatchesFromContext(ctx context.Context) (*map[string]string, bool) {
+	u, ok := ctx.Value(layerPatternMatchesKey).(*map[string]string)
+	return u, ok
+}
+
+func SkipCacheSaveFromContext(ctx context.Context) (*bool, bool) {
+	u, ok := ctx.Value(skipCacheSaveKey).(*bool)
+	return u, ok
+}
+
+func BackgroundContext() context.Context {
+	req, _ := http.NewRequestWithContext(context.Background(), "", "", nil)
+	return NewRequestContext(req)
 }

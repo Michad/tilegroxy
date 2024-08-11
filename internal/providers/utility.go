@@ -15,12 +15,14 @@
 package providers
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log/slog"
 	"math"
 	"net/http"
 	"os"
+	"reflect"
 	"regexp"
 	"slices"
 	"strconv"
@@ -29,13 +31,14 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 var envRegex = regexp.MustCompile(`{env\.[^{}}]*}`)
 var ctxRegex = regexp.MustCompile(`{ctx\.[^{}}]*}`)
 var lyrRegex = regexp.MustCompile(`{layer\.[^{}}]*}`)
 
-func replaceURLPlaceholders(ctx *pkg.RequestContext, tileRequest pkg.TileRequest, url string, invertY bool) (string, error) {
+func replaceURLPlaceholders(ctx context.Context, tileRequest pkg.TileRequest, url string, invertY bool) (string, error) {
 	b, err := tileRequest.GetBounds()
 
 	if err != nil {
@@ -67,7 +70,14 @@ func replaceURLPlaceholders(ctx *pkg.RequestContext, tileRequest pkg.TileRequest
 
 			slog.Debug("Replacing context var " + ctxVar)
 
-			url = strings.Replace(url, ctxMatch, fmt.Sprint(ctx.Value(ctxVar)), 1)
+			val := ctx.Value(ctxVar)
+			valVal := reflect.ValueOf(val)
+
+			if valVal.Kind() == reflect.Ptr {
+				val = valVal.Elem().Interface()
+			}
+
+			url = strings.Replace(url, ctxMatch, fmt.Sprint(val), 1)
 		}
 	}
 
@@ -79,7 +89,8 @@ func replaceURLPlaceholders(ctx *pkg.RequestContext, tileRequest pkg.TileRequest
 
 			slog.Debug("Replacing layer var " + layerVar)
 
-			url = strings.Replace(url, layerMatch, ctx.LayerPatternMatches[layerVar], 1)
+			lpm, _ := pkg.LayerPatternMatchesFromContext(ctx)
+			url = strings.Replace(url, layerMatch, (*lpm)[layerVar], 1)
 		}
 	}
 
@@ -101,7 +112,7 @@ func replaceURLPlaceholders(ctx *pkg.RequestContext, tileRequest pkg.TileRequest
  * Performs a GET operation against a given URL. Implementing providers should call this when possible. It has
  * standard reusable logic around various config options
  */
-func getTile(ctx *pkg.RequestContext, clientConfig config.ClientConfig, url string, authHeaders map[string]string) (*pkg.Image, error) {
+func getTile(ctx context.Context, clientConfig config.ClientConfig, url string, authHeaders map[string]string) (*pkg.Image, error) {
 	slog.DebugContext(ctx, fmt.Sprintf("Calling url %v\n", url))
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -119,7 +130,8 @@ func getTile(ctx *pkg.RequestContext, clientConfig config.ClientConfig, url stri
 		req.Header.Set(h, v)
 	}
 
-	client := http.Client{Timeout: time.Duration(clientConfig.Timeout) * time.Second}
+	transport := otelhttp.NewTransport(http.DefaultTransport, otelhttp.WithMessageEvents(otelhttp.ReadEvents))
+	client := http.Client{Transport: transport, Timeout: time.Duration(clientConfig.Timeout) * time.Second}
 
 	resp, err := client.Do(req)
 	if resp != nil {

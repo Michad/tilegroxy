@@ -35,6 +35,10 @@ import (
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
+	"github.com/Michad/tilegroxy/pkg/static"
+
+	"go.opentelemetry.io/contrib/bridges/otelslog"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/gorilla/handlers"
@@ -83,7 +87,7 @@ func errorVars(cfg *config.ErrorConfig, errorType pkg.TypeOfError) (int, slog.Le
 	return status, level, imgPath
 }
 
-func writeError(ctx *pkg.RequestContext, w http.ResponseWriter, cfg *config.ErrorConfig, err error) {
+func writeError(ctx context.Context, w http.ResponseWriter, cfg *config.ErrorConfig, err error) {
 	var te pkg.TypedError
 	if errors.As(err, &te) {
 		writeErrorMessage(ctx, w, cfg, te.Type(), te.Error(), te.External(cfg.Messages), debug.Stack())
@@ -92,7 +96,7 @@ func writeError(ctx *pkg.RequestContext, w http.ResponseWriter, cfg *config.Erro
 	}
 }
 
-func writeErrorMessage(ctx *pkg.RequestContext, w http.ResponseWriter, cfg *config.ErrorConfig, errorType pkg.TypeOfError, internalMessage string, externalMessage string, stack []byte) {
+func writeErrorMessage(ctx context.Context, w http.ResponseWriter, cfg *config.ErrorConfig, errorType pkg.TypeOfError, internalMessage string, externalMessage string, stack []byte) {
 	status, level, imgPath := errorVars(cfg, errorType)
 
 	slog.Log(ctx, level, internalMessage, "stack", string(stack))
@@ -227,6 +231,11 @@ func configureMainLogging(cfg *config.Config) error {
 
 	logHandler = slogContextHandler{logHandler, attr}
 
+	if cfg.Telemetry.Enabled {
+		otelHandler := otelslog.NewHandler(static.GetPackage())
+		logHandler = MultiHandler{[]slog.Handler{logHandler, otelHandler}}
+	}
+
 	slog.SetDefault(slog.New(logHandler))
 
 	return nil
@@ -264,14 +273,14 @@ type httpContextHandler struct {
 }
 
 func (h httpContextHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	reqC := pkg.NewRequestContext(req)
+	reqContext := pkg.NewRequestContext(req)
 	defer func() {
 		if err := recover(); err != nil {
-			writeErrorMessage(&reqC, w, &h.errCfg, pkg.TypeOfErrorOther, fmt.Sprint(err), "Unexpected Internal Server Error", debug.Stack())
+			writeErrorMessage(reqContext, w, &h.errCfg, pkg.TypeOfErrorOther, fmt.Sprint(err), "Unexpected Internal Server Error", debug.Stack())
 		}
 	}()
 
-	h.Handler.ServeHTTP(w, req.WithContext(&reqC))
+	h.Handler.ServeHTTP(w, req.WithContext(reqContext))
 }
 
 type httpRedirectHandler struct {
@@ -287,32 +296,7 @@ func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth au
 		return fmt.Errorf(config.Error.Messages.ParamRequired, "server.encrypt.domain")
 	}
 
-	r := http.ServeMux{}
-
-	if config.Server.Production {
-		r.HandleFunc(config.Server.RootPath, handleNoContent)
-	} else {
-		r.Handle(config.Server.RootPath, &defaultHandler{config, layerGroup, auth})
-		// r.HandleFunc("/documentation", defaultHandler)
-	}
-
-	tilePath := config.Server.RootPath + config.Server.TilePath + "/{layer}/{z}/{x}/{y}"
-	myTileHandler := tileHandler{defaultHandler{config, layerGroup, auth}}
-
-	r.Handle(tilePath, &myTileHandler)
-	r.Handle(tilePath+"/", &myTileHandler)
-
-	var rootHandler http.Handler
-
-	rootHandler = &r
-
-	if config.Server.Gzip {
-		rootHandler = handlers.CompressHandler(rootHandler)
-	}
-
-	rootHandler = httpContextHandler{rootHandler, config.Error}
-	rootHandler = http.TimeoutHandler(rootHandler, time.Duration(config.Server.Timeout)*time.Second, config.Error.Messages.Timeout)
-	rootHandler, err := configureAccessLogging(config.Logging.Access, config.Error.Messages, rootHandler)
+	rootHandler, err := setupHandlers(config, layerGroup, auth)
 
 	if err != nil {
 		return err
@@ -326,6 +310,16 @@ func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth au
 
 	ctx, stop := signal.NotifyContext(pkg.BackgroundContext(), InterruptFlags...)
 	defer stop()
+
+	var otelShutdown func(context.Context) error
+
+	if config.Telemetry.Enabled {
+		// Set up OpenTelemetry.
+		otelShutdown, err = setupOTELSDK(ctx)
+		if err != nil {
+			return err
+		}
+	}
 
 	srv := &http.Server{
 		Addr:        config.Server.BindHost + ":" + strconv.Itoa(config.Server.Port),
@@ -359,7 +353,59 @@ func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth au
 	}
 
 	err = srv.Shutdown(context.Background())
+
+	if config.Telemetry.Enabled {
+		err = errors.Join(err, otelShutdown(context.Background()))
+	}
 	return err
+}
+
+func setupHandlers(config *config.Config, layerGroup *layer.LayerGroup, auth authentication.Authentication) (http.Handler, error) {
+	r := http.ServeMux{}
+
+	var myRootHandler http.Handler
+	var myTileHandler http.Handler
+
+	if config.Server.Production {
+		myRootHandler = http.HandlerFunc(handleNoContent)
+	} else {
+		myRootHandler = &defaultHandler{config, layerGroup, auth}
+	}
+
+	tilePath := config.Server.RootPath + config.Server.TilePath + "/{layer}/{z}/{x}/{y}"
+	handler, err := newTileHandler(defaultHandler{config: config, auth: auth, layerGroup: layerGroup})
+	if err != nil {
+		return nil, err
+	}
+
+	myTileHandler = &handler
+
+	if config.Telemetry.Enabled {
+		myRootHandler = otelhttp.NewHandler(myRootHandler, config.Server.RootPath, otelhttp.WithMessageEvents(otelhttp.WriteEvents))
+		myTileHandler = otelhttp.NewHandler(myTileHandler, tilePath, otelhttp.WithMessageEvents(otelhttp.WriteEvents))
+	}
+
+	r.Handle(config.Server.RootPath, myRootHandler)
+	r.Handle(tilePath, myTileHandler)
+	r.Handle(tilePath+"/", myTileHandler)
+
+	var rootHandler http.Handler
+
+	rootHandler = &r
+
+	if config.Server.Gzip {
+		rootHandler = handlers.CompressHandler(rootHandler)
+	}
+
+	rootHandler = httpContextHandler{rootHandler, config.Error}
+	rootHandler = http.TimeoutHandler(rootHandler, time.Duration(config.Server.Timeout)*time.Second, config.Error.Messages.Timeout)
+	rootHandler, err = configureAccessLogging(config.Logging.Access, config.Error.Messages, rootHandler)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return rootHandler, nil
 }
 
 func listenAndServeTLS(config *config.Config, srvErr chan error, srv *http.Server) {

@@ -57,6 +57,10 @@ type ClientConfig struct {
 	Timeout       uint              // How long (in seconds) a request can be in flight before we cancel it and return an error
 }
 
+type TelemetryConfig struct {
+	Enabled bool
+}
+
 // TODO: handle this better. Not foolproof in detecting default values and very manual. Probably need to do a mapstructure method for this
 func (c *ClientConfig) MergeDefaultsFrom(o ClientConfig) {
 	if c.UserAgent == "" {
@@ -172,6 +176,7 @@ type Config struct {
 	Client         ClientConfig
 	Logging        LogConfig
 	Error          ErrorConfig
+	Telemetry      TelemetryConfig
 	Secret         map[string]interface{}
 	Authentication map[string]interface{}
 	Cache          map[string]interface{}

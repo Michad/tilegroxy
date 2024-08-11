@@ -24,6 +24,10 @@ var (
 	tilegroxyBuildDate string
 )
 
+func GetPackage() string {
+	return "github.com/michad/tilegroxy"
+}
+
 // Returns a tuple containing build version information. Returns:
 // Version in the format vX.Y.Z - will include placeholders for unofficial builds
 // Verson Control System identifier (git ref)

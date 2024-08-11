@@ -15,6 +15,8 @@
 package caches
 
 import (
+	"context"
+
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
@@ -47,10 +49,10 @@ func (s NoopRegistration) Initialize(configAny any, _ config.ErrorMessages) (cac
 	return Noop{config}, nil
 }
 
-func (c Noop) Lookup(_ pkg.TileRequest) (*pkg.Image, error) {
+func (c Noop) Lookup(_ context.Context, _ pkg.TileRequest) (*pkg.Image, error) {
 	return nil, nil
 }
 
-func (c Noop) Save(_ pkg.TileRequest, _ *pkg.Image) error {
+func (c Noop) Save(_ context.Context, _ pkg.TileRequest, _ *pkg.Image) error {
 	return nil
 }

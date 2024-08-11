@@ -15,26 +15,26 @@ Tilegroxy shines when you consume maps from multiple sources.  It isn't tied to 
 
 ### Features:
 
-* Provide a uniform interface for serving map layers
-* Proxy to ZXY, WMS, TMS, WMTS, or other protocol map layers
-* Cache tiles in disk, memory, s3, redis, and/or memcached
-* Require authentication using static key, JWT, or custom logic
-* Restrict access to a given layer and/or geographic region based on auth token
-* Create your own custom provider to pull in non-standard and proprietary imagery sources
-* Tweak your map layer with 18 standard effects or by providing your own pixel-level logic
-* Combine multiple map layers with adjustable rules and blending methods
-* Act as an HTTP server for [MapServer](https://www.mapserver.org) and any other CGI application that generates tiles
-* Commands for seeding and testing your layers
+* [Proxy](docs/configuration.md#proxy) to ZXY, WMS, TMS, WMTS, or other protocol map layers
+* Cache tiles in [disk](docs/configuration.md#disks), [memory](docs/configuration.md#memory), [s3](docs/configuration.md#s3), [redis](docs/configuration.md#redis), and/or [memcached](docs/configuration.md#memcache)
+* Require authentication using [static key](docs/configuration.md#static-key), [JWT](docs/configuration.md#jwt), or [custom](docs/configuration.md#custom-1) logic
+* [Restrict access](docs/configuration.md#jwt) to a given layer and/or geographic region based on auth token
+* Create your own [custom provider](docs/extensibility.md#custom-providers) to pull in non-standard and proprietary imagery sources
+* Tweak your map layer with [18 standard effects](docs/configuration.md#effect) or by providing your own [pixel-level logic](docs/configuration.md#transform)
+* [Combine](docs/configuration.md#blend) multiple map layers with adjustable rules and blending methods
+* [Act as an HTTP server](docs/configuration.md#cgi) for [MapServer](https://www.mapserver.org) and any other CGI application that generates tiles
+* Commands for [seeding](#seed) and [testing](#test) your layers
 * Support for both raster and vector format tiles
-* Run as HTTPS including Let's Encrypt support
-* Configurable timeout, logging, and error handling rules
-* Override configuration via environment variables
-* Externalize passwords/keys using AWS Secrets Manager
-* Container deployment
+* Run as [HTTPS](docs/configuration.md#encryption) including Let's Encrypt support
+* Configurable [timeout](docs/configuration.md#server), [logging](docs/configuration.md#log), and [error handling](docs/configuration.md#error) rules
+* Override configuration via [environment variables](docs/configuration.md)
+* [Externalize passwords/keys](docs/configuration.md#secret) using AWS Secrets Manager
+* [Container deployment](#docker)
+* Traces, metrics, and logs available via [OpenTelemetry](docs/telemetry.md)
+* Usable as an application or a [library](docs/extensibility.md#using-tilegroxy-as-a-library)
 
 The following are on the roadmap and expected before a 1.0 release:
 
-* OpenTelemetry support
 * Example k8s deployment file
 
 ## Configuration

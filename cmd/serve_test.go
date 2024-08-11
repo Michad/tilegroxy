@@ -154,6 +154,8 @@ func Test_ServeCommand_Execute(t *testing.T) {
   RootPath: "/root"
   TilePath: "/tiles"
   Production: false
+telemetry:
+  enabled: true
 layers:
   - id: color
     provider:
@@ -270,12 +272,12 @@ layers:
 
             "tilegroxy/tilegroxy"
         )
-        func preAuth(ctx *tilegroxy.RequestContext, providerContext tilegroxy.ProviderContext, params map[string]interface{}, cientConfig tilegroxy.ClientConfig, errorMessages tilegroxy.ErrorMessages,
+        func preAuth(ctx tilegroxy.Context, providerContext tilegroxy.ProviderContext, params map[string]interface{}, cientConfig tilegroxy.ClientConfig, errorMessages tilegroxy.ErrorMessages,
         )  (tilegroxy.ProviderContext, error) {
             return tilegroxy.ProviderContext{AuthBypass: true}, nil
         }
 
-        func generateTile(ctx *tilegroxy.RequestContext, providerContext tilegroxy.ProviderContext, tileRequest tilegroxy.TileRequest, params map[string]interface{}, clientConfig tilegroxy.ClientConfig, errorMessages tilegroxy.ErrorMessages ) (*tilegroxy.Image, error ) {
+        func generateTile(ctx tilegroxy.Context, providerContext tilegroxy.ProviderContext, tileRequest tilegroxy.TileRequest, params map[string]interface{}, clientConfig tilegroxy.ClientConfig, errorMessages tilegroxy.ErrorMessages ) (*tilegroxy.Image, error ) {
             time.Sleep(10 * time.Second)
             return &[]byte{0x01,0x02}, nil
         }

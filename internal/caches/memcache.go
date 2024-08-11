@@ -15,6 +15,7 @@
 package caches
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -89,7 +90,7 @@ func (s MemcacheRegistration) Initialize(configAny any, errorMessages config.Err
 
 }
 
-func (c Memcache) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
+func (c Memcache) Lookup(_ context.Context, t pkg.TileRequest) (*pkg.Image, error) {
 	it, err := c.client.Get(c.KeyPrefix + t.String())
 
 	if err != nil {
@@ -99,6 +100,6 @@ func (c Memcache) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
 	return &it.Value, nil
 }
 
-func (c Memcache) Save(t pkg.TileRequest, img *pkg.Image) error {
+func (c Memcache) Save(_ context.Context, t pkg.TileRequest, img *pkg.Image) error {
 	return c.client.Set(&memcache.Item{Key: c.KeyPrefix + t.String(), Value: *img, Expiration: int32(c.TTL)})
 }

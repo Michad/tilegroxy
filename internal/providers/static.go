@@ -15,6 +15,7 @@
 package providers
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Michad/tilegroxy/internal/images"
@@ -67,10 +68,10 @@ func (s StaticRegistration) Initialize(cfgAny any, _ config.ClientConfig, errorM
 	return &Static{cfg, img}, nil
 }
 
-func (t Static) PreAuth(_ *pkg.RequestContext, _ layer.ProviderContext) (layer.ProviderContext, error) {
+func (t Static) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.ProviderContext, error) {
 	return layer.ProviderContext{AuthBypass: true}, nil
 }
 
-func (t Static) GenerateTile(_ *pkg.RequestContext, _ layer.ProviderContext, _ pkg.TileRequest) (*pkg.Image, error) {
+func (t Static) GenerateTile(_ context.Context, _ layer.ProviderContext, _ pkg.TileRequest) (*pkg.Image, error) {
 	return t.img, nil
 }

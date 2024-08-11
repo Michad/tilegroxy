@@ -17,6 +17,7 @@ package providers
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"image"
 	_ "image/jpeg"
@@ -80,11 +81,11 @@ func (s EffectRegistration) Initialize(cfgAny any, clientConfig config.ClientCon
 	return &Effect{config, provider}, nil
 }
 
-func (t Effect) PreAuth(ctx *pkg.RequestContext, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
+func (t Effect) PreAuth(ctx context.Context, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
 	return t.provider.PreAuth(ctx, providerContext)
 }
 
-func (t Effect) GenerateTile(ctx *pkg.RequestContext, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t Effect) GenerateTile(ctx context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	img, err := t.provider.GenerateTile(ctx, providerContext, tileRequest)
 
 	if err != nil {

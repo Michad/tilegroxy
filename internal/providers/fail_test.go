@@ -15,6 +15,7 @@
 package providers
 
 import (
+	"context"
 	"errors"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -54,13 +55,13 @@ func (s FailRegistration) Initialize(cfgAny any, _ config.ClientConfig, _ config
 	return &Fail{config}, nil
 }
 
-func (t Fail) PreAuth(_ *pkg.RequestContext, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
+func (t Fail) PreAuth(_ context.Context, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
 	if t.OnAuth {
 		return providerContext, errors.New(t.Message)
 	}
 	return providerContext, nil
 }
 
-func (t Fail) GenerateTile(_ *pkg.RequestContext, _ layer.ProviderContext, _ pkg.TileRequest) (*pkg.Image, error) {
+func (t Fail) GenerateTile(_ context.Context, _ layer.ProviderContext, _ pkg.TileRequest) (*pkg.Image, error) {
 	return nil, errors.New(t.Message)
 }

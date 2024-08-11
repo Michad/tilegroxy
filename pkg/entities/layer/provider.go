@@ -15,6 +15,7 @@
 package layer
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -26,8 +27,8 @@ import (
 type Provider interface {
 	// Performs authentication before tiles are ever generated. The calling code ensures this is only called once at a time and only when needed
 	// based on the expiration in layergroup.ProviderContext and when an AuthError is returned from GenerateTile
-	PreAuth(ctx *pkg.RequestContext, providerContext ProviderContext) (ProviderContext, error)
-	GenerateTile(ctx *pkg.RequestContext, providerContext ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error)
+	PreAuth(ctx context.Context, providerContext ProviderContext) (ProviderContext, error)
+	GenerateTile(ctx context.Context, providerContext ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error)
 }
 
 type ProviderContext struct {
@@ -73,7 +74,13 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig config.Cli
 			if err != nil {
 				return nil, err
 			}
-			return reg.Initialize(cfg, clientConfig, errorMessages, layerGroup)
+			provider, err := reg.Initialize(cfg, clientConfig, errorMessages, layerGroup)
+
+			if err != nil {
+				return nil, err
+			}
+
+			return ProviderWrapper{Name: name, Provider: provider}, nil
 		}
 	}
 

@@ -15,16 +15,16 @@
 package authentication
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
-	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/mitchellh/mapstructure"
 )
 
 type Authentication interface {
-	CheckAuthentication(req *http.Request, ctx *pkg.RequestContext) bool
+	CheckAuthentication(ctx context.Context, req *http.Request) bool
 }
 
 type AuthenticationRegistration interface {
@@ -64,7 +64,7 @@ func ConstructAuth(rawConfig map[string]interface{}, errorMessages config.ErrorM
 				return nil, err
 			}
 			a, err := reg.Initialize(cfg, errorMessages)
-			return a, err
+			return AuthWrapper{Name: name, Auth: a}, err
 		}
 	}
 

@@ -16,6 +16,7 @@ package providers
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -49,7 +50,7 @@ type CGI struct {
 }
 
 type SLogWriter struct {
-	ctx   *pkg.RequestContext
+	ctx   context.Context
 	level slog.Level
 }
 
@@ -136,11 +137,11 @@ func (s CGIRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig
 	return &CGI{cfg, h, clientConfig}, nil
 }
 
-func (t CGI) PreAuth(_ *pkg.RequestContext, _ layer.ProviderContext) (layer.ProviderContext, error) {
+func (t CGI) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.ProviderContext, error) {
 	return layer.ProviderContext{AuthBypass: true}, nil
 }
 
-func (t CGI) GenerateTile(ctx *pkg.RequestContext, _ layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t CGI) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	var err error
 
 	h := t.handler
@@ -158,7 +159,7 @@ func (t CGI) GenerateTile(ctx *pkg.RequestContext, _ layer.ProviderContext, tile
 		return nil, err
 	}
 
-	slog.DebugContext(ctx, fmt.Sprintf("Calling %v", uri))
+	slog.DebugContext(ctx, fmt.Sprintf("Calling CGI via %v", uri))
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+t.Domain+uri, nil)
 	if err != nil {
@@ -176,11 +177,15 @@ func (t CGI) GenerateTile(ctx *pkg.RequestContext, _ layer.ProviderContext, tile
 	slog.DebugContext(ctx, fmt.Sprintf("CGI response - Status: %v Content: %v", rw.code, rw.headers["Content-Type"]))
 
 	if !slices.Contains(t.clientConfig.StatusCodes, rw.code) {
-		return nil, fmt.Errorf("cgi returned status code %v", rw.code)
+		err = fmt.Errorf("cgi returned status code %v", rw.code)
+
+		return nil, err
 	}
 
 	if t.InvalidAsError && !slices.Contains(t.clientConfig.ContentTypes, rw.headers["Content-Type"][0]) {
-		return nil, errors.New(string(b))
+		err = errors.New(string(b))
+
+		return nil, err
 	}
 
 	return &b, nil

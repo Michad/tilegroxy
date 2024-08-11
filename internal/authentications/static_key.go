@@ -60,7 +60,7 @@ func (s StaticKeyRegistration) Initialize(cfgAny any, _ config.ErrorMessages) (a
 	return &StaticKey{cfg}, nil
 }
 
-func (c StaticKey) CheckAuthentication(req *http.Request, _ *pkg.RequestContext) bool {
+func (c StaticKey) CheckAuthentication(_ context.Context, req *http.Request) bool {
 	h := req.Header["Authorization"]
 	return len(h) > 0 && h[0] == "Bearer "+c.Key
 }

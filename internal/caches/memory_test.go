@@ -15,6 +15,7 @@
 package caches
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -40,7 +41,7 @@ func TestTtl(t *testing.T) {
 	tile := makeReq(53)
 	img := makeImg(53)
 
-	require.NoError(t, r.Save(tile, &img))
+	require.NoError(t, r.Save(context.Background(), tile, &img))
 
 	validateLookup(t, r, tile, &img)
 	time.Sleep(time.Duration(2) * time.Second)

@@ -140,11 +140,11 @@ func (c S3) makeBucket() error {
 	return err
 }
 
-func (c S3) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
+func (c S3) Lookup(ctx context.Context, t pkg.TileRequest) (*pkg.Image, error) {
 	writer := manager.NewWriteAtBuffer([]byte{})
 
 	_, err := c.downloader.Download(
-		context.TODO(),
+		ctx,
 		writer,
 		&s3.GetObjectInput{
 			Bucket: aws.String(c.Bucket),
@@ -166,7 +166,7 @@ func (c S3) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
 	return &img, nil
 }
 
-func (c S3) Save(t pkg.TileRequest, img *pkg.Image) error {
+func (c S3) Save(ctx context.Context, t pkg.TileRequest, img *pkg.Image) error {
 
 	uploadConfig := &s3.PutObjectInput{
 		Bucket: &c.Bucket,
@@ -178,6 +178,6 @@ func (c S3) Save(t pkg.TileRequest, img *pkg.Image) error {
 		uploadConfig.StorageClass = types.StorageClass(c.StorageClass)
 	}
 
-	_, err := c.uploader.Upload(context.TODO(), uploadConfig)
+	_, err := c.uploader.Upload(ctx, uploadConfig)
 	return err
 }
