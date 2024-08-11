@@ -154,6 +154,8 @@ func Test_ServeCommand_Execute(t *testing.T) {
   RootPath: "/root"
   TilePath: "/tiles"
   Production: false
+telemetry:
+  enabled: true
 layers:
   - id: color
     provider:
