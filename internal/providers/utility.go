@@ -31,12 +31,8 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/static"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
-
-var packageName = static.GetPackage()
-var version, ref, buildDate = static.GetVersionInformation()
 
 var envRegex = regexp.MustCompile(`{env\.[^{}}]*}`)
 var ctxRegex = regexp.MustCompile(`{ctx\.[^{}}]*}`)

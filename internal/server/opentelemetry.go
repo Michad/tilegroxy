@@ -1,3 +1,17 @@
+// Copyright 2024 Michael Davis
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package server
 
 import (
@@ -8,10 +22,6 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/static"
 	"go.opentelemetry.io/otel"
-
-	// "go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
-	// "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
-	// "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
@@ -27,11 +37,15 @@ import (
 )
 
 const serviceName = "tilegroxy"
+const batchTime = 10 * time.Second
 
-func setupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, err error) {
+var instanceID = pkg.RandomString()
+
+func setupOTELSDK(ctx context.Context) (func(context.Context) error, error) {
+	var err error
 	var shutdownFuncs []func(context.Context) error
 
-	shutdown = func(ctx context.Context) error {
+	shutdown := func(ctx context.Context) error {
 		var err error
 		for _, fn := range shutdownFuncs {
 			err = errors.Join(err, fn(ctx))
@@ -50,7 +64,7 @@ func setupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, er
 	tracerProvider, err := newTraceProvider()
 	if err != nil {
 		handleErr(err)
-		return
+		return nil, err
 	}
 	shutdownFuncs = append(shutdownFuncs, tracerProvider.Shutdown)
 	otel.SetTracerProvider(tracerProvider)
@@ -58,7 +72,7 @@ func setupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, er
 	meterProvider, err := newMeterProvider()
 	if err != nil {
 		handleErr(err)
-		return
+		return nil, err
 	}
 	shutdownFuncs = append(shutdownFuncs, meterProvider.Shutdown)
 	otel.SetMeterProvider(meterProvider)
@@ -66,12 +80,12 @@ func setupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, er
 	loggerProvider, err := newLoggerProvider()
 	if err != nil {
 		handleErr(err)
-		return
+		return nil, err
 	}
 	shutdownFuncs = append(shutdownFuncs, loggerProvider.Shutdown)
 	global.SetLoggerProvider(loggerProvider)
 
-	return
+	return shutdown, nil
 }
 
 func newPropagator() propagation.TextMapPropagator {
@@ -81,8 +95,6 @@ func newPropagator() propagation.TextMapPropagator {
 	)
 }
 
-var instanceId = pkg.RandomString()
-
 func standardAttributes() []attribute.KeyValue {
 	version, _, _ := static.GetVersionInformation()
 
@@ -90,7 +102,7 @@ func standardAttributes() []attribute.KeyValue {
 		semconv.ServiceNamespaceKey.String(serviceName),
 		semconv.ServiceNameKey.String(serviceName),
 		semconv.ServiceVersionKey.String(version),
-		semconv.ServiceInstanceIDKey.String(instanceId),
+		semconv.ServiceInstanceIDKey.String(instanceID),
 		semconv.TelemetrySDKLanguageGo,
 	}
 }
@@ -113,7 +125,7 @@ func newTraceProvider() (*trace.TracerProvider, error) {
 	traceProvider := trace.NewTracerProvider(
 		trace.WithResource(traceRes),
 		trace.WithBatcher(traceExporter,
-			trace.WithBatchTimeout(10*time.Second)),
+			trace.WithBatchTimeout(batchTime)),
 	)
 	return traceProvider, nil
 }

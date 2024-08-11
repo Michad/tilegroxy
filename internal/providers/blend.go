@@ -251,7 +251,7 @@ func (t Blend) GenerateTile(ctx context.Context, providerContext layer.ProviderC
 	slog.Log(ctx, config.LevelTrace, fmt.Sprintf("Blended size: %v", size))
 
 	for _, img := range imgSlice {
-		combinedImg = t.blendImage(img, size, ctx, combinedImg)
+		combinedImg = t.blendImage(ctx, img, size, combinedImg)
 	}
 
 	var buf bytes.Buffer
@@ -264,7 +264,7 @@ func (t Blend) GenerateTile(ctx context.Context, providerContext layer.ProviderC
 	return &output, err
 }
 
-func (t Blend) blendImage(img image.Image, size image.Point, ctx context.Context, combinedImg image.Image) image.Image {
+func (t Blend) blendImage(ctx context.Context, img image.Image, size image.Point, combinedImg image.Image) image.Image {
 	if img.Bounds().Max != size {
 		slog.DebugContext(ctx, fmt.Sprintf("Resizing from %v to %v", img.Bounds().Max, size))
 		img = transform.Resize(img, size.X, size.Y, transform.NearestNeighbor)

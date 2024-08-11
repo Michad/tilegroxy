@@ -77,7 +77,7 @@ func (v ValidationResult) isGood() bool {
 	return true
 }
 
-func extractToken(req *http.Request, ctx context.Context, tokenExtract map[string]string) (string, bool) {
+func extractToken(ctx context.Context, req *http.Request, tokenExtract map[string]string) (string, bool) {
 	h, hOk := tokenExtract[ExtractModeHeader]
 	c, cOk := tokenExtract[ExtractModeCookie]
 	q, qOk := tokenExtract[ExtractModeQuery]
@@ -202,7 +202,7 @@ func (s CustomRegistration) Initialize(cfgAny any, errorMessages config.ErrorMes
 
 func (c Custom) CheckAuthentication(ctx context.Context, req *http.Request) bool {
 	slog.Log(ctx, config.LevelTrace, "Performing custom auth check")
-	tok, ok := extractToken(req, ctx, c.Token)
+	tok, ok := extractToken(ctx, req, c.Token)
 	if ok {
 		var valResult ValidationResult
 		var inCache bool

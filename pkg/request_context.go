@@ -36,6 +36,7 @@ func p[A any](val A) *A {
 	return &val
 }
 
+//nolint:revive,staticcheck // We want values to be accessible
 func NewRequestContext(req *http.Request) context.Context {
 
 	ctx := req.Context()

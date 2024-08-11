@@ -15,6 +15,7 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -49,7 +50,7 @@ type tileHandler struct {
 	tileSuccessCounter metric.Int64Counter
 }
 
-func NewTileHandler(handler defaultHandler) (tileHandler, error) {
+func newTileHandler(handler defaultHandler) (tileHandler, error) {
 	meter := otel.Meter(packageName)
 
 	tileAllCounter, err1 := meter.Int64Counter("tilegroxy.tiles.total.request", metric.WithDescription("Number of total tile requests"))
@@ -91,50 +92,21 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	layerName := req.PathValue("layer")
-	zStr := req.PathValue("z")
-	xStr := req.PathValue("x")
-	yStr := req.PathValue("y")
-
-	z, err := strconv.Atoi(zStr)
-
-	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Bad Request")
-		writeError(ctx, w, &h.config.Error, pkg.InvalidArgumentError{Name: "z", Value: zStr})
-		return
+	tileReq, ok := h.extractAndValidateRequest(ctx, req, span, w)
+	if !ok {
+		return // We already handled the error in the function
 	}
-
-	x, err := strconv.Atoi(xStr)
-
-	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Bad Request")
-		writeError(ctx, w, &h.config.Error, pkg.InvalidArgumentError{Name: "x", Value: xStr})
-		return
-	}
-
-	y, err := strconv.Atoi(yStr)
-
-	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Bad Request")
-		writeError(ctx, w, &h.config.Error, pkg.InvalidArgumentError{Name: "y", Value: yStr})
-		return
-	}
-
-	tileReq := pkg.TileRequest{LayerName: layerName, Z: z, X: x, Y: y}
 
 	if span.IsRecording() {
 		span.SetAttributes(
-			attribute.String("tilegroxy.layer.name", layerName),
-			attribute.Int("tilegroxy.coordinate.x", x),
-			attribute.Int("tilegroxy.coordinate.y", y),
-			attribute.Int("tilegroxy.coordinate.z", z),
+			attribute.String("tilegroxy.layer.name", tileReq.LayerName),
+			attribute.Int("tilegroxy.coordinate.x", tileReq.X),
+			attribute.Int("tilegroxy.coordinate.y", tileReq.Y),
+			attribute.Int("tilegroxy.coordinate.z", tileReq.Z),
 		)
 	}
 
-	_, err = tileReq.GetBounds()
+	_, err := tileReq.GetBounds()
 
 	if err != nil {
 		span.RecordError(err)
@@ -182,6 +154,43 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		span.SetStatus(codes.Ok, "")
 	}
 
-	//This isn't in the else clause because the tile was still generated successfully even though request errored
+	// This isn't in the else clause because the tile was still generated successfully even though request errored
 	h.tileSuccessCounter.Add(ctx, 1)
+}
+
+func (h *tileHandler) extractAndValidateRequest(ctx context.Context, req *http.Request, span trace.Span, w http.ResponseWriter) (pkg.TileRequest, bool) {
+	layerName := req.PathValue("layer")
+	zStr := req.PathValue("z")
+	xStr := req.PathValue("x")
+	yStr := req.PathValue("y")
+
+	z, err := strconv.Atoi(zStr)
+
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Bad Request")
+		writeError(ctx, w, &h.config.Error, pkg.InvalidArgumentError{Name: "z", Value: zStr})
+		return pkg.TileRequest{}, false
+	}
+
+	x, err := strconv.Atoi(xStr)
+
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Bad Request")
+		writeError(ctx, w, &h.config.Error, pkg.InvalidArgumentError{Name: "x", Value: xStr})
+		return pkg.TileRequest{}, false
+	}
+
+	y, err := strconv.Atoi(yStr)
+
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Bad Request")
+		writeError(ctx, w, &h.config.Error, pkg.InvalidArgumentError{Name: "y", Value: yStr})
+		return pkg.TileRequest{}, false
+	}
+
+	tileReq := pkg.TileRequest{LayerName: layerName, Z: z, X: x, Y: y}
+	return tileReq, true
 }

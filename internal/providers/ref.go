@@ -61,11 +61,11 @@ func (t Ref) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.Provider
 func (t Ref) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	newRequest := pkg.TileRequest{LayerName: t.Layer, Z: tileRequest.Z, X: tileRequest.X, Y: tileRequest.Y}
 
-	//We need to make a new context for the child call to avoid e.g. layer placeholder from main layer interfering with that of the child layer
+	// We need to make a new context for the child call to avoid e.g. layer placeholder from main layer interfering with that of the child layer
 	req, _ := pkg.ReqFromContext(ctx)
 	newCtx := pkg.NewRequestContext(req)
 
-	//Copy span over from original context
+	// Copy span over from original context
 	span := trace.SpanFromContext(ctx)
 	newCtx = trace.ContextWithSpan(newCtx, span)
 

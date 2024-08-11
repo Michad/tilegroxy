@@ -78,7 +78,7 @@ func (s MemoryRegistration) Initialize(configAny any, _ config.ErrorMessages) (c
 	return &Memory{config, cache}, nil
 }
 
-func (c Memory) Lookup(ctx context.Context, t pkg.TileRequest) (*pkg.Image, error) {
+func (c Memory) Lookup(_ context.Context, t pkg.TileRequest) (*pkg.Image, error) {
 	img, ok := c.Cache.Get(t.String())
 
 	if ok {
@@ -88,7 +88,7 @@ func (c Memory) Lookup(ctx context.Context, t pkg.TileRequest) (*pkg.Image, erro
 	return nil, nil
 }
 
-func (c Memory) Save(ctx context.Context, t pkg.TileRequest, img *pkg.Image) error {
+func (c Memory) Save(_ context.Context, t pkg.TileRequest, img *pkg.Image) error {
 	c.Cache.Set(t.String(), *img)
 	return nil
 }

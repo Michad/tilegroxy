@@ -121,7 +121,7 @@ func (c JWT) CheckAuthentication(ctx context.Context, req *http.Request) bool {
 		}
 	}
 
-	exp, ok := c.checkAuthenticationWithoutCache(tokenStr, ctx)
+	exp, ok := c.checkAuthenticationWithoutCache(ctx, tokenStr)
 	if !ok {
 		return false
 	}
@@ -152,7 +152,7 @@ func (c JWT) extractToken(req *http.Request) (string, bool) {
 	return tokenStr, true
 }
 
-func (c JWT) checkAuthenticationWithoutCache(tokenStr string, ctx context.Context) (*jwt.NumericDate, bool) {
+func (c JWT) checkAuthenticationWithoutCache(ctx context.Context, tokenStr string) (*jwt.NumericDate, bool) {
 	parserOptions := make([]jwt.ParserOption, 0)
 	parserOptions = append(parserOptions, jwt.WithLeeway(defaultLeeway))
 	parserOptions = append(parserOptions, jwt.WithExpirationRequired())
@@ -198,12 +198,12 @@ func (c JWT) checkAuthenticationWithoutCache(tokenStr string, ctx context.Contex
 	rawClaim, ok := tokenJwt.Claims.(jwt.MapClaims)
 
 	if ok {
-		validatePassed := c.validateScope(rawClaim, ctx)
+		validatePassed := c.validateScope(ctx, rawClaim)
 		if !validatePassed {
 			return nil, false
 		}
 
-		validatePassed = c.validateGeohash(rawClaim, ctx)
+		validatePassed = c.validateGeohash(ctx, rawClaim)
 		if !validatePassed {
 			return nil, false
 		}
@@ -214,7 +214,7 @@ func (c JWT) checkAuthenticationWithoutCache(tokenStr string, ctx context.Contex
 			*ctxUserID, _ = rawUID.(string)
 		}
 	} else {
-		return logInvalidClaimsType(tokenJwt, ctx)
+		return logInvalidClaimsType(ctx, tokenJwt)
 	}
 	return exp, true
 }
@@ -239,7 +239,7 @@ func (c JWT) parseKey(_ *jwt.Token) (interface{}, error) {
 	return nil, fmt.Errorf(c.errorMessages.InvalidParam, "jwt.alg", c.Algorithm)
 }
 
-func logInvalidClaimsType(tokenJwt *jwt.Token, ctx context.Context) (*jwt.NumericDate, bool) {
+func logInvalidClaimsType(ctx context.Context, tokenJwt *jwt.Token) (*jwt.NumericDate, bool) {
 	// notest
 
 	var debugType string
@@ -254,7 +254,7 @@ func logInvalidClaimsType(tokenJwt *jwt.Token, ctx context.Context) (*jwt.Numeri
 	return nil, false
 }
 
-func (c JWT) validateScope(rawClaim jwt.MapClaims, ctx context.Context) bool {
+func (c JWT) validateScope(ctx context.Context, rawClaim jwt.MapClaims) bool {
 	scope := rawClaim["scope"]
 	scopeStr, ok := scope.(string)
 
@@ -294,7 +294,7 @@ func (c JWT) validateScope(rawClaim jwt.MapClaims, ctx context.Context) bool {
 	return true
 }
 
-func (c JWT) validateGeohash(rawClaim jwt.MapClaims, ctx context.Context) bool {
+func (c JWT) validateGeohash(ctx context.Context, rawClaim jwt.MapClaims) bool {
 	hash := rawClaim["geohash"]
 
 	if hash == nil {

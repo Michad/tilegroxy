@@ -69,7 +69,10 @@ func (s CustomRegistration) Initialize(cfgAny any, clientConfig config.ClientCon
 		return nil, err
 	}
 
-	i.Use(interp.Symbols)
+	err = i.Use(interp.Symbols)
+	if err != nil {
+		return nil, err
+	}
 
 	err = i.Use(interp.Exports{
 		"tilegroxy/tilegroxy": map[string]reflect.Value{
