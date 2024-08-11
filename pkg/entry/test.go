@@ -124,10 +124,10 @@ func testTileRequests(layerObjects *layer.LayerGroup, opts TestOptions, errCount
 		var cacheReadError error
 
 		if !opts.NoCache && layerErr == nil {
-			cacheWriteError = layer.Cache.Save(req, img)
+			cacheWriteError = layer.Cache.Save(ctx, req, img)
 			if cacheWriteError == nil {
 				var img2 *pkg.Image
-				img2, cacheReadError = layer.Cache.Lookup(req)
+				img2, cacheReadError = layer.Cache.Lookup(ctx, req)
 				if cacheReadError == nil {
 					if img2 == nil {
 						cacheReadError = errors.New("no result from cache lookup")

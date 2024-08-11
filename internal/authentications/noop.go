@@ -48,6 +48,6 @@ func (s NoopRegistration) Initialize(config any, _ config.ErrorMessages) (authen
 	return &Noop{config.(NoopConfig)}, nil
 }
 
-func (c Noop) CheckAuthentication(_ *http.Request, _ context.Context) bool {
+func (c Noop) CheckAuthentication(_ context.Context, _ *http.Request) bool {
 	return true
 }

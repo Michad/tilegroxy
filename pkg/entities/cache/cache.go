@@ -15,6 +15,7 @@
 package cache
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -23,8 +24,8 @@ import (
 )
 
 type Cache interface {
-	Lookup(t pkg.TileRequest) (*pkg.Image, error)
-	Save(t pkg.TileRequest, img *pkg.Image) error
+	Lookup(ctx context.Context, t pkg.TileRequest) (*pkg.Image, error)
+	Save(ctx context.Context, t pkg.TileRequest, img *pkg.Image) error
 }
 
 type CacheRegistration interface {
@@ -68,7 +69,7 @@ func ConstructCache(rawConfig map[string]interface{}, errorMessages config.Error
 				return nil, err
 			}
 			a, err := reg.Initialize(cfg, errorMessages)
-			return a, err
+			return CacheWrapper{Name: name, Cache: a}, err
 		}
 	}
 

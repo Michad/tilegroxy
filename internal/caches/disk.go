@@ -15,6 +15,7 @@
 package caches
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -73,7 +74,7 @@ func (s DiskRegistration) Initialize(configAny any, errorMessages config.ErrorMe
 	return &Disk{config}, nil
 }
 
-func (c Disk) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
+func (c Disk) Lookup(ctx context.Context, t pkg.TileRequest) (*pkg.Image, error) {
 	filename := requestToFilename(t)
 
 	img, err := os.ReadFile(filepath.Join(c.Path, filename))
@@ -85,7 +86,7 @@ func (c Disk) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
 	return &img, err
 }
 
-func (c Disk) Save(t pkg.TileRequest, img *pkg.Image) error {
+func (c Disk) Save(ctx context.Context, t pkg.TileRequest, img *pkg.Image) error {
 	filename := requestToFilename(t)
 
 	return os.WriteFile(filepath.Join(c.Path, filename), *img, fs.FileMode(c.FileMode))

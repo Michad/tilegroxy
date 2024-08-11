@@ -20,7 +20,6 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -70,15 +69,5 @@ func (t Ref) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequ
 	span := trace.SpanFromContext(ctx)
 	newCtx = trace.ContextWithSpan(newCtx, span)
 
-	newCtx, span = makeChildSpan(newCtx, newRequest, "ref", "")
-	defer span.End()
-
-	img, err := t.layerGroup.RenderTile(newCtx, newRequest)
-
-	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Error from child ref call")
-	}
-
-	return img, err
+	return t.layerGroup.RenderTile(newCtx, newRequest)
 }

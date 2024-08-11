@@ -106,7 +106,7 @@ func (s JWTRegistration) Initialize(configAny any, errorMessages config.ErrorMes
 	return &JWT{config, &cache, errorMessages}, nil
 }
 
-func (c JWT) CheckAuthentication(req *http.Request, ctx context.Context) bool {
+func (c JWT) CheckAuthentication(ctx context.Context, req *http.Request) bool {
 	tokenStr, ok := c.extractToken(req)
 	if !ok {
 		return false

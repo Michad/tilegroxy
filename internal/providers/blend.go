@@ -33,7 +33,6 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
-	"go.opentelemetry.io/otel/codes"
 
 	"github.com/anthonynsimon/bild/blend"
 	"github.com/anthonynsimon/bild/transform"
@@ -315,13 +314,10 @@ func (t Blend) blendImage(img image.Image, size image.Point, ctx context.Context
 }
 
 func callProvider(ctx context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest, provider layer.Provider, i int, imgs chan indexedImg, errs chan error, wg *sync.WaitGroup) {
-	newCtx, span := makeChildSpan(ctx, tileRequest, "blend", strconv.Itoa(i))
-
 	defer func() {
 		if r := recover(); r != nil {
 			errs <- fmt.Errorf("unexpected blend error %v", r)
 		}
-		span.End()
 		wg.Done()
 	}()
 
@@ -332,9 +328,9 @@ func callProvider(ctx context.Context, providerContext layer.ProviderContext, ti
 	ac, ok := providerContext.Other[key].(layer.ProviderContext)
 
 	if ok {
-		img, err = provider.GenerateTile(newCtx, ac, tileRequest)
+		img, err = provider.GenerateTile(ctx, ac, tileRequest)
 	} else {
-		img, err = provider.GenerateTile(newCtx, layer.ProviderContext{}, tileRequest)
+		img, err = provider.GenerateTile(ctx, layer.ProviderContext{}, tileRequest)
 	}
 
 	if img != nil {
@@ -345,11 +341,6 @@ func callProvider(ctx context.Context, providerContext layer.ProviderContext, ti
 			int
 			image.Image
 		}{i, realImage}
-	}
-
-	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Error from child blend call")
 	}
 
 	errs <- err

@@ -74,7 +74,13 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig config.Cli
 			if err != nil {
 				return nil, err
 			}
-			return reg.Initialize(cfg, clientConfig, errorMessages, layerGroup)
+			provider, err := reg.Initialize(cfg, clientConfig, errorMessages, layerGroup)
+
+			if err != nil {
+				return nil, err
+			}
+
+			return ProviderWrapper{Name: name, Provider: provider}, nil
 		}
 	}
 

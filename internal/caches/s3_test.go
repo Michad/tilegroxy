@@ -68,7 +68,7 @@ func Test_S3ValidateProfile(t *testing.T) {
 	var err2 error
 	s3, err1 := S3Registration{}.Initialize(S3Config{Bucket: "test", Profile: "fakeyfake"}, config.ErrorMessages{})
 	if s3 != nil {
-		_, err2 = s3.Lookup(pkg.TileRequest{})
+		_, err2 = s3.Lookup(context.Background(), pkg.TileRequest{})
 	}
 
 	require.Error(t, errors.Join(err1, err2))
@@ -115,7 +115,7 @@ func Test_S3Execute(t *testing.T) {
 	require.NoError(t, err)
 
 	validateSaveAndLookup(t, s3)
-	img, err := s3.Lookup(pkg.TileRequest{LayerName: "layer", Z: 93, X: 53, Y: 12345})
+	img, err := s3.Lookup(context.Background(), pkg.TileRequest{LayerName: "layer", Z: 93, X: 53, Y: 12345})
 	assert.Nil(t, img)
 	require.NoError(t, err)
 }

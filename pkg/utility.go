@@ -14,6 +14,7 @@
 package pkg
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -21,7 +22,16 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/Michad/tilegroxy/pkg/static"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
+
+var packageName = static.GetPackage()
+var version, ref, buildDate = static.GetVersionInformation()
+var tracer trace.Tracer = otel.Tracer(packageName)
 
 type Image = []byte
 
@@ -119,4 +129,35 @@ func RandomString() string {
 	i := rand.Int64()
 	i2 := rand.Int64()
 	return strconv.FormatInt(i, 36) + strconv.FormatInt(i2, 36)
+}
+
+// Handles making a new context and span for use in a provider that calls another provider. Make sure to End the span that is returned
+func MakeChildSpan(ctx context.Context, newRequest *TileRequest, providerName string, childSpanName string, functionName string) (context.Context, trace.Span) {
+	spanName := providerName
+
+	if childSpanName != "" {
+		spanName += "-" + childSpanName
+	}
+
+	newCtx, span := tracer.Start(ctx, spanName, trace.WithSpanKind(trace.SpanKindInternal))
+
+	if span.IsRecording() {
+		span.SetAttributes(
+			attribute.String("service.name", "tilegroxy"),
+			attribute.String("service.version", version+"-"+ref),
+			attribute.String("service.build", buildDate),
+			attribute.String("code.function", functionName),
+		)
+
+		if newRequest != nil {
+			span.SetAttributes(
+				attribute.String("tilegroxy.layer.name", newRequest.LayerName),
+				attribute.Int("tilegroxy.coordinate.x", newRequest.X),
+				attribute.Int("tilegroxy.coordinate.y", newRequest.Y),
+				attribute.Int("tilegroxy.coordinate.z", newRequest.Z),
+			)
+		}
+	}
+
+	return newCtx, span
 }

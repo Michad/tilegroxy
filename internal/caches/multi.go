@@ -15,6 +15,7 @@
 package caches
 
 import (
+	"context"
 	"errors"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -63,11 +64,11 @@ func (s MultiRegistration) Initialize(configAny any, errorMessages config.ErrorM
 	return Multi{tierCaches}, nil
 }
 
-func (c Multi) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
+func (c Multi) Lookup(ctx context.Context, t pkg.TileRequest) (*pkg.Image, error) {
 	var allErrors error
 
 	for _, cache := range c.Tiers {
-		img, err := cache.Lookup(t)
+		img, err := cache.Lookup(ctx, t)
 		if err != nil {
 			allErrors = errors.Join(allErrors, err)
 		}
@@ -80,11 +81,11 @@ func (c Multi) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
 	return nil, allErrors
 }
 
-func (c Multi) Save(t pkg.TileRequest, img *pkg.Image) error {
+func (c Multi) Save(ctx context.Context, t pkg.TileRequest, img *pkg.Image) error {
 	var allErrors error
 
 	for _, cache := range c.Tiers {
-		err := cache.Save(t, img)
+		err := cache.Save(ctx, t, img)
 		allErrors = errors.Join(allErrors, err)
 	}
 

@@ -168,9 +168,7 @@ func (s RedisRegistration) Initialize(configAny any, errorMessages config.ErrorM
 	return &r, nil
 }
 
-func (c Redis) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
-	ctx := context.TODO()
-
+func (c Redis) Lookup(ctx context.Context, t pkg.TileRequest) (*pkg.Image, error) {
 	key := c.KeyPrefix + t.String()
 	var obj pkg.Image
 
@@ -187,9 +185,7 @@ func (c Redis) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
 	return &obj, nil
 }
 
-func (c Redis) Save(t pkg.TileRequest, img *pkg.Image) error {
-	ctx := context.TODO()
-
+func (c Redis) Save(ctx context.Context, t pkg.TileRequest, img *pkg.Image) error {
 	key := c.KeyPrefix + t.String()
 
 	err := c.cache.Set(&rediscache.Item{

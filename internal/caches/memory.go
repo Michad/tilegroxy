@@ -15,6 +15,7 @@
 package caches
 
 import (
+	"context"
 	"time"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -77,7 +78,7 @@ func (s MemoryRegistration) Initialize(configAny any, _ config.ErrorMessages) (c
 	return &Memory{config, cache}, nil
 }
 
-func (c Memory) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
+func (c Memory) Lookup(ctx context.Context, t pkg.TileRequest) (*pkg.Image, error) {
 	img, ok := c.Cache.Get(t.String())
 
 	if ok {
@@ -87,7 +88,7 @@ func (c Memory) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
 	return nil, nil
 }
 
-func (c Memory) Save(t pkg.TileRequest, img *pkg.Image) error {
+func (c Memory) Save(ctx context.Context, t pkg.TileRequest, img *pkg.Image) error {
 	c.Cache.Set(t.String(), *img)
 	return nil
 }

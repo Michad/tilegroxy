@@ -200,7 +200,7 @@ func (s CustomRegistration) Initialize(cfgAny any, errorMessages config.ErrorMes
 	return &Custom{cfg, &cache, lock, validationFunc}, nil
 }
 
-func (c Custom) CheckAuthentication(req *http.Request, ctx context.Context) bool {
+func (c Custom) CheckAuthentication(ctx context.Context, req *http.Request) bool {
 	slog.Log(ctx, config.LevelTrace, "Performing custom auth check")
 	tok, ok := extractToken(req, ctx, c.Token)
 	if ok {
