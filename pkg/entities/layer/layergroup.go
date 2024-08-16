@@ -124,7 +124,7 @@ func (lg LayerGroup) RenderTile(ctx context.Context, tileRequest pkg.TileRequest
 			if err != nil {
 				slog.WarnContext(ctx, fmt.Sprintf("Cache save error %v\n", err))
 			}
-		}();
+		}()
 	}
 
 	return img, nil
