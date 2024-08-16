@@ -118,11 +118,13 @@ func (lg LayerGroup) RenderTile(ctx context.Context, tileRequest pkg.TileRequest
 	ctxSkipCacheSave, _ := pkg.SkipCacheSaveFromContext(ctx)
 
 	if !*ctxSkipCacheSave {
-		err = l.Cache.Save(ctx, tileRequest, img)
+		go func() {
+			err = l.Cache.Save(ctx, tileRequest, img)
 
-		if err != nil {
-			slog.WarnContext(ctx, fmt.Sprintf("Cache save error %v\n", err))
-		}
+			if err != nil {
+				slog.WarnContext(ctx, fmt.Sprintf("Cache save error %v\n", err))
+			}
+		}();
 	}
 
 	return img, nil
