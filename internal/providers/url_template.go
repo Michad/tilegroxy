@@ -27,6 +27,9 @@ import (
 
 type URLTemplateConfig struct {
 	Template string
+	Width    uint16
+	Height   uint16
+	Srid     uint
 }
 
 type URLTemplate struct {
@@ -59,11 +62,26 @@ func (s URLTemplateRegistration) Initialize(cfgAny any, clientConfig config.Clie
 		return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.url template.url", "")
 	}
 
+	if cfg.Height == 0 {
+		cfg.Height = 256
+	}
+
+	if cfg.Width == 0 {
+		cfg.Width = 256
+	}
+
+	if cfg.Srid == 0 {
+		cfg.Srid = pkg.SRID_WGS_84
+	}
+	if cfg.Srid != pkg.SRID_WGS_84 && cfg.Srid != pkg.SRID_PSUEDO_MERC {
+		return nil, fmt.Errorf(errorMessages.EnumError, "provider.url template.srid", cfg.Srid, []int{pkg.SRID_PSUEDO_MERC, pkg.SRID_WGS_84})
+	}
+
 	return &URLTemplate{cfg, clientConfig}, nil
 }
 
 func (t URLTemplate) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
-	b, err := tileRequest.GetBounds()
+	b, err := tileRequest.GetBoundsProjection(t.Srid)
 
 	if err != nil {
 		return nil, err
@@ -75,9 +93,9 @@ func (t URLTemplate) GenerateTile(ctx context.Context, _ layer.ProviderContext, 
 	url = strings.ReplaceAll(url, "$ymin", fmt.Sprintf("%f", b.South))
 	url = strings.ReplaceAll(url, "$ymax", fmt.Sprintf("%f", b.North))
 	url = strings.ReplaceAll(url, "$zoom", strconv.Itoa(tileRequest.Z))
-	url = strings.ReplaceAll(url, "$width", "256") //TODO: allow these being dynamic
-	url = strings.ReplaceAll(url, "$height", "256")
-	url = strings.ReplaceAll(url, "$srs", "4326") //TODO: decide if I want this to be dynamic
+	url = strings.ReplaceAll(url, "$width", strconv.Itoa(int(t.Width)))
+	url = strings.ReplaceAll(url, "$height", strconv.Itoa(int(t.Height)))
+	url = strings.ReplaceAll(url, "$srs", strconv.Itoa(int(t.Srid)))
 
 	return getTile(ctx, t.clientConfig, url, make(map[string]string))
 }

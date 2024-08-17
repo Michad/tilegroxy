@@ -26,6 +26,7 @@ import (
 type ProxyConfig struct {
 	URL     string
 	InvertY bool // Used for TMS
+	Srid    uint
 }
 
 type Proxy struct {
@@ -54,6 +55,13 @@ func (s ProxyRegistration) Initialize(cfgAny any, clientConfig config.ClientConf
 		return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.proxy.url", "")
 	}
 
+	if cfg.Srid == 0 {
+		cfg.Srid = pkg.SRID_WGS_84
+	}
+	if cfg.Srid != pkg.SRID_WGS_84 && cfg.Srid != pkg.SRID_PSUEDO_MERC {
+		return nil, fmt.Errorf(errorMessages.EnumError, "provider.url template.srid", cfg.Srid, []int{pkg.SRID_PSUEDO_MERC, pkg.SRID_WGS_84})
+	}
+
 	return &Proxy{cfg, clientConfig}, nil
 }
 
@@ -62,7 +70,7 @@ func (t Proxy) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.Provid
 }
 
 func (t Proxy) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
-	url, err := replaceURLPlaceholders(ctx, tileRequest, t.URL, t.InvertY)
+	url, err := replaceURLPlaceholders(ctx, tileRequest, t.URL, t.InvertY, t.Srid)
 	if err != nil {
 		return nil, err
 	}
