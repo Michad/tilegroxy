@@ -20,6 +20,9 @@ import (
 	"github.com/mmcloughlin/geohash"
 )
 
+const SRIDWGS84 = 4326
+const SRIDPsuedoMercator = 3857
+
 type TileRequest struct {
 	LayerName string
 	Z         int
@@ -35,15 +38,30 @@ type Bounds struct {
 }
 
 const (
-	MaxZoom = 21
-	delta   = .00000001
-	maxLat  = 85.0511
-	minLat  = -85.0511
+	MaxZoom              = 21
+	delta                = .00000001
+	maxLat               = 85.0511
+	minLat               = -85.0511
+	max3857CoordInMeters = 20037508.34
 )
 
+func convertLat4326To3857(lat float64) float64 {
+	return math.Log(math.Tan((90+lat)*math.Pi/360)) / (math.Pi / 180) * (max3857CoordInMeters / 180)
+}
+func convertLon4326To3857(lon float64) float64 {
+	return lon * max3857CoordInMeters / 180
+}
+
 func (t TileRequest) GetBounds() (*Bounds, error) {
+	return t.GetBoundsProjection(SRIDWGS84)
+}
+
+func (t TileRequest) GetBoundsProjection(srid uint) (*Bounds, error) {
 	if t.Z < 0 || t.Z > MaxZoom {
 		return nil, RangeError{ParamName: "Z", MinValue: 0, MaxValue: MaxZoom}
+	}
+	if srid != SRIDWGS84 && srid != SRIDPsuedoMercator {
+		return nil, InvalidSridError{srid}
 	}
 
 	z := float64(t.Z)
@@ -70,16 +88,28 @@ func (t TileRequest) GetBounds() (*Bounds, error) {
 	west := math.Min(x2, x1)
 	east := math.Max(x2, x1)
 
-	return &Bounds{south, north, west, east}, nil
+	if srid == SRIDWGS84 {
+		return &Bounds{south, north, west, east}, nil
+	}
+
+	return &Bounds{
+		convertLat4326To3857(south),
+		convertLat4326To3857(north),
+		convertLon4326To3857(west),
+		convertLon4326To3857(east)}, nil
 }
 
 func (t TileRequest) IntersectsBounds(b Bounds) (bool, error) {
+	return t.IntersectsBoundsProjection(b, SRIDWGS84)
+}
+
+func (t TileRequest) IntersectsBoundsProjection(b Bounds, srid uint) (bool, error) {
 	// Treat null-island only bounds as everything
-	if b.North == 0 && b.East == 0 && b.South == 0 && b.West == 0 {
+	if b.IsNullIsland() {
 		return true, nil
 	}
 
-	b2, err := t.GetBounds()
+	b2, err := t.GetBoundsProjection(srid)
 	if err != nil {
 		return false, err
 	}

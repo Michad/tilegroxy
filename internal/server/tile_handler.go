@@ -87,6 +87,13 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	slog.DebugContext(ctx, "server: tile handler started")
 	defer slog.DebugContext(ctx, "server: tile handler ended")
 
+	h.writeHeaders(w)
+
+	if req.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
 	if !h.auth.CheckAuthentication(ctx, req) {
 		writeError(ctx, w, &h.config.Error, pkg.UnauthorizedError{Message: "CheckAuthentication returned false"})
 		return
@@ -134,14 +141,6 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	for h, v := range h.config.Server.Headers {
-		w.Header().Add(h, v)
-	}
-
-	if !h.config.Server.Production {
-		w.Header().Add("X-Powered-By", "tilegroxy "+version)
-	}
-
 	w.WriteHeader(http.StatusOK)
 
 	_, err = w.Write(*img)
@@ -156,6 +155,16 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	// This isn't in the else clause because the tile was still generated successfully even though request errored
 	h.tileSuccessCounter.Add(ctx, 1)
+}
+
+func (h *tileHandler) writeHeaders(w http.ResponseWriter) {
+	for h, v := range h.config.Server.Headers {
+		w.Header().Add(h, v)
+	}
+
+	if !h.config.Server.Production {
+		w.Header().Add("X-Powered-By", "tilegroxy "+version)
+	}
 }
 
 func (h *tileHandler) extractAndValidateRequest(ctx context.Context, req *http.Request, span trace.Span, w http.ResponseWriter) (pkg.TileRequest, bool) {

@@ -77,6 +77,7 @@ Configuration options:
 | --- | --- | --- | --- | --- |
 | url | string | Yes | None | A URL pointing to the tile server. Should contain placeholders surrounded by "{}" that are replaced on-the-fly |
 | inverty | bool | No | false | Changes Y tile numbering to be South-to-North instead of North-to-South. Only impacts Y/y placeholder |
+| srid | uint | No | 4326 | What projection bounds should be in. Can only be 4326 or 3857 |
 
 
 The following placeholders are available in the URL:
@@ -86,10 +87,10 @@ The following placeholders are available in the URL:
 | x or X | The X tile coordinate from the incoming request |
 | y or Y | The Y tile coordinate either from the incoming request or the "flipped" equivalent if the `invertY` parameter is specified.  |
 | z or Z | The Z tile coordinate from the incoming request (aka "zoom") |
-| xmin | The "west" coordinate of the bounding box defined by the incoming tile coordinates. |
-| xmax | The "east" coordinate of the bounding box defined by the incoming tile coordinates. |
-| ymin | The "north" coordinate of the bounding box defined by the incoming tile coordinates. Not impacted by the `invertY` parameter. |
-| ymax | The "south" coordinate of the bounding box defined by the incoming tile coordinates. Not impacted by the `invertY` parameter. |
+| xmin | The "west" coordinate of the bounding box defined by the incoming tile coordinates. In the projection specified by `srid`. |
+| xmax | The "east" coordinate of the bounding box defined by the incoming tile coordinates. In the projection specified by `srid`. |
+| ymin | The "north" coordinate of the bounding box defined by the incoming tile coordinates. In the projection specified by `srid`. Not impacted by the `invertY` parameter. |
+| ymax | The "south" coordinate of the bounding box defined by the incoming tile coordinates. In the projection specified by `srid`. Not impacted by the `invertY` parameter. |
 | env.XXX | An environment variable whose name is XXX |
 | ctx.XXX | A context variable (typically an HTTP header) whose name is XXX |
 | layer.XXX | If the layer includes a pattern with a placeholder of XXX, this is the replacement value from the used layer name | 
@@ -106,7 +107,7 @@ provider:
 
 The URL Template provider overlaps with the Proxy provider but is meant specifically for WMS endpoints. Instead of merely supplying tile coordinates, the URL Template provider will supply the bounding box. This provider is available mostly for compatibility, you generally should use Proxy instead.
 
-Currently only supports EPSG:4326
+Currently only supports EPSG:4326 and EPSG:3857
 
 Name should be "url template"
 
@@ -114,7 +115,10 @@ Configuration options:
 
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| template | string | Yes | None | A URL pointing to the tile server. Should contain placeholders `$xmin` `$xmax` `$ymin` and `$ymax` for tile coordinates |
+| template | string | Yes | None | A URL pointing to the tile server. Should contain placeholders `$xmin` `$xmax` `$ymin` and `$ymax` for tile bounds and can also contains `$srs` `$width` and `$height`  |
+| width | uint | No | 256 | What to use for $width placeholder |
+| height | uint | No | 256 | What to use for $height placeholder |
+| srid | uint | No | 4326 | What projection the bounds should be in and what to use for $srs placeholder. Can only be 4326 or 3857 |
 
 ### Effect
 
@@ -579,7 +583,7 @@ Configuration options:
 | --- | --- | --- | --- | --- |
 | Key | string | Yes | None | The key for verifying the signature. The public key if using asymmetric signing. If the value starts with "env." the remainder is interpreted as the name of the Environment Variable to use to retrieve the verification key. |
 | Algorithm | string | Yes | None | Algorithm to allow for JWT signature. One of: "HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "EdDSA" |
-| HeaderName | string | No | Authorization | The header to extract the JWT from. If this is "Authorization" it removes "Bearer " from the start |
+| HeaderName | string | No | Authorization | The header to extract the JWT from. If this is "Authorization" it removes "Bearer " from the start. Make sure this is in "canonical case" e.g. X-Header - auth will always fail otherwise  |
 | MaxExpiration | uint32 | No | 1 day | How many seconds from now can the expiration be. JWTs more than X seconds from now will result in a 401 |
 | ExpectedAudience | string | No | None | Require the "aud" grant to be this string |
 | ExpectedSubject | string | No | None | Require the "sub" grant to be this string |

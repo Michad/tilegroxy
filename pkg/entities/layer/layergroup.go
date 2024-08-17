@@ -27,6 +27,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type LayerGroup struct {
@@ -118,16 +119,25 @@ func (lg LayerGroup) RenderTile(ctx context.Context, tileRequest pkg.TileRequest
 	ctxSkipCacheSave, _ := pkg.SkipCacheSaveFromContext(ctx)
 
 	if !*ctxSkipCacheSave {
-		go func() {
-			err = l.Cache.Save(ctx, tileRequest, img)
-
-			if err != nil {
-				slog.WarnContext(ctx, fmt.Sprintf("Cache save error %v\n", err))
-			}
-		}()
+		go writeCache(ctx, l.Cache, tileRequest, img)
 	}
 
 	return img, nil
+}
+
+func writeCache(ctx context.Context, cache cache.Cache, tileRequest pkg.TileRequest, img *pkg.Image) {
+	// We need to make a new context to avoid the request finishing cancelling the ctx sent into the cache
+	newCtx := pkg.BackgroundContext()
+
+	// Copy span over from original context
+	span := trace.SpanFromContext(ctx)
+	newCtx = trace.ContextWithSpan(newCtx, span)
+
+	err := cache.Save(newCtx, tileRequest, img)
+
+	if err != nil {
+		slog.WarnContext(newCtx, fmt.Sprintf("Cache save error %v\n", err))
+	}
 }
 
 func (LayerGroup) checkPermission(ctx context.Context, l *Layer, tileRequest pkg.TileRequest) error {

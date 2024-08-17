@@ -38,8 +38,8 @@ var envRegex = regexp.MustCompile(`{env\.[^{}}]*}`)
 var ctxRegex = regexp.MustCompile(`{ctx\.[^{}}]*}`)
 var lyrRegex = regexp.MustCompile(`{layer\.[^{}}]*}`)
 
-func replaceURLPlaceholders(ctx context.Context, tileRequest pkg.TileRequest, url string, invertY bool) (string, error) {
-	b, err := tileRequest.GetBounds()
+func replaceURLPlaceholders(ctx context.Context, tileRequest pkg.TileRequest, url string, invertY bool, srid uint) (string, error) {
+	b, err := tileRequest.GetBoundsProjection(srid)
 
 	if err != nil {
 		return "", err

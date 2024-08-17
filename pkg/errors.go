@@ -143,6 +143,25 @@ func (e RemoteServerError) External(messages config.ErrorMessages) string {
 	return messages.ProviderError
 }
 
+type InvalidSridError struct {
+	srid uint
+}
+
+func (e InvalidSridError) Error() string {
+	// notest
+	return fmt.Sprintf("Supported projections only includes 4326 and 3857, not %v", e.srid)
+}
+
+func (e InvalidSridError) Type() TypeOfError {
+	// notest
+	return TypeOfErrorOther
+}
+
+func (e InvalidSridError) External(messages config.ErrorMessages) string {
+	// notest
+	return fmt.Sprintf(messages.EnumError, "provider.url template.srid", e.srid, []int{SRIDPsuedoMercator, SRIDWGS84})
+}
+
 // Indicates an input from the user is outside the valid range allowed for a numeric parameter - primarily tile coordinates
 type RangeError struct {
 	ParamName string
