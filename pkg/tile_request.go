@@ -90,13 +90,13 @@ func (t TileRequest) GetBoundsProjection(srid uint) (*Bounds, error) {
 
 	if srid == SRIDWGS84 {
 		return &Bounds{south, north, west, east}, nil
-	} else {
-		return &Bounds{
-			convertLat4326To3857(south),
-			convertLat4326To3857(north),
-			convertLon4326To3857(west),
-			convertLon4326To3857(east)}, nil
 	}
+
+	return &Bounds{
+		convertLat4326To3857(south),
+		convertLat4326To3857(north),
+		convertLon4326To3857(west),
+		convertLon4326To3857(east)}, nil
 }
 
 func (t TileRequest) IntersectsBounds(b Bounds) (bool, error) {

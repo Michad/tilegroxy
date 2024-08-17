@@ -125,7 +125,7 @@ func (lg LayerGroup) RenderTile(ctx context.Context, tileRequest pkg.TileRequest
 	return img, nil
 }
 
-func writeCache(ctx context.Context, cache cache.Cache, tileRequest pkg.TileRequest, img *pkg.Image) error {
+func writeCache(ctx context.Context, cache cache.Cache, tileRequest pkg.TileRequest, img *pkg.Image) {
 	// We need to make a new context to avoid the request finishing cancelling the ctx sent into the cache
 	newCtx := pkg.BackgroundContext()
 
@@ -138,8 +138,6 @@ func writeCache(ctx context.Context, cache cache.Cache, tileRequest pkg.TileRequ
 	if err != nil {
 		slog.WarnContext(newCtx, fmt.Sprintf("Cache save error %v\n", err))
 	}
-
-	return err
 }
 
 func (LayerGroup) checkPermission(ctx context.Context, l *Layer, tileRequest pkg.TileRequest) error {
