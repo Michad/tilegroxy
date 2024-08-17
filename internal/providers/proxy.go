@@ -56,10 +56,10 @@ func (s ProxyRegistration) Initialize(cfgAny any, clientConfig config.ClientConf
 	}
 
 	if cfg.Srid == 0 {
-		cfg.Srid = pkg.SRID_WGS_84
+		cfg.Srid = pkg.SRIDWGS84
 	}
-	if cfg.Srid != pkg.SRID_WGS_84 && cfg.Srid != pkg.SRID_PSUEDO_MERC {
-		return nil, fmt.Errorf(errorMessages.EnumError, "provider.url template.srid", cfg.Srid, []int{pkg.SRID_PSUEDO_MERC, pkg.SRID_WGS_84})
+	if cfg.Srid != pkg.SRIDWGS84 && cfg.Srid != pkg.SRIDPsuedoMercator {
+		return nil, fmt.Errorf(errorMessages.EnumError, "provider.url template.srid", cfg.Srid, []int{pkg.SRIDPsuedoMercator, pkg.SRIDWGS84})
 	}
 
 	return &Proxy{cfg, clientConfig}, nil

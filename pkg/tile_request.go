@@ -20,8 +20,8 @@ import (
 	"github.com/mmcloughlin/geohash"
 )
 
-const SRID_WGS_84 = 4326
-const SRID_PSUEDO_MERC = 3857
+const SRIDWGS84 = 4326
+const SRIDPsuedoMercator = 3857
 
 type TileRequest struct {
 	LayerName string
@@ -53,14 +53,14 @@ func convertLon4326To3857(lon float64) float64 {
 }
 
 func (t TileRequest) GetBounds() (*Bounds, error) {
-	return t.GetBoundsProjection(SRID_WGS_84)
+	return t.GetBoundsProjection(SRIDWGS84)
 }
 
 func (t TileRequest) GetBoundsProjection(srid uint) (*Bounds, error) {
 	if t.Z < 0 || t.Z > MaxZoom {
 		return nil, RangeError{ParamName: "Z", MinValue: 0, MaxValue: MaxZoom}
 	}
-	if srid != SRID_WGS_84 && srid != SRID_PSUEDO_MERC {
+	if srid != SRIDWGS84 && srid != SRIDPsuedoMercator {
 		return nil, InvalidSridError{srid}
 	}
 
@@ -88,7 +88,7 @@ func (t TileRequest) GetBoundsProjection(srid uint) (*Bounds, error) {
 	west := math.Min(x2, x1)
 	east := math.Max(x2, x1)
 
-	if srid == SRID_WGS_84 {
+	if srid == SRIDWGS84 {
 		return &Bounds{south, north, west, east}, nil
 	} else {
 		return &Bounds{
@@ -100,7 +100,7 @@ func (t TileRequest) GetBoundsProjection(srid uint) (*Bounds, error) {
 }
 
 func (t TileRequest) IntersectsBounds(b Bounds) (bool, error) {
-	return t.IntersectsBoundsProjection(b, SRID_WGS_84)
+	return t.IntersectsBoundsProjection(b, SRIDWGS84)
 }
 
 func (t TileRequest) IntersectsBoundsProjection(b Bounds, srid uint) (bool, error) {

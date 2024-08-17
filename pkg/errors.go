@@ -160,7 +160,7 @@ func (e InvalidSridError) Type() TypeOfError {
 
 func (e InvalidSridError) External(messages config.ErrorMessages) string {
 	// notest
-	return fmt.Sprintf(messages.EnumError, "provider.url template.srid", e.srid, []int{SRID_PSUEDO_MERC, SRID_WGS_84})
+	return fmt.Sprintf(messages.EnumError, "provider.url template.srid", e.srid, []int{SRIDPsuedoMercator, SRIDWGS84})
 }
 
 // Indicates an input from the user is outside the valid range allowed for a numeric parameter - primarily tile coordinates
