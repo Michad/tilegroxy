@@ -16,7 +16,6 @@ package pkg
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/Michad/tilegroxy/pkg/config"
 )
@@ -150,7 +149,7 @@ type InvalidSridError struct {
 
 func (e InvalidSridError) Error() string {
 	// notest
-	return fmt.Sprintf("Supported projections only includes 4326 and 3857, not " + strconv.Itoa(int(e.srid)))
+	return fmt.Sprintf("Supported projections only includes 4326 and 3857, not %v", e.srid)
 }
 
 func (e InvalidSridError) Type() TypeOfError {
