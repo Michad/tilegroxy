@@ -52,6 +52,7 @@ func NewRequestContext(req *http.Request) context.Context {
 	ctx = context.WithValue(ctx, "uri", req.RequestURI)
 	ctx = context.WithValue(ctx, "path", req.URL.Path)
 	ctx = context.WithValue(ctx, "query", req.URL.Query())
+	ctx = context.WithValue(ctx, "query-string", req.URL.RawQuery)
 	ctx = context.WithValue(ctx, "proto", req.Proto)
 	ctx = context.WithValue(ctx, "ip", strings.Split(req.RemoteAddr, ":")[0])
 	ctx = context.WithValue(ctx, "method", req.Method)
