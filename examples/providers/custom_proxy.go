@@ -81,5 +81,5 @@ func generateTile(
 	//The third parameter is a map containing custom HTTP headers to include, which should be used for Authentication
 	//You can also perform HTTP calls via standard go HTTP library for cases where a GET doesn't suffice. It's recommended
 	//to use GetTile where possible for consistency and ensure the configured rules are followed
-	return tilegroxy.GetTile(ctx, &clientConfig, url, make(map[string]string))
+	return tilegroxy.GetTile(ctx, clientConfig, url, make(map[string]string))
 }
