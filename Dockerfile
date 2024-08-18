@@ -2,7 +2,6 @@ FROM golang:1.22.6-alpine3.20@sha256:1a478681b671001b7f029f94b5016aed984a23ad99c
 
 COPY . .
 
-# TODO: Separate unit tests from integration (testcontainer) tests so we can at least run unit tests in this build
 RUN apk update && \
     apk add make git && \
     make clean unit build

@@ -67,7 +67,11 @@ When supplying a provider ensure you include the `name` parameter. Some provider
 
 ### Proxy
 
-The Proxy provider is the simplest option that simply forwards tile requests to another HTTP(s) endpoint. This provider is primarily used for map layers that already return imagery in tiles: ZXY, TMS, or WMTS.  TMS inverts the y coordinate compared to ZXY and WMTS formats, which is handled by the InvertY parameter.
+The Proxy provider is the simplest option that simply forwards tile requests to another HTTP(s) endpoint. This provider can be used for mapping services that operate in tiles (ZXY, TMS, or WMTS) or against bounds (i.e. WMS). TMS inverts the y coordinate compared to ZXY and WMTS formats, which is handled by the InvertY parameter.
+
+The following is the typical request flow when using a proxy provider:
+
+![Proxy flow diagram](images/diagram-proxy.png)
 
 Name should be "proxy"
 
@@ -153,6 +157,11 @@ Allows you to combine the imagery from multiple providers.  The simplest use cas
 This can only be used with layers that return JPEG or PNG images. Tiles will be scaled down to the lowest resolution to be combined and the combined result always output in PNG format.  
 
 Each downstream provider is called in parallel.
+
+The following diagram depicts a possible request flow when using the Blend provider with the `layers` parameter. Note that each downstream layer is individually cached; this is useful when it's expected for requests to also come in for each of the individual layers but an unnecessary cost if not. If you only expect requests for the blended layer, either use the `providers` parameter option or simply disable caching in the downstream layer(s).
+![Blend request flow](./images/diagram-blend.png)
+
+
 
 Name should be "blend"
 
@@ -380,7 +389,7 @@ cache:
 
 Stores the cache entries as files in a location on the filesystem. 
 
-If the filesystem is purely local then you will experience inconsistent performance if tilegroxy is deployed in a high-availability environment. If utilizing a networked filesystem then be mindful that cache writes are currently synchronous so delays from the filesystem will cause slower performance.
+If the filesystem is purely local then you will experience inconsistent performance if using tilegroxy in a high-availability deployment.
 
 Files are stored in a flat structure inside the specified directory. No cleanup process is included inside of `tilegroxy` itself. It is recommended you use an external cleanup process to avoid running out of disk space.
 

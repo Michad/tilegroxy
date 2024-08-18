@@ -79,39 +79,46 @@ Tilegroxy uses a registration system to find and construct its main entities.  A
 
 ```
 
-type FailConfig struct {
+type SampleConfig struct {
+	// Insert configuration for your provider here
 }
 
-type Fail struct {
-	FailConfig
+type Sample struct {
+	SampleConfig
+	// Add any resources your provider needs to retain through its lifecycle here. For example an SDK Client. This is shared over all requests so should generally be immutable after initialization
 }
 
 func init() {
-	layer.RegisterProvider(FailRegistration{})
+	// This registers the provider with tilegroxy so it can initialize the provider for every layer that uses it
+	layer.RegisterProvider(SampleRegistration{})
 }
 
-type FailRegistration struct {
+//This can generally stay empty
+type SampleRegistration struct {
 }
 
-func (s FailRegistration) InitializeConfig() any {
-	return FailConfig{}
+// Whatever is returned by this will be passed into the Initialize method below. If you want defaults for your configuration, set them here.
+func (s SampleRegistration) InitializeConfig() any {
+	return SampleConfig{}
 }
 
-func (s FailRegistration) Name() string {
-	return "fail"
+// This should always return the same string. Any provider configuration with name set to this value will trigger this "Sample" provider to be used
+func (s SampleRegistration) Name() string {
+	return "Sample"
 }
 
-func (s FailRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layer.LayerGroup) (layer.Provider, error) {
-	config := cfgAny.(FailConfig)
-	return &Fail{config}, nil
+// This is called for every layer with a provider configured with a matching name at startup time. This should return your provider type with any initialization logic, the simplest case is just passing your config struct into your provider struct like shown here.
+func (s SampleRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layer.LayerGroup) (layer.Provider, error) {
+	config := cfgAny.(SampleConfig) //This will always be a mutated version of what's returned from InitializeConfig
+	return &Sample{config}, nil //An error returned here will prevent startup
 }
 
-func (t Fail) PreAuth(ctx *context.Context, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
+func (t Sample) PreAuth(ctx *context.Context, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
 	return providerContext, nil
 }
 
-func (t Fail) GenerateTile(ctx *context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
-	return nil, errors.New("TODO")
+func (t Sample) GenerateTile(ctx *context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+	return nil, errors.New("not implemented")
 }
 ```
 
