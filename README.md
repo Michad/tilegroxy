@@ -33,10 +33,6 @@ Tilegroxy shines when you consume maps from multiple sources.  It isn't tied to 
 * Traces, metrics, and logs available via [OpenTelemetry](docs/telemetry.md)
 * Usable as an application or a [library](docs/extensibility.md#using-tilegroxy-as-a-library)
 
-The following are on the roadmap and expected before a 1.0 release:
-
-* Example k8s deployment file
-
 ## Configuration
 
 Configuration is required to define your layers, cache, authentication, and service operation.  The configuration should be supplied as a JSON or YAML file either directly or through an external service such as etcd or consul. Configuration can also be partially supplied via Environment Variables. 
@@ -103,9 +99,9 @@ docker build . -t tilegroxy
 
 An [example docker-compose.yml file](./docker-compose.yml) is included that can be used to start the tilegroxy server using a configuration file named "test_config.yml" in the current working directory.
 
-### Kubernetes
+<!--### Kubernetes
 
-Coming soon. 
+Coming soon. -->
 
 ## Commands
 
@@ -233,8 +229,7 @@ Usage:
   tilegroxy config create [flags]
 
 Flags:
-  -d, --default         Include all default configuration. TODO: make 
-                        non-mandatory (default true)
+  -d, --default         Include all default configuration. 
   -h, --help            help for create
       --json            Output the configuration in JSON
       --no-pretty       Disable pretty printing JSON

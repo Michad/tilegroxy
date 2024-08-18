@@ -36,7 +36,7 @@ var rootCmd = &cobra.Command{
 	However one use of tilegroxy is as an adapter to convert other mapping APIs such as WMS to a simple tile layer. Any API that returns georeferenced
 	imagery can be used with tilegroxy.
 	
-	See the documentation at TODO for configuration instructions.`,
+	See the documentation at https://github.com/michad/tilegroxy for configuration instructions.`,
 }
 
 func Execute() {
