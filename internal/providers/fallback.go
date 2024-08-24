@@ -109,14 +109,14 @@ func (t Fallback) PreAuth(ctx context.Context, providerContext layer.ProviderCon
 func (t Fallback) GenerateTile(ctx context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	ok := true
 
-	skipCacheSave, _ := pkg.SkipCacheSaveFromContext(ctx)
+	skipCacheSave := false
 
 	if !slices.Contains(t.zoomLevels, tileRequest.Z) {
 		slog.DebugContext(ctx, "Fallback provider falling back due to zoom")
 		ok = false
 
 		if t.Cache == CacheModeUnlessFallback {
-			*skipCacheSave = true
+			skipCacheSave = true
 		}
 	}
 
@@ -128,7 +128,7 @@ func (t Fallback) GenerateTile(ctx context.Context, providerContext layer.Provid
 		ok = false
 
 		if t.Cache == CacheModeUnlessFallback {
-			*skipCacheSave = true
+			skipCacheSave = true
 		}
 	}
 
@@ -140,7 +140,7 @@ func (t Fallback) GenerateTile(ctx context.Context, providerContext layer.Provid
 		if err != nil {
 			ok = false
 			if t.Cache != CacheModeAlways {
-				*skipCacheSave = true
+				skipCacheSave = true
 			}
 
 			slog.DebugContext(ctx, fmt.Sprintf("Fallback provider falling back due to error: %v", err.Error()))
@@ -150,6 +150,7 @@ func (t Fallback) GenerateTile(ctx context.Context, providerContext layer.Provid
 	if !ok {
 		img, err = t.Secondary.GenerateTile(ctx, providerContext, tileRequest)
 	}
+	img.ForceSkipCache = skipCacheSave
 
 	return img, err
 }
