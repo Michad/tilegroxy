@@ -36,7 +36,7 @@ type MemoryConfig struct {
 
 type Memory struct {
 	MemoryConfig
-	Cache otter.Cache[string, []byte]
+	Cache otter.Cache[string, pkg.Image]
 }
 
 func init() {

@@ -261,7 +261,7 @@ func (t Blend) GenerateTile(ctx context.Context, providerContext layer.ProviderC
 	writer.Flush()
 	output := buf.Bytes()
 
-	return &output, err
+	return &pkg.Image{Content: output, ContentType: mimePng}, err
 }
 
 func (t Blend) blendImage(ctx context.Context, img image.Image, size image.Point, combinedImg image.Image) image.Image {
@@ -334,7 +334,7 @@ func callProvider(ctx context.Context, providerContext layer.ProviderContext, ti
 	}
 
 	if img != nil {
-		realImage, _, err2 := image.Decode(bytes.NewReader(*img))
+		realImage, _, err2 := image.Decode(bytes.NewReader(img.Content))
 		err = errors.Join(err, err2)
 
 		imgs <- struct {

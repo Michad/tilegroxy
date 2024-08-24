@@ -141,9 +141,13 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	if img.ContentType != "" {
+		w.Header().Add("Content-Type", img.ContentType)
+	}
+
 	w.WriteHeader(http.StatusOK)
 
-	_, err = w.Write(*img)
+	_, err = w.Write(img.Content)
 
 	if err != nil {
 		span.RecordError(err)

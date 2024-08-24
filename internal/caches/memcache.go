@@ -97,9 +97,15 @@ func (c Memcache) Lookup(_ context.Context, t pkg.TileRequest) (*pkg.Image, erro
 		return nil, err
 	}
 
-	return &it.Value, nil
+	return pkg.DecodeImage(it.Value)
 }
 
 func (c Memcache) Save(_ context.Context, t pkg.TileRequest, img *pkg.Image) error {
-	return c.client.Set(&memcache.Item{Key: c.KeyPrefix + t.String(), Value: *img, Expiration: int32(c.TTL)})
+	val, err := img.Encode()
+
+	if err != nil {
+		return err
+	}
+
+	return c.client.Set(&memcache.Item{Key: c.KeyPrefix + t.String(), Value: val, Expiration: int32(c.TTL)})
 }

@@ -82,12 +82,12 @@ func Test_Fallback_ExecuteZoom(t *testing.T) {
 	img, err := f.GenerateTile(pkg.BackgroundContext(), layer.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 2, X: 23, Y: 32})
 
 	require.NoError(t, err)
-	assert.Equal(t, *exp1, *img)
+	assert.Equal(t, *exp1, img.Content)
 
 	img, err = f.GenerateTile(pkg.BackgroundContext(), layer.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 9, X: 23, Y: 32})
 
 	require.NoError(t, err)
-	assert.Equal(t, *exp2, *img)
+	assert.Equal(t, *exp2, img.Content)
 }
 
 func Test_Fallback_ExecuteBounds(t *testing.T) {
@@ -105,12 +105,12 @@ func Test_Fallback_ExecuteBounds(t *testing.T) {
 	img, err := f.GenerateTile(pkg.BackgroundContext(), layer.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 20, X: 23, Y: 32})
 
 	require.NoError(t, err)
-	assert.Equal(t, *exp1, *img)
+	assert.Equal(t, *exp1, img.Content)
 
 	img, err = f.GenerateTile(pkg.BackgroundContext(), layer.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 20, X: 1, Y: 1})
 
 	require.NoError(t, err)
-	assert.Equal(t, *exp2, *img)
+	assert.Equal(t, *exp2, img.Content)
 }
 
 func Test_Fallback_ExecuteFallback(t *testing.T) {
@@ -124,7 +124,7 @@ func Test_Fallback_ExecuteFallback(t *testing.T) {
 	img, err := f.GenerateTile(pkg.BackgroundContext(), layer.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 20, X: 1, Y: 1})
 
 	require.NoError(t, err)
-	assert.Equal(t, *exp2, *img)
+	assert.Equal(t, *exp2, img.Content)
 }
 
 func Test_Fallback_CacheMode(t *testing.T) {

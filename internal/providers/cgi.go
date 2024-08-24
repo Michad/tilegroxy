@@ -174,7 +174,12 @@ func (t CGI) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequ
 	h.ServeHTTP(&rw, req)
 	b := buf.Bytes()
 
-	slog.DebugContext(ctx, fmt.Sprintf("CGI response - Status: %v Content: %v", rw.code, rw.headers["Content-Type"]))
+	var contentType string
+	if len(rw.headers["Content-Type"]) > 0 {
+		contentType = rw.headers["Content-Type"][0]
+	}
+
+	slog.DebugContext(ctx, fmt.Sprintf("CGI response - Status: %v Content: %v", rw.code, contentType))
 
 	if !slices.Contains(t.clientConfig.StatusCodes, rw.code) {
 		err = fmt.Errorf("cgi returned status code %v", rw.code)
@@ -182,11 +187,11 @@ func (t CGI) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequ
 		return nil, err
 	}
 
-	if t.InvalidAsError && !slices.Contains(t.clientConfig.ContentTypes, rw.headers["Content-Type"][0]) {
+	if t.InvalidAsError && !slices.Contains(t.clientConfig.ContentTypes, contentType) {
 		err = errors.New(string(b))
 
 		return nil, err
 	}
 
-	return &b, nil
+	return &pkg.Image{Content: b, ContentType: contentType}, nil
 }

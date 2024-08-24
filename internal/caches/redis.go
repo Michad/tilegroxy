@@ -170,9 +170,9 @@ func (s RedisRegistration) Initialize(configAny any, errorMessages config.ErrorM
 
 func (c Redis) Lookup(ctx context.Context, t pkg.TileRequest) (*pkg.Image, error) {
 	key := c.KeyPrefix + t.String()
-	var obj pkg.Image
+	var b []byte
 
-	err := c.cache.Get(ctx, key, &obj)
+	err := c.cache.Get(ctx, key, &b)
 
 	if errors.Is(err, rediscache.ErrCacheMiss) {
 		return nil, nil
@@ -182,16 +182,21 @@ func (c Redis) Lookup(ctx context.Context, t pkg.TileRequest) (*pkg.Image, error
 		return nil, err
 	}
 
-	return &obj, nil
+	return pkg.DecodeImage(b)
 }
 
 func (c Redis) Save(ctx context.Context, t pkg.TileRequest, img *pkg.Image) error {
 	key := c.KeyPrefix + t.String()
+	val, err := img.Encode()
 
-	err := c.cache.Set(&rediscache.Item{
+	if err != nil {
+		return err
+	}
+
+	err = c.cache.Set(&rediscache.Item{
 		Ctx:   ctx,
 		Key:   key,
-		Value: *img,
+		Value: val,
 		TTL:   time.Duration(c.TTL) * time.Second,
 	})
 

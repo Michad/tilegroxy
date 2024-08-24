@@ -60,7 +60,7 @@ func Test_EffectExecuteGreyscale(t *testing.T) {
 	assert.NotNil(t, img)
 	require.NoError(t, err)
 
-	assert.Equal(t, *exp, *img)
+	assert.Equal(t, *exp, img.Content)
 }
 
 func Test_EffectExecuteAll(t *testing.T) {

@@ -65,7 +65,7 @@ func (s StaticRegistration) Initialize(cfgAny any, _ config.ClientConfig, errorM
 		return nil, err
 	}
 
-	return &Static{cfg, img}, nil
+	return &Static{cfg, &pkg.Image{Content: *img, ContentType: mimePng}}, nil
 }
 
 func (t Static) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.ProviderContext, error) {

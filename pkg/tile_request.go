@@ -117,10 +117,17 @@ func (t TileRequest) IntersectsBoundsProjection(b Bounds, srid uint) (bool, erro
 	return b2.Intersects(b), nil
 }
 
+// Generates a string representation of the tile request with slash separators between values
 func (t TileRequest) String() string {
-	return t.LayerName + "/" + strconv.Itoa(t.Z) + "/" + strconv.Itoa(t.X) + "/" + strconv.Itoa(t.Y)
+	return t.StringWithSeparator("/")
 }
 
+// Generates a string representation of the tile request with an arbitrary separator between values
+func (t TileRequest) StringWithSeparator(sep string) string {
+	return t.LayerName + sep + strconv.Itoa(t.Z) + sep + strconv.Itoa(t.X) + sep + strconv.Itoa(t.Y)
+}
+
+// Turns a bounding box into a list of the tiles contained in the bounds for an arbitary zoom level. Limited to 10k tiles unless force is true, then it's limited to 2^32 tiles.
 func (b Bounds) FindTiles(layerName string, zoom uint, force bool) (*[]TileRequest, error) {
 	z := float64(zoom)
 
@@ -196,6 +203,7 @@ func (b Bounds) Contains(b2 Bounds) bool {
 	return b2.South+delta >= b.South && b2.North <= b.North+delta && b2.West+delta >= b.West && b2.East <= b.East+delta
 }
 
+// Generates a bounding box representation of a given geohash
 func NewBoundsFromGeohash(hashStr string) (Bounds, error) {
 	err := geohash.Validate(hashStr)
 	if err != nil {

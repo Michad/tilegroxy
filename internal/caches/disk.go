@@ -21,7 +21,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strconv"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -38,7 +37,7 @@ type Disk struct {
 }
 
 func requestToFilename(t pkg.TileRequest) string {
-	return t.LayerName + "_" + strconv.Itoa(t.Z) + "_" + strconv.Itoa(t.X) + "_" + strconv.Itoa(t.Y)
+	return t.StringWithSeparator("_")
 }
 
 func init() {
@@ -77,17 +76,25 @@ func (s DiskRegistration) Initialize(configAny any, errorMessages config.ErrorMe
 func (c Disk) Lookup(_ context.Context, t pkg.TileRequest) (*pkg.Image, error) {
 	filename := requestToFilename(t)
 
-	img, err := os.ReadFile(filepath.Join(c.Path, filename))
+	b, err := os.ReadFile(filepath.Join(c.Path, filename))
 
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, nil
 	}
+	if err != nil {
+		return nil, err
+	}
 
-	return &img, err
+	return pkg.DecodeImage(b)
 }
 
 func (c Disk) Save(_ context.Context, t pkg.TileRequest, img *pkg.Image) error {
 	filename := requestToFilename(t)
+	b, err := img.Encode()
 
-	return os.WriteFile(filepath.Join(c.Path, filename), *img, fs.FileMode(c.FileMode))
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(filepath.Join(c.Path, filename), b, fs.FileMode(c.FileMode))
 }

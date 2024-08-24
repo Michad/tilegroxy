@@ -41,7 +41,7 @@ The following types are available for custom providers:
 | [TileRequest](../pkg/tile_request.go) | The parameters from the user indicating the layer being requested as well as the specific tile coordinate |
 | [ClientConfig](../pkg/config/config.go) | A struct from the configuration which indicates settings such as static headers and timeouts. See `Client` in [Configuration documentation](./configuration.md) for details |
 | [ErrorMessages](../pkg/config/config.go) | A struct from the configuration which indicates common error messages. See `Error Messages` in [Configuration documentation](./configuration.md) for details |
-| [Image](../pkg/utility.go) | The imagery for a given tile. Currently type mapped to []byte |
+| [Image](../pkg/utility.go) | A struct containing the resulting imagery in a byte array called Content. You can optionally also include a field called ContentType with the mime-type of the resulting imagery. Example for how to return data: `&tilegroxy.Image{Content:[]byte{0x01,0x02}}`  |
 | [AuthError](../pkg/entities/layer/provider.go) | An Error type to indicate an upstream provider returned an auth error that should trigger a new call to preAuth |
 | [GetTile](../internal/providers/utility.go) | A utility method that performs an HTTP GET request to a given URL. Use this when possible to ensure all standard Client configurations are honored |
 

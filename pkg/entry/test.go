@@ -131,7 +131,7 @@ func testTileRequests(layerObjects *layer.LayerGroup, opts TestOptions, errCount
 				if cacheReadError == nil {
 					if img2 == nil {
 						cacheReadError = errors.New("no result from cache lookup")
-					} else if !slices.Equal(*img, *img2) {
+					} else if !slices.Equal(img.Content, img2.Content) {
 						cacheReadError = errors.New("cache result doesn't match what we put into cache")
 					}
 				}

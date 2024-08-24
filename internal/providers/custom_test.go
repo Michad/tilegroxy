@@ -54,7 +54,7 @@ func preAuth(ctx tilegroxy.Context, providerContext tilegroxy.ProviderContext, p
 }
 
 func generateTile(ctx tilegroxy.Context, providerContext tilegroxy.ProviderContext, tileRequest tilegroxy.TileRequest, params map[string]interface{}, clientConfig tilegroxy.ClientConfig, errorMessages tilegroxy.ErrorMessages ) (*tilegroxy.Image, error ) {
-	return &[]byte{0x01,0x02}, nil
+	return &tilegroxy.Image{Content:[]byte{0x01,0x02}}, nil
 }
 	`}, config.ClientConfig{}, testErrMessages, nil)
 
@@ -73,6 +73,6 @@ func generateTile(ctx tilegroxy.Context, providerContext tilegroxy.ProviderConte
 	img, err := c.GenerateTile(pkg.BackgroundContext(), pc, pkg.TileRequest{LayerName: "l", Z: 3, X: 1, Y: 2})
 	require.NoError(t, err)
 	assert.NotNil(t, img)
-	assert.Equal(t, []byte{0x01, 0x02}, *img)
+	assert.Equal(t, []byte{0x01, 0x02}, img.Content)
 
 }
