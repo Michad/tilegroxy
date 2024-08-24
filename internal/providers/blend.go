@@ -348,7 +348,7 @@ func callProvider(ctx context.Context, providerContext layer.ProviderContext, ti
 			image.Image
 		}{i, realImage}
 	} else if err == nil {
-		//img and err are both nil -- that's not right
+		// img and err are both nil -- that's not right
 		err = errors.New("no image returned to blender")
 	}
 
