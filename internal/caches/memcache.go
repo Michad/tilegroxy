@@ -61,7 +61,7 @@ func (s MemcacheRegistration) Name() string {
 func (s MemcacheRegistration) Initialize(configAny any, errorMessages config.ErrorMessages) (cache.Cache, error) {
 	config := configAny.(MemcacheConfig)
 
-	if config.Servers == nil || len(config.Servers) == 0 {
+	if len(config.Servers) == 0 {
 		if config.Host == "" {
 			config.Host = memcacheDefaultHost
 		}

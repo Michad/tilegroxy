@@ -89,7 +89,7 @@ func (s RedisRegistration) Initialize(configAny any, errorMessages config.ErrorM
 		return nil, fmt.Errorf(errorMessages.EnumError, "cache.redis.mode", config.Mode, AllModes)
 	}
 
-	if config.Servers == nil || len(config.Servers) == 0 {
+	if len(config.Servers) == 0 {
 		if config.Host == "" {
 			config.Host = redisDefaultHost
 		}
