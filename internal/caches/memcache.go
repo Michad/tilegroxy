@@ -61,7 +61,7 @@ func (s MemcacheRegistration) Name() string {
 func (s MemcacheRegistration) Initialize(configAny any, errorMessages config.ErrorMessages) (cache.Cache, error) {
 	config := configAny.(MemcacheConfig)
 
-	if config.Servers == nil || len(config.Servers) == 0 {
+	if len(config.Servers) == 0 {
 		if config.Host == "" {
 			config.Host = memcacheDefaultHost
 		}
@@ -97,9 +97,15 @@ func (c Memcache) Lookup(_ context.Context, t pkg.TileRequest) (*pkg.Image, erro
 		return nil, err
 	}
 
-	return &it.Value, nil
+	return pkg.DecodeImage(it.Value)
 }
 
 func (c Memcache) Save(_ context.Context, t pkg.TileRequest, img *pkg.Image) error {
-	return c.client.Set(&memcache.Item{Key: c.KeyPrefix + t.String(), Value: *img, Expiration: int32(c.TTL)})
+	val, err := img.Encode()
+
+	if err != nil {
+		return err
+	}
+
+	return c.client.Set(&memcache.Item{Key: c.KeyPrefix + t.String(), Value: val, Expiration: int32(c.TTL)})
 }

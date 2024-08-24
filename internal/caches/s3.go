@@ -161,23 +161,28 @@ func (c S3) Lookup(ctx context.Context, t pkg.TileRequest) (*pkg.Image, error) {
 		return nil, err
 	}
 
-	img := writer.Bytes()
+	b := writer.Bytes()
 
-	return &img, nil
+	return pkg.DecodeImage(b)
 }
 
 func (c S3) Save(ctx context.Context, t pkg.TileRequest, img *pkg.Image) error {
+	b, err := img.Encode()
+
+	if err != nil {
+		return err
+	}
 
 	uploadConfig := &s3.PutObjectInput{
 		Bucket: &c.Bucket,
 		Key:    aws.String(calcKey(&c, &t)),
-		Body:   bytes.NewReader(*img),
+		Body:   bytes.NewReader(b),
 	}
 
 	if c.StorageClass != "" {
 		uploadConfig.StorageClass = types.StorageClass(c.StorageClass)
 	}
 
-	_, err := c.uploader.Upload(ctx, uploadConfig)
+	_, err = c.uploader.Upload(ctx, uploadConfig)
 	return err
 }

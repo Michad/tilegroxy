@@ -116,9 +116,7 @@ func (lg LayerGroup) RenderTile(ctx context.Context, tileRequest pkg.TileRequest
 		return nil, err
 	}
 
-	ctxSkipCacheSave, _ := pkg.SkipCacheSaveFromContext(ctx)
-
-	if !*ctxSkipCacheSave {
+	if !img.ForceSkipCache {
 		go writeCache(ctx, l.Cache, tileRequest, img)
 	}
 

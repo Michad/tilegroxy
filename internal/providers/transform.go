@@ -136,7 +136,7 @@ func (t Transform) GenerateTile(ctx context.Context, providerContext layer.Provi
 		return img, err
 	}
 
-	realImage, _, err := image.Decode(bytes.NewReader(*img))
+	realImage, _, err := image.Decode(bytes.NewReader(img.Content))
 
 	if err != nil {
 		return nil, err
@@ -203,5 +203,5 @@ func (t Transform) GenerateTile(ctx context.Context, providerContext layer.Provi
 	writer.Flush()
 	output := buf.Bytes()
 
-	return &output, err
+	return &pkg.Image{Content: output, ContentType: mimePng, ForceSkipCache: img.ForceSkipCache}, err
 }

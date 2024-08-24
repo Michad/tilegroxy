@@ -34,6 +34,8 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
+const mimePng = "image/png"
+
 var envRegex = regexp.MustCompile(`{env\.[^{}}]*}`)
 var ctxRegex = regexp.MustCompile(`{ctx\.[^{}}]*}`)
 var lyrRegex = regexp.MustCompile(`{layer\.[^{}}]*}`)
@@ -148,8 +150,18 @@ func getTile(ctx context.Context, clientConfig config.ClientConfig, url string, 
 		return nil, &pkg.RemoteServerError{StatusCode: resp.StatusCode}
 	}
 
-	if !slices.Contains(clientConfig.ContentTypes, resp.Header.Get("Content-Type")) {
-		return nil, &pkg.InvalidContentTypeError{ContentType: resp.Header.Get("Content-Type")}
+	contentType := resp.Header.Get("Content-Type")
+
+	if !slices.Contains(clientConfig.ContentTypes, contentType) {
+		return nil, &pkg.InvalidContentTypeError{ContentType: contentType}
+	}
+
+	if clientConfig.RewriteContentTypes != nil {
+		newContentType, ok := clientConfig.RewriteContentTypes[contentType]
+
+		if ok {
+			contentType = newContentType
+		}
 	}
 
 	if resp.ContentLength == -1 {
@@ -172,5 +184,5 @@ func getTile(ctx context.Context, clientConfig config.ClientConfig, url string, 
 		return nil, &pkg.InvalidContentLengthError{Length: len(img)}
 	}
 
-	return &img, nil
+	return &pkg.Image{Content: img, ContentType: contentType}, nil
 }

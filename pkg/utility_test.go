@@ -14,6 +14,7 @@
 package pkg
 
 import (
+	"math/rand/v2"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -98,4 +99,35 @@ func Test_ReplaceEnv_WithVals(t *testing.T) {
 func Test_Ternary(t *testing.T) {
 	assert.Equal(t, "a", Ternary(true, "a", "b"))
 	assert.Equal(t, "b", Ternary(false, "a", "b"))
+}
+
+func Fuzz_EncodeDecodeImage(f *testing.F) {
+	for z := 1; z < 100; z++ {
+		b := make([]byte, rand.IntN(1000))
+
+		for i := range b {
+			b[i] = byte(rand.UintN(255))
+		}
+
+		c := RandomString() + "/" + RandomString()
+
+		f.Add(b, c)
+	}
+	f.Fuzz(func(t *testing.T, b []byte, c string) {
+		img1 := Image{Content: b, ContentType: c}
+
+		b, err := img1.Encode()
+		require.NoError(t, err)
+		img2, err := DecodeImage(b)
+		require.NoError(t, err)
+
+		assert.Equal(t, img1.ContentType, img2.ContentType)
+		assert.Equal(t, img1.Content, img2.Content)
+
+		// Test backwards compatibility
+		img3, err := DecodeImage(img1.Content)
+		require.NoError(t, err)
+		assert.Equal(t, img3.Content, img2.Content)
+		assert.Empty(t, img3.ContentType)
+	})
 }

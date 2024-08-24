@@ -30,7 +30,6 @@ const allowedLayersKey = "allowedLayers"
 const allowedAreaKey = "allowedArea"
 const userIDKey = "user"
 const layerPatternMatchesKey = "layerPatternMatches"
-const skipCacheSaveKey = "skipCacheSave"
 
 func p[A any](val A) *A {
 	return &val
@@ -47,7 +46,6 @@ func NewRequestContext(req *http.Request) context.Context {
 	ctx = context.WithValue(ctx, allowedAreaKey, &Bounds{})
 	ctx = context.WithValue(ctx, userIDKey, p(""))
 	ctx = context.WithValue(ctx, layerPatternMatchesKey, &map[string]string{})
-	ctx = context.WithValue(ctx, skipCacheSaveKey, p(false))
 
 	ctx = context.WithValue(ctx, "uri", req.RequestURI)
 	ctx = context.WithValue(ctx, "path", req.URL.Path)
@@ -101,11 +99,6 @@ func UserIDFromContext(ctx context.Context) (*string, bool) {
 
 func LayerPatternMatchesFromContext(ctx context.Context) (*map[string]string, bool) {
 	u, ok := ctx.Value(layerPatternMatchesKey).(*map[string]string)
-	return u, ok
-}
-
-func SkipCacheSaveFromContext(ctx context.Context) (*bool, bool) {
-	u, ok := ctx.Value(skipCacheSaveKey).(*bool)
 	return u, ok
 }
 

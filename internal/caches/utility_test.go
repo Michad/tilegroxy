@@ -58,7 +58,7 @@ func makeReq(seed int) pkg.TileRequest {
 }
 
 func makeImg(seed int) pkg.Image {
-	return make([]byte, seed)
+	return pkg.Image{Content: make([]byte, seed)}
 }
 
 func validateSaveAndLookup(t *testing.T, c cache.Cache) {
@@ -77,7 +77,7 @@ func validateLookup(t *testing.T, c cache.Cache, tile pkg.TileRequest, expected 
 	require.NoError(t, err, "Cache lookup returned an error")
 	require.NotNil(t, img2, "Cache lookup didn't return an image")
 
-	require.True(t, slices.Equal(*expected, *img2), "Result before and after cache don't match")
+	require.True(t, slices.Equal(expected.Content, img2.Content), "Result before and after cache don't match")
 }
 
 func validateNoLookup(t *testing.T, c cache.Cache, tile pkg.TileRequest) {

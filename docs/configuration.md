@@ -253,7 +253,7 @@ Configuration options:
 
 Ref refers requests to another layer. This is pointless by itself but can be useful when combined with other providers to avoid repeating yourself.
 
-For instance you can have a layer with a complex client coniguration that utilizes a `pattern` and points to a WMS server with the WMS layer being specified by a placeholder, then several other layers using `Ref` that fill in the blank.
+For instance you can have a layer with a complex client configuration that utilizes a `pattern` and points to a WMS server with the WMS layer being specified by a placeholder, then several other layers using `Ref` that fill in the blank.
 
 Name should be "ref"
 
@@ -743,6 +743,8 @@ Configuration options:
 | ContentTypes | string[] | No | image/png, image/jpg | The content-types to allow remote servers to return. Anything else will be interpreted as an error |
 | StatusCodes | int[] | No | 200 | The status codes from the remote server to consider successful |
 | Headers | map[string]string | No | None | Include these headers in requests |
+| RewriteContentTypes | map[string]string | No | {"application/octet-stream": ""} | Replaces `Content-Type`s that match the key with the value. This is to handle servers returning a generic content type. Mapping to an empty string that will cause tilegroxy to intuit the Content-Type by inspecting the contents - this may be inaccurate for MVT. This only applies after the check that Content-Type is valid according to the `ContentTypes` parameter meaning your original Content-Type will need to be in both parameters to be used |
+
 
 The following can be supplied as environment variables:
 

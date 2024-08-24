@@ -93,7 +93,7 @@ func Test_BlendExecute_Add(t *testing.T) {
 	i, err := b.GenerateTile(pkg.BackgroundContext(), ctx, pkg.TileRequest{LayerName: "", Z: 4, X: 2, Y: 3})
 	require.NoError(t, err)
 
-	assert.Equal(t, *exp, *i)
+	assert.Equal(t, *exp, i.Content)
 }
 
 func Test_BlendExecute_All(t *testing.T) {
@@ -104,6 +104,6 @@ func Test_BlendExecute_All(t *testing.T) {
 		i, err := b.GenerateTile(pkg.BackgroundContext(), layer.ProviderContext{}, pkg.TileRequest{LayerName: "", Z: 4, X: 2, Y: 3})
 		require.NoError(t, err)
 		assert.NotNil(t, i)
-		assert.Greater(t, len(*i), 1000)
+		assert.Greater(t, len(i.Content), 1000)
 	}
 }

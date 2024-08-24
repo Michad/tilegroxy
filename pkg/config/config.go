@@ -48,13 +48,15 @@ type ServerConfig struct {
 }
 
 type ClientConfig struct {
-	UserAgent     string            // The user agent to include in outgoing http requests. Separate from Headers to avoid omitting this.
-	MaxLength     int               // The maximum Content-Length to allow incoming responses. Default: 10 Megabytes
-	UnknownLength bool              // If true, allow responses that are missing a Content-Length header, this could lead to memory overruns. Default: false
-	ContentTypes  []string          // The content-types to allow servers to return. Anything else will be interpreted as an error
-	StatusCodes   []int             // The status codes from the remote server to consider successful.  Defaults to just 200
-	Headers       map[string]string // Include these headers in requests. Defaults to none
-	Timeout       uint              // How long (in seconds) a request can be in flight before we cancel it and return an error
+	UserAgent           string            // The user agent to include in outgoing http requests. Separate from Headers to avoid omitting this.
+	MaxLength           int               // The maximum Content-Length to allow incoming responses. Default: 10 Megabytes
+	UnknownLength       bool              // If true, allow responses that are missing a Content-Length header, this could lead to memory overruns. Default: false
+	ContentTypes        []string          // The content-types to allow servers to return. Anything else will be interpreted as an error
+	StatusCodes         []int             // The status codes from the remote server to consider successful.  Defaults to just 200
+	Headers             map[string]string // Include these headers in requests. Defaults to none
+	Timeout             uint              // How long (in seconds) a request can be in flight before we cancel it and return an error
+	RewriteContentTypes map[string]string // Replace ContentType's that match the key with the value. This is to handle servers returning a generic content type. Kicks in after the check that ContentType is in `ContentTypes`.
+
 }
 
 type TelemetryConfig struct {
@@ -69,14 +71,20 @@ func (c *ClientConfig) MergeDefaultsFrom(o ClientConfig) {
 	if c.MaxLength == 0 {
 		c.MaxLength = o.MaxLength
 	}
-	if c.ContentTypes == nil || len(c.ContentTypes) == 0 {
+	if len(c.Headers) == 0 {
+		c.Headers = o.Headers
+	}
+	if len(c.ContentTypes) == 0 {
 		c.ContentTypes = o.ContentTypes
 	}
-	if c.StatusCodes == nil || len(c.StatusCodes) == 0 {
+	if len(c.StatusCodes) == 0 {
 		c.StatusCodes = o.StatusCodes
 	}
 	if c.Timeout == 0 {
 		c.Timeout = o.Timeout
+	}
+	if len(c.RewriteContentTypes) == 0 {
+		c.RewriteContentTypes = o.RewriteContentTypes
 	}
 }
 
@@ -198,13 +206,14 @@ func DefaultConfig() Config {
 			Gzip:       false,
 		},
 		Client: ClientConfig{
-			UserAgent:     "tilegroxy/" + version,
-			MaxLength:     1024 * 1024 * 10,
-			UnknownLength: false,
-			ContentTypes:  []string{"image/png", "image/jpg", "image/jpeg"},
-			StatusCodes:   []int{http.StatusOK},
-			Headers:       map[string]string{},
-			Timeout:       10,
+			UserAgent:           "tilegroxy/" + version,
+			MaxLength:           1024 * 1024 * 10,
+			UnknownLength:       false,
+			ContentTypes:        []string{"image/png", "image/jpg", "image/jpeg"},
+			StatusCodes:         []int{http.StatusOK},
+			Headers:             map[string]string{},
+			Timeout:             10,
+			RewriteContentTypes: map[string]string{"application/octet-stream": ""},
 		},
 		Logging: LogConfig{
 			Main: MainConfig{

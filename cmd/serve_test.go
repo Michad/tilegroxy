@@ -279,7 +279,7 @@ layers:
 
         func generateTile(ctx tilegroxy.Context, providerContext tilegroxy.ProviderContext, tileRequest tilegroxy.TileRequest, params map[string]interface{}, clientConfig tilegroxy.ClientConfig, errorMessages tilegroxy.ErrorMessages ) (*tilegroxy.Image, error ) {
             time.Sleep(10 * time.Second)
-            return &[]byte{0x01,0x02}, nil
+            return &tilegroxy.Image{Content:[]byte{0x01,0x02}}, nil
         }
 `
 	cfg = fmt.Sprintf(cfg, tmpLog.Name())

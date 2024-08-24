@@ -59,5 +59,5 @@ func Test_Transform_Execute(t *testing.T) {
 	img, err := tr.GenerateTile(pkg.BackgroundContext(), pc, pkg.TileRequest{LayerName: "l", Z: 9, X: 23, Y: 32})
 
 	require.NoError(t, err)
-	assert.Equal(t, *exp, *img)
+	assert.Equal(t, *exp, img.Content)
 }
