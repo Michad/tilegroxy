@@ -204,8 +204,12 @@ func Ternary[T any](cond bool, a T, b T) T {
 
 // Generates a random string with alphanumeric characters. Specifics are prone to change. Not guaranteed to have cryptographic security
 func RandomString() string {
+	const base = 36
+	const length = 16
+
 	var i, i2 uint64
-	b := make([]byte, 16)
+	b := make([]byte, length)
+
 	// Try to use sRNG by default because why not
 	_, err := crand.Read(b)
 
@@ -214,11 +218,11 @@ func RandomString() string {
 		i = rand.Uint64()
 		i2 = rand.Uint64()
 	} else {
-		i = binary.BigEndian.Uint64(b[0:8])
-		i2 = binary.BigEndian.Uint64(b[8:16])
+		i = binary.BigEndian.Uint64(b[0:(length / 2)])
+		i2 = binary.BigEndian.Uint64(b[(length / 2):length])
 	}
 
-	return strconv.FormatUint(i, 36) + strconv.FormatUint(i2, 36)
+	return strconv.FormatUint(i, base) + strconv.FormatUint(i2, base)
 }
 
 // Handles making a new context and span for use in a provider that calls another provider. Make sure to End the span that is returned

@@ -124,7 +124,7 @@ func Fuzz_EncodeDecodeImage(f *testing.F) {
 		assert.Equal(t, img1.ContentType, img2.ContentType)
 		assert.Equal(t, img1.Content, img2.Content)
 
-		//Test backwards compatibility
+		// Test backwards compatibility
 		img3, err := DecodeImage(img1.Content)
 		require.NoError(t, err)
 		assert.Equal(t, img3.Content, img2.Content)
