@@ -156,6 +156,14 @@ func getTile(ctx context.Context, clientConfig config.ClientConfig, url string, 
 		return nil, &pkg.InvalidContentTypeError{ContentType: contentType}
 	}
 
+	if clientConfig.RewriteContentTypes != nil {
+		newContentType, ok := clientConfig.RewriteContentTypes[contentType]
+
+		if ok {
+			contentType = newContentType
+		}
+	}
+
 	if resp.ContentLength == -1 {
 		if !clientConfig.UnknownLength {
 			return nil, &pkg.InvalidContentLengthError{Length: -1}
