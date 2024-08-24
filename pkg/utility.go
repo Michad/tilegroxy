@@ -206,7 +206,7 @@ func Ternary[T any](cond bool, a T, b T) T {
 func RandomString() string {
 	var i, i2 uint64
 	b := make([]byte, 16)
-	//Try to use sRNG by default because why not
+	// Try to use sRNG by default because why not
 	_, err := crand.Read(b)
 
 	if err != nil {
