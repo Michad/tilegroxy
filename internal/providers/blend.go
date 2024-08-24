@@ -28,6 +28,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -209,10 +210,11 @@ func (t Blend) GenerateTile(ctx context.Context, providerContext layer.ProviderC
 	wg := sync.WaitGroup{}
 	errs := make(chan error, len(t.providers))
 	imgs := make(chan indexedImg, len(t.providers))
+	var skipWrite atomic.Bool
 
 	for i, p := range t.providers {
 		wg.Add(1)
-		go callProvider(ctx, providerContext, tileRequest, p, i, imgs, errs, &wg)
+		go callProvider(ctx, providerContext, tileRequest, p, i, imgs, errs, &wg, &skipWrite)
 	}
 
 	wg.Wait()
@@ -261,7 +263,7 @@ func (t Blend) GenerateTile(ctx context.Context, providerContext layer.ProviderC
 	writer.Flush()
 	output := buf.Bytes()
 
-	return &pkg.Image{Content: output, ContentType: mimePng}, err
+	return &pkg.Image{Content: output, ContentType: mimePng, ForceSkipCache: skipWrite.Load()}, err
 }
 
 func (t Blend) blendImage(ctx context.Context, img image.Image, size image.Point, combinedImg image.Image) image.Image {
@@ -313,7 +315,7 @@ func (t Blend) blendImage(ctx context.Context, img image.Image, size image.Point
 	return combinedImg
 }
 
-func callProvider(ctx context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest, provider layer.Provider, i int, imgs chan indexedImg, errs chan error, wg *sync.WaitGroup) {
+func callProvider(ctx context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest, provider layer.Provider, i int, imgs chan indexedImg, errs chan error, wg *sync.WaitGroup, skipWrite *atomic.Bool) {
 	defer func() {
 		if r := recover(); r != nil {
 			errs <- fmt.Errorf("unexpected blend error %v", r)
@@ -334,6 +336,10 @@ func callProvider(ctx context.Context, providerContext layer.ProviderContext, ti
 	}
 
 	if img != nil {
+		if img.ForceSkipCache {
+			skipWrite.Store(true)
+		}
+
 		realImage, _, err2 := image.Decode(bytes.NewReader(img.Content))
 		err = errors.Join(err, err2)
 
@@ -341,6 +347,9 @@ func callProvider(ctx context.Context, providerContext layer.ProviderContext, ti
 			int
 			image.Image
 		}{i, realImage}
+	} else if err == nil {
+		//img and err are both nil -- that's not right
+		err = errors.New("no image returned to blender")
 	}
 
 	errs <- err

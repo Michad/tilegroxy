@@ -203,5 +203,5 @@ func (t Transform) GenerateTile(ctx context.Context, providerContext layer.Provi
 	writer.Flush()
 	output := buf.Bytes()
 
-	return &pkg.Image{Content: output, ContentType: mimePng}, err
+	return &pkg.Image{Content: output, ContentType: mimePng, ForceSkipCache: img.ForceSkipCache}, err
 }
