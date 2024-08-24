@@ -71,16 +71,19 @@ func (c *ClientConfig) MergeDefaultsFrom(o ClientConfig) {
 	if c.MaxLength == 0 {
 		c.MaxLength = o.MaxLength
 	}
-	if c.ContentTypes == nil || len(c.ContentTypes) == 0 {
+	if len(c.Headers) == 0 {
+		c.Headers = o.Headers
+	}
+	if len(c.ContentTypes) == 0 {
 		c.ContentTypes = o.ContentTypes
 	}
-	if c.StatusCodes == nil || len(c.StatusCodes) == 0 {
+	if len(c.StatusCodes) == 0 {
 		c.StatusCodes = o.StatusCodes
 	}
 	if c.Timeout == 0 {
 		c.Timeout = o.Timeout
 	}
-	if c.RewriteContentTypes == nil || len(c.RewriteContentTypes) == 0 {
+	if len(c.RewriteContentTypes) == 0 {
 		c.RewriteContentTypes = o.RewriteContentTypes
 	}
 }
