@@ -46,3 +46,34 @@ func TestTwoTierYml(t *testing.T) {
 
 	require.NoError(t, err)
 }
+
+func TestMergeDefaultsFrom(t *testing.T) {
+	c1 := DefaultConfig().Client
+
+	var c2 ClientConfig
+
+	c2.MergeDefaultsFrom(c1)
+
+	assert.Equal(t, c1.ContentTypes, c2.ContentTypes)
+	assert.Equal(t, c1.Headers, c2.Headers)
+	assert.Equal(t, c1.MaxLength, c2.MaxLength)
+	assert.Equal(t, c1.RewriteContentTypes, c2.RewriteContentTypes)
+	assert.Equal(t, c1.StatusCodes, c2.StatusCodes)
+	assert.Equal(t, c1.Timeout, c2.Timeout)
+	assert.Equal(t, c1.UnknownLength, c2.UnknownLength)
+	assert.Equal(t, c1.UserAgent, c2.UserAgent)
+
+	var c3 ClientConfig
+	c3.Headers = map[string]string{"test": "test"}
+
+	c3.MergeDefaultsFrom(c1)
+
+	assert.Equal(t, c1.ContentTypes, c3.ContentTypes)
+	assert.NotEqual(t, c1.Headers, c3.Headers)
+	assert.Equal(t, c1.MaxLength, c3.MaxLength)
+	assert.Equal(t, c1.RewriteContentTypes, c3.RewriteContentTypes)
+	assert.Equal(t, c1.StatusCodes, c3.StatusCodes)
+	assert.Equal(t, c1.Timeout, c3.Timeout)
+	assert.Equal(t, c1.UnknownLength, c3.UnknownLength)
+	assert.Equal(t, c1.UserAgent, c3.UserAgent)
+}
