@@ -13,7 +13,6 @@ layers:
     provider:
       # The CGI provider can work with any CGI executable that generates tiles. Mapserver is the primary example
       name: cgi
-      textAsError: true
       # The filepath to the compiled CGI executable (no arguments)
       exec: /usr/bin/mapserv
       workingDir: .
@@ -29,7 +28,6 @@ layers:
       "*": '^[a-zA-Z0-9\-]+$' 
     provider:
       name: cgi
-      textAsError: true
       exec: /usr/bin/mapserv
       workingDir: .
       #Similar to above but image type is left to the default in the mapfile and a tile size param is included
