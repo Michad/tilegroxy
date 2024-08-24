@@ -127,7 +127,7 @@ func (t TileRequest) StringWithSeparator(sep string) string {
 	return t.LayerName + sep + strconv.Itoa(t.Z) + sep + strconv.Itoa(t.X) + sep + strconv.Itoa(t.Y)
 }
 
-// Turns a bounding box into a list of the tiles contained in the bounds for an arbitary zoom level. Limited to 10k tiles unless force is true, then it's limited to 2^32 tiles.
+// Turns a bounding box into a list of the tiles contained in the bounds for an arbitrary zoom level. Limited to 10k tiles unless force is true, then it's limited to 2^32 tiles.
 func (b Bounds) FindTiles(layerName string, zoom uint, force bool) (*[]TileRequest, error) {
 	z := float64(zoom)
 
