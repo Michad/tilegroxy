@@ -104,7 +104,7 @@ func (s SampleRegistration) InitializeConfig() any {
 
 // This should always return the same string. Any provider configuration with name set to this value will trigger this "Sample" provider to be used
 func (s SampleRegistration) Name() string {
-	return "Sample"
+	return "sample"
 }
 
 // This is called for every layer with a provider configured with a matching name at startup time. This should return your provider type with any initialization logic, the simplest case is just passing your config struct into your provider struct like shown here.

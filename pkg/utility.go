@@ -225,7 +225,7 @@ func RandomString() string {
 	return strconv.FormatUint(i, base) + strconv.FormatUint(i2, base)
 }
 
-// Handles making a new context and span for use in a provider that calls another provider. Make sure to End the span that is returned
+// Handles making a new context and span for entity wrappers to break down request flow. Make sure to End the span that is returned
 func MakeChildSpan(ctx context.Context, newRequest *TileRequest, providerName string, childSpanName string, functionName string) (context.Context, trace.Span) {
 	spanName := providerName
 
