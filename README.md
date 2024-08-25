@@ -1,4 +1,4 @@
-# tilegroxy    
+# tilegroxy — Tile G(o) (P)roxy
 [![Docker Image CI](https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml/badge.svg)](https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml) [![Go Report Card](https://goreportcard.com/badge/michad/tilegroxy)](https://goreportcard.com/report/michad/tilegroxy) [![OpenSSF Scorecard](https://img.shields.io/ossf-scorecard/github.com/Michad/tilegroxy?label=openssf%20scorecard&style=flat)](https://scorecard.dev/viewer/?uri=github.com%2FMichad%2Ftilegroxy) ![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/michad/d1b9e082f6608635494188d0f52bae69/raw/coverage.json) [![Libyears](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/michad/d1b9e082f6608635494188d0f52bae69/raw/libyears.json)](https://libyear.com/)    
 ![Go Version](https://img.shields.io/github/go-mod/go-version/michad/tilegroxy) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md) 
 
@@ -43,13 +43,13 @@ You can also use `tilegroxy config create` to help get started.
 
 ## How to get it
 
-Tilegroxy is designed to be run in a container. But it can also be run directly for that old-school approach; we don't judge.   
+Tilegroxy is available as a standalone executable or a container image. It's recommended you utilize a container for any serious deployment while the standalone executable can be useful to run locally while building your configuration.
 
 ### Building
 
-Tilegroxy builds as a statically linked executable. Prebuilt binaries are available from [Github](https://github.com/Michad/tilegroxy/releases).
+Tilegroxy builds as an executable binary with minimal dynamic dependencies. Prebuilt binaries are available from [Github](https://github.com/Michad/tilegroxy/releases).
 
-Building tilegroxy yourself requires `go`, `git`, `make`, and `date`.  It uses a standard [Makefile](./Makefile) workflow:
+Building tilegroxy yourself requires a bash-like shell with `go`, `git`, `make`, and standard POSIX utilities like `date`.  It uses a conventional [Makefile](./Makefile) workflow:
 
 Build with
 
@@ -63,7 +63,7 @@ then install with
 sudo make install
 ```
 
-Once installed, tilegroxy can be run directly as an HTTP server via the `tilegroxy serve` command documented below. It's recommended to create a systemd unit file to allow it to run as a daemon as an appropriate user.
+Once installed, tilegroxy can be invoked via the commands [documented below](#commands). A systemd unit file for operation as a server daemon is left as an exercise for the reader.  
 
 #### Tests
 
