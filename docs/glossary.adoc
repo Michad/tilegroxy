@@ -1,4 +1,4 @@
-# Glossary
+= Glossary
 
 This glossary contains definitions of domain specific terminology as used in tilegroxy. These terms have standard English meanings but are used in specific ways in the tilegroxy source code and documentation.  This glossary is intended to help you understand how these terms are used here:
 

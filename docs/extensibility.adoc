@@ -1,57 +1,75 @@
-# Extensibility
+= Extensibility
 
-Is tilegroxy's out of the box capabilities not sufficing for your use-case?  Luckily tilegroxy is designed to be highly extensible so you can add whatever functionality yourself!  If possible, please consider contributing back whatever functionality you add if it has generic usefulness. 
+Is tilegroxy's out of the box capabilities not sufficing for your use-case?  Luckily tilegroxy is designed to be highly extensible so you can add whatever functionality yourself!  If possible, please consider contributing back whatever functionality you add if it has generic usefulness.
 
 There are two ways to extend tilegroxy. One is to use the various "custom" options to provide interpreted Go code to implement a provider or authentication scheme. The other is to use tilegroxy as a library and create your own executable with whatever tweaks you need.
 
-## "Custom" 
+== "Custom"
 
-You might have noticed "custom" listed a few times in the [Configuration documentation](./configuration.md). These options allow you to provide your own custom code that is interpreted on the fly to fulfill the specific needs you have.  These custom options must be written in Go and are interpreted using [Yaegi](https://github.com/traefik/yaegi).  Yaegi offers a full featured implementation of the Go specification without the need to precompile.  
+You might have noticed "custom" listed a few times in the xref:./configuration.adoc[Configuration documentation]. These options allow you to provide your own custom code that is interpreted on the fly to fulfill the specific needs you have.  These custom options must be written in Go and are interpreted using https://github.com/traefik/yaegi[Yaegi].  Yaegi offers a full featured implementation of the Go specification without the need to precompile.
 
-Your custom code must live within a single file for each provider/auth.  It can use the entire standard library including potentially dangerous function calls such as `exec` and `unsafe`; be as cautious using custom providers from third parties as you would be executing any other third party software. 
+Your custom code must live within a single file for each provider/auth.  It can use the entire standard library including potentially dangerous function calls such as `exec` and `unsafe`; be as cautious using custom providers from third parties as you would be executing any other third party software.
 
 There is a performance cost of using a custom vs a built-in offering. The exact cost depends on the complexity of your code, however it is typically below 10 milliseconds while tile generation as a whole is usually more than an order of magnitude slower. With authentication especially tilegroxy utilizes caching to mitigate this impact.  However it is something you should keep in mid when deciding whether to implement a Custom provider/auth. Due to these being written in Go, it is easy to convert your custom code to a built-in equivalent if you find this overhead becomes a bottleneck.
 
 Custom caches are not currently possible. This is because it's most likely you would need/want to use an external library to talk to whatever cache, which isn't currently possible (limitation of Yaegi).
 
-### Custom Providers
+=== Custom Providers
 
 For cases where the built-in providers don't suffice, you can write your own custom providers.
 
-Example custom providers can be found within [examples/providers](../examples/providers/).   
+Example custom providers can be found within link:../examples/providers/[examples/providers].
 
 Custom providers must be within the `custom` package and must import the `tilegroxy/tilegroxy` package for mandatory datatypes. There are two mandatory functions:
 
-```go
+[,go]
+----
 func preAuth(tilegroxy.Context, tilegroxy.ProviderContext, map[string]interface{}, tilegroxy.ClientConfig, tilegroxy.ErrorMessages) (tilegroxy.ProviderContext, error)
 
 func generateTile(tilegroxy.Context, tilegroxy.ProviderContext, tilegroxy.TileRequest, map[string]interface{}, tilegroxy.ClientConfig,tilegroxy.ErrorMessages) (*tilegroxy.Image, error)
-```
+----
 
-The `preAuth` function is responsible for authenticating outgoing requests and returning a token or whatever else is needed. It is called when needed by the application when either `expiration` is reached or an `AuthError` is returned by `generateTile`. A given instance of tilegroxy will only call this method once at a time and then shares the result among threads. However, ProviderContext is not shared between instances of tilegroxy. 
+The `preAuth` function is responsible for authenticating outgoing requests and returning a token or whatever else is needed. It is called when needed by the application when either `expiration` is reached or an `AuthError` is returned by `generateTile`. A given instance of tilegroxy will only call this method once at a time and then shares the result among threads. However, ProviderContext is not shared between instances of tilegroxy.
 
 The `generateTile` function is the main function which returns an image for a given tile request. You should never trigger a call to `preAuth` yourself from `generateTile` (instead return an `AuthError`) to prevent excessive calls to the upstream provider from multiple tiles.
 
 The following types are available for custom providers:
 
-| Type | Description |
-| --- | --- |
-| [Context](../pkg/request_context.go) | A context.Context with special values applied. Contains contextual information specific to the incoming request. Can retrieve headers via the Value method and authz information if configured properly. Do note there won't be a request when seed and test commands are run, this context will be a "Background Context" at those times |
-| [ProviderContext](../pkg/entities/layer/provider.go) | A struct for on the fly, provider-specific information. It is primarily used to facilitate authentication. Includes an Expiration field to inform the application when to re-auth via the preAuth method (this should occur before auth actually expires). Also includes an auth token field, a auth Bypass field (for un-authed usecases), and a map |
-| [TileRequest](../pkg/tile_request.go) | The parameters from the user indicating the layer being requested as well as the specific tile coordinate |
-| [ClientConfig](../pkg/config/config.go) | A struct from the configuration which indicates settings such as static headers and timeouts. See `Client` in [Configuration documentation](./configuration.md) for details |
-| [ErrorMessages](../pkg/config/config.go) | A struct from the configuration which indicates common error messages. See `Error Messages` in [Configuration documentation](./configuration.md) for details |
-| [Image](../pkg/utility.go) | A struct containing the resulting imagery in a byte array called Content. You can optionally also include a field called ContentType with the mime-type of the resulting imagery. Example for how to return data: `&tilegroxy.Image{Content:[]byte{0x01,0x02}}`  |
-| [AuthError](../pkg/entities/layer/provider.go) | An Error type to indicate an upstream provider returned an auth error that should trigger a new call to preAuth |
-| [GetTile](../internal/providers/utility.go) | A utility method that performs an HTTP GET request to a given URL. Use this when possible to ensure all standard Client configurations are honored |
+|===
+| Type | Description
 
-### Custom Authentication
+| link:../pkg/request_context.go[Context]
+| A context.Context with special values applied. Contains contextual information specific to the incoming request. Can retrieve headers via the Value method and authz information if configured properly. Do note there won't be a request when seed and test commands are run, this context will be a "Background Context" at those times
+
+| link:../pkg/entities/layer/provider.go[ProviderContext]
+| A struct for on the fly, provider-specific information. It is primarily used to facilitate authentication. Includes an Expiration field to inform the application when to re-auth via the preAuth method (this should occur before auth actually expires). Also includes an auth token field, a auth Bypass field (for un-authed usecases), and a map
+
+| link:../pkg/tile_request.go[TileRequest]
+| The parameters from the user indicating the layer being requested as well as the specific tile coordinate
+
+| link:../pkg/config/config.go[ClientConfig]
+| A struct from the configuration which indicates settings such as static headers and timeouts. See `Client` in xref:./configuration.adoc[Configuration documentation] for details
+
+| link:../pkg/config/config.go[ErrorMessages]
+| A struct from the configuration which indicates common error messages. See `Error Messages` in xref:./configuration.adoc[Configuration documentation] for details
+
+| link:../pkg/utility.go[Image]
+| A struct containing the resulting imagery in a byte array called Content. You can optionally also include a field called ContentType with the mime-type of the resulting imagery. Example for how to return data: `&tilegroxy.Image{Content:[]byte{0x01,0x02}}`
+
+| link:../pkg/entities/layer/provider.go[AuthError]
+| An Error type to indicate an upstream provider returned an auth error that should trigger a new call to preAuth
+
+| link:../internal/providers/utility.go[GetTile]
+| A utility method that performs an HTTP GET request to a given URL. Use this when possible to ensure all standard Client configurations are honored
+|===
+
+=== Custom Authentication
 
 A custom authentication works much the same way as a custom provider.  The code you need to supply only has access to the standard library.  The package must be "custom" and you must include the following function:
 
-```
+----
 func validate(string) (bool, time.Time, string, []string)
-```
+----
 
 The `validate` method will be supplied with a single token.  The function should then return (in order):
 
@@ -62,22 +80,35 @@ The `validate` method will be supplied with a single token.  The function should
 
 The method how tokens are extracted from the request is configurable. The following modes are available and if multiple are specified the first one (given the order indicated) in the request is utilized:
 
-| Order | Key | Value | 
-| --- | --- | --- | 
-| 1 | header | Header Name (in Header-Case) | 
-| 2 | cookie | Cookie Name |
-| 3 | query | Query Parameter Key |
-| 4 | path | None (set as empty string) |
+|===
+| Order | Key | Value
+
+| 1
+| header
+| Header Name (in Header-Case)
+
+| 2
+| cookie
+| Cookie Name
+
+| 3
+| query
+| Query Parameter Key
+
+| 4
+| path
+| None (set as empty string)
+|===
 
 No custom types or methods are available.
 
-## Using tilegroxy as a library
+== Using tilegroxy as a library
 
-Tilegroxy exposes the critical classes needed to create your own executable using tilegroxy that has a different CLI interface or that includes your own custom providers, cache, authentication, or secret sources.  Extending tilegroxy in this way is more complex and requires you to implement your own entry points but allows you to bring in third party libraries as needed and allows you to have fully custom caches. 
+Tilegroxy exposes the critical classes needed to create your own executable using tilegroxy that has a different CLI interface or that includes your own custom providers, cache, authentication, or secret sources.  Extending tilegroxy in this way is more complex and requires you to implement your own entry points but allows you to bring in third party libraries as needed and allows you to have fully custom caches.
 
 Tilegroxy uses a registration system to find and construct its main entities.  As long as you supply a struct that implements the XXXRegistration interface you can call the RegisterXXX method on startup to allow the tilegroxy internal to locate the struct.  For example, here is a minimal Provider implemented in this way:
 
-```
+----
 
 type SampleConfig struct {
 	// Insert configuration for your provider here
@@ -120,8 +151,8 @@ func (t Sample) PreAuth(ctx *context.Context, providerContext layer.ProviderCont
 func (t Sample) GenerateTile(ctx *context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	return nil, errors.New("not implemented")
 }
-```
+----
 
 From here, implementing the provider is the same as implementing a Custom provider.  The other entities can be specified in the same way.
 
-See the [pkg package](../pkg) for other structs and methods available for customizing tilegroxy.
+See the link:../pkg[pkg package] for other structs and methods available for customizing tilegroxy.
