@@ -47,7 +47,7 @@ Tilegroxy is designed to be run in a container. But it can also be run directly 
 
 ### Building
 
-Tilegroxy builds as a statically linked executable. Prebuilt binaries are available from [Github](https://github.com/Michad/tilegroxy/releases).
+Tilegroxy builds as an executable with minimal dynamic dependencies. Prebuilt binaries are available from [Github](https://github.com/Michad/tilegroxy/releases).
 
 Building tilegroxy yourself requires `go`, `git`, `make`, and `date`.  It uses a standard [Makefile](./Makefile) workflow:
 
