@@ -1,7 +1,7 @@
 = tilegroxy -- Tile G(o) (P)roxy
 
 image:https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml/badge.svg[Docker Image CI,link=https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml] image:https://goreportcard.com/badge/michad/tilegroxy[Go Report Card,link=https://goreportcard.com/report/michad/tilegroxy] image:https://img.shields.io/ossf-scorecard/github.com/Michad/tilegroxy?label=openssf%20scorecard&style=flat[OpenSSF Scorecard,link=https://scorecard.dev/viewer/?uri=github.com%2FMichad%2Ftilegroxy] image:https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/michad/d1b9e082f6608635494188d0f52bae69/raw/coverage.json[Coverage] image:https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/michad/d1b9e082f6608635494188d0f52bae69/raw/libyears.json[Libyears,link=https://libyear.com/]  +
-image:https://img.shields.io/github/go-mod/go-version/michad/tilegroxy[Go Version] image:https://img.shields.io/badge/License-Apache_2.0-blue.svg[License,link=https://opensource.org/licenses/Apache-2.0] xref:CODE_OF_CONDUCT.adoc[image:https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg[Contributor Covenant\]]
+image:https://img.shields.io/github/go-mod/go-version/michad/tilegroxy[Go Version] image:https://img.shields.io/badge/License-Apache_2.0-blue.svg[License,link=https://opensource.org/licenses/Apache-2.0] xref:CODE_OF_CONDUCT.adoc[image:https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg[Contributor Covenant]]
 
 Tilegroxy lives between your map and your mapping providers to deliver a consistent, cached API for all your layers.
 
@@ -16,23 +16,42 @@ Tilegroxy shines when you consume maps from multiple sources.  It isn't tied to 
 
 === Features:
 
-* link:docs/configuration.md#proxy[Proxy] to ZXY, WMS, TMS, WMTS, or other protocol map layers
-* Cache tiles in link:docs/configuration.md#disks[disk], link:docs/configuration.md#memory[memory], link:docs/configuration.md#s3[s3], link:docs/configuration.md#redis[redis], and/or link:docs/configuration.md#memcache[memcached]
-* Require authentication using link:docs/configuration.md#static-key[static key], link:docs/configuration.md#jwt[JWT], or link:docs/configuration.md#custom-1[custom] logic
-* link:docs/configuration.md#jwt[Restrict access] to a given layer and/or geographic region based on auth token
-* Create your own link:docs/extensibility.md#custom-providers[custom provider] to pull in non-standard and proprietary imagery sources
-* Tweak your map layer with link:docs/configuration.md#effect[18 standard effects] or by providing your own link:docs/configuration.md#transform[pixel-level logic]
-* link:docs/configuration.md#blend[Combine] multiple map layers with adjustable rules and blending methods
-* link:docs/configuration.md#cgi[Act as an HTTP server] for https://www.mapserver.org[MapServer] and any other CGI application that generates tiles
-* Commands for <<seed,seeding>> and <<test,testing>> your layers
-* Support for both raster and vector format tiles
-* Run as link:docs/configuration.md#encryption[HTTPS] including Let's Encrypt support
-* Configurable link:docs/configuration.md#server[timeout], link:docs/configuration.md#log[logging], and link:docs/configuration.md#error[error handling] rules
-* Override configuration via xref:docs/configuration.adoc[environment variables]
-* link:docs/configuration.md#secret[Externalize passwords/keys] using AWS Secrets Manager
-* <<docker,Container deployment>>
-* Traces, metrics, and logs available via xref:docs/telemetry.adoc[OpenTelemetry]
-* Usable as an application or a link:docs/extensibility.md#using-tilegroxy-as-a-library[library]
++++<ul><li>+++
+link:docs/configuration.md#proxy[Proxy] to ZXY, WMS, TMS, WMTS, or other protocol map layers
++++</li><li>+++
+Cache tiles in link:docs/configuration.md#disks[disk], link:docs/configuration.md#memory[memory], link:docs/configuration.md#s3[s3], link:docs/configuration.md#redis[redis], and/or link:docs/configuration.md#memcache[memcached]
++++</li><li>+++
+Require authentication using link:docs/configuration.md#static-key[static key], link:docs/configuration.md#jwt[JWT], or link:docs/configuration.md#custom-1[custom] logic
++++</li><li>+++
+link:docs/configuration.md#jwt[Restrict access] to a given layer and/or geographic region based on auth token
++++</li><li>+++
+Create your own link:docs/extensibility.md#custom-providers[custom provider] to pull in non-standard and proprietary imagery sources
++++</li><li>+++
+Tweak your map layer with link:docs/configuration.md#effect[18 standard effects] or by providing your own link:docs/configuration.md#transform[pixel-level logic]
++++</li><li>+++
+link:docs/configuration.md#blend[Combine] multiple map layers with adjustable rules and blending methods
++++</li><li>+++
+link:docs/configuration.md#cgi[Act as an HTTP server] for https://www.mapserver.org[MapServer] and any other CGI application that generates tiles
++++</li><li>+++
+Commands for <<seed,seeding>> and <<test,testing>> your layers
++++</li><li>+++
+Support for both raster and vector format tiles
++++</li><li>+++
+Run as link:docs/configuration.md#encryption[HTTPS] including Let's Encrypt support
++++</li><li>+++
+Configurable link:docs/configuration.md#server[timeout], link:docs/configuration.md#log[logging], and link:docs/configuration.md#error[error handling] rules
++++</li><li>+++
+Override configuration via xref:docs/configuration.adoc[environment variables]
++++</li><li>+++
+link:docs/configuration.md#secret[Externalize passwords/keys] using AWS Secrets Manager
++++</li><li>+++
+link:#docker[Container deployment]
++++</li><li>+++
+Traces, metrics, and logs available via xref:docs/telemetry.adoc[OpenTelemetry]
++++</li><li>+++
+Usable as an application or a link:docs/extensibility.md#using-tilegroxy-as-a-library[library]
++++</li></ul>+++
+
 
 == Configuration
 
@@ -306,7 +325,7 @@ As this is a young project any contribution via an Issue or Pull Request is very
 A few please and thank yous:
 
 * Follow https://go.dev/doc/effective_go[go conventions] and the patterns you see elsewhere in the codebase.  Linters are configured in Github Actions, they can be run locally with `make lint`
-* Use https://gist.github.com/joshbuchea/6f47e86d2510bce28f8e7f42ae84c716[semantic]/https://www.conventionalcommits.org/en/v1.0.0/[conventional] commit messages.
+* Use https://gist.github.com/joshbuchea/6f47e86d2510bce28f8e7f42ae84c716[semantic] / https://www.conventionalcommits.org/en/v1.0.0/[conventional] commit messages.
 * Open an issue for discussion before making large, fundamental change/refactors
 * Ensure you add tests. You can use `make coverage` to ensure you're not dropping coverage.
 
