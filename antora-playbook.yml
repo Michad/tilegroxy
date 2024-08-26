@@ -1,0 +1,29 @@
+site:
+  title: tilegroxy Docs
+  # url: https://example.com
+  start_page: operation::index.adoc
+content:
+  sources:
+  - url: .
+    branches: HEAD
+    start_path: docs/operation
+    edit_url: ~
+  - url: .
+    branches: HEAD
+    start_path: docs/development
+    edit_url: ~
+  - url: .
+    branches: HEAD
+    start_path: docs/decisions
+    edit_url: ~
+asciidoc:
+  attributes:
+    experimental: ''
+    idprefix: ''
+    idseparator: '-'
+    page-pagination: ''
+
+ui:
+  bundle:
+    url: https://github.com/tilegroxy/antora-ui/releases/download/v1/ui-bundle.zip
+    snapshot: true

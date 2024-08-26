@@ -1,0 +1,4 @@
+* xref:configuration.adoc[]
+* xref:extensibility.adoc[]
+* xref:telemetry.adoc[]
+* xref:migrate-tilestache.adoc[]
