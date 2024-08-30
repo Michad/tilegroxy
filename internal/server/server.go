@@ -92,7 +92,7 @@ func writeError(ctx context.Context, w http.ResponseWriter, cfg *config.ErrorCon
 	if errors.As(err, &te) {
 		writeErrorMessage(ctx, w, cfg, te.Type(), te.Error(), te.External(cfg.Messages), debug.Stack())
 	} else {
-		writeErrorMessage(ctx, w, cfg, pkg.TypeOfErrorOther, te.Error(), fmt.Sprintf(cfg.Messages.ServerError, err), debug.Stack())
+		writeErrorMessage(ctx, w, cfg, pkg.TypeOfErrorOther, err.Error(), fmt.Sprintf(cfg.Messages.ServerError, err), debug.Stack())
 	}
 }
 
