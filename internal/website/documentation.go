@@ -27,12 +27,12 @@ var (
 const index = "index.html"
 
 func ReadDocumentationFile(path string) ([]byte, error) {
-	if path == "" {
-		path = index
+	if len(path) > 0 && path[0] == '/' {
+		path = path[1:]
 	}
 
-	if path[0] == '/' {
-		path = path[1:]
+	if path == "" {
+		path = index
 	}
 
 	path = "resources/" + path
