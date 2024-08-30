@@ -15,30 +15,40 @@
 package server
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 
-	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/authentication"
-	"github.com/Michad/tilegroxy/pkg/entities/layer"
+	"github.com/Michad/tilegroxy/internal/website"
 )
 
-type defaultHandler struct {
-	config     *config.Config
-	layerGroup *layer.LayerGroup
-	auth       authentication.Authentication
+type documentationHandler struct {
+	defaultHandler
 }
 
-func (h *defaultHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (h documentationHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
+	slog.DebugContext(ctx, "server: documentation handler started")
+	defer slog.DebugContext(ctx, "server: documentation handler ended")
 
-	slog.DebugContext(ctx, "server: default handler started")
-	defer slog.DebugContext(ctx, "server: default handler ended")
-
-	if h.config.Server.DocsPath != "" {
-		w.Header().Add("Location", "/docs")
-		w.WriteHeader(http.StatusTemporaryRedirect)
-	} else {
+	if req.Method != http.MethodGet {
 		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	path := req.PathValue("path")
+
+	data, err := website.ReadDocumentationFile(path)
+
+	if err != nil {
+		writeError(ctx, w, &h.config.Error, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_, err = w.Write(data)
+
+	if err != nil {
+		slog.WarnContext(ctx, fmt.Sprintf("Unable to write to documentation request due to %v", err))
 	}
 }
