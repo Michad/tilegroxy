@@ -17,16 +17,18 @@ package website
 import (
 	"embed"
 	"errors"
+	"mime"
+	"path/filepath"
 )
 
 var (
-	//go:embed resources
+	//go:embed resources/*
 	files embed.FS
 )
 
 const index = "index.html"
 
-func ReadDocumentationFile(path string) ([]byte, error) {
+func ReadDocumentationFile(path string) ([]byte, string, error) {
 	if len(path) > 0 && path[0] == '/' {
 		path = path[1:]
 	}
@@ -47,11 +49,17 @@ func ReadDocumentationFile(path string) ([]byte, error) {
 
 			path += index
 
-			return files.ReadFile(path)
+			ext := mime.TypeByExtension(filepath.Ext(path))
+
+			data, err = files.ReadFile(path)
+
+			return data, ext, err
 		}
 
-		return nil, err
+		return nil, "", err
 	}
 
-	return data, nil
+	ext := mime.TypeByExtension(filepath.Ext(path))
+
+	return data, ext, nil
 }

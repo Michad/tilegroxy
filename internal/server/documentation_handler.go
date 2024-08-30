@@ -38,11 +38,15 @@ func (h documentationHandler) ServeHTTP(w http.ResponseWriter, req *http.Request
 
 	path := req.PathValue("path")
 
-	data, err := website.ReadDocumentationFile(path)
+	data, contentType, err := website.ReadDocumentationFile(path)
 
 	if err != nil {
 		writeError(ctx, w, &h.config.Error, err)
 		return
+	}
+
+	if contentType != "" {
+		w.Header().Add("Content-Type", contentType)
 	}
 
 	w.WriteHeader(http.StatusOK)

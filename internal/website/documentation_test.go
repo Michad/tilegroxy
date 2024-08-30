@@ -22,18 +22,22 @@ import (
 )
 
 func Test_ReadDocumentationFile(t *testing.T) {
-	index1, err := ReadDocumentationFile("index.html")
+	index1, contentType1, err := ReadDocumentationFile("index.html")
 	require.NoError(t, err)
-	index2, err := ReadDocumentationFile("")
+	index2, contentType2, err := ReadDocumentationFile("")
 	require.NoError(t, err)
-	index3, err := ReadDocumentationFile("/")
+	index3, contentType3, err := ReadDocumentationFile("/")
 	require.NoError(t, err)
 
 	assert.NotEmpty(t, index1)
 	assert.Equal(t, index1, index2)
 	assert.Equal(t, index1, index3)
+	assert.Equal(t, "text/html; charset=utf-8", contentType1)
+	assert.Equal(t, contentType1, contentType2)
+	assert.Equal(t, contentType1, contentType3)
 
-	fake, err := ReadDocumentationFile("alkfjasfkjasflk")
+	fake, ext, err := ReadDocumentationFile("alkfjasfkjasflk")
 	require.Error(t, err)
+	assert.Empty(t, ext)
 	assert.Nil(t, fake)
 }
