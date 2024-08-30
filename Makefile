@@ -34,6 +34,11 @@ lint:
 	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.59.1
 	@golangci-lint run --fix -E asciicheck,bidichk,bodyclose,canonicalheader,dogsled,dupl,exhaustive,gocheckcompilerdirectives,gocritic,gofmt,durationcheck,errname,errorlint,fatcontext,goheader,inamedparam,interfacebloat,intrange,maintidx,makezero,mirror,misspell,mnd,noctx,nonamedreturns,perfsprint,prealloc,predeclared,revive,stylecheck,tenv,testifylint,usestdlibvars,unconvert,wastedassign
 
+docs:
+	@npm i antora
+	@node_modules/antora/bin/antora antora-playbook.yml
+	@cp -r build/site/* internal/website/resources/
+
 version:
 	@./${OUT} version --json
 
@@ -44,4 +49,4 @@ clean:
 	@go clean
 	-@rm ${OUT}
 
-.PHONY: build test clean version
+.PHONY: build clean cover cover-out coverage docs lint libyears test unit version
