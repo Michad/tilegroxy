@@ -2,8 +2,14 @@
 
 This glossary contains definitions of domain specific terminology as used in tilegroxy. These terms have standard English meanings but are used in specific ways in the tilegroxy source code and documentation.  This glossary is intended to help you understand how these terms are used here:
 
-Layer: A visual layer to be displayed in a map. A frequent web map use case will display a "base map" (a world map as we're used to seeing it) as the base layer and then on top of that another layer for the specific data the user is working with. Any number of layers can be displayed on top of each other so it's typical for all maps besides the basemap to include transparency where there is no data.  An application may have different layers available depending on the business logic employed, tilegroxy has the ability to atomically serve up any number of independent layers. Layers are served from tilegroxy onto a map in the form of individual tiles that form a grid-structure, which allows returning only the parts of the map that are currently visible and to cache each individual tile.  Each layer in tilegroxy primarily contains a `provider` definition that defines how data is retrieved.
+== Layer
 
-Layer Name: the name of the layer as specified in incoming requests. The layer name is used, alongside tile coordinates, as the cache key. Layers are found based on the name in two ways 1) By matching the layer name against the layer's pattern if one is specified or if not 2) by exactly matching the layer's ID
+A visual Layer to be displayed in a map. A frequent web map use case features a "base map" (a world map as we're used to seeing it) displayed on the bottom of a map for context with additional data the user is working with layered on top. Any number of layers can be displayed on top of each other so it's typical for all maps besides the basemap to include transparency where there is no data.  An application may have different layers available depending on the business logic employed, tilegroxy has the ability to atomically serve up any number of independent layers. Layers are served by tilegroxy in the form of individual tiles in a gridded structure, which allows returning only the parts of the map that are currently visible and to cache data without being impacted by the specific positioning of the map.  Each layer in tilegroxy primarily contains a Provider declaration that defines how data is retrieved.
 
-Provider: A provider is any source of geospatial data that defines what is seen in a layer. Tilegroxy includes a number of distinct Provider implementations, those often allow making web calls to an external service but in many cases can simply map to another Provider implementation with a mutation applied.
+== Layer Name
+
+The name of the layer as specified in incoming requests. The layer name is used, alongside tile coordinates, as the cache key. Layers are found based on the name in two ways 1) By matching the layer name against the layer's pattern if one is specified or if not 2) by exactly matching the layer's ID
+
+== Provider
+
+A Provider is any source of geospatial data that defines what is seen in a layer. Tilegroxy includes a number of distinct Provider implementations, those often allow making web calls to an external service but in many cases can simply map to another Provider implementation with a mutation applied.

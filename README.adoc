@@ -17,39 +17,39 @@ Tilegroxy shines when you consume maps from multiple sources.  It isn't tied to 
 === Features:
 
 +++<ul><li>+++
-link:docs/configuration.md#proxy[Proxy] to ZXY, WMS, TMS, WMTS, or other protocol map layers
+link:docs/configuration.adoc#proxy[Proxy] to ZXY, WMS, TMS, WMTS, or other protocol map layers
 +++</li><li>+++
-Cache tiles in link:docs/configuration.md#disks[disk], link:docs/configuration.md#memory[memory], link:docs/configuration.md#s3[s3], link:docs/configuration.md#redis[redis], and/or link:docs/configuration.md#memcache[memcached]
+Cache tiles in link:docs/configuration.adoc#disks[disk], link:docs/configuration.adoc#memory[memory], link:docs/configuration.adoc#s3[s3], link:docs/configuration.adoc#redis[redis], and/or link:docs/configuration.adoc#memcache[memcached]
 +++</li><li>+++
-Require authentication using link:docs/configuration.md#static-key[static key], link:docs/configuration.md#jwt[JWT], or link:docs/configuration.md#custom-1[custom] logic
+Require authentication using link:docs/configuration.adoc#static-key[static key], link:docs/configuration.adoc#jwt[JWT], or link:docs/configuration.adoc#custom-1[custom] logic
 +++</li><li>+++
-link:docs/configuration.md#jwt[Restrict access] to a given layer and/or geographic region based on auth token
+link:docs/configuration.adoc#jwt[Restrict access] to a given layer and/or geographic region based on auth token
 +++</li><li>+++
-Create your own link:docs/extensibility.md#custom-providers[custom provider] to pull in non-standard and proprietary imagery sources
+Create your own link:docs/extensibility.adoc#custom-providers[custom provider] to pull in non-standard and proprietary imagery sources
 +++</li><li>+++
-Tweak your map layer with link:docs/configuration.md#effect[18 standard effects] or by providing your own link:docs/configuration.md#transform[pixel-level logic]
+Tweak your map layer with link:docs/configuration.adoc#effect[18 standard effects] or by providing your own link:docs/configuration.adoc#transform[pixel-level logic]
 +++</li><li>+++
-link:docs/configuration.md#blend[Combine] multiple map layers with adjustable rules and blending methods
+link:docs/configuration.adoc#blend[Combine] multiple map layers with adjustable rules and blending methods
 +++</li><li>+++
-link:docs/configuration.md#cgi[Act as an HTTP server] for https://www.mapserver.org[MapServer] and any other CGI application that generates tiles
+link:docs/configuration.adoc#cgi[Act as an HTTP server] for https://www.mapserver.org[MapServer] and any other CGI application that generates tiles
 +++</li><li>+++
 Commands for <<seed,seeding>> and <<test,testing>> your layers
 +++</li><li>+++
 Support for both raster and vector format tiles
 +++</li><li>+++
-Run as link:docs/configuration.md#encryption[HTTPS] including Let's Encrypt support
+Run as link:docs/configuration.adoc#encryption[HTTPS] including Let's Encrypt support
 +++</li><li>+++
-Configurable link:docs/configuration.md#server[timeout], link:docs/configuration.md#log[logging], and link:docs/configuration.md#error[error handling] rules
+Configurable link:docs/configuration.adoc#server[timeout], link:docs/configuration.adoc#log[logging], and link:docs/configuration.adoc#error[error handling] rules
 +++</li><li>+++
 Override configuration via xref:docs/configuration.adoc[environment variables]
 +++</li><li>+++
-link:docs/configuration.md#secret[Externalize passwords/keys] using AWS Secrets Manager
+link:docs/configuration.adoc#secret[Externalize passwords/keys] using AWS Secrets Manager
 +++</li><li>+++
 link:#docker[Container deployment]
 +++</li><li>+++
 Traces, metrics, and logs available via xref:docs/telemetry.adoc[OpenTelemetry]
 +++</li><li>+++
-Usable as an application or a link:docs/extensibility.md#using-tilegroxy-as-a-library[library]
+Usable as an application or a link:docs/extensibility.adoc#using-tilegroxy-as-a-library[library]
 +++</li></ul>+++
 
 == Configuration
