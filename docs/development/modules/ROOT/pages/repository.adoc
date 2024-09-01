@@ -2,3 +2,38 @@
 
 The tilegroxy repository has the following structure
 
+== Root (/)
+
+Contains only files/folders that need to be in the root directory or that don't make sense elsewhere. We should relocate anything that reasonably can be relocated to avoid bloat.
+
+== pkg
+
+Any code that should be exposed for consumers of tilegroxy as detailed in the `extensibility` documentation.  
+
+Any deletion/rename/signature changes to code in this folder constitutes a breaking change. As such we should keep the code in this folder to the minimum necessary to be able to have a reasonable custom deployment of tilegroxy.  Utility code should generally be left out of here.
+
+
+== internal
+
+The majority of code/business logic for tilegroxy should live in here.  Code in here can't be directly called by extensions of tilegroxy so it's generally safe to modify without constituting a breaking change.  
+
+== cmd
+
+Code specific for defining the CLI interface of tilegroxy go in here.  We should try to keep these files minimal with just the necessary cobra scaffolding, the core logic should be placed in the pkg/internal packages with the cmd code being essentially just a CLI wrapper.
+
+== docs
+
+Documentation lives here structured in Antora modules split into three separate sources: operation manual (user docs), development manual (these docs), and decisions (ADR record)
+
+== Examples
+
+Contains dedicated files that provide examples of how tilegroxy can be used.  
+
+== img_source
+
+Contains the source data for images used elsewhere in the application or documentation.  For example this might be a graphviz definition that is then turned into a PNG for the docs or a GIMP project file for our built-in images.
+
+== .github/workflows
+
+Contains Github Actions CI/CD workflows
+

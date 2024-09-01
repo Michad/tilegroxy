@@ -1,0 +1,29 @@
+= Documentation
+
+Tilegroxy documentation is written in AsciiDoc files stored in the same repository as code. Tilegroxy uses Antora to build its documentation into a website that can be served up inside the application as well as a common server.
+
+The documentation is automatically built via github actions as a test on every PR and commit to main.  The documentation is only published to link:tilegroxy.michael.davis.name[the doc server] upon new releases.  
+
+If you are making changes to the asciidocs, please build the documentation before opening a PR.  Do not commit any changes to `internal/website/resources` - the folder is `git ignore`-ed however index.html has a default placeholder in git.  You can avoid changes from index.html showing up in git using `git update-index --no-assume-unchanged`
+
+== Build
+
+The Makefile contains a couple targets specific to the documentation
+
+=== Docs
+
+Running `make docs` will invoke antora to build the documentation. You must invoke this goal before building the go application in order to have the website available inside of tilegroxy.
+
+Antora is a node app and the make command will automatically install the dependency before invoking it. You should use node 20 for building documentation.  
+
+The docs are built in `build/site` and then copied into the `internal/website/resources` where `go:embed` can pull them into the tilegroxy binary.
+
+The UI template lives at https://github.com/tilegroxy/antora-ui and any changes to it will need to be built prior to building documentation in this repository by creating a tag in the form `vN` in that repository and then updating `antora-playbook.yml` in this repository to refer to that new version.
+
+=== Readme
+
+Github does not support `include` pragmas (see link:https://github.com/github/markup/issues/1095[github/markup#1095]) so it's necessary to pre-bake the `include`s ahead of time. 
+
+This is performed using link:https://github.com/asciidoctor/asciidoctor-reducer[asciidoctor-reducer] via running `make readme`. This requires you have a somewhat modern ruby & gem installed.
+
+We use this to allow our main README file to share content with the main documentation website. The `README.adoc` file should not be modified itself, instead any modifications should be made to `README_source.adoc` and then `make readme` run to update the main README. The command should also be run any time an included doc is updated.  This is not yet automated.
