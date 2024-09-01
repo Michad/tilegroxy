@@ -155,4 +155,4 @@ func (t Sample) GenerateTile(ctx *context.Context, providerContext layer.Provide
 
 From here, implementing the provider is the same as implementing a Custom provider.  The other entities can be specified in the same way.
 
-See the link:../pkg[pkg package] for other structs and methods available for customizing tilegroxy.
+See the link:https://github.com/Michad/tilegroxy/tree/main/pkg[pkg package] for other structs and methods available for customizing tilegroxy.

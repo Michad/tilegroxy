@@ -1,0 +1,7 @@
+= Serve
+
+The main operating mode of tilegroxy. Starts up an HTTP server and responds to incoming web requests.
+
+----
+tilegroxy serve -c /path/to/tilegroxy.yml
+----

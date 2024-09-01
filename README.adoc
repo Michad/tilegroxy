@@ -10,75 +10,21 @@ Tilegroxy lives between your map and your mapping providers to deliver a consist
 💡 Inspired by https://github.com/tilestache/tilestache[tilestache] +
 🛠️ This project is still a work in progress. Changes may occur prior to the 1.0 release.
 
-== Why tilegroxy?
+include::docs/operation/modules/ROOT/pages/index.adoc[leveloffset=1]
 
-Tilegroxy shines when you consume maps from multiple sources.  It isn't tied to any one mapping backend and can pull data from any protocol, whether the standard alphabet soup or a proprietary, authenticated API. Rather than make your frontend aware of every single vendor and exposing your keys, utilize tilegroxy and provide a uniform API with a configuration-driven backend that can be augmented by code when necessary.
+== Documentation
 
-=== Features:
+**Prebuilt Documentation for the most recent release is available link:https://tilegroxy.michael.davis.name[here]. **
 
-+++<ul><li>+++
-link:docs/configuration.adoc#proxy[Proxy] to ZXY, WMS, TMS, WMTS, or other protocol map layers
-+++</li><li>+++
-Cache tiles in link:docs/configuration.adoc#disks[disk], link:docs/configuration.adoc#memory[memory], link:docs/configuration.adoc#s3[s3], link:docs/configuration.adoc#redis[redis], and/or link:docs/configuration.adoc#memcache[memcached]
-+++</li><li>+++
-Require authentication using link:docs/configuration.adoc#static-key[static key], link:docs/configuration.adoc#jwt[JWT], or link:docs/configuration.adoc#custom-1[custom] logic
-+++</li><li>+++
-link:docs/configuration.adoc#jwt[Restrict access] to a given layer and/or geographic region based on auth token
-+++</li><li>+++
-Create your own link:docs/extensibility.adoc#custom-providers[custom provider] to pull in non-standard and proprietary imagery sources
-+++</li><li>+++
-Tweak your map layer with link:docs/configuration.adoc#effect[18 standard effects] or by providing your own link:docs/configuration.adoc#transform[pixel-level logic]
-+++</li><li>+++
-link:docs/configuration.adoc#blend[Combine] multiple map layers with adjustable rules and blending methods
-+++</li><li>+++
-link:docs/configuration.adoc#cgi[Act as an HTTP server] for https://www.mapserver.org[MapServer] and any other CGI application that generates tiles
-+++</li><li>+++
-Commands for <<seed,seeding>> and <<test,testing>> your layers
-+++</li><li>+++
-Support for both raster and vector format tiles
-+++</li><li>+++
-Run as link:docs/configuration.adoc#encryption[HTTPS] including Let's Encrypt support
-+++</li><li>+++
-Configurable link:docs/configuration.adoc#server[timeout], link:docs/configuration.adoc#log[logging], and link:docs/configuration.adoc#error[error handling] rules
-+++</li><li>+++
-Override configuration via xref:docs/configuration.adoc[environment variables]
-+++</li><li>+++
-link:docs/configuration.adoc#secret[Externalize passwords/keys] using AWS Secrets Manager
-+++</li><li>+++
-link:#docker[Container deployment]
-+++</li><li>+++
-Traces, metrics, and logs available via xref:docs/telemetry.adoc[OpenTelemetry]
-+++</li><li>+++
-Usable as an application or a link:docs/extensibility.adoc#using-tilegroxy-as-a-library[library]
-+++</li></ul>+++
-
-== Configuration
-
-Configuration is required to define your layers, cache, authentication, and service operation.  The configuration should be supplied as a JSON or YAML file either directly or through an external service such as etcd or consul. Configuration can also be partially supplied via Environment Variables.
-
-Details can be found in xref:./docs/configuration.adoc[Configuration documentation] or through link:./examples/configurations/[examples]. For help converting from tilestache see the documentation on xref:./docs/migrate-tilestache.adoc[Migrating From Tilestache].
-
-You can also use `tilegroxy config create` to help get started.
+Documentation is served by tilegroxy at `/docs` (disable this behaviour by setting `Server.Production=true`). Documentation is powered by link:https://antora.org[Antora] with raw AsciiDoc located in link:./docs[docs] 
 
 
-include::docs/operation/modules/ROOT/pages/index.adoc[]
+include::docs/operation/modules/ROOT/pages/get-it.adoc[leveloffset=1]
 
 
 == Extending tilegroxy
 
 One of the top design goals of tilegroxy is to be highly flexible. If there's functionality you need, there's a couple different ways you can add it in.  See the xref:./docs/extensibility.adoc[extensibility documentation] for instructions.
-
-== Troubleshooting
-
-Please submit an https://github.com/Michad/tilegroxy/issues/new[Issue] for any trouble you run into so we can build out this section.
-
-*I have trouble running tests due to an error referencing docker or permissions*
-
-This is most likely an issue due to your Docker installation.  There can be a number of issues at play depending on your OS and setup.  Some suggestions:
-
-Make sure you have docker installed, the daemon is running, and your user has permission to use docker (is in the docker group).  If using Podman, ensure `podman.socket` is enabled both globally and for your `--user`.  If using Docker on Linux try temporarily setting `/var/run/docker.sock` world-writeable. If using Docker on a Mac, make sure colima is running. On Windows, ensure Docker Desktop is running.
-
-If using a system with SELinux try temporarily disabling SELinux with `sudo setenforce 0` or running with "Ryuk" disabled by setting the env var `TESTCONTAINERS_RYUK_DISABLED=true`.
 
 == Contributing
 
@@ -92,3 +38,5 @@ A few please and thank yous:
 * Ensure you add tests. You can use `make coverage` to ensure you're not dropping coverage.
 
 Very niche providers might be declined. Those are best suited as custom providers outside the core platform.
+
+include::docs/configuration.adoc[]

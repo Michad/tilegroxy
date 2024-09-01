@@ -1,0 +1,20 @@
+= Config Check
+
+Validates your supplied configuration.
+
+Full, up-to-date usage information can be found with `tilegroxy config check -h`.
+
+----
+Checks the validity of the configuration you supplied and then exits. If
+everything is valid the program displays "Valid" and exits with a code of
+0. If the configuration is invalid then a descriptive error is outputted
+and it exits with a non-zero status code.
+
+Usage:
+  tilegroxy config check [flags]
+
+Flags:
+  -e, --echo   Echos back the full parsed configuration including default
+               values if the configuration is valid
+  -h, --help   help for check
+----

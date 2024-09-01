@@ -1,0 +1,65 @@
+= How to get it
+
+Tilegroxy is available as a standalone executable or a container image. It's recommended you utilize a container for any serious deployment while the standalone executable can be useful to run locally while building your configuration.
+
+== Building
+
+Tilegroxy builds as an executable binary with minimal dynamic dependencies. Prebuilt binaries are available from https://github.com/Michad/tilegroxy/releases[Github].
+
+Building tilegroxy yourself requires a bash-like shell with `go`, `git`, `make`, and standard POSIX utilities like `date`.  It uses a conventional link:https://github.com/Michad/tilegroxy/blob/main/Makefile[Makefile] workflow:
+
+Build with
+
+----
+make
+----
+
+then install with
+
+----
+sudo make install
+----
+
+Once installed, tilegroxy can be invoked via the available link:./commands.adoc[commands]. A systemd unit file for operation as a server daemon is left as an exercise for the reader.
+
+=== Tests
+
+The build includes integration tests that use https://golang.testcontainers.org/[testcontainers].  This requires you have either docker or podman installed and running. If you encounter difficulties running these tests it's recommended you use a prebuilt binary.  That said, you can also build with just unit tests using:
+
+----
+make clean build unit
+----
+
+See link:https://tilegroxy.michael.davis.name/development/tests.html[developer documentation] for more details.
+
+== Docker
+
+Tilegroxy is available as a container image on the Github container repository.
+
+You can pull the most recent versioned release with the `latest` tag and the very latest (and maybe buggy) build with the `edge` tag. Tags are also available for version numbers.  https://github.com/Michad/tilegroxy/pkgs/container/tilegroxy[See here for a full list].
+
+For example:
+
+----
+docker pull ghcr.io/michad/tilegroxy:latest
+----
+
+To then run tilegroxy:
+
+----
+docker run --rm -v ./test_config.yml:/tilegroxy/tilegroxy.yml:Z ghcr.io/michad/tilegroxy seed -l osm -z 0 -v
+----
+
+You can of course build the docker image yourself:
+
+----
+docker build . -t tilegroxy
+----
+
+An example link:https://github.com/Michad/tilegroxy/blob/main/docker-compose.yml[docker-compose.yml] is included that can be used to start the tilegroxy server. It assumes using a configuration file named "test_config.yml" is located in the current working directory.
+
+////
+### Kubernetes
+
+Coming soon.
+////

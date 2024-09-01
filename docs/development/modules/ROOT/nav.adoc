@@ -1,1 +1,4 @@
 * xref:glossary.adoc[]
+* xref:repository.adoc[]
+* xref:tests.adoc[]
+* xref:troubleshooting.adoc[]

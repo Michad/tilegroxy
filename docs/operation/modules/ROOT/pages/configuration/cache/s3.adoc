@@ -8,7 +8,7 @@ If you're using a Directory Bucket AKA Express One Zone there's a few things to 
 
 * Ensure `storageclass` is set to "EXPRESS_ONEZONE"
 * The bucket contains the full name including suffix. For example: `+my-tilegroxy-cache--use1-az6--x-s3+`
-* An endpoint is configured in the format "https://s3express-\{az_id}.\{region}.amazonaws.com" For example: "https://s3express-use1-az6.us-east-1.amazonaws.com"
+
 
 Name should be "s3"
 
