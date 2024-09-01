@@ -10,7 +10,7 @@ Tilegroxy lives between your map and your mapping providers to deliver a consist
 💡 Inspired by https://github.com/tilestache/tilestache[tilestache] +
 🛠️ This project is still a work in progress. Changes may occur prior to the 1.0 release.
 
-include::docs/operation/modules/ROOT/pages/index.adoc[leveloffset=1]
+include::docs/operation/modules/ROOT/pages/index.adoc[]
 
 == Documentation
 
@@ -19,7 +19,7 @@ include::docs/operation/modules/ROOT/pages/index.adoc[leveloffset=1]
 Documentation is served by tilegroxy at `/docs` (disable this behaviour by setting `Server.Production=true`). Documentation is powered by link:https://antora.org[Antora] with raw AsciiDoc located in link:./docs[docs] 
 
 
-include::docs/operation/modules/ROOT/pages/get-it.adoc[leveloffset=1]
+// include::docs/operation/modules/ROOT/pages/get-it.adoc[leveloffset=1]
 
 
 == Extending tilegroxy
@@ -38,5 +38,3 @@ A few please and thank yous:
 * Ensure you add tests. You can use `make coverage` to ensure you're not dropping coverage.
 
 Very niche providers might be declined. Those are best suited as custom providers outside the core platform.
-
-include::docs/configuration.adoc[]
