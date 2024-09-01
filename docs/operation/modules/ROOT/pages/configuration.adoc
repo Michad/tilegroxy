@@ -1,6 +1,6 @@
 :doctype: book
 
-include::configuration/index.adoc[leveloffset=0]
+include::configuration/index.adoc[]
 
 include::configuration/layer.adoc[leveloffset=1]
 

@@ -1,1 +1,0 @@
-include::operation/modules/ROOT/pages/configuration.adoc[]

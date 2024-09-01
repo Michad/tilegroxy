@@ -39,6 +39,10 @@ docs:
 	@node_modules/antora/bin/antora antora-playbook.yml
 	@cp -r build/site/* internal/website/resources/
 
+readme:
+	@gem install asciidoctor-reducer
+	@asciidoctor-reducer -o README.adoc README_source.adoc
+
 version:
 	@./${OUT} version --json
 
@@ -49,4 +53,4 @@ clean:
 	@go clean
 	-@rm ${OUT}
 
-.PHONY: build clean cover cover-out coverage docs lint libyears test unit version
+.PHONY: build clean cover cover-out coverage docs lint libyears readme test unit version
