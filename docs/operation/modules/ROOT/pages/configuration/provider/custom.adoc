@@ -1,0 +1,23 @@
+= Custom
+
+Custom providers implement your own custom logic for providing imagery from whatever source you can imagine.  They require a custom Go script file interpreted using https://github.com/traefik/yaegi[Yaegi].  The main README has more detailed information on implementing custom providers and link:../examples/providers/[examples are available].
+
+Name should be "custom"
+
+Configuration options:
+
+|===
+| Parameter | Type | Required | Default | Description
+
+| file
+| string
+| Yes
+| None
+| An absolute file path to find the Go code implementing the provider
+
+| Any
+| Any
+| No
+| None
+| Any additional parameter you include will be automatically supplied to your custom provider as-is
+|===

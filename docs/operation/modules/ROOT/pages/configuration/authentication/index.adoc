@@ -1,0 +1,9 @@
+
+
+= Authentication
+
+Implements incoming auth schemes. This is primarily meant for authentication but does include some authorization by limiting access to specific layers via JWT or custom schemes.
+
+Requests that do not comply with authentication requirements will receive a 401 Unauthorized HTTP status code.
+
+When supplying authentication ensure you include the `name` parameter.

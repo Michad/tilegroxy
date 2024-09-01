@@ -1,0 +1,112 @@
+= JWT
+
+Requires incoming requests include a https://jwt.io/[JSON Web Token (JWT)]. The signature of the token is verified against a fixed secret and grants are validated.
+
+Currently this implementation only supports a single key specified against a single signing algorithm. The key can either be stored in configuration or supplied via environment variable. Support for multiple keys and keys pulled from secret stores is a desired future roadmap item.
+
+The following claims are supported/enforced:
+
+|===
+| Claim | Implementation
+
+| exp
+| Ensure the JWT hasn't expired and it's no further than a certain amount of time from now
+
+| aud
+| Validate it matches a specific value
+
+| sub
+| Validate it matches a specific value
+
+| iss
+| Validate it matches a specific value
+
+| scope
+| Validate it contains a specific scope OR ensure a given prefix plus the layer in the current request is contained in scope
+
+| geohash
+| Validate the current tile being requested is fully contained in https://en.wikipedia.org/wiki/Geohash[the geohash]
+|===
+
+Name should be "jwt"
+
+Configuration options:
+
+|===
+| Parameter | Type | Required | Default | Description
+
+| Key
+| string
+| Yes
+| None
+| The key for verifying the signature. The public key if using asymmetric signing. If the value starts with "env." the remainder is interpreted as the name of the Environment Variable to use to retrieve the verification key.
+
+| Algorithm
+| string
+| Yes
+| None
+| Algorithm to allow for JWT signature. One of: "HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "EdDSA"
+
+| HeaderName
+| string
+| No
+| Authorization
+| The header to extract the JWT from. If this is "Authorization" it removes "Bearer " from the start. Make sure this is in "canonical case" e.g. X-Header - auth will always fail otherwise
+
+| MaxExpiration
+| uint32
+| No
+| 1 day
+| How many seconds from now can the expiration be. JWTs more than X seconds from now will result in a 401
+
+| ExpectedAudience
+| string
+| No
+| None
+| Require the "aud" grant to be this string
+
+| ExpectedSubject
+| string
+| No
+| None
+| Require the "sub" grant to be this string
+
+| ExpectedIssuer
+| string
+| No
+| None
+| Require the "iss" grant to be this string
+
+| ExpectedScope
+| string
+| No
+| None
+| Require the "scope" grant to contain this string
+
+| LayerScope
+| bool
+| No
+| false
+| If true the "scope" grant is used to whitelist access to layers
+
+| ScopePrefix
+| string
+| No
+| Empty string
+| If true this prefix indicates scopes to use. For example a prefix of "tile/" will mean a scope of "tile/test" grants access to "test". Doesn't impact ExpectedScope
+
+| UserId
+| string
+| No
+| sub
+| Use the specified grant as the user identifier. This is just used for logging by default but it's made available to custom providers
+|===
+
+Example:
+
+----
+authentication:
+  name: jwt
+  key: env.JWT_KEY
+  algorithm: HS256
+----

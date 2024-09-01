@@ -1,0 +1,59 @@
+= CGI
+
+The CGI provider allows a call-out to an external executable on the local system that's responsible for generating the tile. This allows tilegroxy to act as the HTTP server for a CGI program like Apache httpd or nginx traditionally acts. The flagship use-case for this is to integrate with https://www.mapserver.org[MapServer]. A full example is available in link:../examples/mapserver/[examples/mapserver].
+
+Name should be "cgi"
+
+Configuration options:
+
+|===
+| Parameter | Type | Required | Default | Description
+
+| Exec
+| string
+| Yes
+| None
+| The path to the CGI executable
+
+| Args
+| []string
+| No
+| None
+| Arguments to pass into the executable in standard "split on spaces" format
+
+| Uri
+| string
+| Yes
+| None
+| The URI (path + query) to pass into the CGI for the fake request - think mod_rewrite style invocation of the CGI
+
+| Domain
+| string
+| No
+| localhost
+| The host to pass into the CGI for the fake request
+
+| Headers
+| map[string][]string
+| No
+| None
+| Extra headers to pass into the CGI with the request
+
+| Env
+| map[string]string
+| No
+| None
+| Extra environment variables to supply to the CGI invocations. If the value is an empty string it passes along the value from the main tilegroxy invocation
+
+| WorkingDir
+| string
+| No
+| Base dir of exec
+| Working directory for the CGI invocation
+
+| InvalidAsError
+| bool
+| No
+| false
+| If true, if the CGI response includes a content type that isn't in the <<client,Client>>'s list of acceptable content types then it treats the response body as an error message
+|===

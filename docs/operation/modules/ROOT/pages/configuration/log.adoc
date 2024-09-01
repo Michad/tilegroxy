@@ -1,0 +1,144 @@
+
+= Log
+
+Configures how the application should log during operation.
+
+The `Logging` section supports two keys: `main` and `access` which are objects described respectively below.
+
+Example:
+
+----
+logging:
+  access:
+    console: false
+    path: access.log
+  main:
+    level: debug
+    format: json
+----
+
+== Main Logs
+
+Configures application log messages.
+
+These log messages output in a structured log format, either with Key=Value attributes in plain (text) mode or as JSON.  In either mode attributes are available driven by the HTTP request that is being processed.  We try to avoid plain mode logs being overly verbose for readability, which means if you want all the attributes you'll need to explicitly enable them.  In JSON mode we assume you're ingesting them into a system that handles formatting so include more attributes by default.
+
+In order to avoid logging secrets you need to specify the headers to log. If you're including auth information via the URL (not recommended) you should make sure Request is false to avoid logging those.
+
+Level controls the verbosity of logs. There is no guarantee as to the specific log messages that will be outputted so you might see more or fewer log messages between versions of the application, especially at higher verbosity levels.  Here are the general rules of what to expect for each level (from least to most verbose):
+
+* *error*: Only messages for things that are definitely a problem with your setup or the application itself. It's recommended to configure alerts/notifications for error logs and if the issue is not User Error, please open a ticket for it: https://github.com/Michad/tilegroxy/issues
+* *warn*: Includes messages for things that _might_ be an issue but isn't critical to the core functioning of the system.  For example an issue talking to your configured cache will come through as a warning.
+* *info*: Includes messages that allow you to see what's happening in real time but without being overwhelmed with minutiae. Expect one or two log messages per request, including messages indicating requests with something unusual.
+* *debug*: Includes messages to help understand what's happening for a given request execution. Expect a few log messages per request. This is more than you probably want in prod but can be useful when first integrating with the system.
+* *trace*: Includes messages for every level of the application as a request flows between layers. Expect several log messages per request, more for complex setups/layers. Very noisy but shouldn't be a _huge_ performance impact.
+* *absurd*: Includes more information than you will probably ever need. In some cases this can produce thousands of messages per request and will have a substantial performance cost.
+
+Configuration options:
+
+|===
+| Parameter | Type | Required | Default | Description
+
+| Console
+| bool
+| No
+| true
+| Whether to write application logs to standard out
+
+| Path
+| string
+| No
+| None
+| The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth
+
+| Format
+| string
+| No
+| plain
+| The format to output application logs in. Applies to both standard out and file out. Possible values: plain, json
+
+| Level
+| string
+| No
+| info
+| The most-detailed log level that should be included. Possible values: debug, info, warn, error, trace, absurd
+
+| Request
+| bool
+| No
+| auto
+| Whether to include any extra attributes based on request parameters (excluding explicitly requested). If auto (default) it defaults true if format is json, false otherwise
+
+| Headers
+| string[]
+| No
+| None
+| Headers to include as attributes in structured log messages. Attribute key will be in all lowercase.
+|===
+
+The following can be supplied as environment variables:
+
+|===
+| Configuration Parameter | Environment Variable
+
+| Console
+| LOGGING_MAIN_CONSOLE
+
+| Path
+| LOGGING_MAIN_PATH
+
+| Format
+| LOGGING_MAIN_FORMAT
+
+| Level
+| LOGGING_MAIN_LEVEL
+
+| Request
+| LOGGING_MAIN_REQUEST
+
+| Headers
+| LOGGING_MAIN_HEADERS
+|===
+
+== Access Logs
+
+Configures logs for incoming HTTP requests. Primarily outputs in standard Apache Access Log formats.
+
+Configuration options:
+
+|===
+| Parameter | Type | Required | Default | Description
+
+| Console
+| bool
+| No
+| true
+| Whether to write access logs to standard out
+
+| Path
+| string
+| No
+| None
+| The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth
+
+| Format
+| string
+| No
+| common
+| The format to output access logs in. Applies to both standard out and file out. Possible values: common, combined
+|===
+
+The following can be supplied as environment variables:
+
+|===
+| Configuration Parameter | Environment Variable
+
+| Console
+| LOGGING_ACCESS_CONSOLE
+
+| Path
+| LOGGING_ACCESS_PATH
+
+| Format
+| LOGGING_ACCESS_FORMAT
+|===

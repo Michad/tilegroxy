@@ -1,0 +1,154 @@
+= Error
+
+Configures how errors are returned to users.
+
+There are four primary operating modes:
+
+*None*: Errors are logged but not returned to users.  In fact, nothing is returned to the users besides a relevant HTTP status code.
+
+*Text*: Errors are returned in plain text in the HTTP response body
+
+*Image*: The error message itself isn't returned but the user receives an image indicating the general category of error.  The images can be customized.
+
+*Image with Header* : The same images are returned but the error message itself is returned as a special header: x-error-message.
+
+It is highly recommended you use the Image mode for production usage.  Returning an Image provides the most user friendly experience as it provides feedback to the user in the map they're looking at that something is wrong.  More importantly, it avoids exposing the specific error message to the end user, which could contain information you don't want exposed.  "Image with error" is useful for development workflows, it gives the same user experience but allows you to easily get to the error messages.
+
+Configuration options:
+
+|===
+| Parameter | Type | Required | Default | Description
+
+| Mode
+| string
+| No
+| image
+| The error mode as described above.  One of: text none image image+header
+
+| Messages
+| ErrorMessages
+| No
+| Various
+| Controls the error messages returned as described below
+
+| Images
+| ErrorImages
+| No
+| Various
+| Controls the images returned for errors as described below
+
+| AlwaysOk
+| bool
+| No
+| false
+| If set we always return 200 regardless of what happens
+|===
+
+The following can be supplied as environment variables:
+
+|===
+| Configuration Parameter | Environment Variable
+
+| Mode
+| ERROR_MODE
+
+| AlwaysOk
+| ERROR_ALWAYSOK
+|===
+
+== Error Images
+
+When using the image or image+header modes you can configure the images you want to be returned to the user.  Either use a built-in image or an image provided yourself on the local filesystem via relative or absolute file path.
+
+Configuration options:
+
+|===
+| Parameter | Type | Required | Default | Description
+
+| OutOfBounds
+| string
+| No
+| embedded:transparent.png
+| The image to display for requests outside the extent of the layer
+
+| Authentication
+| string
+| No
+| embedded:unauthorized.png
+| The image to display for auth errors
+
+| Provider
+| string
+| No
+| embedded:error.png
+| The image to display for errors returned by the layer's provider
+
+| Other
+| string
+| No
+| embedded:error.png
+| The image to display for all other errors
+|===
+
+The following can be supplied as environment variables:
+
+|===
+| Configuration Parameter | Environment Variable
+
+| OutOfBounds
+| ERROR_IMAGES_OUTOFBOUNDS
+
+| Authentication
+| ERROR_IMAGES_AUTHENTICATION
+
+| Provider
+| ERROR_IMAGES_PROVIDER
+
+| Other
+| ERROR_IMAGES_OTHER
+|===
+
+=== Image Options
+
+In addition to an image on the filesystem you can refer to a static color or a built-in image.
+
+There are currently 4 built-in images available:
+
+|===
+| Image name | Description | Preview
+
+| transparent.png
+| A fully transparent image meant to be used for requests outside the valid range of a layer
+| image:transparent.png[]
+
+| red.png
+| A semi-transparent solid red image
+| image:red.png[]
+
+| error.png
+| A semi-transparent solid red image with the word "Error" in white
+| image:error.png[]
+
+| unauthorized.png
+| A semi-transparent solid red image with the words "Not Authorized" in white
+| image:unauthorized.png[]
+|===
+
+To utilize them prepend "embedded:" before the name.  For example `embedded:transparent.png`
+
+You can also reference any color by including an hex code prefixed by "color:". The color code can be RGB or RGBA and have single or double hex digits. For example the following all generate an identical violet tile: `color:FF00FFFF`, `color:FF00FF`, `color:F0F`, `color:F0FF`
+
+== Error Messages
+
+The templates used for error messages for the majority of errors can be configured.  Since tilegroxy is a backend service the main time you see words coming from it is in error messages, so it's all the more important to be flexible with those words.  This is most useful for those whose primary language is not English and want to decrease how often they need to deal with translating. Unfortunately, many lower-level errors can return messages not covered by these string.
+
+The following are currently supported:
+
+ NotAuthorized
+ InvalidParam
+ RangeError
+ ServerError
+ ProviderError
+ ParamsBothOrNeither
+ ParamsMutuallyExclusive
+ EnumError
