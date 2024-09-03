@@ -9,3 +9,9 @@ This is most likely an issue due to your Docker installation.  There can be a nu
 Make sure you have docker installed, the daemon is running, and your user has permission to use docker (is in the docker group).  If using Podman, ensure `podman.socket` is enabled both globally and for your `--user`.  If using Docker on Linux try temporarily setting `/var/run/docker.sock` world-writeable. If using Docker on a Mac, make sure colima is running. On Windows, ensure Docker Desktop is running.
 
 If using a system with SELinux try temporarily disabling SELinux with `sudo setenforce 0` or running with "Ryuk" disabled by setting the env var `TESTCONTAINERS_RYUK_DISABLED=true`.
+
+*Environment variables aren't applying*
+
+Environment variables can be inconsistently applied when using `go run`. Build the tilegroxy binary and execute it instead.
+
+If you're seeing an issue aside from `go run` submit an issue.

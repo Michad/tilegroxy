@@ -1,1 +1,22 @@
 = Tests
+
+Tests in tilegroxy use the standard Go testing capabilities as well as the link:https://github.com/stretchr/testify[testify] library to provide convenient asserts.  
+
+The majority of tests are unit tests.  
+
+There are integration tests, especially with cache code, that utilize testcontainers to provide a better level of assurance of functionality.  The integration tests should be placed in dedicated files with a build flag to disable the test when the `unit` flag is specified, this allows building with these testcontainer tests excluded in situations where they're problematic (e.g. inside the dockerfile).
+
+There are a couple places where psuedo-end-to-end tests are placed: tile handler and serve command.  Tests in these places are suited for testing a full configuration, standing up a server (or at least one endpoint), sending requests in, and verifying the results.  This confirms everything is working with the exception of details of the final binary itself. Any tests for verifying functionality that only makes sense to check end-to-end should be placed for now.  In the future we may add an external test harness to cover the functionality that can't be validated from within the project.
+
+== Coverage
+
+Code coverage can be calculated using the Makefile:
+
+`make cover` calculates the code coverage and saves the results to a file
+
+`make coverage` does the same but also outputs the overall code coverage percentage and opens a browser tab displaying coverage breakdown
+
+We use a tool called link:https://github.com/dave/courtney[Courtney] to calculate code coverage.  Courtney is built on the standard go coverage tool but excludes lines that don't make sense to count against coverage (such as a line like `return nil, err` after a function call returns an error).
+
+We try to keep coverage above 85%. Having a coverage of 100% isn't necessarily the goal as it can infer a false sense of security and for non-trivial projects there are diminishing returns to coverage compared to the maintenance cost of the tests.
+
