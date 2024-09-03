@@ -38,5 +38,3 @@ A few please and thank yous:
 * Ensure you add tests. You can use `make coverage` to ensure you're not dropping coverage.
 
 Very niche providers might be declined. Those are best suited as custom providers outside the core platform.
-
-include::docs/operation/modules/ROOT/pages/configuration.adoc[leveloffset=1]
