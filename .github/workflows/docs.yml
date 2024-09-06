@@ -31,7 +31,7 @@ jobs:
 
     - name: Set up s3cmd
       uses: s3-actions/s3cmd@94a3bbf729819e9ce06b0ce2abaf7ea1086f36d4 # v1.7.0
-      # if: startsWith(github.ref, 'refs/tags/v')
+      if: startsWith(github.ref, 'refs/tags/v')
       with:
         provider: aws 
         region: ${{ secrets.S3_REGION }}
@@ -39,7 +39,7 @@ jobs:
         secret_key: ${{ secrets.S3_SECRET_KEY }}
 
     - name: Upload to s3
-      # if: startsWith(github.ref, 'refs/tags/v')
+      if: startsWith(github.ref, 'refs/tags/v')
       env:
         BUCKET: ${{ secrets.S3_BUCKET }}
       run: |
