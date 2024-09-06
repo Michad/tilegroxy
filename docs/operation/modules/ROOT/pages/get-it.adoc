@@ -6,7 +6,7 @@ Tilegroxy is available as a standalone executable or a container image. It's rec
 
 Tilegroxy builds as an executable binary with minimal dynamic dependencies. Prebuilt binaries are available from https://github.com/Michad/tilegroxy/releases[Github].
 
-Building tilegroxy yourself requires a bash-like shell with `go`, `git`, `make`, and standard POSIX utilities like `date`.  It uses a conventional link:https://github.com/Michad/tilegroxy/blob/main/Makefile[Makefile] workflow:
+Building tilegroxy yourself requires a bash-like shell with go 1.22, node 20, git, make, and standard POSIX utilities like date.  It uses a conventional link:https://github.com/Michad/tilegroxy/blob/main/Makefile[Makefile] workflow:
 
 Build with
 

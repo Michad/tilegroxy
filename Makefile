@@ -4,7 +4,7 @@ VERSION := $(shell git describe --tag --abbrev=0 --dirty)
 REF := $(shell git rev-parse --short HEAD)
 DATE := $(shell date -Iseconds --u)
 
-all: clean test build version
+all: clean test docs build version
 
 build:
 	go build -v -o ${OUT} -ldflags="-X \"${PKG}/pkg/static.tilegroxyVersion=${VERSION}\" -X \"${PKG}/pkg/static.tilegroxyBuildRef=${REF}\" -X \"${PKG}/pkg/static.tilegroxyBuildDate=${DATE}\"" -tags viper_bind_struct
