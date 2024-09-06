@@ -1,0 +1,152 @@
+= tilegroxy -- Tile G(o) (P)roxy
+
+image:https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml/badge.svg[Docker Image CI,link=https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml] image:https://goreportcard.com/badge/michad/tilegroxy[Go Report Card,link=https://goreportcard.com/report/michad/tilegroxy] image:https://img.shields.io/ossf-scorecard/github.com/Michad/tilegroxy?label=openssf%20scorecard&style=flat[OpenSSF Scorecard,link=https://scorecard.dev/viewer/?uri=github.com%2FMichad%2Ftilegroxy] image:https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/michad/d1b9e082f6608635494188d0f52bae69/raw/coverage.json[Coverage] image:https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/michad/d1b9e082f6608635494188d0f52bae69/raw/libyears.json[Libyears,link=https://libyear.com/]  +
+image:https://img.shields.io/github/go-mod/go-version/michad/tilegroxy[Go Version] image:https://img.shields.io/badge/License-Apache_2.0-blue.svg[License,link=https://opensource.org/licenses/Apache-2.0] xref:CODE_OF_CONDUCT.adoc[image:https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg[Contributor Covenant]]
+
+Tilegroxy lives between your map and your mapping providers to deliver a consistent, cached API for all your layers.
+
+🚀 Built in Go. +
+🔌 Features a flexible plugin system powered by https://github.com/traefik/yaegi[Yaegi]. +
+💡 Inspired by https://github.com/tilestache/tilestache[tilestache] +
+🛠️ This project is still a work in progress. Changes may occur prior to the 1.0 release.
+
+:leveloffset: 1
+
+= Why tilegroxy?
+
+Tilegroxy shines when you consume maps from multiple sources.  It isn't tied to any one mapping backend and can pull data from any protocol, whether the standard alphabet soup or a proprietary, authenticated API. Rather than make your frontend aware of every single vendor and exposing your keys, utilize tilegroxy and provide a uniform API with a configuration-driven backend that can be augmented by code when necessary.
+
+== Features
+
++++<ul><li>+++
+link:https://tilegroxy.michael.davis.name/operation/configuration/provider/proxy.html[Proxy] to ZXY, WMS, TMS, WMTS, or other protocol map layers
++++</li><li>+++
+Cache tiles in link:https://tilegroxy.michael.davis.name/operation/configuration/cache/disk.html[disk], link:https://tilegroxy.michael.davis.name/operation/configuration/cache/memory.html[memory], link:https://tilegroxy.michael.davis.name/operation/configuration/cache/s3.html[s3], link:https://tilegroxy.michael.davis.name/operation/configuration/cache/redis.html[redis], and/or link:https://tilegroxy.michael.davis.name/operation/configuration/cache/memcache.html[memcached]
++++</li><li>+++
+Require authentication using link:https://tilegroxy.michael.davis.name/operation/configuration/authentication/static_key.html[static key], link:https://tilegroxy.michael.davis.name/operation/configuration/authentication/jwt.html[JWT], or link:https://tilegroxy.michael.davis.name/operation/configuration/authentication/custom.html[custom] logic
++++</li><li>+++
+link:https://tilegroxy.michael.davis.name/operation/configuration/authentication/jwt.html[Restrict access] to a given layer and/or geographic region based on auth token
++++</li><li>+++
+Create your own link:https://tilegroxy.michael.davis.name/operation/extensibility.html[custom provider] to pull in non-standard and proprietary imagery sources
++++</li><li>+++
+Tweak your map layer with link:https://tilegroxy.michael.davis.name/operation/configuration/provider/effect.html[18 standard effects] or by providing your own link:https://tilegroxy.michael.davis.name/operation/configuration/provider/transform.html[pixel-level logic]
++++</li><li>+++
+link:https://tilegroxy.michael.davis.name/operation/configuration/provider/blend.html[Combine] multiple map layers with adjustable rules and blending methods
++++</li><li>+++
+link:https://tilegroxy.michael.davis.name/operation/configuration/provider/cgi.html[Act as an HTTP server] for https://www.mapserver.org[MapServer] and any other CGI application that generates tiles
++++</li><li>+++
+Commands for link:https://tilegroxy.michael.davis.name/operation/commands/seed.html[seeding] and link:https://tilegroxy.michael.davis.name/operation/commands/test.html[testing] your layers
++++</li><li>+++
+Support for both raster and vector format tiles
++++</li><li>+++
+Run as link:https://tilegroxy.michael.davis.name/operation/configuration/encryption.html[HTTPS] including Let's Encrypt support
++++</li><li>+++
+Configurable link:https://tilegroxy.michael.davis.name/operation/configuration/server.html[timeout], link:https://tilegroxy.michael.davis.name/operation/configuration/log.html[logging], and link:https://tilegroxy.michael.davis.name/operation/configuration/error.html[error handling] rules
++++</li><li>+++
+Override configuration via link:https://tilegroxy.michael.davis.name/operation/configuration/index.html[environment variables]
++++</li><li>+++
+link:https://tilegroxy.michael.davis.name/operation/configuration/secret/index.html[Externalize passwords/keys] using AWS Secrets Manager
++++</li><li>+++
+link:#docker[Container deployment]
++++</li><li>+++
+Traces, metrics, and logs available via link:https://tilegroxy.michael.davis.name/operation/configuration/telemetry.html[OpenTelemetry]
++++</li><li>+++
+Usable as an application or a link:https://tilegroxy.michael.davis.name/operation/extensibility.html[library]
++++</li></ul>+++
+
+:leveloffset!:
+
+== Documentation
+
+**Prebuilt Documentation for the most recent release is available link:https://tilegroxy.michael.davis.name[here]. **
+
+Documentation is served by tilegroxy at `/docs` (disable this behaviour by setting `Server.Production=true`). Documentation is powered by link:https://antora.org[Antora] with raw AsciiDoc located in link:./docs[docs]
+
+
+:leveloffset: 1
+
+= How to get it
+
+Tilegroxy is available as a standalone executable or a container image. It's recommended you utilize a container for any serious deployment while the standalone executable can be useful to run locally while building your configuration.
+
+== Building
+
+Tilegroxy builds as an executable binary with minimal dynamic dependencies. Prebuilt binaries are available from https://github.com/Michad/tilegroxy/releases[Github].
+
+Building tilegroxy yourself requires a bash-like shell with go 1.22, node 20, git, make, and standard POSIX utilities like date.  It uses a conventional link:https://github.com/Michad/tilegroxy/blob/main/Makefile[Makefile] workflow:
+
+Build with
+
+----
+make
+----
+
+then install with
+
+----
+sudo make install
+----
+
+Once installed, tilegroxy can be invoked via the available link:https://tilegroxy.michael.davis.name/operation/commands/index.html[commands] such as `tilegroxy serve`. A systemd unit file for operation as a server daemon is left as an exercise for the reader.
+
+=== Tests
+
+The build includes integration tests that use https://golang.testcontainers.org/[testcontainers].  This requires you have either docker or podman installed and running. If you encounter difficulties running these tests it's recommended you use a prebuilt binary.  That said, you can also build with just unit tests using:
+
+----
+make clean build unit
+----
+
+See link:https://tilegroxy.michael.davis.name/development/tests.html[developer documentation] for more details.
+
+== Docker
+
+Tilegroxy is available as a container image on the Github container repository.
+
+You can pull the most recent versioned release with the `latest` tag and the very latest (and maybe buggy) build with the `edge` tag. Tags are also available for version numbers.  https://github.com/Michad/tilegroxy/pkgs/container/tilegroxy[See here for a full list].
+
+For example:
+
+----
+docker pull ghcr.io/michad/tilegroxy:latest
+----
+
+To then run tilegroxy:
+
+----
+docker run --rm -v ./test_config.yml:/tilegroxy/tilegroxy.yml:Z ghcr.io/michad/tilegroxy seed -l osm -z 0 -v
+----
+
+You can of course build the docker image yourself:
+
+----
+docker build . -t tilegroxy
+----
+
+An example link:https://github.com/Michad/tilegroxy/blob/main/docker-compose.yml[docker-compose.yml] is included that can be used to start the tilegroxy server. It assumes using a configuration file named "test_config.yml" is located in the current working directory.
+
+////
+### Kubernetes
+
+Coming soon.
+////
+
+:leveloffset!:
+
+
+== Extending tilegroxy
+
+One of the top design goals of tilegroxy is to be highly flexible. If there's functionality you need, there's a couple different ways you can add it in.  See the link:https://tilegroxy.michael.davis.name/operation/extensibility.html[extensibility documentation] for instructions.
+
+== Contributing
+
+As this is a young project any contribution via an Issue or Pull Request is very welcome.
+
+A few please and thank yous:
+
+* Follow https://go.dev/doc/effective_go[go conventions] and the patterns you see elsewhere in the codebase.  Linters are configured in Github Actions, they can be run locally with `make lint`
+* Use https://gist.github.com/joshbuchea/6f47e86d2510bce28f8e7f42ae84c716[semantic] / https://www.conventionalcommits.org/en/v1.0.0/[conventional] commit messages.
+* Open an issue for discussion before making large, fundamental change/refactors
+* Ensure you add tests. You can use `make coverage` to ensure you're not dropping coverage.
+
+Very niche providers might be declined. Those are best suited as custom providers outside the core platform.

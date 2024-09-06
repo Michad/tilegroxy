@@ -15,7 +15,6 @@
 package server
 
 import (
-	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -32,8 +31,14 @@ type defaultHandler struct {
 
 func (h *defaultHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
+
 	slog.DebugContext(ctx, "server: default handler started")
 	defer slog.DebugContext(ctx, "server: default handler ended")
 
-	fmt.Fprintln(w, "Coming soon")
+	if h.config.Server.DocsPath != "" {
+		w.Header().Add("Location", h.config.Server.RootPath+h.config.Server.DocsPath)
+		w.WriteHeader(http.StatusTemporaryRedirect)
+	} else {
+		w.WriteHeader(http.StatusNoContent)
+	}
 }

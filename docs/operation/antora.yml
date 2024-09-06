@@ -1,0 +1,5 @@
+name: operation
+title: Operation Manual
+version: ~
+nav:
+- modules/ROOT/nav.adoc

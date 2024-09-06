@@ -1,0 +1,1 @@
+The documentation in this section describes architectural or otherwise important design decisions reached during the development of tilegroxy.  These documents lend insight into the philosophy, history, and design of tilegroxy. If you're a casual user of tilegroxy you can most likely ignore this section.

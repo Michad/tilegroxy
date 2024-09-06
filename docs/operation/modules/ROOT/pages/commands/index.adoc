@@ -1,0 +1,21 @@
+= Commands
+
+The `tilegroxy` executable is a standard https://github.com/spf13/cobra[cobra] program with a handful of commands available. If you're deploying tilegroxy for use as a webserver you want to use the `serve` command. A couple other commands are available to aid in standing up and administering a tilegroxy deployment.
+
+The following global flags are available for supplying your configuration:
+
+----
+  -c, --config string            A file path to the configuration file to use.
+                                 The file should have an extension of either
+                                 json or yml/yaml and be readable.
+                                 (default "./tilegroxy.yml")
+      --remote-endpoint string   The endpoint to use to connect to the remote
+                                 provider (default "http://127.0.0.1:2379")
+      --remote-path string       The path to use to select the configuration
+                                 on the remote provider
+                                 (default "/config/tilegroxy.yml")
+      --remote-provider string   The provider to pull configuration from.
+                                 One of: etcd, etcd3, consul, firestore, nats
+      --remote-type string       The file format to use to parse the configuration
+                                 from the remote provider (default "yaml")
+----

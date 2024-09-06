@@ -365,15 +365,22 @@ func setupHandlers(config *config.Config, layerGroup *layer.LayerGroup, auth aut
 
 	var myRootHandler http.Handler
 	var myTileHandler http.Handler
+	var myDocumentationHandler http.Handler
+	defaultHandler := defaultHandler{config: config, auth: auth, layerGroup: layerGroup}
 
 	if config.Server.Production {
 		myRootHandler = http.HandlerFunc(handleNoContent)
 	} else {
-		myRootHandler = &defaultHandler{config, layerGroup, auth}
+		myRootHandler = &defaultHandler
+
+		if config.Server.DocsPath != "" {
+			myDocumentationHandler = &documentationHandler{defaultHandler}
+		}
 	}
 
 	tilePath := config.Server.RootPath + config.Server.TilePath + "/{layer}/{z}/{x}/{y}"
-	handler, err := newTileHandler(defaultHandler{config: config, auth: auth, layerGroup: layerGroup})
+	docsPath := config.Server.RootPath + config.Server.DocsPath + "/{path...}"
+	handler, err := newTileHandler(defaultHandler)
 	if err != nil {
 		return nil, err
 	}
@@ -383,11 +390,19 @@ func setupHandlers(config *config.Config, layerGroup *layer.LayerGroup, auth aut
 	if config.Telemetry.Enabled {
 		myRootHandler = otelhttp.NewHandler(myRootHandler, config.Server.RootPath, otelhttp.WithMessageEvents(otelhttp.WriteEvents))
 		myTileHandler = otelhttp.NewHandler(myTileHandler, tilePath, otelhttp.WithMessageEvents(otelhttp.WriteEvents))
+
+		if myDocumentationHandler != nil {
+			myDocumentationHandler = otelhttp.NewHandler(myDocumentationHandler, docsPath, otelhttp.WithMessageEvents(otelhttp.WriteEvents))
+		}
 	}
 
 	r.Handle(config.Server.RootPath, myRootHandler)
 	r.Handle(tilePath, myTileHandler)
 	r.Handle(tilePath+"/", myTileHandler)
+
+	if myDocumentationHandler != nil {
+		r.Handle(docsPath, myDocumentationHandler)
+	}
 
 	var rootHandler http.Handler
 

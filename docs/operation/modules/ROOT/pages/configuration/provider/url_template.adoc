@@ -1,0 +1,37 @@
+= URL Template
+
+The URL Template provider overlaps with the Proxy provider but is meant specifically for WMS endpoints. Instead of merely supplying tile coordinates, the URL Template provider will supply the bounding box. This provider is available mostly for compatibility, you generally should use Proxy instead.
+
+Currently only supports EPSG:4326 and EPSG:3857
+
+Name should be "url template"
+
+Configuration options:
+
+|===
+| Parameter | Type | Required | Default | Description
+
+| template
+| string
+| Yes
+| None
+| A URL pointing to the tile server. Should contain placeholders `$xmin` `$xmax` `$ymin` and `$ymax` for tile bounds and can also contains `$srs` `$width` and `$height`
+
+| width
+| uint
+| No
+| 256
+| What to use for $width placeholder
+
+| height
+| uint
+| No
+| 256
+| What to use for $height placeholder
+
+| srid
+| uint
+| No
+| 4326
+| What projection the bounds should be in and what to use for $srs placeholder. Can only be 4326 or 3857
+|===

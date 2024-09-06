@@ -41,6 +41,7 @@ type ServerConfig struct {
 	Port       int               // Port to bind HTTP server to
 	RootPath   string            // Root HTTP Path to apply to all endpoints. Defaults to /
 	TilePath   string            // HTTP Path to serve tiles under (in addition to RootPath). Defaults to tiles which means /tiles/{layer}/{z}/{x}/{y}.
+	DocsPath   string            /// HTTP Path for accessing the documentation website. Defaults to /docs
 	Headers    map[string]string // Include these headers in all response from server
 	Production bool              // Controls serving splash page, documentation, x-powered-by header. Defaults to false, set true to harden for prod
 	Timeout    uint              // How long (in seconds) a request can be in flight before we cancel it and return an error
@@ -200,6 +201,7 @@ func DefaultConfig() Config {
 			Port:       8080,
 			RootPath:   "/",
 			TilePath:   "tiles",
+			DocsPath:   "docs",
 			Headers:    map[string]string{},
 			Production: false,
 			Timeout:    60,
