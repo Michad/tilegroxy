@@ -87,7 +87,7 @@ then install with
 sudo make install
 ----
 
-Once installed, tilegroxy can be invoked via the available link:./commands.adoc[commands]. A systemd unit file for operation as a server daemon is left as an exercise for the reader.
+Once installed, tilegroxy can be invoked via the available link:https://tilegroxy.michael.davis.name/operation/commands/index.html[commands] such as `tilegroxy serve`. A systemd unit file for operation as a server daemon is left as an exercise for the reader.
 
 === Tests
 
