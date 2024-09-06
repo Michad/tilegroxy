@@ -40,7 +40,7 @@ jobs:
 
     - name: Upload to s3
       # if: startsWith(github.ref, 'refs/tags/v')
-      with:
-        bucket: ${{ secrets.S3_BUCKET }}
+      env:
+        BUCKET: ${{ secrets.S3_BUCKET }}
       run: |
-        s3cmd sync --recursive --delete-removed build/site/* s3://${bucket}/
+        s3cmd sync --recursive --delete-removed build/site/* s3://${BUCKET}/
