@@ -36,7 +36,7 @@ func (h *defaultHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	defer slog.DebugContext(ctx, "server: default handler ended")
 
 	if h.config.Server.DocsPath != "" {
-		w.Header().Add("Location", "/docs")
+		w.Header().Add("Location", h.config.Server.RootPath+h.config.Server.DocsPath)
 		w.WriteHeader(http.StatusTemporaryRedirect)
 	} else {
 		w.WriteHeader(http.StatusNoContent)
