@@ -1,0 +1,197 @@
+= Health
+
+Tilegroxy includes a facility for validating the health of the tilegroxy server.  This information is served from a separate port from the main endpoints; this is done for security reasons to avoid the risk of leaking internal details which could be used to create targeted attacks.  This port should not be exposed outside your local network. The intent is for the health endpoints to be used with load balancers, monitoring tools, or orchestration systems (such as kubernetes).
+
+There are two specific endpoints available: `/` and `/health`.  
+
+Hitting `/` will return a 200 once the tilegroxy server is online.  
+
+Hitting `/health` will invoke the full health check.
+
+The full healthcheck consists of invoking a series of individual checks. The list of specific checks is configurable. Actual execution of these checks is fully asynchronous, which means calling the health endpoint returns the cached results of the most recent check rather than triggering the checks immediately.  
+
+Configuration options:
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| Enabled
+| If set to false the port isn't bound to
+| boolean
+| No
+| true
+
+| Port
+| The port to serve health on
+| int
+| No
+| 3000
+
+| Host
+| The host to bind to
+| string
+| No
+| 0.0.0.0
+
+| Checks
+| An array defining the specific checks to perform. See <<Checks>>
+| Check[]
+| Yes
+| None
+
+|===
+
+The following can be supplied as environment variables:
+
+|===
+| Configuration Parameter | Environment Variable
+
+| Enabled
+| SERVER_HEALTH_ENABLED
+
+| Port
+| SERVER_HEALTH_PORT
+
+| Host
+| SERVER_HEALTH_HOST
+
+|===
+
+
+== Checks
+
+There are a number of different types of checks that can be performed.  Like elsewhere in the configuration, these different types of checks are controlled by the `name` parameter and the remaining parameters available depend on which one you select.  
+
+=== Tile
+
+This check generates a synthetic request for a specific layer and validates the result is as expected. This allows you to detect issues connecting to an upstream provider or alert when broken imagery begins to be returned. These requests are generated internally and do not go through HTTP so will not show up in access logs, do not trigger authentication, and will not have a user ID associated. If telemetry is enabled, these requests will count against per-layer tile metrics but not against total tile metrics.
+
+THIS CHECK DOES NOT USE THE CACHE. Do not use this check against an intensive layer or one that incurs a monetary cost.
+
+
+Name should be "tile"
+
+Configuration options:
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| delay
+| How long to wait (in seconds) between subsequent checks
+| int
+| No
+| 600
+
+| layer
+| The layername to send the request against
+| string
+| Yes
+| None
+
+| z
+| The z coordinate (zoom) of the request
+| int
+| No
+| 10
+
+| x
+| The x coordinate of the request
+| int
+| No
+| 123
+
+| y
+| The y coordinate of the request
+| int
+| No
+| 534
+
+| validation
+| How to validate the resulting tile is as expected. Possible options: same, content-type, base-64, file, success. See below for details
+| string
+| Yes
+| same
+
+| result
+| The expected result of the tile. Interpreted based on the value specified in `validation`
+| string
+| No
+| None
+
+|===
+
+
+Once the tile is generated there's a few options for how you validate the tile is as you expect:
+
+[cols="1,3,2"]
+|===
+| Validation | Description | How result is interpreted 
+
+| same
+| Checks that the tile generated is the same as the previous tile generated. The first check after startup will act the same as `success`. If the value of the tile changes and then stays the same, the first check will return an error but subsequent checks will return back to healthy. 
+| Result is unused 
+
+| content-type
+| Checks the content type of the resulting tile but doesn't check the tile itself. This requires the tile to come back from the provider with a known MIME type. 
+// See link:https://tilegroxy.michael.davis.name/operation/content-type.html[content-type] for details on how this is handled.
+| Result is the exact MIME-type of the tile
+
+| base-64
+| Checks the generated tile exactly matches a specified value. 
+| Result is the base64 encoded contents of the tile
+
+| file
+| Checks the generated tile exactly matches a specified value. 
+| Result is the filepath to retrieve the expected contents of the tile. File is read into memory upon every check.
+
+| success
+| Doesn't check the value of the generated tile. As long as no error is encountered when generating the tile the check is considered healthy.
+| Result is unused 
+
+|===
+
+
+=== Cache
+
+This check puts a value into the cache, retrieves it, and confirms the value matches. 
+
+The key used to insert into the cache corresponds to a request against layer named "\_\__hc___" at coordinates 0,0,0.  The value inserted into the cache changes each time.
+
+Name should be "cache"
+
+Configuration options:
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| delay
+| How long to wait (in seconds) between subsequent checks
+| int
+| No
+| 600
+
+|===
+
+== Example
+
+
+----
+server:
+  health:
+    port: 3020
+    checks:
+      - name: tile
+        layer: some_layer
+        x: 0
+        y: 0
+        z: 0
+        validation: content-type
+        result: image/png; charset=UTF-8
+        delay: 60 
+      - name: cache
+        delay: 600
+        
+----

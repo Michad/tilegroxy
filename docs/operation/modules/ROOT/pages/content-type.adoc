@@ -1,0 +1,3 @@
+= Content Type
+
+TODO: details about how content-type is handled
