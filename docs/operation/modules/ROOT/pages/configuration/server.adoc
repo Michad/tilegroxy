@@ -57,13 +57,13 @@ Configuration options:
 | Whether to gzip compress HTTP responses
 
 | Encrypt
-| xref:encryption.adoc[Encryption]
+| xref:configuration/encryption.adoc[Encryption]
 | No
 | None
 | Configuration for enabling TLS (HTTPS). Don't specify to operate without encryption (the default)
 
 | Health
-| xref:health.adoc[Health]
+| xref:configuration/health.adoc[Health]
 | No
 | None
 | Configuration to turn on endpoints for validating the health of the server on a secondary port
