@@ -42,3 +42,4 @@
 * xref:extensibility.adoc[]
 * xref:telemetry.adoc[]
 * xref:migrate-tilestache.adoc[]
+* xref:productionizing.adoc[]
