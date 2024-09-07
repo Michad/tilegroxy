@@ -35,7 +35,7 @@ lint:
 	@golangci-lint run --fix -E asciicheck,bidichk,bodyclose,canonicalheader,dogsled,dupl,exhaustive,gocheckcompilerdirectives,gocritic,gofmt,durationcheck,errname,errorlint,fatcontext,goheader,inamedparam,interfacebloat,intrange,maintidx,makezero,mirror,misspell,mnd,noctx,nonamedreturns,perfsprint,prealloc,predeclared,revive,stylecheck,tenv,testifylint,usestdlibvars,unconvert,wastedassign
 
 docs:
-	@npm i antora
+	@npm i 
 	@node_modules/antora/bin/antora antora-playbook.yml
 	@cp -r build/site/* internal/website/resources/
 
