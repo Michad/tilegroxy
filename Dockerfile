@@ -1,14 +1,16 @@
 
 FROM node:20-alpine3.20@sha256:1a526b97cace6b4006256570efa1a29cd1fe4b96a5301f8d48e87c5139438a45 AS docs_stage
 
-COPY . .
 
-RUN npm i -g antora && antora antora-playbook.yml
+WORKDIR /usr/app
+COPY . /usr/app
+
+RUN npm i && node_modules/antora/bin/antora antora-playbook.yml
 
 FROM golang:1.22.6-alpine3.20@sha256:1a478681b671001b7f029f94b5016aed984a23ad99c707f6a0ab6563860ae2f3 AS build_stage
 
 COPY . .
-COPY --from=docs_stage build/site internal/website/resources/
+COPY --from=docs_stage /usr/app/build/site internal/website/resources/
 
 RUN ls -hal internal/website/resources/
 RUN apk update && \
