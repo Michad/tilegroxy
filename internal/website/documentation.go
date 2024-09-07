@@ -17,6 +17,7 @@ package website
 import (
 	"embed"
 	"errors"
+	"io/fs"
 	"mime"
 	"path/filepath"
 )
@@ -27,6 +28,7 @@ var (
 )
 
 const index = "index.html"
+const indexFallback = "index_default.html"
 
 func ReadDocumentationFile(path string) ([]byte, string, error) {
 	if len(path) > 0 && path[0] == '/' {
@@ -37,9 +39,8 @@ func ReadDocumentationFile(path string) ([]byte, string, error) {
 		path = index
 	}
 
-	path = "resources/" + path
-
-	data, err := files.ReadFile(path)
+	filePath := "resources/" + path
+	data, err := files.ReadFile(filePath)
 
 	if err != nil {
 		if errors.Is(err, errors.New("is a directory")) {
@@ -49,17 +50,15 @@ func ReadDocumentationFile(path string) ([]byte, string, error) {
 
 			path += index
 
-			ext := mime.TypeByExtension(filepath.Ext(path))
-
-			data, err = files.ReadFile(path)
-
-			return data, ext, err
+			return ReadDocumentationFile(path)
+		} else if path == index && errors.Is(err, fs.ErrNotExist) {
+			return ReadDocumentationFile(indexFallback)
 		}
 
 		return nil, "", err
 	}
 
-	ext := mime.TypeByExtension(filepath.Ext(path))
+	ext := mime.TypeByExtension(filepath.Ext(filePath))
 
 	return data, ext, nil
 }
