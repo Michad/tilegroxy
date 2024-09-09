@@ -20,6 +20,7 @@ import (
 	"math/rand/v2"
 	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/Michad/tilegroxy/pkg"
@@ -57,7 +58,7 @@ func (s CacheCheckRegistration) InitializeConfig() health.HealthCheckConfig {
 }
 
 func (s CacheCheckRegistration) Name() string {
-	return "tile"
+	return "cache"
 }
 
 func (s CacheCheckRegistration) Initialize(checkConfig health.HealthCheckConfig, lg *layer.LayerGroup, cache cache.Cache, allCfg *config.Config) (health.HealthCheck, error) {
@@ -72,6 +73,9 @@ func (s CacheCheckRegistration) Initialize(checkConfig health.HealthCheckConfig,
 
 func makeImage() (pkg.Image, error) {
 	col := strconv.FormatUint(rand.Uint64N(0xFFFFFF), 16)
+	if len(col) < 6 {
+		col = strings.Repeat("0", 6-len(col)) + col
+	}
 
 	img, err := images.GetStaticImage("color:" + col)
 

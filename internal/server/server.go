@@ -46,7 +46,6 @@ func handleNoContent(w http.ResponseWriter, _ *http.Request) {
 // not useful in practice due to OS-specific nature of signals
 var InterruptFlags = []os.Signal{os.Interrupt}
 
-
 func setupHandlers(config *config.Config, layerGroup *layer.LayerGroup, auth authentication.Authentication) (http.Handler, error) {
 	r := http.ServeMux{}
 
@@ -146,8 +145,6 @@ func listenAndServeTLS(config *config.Config, srvErr chan error, srv *http.Serve
 	}
 }
 
-
-
 func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth authentication.Authentication) error {
 	if config.Server.Encrypt != nil && config.Server.Encrypt.Domain == "" {
 		return fmt.Errorf(config.Error.Messages.ParamRequired, "server.encrypt.domain")
@@ -167,6 +164,16 @@ func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth au
 
 	ctx, stop := signal.NotifyContext(pkg.BackgroundContext(), InterruptFlags...)
 	defer stop()
+
+	var healthShutdown func(context.Context) error
+
+	if config.Server.Health.Enabled {
+		healthShutdown, err = setupHealth(ctx, config, layerGroup)
+
+		if err != nil {
+			return err
+		}
+	}
 
 	var otelShutdown func(context.Context) error
 
@@ -211,8 +218,13 @@ func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth au
 
 	err = srv.Shutdown(context.Background())
 
-	if config.Telemetry.Enabled {
+	if otelShutdown != nil {
 		err = errors.Join(err, otelShutdown(context.Background()))
 	}
+
+	if healthShutdown != nil {
+		err = errors.Join(err, healthShutdown(context.Background()))
+	}
+
 	return err
 }
