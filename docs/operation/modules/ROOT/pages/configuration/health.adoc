@@ -10,6 +10,8 @@ Hitting `/health` will invoke the full health check.
 
 The full healthcheck consists of invoking a series of individual checks. The list of specific checks is configurable. Actual execution of these checks is fully asynchronous, which means calling the health endpoint returns the cached results of the most recent check rather than triggering the checks immediately.  
 
+The healthcheck follows the format documented link:https://datatracker.ietf.org/doc/html/draft-inadarei-api-health-check-06[here].
+
 Configuration options:
 
 [cols="1,3,1,1,1"]
@@ -194,4 +196,34 @@ server:
       - name: cache
         delay: 600
         
+----
+
+
+Produces an output like:
+
+
+----
+{
+  "checks": {
+    "tilegroxy:checks": [
+      {
+        "componentId": "0",
+        "componentType": "TileCheck",
+        "status": "ok",
+        "time": "2024-09-09T01:05:56-04:00",
+        "ttl": 60
+      },
+      {
+        "componentId": "1",
+        "componentType": "CacheCheck",
+        "status": "ok",
+        "time": "2024-09-09T01:05:56-04:00",
+        "ttl": 600
+      }
+    ]
+  },
+  "releaseId": "ab123",
+  "status": "ok",
+  "version": "v0.7.0"
+}
 ----
