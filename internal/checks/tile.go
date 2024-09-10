@@ -79,7 +79,7 @@ func (s TileCheckRegistration) Name() string {
 	return "tile"
 }
 
-func (s TileCheckRegistration) Initialize(checkConfig health.HealthCheckConfig, lg *layer.LayerGroup, cache cache.Cache, allCfg *config.Config) (health.HealthCheck, error) {
+func (s TileCheckRegistration) Initialize(checkConfig health.HealthCheckConfig, lg *layer.LayerGroup, _ cache.Cache, allCfg *config.Config) (health.HealthCheck, error) {
 	cfg := checkConfig.(TileCheckConfig)
 
 	if cfg.Delay == 0 {
@@ -139,7 +139,7 @@ func (h *TileCheck) Check(ctx context.Context) error {
 	return nil
 }
 
-func (h *TileCheck) ValidateSame(ctx context.Context, img *pkg.Image) error {
+func (h *TileCheck) ValidateSame(_ context.Context, img *pkg.Image) error {
 	if h.img == nil {
 		h.img = img
 		return nil
@@ -153,7 +153,7 @@ func (h *TileCheck) ValidateSame(ctx context.Context, img *pkg.Image) error {
 	return nil
 }
 
-func (h *TileCheck) ValidateContentType(ctx context.Context, img *pkg.Image) error {
+func (h *TileCheck) ValidateContentType(_ context.Context, img *pkg.Image) error {
 	if img.ContentType != h.Result {
 		return fmt.Errorf(h.errorMessages.InvalidParam, "content type", img.ContentType)
 	}
@@ -161,7 +161,7 @@ func (h *TileCheck) ValidateContentType(ctx context.Context, img *pkg.Image) err
 	return nil
 }
 
-func (h *TileCheck) ValidateBase64(ctx context.Context, img *pkg.Image) error {
+func (h *TileCheck) ValidateBase64(_ context.Context, img *pkg.Image) error {
 	imgEncode := base64.StdEncoding.EncodeToString(img.Content)
 	if imgEncode != h.Result {
 		return fmt.Errorf(h.errorMessages.InvalidParam, "content", imgEncode)
@@ -170,7 +170,7 @@ func (h *TileCheck) ValidateBase64(ctx context.Context, img *pkg.Image) error {
 	return nil
 }
 
-func (h *TileCheck) ValidateFile(ctx context.Context, img *pkg.Image) error {
+func (h *TileCheck) ValidateFile(_ context.Context, img *pkg.Image) error {
 	expected, err := os.ReadFile(h.Result)
 
 	if err != nil {

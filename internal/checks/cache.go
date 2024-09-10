@@ -61,7 +61,7 @@ func (s CacheCheckRegistration) Name() string {
 	return "cache"
 }
 
-func (s CacheCheckRegistration) Initialize(checkConfig health.HealthCheckConfig, lg *layer.LayerGroup, cache cache.Cache, allCfg *config.Config) (health.HealthCheck, error) {
+func (s CacheCheckRegistration) Initialize(checkConfig health.HealthCheckConfig, _ *layer.LayerGroup, cache cache.Cache, allCfg *config.Config) (health.HealthCheck, error) {
 	cfg := checkConfig.(CacheCheckConfig)
 
 	if cfg.Delay == 0 {
@@ -71,10 +71,14 @@ func (s CacheCheckRegistration) Initialize(checkConfig health.HealthCheckConfig,
 	return &CacheCheck{cfg, cache, allCfg.Error.Messages}, nil
 }
 
+const numColorDigits = 6
+const hexBase = 16
+const maxColorInt = 0xFFFFFF
+
 func makeImage() (pkg.Image, error) {
-	col := strconv.FormatUint(rand.Uint64N(0xFFFFFF), 16)
-	if len(col) < 6 {
-		col = strings.Repeat("0", 6-len(col)) + col
+	col := strconv.FormatUint(rand.Uint64N(maxColorInt), hexBase)
+	if len(col) < numColorDigits {
+		col = strings.Repeat("0", numColorDigits-len(col)) + col
 	}
 
 	img, err := images.GetStaticImage("color:" + col)

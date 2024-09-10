@@ -67,7 +67,7 @@ func Test_Base64(t *testing.T) {
 	tc := hc.(*TileCheck)
 
 	err = hc.Check(ctx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	tc.Result = "test"
 	err = hc.Check(ctx)
@@ -92,7 +92,7 @@ func Test_File(t *testing.T) {
 	require.NoError(t, err)
 
 	err = hc.Check(ctx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	fileVal2, err := images.GetStaticImage("color:000")
 	require.NoError(t, err)
@@ -144,7 +144,7 @@ func Test_ContentType(t *testing.T) {
 	tc := hc.(*TileCheck)
 
 	err = hc.Check(ctx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	tc.Result = "test"
 	err = hc.Check(ctx)
@@ -163,18 +163,18 @@ func Test_Same(t *testing.T) {
 	tc := hc.(*TileCheck)
 
 	err = hc.Check(ctx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = hc.Check(ctx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	tc.img = &pkg.Image{}
 
 	err = hc.Check(ctx)
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	err = hc.Check(ctx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func initialize(t *testing.T, fail bool) (config.Config, *layer.LayerGroup, TileCheckRegistration, TileCheckConfig) {

@@ -35,6 +35,9 @@ import (
 	"github.com/Michad/tilegroxy/pkg/static"
 )
 
+var startupWaitTime = 100 * time.Millisecond
+var checkLeeway = 5 * time.Second
+
 type CheckResult struct {
 	err       error
 	timestamp time.Time
@@ -92,7 +95,7 @@ func (h healthHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 					detail["output"] = resultCheck.err.Error()
 				} else {
 					// Include 5 second leeway for check not being performed instantly
-					if resultCheck.timestamp.Add(resultCheck.ttl).Add(5 * time.Second).Before(time.Now()) {
+					if resultCheck.timestamp.Add(resultCheck.ttl).Add(checkLeeway).Before(time.Now()) {
 						isOk = false
 						detail["status"] = "error"
 						detail["output"] = "stale"
@@ -166,9 +169,9 @@ func SetupHealth(ctx context.Context, cfg *config.Config, layerGroup *layer.Laye
 			return func(ctx context.Context) error {
 				return errors.Join(callback(ctx), callback2(ctx))
 			}, err
-		} else {
-			return callback2, err
 		}
+
+		return callback2, err
 	}
 
 	return callback, err
@@ -195,7 +198,7 @@ func setupHealthEndpoints(ctx context.Context, h config.HealthConfig, checks []h
 	// Give srv a little breathing room to try to start up
 	select {
 	case err = <-srvErr:
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(startupWaitTime):
 	}
 
 	return srv.Shutdown, err

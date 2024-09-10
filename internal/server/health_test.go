@@ -95,18 +95,18 @@ func Test_Health_Success(t *testing.T) {
 	require.NoError(t, err)
 	time.Sleep(1 * time.Second)
 
-	baseUrl := "http://127.0.0.1:" + strconv.Itoa(port)
-	resp, err := http.DefaultClient.Get(baseUrl)
+	baseURL := "http://127.0.0.1:" + strconv.Itoa(port)
+	resp, err := http.DefaultClient.Get(baseURL)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusNoContent, resp.StatusCode)
 	require.NoError(t, resp.Body.Close())
 
-	resp, err = http.DefaultClient.Head(baseUrl + "/health")
+	resp, err = http.DefaultClient.Head(baseURL + "/health")
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusNoContent, resp.StatusCode)
 	require.NoError(t, resp.Body.Close())
 
-	resp, err = http.DefaultClient.Get(baseUrl + "/health")
+	resp, err = http.DefaultClient.Get(baseURL + "/health")
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -131,9 +131,9 @@ func Test_Health_Fail(t *testing.T) {
 	callback, err := SetupHealth(ctx, &cfg, lg)
 	require.NoError(t, err)
 
-	baseUrl := "http://127.0.0.1:" + strconv.Itoa(port)
+	baseURL := "http://127.0.0.1:" + strconv.Itoa(port)
 
-	resp, err := http.DefaultClient.Get(baseUrl + "/health")
+	resp, err := http.DefaultClient.Get(baseURL + "/health")
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 
