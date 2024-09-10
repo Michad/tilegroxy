@@ -168,7 +168,7 @@ func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth au
 	var healthShutdown func(context.Context) error
 
 	if config.Server.Health.Enabled {
-		healthShutdown, err = setupHealth(ctx, config, layerGroup)
+		healthShutdown, err = SetupHealth(ctx, config, layerGroup)
 
 		if err != nil {
 			return err

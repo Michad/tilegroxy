@@ -35,6 +35,12 @@ import (
 	"github.com/Michad/tilegroxy/pkg/static"
 )
 
+type CheckResult struct {
+	err       error
+	timestamp time.Time
+	ttl       time.Duration
+}
+
 type healthHandler struct {
 	checks           []health.HealthCheck
 	checkResultCache *sync.Map
@@ -132,17 +138,11 @@ func (h healthHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	_, err = w.Write(data)
 
 	if err != nil {
-		slog.WarnContext(ctx, fmt.Sprintf("Unable to write to documentation request due to %v", err))
+		slog.WarnContext(ctx, fmt.Sprintf("Unable to write to health request due to %v", err))
 	}
 }
 
-type CheckResult struct {
-	err       error
-	timestamp time.Time
-	ttl       time.Duration
-}
-
-func setupHealth(ctx context.Context, cfg *config.Config, layerGroup *layer.LayerGroup) (func(context.Context) error, error) {
+func SetupHealth(ctx context.Context, cfg *config.Config, layerGroup *layer.LayerGroup) (func(context.Context) error, error) {
 	h := cfg.Server.Health
 
 	slog.InfoContext(ctx, fmt.Sprintf("Initializing health subsystem with %v checks on %v:%v", len(h.Checks), h.Host, h.Port))
