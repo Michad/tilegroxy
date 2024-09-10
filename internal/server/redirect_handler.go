@@ -14,16 +14,12 @@
 
 package server
 
-import (
-	"testing"
+import "net/http"
 
-	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/stretchr/testify/require"
-)
+type httpRedirectHandler struct {
+	protoAndHost string
+}
 
-func Test_ListenAndServe_Validate(t *testing.T) {
-	cfg := config.DefaultConfig()
-	cfg.Server.Encrypt = &config.EncryptionConfig{Certificate: "asfjaslkf", Domain: ""}
-
-	require.Error(t, ListenAndServe(&cfg, nil, nil))
+func (h httpRedirectHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	http.Redirect(w, req, h.protoAndHost+req.RequestURI, http.StatusMovedPermanently)
 }

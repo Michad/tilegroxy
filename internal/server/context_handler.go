@@ -15,15 +15,26 @@
 package server
 
 import (
-	"testing"
+	"fmt"
+	"net/http"
+	"runtime/debug"
 
+	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/stretchr/testify/require"
 )
 
-func Test_ListenAndServe_Validate(t *testing.T) {
-	cfg := config.DefaultConfig()
-	cfg.Server.Encrypt = &config.EncryptionConfig{Certificate: "asfjaslkf", Domain: ""}
+type httpContextHandler struct {
+	http.Handler
+	errCfg config.ErrorConfig
+}
 
-	require.Error(t, ListenAndServe(&cfg, nil, nil))
+func (h httpContextHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	reqContext := pkg.NewRequestContext(req)
+	defer func() {
+		if err := recover(); err != nil {
+			writeErrorMessage(reqContext, w, &h.errCfg, pkg.TypeOfErrorOther, fmt.Sprint(err), "Unexpected Internal Server Error", debug.Stack())
+		}
+	}()
+
+	h.Handler.ServeHTTP(w, req.WithContext(reqContext))
 }

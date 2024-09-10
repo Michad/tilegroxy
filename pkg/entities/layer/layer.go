@@ -249,7 +249,9 @@ func (l *Layer) MatchesName(ctx context.Context, layerName string) bool {
 	if doesMatch, matches := match(l.Pattern, layerName); doesMatch {
 		if validateParamMatches(matches, l.ParamValidator) {
 			layerPatternMatches, _ := pkg.LayerPatternMatchesFromContext(ctx)
-			*layerPatternMatches = matches
+			if layerPatternMatches != nil {
+				*layerPatternMatches = matches
+			}
 			return true
 		}
 	}

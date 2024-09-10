@@ -35,13 +35,22 @@ type EncryptionConfig struct {
 	HTTPPort    int    // The port used for non-encrypted traffic. Required if using Let's Encrypt for ACME challenge and needs to indirectly be 80 (that is, it could be 8080 if something else redirects 80 to 8080). Everything except .well-known will be redirected to the main port when set.
 }
 
+// Configuration for health checks
+type HealthConfig struct {
+	Enabled bool             // If set to false the port isn't bound to. Defaults false
+	Port    int              // The port to serve health on. Defaults to 3000
+	Host    string           // The host to bind to. Defaults to 0.0.0.0
+	Checks  []map[string]any // An array defining the specific checks to perform.
+}
+
 type ServerConfig struct {
 	Encrypt    *EncryptionConfig // Whether and how to use TLS. Defaults to none AKA no encryption.
+	Health     HealthConfig      // Whether to enable health endpoints on a secondary port.
 	BindHost   string            // IP address to bind HTTP server to
 	Port       int               // Port to bind HTTP server to
 	RootPath   string            // Root HTTP Path to apply to all endpoints. Defaults to /
 	TilePath   string            // HTTP Path to serve tiles under (in addition to RootPath). Defaults to tiles which means /tiles/{layer}/{z}/{x}/{y}.
-	DocsPath   string            /// HTTP Path for accessing the documentation website. Defaults to /docs
+	DocsPath   string            // HTTP Path for accessing the documentation website. Defaults to docs
 	Headers    map[string]string // Include these headers in all response from server
 	Production bool              // Controls serving splash page, documentation, x-powered-by header. Defaults to false, set true to harden for prod
 	Timeout    uint              // How long (in seconds) a request can be in flight before we cancel it and return an error
@@ -206,6 +215,11 @@ func DefaultConfig() Config {
 			Production: false,
 			Timeout:    60,
 			Gzip:       false,
+			Health: HealthConfig{
+				Enabled: false,
+				Port:    3000,
+				Host:    "0.0.0.0",
+			},
 		},
 		Client: ClientConfig{
 			UserAgent:           "tilegroxy/" + version,

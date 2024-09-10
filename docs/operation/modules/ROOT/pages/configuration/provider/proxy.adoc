@@ -10,30 +10,32 @@ Name should be "proxy"
 
 Configuration options:
 
+[cols="1,3,1,1,1"]
 |===
-| Parameter | Type | Required | Default | Description
+| Parameter | Description | Type | Required | Default
 
 | url
+| A URL pointing to the tile server. Should contain placeholders surrounded by "{}" that are replaced on-the-fly
 | string
 | Yes
 | None
-| A URL pointing to the tile server. Should contain placeholders surrounded by "{}" that are replaced on-the-fly
 
 | inverty
+| Changes Y tile numbering to be South-to-North instead of North-to-South. Only impacts Y/y placeholder
 | bool
 | No
 | false
-| Changes Y tile numbering to be South-to-North instead of North-to-South. Only impacts Y/y placeholder
 
 | srid
+| What projection bounds should be in. Can only be 4326 or 3857
 | uint
 | No
 | 4326
-| What projection bounds should be in. Can only be 4326 or 3857
 |===
 
 The following placeholders are available in the URL:
 
+[cols="1,4"]
 |===
 | Placeholder | Description
 

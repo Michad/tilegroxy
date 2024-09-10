@@ -29,6 +29,7 @@
 *** xref:configuration/secret/aws_secrets_manager.adoc[]
 ** xref:configuration/server.adoc[]
 *** xref:configuration/encryption.adoc[]
+*** xref:configuration/health.adoc[]
 ** xref:configuration/client.adoc[]
 ** xref:configuration/log.adoc[]
 ** xref:configuration/telemetry.adoc[]
@@ -42,3 +43,4 @@
 * xref:extensibility.adoc[]
 * xref:telemetry.adoc[]
 * xref:migrate-tilestache.adoc[]
+* xref:productionizing.adoc[]

@@ -32,6 +32,7 @@ import (
 
 type LayerGroup struct {
 	layers           []*Layer
+	DefaultCache     cache.Cache
 	cacheHitCounter  metric.Int64Counter
 	cacheMissCounter metric.Int64Counter
 }
@@ -55,6 +56,7 @@ func ConstructLayerGroup(cfg config.Config, cache cache.Cache, secreter secret.S
 	layerGroup.cacheMissCounter, err2 = meter.Int64Counter("tilegroxy.cache.total.miss", metric.WithDescription("Number of requests that missed the cache (ignoring skips)"))
 
 	layerGroup.layers = layerObjects
+	layerGroup.DefaultCache = cache
 
 	return &layerGroup, errors.Join(err1, err2)
 }

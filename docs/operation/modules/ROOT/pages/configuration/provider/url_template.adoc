@@ -8,30 +8,31 @@ Name should be "url template"
 
 Configuration options:
 
+[cols="1,3,1,1,1"]
 |===
-| Parameter | Type | Required | Default | Description
+| Parameter | Description | Type | Required | Default
 
 | template
+| A URL pointing to the tile server. Should contain placeholders `$xmin` `$xmax` `$ymin` and `$ymax` for tile bounds and can also contains `$srs` `$width` and `$height`
 | string
 | Yes
 | None
-| A URL pointing to the tile server. Should contain placeholders `$xmin` `$xmax` `$ymin` and `$ymax` for tile bounds and can also contains `$srs` `$width` and `$height`
 
 | width
+| What to use for $width placeholder
 | uint
 | No
 | 256
-| What to use for $width placeholder
 
 | height
+| What to use for $height placeholder
 | uint
 | No
 | 256
-| What to use for $height placeholder
 
 | srid
+| What projection the bounds should be in and what to use for $srs placeholder. Can only be 4326 or 3857
 | uint
 | No
 | 4326
-| What projection the bounds should be in and what to use for $srs placeholder. Can only be 4326 or 3857
 |===

@@ -14,56 +14,57 @@ Name should be "s3"
 
 Configuration options:
 
+[cols="1,3,1,1,1"]
 |===
-| Parameter | Type | Required | Default | Description
+| Parameter | Description | Type | Required | Default
 
 | bucket
+| The name of the bucket to use
 | string
 | Yes
 | None
-| The name of the bucket to use
 
 | path
+| The path prefix to use for storing tiles
 | string
 | No
 | /
-| The path prefix to use for storing tiles
 
 | region
+| The AWS region containing the bucket. Required if region is not specified via other means. Consult https://docs.aws.amazon.com/general/latest/gr/rande.html#regional-endpoints[AWS documentation] for possible values
 | string
 | No
 | None
-| The AWS region containing the bucket. Required if region is not specified via other means. Consult https://docs.aws.amazon.com/general/latest/gr/rande.html#regional-endpoints[AWS documentation] for possible values
 
 | access
+| The AWS Access Key ID to authenticate with. This is not recommended; it is offered as a fallback authentication method only. Consult https://docs.aws.amazon.com/cli/v1/userguide/cli-chap-authentication.html[AWS documentation] for better options
 | string
 | No
 | None
-| The AWS Access Key ID to authenticate with. This is not recommended; it is offered as a fallback authentication method only. Consult https://docs.aws.amazon.com/cli/v1/userguide/cli-chap-authentication.html[AWS documentation] for better options
 
 | secret
+| The AWS Secret Key to authenticate with. This is not recommended; it is offered as a fallback authentication method only. Consult https://docs.aws.amazon.com/cli/v1/userguide/cli-chap-authentication.html[AWS documentation] for better options
 | string
 | No
 | None
-| The AWS Secret Key to authenticate with. This is not recommended; it is offered as a fallback authentication method only. Consult https://docs.aws.amazon.com/cli/v1/userguide/cli-chap-authentication.html[AWS documentation] for better options
 
 | profile
+| The profile to use to authenticate against the AWS API. Consult https://docs.aws.amazon.com/sdkref/latest/guide/file-format.html#file-format-profile[AWS documentation for specifics]
 | string
 | No
 | None
-| The profile to use to authenticate against the AWS API. Consult https://docs.aws.amazon.com/sdkref/latest/guide/file-format.html#file-format-profile[AWS documentation for specifics]
 
 | storageclass
+| The storage class to use for the object. You probably can leave this blank and use the bucket default. Consult https://aws.amazon.com/s3/storage-classes/[AWS documentation] for an overview of options. The following are currently valid: STANDARD REDUCED_REDUNDANCY STANDARD_IA ONEZONE_IA INTELLIGENT_TIERING GLACIER DEEP_ARCHIVE OUTPOSTS GLACIER_IR SNOW EXPRESS_ONEZONE
 | string
 | No
 | STANDARD
-| The storage class to use for the object. You probably can leave this blank and use the bucket default. Consult https://aws.amazon.com/s3/storage-classes/[AWS documentation] for an overview of options. The following are currently valid: STANDARD REDUCED_REDUNDANCY STANDARD_IA ONEZONE_IA INTELLIGENT_TIERING GLACIER DEEP_ARCHIVE OUTPOSTS GLACIER_IR SNOW EXPRESS_ONEZONE
 
 | endpoint
+| Override the S3 API Endpoint we talk to. Useful if you're using S3 outside AWS or using a directory bucket
 | string
 | No
 | AWS Auto
-| Override the S3 API Endpoint we talk to. Useful if you're using S3 outside AWS or using a directory bucket
 |===
 
 Example:

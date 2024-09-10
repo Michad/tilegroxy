@@ -6,18 +6,19 @@ Name should be "static"
 
 Configuration options:
 
+[cols="1,3,1,1,1"]
 |===
-| Parameter | Type | Required | Default | Description
+| Parameter | Description | Type | Required | Default
 
 | image
+| Either a filepath to an image on the local filesystem or one of the xref:configuration/error.adoc[built-in images]
 | string
 | Yes
 | None
-| Either a filepath to an image on the local filesystem or one of the <<image-options,built-in images>>
 
 | color
+| A hexcode (RGB or RGBA) of a color to return. Equivalent to specifying `image` with this value with a prefix of "color:"
 | string
 | No
 | None
-| A hexcode (RGB or RGBA) of a color to return. Equivalent to specifying `image` with this value with a prefix of "color:"
 |===

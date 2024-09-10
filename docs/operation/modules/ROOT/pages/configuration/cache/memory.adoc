@@ -8,20 +8,21 @@ Name should be "memory"
 
 Configuration options:
 
+[cols="1,3,1,1,1"]
 |===
-| Parameter | Type | Required | Default | Description
+| Parameter | Description | Type | Required | Default 
 
 | maxsize
+| Maximum number of tiles to hold in the cache. Must be at least 10. Setting this too high can cause out-of-memory panics. This is not a guaranteed setting, which entry is evicted when exceeding this size is an implementation detail and the size can temporarily grow somewhat larger.
 | uint16
 | No
 | 100
-| Maximum number of tiles to hold in the cache. Must be at least 10. Setting this too high can cause out-of-memory panics. This is not a guaranteed setting, which entry is evicted when exceeding this size is an implementation detail and the size can temporarily grow somewhat larger.
 
 | ttl
+| Maximum time to live for cache entries in seconds
 | uint32
 | No
 | 3600
-| Maximum time to live for cache entries in seconds
 |===
 
 Example:

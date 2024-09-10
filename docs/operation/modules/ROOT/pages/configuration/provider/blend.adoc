@@ -11,44 +11,45 @@ image:diagram-blend.png[Blend request flow]
 
 Name should be "blend"
 
+[cols="1,3,1,1,1"]
 |===
-| Parameter | Type | Required | Default | Description
+| Parameter | Description | Type | Required | Default
 
 | providers
+| The providers to blend together.  Order matters
 | Provider[]
 | Yes
 | None
-| The providers to blend together.  Order matters
 
 | mode
+| How to blend the images. https://github.com/anthonynsimon/bild#blend-modes[Examples of the modes]. Possible values: "add", "color burn", "color dodge", "darken", "difference", "divide", "exclusion", "lighten", "linear burn", "linear light", "multiply", "normal", "opacity", "overlay", "screen", "soft light", "subtract"
 | String
 | No
 | normal
-| How to blend the images. https://github.com/anthonynsimon/bild#blend-modes[Examples of the modes]. Possible values: "add", "color burn", "color dodge", "darken", "difference", "divide", "exclusion", "lighten", "linear burn", "linear light", "multiply", "normal", "opacity", "overlay", "screen", "soft light", "subtract"
 
 | opacity
+| Only applicable if mode is "opacity". A value between 0 and 1 controlling the amount of opacity
 | Float
 | No
 | 0
-| Only applicable if mode is "opacity". A value between 0 and 1 controlling the amount of opacity
 
 | layer
+| An alternative to the `providers` parameter for specifying references to other layers that utilize patterns. Equivalent to specifying a number of <<ref,`Ref`>> providers in `providers`
 | Object - See next rows
 | No
 | None
-| An alternative to the `providers` parameter for specifying references to other layers that utilize patterns. Equivalent to specifying a number of <<ref,`Ref`>> providers in `providers`
 
 | layer.pattern
+| A string with one or more placeholders present wrapped in curly brackets that match the layer placeholder you want to refer towards
 | String
 | Yes
 | None
-| A string with one or more placeholders present wrapped in curly brackets that match the layer placeholder you want to refer towards
 
 | layer.values
+| An entry per instantiation of the layer, each entry should have a value for each placeholder in the pattern with the key being the placeholder and the value being the replacement value
 | {"k":"v"}[]
 | Yes
 | None
-| An entry per instantiation of the layer, each entry should have a value for each placeholder in the pattern with the key being the placeholder and the value being the replacement value
 |===
 
 Example:

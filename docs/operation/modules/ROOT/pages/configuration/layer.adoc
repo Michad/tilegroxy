@@ -8,44 +8,45 @@ When using a pattern you can include https://regex101.com/[Regular Expressions] 
 
 Configuration options:
 
+[cols="1,3,1,1,1"]
 |===
-| Parameter | Type | Required | Default | Description
+| Parameter | Description | Type | Required | Default
 
 | id
+| A url-safe identifier of the layer. Primarily used as the default path for incoming tile web requests
 | string
 | Yes
 | None
-| A url-safe identifier of the layer. Primarily used as the default path for incoming tile web requests
 
 | pattern
+| A url-safe pattern with non-subsequent placeholders
 | string
 | No
 | id
-| A url-safe pattern with non-subsequent placeholders
 
 | paramValidator
+| A mapping of regular expressions to use to validate the values that match against the placeholders. The regular expressions must match the full value. Specify a key of "*" to apply it to all values
 | map[string]string
 | No
 | None
-| A mapping of regular expressions to use to validate the values that match against the placeholders. The regular expressions must match the full value. Specify a key of "*" to apply it to all values
 
 | provider
-| Provider
+| The configuration that drives how tiles are generated
+| xref:configuration/provider/index.adoc[Provider]
 | Yes
 | None
-| See below
 
 | client
-| Client
+| A Client configuration to use for this layer specifically that overrides the Client from the top-level of the configuration. See below for Client schema
+| xref:configuration/client.adoc[Client]
 | No
 | None
-| A Client configuration to use for this layer specifically that overrides the Client from the top-level of the configuration. See below for Client schema
 
 | skipcache
+| If true, skip reading and writing to cache
 | bool
 | No
 | false
-| If true, skip reading and writing to cache
 |===
 
 Example:

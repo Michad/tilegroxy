@@ -6,6 +6,7 @@ Currently this implementation only supports a single key specified against a sin
 
 The following claims are supported/enforced:
 
+[cols="1,4"]
 |===
 | Claim | Implementation
 
@@ -32,74 +33,75 @@ Name should be "jwt"
 
 Configuration options:
 
+[cols="1,3,1,1,1"]
 |===
 | Parameter | Type | Required | Default | Description
 
 | Key
+| The key for verifying the signature. The public key if using asymmetric signing. If the value starts with "env." the remainder is interpreted as the name of the Environment Variable to use to retrieve the verification key.
 | string
 | Yes
 | None
-| The key for verifying the signature. The public key if using asymmetric signing. If the value starts with "env." the remainder is interpreted as the name of the Environment Variable to use to retrieve the verification key.
 
 | Algorithm
+| Algorithm to allow for JWT signature. One of: "HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "EdDSA"
 | string
 | Yes
 | None
-| Algorithm to allow for JWT signature. One of: "HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "EdDSA"
 
 | HeaderName
+| The header to extract the JWT from. If this is "Authorization" it removes "Bearer " from the start. Make sure this is in "canonical case" e.g. X-Header - auth will always fail otherwise
 | string
 | No
 | Authorization
-| The header to extract the JWT from. If this is "Authorization" it removes "Bearer " from the start. Make sure this is in "canonical case" e.g. X-Header - auth will always fail otherwise
 
 | MaxExpiration
+| How many seconds from now can the expiration be. JWTs more than X seconds from now will result in a 401
 | uint32
 | No
 | 1 day
-| How many seconds from now can the expiration be. JWTs more than X seconds from now will result in a 401
 
 | ExpectedAudience
+| Require the "aud" grant to be this string
 | string
 | No
 | None
-| Require the "aud" grant to be this string
 
 | ExpectedSubject
+| Require the "sub" grant to be this string
 | string
 | No
 | None
-| Require the "sub" grant to be this string
 
 | ExpectedIssuer
+| Require the "iss" grant to be this string
 | string
 | No
 | None
-| Require the "iss" grant to be this string
 
 | ExpectedScope
+| Require the "scope" grant to contain this string
 | string
 | No
 | None
-| Require the "scope" grant to contain this string
 
 | LayerScope
+| If true the "scope" grant is used to whitelist access to layers
 | bool
 | No
 | false
-| If true the "scope" grant is used to whitelist access to layers
 
 | ScopePrefix
+| If true this prefix indicates scopes to use. For example a prefix of "tile/" will mean a scope of "tile/test" grants access to "test". Doesn't impact ExpectedScope
 | string
 | No
 | Empty string
-| If true this prefix indicates scopes to use. For example a prefix of "tile/" will mean a scope of "tile/test" grants access to "test". Doesn't impact ExpectedScope
 
 | UserId
+| Use the specified grant as the user identifier. This is just used for logging by default but it's made available to custom providers
 | string
 | No
 | sub
-| Use the specified grant as the user identifier. This is just used for logging by default but it's made available to custom providers
 |===
 
 Example:
