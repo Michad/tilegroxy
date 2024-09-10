@@ -10,38 +10,39 @@ Name should be "fallback"
 
 Configuration options:
 
+[cols="1,3,1,1,1"]
 |===
-| Parameter | Type | Required | Default | Description
+| Parameter | Description | Type | Required | Default
 
 | primary
+| The provider to delegate to first
 | Provider
 | Yes
 | None
-| The provider to delegate to first
 
 | secondary
+| The provider to delegate to if primary returns an error
 | Provider
 | Yes
 | None
-| The provider to delegate to if primary returns an error
 
 | zoom
+| Zooming below or above this range will activate the fallback. Can be a single number, a range with a dash between start and end, or a comma separated list of the first two options.  For example "4" "2-3" or "2,3-4"
 | String
 | No
 | 0-21
-| Zooming below or above this range will activate the fallback. Can be a single number, a range with a dash between start and end, or a comma separated list of the first two options.  For example "4" "2-3" or "2,3-4"
 
 | bounds
+| Any tiles that don't intersect with this bounds will activate the fallback
 | Object with north, south, east, west
 | No
 | Whole world
-| Any tiles that don't intersect with this bounds will activate the fallback
 
 | cache
+| When to save the resulting tile to the cache. Options: always, unless-error, unless-fallback.
 | string
 | No
 | unless-error
-| When to save the resulting tile to the cache. Options: always, unless-error, unless-fallback.
 |===
 
 Example:

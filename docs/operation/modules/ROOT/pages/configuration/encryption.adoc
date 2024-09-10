@@ -11,42 +11,44 @@ If a certificate and keyfile are supplied the server will utilize option 1, othe
 
 Configuration options:
 
+[cols="1,3,1,1,1"]
 |===
-| Parameter | Type | Required | Default | Description
+| Parameter | Description | Type | Required | Default
 
 | Domain
+| The domain name you're operating with (the domain end-users use)
 | string
 | Yes
 | None
-| The domain name you're operating with (the domain end-users use)
 
 | Cache
+| The path to a directory to cache certificates in if using let's encrypt.
 | string
 | No
 | ./certs
-| The path to a directory to cache certificates in if using let's encrypt.
 
 | Certificate
+| The file path to the TLS certificate
 | string
 | None
-| The file path to the TLS certificate
 |
 
 | KeyFile
+| The file path to the keyfile
 | string
 | None
-| The file path to the keyfile
 |
 
 | HttpPort
+| The port used for non-encrypted traffic. Required if using Let's Encrypt to provide for the ACME challenge, in which case this needs to indirectly be 80 (that is, this can be set to e.g. 8080 if something ahead of this redirects 80 to 8080). Everything except .well-known will be redirected to the main port when set.
 | int
 | No
 | None
-| The port used for non-encrypted traffic. Required if using Let's Encrypt to provide for the ACME challenge, in which case this needs to indirectly be 80 (that is, this can be set to e.g. 8080 if something ahead of this redirects 80 to 8080). Everything except .well-known will be redirected to the main port when set.
 |===
 
 The following can be supplied as environment variables:
 
+[cols="1,2"]
 |===
 | Configuration Parameter | Environment Variable
 

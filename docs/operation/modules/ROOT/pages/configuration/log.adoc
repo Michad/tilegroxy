@@ -36,48 +36,50 @@ Level controls the verbosity of logs. There is no guarantee as to the specific l
 
 Configuration options:
 
+[cols="1,3,1,1,1"]
 |===
-| Parameter | Type | Required | Default | Description
+| Parameter | Description | Type | Required | Default
 
 | Console
+| Whether to write application logs to standard out
 | bool
 | No
 | true
-| Whether to write application logs to standard out
 
 | Path
+| The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth
 | string
 | No
 | None
-| The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth
 
 | Format
+| The format to output application logs in. Applies to both standard out and file out. Possible values: plain, json
 | string
 | No
 | plain
-| The format to output application logs in. Applies to both standard out and file out. Possible values: plain, json
 
 | Level
+| The most-detailed log level that should be included. Possible values: debug, info, warn, error, trace, absurd
 | string
 | No
 | info
-| The most-detailed log level that should be included. Possible values: debug, info, warn, error, trace, absurd
 
 | Request
+| Whether to include any extra attributes based on request parameters (excluding explicitly requested). If auto (default) it defaults true if format is json, false otherwise
 | bool
 | No
 | auto
-| Whether to include any extra attributes based on request parameters (excluding explicitly requested). If auto (default) it defaults true if format is json, false otherwise
 
 | Headers
+| Headers to include as attributes in structured log messages. Attribute key will be in all lowercase.
 | string[]
 | No
 | None
-| Headers to include as attributes in structured log messages. Attribute key will be in all lowercase.
 |===
 
 The following can be supplied as environment variables:
 
+[cols="1,3"]
 |===
 | Configuration Parameter | Environment Variable
 
@@ -106,30 +108,32 @@ Configures logs for incoming HTTP requests. Primarily outputs in standard Apache
 
 Configuration options:
 
+[cols="1,3,1,1,1"]
 |===
-| Parameter | Type | Required | Default | Description
+| Parameter | Description | Type | Required | Default
 
 | Console
+| Whether to write access logs to standard out
 | bool
 | No
 | true
-| Whether to write access logs to standard out
 
 | Path
+| The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth
 | string
 | No
 | None
-| The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth
 
 | Format
+| The format to output access logs in. Applies to both standard out and file out. Possible values: common, combined
 | string
 | No
 | common
-| The format to output access logs in. Applies to both standard out and file out. Possible values: common, combined
 |===
 
 The following can be supplied as environment variables:
 
+[cols="1,3"]
 |===
 | Configuration Parameter | Environment Variable
 

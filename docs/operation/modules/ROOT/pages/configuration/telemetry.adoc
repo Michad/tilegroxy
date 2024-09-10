@@ -7,18 +7,20 @@ More details on Telemetry capabilities can be found in xref:./telemetry.adoc[Tel
 
 Configuration options:
 
+[cols="1,3,1,1,1"]
 |===
-| Parameter | Type | Required | Default | Description
+| Parameter | Description | Type | Required | Default
 
 | Enabled
+| Turns on/off telemetry
 | bool
 | No
 | false
-| Turns on/off telemetry
 |===
 
 The following can be supplied as environment variables:
 
+[cols="1,3"]
 |===
 | Configuration Parameter | Environment Variable
 

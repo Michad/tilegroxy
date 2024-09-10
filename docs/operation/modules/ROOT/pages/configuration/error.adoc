@@ -16,36 +16,38 @@ It is highly recommended you use the Image mode for production usage.  Returning
 
 Configuration options:
 
+[cols="1,3,1,1,1"]
 |===
-| Parameter | Type | Required | Default | Description
+| Parameter | Description | Type | Required | Default
 
 | Mode
+| The error mode as described above.  One of: text none image image+header
 | string
 | No
 | image
-| The error mode as described above.  One of: text none image image+header
 
 | Messages
+| Controls the error messages returned as described below
 | ErrorMessages
 | No
 | Various
-| Controls the error messages returned as described below
 
 | Images
+| Controls the images returned for errors as described below
 | ErrorImages
 | No
 | Various
-| Controls the images returned for errors as described below
 
 | AlwaysOk
+| If set we always return 200 regardless of what happens
 | bool
 | No
 | false
-| If set we always return 200 regardless of what happens
 |===
 
 The following can be supplied as environment variables:
 
+[cols="1,2"]
 |===
 | Configuration Parameter | Environment Variable
 
@@ -62,36 +64,38 @@ When using the image or image+header modes you can configure the images you want
 
 Configuration options:
 
+[cols="1,3,1,1,1"]
 |===
-| Parameter | Type | Required | Default | Description
+| Parameter | Description | Type | Required | Default
 
 | OutOfBounds
+| The image to display for requests outside the extent of the layer
 | string
 | No
 | embedded:transparent.png
-| The image to display for requests outside the extent of the layer
 
 | Authentication
+| The image to display for auth errors
 | string
 | No
 | embedded:unauthorized.png
-| The image to display for auth errors
 
 | Provider
+| The image to display for errors returned by the layer's provider
 | string
 | No
 | embedded:error.png
-| The image to display for errors returned by the layer's provider
 
 | Other
+| The image to display for all other errors
 | string
 | No
 | embedded:error.png
-| The image to display for all other errors
 |===
 
 The following can be supplied as environment variables:
 
+[cols="1,2"]
 |===
 | Configuration Parameter | Environment Variable
 

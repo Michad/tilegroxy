@@ -8,12 +8,13 @@ Name should be "static key"
 
 Configuration options:
 
+[cols="1,3,1,1,1"]
 |===
-| Parameter | Type | Required | Default | Description
+| Parameter  | Description | Type | Required | Default
 
 | key
+| The bearer token to require be supplied. If not specified `tilegroxy` will generate a random token at startup and output it in logs
 | string
 | No
 | Auto
-| The bearer token to require be supplied. If not specified `tilegroxy` will generate a random token at startup and output it in logs
 |===
