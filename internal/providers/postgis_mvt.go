@@ -16,7 +16,9 @@ package providers
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -39,6 +41,7 @@ type PostgisMvtConfig struct {
 	GID        string
 	Geometry   string
 	Attributes []string
+	Filter     string
 	SourceSRID uint
 }
 
@@ -122,6 +125,8 @@ func (t PostgisMvt) GenerateTile(ctx context.Context, _ layer.ProviderContext, r
 	rawEnv := bounds.ToEWKT()
 	bufEnv := bounds.BufferRelative(t.Buffer).ToEWKT()
 
+	params := []any{int(t.SourceSRID), rawEnv, t.Resolution, int(t.Buffer * float64(t.Resolution)), bufEnv, req.LayerName, t.GID}
+
 	query := `WITH mvtgeom AS(SELECT ST_AsMVTGeom(ST_Transform(ST_SetSRID("` + t.Geometry + `", $1::integer), 3857), $2::geometry, extent => $3, buffer => $4) AS geom`
 
 	query += `, "`
@@ -137,21 +142,32 @@ func (t PostgisMvt) GenerateTile(ctx context.Context, _ layer.ProviderContext, r
 	query += `FROM ` + t.Table
 	query += ` WHERE "` + t.Geometry + `" && ST_Transform($5::geometry, $1::integer) AND ST_Intersects("` + t.Geometry + `", ST_Transform($5::geometry, $1::integer))`
 
+	if t.Filter != "" {
+		preparedFilter, replacements, err := replacePlaceholdersInString(ctx, req, t.Filter, 8, false, t.SourceSRID)
+		if err != nil {
+			return nil, err
+		}
+
+		query += " AND " + preparedFilter
+
+		if len(replacements) > 0 {
+			params = slices.Concat(params, replacements)
+		}
+	}
+
 	query += ") SELECT ST_AsMVT(mvtgeom.*, $6, $3, 'geom', $7) FROM mvtgeom"
 
 	if slog.Default().Enabled(ctx, config.LevelTrace) {
 		queryDebug := query
-		queryDebug = strings.ReplaceAll(queryDebug, "$1", strconv.Itoa(int(t.SourceSRID)))
-		queryDebug = strings.ReplaceAll(queryDebug, "$2", "'"+rawEnv+"'")
-		queryDebug = strings.ReplaceAll(queryDebug, "$3", strconv.Itoa(int(t.Resolution)))
-		queryDebug = strings.ReplaceAll(queryDebug, "$4", strconv.Itoa(int(t.Buffer*float64(t.Resolution))))
-		queryDebug = strings.ReplaceAll(queryDebug, "$5", "'"+bufEnv+"'")
-		queryDebug = strings.ReplaceAll(queryDebug, "$6", "'"+req.LayerName+"'")
-		queryDebug = strings.ReplaceAll(queryDebug, "$7", "'"+t.GID+"'")
+		for i := range params {
+			realI := len(params) - i - 1
+			queryDebug = strings.ReplaceAll(queryDebug, "$"+strconv.Itoa(i+1), fmt.Sprint(params[realI]))
+		}
+
 		slog.Log(ctx, config.LevelTrace, queryDebug)
 	}
 
-	row := conn.QueryRow(ctx, query, int(t.SourceSRID), rawEnv, t.Resolution, int(t.Buffer*float64(t.Resolution)), bufEnv, req.LayerName, t.GID)
+	row := conn.QueryRow(ctx, query, params...)
 
 	var result []byte
 	err = row.Scan(&result)

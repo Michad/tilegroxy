@@ -41,36 +41,56 @@ var ctxRegex = regexp.MustCompile(`{ctx\.[^{}}]*}`)
 var lyrRegex = regexp.MustCompile(`{layer\.[^{}}]*}`)
 
 func replaceURLPlaceholders(ctx context.Context, tileRequest pkg.TileRequest, url string, invertY bool, srid uint) (string, error) {
-	b, err := tileRequest.GetBoundsProjection(srid)
+	url, replacements, err := replacePlaceholdersInString(ctx, tileRequest, url, 0, invertY, srid)
 
 	if err != nil {
 		return "", err
 	}
+
+	for i := range replacements {
+		//Make sure longer keys are processed first to avoid e.g. $1's replacement messing up $10
+		realI := len(replacements) - i - 1
+		url = strings.ReplaceAll(url, "$"+strconv.Itoa(realI), fmt.Sprint(replacements[realI]))
+	}
+
+	return url, nil
+}
+
+// Replaces arbitrary application specific placeholders in an arbitrary string with more generic prepared statement style placeholders and returns a mapping of those final placeholders to the real values.  e.g. "blah {env.foo} blah" -> "blah $1 blah" and {"$1": "bar"}
+// Values that are guaranteed to be safe (such as tile coordinates) are replaced directly in the string
+func replacePlaceholdersInString(ctx context.Context, tileRequest pkg.TileRequest, str string, startParamIndex int, invertY bool, srid uint) (string, []any, error) {
+	b, err := tileRequest.GetBoundsProjection(srid)
+
+	if err != nil {
+		return "", nil, err
+	}
+
+	replacements := make([]any, 0)
+	paramIndex := startParamIndex
 
 	y := tileRequest.Y
 	if invertY {
 		y = int(math.Exp2(float64(tileRequest.Z))) - y - 1
 	}
 
-	if strings.Contains(url, "{env.") {
-		envMatches := envRegex.FindAllString(url, -1)
+	if strings.Contains(str, "{env.") {
+		envMatches := envRegex.FindAllString(str, -1)
 
 		for _, envMatch := range envMatches {
 			envVar := envMatch[5 : len(envMatch)-1]
 
-			slog.Debug("Replacing env var " + envVar)
-
-			url = strings.Replace(url, envMatch, os.Getenv(envVar), 1)
+			param := "$" + strconv.Itoa(paramIndex)
+			replacements = append(replacements, os.Getenv(envVar))
+			str = strings.Replace(str, envMatch, param, 1)
+			paramIndex += 1
 		}
 	}
 
-	if strings.Contains(url, "{ctx.") {
-		ctxMatches := ctxRegex.FindAllString(url, -1)
+	if strings.Contains(str, "{ctx.") {
+		ctxMatches := ctxRegex.FindAllString(str, -1)
 
 		for _, ctxMatch := range ctxMatches {
 			ctxVar := ctxMatch[5 : len(ctxMatch)-1]
-
-			slog.Debug("Replacing context var " + ctxVar)
 
 			val := ctx.Value(ctxVar)
 			valVal := reflect.ValueOf(val)
@@ -79,35 +99,40 @@ func replaceURLPlaceholders(ctx context.Context, tileRequest pkg.TileRequest, ur
 				val = valVal.Elem().Interface()
 			}
 
-			url = strings.Replace(url, ctxMatch, fmt.Sprint(val), 1)
+			param := "$" + strconv.Itoa(paramIndex)
+			replacements = append(replacements, fmt.Sprint(val))
+			str = strings.Replace(str, ctxMatch, param, 1)
+			paramIndex += 1
 		}
 	}
 
-	if strings.Contains(url, "{layer.") {
-		layerMatches := lyrRegex.FindAllString(url, -1)
+	if strings.Contains(str, "{layer.") {
+		layerMatches := lyrRegex.FindAllString(str, -1)
+
+		lpm, _ := pkg.LayerPatternMatchesFromContext(ctx)
 
 		for _, layerMatch := range layerMatches {
 			layerVar := layerMatch[7 : len(layerMatch)-1]
 
-			slog.Debug("Replacing layer var " + layerVar)
-
-			lpm, _ := pkg.LayerPatternMatchesFromContext(ctx)
-			url = strings.Replace(url, layerMatch, (*lpm)[layerVar], 1)
+			param := "$" + strconv.Itoa(paramIndex)
+			replacements = append(replacements, (*lpm)[layerVar])
+			str = strings.Replace(str, layerMatch, param, 1)
+			paramIndex += 1
 		}
 	}
 
-	url = strings.ReplaceAll(url, "{Z}", strconv.Itoa(tileRequest.Z))
-	url = strings.ReplaceAll(url, "{z}", strconv.Itoa(tileRequest.Z))
-	url = strings.ReplaceAll(url, "{Y}", strconv.Itoa(y))
-	url = strings.ReplaceAll(url, "{y}", strconv.Itoa(y))
-	url = strings.ReplaceAll(url, "{X}", strconv.Itoa(tileRequest.X))
-	url = strings.ReplaceAll(url, "{x}", strconv.Itoa(tileRequest.X))
+	str = strings.ReplaceAll(str, "{Z}", strconv.Itoa(tileRequest.Z))
+	str = strings.ReplaceAll(str, "{z}", strconv.Itoa(tileRequest.Z))
+	str = strings.ReplaceAll(str, "{Y}", strconv.Itoa(y))
+	str = strings.ReplaceAll(str, "{y}", strconv.Itoa(y))
+	str = strings.ReplaceAll(str, "{X}", strconv.Itoa(tileRequest.X))
+	str = strings.ReplaceAll(str, "{x}", strconv.Itoa(tileRequest.X))
 
-	url = strings.ReplaceAll(url, "{xmin}", fmt.Sprintf("%f", b.West))
-	url = strings.ReplaceAll(url, "{xmax}", fmt.Sprintf("%f", b.East))
-	url = strings.ReplaceAll(url, "{ymin}", fmt.Sprintf("%f", b.South))
-	url = strings.ReplaceAll(url, "{ymax}", fmt.Sprintf("%f", b.North))
-	return url, nil
+	str = strings.ReplaceAll(str, "{xmin}", fmt.Sprintf("%f", b.West))
+	str = strings.ReplaceAll(str, "{xmax}", fmt.Sprintf("%f", b.East))
+	str = strings.ReplaceAll(str, "{ymin}", fmt.Sprintf("%f", b.South))
+	str = strings.ReplaceAll(str, "{ymax}", fmt.Sprintf("%f", b.North))
+	return str, replacements, nil
 }
 
 /**

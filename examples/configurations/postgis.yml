@@ -18,3 +18,20 @@ layers:
       attributes: 
         - "name"
       sourcesrid: 4269
+  - id: counties_by_year
+    pattern: counties_{year}
+    paramValidator:
+      "year": "^[0-9]{4}$"
+    provider:
+      name: postgismvt
+      host: localhost
+      user: postgres
+      password: password
+      database: postgres
+      table: public.histcounties
+      gid: id_num
+      geometry: geom
+      attributes: 
+        - "full_name"
+      filter: "to_date({layer.year}, 'yyyy') BETWEEN start_date AND end_date"
+      sourcesrid: 4326
