@@ -1,0 +1,20 @@
+server:
+  headers:
+    Access-Control-Allow-Origin: "*"
+Logging:
+    Main:
+        Level: trace
+layers:
+  - id: zcta5
+    provider:
+      name: postgismvt
+      host: localhost
+      user: postgres
+      password: password
+      database: postgres
+      table: tiger_data.county_all
+      gid: gid
+      geometry: the_geom
+      attributes: 
+        - "name"
+      sourcesrid: 4269
