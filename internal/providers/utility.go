@@ -48,7 +48,7 @@ func replaceURLPlaceholders(ctx context.Context, tileRequest pkg.TileRequest, ur
 	}
 
 	for i := range replacements {
-		//Make sure longer keys are processed first to avoid e.g. $1's replacement messing up $10
+		// Make sure longer keys are processed first to avoid e.g. $1's replacement messing up $10
 		realI := len(replacements) - i - 1
 		url = strings.ReplaceAll(url, "$"+strconv.Itoa(realI), fmt.Sprint(replacements[realI]))
 	}
