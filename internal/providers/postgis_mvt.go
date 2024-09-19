@@ -18,31 +18,33 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// column names come explicitly from config which are trusted operator inputs. So this isn't intended to be a primary protection against SQL injection attacks, just a helper against mistakes
+var columnRegex = regexp.MustCompile("^[a-zA-Z0-9_]+$")
+
 type PostgisMvtConfig struct {
-	Host       string
-	Port       uint16
-	User       string
-	Password   string
-	Database   string
+	Datastore  string
 	Table      string
-	Resolution uint
+	Extent     uint
 	Buffer     float64
 	GID        string
 	Geometry   string
 	Attributes []string
 	Filter     string
 	SourceSRID uint
+	Limit      uint
 }
 
 type PostgisMvt struct {
@@ -60,18 +62,14 @@ type PostgisMvtRegistration struct {
 func (s PostgisMvtRegistration) InitializeConfig() any {
 	cfg := PostgisMvtConfig{}
 
-	cfg.Host = "127.0.0.1"
-	cfg.Port = 5432
-	cfg.User = "postgresql"
-	cfg.Password = ""
-	cfg.Database = ""
 	cfg.Table = ""
-	cfg.Resolution = 4096
+	cfg.Extent = 4096
 	cfg.Buffer = 0.125
 	cfg.GID = "gid"
 	cfg.Geometry = "geom"
 	cfg.Attributes = []string{}
 	cfg.SourceSRID = pkg.SRIDWGS84
+	cfg.Limit = 0
 
 	return cfg
 }
@@ -80,26 +78,37 @@ func (s PostgisMvtRegistration) Name() string {
 	return "postgismvt"
 }
 
-func (s PostgisMvtRegistration) Initialize(cfgAny any, _ config.ClientConfig, _ config.ErrorMessages, _ *layer.LayerGroup) (layer.Provider, error) {
+func (s PostgisMvtRegistration) Initialize(cfgAny any, _ config.ClientConfig, errorMessages config.ErrorMessages, _ *layer.LayerGroup, datastores *datastore.DatastoreRegistry) (layer.Provider, error) {
 	cfg := cfgAny.(PostgisMvtConfig)
 
-	dbCfg, err := pgxpool.ParseConfig("")
-
-	if err != nil {
-		return nil, err
+	if cfg.GID != "" {
+		if !columnRegex.MatchString(cfg.GID) {
+			return nil, fmt.Errorf(errorMessages.InvalidParam, "postgismvt.gid", cfg.GID, columnRegex)
+		}
+	}
+	if cfg.Geometry != "" {
+		if !columnRegex.MatchString(cfg.Geometry) {
+			return nil, fmt.Errorf(errorMessages.InvalidParam, "postgismvt.geometry", cfg.Geometry, columnRegex)
+		}
+	}
+	if len(cfg.Attributes) > 0 {
+		for i, attribute := range cfg.Attributes {
+			if !columnRegex.MatchString(attribute) {
+				return nil, fmt.Errorf(errorMessages.InvalidParam, "postgismvt.attributes."+strconv.Itoa(i), attribute, columnRegex)
+			}
+		}
 	}
 
-	dbCfg.ConnConfig.Host = cfg.Host
-	dbCfg.ConnConfig.Port = cfg.Port
-	dbCfg.ConnConfig.Database = cfg.Database
-	dbCfg.ConnConfig.User = cfg.User
-	dbCfg.ConnConfig.Password = cfg.Password
-	dbCfg.ConnConfig.Host = cfg.Host
+	ds, ok := datastores.Get(cfg.Datastore)
 
-	dbpool, err := pgxpool.NewWithConfig(pkg.BackgroundContext(), dbCfg)
+	if !ok {
+		return nil, fmt.Errorf(errorMessages.InvalidParam, "postgismvt.datastore", cfg.Datastore)
+	}
 
-	if err != nil {
-		return nil, err
+	dbpool, ok := ds.Native().(*pgxpool.Pool)
+
+	if !ok {
+		return nil, fmt.Errorf(errorMessages.InvalidParam, "postgismvt.datastore", cfg.Datastore)
 	}
 
 	return &PostgisMvt{cfg, dbpool}, nil
@@ -125,25 +134,31 @@ func (t PostgisMvt) GenerateTile(ctx context.Context, _ layer.ProviderContext, r
 	rawEnv := bounds.ToEWKT()
 	bufEnv := bounds.BufferRelative(t.Buffer).ToEWKT()
 
-	params := []any{int(t.SourceSRID), rawEnv, t.Resolution, int(t.Buffer * float64(t.Resolution)), bufEnv, req.LayerName, t.GID}
+	params := []any{int(t.SourceSRID), rawEnv, t.Extent, int(t.Buffer * float64(t.Extent)), bufEnv, req.LayerName, t.GID}
 
-	query := `WITH mvtgeom AS(SELECT ST_AsMVTGeom(ST_Transform(ST_SetSRID("` + t.Geometry + `", $1::integer), 3857), $2::geometry, extent => $3, buffer => $4) AS geom`
+	query := `WITH mvtgeom AS(SELECT ST_AsMVTGeom(ST_Transform(ST_SetSRID("` + t.Geometry + `", $1::integer), 3857), $2::geometry, extent => $3, buffer => $4) AS "geom"`
 
 	query += `, "`
 	query += t.GID
 	query += `" `
 
-	for _, col := range t.Attributes {
-		query += `, "`
-		query += col
-		query += `" `
+	if len(t.Attributes) > 0 {
+		for _, col := range t.Attributes {
+			query += `, "`
+			query += col
+			query += `" `
+		}
+	} else {
+		query += ", * "
 	}
 
 	query += `FROM ` + t.Table
+
+	// Doing both an explicit BBox check and ST_Intersects isn't strictly necessary but I've seen cases where it helps the query planner
 	query += ` WHERE "` + t.Geometry + `" && ST_Transform($5::geometry, $1::integer) AND ST_Intersects("` + t.Geometry + `", ST_Transform($5::geometry, $1::integer))`
 
 	if t.Filter != "" {
-		preparedFilter, replacements, err := replacePlaceholdersInString(ctx, req, t.Filter, 8, false, t.SourceSRID)
+		preparedFilter, replacements, err := replacePlaceholdersInString(ctx, req, t.Filter, len(params)+1, false, t.SourceSRID)
 		if err != nil {
 			return nil, err
 		}
@@ -155,13 +170,17 @@ func (t PostgisMvt) GenerateTile(ctx context.Context, _ layer.ProviderContext, r
 		}
 	}
 
+	if t.Limit > 0 {
+		query += " LIMIT " + strconv.Itoa(int(t.Limit))
+	}
+
 	query += ") SELECT ST_AsMVT(mvtgeom.*, $6, $3, 'geom', $7) FROM mvtgeom"
 
 	if slog.Default().Enabled(ctx, config.LevelTrace) {
 		queryDebug := query
 		for i := range params {
 			realI := len(params) - i - 1
-			queryDebug = strings.ReplaceAll(queryDebug, "$"+strconv.Itoa(i+1), fmt.Sprint(params[realI]))
+			queryDebug = strings.ReplaceAll(queryDebug, "$"+strconv.Itoa(realI+1), "'"+fmt.Sprint(params[realI])+"'")
 		}
 
 		slog.Log(ctx, config.LevelTrace, queryDebug)

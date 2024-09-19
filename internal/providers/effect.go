@@ -26,6 +26,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/anthonynsimon/bild/adjust"
 	"github.com/anthonynsimon/bild/blur"
@@ -63,7 +64,7 @@ func (s EffectRegistration) Name() string {
 	return "effect"
 }
 
-func (s EffectRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layer.LayerGroup) (layer.Provider, error) {
+func (s EffectRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layer.LayerGroup, datastores *datastore.DatastoreRegistry) (layer.Provider, error) {
 	config := cfgAny.(EffectConfig)
 	if !slices.Contains(allEffectModes, config.Mode) {
 		return nil, fmt.Errorf(errorMessages.EnumError, "provider.effect.mode", config.Mode, allEffectModes)
@@ -73,7 +74,7 @@ func (s EffectRegistration) Initialize(cfgAny any, clientConfig config.ClientCon
 		return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "provider.effect.intensity", "provider.effect.mode="+config.Mode)
 	}
 
-	provider, err := layer.ConstructProvider(config.Provider, clientConfig, errorMessages, layerGroup)
+	provider, err := layer.ConstructProvider(config.Provider, clientConfig, errorMessages, layerGroup, datastores)
 	if err != nil {
 		return nil, err
 	}

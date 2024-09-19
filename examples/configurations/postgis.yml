@@ -4,14 +4,21 @@ server:
 Logging:
     Main:
         Level: trace
+cache:
+  name: memory
+datastores:
+  - name: postgresql
+    id: vector-database-0
+    host: localhost
+    user: postgres
+    password: password
+    database: postgres
+
 layers:
   - id: zcta5
     provider:
       name: postgismvt
-      host: localhost
-      user: postgres
-      password: password
-      database: postgres
+      datastore: vector-database-0
       table: tiger_data.county_all
       gid: gid
       geometry: the_geom
@@ -24,14 +31,13 @@ layers:
       "year": "^[0-9]{4}$"
     provider:
       name: postgismvt
-      host: localhost
-      user: postgres
-      password: password
-      database: postgres
+      datastore: vector-database-0
       table: public.histcounties
       gid: id_num
       geometry: geom
-      attributes: 
-        - "full_name"
+      extent: 256
+      buffer: 0.01
+      # attributes: 
+      #   - "full_name"
       filter: "to_date({layer.year}, 'yyyy') BETWEEN start_date AND end_date"
       sourcesrid: 4326

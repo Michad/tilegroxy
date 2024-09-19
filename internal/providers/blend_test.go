@@ -37,16 +37,16 @@ func makeBlendProviders() []map[string]interface{} {
 
 func Test_BlendValidate(t *testing.T) {
 	providers := makeBlendProviders()
-	b, err := BlendRegistration{}.Initialize(BlendConfig{Providers: providers}, testClientConfig, testErrMessages, nil)
+	b, err := BlendRegistration{}.Initialize(BlendConfig{Providers: providers}, testClientConfig, testErrMessages, nil, nil)
 	assert.Nil(t, b)
 	require.Error(t, err)
-	b, err = BlendRegistration{}.Initialize(BlendConfig{Mode: "fake", Providers: providers}, testClientConfig, testErrMessages, nil)
+	b, err = BlendRegistration{}.Initialize(BlendConfig{Mode: "fake", Providers: providers}, testClientConfig, testErrMessages, nil, nil)
 	assert.Nil(t, b)
 	require.Error(t, err)
-	b, err = BlendRegistration{}.Initialize(BlendConfig{Mode: "add", Opacity: 23, Providers: providers}, testClientConfig, testErrMessages, nil)
+	b, err = BlendRegistration{}.Initialize(BlendConfig{Mode: "add", Opacity: 23, Providers: providers}, testClientConfig, testErrMessages, nil, nil)
 	assert.Nil(t, b)
 	require.Error(t, err)
-	b, err = BlendRegistration{}.Initialize(BlendConfig{Mode: "opacity", Opacity: 23, Providers: []map[string]interface{}{}}, testClientConfig, testErrMessages, nil)
+	b, err = BlendRegistration{}.Initialize(BlendConfig{Mode: "opacity", Opacity: 23, Providers: []map[string]interface{}{}}, testClientConfig, testErrMessages, nil, nil)
 	assert.Nil(t, b)
 	require.Error(t, err)
 }
@@ -65,7 +65,7 @@ func Test_Blend_Layers(t *testing.T) {
 		Layer: &BlendLayerConfig{
 			Pattern: "something_{a}_{b}",
 			Values:  []map[string]string{v1, v2},
-		}}, testClientConfig, testErrMessages, nil)
+		}}, testClientConfig, testErrMessages, nil, nil)
 	assert.NotNil(t, b)
 	require.NoError(t, err)
 	bb := b.(*Blend)
@@ -76,7 +76,7 @@ func Test_Blend_Layers(t *testing.T) {
 }
 
 func Test_BlendExecute_Add(t *testing.T) {
-	b, err := BlendRegistration{}.Initialize(BlendConfig{Mode: "add", Providers: makeBlendProviders()}, testClientConfig, testErrMessages, nil)
+	b, err := BlendRegistration{}.Initialize(BlendConfig{Mode: "add", Providers: makeBlendProviders()}, testClientConfig, testErrMessages, nil, nil)
 	assert.NotNil(t, b)
 	require.NoError(t, err)
 
@@ -98,7 +98,7 @@ func Test_BlendExecute_Add(t *testing.T) {
 
 func Test_BlendExecute_All(t *testing.T) {
 	for _, mode := range allBlendModes {
-		b, err := BlendRegistration{}.Initialize(BlendConfig{Mode: mode, Providers: makeBlendProviders()}, testClientConfig, testErrMessages, nil)
+		b, err := BlendRegistration{}.Initialize(BlendConfig{Mode: mode, Providers: makeBlendProviders()}, testClientConfig, testErrMessages, nil, nil)
 		assert.NotNil(t, b)
 		require.NoError(t, err)
 		i, err := b.GenerateTile(pkg.BackgroundContext(), layer.ProviderContext{}, pkg.TileRequest{LayerName: "", Z: 4, X: 2, Y: 3})

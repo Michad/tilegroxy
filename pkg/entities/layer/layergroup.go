@@ -24,6 +24,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
+	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
@@ -37,13 +38,13 @@ type LayerGroup struct {
 	cacheMissCounter metric.Int64Counter
 }
 
-func ConstructLayerGroup(cfg config.Config, cache cache.Cache, secreter secret.Secreter) (*LayerGroup, error) {
+func ConstructLayerGroup(cfg config.Config, cache cache.Cache, secreter secret.Secreter, datastores *datastore.DatastoreRegistry) (*LayerGroup, error) {
 	var err, err1, err2 error
 	var layerGroup LayerGroup
 	layerObjects := make([]*Layer, len(cfg.Layers))
 
 	for i, l := range cfg.Layers {
-		layerObjects[i], err = ConstructLayer(l, cfg.Client, cfg.Error.Messages, &layerGroup, secreter)
+		layerObjects[i], err = ConstructLayer(l, cfg.Client, cfg.Error.Messages, &layerGroup, secreter, datastores)
 		if err != nil {
 			return nil, fmt.Errorf("error constructing layer %v: %w", i, err)
 		}

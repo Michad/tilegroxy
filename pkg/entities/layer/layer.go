@@ -27,6 +27,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
+	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
 	"github.com/Michad/tilegroxy/pkg/static"
 	"go.opentelemetry.io/otel"
@@ -177,7 +178,7 @@ type Layer struct {
 	tileSuccessCounter metric.Int64Counter
 }
 
-func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup, secreter secret.Secreter) (*Layer, error) {
+func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup, secreter secret.Secreter, datastores *datastore.DatastoreRegistry) (*Layer, error) {
 	var err error
 	if rawConfig.Client == nil {
 		rawConfig.Client = &defaultClientConfig
@@ -194,7 +195,7 @@ func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.Cli
 		}
 	}
 
-	provider, err := ConstructProvider(rawConfig.Provider, *rawConfig.Client, errorMessages, layerGroup)
+	provider, err := ConstructProvider(rawConfig.Provider, *rawConfig.Client, errorMessages, layerGroup, datastores)
 
 	if err != nil {
 		return nil, err

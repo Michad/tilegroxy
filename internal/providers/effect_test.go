@@ -33,12 +33,12 @@ func makeEffectProvider() map[string]interface{} {
 
 func Test_EffectValidate(t *testing.T) {
 	s := makeEffectProvider()
-	c, err := EffectRegistration{}.Initialize(EffectConfig{Provider: s}, testClientConfig, testErrMessages, nil)
+	c, err := EffectRegistration{}.Initialize(EffectConfig{Provider: s}, testClientConfig, testErrMessages, nil, nil)
 
 	assert.Nil(t, c)
 	require.Error(t, err)
 
-	c, err = EffectRegistration{}.Initialize(EffectConfig{Mode: "emboss", Intensity: 24, Provider: s}, testClientConfig, testErrMessages, nil)
+	c, err = EffectRegistration{}.Initialize(EffectConfig{Mode: "emboss", Intensity: 24, Provider: s}, testClientConfig, testErrMessages, nil, nil)
 
 	assert.Nil(t, c)
 	require.Error(t, err)
@@ -46,7 +46,7 @@ func Test_EffectValidate(t *testing.T) {
 
 func Test_EffectExecuteGreyscale(t *testing.T) {
 	s := makeEffectProvider()
-	c, err := EffectRegistration{}.Initialize(EffectConfig{Mode: "grayscale", Provider: s}, testClientConfig, testErrMessages, nil)
+	c, err := EffectRegistration{}.Initialize(EffectConfig{Mode: "grayscale", Provider: s}, testClientConfig, testErrMessages, nil, nil)
 
 	assert.NotNil(t, c)
 	require.NoError(t, err)
@@ -66,7 +66,7 @@ func Test_EffectExecuteGreyscale(t *testing.T) {
 func Test_EffectExecuteAll(t *testing.T) {
 	s := makeEffectProvider()
 	for _, mode := range allEffectModes {
-		c, err := EffectRegistration{}.Initialize(EffectConfig{Mode: mode, Provider: s}, testClientConfig, testErrMessages, nil)
+		c, err := EffectRegistration{}.Initialize(EffectConfig{Mode: mode, Provider: s}, testClientConfig, testErrMessages, nil, nil)
 
 		assert.NotNil(t, c)
 		require.NoError(t, err)

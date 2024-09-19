@@ -122,6 +122,7 @@ type ErrorMessages struct {
 	EnumError               string
 	ScriptError             string
 	Timeout                 string
+	ParamRegex              string
 }
 
 // Selects what image to return when various errors occur. These should either be an embedded:XXX value reflecting an image in `internal/layers/images` or the path to an image in the runtime filesystem
@@ -196,6 +197,7 @@ type Config struct {
 	Error          ErrorConfig
 	Telemetry      TelemetryConfig
 	Secret         map[string]interface{}
+	Datastores     []map[string]interface{}
 	Authentication map[string]interface{}
 	Cache          map[string]interface{}
 	Layers         []LayerConfig
@@ -261,6 +263,7 @@ func DefaultConfig() Config {
 				OneOfRequired:           "You must specify one of: %v",
 				Timeout:                 "Timeout error",
 				ParamRequired:           "Parameter %v is required",
+				ParamRegex:              "Invalid value supplied for parameter %v: %v. Value must conform to regex: %v ",
 			},
 			Images: ErrorImages{
 				OutOfBounds:    images.KeyImageTransparent,
@@ -273,6 +276,7 @@ func DefaultConfig() Config {
 		Secret: map[string]interface{}{
 			"name": "none",
 		},
+		Datastores: []map[string]interface{}{},
 		Authentication: map[string]interface{}{
 			"name": "none",
 		},

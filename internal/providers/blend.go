@@ -33,6 +33,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 
 	"github.com/anthonynsimon/bild/blend"
@@ -81,7 +82,7 @@ func (s BlendRegistration) Name() string {
 	return "blend"
 }
 
-func (s BlendRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layer.LayerGroup) (layer.Provider, error) {
+func (s BlendRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layer.LayerGroup, datastores *datastore.DatastoreRegistry) (layer.Provider, error) {
 	cfg := cfgAny.(BlendConfig)
 	var err error
 	if !slices.Contains(allBlendModes, cfg.Mode) {
@@ -102,7 +103,7 @@ func (s BlendRegistration) Initialize(cfgAny any, clientConfig config.ClientConf
 				layerName = strings.ReplaceAll(layerName, "{"+k+"}", v)
 			}
 
-			ref, err = layer.ConstructProvider(map[string]interface{}{"name": "ref", "layer": layerName}, clientConfig, errorMessages, layerGroup)
+			ref, err = layer.ConstructProvider(map[string]interface{}{"name": "ref", "layer": layerName}, clientConfig, errorMessages, layerGroup, datastores)
 			if err != nil {
 				return nil, err
 			}
@@ -113,7 +114,7 @@ func (s BlendRegistration) Initialize(cfgAny any, clientConfig config.ClientConf
 		errorSlice := make([]error, 0)
 
 		for _, p := range cfg.Providers {
-			provider, err := layer.ConstructProvider(p, clientConfig, errorMessages, layerGroup)
+			provider, err := layer.ConstructProvider(p, clientConfig, errorMessages, layerGroup, datastores)
 			providers = append(providers, provider) //nolint:makezero //Linter is easily confused if initialized before the make
 			errorSlice = append(errorSlice, err)
 		}

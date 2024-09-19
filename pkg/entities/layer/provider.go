@@ -21,6 +21,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -40,7 +41,7 @@ type ProviderContext struct {
 
 type ProviderRegistration interface {
 	Name() string
-	Initialize(config any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup) (Provider, error)
+	Initialize(config any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup, datastores *datastore.DatastoreRegistry) (Provider, error)
 	InitializeConfig() any
 }
 
@@ -63,7 +64,7 @@ func RegisteredProviderNames() []string {
 	return names
 }
 
-func ConstructProvider(rawConfig map[string]interface{}, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup) (Provider, error) {
+func ConstructProvider(rawConfig map[string]interface{}, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup, datastores *datastore.DatastoreRegistry) (Provider, error) {
 	name, ok := rawConfig["name"].(string)
 
 	if ok {
@@ -74,7 +75,7 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig config.Cli
 			if err != nil {
 				return nil, err
 			}
-			provider, err := reg.Initialize(cfg, clientConfig, errorMessages, layerGroup)
+			provider, err := reg.Initialize(cfg, clientConfig, errorMessages, layerGroup, datastores)
 
 			if err != nil {
 				return nil, err
