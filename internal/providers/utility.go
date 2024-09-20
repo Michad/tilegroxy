@@ -82,7 +82,7 @@ func replacePlaceholdersInString(ctx context.Context, tileRequest pkg.TileReques
 			param := "$" + strconv.Itoa(paramIndex)
 			replacements = append(replacements, os.Getenv(envVar))
 			str = strings.Replace(str, envMatch, param, 1)
-			paramIndex += 1
+			paramIndex++
 		}
 	}
 
@@ -102,7 +102,7 @@ func replacePlaceholdersInString(ctx context.Context, tileRequest pkg.TileReques
 			param := "$" + strconv.Itoa(paramIndex)
 			replacements = append(replacements, fmt.Sprint(val))
 			str = strings.Replace(str, ctxMatch, param, 1)
-			paramIndex += 1
+			paramIndex++
 		}
 	}
 
@@ -117,7 +117,7 @@ func replacePlaceholdersInString(ctx context.Context, tileRequest pkg.TileReques
 			param := "$" + strconv.Itoa(paramIndex)
 			replacements = append(replacements, (*lpm)[layerVar])
 			str = strings.Replace(str, layerMatch, param, 1)
-			paramIndex += 1
+			paramIndex++
 		}
 	}
 

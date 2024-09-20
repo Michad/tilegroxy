@@ -114,7 +114,7 @@ func (s PostgisMvtRegistration) Initialize(cfgAny any, _ config.ClientConfig, er
 	return &PostgisMvt{cfg, dbpool}, nil
 }
 
-func (t PostgisMvt) PreAuth(_ context.Context, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
+func (t PostgisMvt) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.ProviderContext, error) {
 	return layer.ProviderContext{AuthBypass: true}, nil
 }
 

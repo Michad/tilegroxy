@@ -20,6 +20,7 @@ linters-settings:
       - '60'
       - '360'
       - '255'
+      - '2.0'
   revive:
     rules:
       - name: call-to-gc
