@@ -15,11 +15,17 @@
 package datastores
 
 import (
+	"context"
+
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type PostgresqlWrapperConfig struct {
@@ -90,4 +96,180 @@ func (p PostgresqlWrapper) GetID() string {
 
 func (p PostgresqlWrapper) Native() any {
 	return p.pool
+}
+
+type key string
+
+const (
+	spanQueryKey    key = "PostgresqlQuerySpanKey"
+	spanBatchKey    key = "PostgresqlBatchSpanKey"
+	spanCopyFromKey key = "PostgresqlCopyFromSpanKey"
+	spanPrepareKey  key = "PostgresqlPrepareSpanKey"
+	spanConnectKey  key = "PostgresqlConnectSpanKey"
+	spanAcquireKey  key = "PostgresqlAcquireSpanKey"
+)
+
+type Tracer struct {
+}
+
+func (t Tracer) TraceQueryStart(ctx context.Context, conn *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
+	ctx, span := pkg.MakeChildSpan(ctx, nil, "Postgresql", "Query", "Query")
+	ctx = context.WithValue(ctx, spanQueryKey, span)
+
+	if span.IsRecording() {
+		span.SetAttributes(
+			attribute.String("query", data.SQL),
+		)
+	}
+
+	return ctx
+}
+
+func (t Tracer) TraceQueryEnd(ctx context.Context, conn *pgx.Conn, data pgx.TraceQueryEndData) {
+	span, ok := ctx.Value(spanQueryKey).(trace.Span)
+
+	if ok && span != nil && span.IsRecording() {
+		if data.Err != nil {
+			span.RecordError(data.Err)
+			span.SetStatus(codes.Error, data.CommandTag.String())
+		}
+
+		span.End()
+	}
+}
+
+func (t Tracer) TraceBatchStart(ctx context.Context, conn *pgx.Conn, data pgx.TraceBatchStartData) context.Context {
+	ctx, span := pkg.MakeChildSpan(ctx, nil, "Postgresql", "Batch", "Batch")
+	ctx = context.WithValue(ctx, spanBatchKey, span)
+
+	if span.IsRecording() {
+		if data.Batch != nil {
+			span.SetAttributes(
+				attribute.Int("length", data.Batch.Len()),
+			)
+		}
+	}
+
+	return ctx
+}
+
+func (t Tracer) TraceBatchQuery(ctx context.Context, conn *pgx.Conn, data pgx.TraceBatchQueryData) {
+	span, ok := ctx.Value(spanBatchKey).(trace.Span)
+
+	if ok && span != nil && span.IsRecording() {
+		span.AddEvent("BatchQuery", trace.WithAttributes(
+			attribute.String("query", data.SQL),
+		))
+	}
+}
+
+func (t Tracer) TraceBatchEnd(ctx context.Context, conn *pgx.Conn, data pgx.TraceBatchEndData) {
+	span, ok := ctx.Value(spanBatchKey).(trace.Span)
+
+	if ok && span != nil && span.IsRecording() {
+		if data.Err != nil {
+			span.RecordError(data.Err)
+			span.SetStatus(codes.Error, "")
+		}
+
+		span.End()
+	}
+}
+
+func (t Tracer) TraceCopyFromStart(ctx context.Context, conn *pgx.Conn, data pgx.TraceCopyFromStartData) context.Context {
+	ctx, span := pkg.MakeChildSpan(ctx, nil, "Postgresql", "CopyFrom", "CopyFrom")
+	ctx = context.WithValue(ctx, spanCopyFromKey, span)
+
+	if span.IsRecording() {
+		span.SetAttributes(
+			attribute.String("table", data.TableName.Sanitize()),
+		)
+	}
+
+	return ctx
+}
+
+func (t Tracer) TraceCopyFromEnd(ctx context.Context, conn *pgx.Conn, data pgx.TraceCopyFromEndData) {
+	span, ok := ctx.Value(spanCopyFromKey).(trace.Span)
+
+	if ok && span != nil && span.IsRecording() {
+		if data.Err != nil {
+			span.RecordError(data.Err)
+			span.SetStatus(codes.Error, data.CommandTag.String())
+		}
+
+		span.End()
+	}
+}
+
+func (t Tracer) TracePrepareStart(ctx context.Context, conn *pgx.Conn, data pgx.TracePrepareStartData) context.Context {
+	ctx, span := pkg.MakeChildSpan(ctx, nil, "Postgresql", "Prepare", "Prepare")
+	ctx = context.WithValue(ctx, spanPrepareKey, span)
+
+	if span.IsRecording() {
+		span.SetAttributes(
+			attribute.String("query", data.SQL),
+		)
+	}
+
+	return ctx
+}
+
+func (t Tracer) TracePrepareEnd(ctx context.Context, conn *pgx.Conn, data pgx.TracePrepareEndData) {
+	span, ok := ctx.Value(spanPrepareKey).(trace.Span)
+
+	if ok && span != nil && span.IsRecording() {
+		if data.Err != nil {
+			span.RecordError(data.Err)
+			span.SetStatus(codes.Error, "")
+		}
+
+		span.End()
+	}
+}
+
+func (t Tracer) TraceConnectStart(ctx context.Context, data pgx.TraceConnectStartData) context.Context {
+	ctx, span := pkg.MakeChildSpan(ctx, nil, "Postgresql", "Connect", "Connect")
+	ctx = context.WithValue(ctx, spanConnectKey, span)
+
+	if span.IsRecording() {
+		span.SetAttributes(
+			attribute.String("host", data.ConnConfig.Host),
+		)
+	}
+
+	return ctx
+}
+
+func (t Tracer) TraceConnectEnd(ctx context.Context, data pgx.TraceConnectEndData) {
+	span, ok := ctx.Value(spanConnectKey).(trace.Span)
+
+	if ok && span != nil && span.IsRecording() {
+		if data.Err != nil {
+			span.RecordError(data.Err)
+			span.SetStatus(codes.Error, "")
+		}
+
+		span.End()
+	}
+}
+
+func (t Tracer) TraceAcquireStart(ctx context.Context, pool *pgxpool.Pool, data pgxpool.TraceAcquireStartData) context.Context {
+	ctx, span := pkg.MakeChildSpan(ctx, nil, "Postgresql", "Acquire", "Acquire")
+	ctx = context.WithValue(ctx, spanAcquireKey, span)
+
+	return ctx
+}
+
+func (t Tracer) TraceAcquireEnd(ctx context.Context, pool *pgxpool.Pool, data pgxpool.TraceAcquireEndData) {
+	span, ok := ctx.Value(spanAcquireKey).(trace.Span)
+
+	if ok && span != nil && span.IsRecording() {
+		if data.Err != nil {
+			span.RecordError(data.Err)
+			span.SetStatus(codes.Error, "")
+		}
+
+		span.End()
+	}
 }

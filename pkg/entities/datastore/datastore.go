@@ -23,8 +23,11 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+// Wraps around an arbitrary struct for communicating with an arbitrary database. The goal for this datastore mechanism isn't to provide a uniform interface for querying databases but instead to provide a consistent way to declare database connection (pools) that can be reused between providers
 type DatastoreWrapper interface {
+	// Returns the ID of the datastore as defined in configuration.  Should return cfg.ID
 	GetID() string
+	// Returns the underlying library for connecting to the datastore.  e.g. for postgresql it returns *pgx.Pool. Calling providers should ensure the type matches what they expect and return a clear error if not (in case the operator mixes things up in config)
 	Native() any
 }
 

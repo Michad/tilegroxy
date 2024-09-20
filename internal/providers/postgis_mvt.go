@@ -148,8 +148,6 @@ func (t PostgisMvt) GenerateTile(ctx context.Context, _ layer.ProviderContext, r
 			query += col
 			query += `" `
 		}
-	} else {
-		query += ", * "
 	}
 
 	query += `FROM ` + t.Table
