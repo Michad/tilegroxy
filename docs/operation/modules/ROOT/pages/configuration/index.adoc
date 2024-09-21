@@ -11,14 +11,16 @@ Some parameters can be specified by environment variables which must be upper ca
 The following is the top-level configuration structure. All top-level keys are optional besides layers:
 
 ____
-<<server,server>>:  ... +
-<<client,client>>:  ... +
-<<log,logging>>:  ... +
-<<telemetry,telemetry>>: ... +
-<<error,error>>:  ... +
-<<secret,secret>>: ... +
-<<authentication,authentication>>:  ... +
-<<cache,cache>>:  ... +
-<<layer,layers>>:  +
-   - ...
+xref:configuration/server.adoc[server]:  ... +
+xref:configuration/client.adoc[client]:  ... +
+xref:configuration/log.adoc[logging]:  ... +
+xref:configuration/telemetry.adoc[telemetry]: ... +
+xref:configuration/error.adoc[error]:  ... +
+xref:configuration/secret/index.adoc[secret]: ... +
+xref:configuration/authentication/index.adoc[authentication]:  ... +
+xref:configuration/cache/index.adoc[cache]:  ... +
+xref:configuration/datastores/index.adoc[datastores]: +
+   - ... +
+xref:configuration/layer.adoc[layers]:  +
+   - ... +
 ____
