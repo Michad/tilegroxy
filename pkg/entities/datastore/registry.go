@@ -30,15 +30,18 @@ func (reg DatastoreRegistry) Get(id string) (DatastoreWrapper, bool) {
 }
 
 func ConstructDatastoreRegistry(cfg []map[string]interface{}, secreter secret.Secreter, errorMessages config.ErrorMessages) (*DatastoreRegistry, error) {
+	var err error
 	reg := DatastoreRegistry{}
 	reg.datastores = make(map[string]DatastoreWrapper)
 
 	for _, curCfg := range cfg {
 		curCfg = pkg.ReplaceEnv(curCfg)
-		curCfg, err := pkg.ReplaceConfigValues(curCfg, "secret", secreter.Lookup)
+		if secreter != nil {
+			curCfg, err = pkg.ReplaceConfigValues(curCfg, "secret", secreter.Lookup)
 
-		if err != nil {
-			return nil, err
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		wrapper, err := ConstructDatastoreWrapper(curCfg, secreter, errorMessages)

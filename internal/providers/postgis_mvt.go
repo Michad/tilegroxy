@@ -99,13 +99,12 @@ func (s PostgisMvtRegistration) Initialize(cfgAny any, _ config.ClientConfig, er
 		}
 	}
 
+	var dbpool *pgxpool.Pool
+
 	ds, ok := datastores.Get(cfg.Datastore)
-
-	if !ok {
-		return nil, fmt.Errorf(errorMessages.InvalidParam, "postgismvt.datastore", cfg.Datastore)
+	if ok {
+		dbpool, ok = ds.Native().(*pgxpool.Pool)
 	}
-
-	dbpool, ok := ds.Native().(*pgxpool.Pool)
 
 	if !ok {
 		return nil, fmt.Errorf(errorMessages.InvalidParam, "postgismvt.datastore", cfg.Datastore)

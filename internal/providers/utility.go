@@ -115,7 +115,13 @@ func replacePlaceholdersInString(ctx context.Context, tileRequest pkg.TileReques
 			layerVar := layerMatch[7 : len(layerMatch)-1]
 
 			param := "$" + strconv.Itoa(paramIndex)
-			replacements = append(replacements, (*lpm)[layerVar])
+			var val any
+
+			if lpm != nil {
+				val = (*lpm)[layerVar]
+			}
+
+			replacements = append(replacements, val)
 			str = strings.Replace(str, layerMatch, param, 1)
 			paramIndex++
 		}
