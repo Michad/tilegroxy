@@ -133,15 +133,15 @@ func (t Tracer) traceStart(ctx context.Context, myKey key, query, host string) c
 	ctx, span := pkg.MakeChildSpan(ctx, nil, "Postgresql", string(myKey), string(myKey))
 	ctx = context.WithValue(ctx, myKey, span)
 
-		att := make([]attribute.KeyValue, 0)
-		if query != "" {
-			att = append(att, attribute.String("query", query))
-		}
-		if host != "" {
-			att = append(att, attribute.String("host", host))
-		}
+	att := make([]attribute.KeyValue, 0)
+	if query != "" {
+		att = append(att, attribute.String("query", query))
+	}
+	if host != "" {
+		att = append(att, attribute.String("host", host))
+	}
 
-		span.SetAttributes(att...)
+	span.SetAttributes(att...)
 
 	return ctx
 }
