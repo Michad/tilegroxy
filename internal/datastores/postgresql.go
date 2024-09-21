@@ -16,6 +16,7 @@ package datastores
 
 import (
 	"context"
+	"time"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -29,12 +30,16 @@ import (
 )
 
 type PostgresqlWrapperConfig struct {
-	ID       string
-	Host     string
-	Port     uint16
-	User     string
-	Password string
-	Database string
+	ID             string
+	Host           string
+	Port           uint16
+	User           string
+	Password       string
+	Database       string
+	MinConnections int32
+	MaxConnections int32
+	IdleTimeout    int32 // In seconds
+	Lifetime       int32 // In seconds
 }
 
 type PostgresqlWrapper struct {
@@ -54,9 +59,13 @@ func (s PostgresqlWrapperRegistration) InitializeConfig() any {
 
 	cfg.Host = "127.0.0.1"
 	cfg.Port = 5432
-	cfg.User = "postgresql"
+	cfg.User = "postgres"
 	cfg.Password = ""
 	cfg.Database = ""
+	cfg.MinConnections = 10
+	cfg.MaxConnections = 30
+	cfg.IdleTimeout = 60 * 10
+	cfg.Lifetime = 60 * 60 * 24
 
 	return cfg
 }
@@ -80,6 +89,12 @@ func (s PostgresqlWrapperRegistration) Initialize(cfgAny any, _ secret.Secreter,
 	dbCfg.ConnConfig.User = cfg.User
 	dbCfg.ConnConfig.Password = cfg.Password
 	dbCfg.ConnConfig.Host = cfg.Host
+	dbCfg.ConnConfig.Tracer = Tracer{}
+	dbCfg.MinConns = cfg.MinConnections
+	dbCfg.MaxConns = cfg.MaxConnections
+	dbCfg.MaxConnIdleTime = time.Duration(cfg.IdleTimeout) * time.Second
+	dbCfg.MaxConnLifetime = time.Duration(cfg.Lifetime) * time.Second
+	dbCfg.MaxConnLifetimeJitter = time.Duration(cfg.Lifetime) / 10 * time.Second
 
 	dbpool, err := pgxpool.NewWithConfig(pkg.BackgroundContext(), dbCfg)
 
