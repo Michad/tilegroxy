@@ -54,6 +54,7 @@ func init() {
 type PostgresqlWrapperRegistration struct {
 }
 
+//nolint:mnd
 func (s PostgresqlWrapperRegistration) InitializeConfig() any {
 	cfg := PostgresqlWrapperConfig{}
 
@@ -74,6 +75,7 @@ func (s PostgresqlWrapperRegistration) Name() string {
 	return "postgresql"
 }
 
+//nolint:mnd
 func (s PostgresqlWrapperRegistration) Initialize(cfgAny any, _ secret.Secreter, _ config.ErrorMessages) (datastore.DatastoreWrapper, error) {
 	cfg := cfgAny.(PostgresqlWrapperConfig)
 
@@ -127,7 +129,7 @@ const (
 type Tracer struct {
 }
 
-func (t Tracer) TraceQueryStart(ctx context.Context, conn *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
+func (t Tracer) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
 	ctx, span := pkg.MakeChildSpan(ctx, nil, "Postgresql", "Query", "Query")
 	ctx = context.WithValue(ctx, spanQueryKey, span)
 
@@ -140,7 +142,7 @@ func (t Tracer) TraceQueryStart(ctx context.Context, conn *pgx.Conn, data pgx.Tr
 	return ctx
 }
 
-func (t Tracer) TraceQueryEnd(ctx context.Context, conn *pgx.Conn, data pgx.TraceQueryEndData) {
+func (t Tracer) TraceQueryEnd(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryEndData) {
 	span, ok := ctx.Value(spanQueryKey).(trace.Span)
 
 	if ok && span != nil && span.IsRecording() {
@@ -153,7 +155,7 @@ func (t Tracer) TraceQueryEnd(ctx context.Context, conn *pgx.Conn, data pgx.Trac
 	}
 }
 
-func (t Tracer) TraceBatchStart(ctx context.Context, conn *pgx.Conn, data pgx.TraceBatchStartData) context.Context {
+func (t Tracer) TraceBatchStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceBatchStartData) context.Context {
 	ctx, span := pkg.MakeChildSpan(ctx, nil, "Postgresql", "Batch", "Batch")
 	ctx = context.WithValue(ctx, spanBatchKey, span)
 
@@ -168,7 +170,7 @@ func (t Tracer) TraceBatchStart(ctx context.Context, conn *pgx.Conn, data pgx.Tr
 	return ctx
 }
 
-func (t Tracer) TraceBatchQuery(ctx context.Context, conn *pgx.Conn, data pgx.TraceBatchQueryData) {
+func (t Tracer) TraceBatchQuery(ctx context.Context, _ *pgx.Conn, data pgx.TraceBatchQueryData) {
 	span, ok := ctx.Value(spanBatchKey).(trace.Span)
 
 	if ok && span != nil && span.IsRecording() {
@@ -178,7 +180,7 @@ func (t Tracer) TraceBatchQuery(ctx context.Context, conn *pgx.Conn, data pgx.Tr
 	}
 }
 
-func (t Tracer) TraceBatchEnd(ctx context.Context, conn *pgx.Conn, data pgx.TraceBatchEndData) {
+func (t Tracer) TraceBatchEnd(ctx context.Context, _ *pgx.Conn, data pgx.TraceBatchEndData) {
 	span, ok := ctx.Value(spanBatchKey).(trace.Span)
 
 	if ok && span != nil && span.IsRecording() {
@@ -191,7 +193,7 @@ func (t Tracer) TraceBatchEnd(ctx context.Context, conn *pgx.Conn, data pgx.Trac
 	}
 }
 
-func (t Tracer) TraceCopyFromStart(ctx context.Context, conn *pgx.Conn, data pgx.TraceCopyFromStartData) context.Context {
+func (t Tracer) TraceCopyFromStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceCopyFromStartData) context.Context {
 	ctx, span := pkg.MakeChildSpan(ctx, nil, "Postgresql", "CopyFrom", "CopyFrom")
 	ctx = context.WithValue(ctx, spanCopyFromKey, span)
 
@@ -204,7 +206,7 @@ func (t Tracer) TraceCopyFromStart(ctx context.Context, conn *pgx.Conn, data pgx
 	return ctx
 }
 
-func (t Tracer) TraceCopyFromEnd(ctx context.Context, conn *pgx.Conn, data pgx.TraceCopyFromEndData) {
+func (t Tracer) TraceCopyFromEnd(ctx context.Context, _ *pgx.Conn, data pgx.TraceCopyFromEndData) {
 	span, ok := ctx.Value(spanCopyFromKey).(trace.Span)
 
 	if ok && span != nil && span.IsRecording() {
@@ -217,7 +219,7 @@ func (t Tracer) TraceCopyFromEnd(ctx context.Context, conn *pgx.Conn, data pgx.T
 	}
 }
 
-func (t Tracer) TracePrepareStart(ctx context.Context, conn *pgx.Conn, data pgx.TracePrepareStartData) context.Context {
+func (t Tracer) TracePrepareStart(ctx context.Context, _ *pgx.Conn, data pgx.TracePrepareStartData) context.Context {
 	ctx, span := pkg.MakeChildSpan(ctx, nil, "Postgresql", "Prepare", "Prepare")
 	ctx = context.WithValue(ctx, spanPrepareKey, span)
 
@@ -230,7 +232,7 @@ func (t Tracer) TracePrepareStart(ctx context.Context, conn *pgx.Conn, data pgx.
 	return ctx
 }
 
-func (t Tracer) TracePrepareEnd(ctx context.Context, conn *pgx.Conn, data pgx.TracePrepareEndData) {
+func (t Tracer) TracePrepareEnd(ctx context.Context, _ *pgx.Conn, data pgx.TracePrepareEndData) {
 	span, ok := ctx.Value(spanPrepareKey).(trace.Span)
 
 	if ok && span != nil && span.IsRecording() {
@@ -269,14 +271,14 @@ func (t Tracer) TraceConnectEnd(ctx context.Context, data pgx.TraceConnectEndDat
 	}
 }
 
-func (t Tracer) TraceAcquireStart(ctx context.Context, pool *pgxpool.Pool, data pgxpool.TraceAcquireStartData) context.Context {
+func (t Tracer) TraceAcquireStart(ctx context.Context, _ *pgxpool.Pool, _ pgxpool.TraceAcquireStartData) context.Context {
 	ctx, span := pkg.MakeChildSpan(ctx, nil, "Postgresql", "Acquire", "Acquire")
 	ctx = context.WithValue(ctx, spanAcquireKey, span)
 
 	return ctx
 }
 
-func (t Tracer) TraceAcquireEnd(ctx context.Context, pool *pgxpool.Pool, data pgxpool.TraceAcquireEndData) {
+func (t Tracer) TraceAcquireEnd(ctx context.Context, _ *pgxpool.Pool, data pgxpool.TraceAcquireEndData) {
 	span, ok := ctx.Value(spanAcquireKey).(trace.Span)
 
 	if ok && span != nil && span.IsRecording() {
