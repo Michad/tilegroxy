@@ -22,6 +22,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
@@ -56,7 +57,7 @@ func (s URLTemplateRegistration) Name() string {
 	return "url template"
 }
 
-func (s URLTemplateRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, _ *layer.LayerGroup) (layer.Provider, error) {
+func (s URLTemplateRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, _ *layer.LayerGroup, _ *datastore.DatastoreRegistry) (layer.Provider, error) {
 	cfg := cfgAny.(URLTemplateConfig)
 	if cfg.Template == "" {
 		return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.url template.url", "")

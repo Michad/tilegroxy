@@ -26,12 +26,12 @@ import (
 )
 
 func Test_CustomValidate(t *testing.T) {
-	c, err := CustomRegistration{}.Initialize(CustomConfig{}, testClientConfig, testErrMessages, nil)
+	c, err := CustomRegistration{}.Initialize(CustomConfig{}, testClientConfig, testErrMessages, nil, nil)
 
 	assert.Nil(t, c)
 	require.Error(t, err)
 
-	c, err = CustomRegistration{}.Initialize(CustomConfig{Script: "package custom"}, testClientConfig, testErrMessages, nil)
+	c, err = CustomRegistration{}.Initialize(CustomConfig{Script: "package custom"}, testClientConfig, testErrMessages, nil, nil)
 
 	assert.Nil(t, c)
 	require.Error(t, err)
@@ -56,7 +56,7 @@ func preAuth(ctx tilegroxy.Context, providerContext tilegroxy.ProviderContext, p
 func generateTile(ctx tilegroxy.Context, providerContext tilegroxy.ProviderContext, tileRequest tilegroxy.TileRequest, params map[string]interface{}, clientConfig tilegroxy.ClientConfig, errorMessages tilegroxy.ErrorMessages ) (*tilegroxy.Image, error ) {
 	return &tilegroxy.Image{Content:[]byte{0x01,0x02}}, nil
 }
-	`}, config.ClientConfig{}, testErrMessages, nil)
+	`}, config.ClientConfig{}, testErrMessages, nil, nil)
 
 	if err != nil {
 		fmt.Println(err)

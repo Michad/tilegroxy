@@ -21,6 +21,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
+	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
 )
@@ -28,6 +29,11 @@ import (
 func configToEntities(cfg config.Config) (*layer.LayerGroup, authentication.Authentication, error) {
 	cfg.Secret = pkg.ReplaceEnv(cfg.Secret)
 	secreter, err := secret.ConstructSecreter(cfg.Secret, cfg.Error.Messages)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error constructing secret: %w", err)
+	}
+
+	datastores, err := datastore.ConstructDatastoreRegistry(cfg.Datastores, secreter, cfg.Error.Messages)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error constructing secret: %w", err)
 	}
@@ -54,7 +60,7 @@ func configToEntities(cfg config.Config) (*layer.LayerGroup, authentication.Auth
 		return nil, nil, fmt.Errorf("error constructing auth: %w", err)
 	}
 
-	layerGroup, err := layer.ConstructLayerGroup(cfg, cache, secreter)
+	layerGroup, err := layer.ConstructLayerGroup(cfg, cache, secreter, datastores)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error constructing layers: %w", err)
 	}

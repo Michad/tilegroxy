@@ -19,6 +19,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -49,7 +50,7 @@ func (s RefRegistration) Name() string {
 	return "ref"
 }
 
-func (s RefRegistration) Initialize(cfgAny any, _ config.ClientConfig, _ config.ErrorMessages, layerGroup *layer.LayerGroup) (layer.Provider, error) {
+func (s RefRegistration) Initialize(cfgAny any, _ config.ClientConfig, _ config.ErrorMessages, layerGroup *layer.LayerGroup, _ *datastore.DatastoreRegistry) (layer.Provider, error) {
 	cfg := cfgAny.(RefConfig)
 	return &Ref{cfg, layerGroup}, nil
 }

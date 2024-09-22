@@ -37,7 +37,7 @@ import (
 func configToEntities(cfg config.Config) (*layer.LayerGroup, authentication.Authentication, error) {
 	cache, err1 := cache.ConstructCache(cfg.Cache, cfg.Error.Messages)
 	auth, err2 := authentication.ConstructAuth(cfg.Authentication, cfg.Error.Messages)
-	layerGroup, err3 := layer.ConstructLayerGroup(cfg, cache, nil)
+	layerGroup, err3 := layer.ConstructLayerGroup(cfg, cache, nil, nil)
 
 	return layerGroup, auth, errors.Join(err1, err2, err3)
 }
@@ -52,7 +52,7 @@ func Test_TileHandler_AllowedArea(t *testing.T) {
 	var cache cache.Cache
 	auth = authentications.Noop{}
 	cache = caches.Noop{}
-	lg, err := layer.ConstructLayerGroup(cfg, cache, nil)
+	lg, err := layer.ConstructLayerGroup(cfg, cache, nil, nil)
 	require.NoError(t, err)
 
 	handler, err := newTileHandler(defaultHandler{config: &cfg, auth: auth, layerGroup: lg})
@@ -116,7 +116,7 @@ func Test_TileHandler_Proxy(t *testing.T) {
 	var cache cache.Cache
 	auth = authentications.Noop{}
 	cache = caches.Noop{}
-	lg, err := layer.ConstructLayerGroup(cfg, cache, nil)
+	lg, err := layer.ConstructLayerGroup(cfg, cache, nil, nil)
 	require.NoError(t, err)
 
 	handler, err := newTileHandler(defaultHandler{config: &cfg, auth: auth, layerGroup: lg})
@@ -157,7 +157,7 @@ func Test_TileHandler_RefToStatic(t *testing.T) {
 	var cache cache.Cache
 	auth = authentications.Noop{}
 	cache = caches.Noop{}
-	lg, err := layer.ConstructLayerGroup(cfg, cache, nil)
+	lg, err := layer.ConstructLayerGroup(cfg, cache, nil, nil)
 	require.NoError(t, err)
 
 	handler, err := newTileHandler(defaultHandler{config: &cfg, auth: auth, layerGroup: lg})
@@ -228,7 +228,7 @@ func Test_TileHandler_ExecuteCustom(t *testing.T) {
     }`
 
 	cache := caches.Noop{}
-	lg, err := layer.ConstructLayerGroup(cfg, cache, nil)
+	lg, err := layer.ConstructLayerGroup(cfg, cache, nil, nil)
 	require.NoError(t, err)
 
 	authO, err := authentication.ConstructAuth(auth, cfg.Error.Messages)

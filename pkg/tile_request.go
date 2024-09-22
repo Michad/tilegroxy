@@ -14,35 +14,21 @@
 package pkg
 
 import (
+	"fmt"
 	"math"
 	"strconv"
 
 	"github.com/mmcloughlin/geohash"
 )
 
-const SRIDWGS84 = 4326
-const SRIDPsuedoMercator = 3857
-
-type TileRequest struct {
-	LayerName string
-	Z         int
-	X         int
-	Y         int
-}
-
-type Bounds struct {
-	South float64
-	North float64
-	West  float64
-	East  float64
-}
-
 const (
+	SRIDWGS84            = 4326
+	SRIDPsuedoMercator   = 3857
 	MaxZoom              = 21
 	delta                = .00000001
 	maxLat               = 85.0511
 	minLat               = -85.0511
-	max3857CoordInMeters = 20037508.34
+	max3857CoordInMeters = 20037508.342789
 )
 
 func convertLat4326To3857(lat float64) float64 {
@@ -50,6 +36,13 @@ func convertLat4326To3857(lat float64) float64 {
 }
 func convertLon4326To3857(lon float64) float64 {
 	return lon * max3857CoordInMeters / 180
+}
+
+type TileRequest struct {
+	LayerName string
+	Z         int
+	X         int
+	Y         int
 }
 
 func (t TileRequest) GetBounds() (*Bounds, error) {
@@ -89,14 +82,15 @@ func (t TileRequest) GetBoundsProjection(srid uint) (*Bounds, error) {
 	east := math.Max(x2, x1)
 
 	if srid == SRIDWGS84 {
-		return &Bounds{south, north, west, east}, nil
+		return &Bounds{south, north, west, east, srid}, nil
 	}
 
 	return &Bounds{
 		convertLat4326To3857(south),
 		convertLat4326To3857(north),
 		convertLon4326To3857(west),
-		convertLon4326To3857(east)}, nil
+		convertLon4326To3857(east),
+		srid}, nil
 }
 
 func (t TileRequest) IntersectsBounds(b Bounds) (bool, error) {
@@ -125,6 +119,26 @@ func (t TileRequest) String() string {
 // Generates a string representation of the tile request with an arbitrary separator between values
 func (t TileRequest) StringWithSeparator(sep string) string {
 	return t.LayerName + sep + strconv.Itoa(t.Z) + sep + strconv.Itoa(t.X) + sep + strconv.Itoa(t.Y)
+}
+
+type Bounds struct {
+	South float64
+	North float64
+	West  float64
+	East  float64
+	SRID  uint
+}
+
+// Generates a bounding box representation of a given geohash
+func NewBoundsFromGeohash(hashStr string) (Bounds, error) {
+	err := geohash.Validate(hashStr)
+	if err != nil {
+		return Bounds{}, err
+	}
+
+	bbox := geohash.BoundingBox(hashStr)
+
+	return Bounds{South: bbox.MinLat, North: bbox.MaxLat, West: bbox.MinLng, East: bbox.MaxLng, SRID: SRIDWGS84}, nil
 }
 
 // Turns a bounding box into a list of the tiles contained in the bounds for an arbitrary zoom level. Limited to 10k tiles unless force is true, then it's limited to 2^32 tiles.
@@ -203,14 +217,35 @@ func (b Bounds) Contains(b2 Bounds) bool {
 	return b2.South+delta >= b.South && b2.North <= b.North+delta && b2.West+delta >= b.West && b2.East <= b.East+delta
 }
 
-// Generates a bounding box representation of a given geohash
-func NewBoundsFromGeohash(hashStr string) (Bounds, error) {
-	err := geohash.Validate(hashStr)
-	if err != nil {
-		return Bounds{}, err
+func (b Bounds) Width() float64 {
+	return math.Abs(b.East - b.West)
+}
+
+func (b Bounds) Height() float64 {
+	return math.Abs(b.North - b.South)
+}
+
+func (b Bounds) Centroid() (float64, float64) {
+	return (b.West + b.East) / 2.0, (b.North + b.South) / 2.0
+}
+
+func (b Bounds) BufferRelative(pct float64) Bounds {
+	deltaW := b.Width() * pct / 2
+	deltaH := b.Height() * pct / 2
+
+	return Bounds{
+		North: b.North + deltaH,
+		South: b.South - deltaH,
+		West:  b.West - deltaW,
+		East:  b.East + deltaW,
+		SRID:  b.SRID,
 	}
+}
 
-	bbox := geohash.BoundingBox(hashStr)
+func (b Bounds) ToWKT() string {
+	return fmt.Sprintf("POLYGON((%.7f %.7f,%.7f %.7f,%.7f %.7f,%.7f %.7f,%.7f %.7f))", b.West, b.South, b.West, b.North, b.East, b.North, b.East, b.South, b.West, b.South)
+}
 
-	return Bounds{South: bbox.MinLat, North: bbox.MaxLat, West: bbox.MinLng, East: bbox.MaxLng}, nil
+func (b Bounds) ToEWKT() string {
+	return fmt.Sprintf("SRID=%v;%v", b.SRID, b.ToWKT())
 }

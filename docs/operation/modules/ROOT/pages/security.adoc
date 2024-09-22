@@ -1,0 +1,36 @@
+= Security
+
+Tilegroxy operates as a configuration driven framework for flexibly serving up data that comes from a wide variety of possible sources.  The flexible configuration means that an operator can misconfigure tilegroxy in an insecure manner that opens it up to a wide variety of vulnerabilities. Tilegroxy cannot and does not attempt to prevent all possible misconfigurations however it aims to equip operators with the tools necessary to have a secure deployment when properly configured. This document describes the considerations one should have when deploying tilegroxy inside a security sensitive environment.
+
+== User Inputs
+
+Tilegroxy draws a distinction between inputs provided by the Operator (probably you) and the User (the end user who makes tile requests).  Operator input is inherently trusted and beyond preventing foot-guns, no attempt is made to prevent potentially malicious intent. User input meanwhile is treated as potentially hostile.
+
+=== Layer Name Parameters
+
+Tilegroxy supports parameterized layer names where each parameter is arbitrary user input. By default these parameters are not used for anything and merely provide flexibility in how one refers to a map layer. However, the Operator can configure these parameters to be used in a variety of ways, for instance placed inside of proxied URLs, inside of SQL as parameters in Prepared Statements, or as inputs in arbitrary code.  
+
+A `parameterValidator` configuration option is available that allows defining a Regular Expression to validate the parameters specified. It is recommended the Operator defines restrictions as tight as possible, often allowing only alphanumeric values.
+
+The configuration for tilegroxy should be treated the same as one would treat code, it should be carefully reviewed, kept in source control, and one should never trust complex configuration from third parties without vetting it for bugs and vulnerabilities.  
+
+=== Headers and Query Params
+
+By default tilegroxy ignores incoming HTTP headers and the query string.  It is possible for the Operator to utilize these in many of the same situations described in Layer Name Parameters. However, there is no facility for validating these inputs so operators are advised to use extreme caution in trusting these inputs.
+
+== Downstream Responses
+
+One of the primary use-cases for tilegroxy is to proxy tile requests to another HTTP(s) server. These inputs are cached and returned to the user, either as-is or with transformation.  In order to prevent a third-party server returning malicious inputs a few protections are available:
+
+* Content Type validation - if the server returns an invalid content-type then the request errors. By default only PNG and JPG images are allowed.
+** Content Type mirroring - when returning a payload retrieved from a third party HTTP service tilegroxy will return the same content-type as the server, this helps prevent using tilegroxy to deliver malicious javascript payloads disguised under a false content type
+* Content Size validation - if the server fails to return a content size header or if the content size is greater than a limit (by default 10 MiB) then the request errors.  Tilegroxy will not allocate a buffer greater than the allowed size even if the server responds with a larger response than advertised
+* TLS Validation - if the URL configured includes an https protocol then standard TLS certificate validation occurs. Tilegroxy uses default Go settings for validation including a minimum version of TLS 1.2 and rejection of insecure ciphers
+
+Despite these protections it's important that operators only utilize trusted services to originate its maps. Tilegroxy cannot protect against a third party returning a valid result containing offensive imagery. And never allow user input to dictate the hostname used.
+
+== Authentication
+
+Tilegroxy provides a flexible capability for xref:configuration/authentication/index.adoc[auth] but defaults to operating unauthenticated.  The flagship mode is via JWTs provided via HTTP header, which provides a capability for both authentication and authorization by layer and geographic region. 
+
+Tilegroxy is primarily intended to be used as a microservice within a broader application ecosystem so implementing the specifics of how authentication should work end-to-end is left up to the operator in conjunction with their needs.

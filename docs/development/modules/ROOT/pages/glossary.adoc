@@ -13,3 +13,7 @@ The name of the layer as specified in incoming requests. The layer name is used,
 == Provider
 
 A Provider is any source of geospatial data that defines what is seen in a layer. Tilegroxy includes a number of distinct Provider implementations, those often allow making web calls to an external service but in many cases can simply map to another Provider implementation with a mutation applied.
+
+== Operator
+
+The Operator is the administrator who creates the tilegroxy configuration and utilizes it in their environment.  This is in contrast to the User who consumes the tiles in some web application. Operator input (primarily configuration) is considered trusted and so has much lesser degree of scrutiny, for instance in a provider that utilizes a database it can be possible to inject arbitrary SQL with Operator input. Any input coming from a User in contrast is treated with a presumption of maliciousness.

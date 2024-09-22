@@ -30,7 +30,7 @@ func Test_CGI_Validate(t *testing.T) {
 		URI: "/?map=mapfiles/{layer.file}.map&MODE=tile&layers={layer.layer}&TILEMODE=gmap&TILE={x}+{y}+{z}",
 	}
 
-	cgi, err := CGIRegistration{}.Initialize(cfg, testClientConfig, testErrMessages, nil)
+	cgi, err := CGIRegistration{}.Initialize(cfg, testClientConfig, testErrMessages, nil, nil)
 	require.Error(t, err)
 	assert.Nil(t, cgi)
 
@@ -38,7 +38,7 @@ func Test_CGI_Validate(t *testing.T) {
 		Exec: "test_files/mapserv_via_docker.sh",
 	}
 
-	cgi, err = CGIRegistration{}.Initialize(cfg, testClientConfig, testErrMessages, nil)
+	cgi, err = CGIRegistration{}.Initialize(cfg, testClientConfig, testErrMessages, nil, nil)
 	require.Error(t, err)
 	assert.Nil(t, cgi)
 }
@@ -54,7 +54,7 @@ func Test_CGI_Mapserv(t *testing.T) {
 		Env:  env,
 	}
 
-	cgi, err := CGIRegistration{}.Initialize(cfg, testClientConfig, testErrMessages, nil)
+	cgi, err := CGIRegistration{}.Initialize(cfg, testClientConfig, testErrMessages, nil, nil)
 
 	require.NoError(t, err)
 	assert.NotNil(t, cgi)
@@ -81,7 +81,7 @@ func Test_CGI_InvalidMapserv(t *testing.T) {
 		InvalidAsError: true,
 	}
 
-	cgi, err := CGIRegistration{}.Initialize(cfg, testClientConfig, testErrMessages, nil)
+	cgi, err := CGIRegistration{}.Initialize(cfg, testClientConfig, testErrMessages, nil, nil)
 
 	require.NoError(t, err)
 	assert.NotNil(t, cgi)

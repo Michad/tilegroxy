@@ -1,0 +1,85 @@
+= PostgreSQL
+
+Defines a connection pool to a link:https://www.postgresql.org/[PostgreSQL] database.  Utilizes link:https://github.com/jackc/pgx?tab=readme-ov-file#supported-go-and-postgresql-versions[pgx] under the hood which supports PostgreSQL 12 and higher.  
+
+Name should be "postgresql"
+
+== Configuration options:
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| ID
+| The unique identifier of the datastore used to reference this datastore in a provider
+| string
+| Yes
+| None
+
+| Host
+| The hostname to use to connect to the database
+| string
+| No
+| localhost
+
+| Port
+| The port to use to connect to the database
+| uint16
+| No
+| 5432
+
+| User
+| The user to use to authenticate with postgresql
+| string
+| No
+| postgres
+
+| Password
+| The password to use to authenticate with postgresql
+| string
+| No
+| None
+
+| Database 
+| The name of the database to connect to
+| string
+| No
+| postgres
+
+| MinConnections 
+| The minimum number of connections to keep in reserve in the connection pool
+| int
+| No
+| 10
+
+| MaxConnections 
+| The maximum number of connections to allow in the connection pool. Ensure your postgresql instance's `max_connections` is configured high enough to accommodate this setting
+| int
+| No
+| 30
+
+| IdleTimeout
+| The amount of time (in seconds) to allow a connection to sit idle before it is removed from the pool
+| int
+| No
+| 10 minutes
+
+| Lifetime
+| The maximum amount of time (in seconds) to allow a connection to live in the pool. A jitter of 10% is automatically applied.
+| int
+| No
+| 1 day
+|===
+
+
+== Example:
+
+----
+datastores:
+  - name: postgresql
+    id: pg-database-0
+    host: localhost
+    user: postgres
+    password: password
+    database: postgres
+----

@@ -65,7 +65,7 @@ func initialize(t *testing.T, fail bool) (config.Config, *layer.LayerGroup) {
 	}
 
 	cfgAll.Layers = append(cfgAll.Layers, layerCfg)
-	lg, err := layer.ConstructLayerGroup(cfgAll, nil, nil)
+	lg, err := layer.ConstructLayerGroup(cfgAll, nil, nil, nil)
 	require.NoError(t, err)
 
 	return cfgAll, lg

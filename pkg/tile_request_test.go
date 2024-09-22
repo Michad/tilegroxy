@@ -15,7 +15,6 @@ package pkg
 
 import (
 	"math"
-	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -23,7 +22,7 @@ import (
 )
 
 func TestBoundsToTileZoom0(t *testing.T) {
-	b := Bounds{-90, 90, -180, 180}
+	b := Bounds{-90, 90, -180, 180, SRIDWGS84}
 
 	tilesArr, _ := b.FindTiles("test", 0, false)
 	tiles := *tilesArr
@@ -35,7 +34,7 @@ func TestBoundsToTileZoom0(t *testing.T) {
 	assert.Equal(t, 0, tiles[0].Z)
 }
 func TestBoundsToTileZoom1(t *testing.T) {
-	b := Bounds{-90, 90, -180, 180}
+	b := Bounds{-90, 90, -180, 180, SRIDWGS84}
 
 	tilesArr, _ := b.FindTiles("test", 1, false)
 	tiles := *tilesArr
@@ -53,7 +52,7 @@ func TestBoundsToTileZoom1(t *testing.T) {
 }
 
 func TestBoundsToTileZoom8(t *testing.T) {
-	b := Bounds{51, 51.6, 5.7, 7.0}
+	b := Bounds{51, 51.6, 5.7, 7.0, SRIDWGS84}
 
 	tilesArr, _ := b.FindTiles("test", 8, false)
 	tiles := *tilesArr
@@ -105,53 +104,53 @@ func TestTileRequestRangeError(t *testing.T) {
 }
 
 func TestBoundsIntersect(t *testing.T) {
-	assert.True(t, Bounds{0, 1, 0, 1}.Intersects(Bounds{.9, 1.1, 0.9, 1.1}))
-	assert.True(t, Bounds{0, 1, 0, 1}.Intersects(Bounds{-1, 0.1, -1, 0.1}))
-	assert.True(t, Bounds{0, 1, 0, 1}.Intersects(Bounds{0, 1, 0, 0.1}))
-	assert.True(t, Bounds{0, 1, 0, 1}.Intersects(Bounds{0, 1, 0.9, 2}))
-	assert.True(t, Bounds{.9, 1.1, 0.9, 1.1}.Intersects(Bounds{0, 1, 0, 1}))
-	assert.True(t, Bounds{-1, 0.1, -1, 0.1}.Intersects(Bounds{0, 1, 0, 1}))
-	assert.True(t, Bounds{0, 1, 0, 0.1}.Intersects(Bounds{0, 1, 0, 1}))
-	assert.True(t, Bounds{0, 1, 0.9, 2}.Intersects(Bounds{0, 1, 0, 1}))
+	assert.True(t, Bounds{0, 1, 0, 1, SRIDWGS84}.Intersects(Bounds{.9, 1.1, 0.9, 1.1, SRIDWGS84}))
+	assert.True(t, Bounds{0, 1, 0, 1, SRIDWGS84}.Intersects(Bounds{-1, 0.1, -1, 0.1, SRIDWGS84}))
+	assert.True(t, Bounds{0, 1, 0, 1, SRIDWGS84}.Intersects(Bounds{0, 1, 0, 0.1, SRIDWGS84}))
+	assert.True(t, Bounds{0, 1, 0, 1, SRIDWGS84}.Intersects(Bounds{0, 1, 0.9, 2, SRIDWGS84}))
+	assert.True(t, Bounds{.9, 1.1, 0.9, 1.1, SRIDWGS84}.Intersects(Bounds{0, 1, 0, 1, SRIDWGS84}))
+	assert.True(t, Bounds{-1, 0.1, -1, 0.1, SRIDWGS84}.Intersects(Bounds{0, 1, 0, 1, SRIDWGS84}))
+	assert.True(t, Bounds{0, 1, 0, 0.1, SRIDWGS84}.Intersects(Bounds{0, 1, 0, 1, SRIDWGS84}))
+	assert.True(t, Bounds{0, 1, 0.9, 2, SRIDWGS84}.Intersects(Bounds{0, 1, 0, 1, SRIDWGS84}))
 
-	assert.False(t, Bounds{0, 1, 0, 1}.Intersects(Bounds{101, http.StatusOK, 10, 354}))
-	assert.False(t, Bounds{0, 1, 0, 1}.Intersects(Bounds{0, 1, 1, 2}))
-	assert.False(t, Bounds{0, 1, 0, 1}.Intersects(Bounds{0, 1, -1, 0}))
-	assert.False(t, Bounds{0, 1, 0, 1}.Intersects(Bounds{1, 2, 0, 1}))
-	assert.False(t, Bounds{0, 1, 0, 1}.Intersects(Bounds{-1, 0, 0, 1}))
+	assert.False(t, Bounds{0, 1, 0, 1, SRIDWGS84}.Intersects(Bounds{101, 201, 10, 354, SRIDWGS84}))
+	assert.False(t, Bounds{0, 1, 0, 1, SRIDWGS84}.Intersects(Bounds{0, 1, 1, 2, SRIDWGS84}))
+	assert.False(t, Bounds{0, 1, 0, 1, SRIDWGS84}.Intersects(Bounds{0, 1, -1, 0, SRIDWGS84}))
+	assert.False(t, Bounds{0, 1, 0, 1, SRIDWGS84}.Intersects(Bounds{1, 2, 0, 1, SRIDWGS84}))
+	assert.False(t, Bounds{0, 1, 0, 1, SRIDWGS84}.Intersects(Bounds{-1, 0, 0, 1, SRIDWGS84}))
 
-	assert.True(t, Bounds{0, 10, 0, 10}.Intersects(Bounds{0, 1, 0, 1}))
-	assert.True(t, Bounds{0, 1, 0, 1}.Intersects(Bounds{0, 10, 0, 10}))
-	assert.True(t, Bounds{0, 10, 0, 10}.Intersects(Bounds{3, 4, 3, 4}))
-	assert.True(t, Bounds{3, 4, 3, 4}.Intersects(Bounds{0, 10, 0, 10}))
+	assert.True(t, Bounds{0, 10, 0, 10, SRIDWGS84}.Intersects(Bounds{0, 1, 0, 1, SRIDWGS84}))
+	assert.True(t, Bounds{0, 1, 0, 1, SRIDWGS84}.Intersects(Bounds{0, 10, 0, 10, SRIDWGS84}))
+	assert.True(t, Bounds{0, 10, 0, 10, SRIDWGS84}.Intersects(Bounds{3, 4, 3, 4, SRIDWGS84}))
+	assert.True(t, Bounds{3, 4, 3, 4, SRIDWGS84}.Intersects(Bounds{0, 10, 0, 10, SRIDWGS84}))
 
-	assert.True(t, Bounds{-90, 90, -180, 180}.Intersects(Bounds{0, 1, 0, 1}))
-	assert.True(t, Bounds{0, 1, 0, 1}.Intersects(Bounds{-90, 90, -180, 180}))
+	assert.True(t, Bounds{-90, 90, -180, 180, SRIDWGS84}.Intersects(Bounds{0, 1, 0, 1, SRIDWGS84}))
+	assert.True(t, Bounds{0, 1, 0, 1, SRIDWGS84}.Intersects(Bounds{-90, 90, -180, 180, SRIDWGS84}))
 }
 
 func TestBoundsContains(t *testing.T) {
-	assert.False(t, Bounds{0, 1, 0, 1}.Contains(Bounds{.9, 1.1, 0.9, 1.1}))
-	assert.False(t, Bounds{0, 1, 0, 1}.Contains(Bounds{-1, 0.1, -1, 0.1}))
-	assert.True(t, Bounds{0, 1, 0, 1}.Contains(Bounds{0, 1, 0, 0.1}))
-	assert.False(t, Bounds{0, 1, 0, 1}.Contains(Bounds{0, 1, 0.9, 2}))
-	assert.False(t, Bounds{.9, 1.1, 0.9, 1.1}.Contains(Bounds{0, 1, 0, 1}))
-	assert.False(t, Bounds{-1, 0.1, -1, 0.1}.Contains(Bounds{0, 1, 0, 1}))
-	assert.False(t, Bounds{0, 1, 0, 0.1}.Contains(Bounds{0, 1, 0, 1}))
-	assert.False(t, Bounds{0, 1, 0.9, 2}.Contains(Bounds{0, 1, 0, 1}))
+	assert.False(t, Bounds{0, 1, 0, 1, SRIDWGS84}.Contains(Bounds{.9, 1.1, 0.9, 1.1, SRIDWGS84}))
+	assert.False(t, Bounds{0, 1, 0, 1, SRIDWGS84}.Contains(Bounds{-1, 0.1, -1, 0.1, SRIDWGS84}))
+	assert.True(t, Bounds{0, 1, 0, 1, SRIDWGS84}.Contains(Bounds{0, 1, 0, 0.1, SRIDWGS84}))
+	assert.False(t, Bounds{0, 1, 0, 1, SRIDWGS84}.Contains(Bounds{0, 1, 0.9, 2, SRIDWGS84}))
+	assert.False(t, Bounds{.9, 1.1, 0.9, 1.1, SRIDWGS84}.Contains(Bounds{0, 1, 0, 1, SRIDWGS84}))
+	assert.False(t, Bounds{-1, 0.1, -1, 0.1, SRIDWGS84}.Contains(Bounds{0, 1, 0, 1, SRIDWGS84}))
+	assert.False(t, Bounds{0, 1, 0, 0.1, SRIDWGS84}.Contains(Bounds{0, 1, 0, 1, SRIDWGS84}))
+	assert.False(t, Bounds{0, 1, 0.9, 2, SRIDWGS84}.Contains(Bounds{0, 1, 0, 1, SRIDWGS84}))
 
-	assert.False(t, Bounds{0, 1, 0, 1}.Contains(Bounds{101, http.StatusOK, 10, 354}))
-	assert.False(t, Bounds{0, 1, 0, 1}.Contains(Bounds{0, 1, 1, 2}))
-	assert.False(t, Bounds{0, 1, 0, 1}.Contains(Bounds{0, 1, -1, 0}))
-	assert.False(t, Bounds{0, 1, 0, 1}.Contains(Bounds{1, 2, 0, 1}))
-	assert.False(t, Bounds{0, 1, 0, 1}.Contains(Bounds{-1, 0, 0, 1}))
+	assert.False(t, Bounds{0, 1, 0, 1, SRIDWGS84}.Contains(Bounds{101, 201, 10, 354, SRIDWGS84}))
+	assert.False(t, Bounds{0, 1, 0, 1, SRIDWGS84}.Contains(Bounds{0, 1, 1, 2, SRIDWGS84}))
+	assert.False(t, Bounds{0, 1, 0, 1, SRIDWGS84}.Contains(Bounds{0, 1, -1, 0, SRIDWGS84}))
+	assert.False(t, Bounds{0, 1, 0, 1, SRIDWGS84}.Contains(Bounds{1, 2, 0, 1, SRIDWGS84}))
+	assert.False(t, Bounds{0, 1, 0, 1, SRIDWGS84}.Contains(Bounds{-1, 0, 0, 1, SRIDWGS84}))
 
-	assert.True(t, Bounds{0, 10, 0, 10}.Contains(Bounds{0, 1, 0, 1}))
-	assert.False(t, Bounds{0, 1, 0, 1}.Contains(Bounds{0, 10, 0, 10}))
-	assert.True(t, Bounds{0, 10, 0, 10}.Contains(Bounds{3, 4, 3, 4}))
-	assert.False(t, Bounds{3, 4, 3, 4}.Contains(Bounds{0, 10, 0, 10}))
+	assert.True(t, Bounds{0, 10, 0, 10, SRIDWGS84}.Contains(Bounds{0, 1, 0, 1, SRIDWGS84}))
+	assert.False(t, Bounds{0, 1, 0, 1, SRIDWGS84}.Contains(Bounds{0, 10, 0, 10, SRIDWGS84}))
+	assert.True(t, Bounds{0, 10, 0, 10, SRIDWGS84}.Contains(Bounds{3, 4, 3, 4, SRIDWGS84}))
+	assert.False(t, Bounds{3, 4, 3, 4, SRIDWGS84}.Contains(Bounds{0, 10, 0, 10, SRIDWGS84}))
 
-	assert.True(t, Bounds{-90, 90, -180, 180}.Contains(Bounds{0, 1, 0, 1}))
-	assert.False(t, Bounds{0, 1, 0, 1}.Contains(Bounds{-90, 90, -180, 180}))
+	assert.True(t, Bounds{-90, 90, -180, 180, SRIDWGS84}.Contains(Bounds{0, 1, 0, 1, SRIDWGS84}))
+	assert.False(t, Bounds{0, 1, 0, 1, SRIDWGS84}.Contains(Bounds{-90, 90, -180, 180, SRIDWGS84}))
 }
 
 func TestGeohashToBounds(t *testing.T) {
@@ -188,10 +187,10 @@ func FuzzToBoundsAndBack(f *testing.F) {
 		require.NoError(t, err)
 
 		// Small delta to avoid floating point rounding errors causing an extra tile
-		b.West += 0.000000001
-		b.South += 0.000000001
-		b.East -= 0.000000001
-		b.North -= 0.000000001
+		b.West += delta
+		b.South += delta
+		b.East -= delta
+		b.North -= delta
 
 		newTiles, err := b.FindTiles(orig.LayerName, uint(orig.Z), false)
 
@@ -199,4 +198,30 @@ func FuzzToBoundsAndBack(f *testing.F) {
 		require.Len(t, *newTiles, 1)
 		assert.Equal(t, orig, (*newTiles)[0])
 	})
+}
+
+func FuzzBoundsBufferRelative(f *testing.F) {
+	f.Add(-1.0, 1.0, -1.0, 1.0, 0.5)
+	f.Add(-1.0, 1.0, -1.0, 1.0, -0.5)
+	f.Add(0.0, 10.0, 0.0, 10.0, 1.0)
+	f.Add(0.0, 10.0, 0.0, 10.0, 10.0)
+
+	f.Fuzz(func(t *testing.T, w, n, s, e, pct float64) {
+		b := Bounds{West: w, East: e, North: n, South: s}
+		b2 := b.BufferRelative(pct)
+		assert.InDelta(t, b.Width()*(1+pct), b2.Width(), delta)
+		assert.InDelta(t, b.Height()*(1+pct), b2.Height(), delta)
+		cX, cY := b.Centroid()
+		cX2, cY2 := b2.Centroid()
+		assert.InDelta(t, cX, cX2, delta)
+		assert.InDelta(t, cY, cY2, delta)
+	})
+}
+
+func TestTileToEWKT(t *testing.T) {
+	req := TileRequest{LayerName: "", Z: 2, X: 1, Y: 1}
+	b, err := req.GetBoundsProjection(SRIDPsuedoMercator)
+	require.NoError(t, err)
+	// test case from result of postgis `SELECT ST_AsEWKT(ST_TileEnvelope(2,1,1))` with precision tweak
+	assert.Equal(t, "SRID=3857;POLYGON((-10018754.1713945 0.0000000,-10018754.1713945 10018754.1713945,0.0000000 10018754.1713945,0.0000000 0.0000000,-10018754.1713945 0.0000000))", b.ToEWKT())
 }

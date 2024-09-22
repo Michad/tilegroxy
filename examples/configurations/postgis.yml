@@ -1,0 +1,52 @@
+server:
+  headers:
+    Access-Control-Allow-Origin: "*"
+Logging:
+    Main:
+        Level: trace
+cache:
+  name: memory
+datastores:
+  - name: postgresql
+    id: vector-database-0
+    host: localhost
+    user: postgres
+    password: password
+    database: postgres
+
+layers:
+    # This pulls from a US census TIGER data table containing all current counties. This data can be loaded with https://postgis.net/docs/Loader_Generate_Nation_Script.html
+  - id: tiger_county
+    provider:
+      name: postgismvt
+      datastore: vector-database-0
+      table: tiger_data.county_all
+      gid: gid
+      geometry: the_geom
+      attributes: 
+        - "name"
+      sourcesrid: 4269
+    # This pulls from a table detailing historic US counties. The layer includes a parameter that allows you to select an arbitrary year. This data can be found https://digital.newberry.org/ahcb/pages/United_States.html
+  - id: counties_by_year
+    pattern: counties_{year}
+    paramValidator:
+      "year": "^[0-9]{4}$"
+    provider:
+      name: postgismvt
+      # Must match the ID of a datastore in the datastores section above that has a name of postgresql
+      datastore: vector-database-0
+      # Loaded like shp2pgsql -g geom -I US_HistCounties.shp histcounties | psql -h localhost 
+      table: public.histcounties
+      gid: id_num
+      geometry: geom
+      # Controls the resolution of the resulting vector tiles.  Defaults to 4096
+      extent: 256
+      # Includes extra data off the edges of vector tiles to avoid grid-lines and to enable consistency in icons/labels. Defaults to 1/8th
+      buffer: 0.01
+      # Indicate any other columns to include in the tiles. Case sensitive (all lowercase if you didn't quote the columns when loading).  By default no extra columns are included. 
+      attributes: 
+        - "full_name"
+      # A snippet that goes inside a WHERE clause. Note that the {layer.year} is loaded as a parameter in a prepared statement to prevent SQL injection from user input. However the rest of this is inserted into SQL as-is so be cautious that it comes from trusted parties.
+      filter: "to_date({layer.year}, 'yyyy') BETWEEN start_date AND end_date"
+      # Needs to match the geometries in the table
+      sourcesrid: 4326

@@ -33,11 +33,11 @@ func makeTransformProvider() map[string]interface{} {
 
 func Test_Transform_Validate(t *testing.T) {
 	p := makeTransformProvider()
-	tr, err := TransformRegistration{}.Initialize(TransformConfig{Provider: p}, testClientConfig, testErrMessages, nil)
+	tr, err := TransformRegistration{}.Initialize(TransformConfig{Provider: p}, testClientConfig, testErrMessages, nil, nil)
 
 	assert.Nil(t, tr)
 	require.Error(t, err)
-	tr, err = TransformRegistration{}.Initialize(TransformConfig{Formula: "package custom", Provider: p}, testClientConfig, testErrMessages, nil)
+	tr, err = TransformRegistration{}.Initialize(TransformConfig{Formula: "package custom", Provider: p}, testClientConfig, testErrMessages, nil, nil)
 
 	assert.Nil(t, tr)
 	require.Error(t, err)
@@ -45,7 +45,7 @@ func Test_Transform_Validate(t *testing.T) {
 
 func Test_Transform_Execute(t *testing.T) {
 	p := makeTransformProvider()
-	tr, err := TransformRegistration{}.Initialize(TransformConfig{Provider: p, Formula: `func transform(r, g, b, a uint8) (uint8, uint8, uint8, uint8) { return g,b,r,a }`}, testClientConfig, testErrMessages, nil)
+	tr, err := TransformRegistration{}.Initialize(TransformConfig{Provider: p, Formula: `func transform(r, g, b, a uint8) (uint8, uint8, uint8, uint8) { return g,b,r,a }`}, testClientConfig, testErrMessages, nil, nil)
 
 	assert.NotNil(t, tr)
 	require.NoError(t, err)

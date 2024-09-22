@@ -20,6 +20,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
@@ -49,7 +50,7 @@ func (s ProxyRegistration) Name() string {
 	return "proxy"
 }
 
-func (s ProxyRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, _ *layer.LayerGroup) (layer.Provider, error) {
+func (s ProxyRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, _ *layer.LayerGroup, _ *datastore.DatastoreRegistry) (layer.Provider, error) {
 	cfg := cfgAny.(ProxyConfig)
 	if cfg.URL == "" {
 		return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.proxy.url", "")
