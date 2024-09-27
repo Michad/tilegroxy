@@ -114,6 +114,7 @@ func Test_Validate(t *testing.T) {
 
 func Test_GenerateTile(t *testing.T) {
 	slog.SetLogLoggerLevel(config.LevelAbsurd)
+	defer slog.SetLogLoggerLevel(slog.LevelDebug)
 
 	ctx := context.Background()
 	container, cleanupF := setupPostgisContainer(ctx, t)
