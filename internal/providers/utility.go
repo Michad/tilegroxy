@@ -163,6 +163,10 @@ func getTile(ctx context.Context, clientConfig config.ClientConfig, url string, 
 		req.Header.Set(h, v)
 	}
 
+	if clientConfig.Timeout > math.MaxInt64 {
+		clientConfig.Timeout = math.MaxInt64
+	}
+
 	transport := otelhttp.NewTransport(http.DefaultTransport, otelhttp.WithMessageEvents(otelhttp.ReadEvents))
 	client := http.Client{Transport: transport, Timeout: time.Duration(clientConfig.Timeout) * time.Second}
 

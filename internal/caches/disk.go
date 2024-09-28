@@ -76,7 +76,7 @@ func (s DiskRegistration) Initialize(configAny any, errorMessages config.ErrorMe
 func (c Disk) Lookup(_ context.Context, t pkg.TileRequest) (*pkg.Image, error) {
 	filename := requestToFilename(t)
 
-	b, err := os.ReadFile(filepath.Join(c.Path, filename))
+	b, err := os.ReadFile(filepath.Clean(filepath.Join(c.Path, filename)))
 
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, nil

@@ -114,6 +114,7 @@ func (t Transform) PreAuth(ctx context.Context, providerContext layer.ProviderCo
 	return t.provider.PreAuth(ctx, providerContext)
 }
 
+// #nosec G115
 func (t Transform) transform(ctx context.Context, col color.Color) color.Color {
 	r1, g1, b1, a1 := col.RGBA()
 	r1b := uint8(r1)
@@ -201,8 +202,17 @@ func (t Transform) GenerateTile(ctx context.Context, providerContext layer.Provi
 	writer := bufio.NewWriter(&buf)
 
 	err = png.Encode(writer, resultImage)
-	writer.Flush()
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = writer.Flush()
+
+	if err != nil {
+		return nil, err
+	}
 	output := buf.Bytes()
 
-	return &pkg.Image{Content: output, ContentType: mimePng, ForceSkipCache: img.ForceSkipCache}, err
+	return &pkg.Image{Content: output, ContentType: mimePng, ForceSkipCache: img.ForceSkipCache}, nil
 }

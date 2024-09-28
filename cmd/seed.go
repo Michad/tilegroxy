@@ -87,7 +87,7 @@ func initSeed() {
 	rootCmd.AddCommand(seedCmd)
 
 	seedCmd.Flags().StringP("layer", "l", "", "The ID of the layer to seed")
-	seedCmd.MarkFlagRequired("layer") //nolint:errcheck
+	err := seedCmd.MarkFlagRequired("layer")
 	seedCmd.Flags().BoolP("verbose", "v", false, "Output verbose information including every tile being requested and success or error status")
 	seedCmd.Flags().UintSliceP("zoom", "z", []uint{0, 1, 2, 3, 4, 5}, "The zoom level(s) to seed")
 	seedCmd.Flags().Float32P("min-latitude", "s", -90, "The minimum latitude to seed. The south side of the bounding box")
@@ -97,4 +97,8 @@ func initSeed() {
 	seedCmd.Flags().Bool("force", false, "Perform the seeding even if it'll produce an excessive number of tiles. Without this flag seeds over 10k tiles will error out. \nWarning: Overriding this protection absolutely can cause an Out-of-Memory error")
 	seedCmd.Flags().Uint16P("threads", "t", 1, "How many concurrent requests to use to perform seeding. Be mindful of spamming upstream providers")
 	// TODO: support some way to support writing just to a specific cache when Multi cache is being used
+
+	if err != nil {
+		panic(err)
+	}
 }

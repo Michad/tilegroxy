@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"net"
 	"net/http"
 	"os"
@@ -98,8 +99,12 @@ func setupHandlers(config *config.Config, layerGroup *layer.LayerGroup, auth aut
 		rootHandler = handlers.CompressHandler(rootHandler)
 	}
 
+	if config.Server.Timeout > math.MaxInt64 {
+		config.Server.Timeout = math.MaxInt64
+	}
+
 	rootHandler = httpContextHandler{rootHandler, config.Error}
-	rootHandler = http.TimeoutHandler(rootHandler, time.Duration(config.Server.Timeout)*time.Second, config.Error.Messages.Timeout)
+	rootHandler = http.TimeoutHandler(rootHandler, time.Duration(config.Server.Timeout)*time.Second, config.Error.Messages.Timeout) // #nosec G115
 	rootHandler, err = configureAccessLogging(config.Logging.Access, config.Error.Messages, rootHandler)
 
 	if err != nil {
@@ -115,8 +120,14 @@ func listenAndServeTLS(config *config.Config, srvErr chan error, srv *http.Serve
 
 	if config.Server.Encrypt.Certificate != "" && config.Server.Encrypt.KeyFile != "" {
 		if httpPort != 0 {
+			srv := &http.Server{
+				Addr:              httpHostPort,
+				Handler:           httpRedirectHandler{protoAndHost: "https://" + config.Server.Encrypt.Domain},
+				ReadHeaderTimeout: time.Second,
+			}
+
 			go func() {
-				srvErr <- http.ListenAndServe(httpHostPort, httpRedirectHandler{protoAndHost: "https://" + config.Server.Encrypt.Domain})
+				srvErr <- srv.ListenAndServe()
 			}()
 		}
 
@@ -136,7 +147,13 @@ func listenAndServeTLS(config *config.Config, srvErr chan error, srv *http.Serve
 		}
 
 		if httpPort != 0 {
-			go func() { srvErr <- http.ListenAndServe(httpHostPort, certManager.HTTPHandler(nil)) }()
+			srv := &http.Server{
+				Addr:              httpHostPort,
+				Handler:           certManager.HTTPHandler(nil),
+				ReadHeaderTimeout: time.Second,
+			}
+
+			go func() { srvErr <- srv.ListenAndServe() }()
 		}
 
 		srv.TLSConfig = certManager.TLSConfig()
@@ -186,9 +203,10 @@ func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth au
 	}
 
 	srv := &http.Server{
-		Addr:        config.Server.BindHost + ":" + strconv.Itoa(config.Server.Port),
-		BaseContext: func(_ net.Listener) context.Context { return ctx },
-		Handler:     rootHandler,
+		Addr:              config.Server.BindHost + ":" + strconv.Itoa(config.Server.Port),
+		BaseContext:       func(_ net.Listener) context.Context { return ctx },
+		Handler:           rootHandler,
+		ReadHeaderTimeout: time.Second,
 	}
 
 	srvErr := make(chan error, 1)

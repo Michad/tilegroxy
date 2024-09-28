@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math"
 	"regexp"
 	"slices"
 	"strconv"
@@ -37,14 +38,14 @@ var columnRegex = regexp.MustCompile("^[a-zA-Z0-9_]+$")
 type PostgisMvtConfig struct {
 	Datastore  string
 	Table      string
-	Extent     uint
+	Extent     uint16
 	Buffer     float64
 	GID        string
 	Geometry   string
 	Attributes []string
 	Filter     string
 	SourceSRID uint
-	Limit      uint
+	Limit      uint16
 }
 
 type PostgisMvt struct {
@@ -133,7 +134,11 @@ func (t PostgisMvt) GenerateTile(ctx context.Context, _ layer.ProviderContext, r
 	rawEnv := bounds.ToEWKT()
 	bufEnv := bounds.BufferRelative(t.Buffer).ToEWKT()
 
-	params := []any{int(t.SourceSRID), rawEnv, t.Extent, int(t.Buffer * float64(t.Extent)), bufEnv, req.LayerName, t.GID}
+	if t.SourceSRID > math.MaxInt {
+		return nil, pkg.InvalidSridError{}
+	}
+
+	params := []any{int(t.SourceSRID), rawEnv, t.Extent, int(t.Buffer * float64(t.Extent)), bufEnv, req.LayerName, t.GID} // #nosec G115
 
 	query := `WITH mvtgeom AS(SELECT ST_AsMVTGeom(ST_Transform(ST_SetSRID("` + t.Geometry + `", $1::integer), 3857), $2::geometry, extent => $3, buffer => $4) AS "geom"`
 

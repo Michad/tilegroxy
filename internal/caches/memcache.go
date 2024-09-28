@@ -35,7 +35,7 @@ type MemcacheConfig struct {
 	HostAndPort `mapstructure:",squash"`
 	Servers     []HostAndPort // The list of servers to use.
 	KeyPrefix   string        // Prefix to keynames stored in cache
-	TTL         uint32        // Cache expiration in seconds. Max of 30 days. Default to 1 day
+	TTL         uint          // Cache expiration in seconds. Max of 30 days. Default to 1 day
 }
 
 type Memcache struct {
@@ -107,5 +107,5 @@ func (c Memcache) Save(_ context.Context, t pkg.TileRequest, img *pkg.Image) err
 		return err
 	}
 
-	return c.client.Set(&memcache.Item{Key: c.KeyPrefix + t.String(), Value: val, Expiration: int32(c.TTL)})
+	return c.client.Set(&memcache.Item{Key: c.KeyPrefix + t.String(), Value: val, Expiration: int32(c.TTL)}) // #nosec G115 -- max value applied in Initialize
 }

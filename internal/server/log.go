@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -44,7 +45,7 @@ func (h slogContextHandler) Handle(ctx context.Context, r slog.Record) error {
 }
 
 func makeLogFileWriter(path string, alsoStdOut bool) (io.Writer, error) {
-	logFile, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+	logFile, err := os.OpenFile(filepath.Clean(path), os.O_CREATE|os.O_APPEND|os.O_RDWR, 0600)
 
 	if err != nil {
 		return nil, err

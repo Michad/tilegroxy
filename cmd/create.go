@@ -72,7 +72,7 @@ func runCreate(cmd *cobra.Command, _ []string) {
 	var file *os.File
 
 	if writePath != "" {
-		file, err = os.OpenFile(writePath, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0666)
+		file, err = os.OpenFile(filepath.Clean(writePath), os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0600)
 
 		if err != nil {
 			panic(err)

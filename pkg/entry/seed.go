@@ -74,6 +74,10 @@ func Seed(cfg *config.Config, opts SeedOptions, out io.Writer) error {
 
 	numReq := len(tileRequests)
 
+	if numReq > math.MaxUint16 {
+		return fmt.Errorf("more than %v tiles requested", math.MaxUint16)
+	}
+
 	if opts.NumThread > uint16(numReq) {
 		fmt.Fprintln(os.Stderr, "Warning: more threads requested than tiles")
 		opts.NumThread = uint16(numReq)
@@ -116,13 +120,13 @@ func createTileRequests(z uint, curCount int, opts SeedOptions) (*[]pkg.TileRequ
 	tileRequests, err := opts.Bounds.FindTiles(opts.LayerName, z, opts.Force)
 
 	if err != nil || (curCount > maxCount && !opts.Force) {
-		count := curCount
+		count := uint64(curCount) // #nosec G115
 
 		if err != nil {
 			var tilesError pkg.TooManyTilesError
 
 			if errors.As(err, &tilesError) {
-				count = int(tilesError.NumTiles)
+				count = tilesError.NumTiles
 			} else {
 				return nil, err
 			}

@@ -75,6 +75,10 @@ func Test(cfg *config.Config, opts TestOptions, out io.Writer) (uint32, error) {
 
 	numReq := len(tileRequests)
 
+	if numReq > math.MaxUint16 {
+		return 0, fmt.Errorf("more than %v tiles requested", math.MaxUint16)
+	}
+
 	if opts.NumThread > uint16(numReq) {
 		fmt.Fprintln(os.Stderr, "Warning: more threads requested than tiles")
 		opts.NumThread = uint16(numReq)
@@ -110,8 +114,9 @@ func Test(cfg *config.Config, opts TestOptions, out io.Writer) (uint32, error) {
 
 	wg.Wait()
 
-	writer.Flush()
-	return errCount, nil
+	err = writer.Flush()
+
+	return errCount, err
 }
 
 func testTileRequests(layerObjects *layer.LayerGroup, opts TestOptions, errCount *uint32, writer *tabwriter.Writer, wg *sync.WaitGroup, t int, myReqs []pkg.TileRequest) {
