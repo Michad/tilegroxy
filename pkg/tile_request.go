@@ -143,6 +143,10 @@ func NewBoundsFromGeohash(hashStr string) (Bounds, error) {
 
 // Turns a bounding box into a list of the tiles contained in the bounds for an arbitrary zoom level. Limited to 10k tiles unless force is true, then it's limited to 2^32 tiles.
 func (b Bounds) FindTiles(layerName string, zoom uint, force bool) (*[]TileRequest, error) {
+	if zoom > MaxZoom {
+		return nil, RangeError{"z", 0, MaxZoom}
+	}
+
 	z := float64(zoom)
 
 	lonMin := b.West
@@ -181,7 +185,7 @@ func (b Bounds) FindTiles(layerName string, zoom uint, force bool) (*[]TileReque
 		yMax = yMin + 1
 	}
 
-	numTiles := uint64(xMax-xMin) * uint64(yMax-yMin)
+	numTiles := uint64(xMax-xMin) * uint64(yMax-yMin) // #nosec G115 -- int->uint64 can't overflow until 128 bit processors come out
 
 	if numTiles > 10000 && !force {
 		return nil, TooManyTilesError{NumTiles: numTiles}

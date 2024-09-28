@@ -261,10 +261,20 @@ func (t Blend) GenerateTile(ctx context.Context, providerContext layer.ProviderC
 	writer := bufio.NewWriter(&buf)
 
 	err := png.Encode(writer, combinedImg)
-	writer.Flush()
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = writer.Flush()
+
+	if err != nil {
+		return nil, err
+	}
+
 	output := buf.Bytes()
 
-	return &pkg.Image{Content: output, ContentType: mimePng, ForceSkipCache: skipWrite.Load()}, err
+	return &pkg.Image{Content: output, ContentType: mimePng, ForceSkipCache: skipWrite.Load()}, nil
 }
 
 func (t Blend) blendImage(ctx context.Context, img image.Image, size image.Point, combinedImg image.Image) image.Image {

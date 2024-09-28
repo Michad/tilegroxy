@@ -26,6 +26,7 @@ import (
 	"image/png"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -117,6 +118,7 @@ func GetStaticImage(path string) (*[]byte, error) {
 	}
 
 	if failedImages[path] != nil {
+		//#nosec G404
 		if rand.Float32()*100 > 1 {
 			return nil, failedImages[path]
 		}
@@ -126,7 +128,7 @@ func GetStaticImage(path string) (*[]byte, error) {
 		return getColorImage(path)
 	}
 
-	img, err := os.ReadFile(path)
+	img, err := os.ReadFile(filepath.Clean(path))
 
 	if img != nil {
 		dynamicImages[path] = &img
@@ -160,7 +162,12 @@ func getColorImage(path string) (*[]byte, error) {
 		return nil, err
 	}
 
-	writer.Flush()
+	err = writer.Flush()
+
+	if err != nil {
+		return nil, err
+	}
+
 	output := buf.Bytes()
 
 	dynamicImages[path] = &output

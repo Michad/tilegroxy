@@ -142,8 +142,18 @@ func (t Effect) GenerateTile(ctx context.Context, providerContext layer.Provider
 	writer := bufio.NewWriter(&buf)
 
 	err = png.Encode(writer, realImage)
-	writer.Flush()
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = writer.Flush()
+
+	if err != nil {
+		return nil, err
+	}
+
 	output := buf.Bytes()
 
-	return &pkg.Image{Content: output, ContentType: mimePng, ForceSkipCache: img.ForceSkipCache}, err
+	return &pkg.Image{Content: output, ContentType: mimePng, ForceSkipCache: img.ForceSkipCache}, nil
 }

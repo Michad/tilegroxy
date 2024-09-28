@@ -76,7 +76,7 @@ const hexBase = 16
 const maxColorInt = 0xFFFFFF
 
 func makeImage() (pkg.Image, error) {
-	col := strconv.FormatUint(rand.Uint64N(maxColorInt), hexBase)
+	col := strconv.FormatUint(rand.Uint64N(maxColorInt), hexBase) // #nosec G404
 	if len(col) < numColorDigits {
 		col = strings.Repeat("0", numColorDigits-len(col)) + col
 	}

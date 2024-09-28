@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"net"
 	"net/http"
 	"reflect"
@@ -186,9 +187,10 @@ func setupHealthEndpoints(ctx context.Context, h config.HealthConfig, checks []h
 	r.Handle("/health", healthHandler{checks, checkResultCache})
 
 	srv := &http.Server{
-		Addr:        httpHostPort,
-		BaseContext: func(_ net.Listener) context.Context { return ctx },
-		Handler:     &r,
+		Addr:              httpHostPort,
+		BaseContext:       func(_ net.Listener) context.Context { return ctx },
+		Handler:           &r,
+		ReadHeaderTimeout: time.Second,
 	}
 
 	go func() { srvErr <- srv.ListenAndServe() }()
@@ -219,7 +221,12 @@ func setupCheckRoutines(ctx context.Context, h config.HealthConfig, layerGroup *
 	}
 
 	for i, check := range checks {
-		ttl := time.Second * time.Duration(check.GetDelay())
+		delay := check.GetDelay()
+
+		if delay > math.MaxInt64 {
+			delay = math.MaxInt64
+		}
+		ttl := time.Second * time.Duration(delay) // #nosec G115
 
 		ticker := time.NewTicker(ttl)
 		done := make(chan bool)

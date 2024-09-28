@@ -39,9 +39,9 @@ Example:
 
 func runTest(cmd *cobra.Command, _ []string) {
 	layerNames, err1 := cmd.Flags().GetStringSlice("layer")
-	z, err2 := cmd.Flags().GetUint("z-coordinate")
-	x, err3 := cmd.Flags().GetUint("y-coordinate")
-	y, err4 := cmd.Flags().GetUint("x-coordinate")
+	z, err2 := cmd.Flags().GetInt("z-coordinate")
+	x, err3 := cmd.Flags().GetInt("y-coordinate")
+	y, err4 := cmd.Flags().GetInt("x-coordinate")
 	noCache, err5 := cmd.Flags().GetBool("no-cache")
 	numThread, err6 := cmd.Flags().GetUint16("threads")
 	out := rootCmd.OutOrStdout()
@@ -59,7 +59,7 @@ func runTest(cmd *cobra.Command, _ []string) {
 		return
 	}
 
-	errCount, err := tg.Test(cfg, tg.TestOptions{LayerNames: layerNames, Z: int(z), X: int(x), Y: int(y), NumThread: numThread, NoCache: noCache}, out)
+	errCount, err := tg.Test(cfg, tg.TestOptions{LayerNames: layerNames, Z: z, X: x, Y: y, NumThread: numThread, NoCache: noCache}, out)
 
 	if err != nil {
 		fmt.Fprintf(out, "Error: %v", err)
@@ -87,9 +87,9 @@ func initTest() {
 	rootCmd.AddCommand(testCmd)
 
 	testCmd.Flags().StringSliceP("layer", "l", []string{}, "The ID(s) of the layer to test. Tests all layers by default")
-	testCmd.Flags().UintP("z-coordinate", "z", 10, "The z coordinate to use to test")  //nolint:mnd
-	testCmd.Flags().UintP("x-coordinate", "x", 123, "The x coordinate to use to test") //nolint:mnd
-	testCmd.Flags().UintP("y-coordinate", "y", 534, "The y coordinate to use to test") //nolint:mnd
+	testCmd.Flags().IntP("z-coordinate", "z", 10, "The z coordinate to use to test")  //nolint:mnd
+	testCmd.Flags().IntP("x-coordinate", "x", 123, "The x coordinate to use to test") //nolint:mnd
+	testCmd.Flags().IntP("y-coordinate", "y", 534, "The y coordinate to use to test") //nolint:mnd
 	testCmd.Flags().Bool("no-cache", false, "Don't write to the cache. The Cache configuration must still be syntactically valid")
 	testCmd.Flags().Uint16P("threads", "t", 1, "How many layers to test at once. Be mindful of spamming upstream providers")
 	//TODO: output in custom format or write to file
