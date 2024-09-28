@@ -1,0 +1,5 @@
+name: decisions
+title: Decision Records
+version: ~
+nav:
+- modules/ROOT/nav.adoc

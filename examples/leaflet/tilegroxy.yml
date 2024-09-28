@@ -1,6 +1,6 @@
 server:
     production: false
-    port: 8081
+    port: 8080
 cache:
     name: None
 layers:

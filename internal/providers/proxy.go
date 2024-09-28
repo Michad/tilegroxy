@@ -15,40 +15,66 @@
 package providers
 
 import (
+	"context"
 	"fmt"
-	"math"
-	"strconv"
-	"strings"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/datastore"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
+type ProxyConfig struct {
+	URL     string
+	InvertY bool // Used for TMS
+	Srid    uint
+}
+
 type Proxy struct {
-	Url     string
-	InvertY bool //Used for TMS
+	ProxyConfig
+	clientConfig config.ClientConfig
 }
 
-func (t Proxy) PreAuth(authContext *AuthContext) error {
-	return nil
+func init() {
+	layer.RegisterProvider(ProxyRegistration{})
 }
 
-func (t Proxy) GenerateTile(authContext *AuthContext, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, tileRequest internal.TileRequest) (*internal.Image, error) {
-	if t.Url == "" {
+type ProxyRegistration struct {
+}
+
+func (s ProxyRegistration) InitializeConfig() any {
+	return ProxyConfig{}
+}
+
+func (s ProxyRegistration) Name() string {
+	return "proxy"
+}
+
+func (s ProxyRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, _ *layer.LayerGroup, _ *datastore.DatastoreRegistry) (layer.Provider, error) {
+	cfg := cfgAny.(ProxyConfig)
+	if cfg.URL == "" {
 		return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.proxy.url", "")
 	}
 
-	y := tileRequest.Y
-	if t.InvertY {
-		y = int(math.Exp2(float64(tileRequest.Z))) - y - 1
+	if cfg.Srid == 0 {
+		cfg.Srid = pkg.SRIDWGS84
+	}
+	if cfg.Srid != pkg.SRIDWGS84 && cfg.Srid != pkg.SRIDPsuedoMercator {
+		return nil, fmt.Errorf(errorMessages.EnumError, "provider.url template.srid", cfg.Srid, []int{pkg.SRIDPsuedoMercator, pkg.SRIDWGS84})
 	}
 
-	url := strings.ReplaceAll(t.Url, "{Z}", strconv.Itoa(tileRequest.Z))
-	url = strings.ReplaceAll(url, "{z}", strconv.Itoa(tileRequest.Z))
-	url = strings.ReplaceAll(url, "{Y}", strconv.Itoa(y))
-	url = strings.ReplaceAll(url, "{y}", strconv.Itoa(y))
-	url = strings.ReplaceAll(url, "{X}", strconv.Itoa(tileRequest.X))
-	url = strings.ReplaceAll(url, "{x}", strconv.Itoa(tileRequest.X))
+	return &Proxy{cfg, clientConfig}, nil
+}
 
-	return getTile(clientConfig, url, make(map[string]string))
+func (t Proxy) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.ProviderContext, error) {
+	return layer.ProviderContext{AuthBypass: true}, nil
+}
+
+func (t Proxy) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+	url, err := replaceURLPlaceholders(ctx, tileRequest, t.URL, t.InvertY, t.Srid)
+	if err != nil {
+		return nil, err
+	}
+
+	return getTile(ctx, t.clientConfig, url, make(map[string]string))
 }

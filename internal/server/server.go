@@ -15,185 +15,81 @@
 package server
 
 import (
+	"context"
+	"errors"
 	"fmt"
-	"io"
 	"log/slog"
+	"math"
+	"net"
 	"net/http"
 	"os"
+	"os/signal"
+	"runtime/debug"
 	"strconv"
+	"time"
 
-	"github.com/Michad/tilegroxy/internal/authentication"
-	"github.com/Michad/tilegroxy/internal/config"
-	"github.com/Michad/tilegroxy/internal/images"
-	"github.com/Michad/tilegroxy/internal/layers"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/authentication"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/gorilla/handlers"
 )
 
-func handleNoContent(w http.ResponseWriter, req *http.Request) {
+func handleNoContent(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-type TypeOfError int
+// This is just here to allow tests to specify a different signal to send to kill the webserver
+// not useful in practice due to OS-specific nature of signals
+var InterruptFlags = []os.Signal{os.Interrupt}
 
-const (
-	TypeOfErrorBounds = iota
-	TypeOfErrorAuth
-	TypeOfErrorProvider
-	TypeOfErrorOtherBadRequest
-	TypeOfErrorOther
-)
-
-func writeError(w http.ResponseWriter, cfg *config.ErrorConfig, errorType TypeOfError, message string, params ...any) {
-	var status int
-	if errorType == TypeOfErrorAuth {
-		status = http.StatusUnauthorized
-	} else if errorType == TypeOfErrorBounds {
-		status = http.StatusBadRequest
-	} else if errorType == TypeOfErrorProvider {
-		status = http.StatusInternalServerError
-	} else if errorType == TypeOfErrorOtherBadRequest {
-		status = http.StatusBadRequest
-	} else {
-		status = http.StatusInternalServerError
-	}
-
-	fullMessage := fmt.Sprintf(message, params...)
-	slog.Warn("Returning error to response: " + fullMessage)
-
-	if cfg.Mode == config.ModeErrorPlainText {
-		w.WriteHeader(status)
-		w.Write([]byte(fullMessage))
-	} else if cfg.Mode == config.ModeErrorNoError {
-		w.WriteHeader(status)
-	} else if cfg.Mode == config.ModeErrorImageHeader || cfg.Mode == config.ModeErrorImage {
-		if cfg.Mode == config.ModeErrorImageHeader {
-			w.Header().Add("x-error-message", fullMessage)
-		}
-		w.WriteHeader(status)
-
-		var imgPath string
-		if errorType == TypeOfErrorBounds {
-			imgPath = cfg.Images.OutOfBounds
-		} else if errorType == TypeOfErrorAuth {
-			imgPath = cfg.Images.Authentication
-		} else if errorType == TypeOfErrorProvider {
-			imgPath = cfg.Images.Provider
-		} else {
-			imgPath = cfg.Images.Other
-		}
-
-		img, err2 := images.GetStaticImage(imgPath)
-		if img != nil {
-			w.Write(*img)
-		}
-
-		if err2 != nil {
-			slog.Error(err2.Error())
-		}
-	} else {
-		w.WriteHeader(status)
-		slog.Error("Invalid error mode! Falling back to none!")
-	}
-}
-
-func configureMainLogging(cfg *config.Config) error {
-	if cfg.Logging.MainLog.EnableStandardOut || len(cfg.Logging.MainLog.Path) > 0 {
-		var out io.Writer
-		if len(cfg.Logging.MainLog.Path) > 0 {
-			logFile, err := os.OpenFile(cfg.Logging.MainLog.Path, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
-
-			if err != nil {
-				return err
-			}
-
-			if cfg.Logging.MainLog.EnableStandardOut {
-				out = io.MultiWriter(os.Stdout, out)
-			} else {
-				out = logFile
-			}
-		} else if cfg.Logging.MainLog.EnableStandardOut {
-			out = os.Stdout
-		} else {
-			panic("Impossible logic error")
-		}
-
-		var level slog.Level
-		err := level.UnmarshalText([]byte(cfg.Logging.MainLog.Level))
-
-		if err != nil {
-			return err
-		}
-
-		opt := slog.HandlerOptions{
-			AddSource: !cfg.Server.Production,
-			Level:     level,
-		}
-
-		var logHandler slog.Handler
-
-		if cfg.Logging.MainLog.Format == config.MainLogFormatPlain {
-			logHandler = slog.NewTextHandler(out, &opt)
-		} else if cfg.Logging.MainLog.Format == config.MainLogFormatJson {
-			logHandler = slog.NewJSONHandler(out, &opt)
-		} else {
-			return fmt.Errorf(cfg.Error.Messages.InvalidParam, "logging.mainlog.format", cfg.Logging.MainLog.Format)
-		}
-
-		slog.SetDefault(slog.New(logHandler))
-	} else {
-		slog.SetLogLoggerLevel(10)
-	}
-	return nil
-}
-
-func configureAccessLogging(cfg config.AccessLogConfig, errorMessages config.ErrorMessages, rootHandler http.Handler) (http.Handler, error) {
-	if cfg.EnableStandardOut || len(cfg.Path) > 0 {
-		var out io.Writer
-		if len(cfg.Path) > 0 {
-			logFile, err := os.OpenFile(cfg.Path, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
-
-			if err != nil {
-				return nil, err
-			}
-
-			if cfg.EnableStandardOut {
-				out = io.MultiWriter(os.Stdout, out)
-			} else {
-				out = logFile
-			}
-		} else if cfg.EnableStandardOut {
-			out = os.Stdout
-		} else {
-			panic("Impossible logic error")
-		}
-
-		if cfg.Format == config.AccessLogFormatCommon {
-			rootHandler = handlers.LoggingHandler(out, rootHandler)
-		} else if cfg.Format == config.AccessLogFormatCombined {
-			rootHandler = handlers.CombinedLoggingHandler(out, rootHandler)
-		} else {
-			return nil, fmt.Errorf(errorMessages.InvalidParam, "logging.accesslog.format", cfg.Format)
-		}
-	}
-	return rootHandler, nil
-}
-
-func ListenAndServe(config *config.Config, layerList []*layers.Layer, auth *authentication.Authentication) error {
+func setupHandlers(config *config.Config, layerGroup *layer.LayerGroup, auth authentication.Authentication) (http.Handler, error) {
 	r := http.ServeMux{}
 
-	layerMap := make(map[string]*layers.Layer)
-	for _, l := range layerList {
-		layerMap[l.Id] = l
-	}
+	var myRootHandler http.Handler
+	var myTileHandler http.Handler
+	var myDocumentationHandler http.Handler
+	defaultHandler := defaultHandler{config: config, auth: auth, layerGroup: layerGroup}
 
 	if config.Server.Production {
-		r.HandleFunc("/", handleNoContent)
+		myRootHandler = http.HandlerFunc(handleNoContent)
 	} else {
-		r.Handle("/", &defaultHandler{config, layerMap, auth})
-		// r.HandleFunc("/documentation", defaultHandler)
+		myRootHandler = &defaultHandler
+
+		if config.Server.DocsPath != "" {
+			myDocumentationHandler = &documentationHandler{defaultHandler}
+		}
 	}
-	r.Handle(config.Server.ContextRoot+"/{layer}/{z}/{x}/{y}", &tileHandler{defaultHandler{config, layerMap, auth}})
+
+	tilePath := config.Server.RootPath + config.Server.TilePath + "/{layer}/{z}/{x}/{y}"
+	docsPath := config.Server.RootPath + config.Server.DocsPath + "/{path...}"
+	handler, err := newTileHandler(defaultHandler)
+	if err != nil {
+		return nil, err
+	}
+
+	myTileHandler = &handler
+
+	if config.Telemetry.Enabled {
+		myRootHandler = otelhttp.NewHandler(myRootHandler, config.Server.RootPath, otelhttp.WithMessageEvents(otelhttp.WriteEvents))
+		myTileHandler = otelhttp.NewHandler(myTileHandler, tilePath, otelhttp.WithMessageEvents(otelhttp.WriteEvents))
+
+		if myDocumentationHandler != nil {
+			myDocumentationHandler = otelhttp.NewHandler(myDocumentationHandler, docsPath, otelhttp.WithMessageEvents(otelhttp.WriteEvents))
+		}
+	}
+
+	r.Handle(config.Server.RootPath, myRootHandler)
+	r.Handle(tilePath, myTileHandler)
+	r.Handle(tilePath+"/", myTileHandler)
+
+	if myDocumentationHandler != nil {
+		r.Handle(docsPath, myDocumentationHandler)
+	}
 
 	var rootHandler http.Handler
 
@@ -203,7 +99,75 @@ func ListenAndServe(config *config.Config, layerList []*layers.Layer, auth *auth
 		rootHandler = handlers.CompressHandler(rootHandler)
 	}
 
-	rootHandler, err := configureAccessLogging(config.Logging.AccessLog, config.Error.Messages, rootHandler)
+	if config.Server.Timeout > math.MaxInt64 {
+		config.Server.Timeout = math.MaxInt64
+	}
+
+	rootHandler = httpContextHandler{rootHandler, config.Error}
+	rootHandler = http.TimeoutHandler(rootHandler, time.Duration(config.Server.Timeout)*time.Second, config.Error.Messages.Timeout) // #nosec G115
+	rootHandler, err = configureAccessLogging(config.Logging.Access, config.Error.Messages, rootHandler)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return rootHandler, nil
+}
+
+func listenAndServeTLS(config *config.Config, srvErr chan error, srv *http.Server) {
+	httpPort := config.Server.Encrypt.HTTPPort
+	httpHostPort := net.JoinHostPort(config.Server.BindHost, strconv.Itoa(httpPort))
+
+	if config.Server.Encrypt.Certificate != "" && config.Server.Encrypt.KeyFile != "" {
+		if httpPort != 0 {
+			srv := &http.Server{
+				Addr:              httpHostPort,
+				Handler:           httpRedirectHandler{protoAndHost: "https://" + config.Server.Encrypt.Domain},
+				ReadHeaderTimeout: time.Second,
+			}
+
+			go func() {
+				srvErr <- srv.ListenAndServe()
+			}()
+		}
+
+		srvErr <- srv.ListenAndServeTLS(config.Server.Encrypt.Certificate, config.Server.Encrypt.KeyFile)
+	} else {
+		// Let's Encrypt workflow
+
+		cacheDir := "certs"
+		if config.Server.Encrypt.Cache != "" {
+			cacheDir = config.Server.Encrypt.Cache
+		}
+
+		certManager := autocert.Manager{
+			Prompt:     autocert.AcceptTOS,
+			HostPolicy: autocert.HostWhitelist(config.Server.Encrypt.Domain),
+			Cache:      autocert.DirCache(cacheDir),
+		}
+
+		if httpPort != 0 {
+			srv := &http.Server{
+				Addr:              httpHostPort,
+				Handler:           certManager.HTTPHandler(nil),
+				ReadHeaderTimeout: time.Second,
+			}
+
+			go func() { srvErr <- srv.ListenAndServe() }()
+		}
+
+		srv.TLSConfig = certManager.TLSConfig()
+
+		srvErr <- srv.ListenAndServeTLS("", "")
+	}
+}
+
+func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth authentication.Authentication) error {
+	if config.Server.Encrypt != nil && config.Server.Encrypt.Domain == "" {
+		return fmt.Errorf(config.Error.Messages.ParamRequired, "server.encrypt.domain")
+	}
+
+	rootHandler, err := setupHandlers(config, layerGroup, auth)
 
 	if err != nil {
 		return err
@@ -215,7 +179,70 @@ func ListenAndServe(config *config.Config, layerList []*layers.Layer, auth *auth
 		return err
 	}
 
-	slog.Info("Binding...")
+	ctx, stop := signal.NotifyContext(pkg.BackgroundContext(), InterruptFlags...)
+	defer stop()
 
-	return http.ListenAndServe(config.Server.BindHost+":"+strconv.Itoa(config.Server.Port), rootHandler)
+	var healthShutdown func(context.Context) error
+
+	if config.Server.Health.Enabled {
+		healthShutdown, err = SetupHealth(ctx, config, layerGroup)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	var otelShutdown func(context.Context) error
+
+	if config.Telemetry.Enabled {
+		// Set up OpenTelemetry.
+		otelShutdown, err = setupOTELSDK(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
+	srv := &http.Server{
+		Addr:              config.Server.BindHost + ":" + strconv.Itoa(config.Server.Port),
+		BaseContext:       func(_ net.Listener) context.Context { return ctx },
+		Handler:           rootHandler,
+		ReadHeaderTimeout: time.Second,
+	}
+
+	srvErr := make(chan error, 1)
+
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				srvErr <- fmt.Errorf("unexpected server error %v \n %v", r, string(debug.Stack()))
+			}
+		}()
+
+		slog.InfoContext(context.Background(), "Binding...")
+
+		if config.Server.Encrypt != nil {
+			listenAndServeTLS(config, srvErr, srv)
+		} else {
+			srvErr <- srv.ListenAndServe()
+		}
+	}()
+
+	select {
+	case err = <-srvErr:
+		return err
+	case <-ctx.Done():
+		stop()
+	}
+
+	err = srv.Shutdown(context.Background())
+
+	if otelShutdown != nil {
+		err = errors.Join(err, otelShutdown(context.Background()))
+	}
+
+	if healthShutdown != nil {
+		err = errors.Join(err, healthShutdown(context.Background()))
+	}
+
+	return err
 }

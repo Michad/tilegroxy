@@ -1,0 +1,5 @@
+= None
+
+Disables the cache.
+
+Name should be "none" or "test"

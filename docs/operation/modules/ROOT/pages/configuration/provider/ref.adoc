@@ -1,0 +1,28 @@
+= Ref
+
+Ref refers requests to another layer. This is pointless by itself but can be useful when combined with other providers to avoid repeating yourself.
+
+For instance you can have a layer with a complex client configuration that utilizes a `pattern` and points to a WMS server with the WMS layer being specified by a placeholder, then several other layers using `Ref` that fill in the blank.
+
+Name should be "ref"
+
+Configuration options:
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| layer
+| The layername to refer towards, treated the same if it were supplied in an incoming request.
+| string
+| Yes
+| None
+|===
+
+Example
+
+----
+provider:
+  name: ref
+  layer: something_else
+----

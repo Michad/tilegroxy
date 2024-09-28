@@ -1,0 +1,103 @@
+name: Code Metrics
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+permissions:
+  contents: read
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    name: Update coverage
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          persist-credentials: false 
+          fetch-depth: 0 
+      - name: Setup go
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
+        with:
+          go-version-file: 'go.mod'
+      - name: Run Test
+        id: test
+        run: |
+          make clean cover
+          tail -1 coveragef.out | sed -E "s/[^0-9]*([0-9]+\.[0-9]*)%/VAL=\1/" >> $GITHUB_OUTPUT
+      - name: Comment on PR
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        if: github.event_name == 'pull_request'
+        env:
+          VAL: ${{ steps.test.outputs.VAL }}
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: 'Code coverage is ' + process.env.VAL + '%'
+            })
+      - name: Create the Badge
+        uses: schneegans/dynamic-badges-action@e9a478b16159b4d31420099ba146cdc50f134483 # v1.7.0
+        if: github.event_name != 'pull_request'
+        env:
+          VAL: ${{ steps.test.outputs.VAL }}
+        with:
+          auth: ${{ secrets.GIST_SECRET }}
+          gistID: d1b9e082f6608635494188d0f52bae69
+          filename: coverage.json
+          label: Coverage
+          message: ${{ env.VAL }}%
+          valColorRange: ${{ env.VAL }}
+          maxColorRange: 90
+          minColorRange: 50
+  libyears:
+    runs-on: ubuntu-latest
+    name: Update libyears
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          persist-credentials: false 
+          fetch-depth: 0 
+      - name: Setup go
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
+        with:
+          go-version-file: 'go.mod'
+      - name: Run Test
+        id: test
+        run: |
+          make libyears | /usr/bin/jq '.libyear | .*100 | round/100' | xargs -I{} echo VAL={} >> $GITHUB_OUTPUT
+      - name: Comment on PR
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        if: github.event_name == 'pull_request'
+        env:
+          VAL: ${{ steps.test.outputs.VAL }}
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: 'Libyears is ' + process.env.VAL
+            })
+      - name: Create the Badge
+        uses: schneegans/dynamic-badges-action@e9a478b16159b4d31420099ba146cdc50f134483 # v1.7.0
+        if: github.event_name != 'pull_request'
+        env:
+          VAL: ${{ steps.test.outputs.VAL }}
+        with:
+          auth: ${{ secrets.GIST_SECRET }}
+          gistID: d1b9e082f6608635494188d0f52bae69
+          filename: libyears.json
+          label: Libyears
+          message: ${{ env.VAL }} years
+          invertColorRange: true
+          valColorRange: ${{ env.VAL }}
+          maxColorRange: 50
+          minColorRange: 0

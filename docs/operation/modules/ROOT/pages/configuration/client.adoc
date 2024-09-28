@@ -1,0 +1,74 @@
+= Client
+
+Configures how the HTTP client should operate for tile requests that require calling an external HTTP(s) server.
+
+Configuration options:
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| UserAgent
+| The user agent to include in outgoing http requests.
+| string
+| No
+| tilegroxy/VERSION
+
+| MaxLength
+| The maximum Content-Length to allow incoming responses
+| int
+| No
+| 10 MiB
+
+| UnknownLength
+| Allow responses that are missing a Content-Length header, this could lead to excessive memory usage
+| bool
+| No
+| false
+
+| ContentTypes
+| The content-types to allow remote servers to return. Anything else will be interpreted as an error
+| string[]
+| No
+| image/png, image/jpg
+
+| StatusCodes
+| The status codes from the remote server to consider successful
+| int[]
+| No
+| 200
+
+| Headers
+| Include these headers in requests
+| map[string]string
+| No
+| None
+
+| RewriteContentTypes
+| Replaces ``Content-Type``s that match the key with the value. This is to handle servers returning a generic content type. Mapping to an empty string that will cause tilegroxy to intuit the Content-Type by inspecting the contents - this may be inaccurate for MVT. This only applies after the check that Content-Type is valid according to the `ContentTypes` parameter meaning your original Content-Type will need to be in both parameters to be used
+| map[string]string
+| No
+| {"application/octet-stream": ""}
+|===
+
+The following can be supplied as environment variables:
+
+[cols="1,2"]
+|===
+| Configuration Parameter | Environment Variable
+
+| UserAgent
+| CLIENT_USERAGENT
+
+| MaxLength
+| CLIENT_MAXLENGTH
+
+| UnknownLength
+| CLIENT_UNKNOWNLENGTH
+
+| ContentTypes
+| CLIENT_CONTENTTYPES
+
+| StatusCodes
+| CLIENT_STATUSCODES
+|===

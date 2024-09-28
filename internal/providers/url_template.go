@@ -15,42 +15,88 @@
 package providers
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/datastore"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
-type UrlTemplate struct {
+type URLTemplateConfig struct {
 	Template string
+	Width    uint16
+	Height   uint16
+	Srid     uint
 }
 
-func (t UrlTemplate) PreAuth(authContext *AuthContext) error {
-	return nil
+type URLTemplate struct {
+	URLTemplateConfig
+	clientConfig config.ClientConfig
 }
 
-func (t UrlTemplate) GenerateTile(authContext *AuthContext, clientConfig *config.ClientConfig, errorMessages *config.ErrorMessages, tileRequest internal.TileRequest) (*internal.Image, error) {
-	if t.Template == "" {
+func (t URLTemplate) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.ProviderContext, error) {
+	return layer.ProviderContext{AuthBypass: true}, nil
+}
+
+func init() {
+	layer.RegisterProvider(URLTemplateRegistration{})
+}
+
+type URLTemplateRegistration struct {
+}
+
+func (s URLTemplateRegistration) InitializeConfig() any {
+	return URLTemplateConfig{}
+}
+
+func (s URLTemplateRegistration) Name() string {
+	return "url template"
+}
+
+func (s URLTemplateRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, _ *layer.LayerGroup, _ *datastore.DatastoreRegistry) (layer.Provider, error) {
+	cfg := cfgAny.(URLTemplateConfig)
+	if cfg.Template == "" {
 		return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.url template.url", "")
 	}
 
-	b, err := tileRequest.GetBounds()
+	if cfg.Height == 0 {
+		cfg.Height = 256
+	}
+
+	if cfg.Width == 0 {
+		cfg.Width = 256
+	}
+
+	if cfg.Srid == 0 {
+		cfg.Srid = pkg.SRIDWGS84
+	}
+	if cfg.Srid != pkg.SRIDWGS84 && cfg.Srid != pkg.SRIDPsuedoMercator {
+		return nil, fmt.Errorf(errorMessages.EnumError, "provider.url template.srid", cfg.Srid, []int{pkg.SRIDPsuedoMercator, pkg.SRIDWGS84})
+	}
+
+	return &URLTemplate{cfg, clientConfig}, nil
+}
+
+func (t URLTemplate) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+	b, err := tileRequest.GetBoundsProjection(t.Srid)
 
 	if err != nil {
 		return nil, err
 	}
 
-	//width, height (in pixels), srs (in PROJ.4 format), xmin, ymin, xmax, ymax (in projected map units), and zoom
-	url := strings.ReplaceAll(t.Template, "$xmin", fmt.Sprintf("%f", b.MinLong))
-	url = strings.ReplaceAll(url, "$xmax", fmt.Sprintf("%f", b.MaxLong))
-	url = strings.ReplaceAll(url, "$ymin", fmt.Sprintf("%f", b.MinLat))
-	url = strings.ReplaceAll(url, "$ymax", fmt.Sprintf("%f", b.MaxLat))
+	// width, height (in pixels), srs (in PROJ.4 format), xmin, ymin, xmax, ymax (in projected map units), and zoom
+	url := strings.ReplaceAll(t.Template, "$xmin", fmt.Sprintf("%f", b.West))
+	url = strings.ReplaceAll(url, "$xmax", fmt.Sprintf("%f", b.East))
+	url = strings.ReplaceAll(url, "$ymin", fmt.Sprintf("%f", b.South))
+	url = strings.ReplaceAll(url, "$ymax", fmt.Sprintf("%f", b.North))
 	url = strings.ReplaceAll(url, "$zoom", strconv.Itoa(tileRequest.Z))
-	url = strings.ReplaceAll(url, "$width", "256") //TODO: allow these being dynamic
-	url = strings.ReplaceAll(url, "$height", "256")
-	url = strings.ReplaceAll(url, "$srs", "4326") //TODO: decide if I want this to be dynamic
+	url = strings.ReplaceAll(url, "$width", strconv.Itoa(int(t.Width)))
+	url = strings.ReplaceAll(url, "$height", strconv.Itoa(int(t.Height)))
+	url = strings.ReplaceAll(url, "$srs", strconv.FormatUint(uint64(t.Srid), 10))
 
-	return getTile(clientConfig, url, make(map[string]string))
+	return getTile(ctx, t.clientConfig, url, make(map[string]string))
 }

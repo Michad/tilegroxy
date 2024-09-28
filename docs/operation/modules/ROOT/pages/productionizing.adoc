@@ -1,0 +1,16 @@
+= Productionizing
+
+When running tilegroxy by default it runs in a non-hardened mode most fit for development use-cases.  If you want to operate tilegroxy in a production use-case with substantial traffic consider the following action items:
+
+[%interactive]
+* [ ] Deploy tilegroxy in a high-availability manner (that is to say N+1 Load Balanced) 
+* [ ] Configure Server.Production=true to disable X-Powered-By header and developer documentation
+* [ ] Configure Server.Header with any static headers you want returned such as CORS headers. A good reference of headers to consider is available link:https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html[here]
+* [ ] Configure Client.UserAgent with a agent that reflects your organization rather than tilegroxy itself
+* [ ] Configure logging to output at warning or error levels to avoid a bad signal to noise ratio
+* [ ] Consume logs into your aggregator or observability solution with a tool such as fluentbit/filebeat and/or rotate them with a tool such as logrotate
+* [ ] Ensure you have authentication configured either inside tilegroxy or upstream 
+* [ ] Ensure you have monitoring of the health endpoints and the endpoints are not exposed to the internet
+* [ ] Ensure cache-ing is configured against a distributed, high availability data-store
+* [ ] Consume telemetry data into an observability solution with trace sampling set at a level that won't overwhelm you
+* [ ] Verify tilegroxy will be restarted on the unfortunate event it crashes such as via Docker's run=unless-stopped, Kubernete's restart policy, or SystemD's Restart=on-failure

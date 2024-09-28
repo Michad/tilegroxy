@@ -15,15 +15,16 @@
 package caches
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strconv"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
 )
 
 type DiskConfig struct {
@@ -32,16 +33,33 @@ type DiskConfig struct {
 }
 
 type Disk struct {
-	config DiskConfig
+	DiskConfig
 }
 
-func requestToFilename(t internal.TileRequest) string {
-	return t.LayerName + "_" + strconv.Itoa(t.Z) + "_" + strconv.Itoa(t.X) + "_" + strconv.Itoa(t.Y)
+func requestToFilename(t pkg.TileRequest) string {
+	return t.StringWithSeparator("_")
 }
 
-func ConstructDisk(config DiskConfig, ErrorMessages *config.ErrorMessages) (*Disk, error) {
+func init() {
+	cache.RegisterCache(DiskRegistration{})
+}
+
+type DiskRegistration struct {
+}
+
+func (s DiskRegistration) InitializeConfig() any {
+	return DiskConfig{}
+}
+
+func (s DiskRegistration) Name() string {
+	return "disk"
+}
+
+func (s DiskRegistration) Initialize(configAny any, errorMessages config.ErrorMessages) (cache.Cache, error) {
+	config := configAny.(DiskConfig)
+
 	if config.Path == "" {
-		return nil, fmt.Errorf(ErrorMessages.InvalidParam, "Cache.Disk.path", config.Path)
+		return nil, fmt.Errorf(errorMessages.InvalidParam, "Cache.Disk.path", config.Path)
 	}
 	if config.FileMode == 0 {
 		config.FileMode = 0777
@@ -55,20 +73,28 @@ func ConstructDisk(config DiskConfig, ErrorMessages *config.ErrorMessages) (*Dis
 	return &Disk{config}, nil
 }
 
-func (c Disk) Lookup(t internal.TileRequest) (*internal.Image, error) {
+func (c Disk) Lookup(_ context.Context, t pkg.TileRequest) (*pkg.Image, error) {
 	filename := requestToFilename(t)
 
-	img, err := os.ReadFile(filepath.Join(c.config.Path, filename))
+	b, err := os.ReadFile(filepath.Clean(filepath.Join(c.Path, filename)))
 
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, nil
 	}
+	if err != nil {
+		return nil, err
+	}
 
-	return &img, err
+	return pkg.DecodeImage(b)
 }
 
-func (c Disk) Save(t internal.TileRequest, img *internal.Image) error {
+func (c Disk) Save(_ context.Context, t pkg.TileRequest, img *pkg.Image) error {
 	filename := requestToFilename(t)
+	b, err := img.Encode()
 
-	return os.WriteFile(filepath.Join(c.config.Path, filename), *img, fs.FileMode(c.config.FileMode))
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(filepath.Join(c.Path, filename), b, fs.FileMode(c.FileMode))
 }

@@ -1,0 +1,38 @@
+= Configuration
+
+Tilegroxy is a configuration driven application. This documentation describes the various configuration options available. Configuration can be supplied as either YAML or JSON format. Documentation is primarily in YAML format however advanced YAML features are avoided to make it easy to convert to JSON.
+
+link:https://github.com/Michad/tilegroxy/tree/main/examples/configurations[Complete examples are available here.]
+
+== Conventions
+
+Parameter names (configuration keys) are case-insensitive unless indicated otherwise. 
+
+Names (see below) are always lower case.
+
+Some parameters can be specified by environment variables which must be upper case. Environment variables override config parameters which override default values.
+
+== Entities
+
+Some configuration sections (xref:configuration/authentication/index.adoc[authentication], xref:configuration/provider/index.adoc[provider], xref:configuration/cache/index.adoc[cache], xref:configuration/datastores/index.adoc[datastores] and xref:configuration/secret/index.adoc[secret]) support selecting different methods of operation that change the full list of parameters available. For example,  a "proxy" provider requires a `url` parameter to get a map tile from another server while a "static" provider takes in a `image` to return for every request. You select these operating modes using a parameter called `name`. 
+
+Since these entities are too dynamic to have fixed environment variables and frequently may require a secret to operate, any string parameters can be made to use an environment variable by specifying a value in the format of `env.ENV_VAR_NAME`.  You can also use an external secret store xref:configuration/secret/index.adoc[if configured] by specifying a value in the format `secret.SECRET_NAME`
+
+== Structure
+
+The following is the top-level configuration structure. All top-level keys are optional besides layers:
+
+____
+xref:configuration/server.adoc[server]:  ... +
+xref:configuration/client.adoc[client]:  ... +
+xref:configuration/log.adoc[logging]:  ... +
+xref:configuration/telemetry.adoc[telemetry]: ... +
+xref:configuration/error.adoc[error]:  ... +
+xref:configuration/secret/index.adoc[secret]: ... +
+xref:configuration/authentication/index.adoc[authentication]:  ... +
+xref:configuration/cache/index.adoc[cache]:  ... +
+xref:configuration/datastores/index.adoc[datastores]: +
+   - ... +
+xref:configuration/layer.adoc[layers]:  +
+   - ... +
+____

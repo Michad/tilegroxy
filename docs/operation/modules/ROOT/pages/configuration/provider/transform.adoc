@@ -1,0 +1,59 @@
+= Transform
+
+This provider allows you to implement a function to change the RGBA value of each individual pixel in imagery from another provider.  Like the "Custom" provider this is implemented using Yaegi and requires you to include your own Go code.  The interface for this is however much simpler, it requires just a single function:
+
+----
+func transform(r, g, b, a uint8) (uint8, uint8, uint8, uint8)
+----
+
+You can include the logic in a dedicated file, or inline in configuration. No special types or functions are available for use besides the standard library. A package declaration and any imports are optional.
+
+This can only be used with layers that return JPEG or PNG images. Tiles will be scaled down to the lowest resolution to be combined and the combined result always output in PNG format.
+
+Name should be "transform"
+
+Configuration options:
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| file
+| An absolute file path to find the Go code implementing the transformation
+| string
+| No
+| None
+
+| formula
+| The go code implementing the transformation. Required if file isn't included
+| string
+| No
+| None
+
+| provider
+| The provider to get the imagery to transform
+| Provider
+| Yes
+| None
+
+| threads
+| How many threads (goroutines) to use per tile. The typical tile has 65,536 pixels, setting this to 8 for instance means each thread has to process 8,192 pixels in parallel. This helps avoid latency becoming problematically slow.
+| int
+| No
+| 1
+|===
+
+Example:
+
+----
+provider:
+  name: transform
+  threads: 8
+  formula: |
+    func transform(r, g, b, a uint8) (uint8, uint8, uint8, uint8) {
+      return g,b,r,a
+    }
+  provider:
+    name: proxy
+    url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+----

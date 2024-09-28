@@ -16,15 +16,17 @@ package caches
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"strconv"
 	"time"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 
-	"github.com/go-redis/cache/v9"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
+	rediscache "github.com/go-redis/cache/v9"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -37,30 +39,47 @@ const (
 var AllModes = []string{ModeStandalone, ModeCluster, ModeRing}
 
 type RedisConfig struct {
-	HostAndPort `mapstructure:",squash"` //Host and Port for a single server. A convenience equivalent to supplying Servers with a single entry
-	Db          int                      //Database number, defaults to 0
-	KeyPrefix   string                   //Prefix to keynames stored in cache
-	Username    string                   //Username to use to authenticate
-	Password    string                   //Password to use to authenticate
-	Mode        string                   //Controls operating mode. One of AllModes. Defaults to standalone
-	Ttl         uint32                   //Cache expiration in seconds. Max of 1 year. Default to 1 day
-	Servers     []HostAndPort            //The list of servers to use.
+	HostAndPort `mapstructure:",squash"` // Host and Port for a single server. A convenience equivalent to supplying Servers with a single entry
+	DB          int                      // Database number, defaults to 0
+	KeyPrefix   string                   // Prefix to keynames stored in cache
+	Username    string                   // Username to use to authenticate
+	Password    string                   // Password to use to authenticate
+	Mode        string                   // Controls operating mode. One of AllModes. Defaults to standalone
+	TTL         uint32                   // Cache expiration in seconds. Max of 1 year. Default to 1 day
+	Servers     []HostAndPort            // The list of servers to use.
 }
 
 const (
 	redisDefaultHost = "127.0.0.1"
 	redisDefaultPort = 6379
-	redisDefaultTtl  = 60 * 60 * 24
-	redisMaxTtl      = 60 * 60 * 24 * 365
+	redisDefaultTTL  = 60 * 60 * 24
+	redisMaxTTL      = 60 * 60 * 24 * 365
 )
 
 type Redis struct {
-	*RedisConfig
-	cache *cache.Cache
+	RedisConfig
+	cache *rediscache.Cache
 }
 
-func ConstructRedis(config *RedisConfig, errorMessages *config.ErrorMessages) (*Redis, error) {
-	var tileCache *cache.Cache
+func init() {
+	cache.RegisterCache(RedisRegistration{})
+}
+
+type RedisRegistration struct {
+}
+
+func (s RedisRegistration) InitializeConfig() any {
+	return RedisConfig{}
+}
+
+func (s RedisRegistration) Name() string {
+	return "redis"
+}
+
+func (s RedisRegistration) Initialize(configAny any, errorMessages config.ErrorMessages) (cache.Cache, error) {
+	config := configAny.(RedisConfig)
+
+	var tileCache *rediscache.Cache
 
 	if config.Mode == "" {
 		config.Mode = ModeStandalone
@@ -70,7 +89,7 @@ func ConstructRedis(config *RedisConfig, errorMessages *config.ErrorMessages) (*
 		return nil, fmt.Errorf(errorMessages.EnumError, "cache.redis.mode", config.Mode, AllModes)
 	}
 
-	if config.Servers == nil || len(config.Servers) == 0 {
+	if len(config.Servers) == 0 {
 		if config.Host == "" {
 			config.Host = redisDefaultHost
 		}
@@ -79,21 +98,20 @@ func ConstructRedis(config *RedisConfig, errorMessages *config.ErrorMessages) (*
 		}
 
 		config.Servers = []HostAndPort{{config.Host, config.Port}}
-	} else {
-		if config.Host != "" {
-			return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "config.redis.host", "config.redis.servers")
-		}
+	} else if config.Host != "" {
+		return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "config.redis.host", "config.redis.servers")
 	}
 
-	if config.Ttl == 0 {
-		config.Ttl = redisDefaultTtl
+	if config.TTL == 0 {
+		config.TTL = redisDefaultTTL
 	}
-	if config.Ttl > redisMaxTtl {
-		config.Ttl = redisMaxTtl
+	if config.TTL > redisMaxTTL {
+		config.TTL = redisMaxTTL
 	}
 
-	if config.Mode == ModeCluster {
-		if config.Db != 0 {
+	switch config.Mode {
+	case ModeCluster:
+		if config.DB != 0 {
 			return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "cache.redis.db", "cache.redis.cluster")
 		}
 
@@ -106,12 +124,12 @@ func ConstructRedis(config *RedisConfig, errorMessages *config.ErrorMessages) (*
 		})
 
 		//TODO: Open bug with go-redis about `rediser` type being private so the below isn't needlessly repeated
-		tileCache = cache.New(&cache.Options{
+		tileCache = rediscache.New(&rediscache.Options{
 			Redis: client,
 		})
-	} else if config.Mode == ModeRing {
+	case ModeRing:
 		if len(config.Servers) < 2 {
-			//Not the best error message but the typical user of this should be able to figure it out
+			// Not the best error message but the typical user of this should be able to figure it out
 			return nil, fmt.Errorf(errorMessages.InvalidParam, "length(cache.redis.servers)", len(config.Servers))
 		}
 
@@ -124,23 +142,23 @@ func ConstructRedis(config *RedisConfig, errorMessages *config.ErrorMessages) (*
 			Addrs:    addrMap,
 			Username: config.Username,
 			Password: config.Password,
-			DB:       config.Db,
+			DB:       config.DB,
 		})
 
 		//TODO: Open bug with go-redis about `rediser` type being private so the below isn't needlessly repeated
-		tileCache = cache.New(&cache.Options{
+		tileCache = rediscache.New(&rediscache.Options{
 			Redis: client,
 		})
-	} else {
+	default:
 		client := redis.NewClient(&redis.Options{
 			Addr:     config.Servers[0].Host + ":" + strconv.Itoa(int(config.Servers[0].Port)),
 			Username: config.Username,
 			Password: config.Password,
-			DB:       config.Db,
+			DB:       config.DB,
 		})
 
 		//TODO: Open bug with go-redis about `rediser` type being private so the below isn't needlessly repeated
-		tileCache = cache.New(&cache.Options{
+		tileCache = rediscache.New(&rediscache.Options{
 			Redis: client,
 		})
 	}
@@ -150,15 +168,13 @@ func ConstructRedis(config *RedisConfig, errorMessages *config.ErrorMessages) (*
 	return &r, nil
 }
 
-func (c Redis) Lookup(t internal.TileRequest) (*internal.Image, error) {
-	ctx := context.TODO()
-
+func (c Redis) Lookup(ctx context.Context, t pkg.TileRequest) (*pkg.Image, error) {
 	key := c.KeyPrefix + t.String()
-	var obj internal.Image
+	var b []byte
 
-	err := c.cache.Get(ctx, key, &obj)
+	err := c.cache.Get(ctx, key, &b)
 
-	if err == cache.ErrCacheMiss {
+	if errors.Is(err, rediscache.ErrCacheMiss) {
 		return nil, nil
 	}
 
@@ -166,19 +182,22 @@ func (c Redis) Lookup(t internal.TileRequest) (*internal.Image, error) {
 		return nil, err
 	}
 
-	return &obj, nil
+	return pkg.DecodeImage(b)
 }
 
-func (c Redis) Save(t internal.TileRequest, img *internal.Image) error {
-	ctx := context.TODO()
-
+func (c Redis) Save(ctx context.Context, t pkg.TileRequest, img *pkg.Image) error {
 	key := c.KeyPrefix + t.String()
+	val, err := img.Encode()
 
-	err := c.cache.Set(&cache.Item{
+	if err != nil {
+		return err
+	}
+
+	err = c.cache.Set(&rediscache.Item{
 		Ctx:   ctx,
 		Key:   key,
-		Value: *img,
-		TTL:   time.Duration(c.Ttl) * time.Second,
+		Value: val,
+		TTL:   time.Duration(c.TTL) * time.Second,
 	})
 
 	return err

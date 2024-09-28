@@ -1,0 +1,38 @@
+= Disks
+
+Stores the cache entries as files in a location on the filesystem.
+
+If the filesystem is purely local then you will experience inconsistent performance if using tilegroxy in a high-availability deployment.
+
+Files are stored in a flat structure inside the specified directory. No cleanup process is included inside of `tilegroxy` itself. It is recommended you use an external cleanup process to avoid running out of disk space.
+
+Name should be "disk"
+
+Configuration options:
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter  | Description | Type | Required | Default
+
+| path
+| The absolute path to the directory to store cache entries within. Directory (and tree) will be created if it does not already exist
+| string
+| Yes
+| None
+
+| filemode
+| A https://pkg.go.dev/io/fs#FileMode[Go filemode] as an integer to use for all created files/directories. This might change in the future to support a more conventional unix permission notation
+| uint32
+| No
+| 0777
+|===
+
+Example:
+
+[,json]
+----
+"cache": {
+  "name": "disk",
+  "path": "./disk_tile_cache"
+}
+----

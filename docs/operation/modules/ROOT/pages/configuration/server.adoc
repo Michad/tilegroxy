@@ -1,0 +1,100 @@
+
+= Server
+
+Configures how the HTTP server should operate
+
+Configuration options:
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| BindHost
+| IP address to bind HTTP server to
+| string
+| No
+| 127.0.0.1
+
+| Port
+| Port to bind HTTP server to
+| int
+| No
+| 8080
+
+| RootPath
+| The root HTTP Path to serve all requests under.
+| string
+| No
+| /
+
+| TilePath
+| The HTTP Path to serve tiles under in addition to RootPath. The defaults will result in a path that looks like /tiles/\{layer}/\{z}/\{x}/\{y}
+| string
+| No
+| tiles
+
+| Headers
+| Include these headers in all response from server
+| map[string]string
+| No
+| None
+
+| Production
+| Hardens operation for usage in production. For instance, controls serving splash page, documentation, x-powered-by header.
+| bool
+| No
+| false
+
+| Timeout
+| How long (in seconds) a request can be in flight before we cancel it and return an error
+| uint
+| No
+| 60
+
+| Gzip
+| Whether to gzip compress HTTP responses
+| bool
+| No
+| false
+
+| Encrypt
+| Configuration for enabling TLS (HTTPS). Don't specify to operate without encryption (the default)
+| xref:configuration/encryption.adoc[Encryption]
+| No
+| None
+
+| Health
+| Configuration to turn on endpoints for validating the health of the server on a secondary port
+| xref:configuration/health.adoc[Health]
+| No
+| None
+|===
+
+The following can be supplied as environment variables:
+
+[cols="1,3"]
+|===
+| Configuration Parameter | Environment Variable
+
+| BindHost
+| SERVER_BINDHOST
+
+| Port
+| SERVER_PORT
+
+| RootPath
+| SERVER_ROOTPATH
+
+| TilePath
+| SERVER_TILEPATH
+
+| Production
+| SERVER_PRODUCTION
+
+| Timeout
+| SERVER_TIMEOUT
+
+| Gzip
+| SERVER_GZIP
+|===
+

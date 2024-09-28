@@ -3,9 +3,9 @@ package caches
 import (
 	"fmt"
 
-	"github.com/Michad/tilegroxy/internal"
 	"github.com/Michad/tilegroxy/internal/caches/group"
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 )
 
 // GroupConfig is a local type so callers needn't import caches/group directly.
@@ -18,17 +18,17 @@ type GroupCache struct {
 }
 
 // Lookup takes a TileRequest and returns an Image or an error.
-func (g *GroupCache) Lookup(t internal.TileRequest) (*internal.Image, error) {
+func (g *GroupCache) Lookup(t pkg.TileRequest) (*pkg.Image, error) {
 	file := fmt.Sprintf("%d/%d/%d", t.Z, t.X, t.Y) // TODO
 	if v, ok := g.Cache.Get(t.LayerName, file); ok {
-		i := v.(internal.Image)
+		i := v.(pkg.Image)
 		return &i, nil
 	}
 	return nil, group.ItemNotFoundError
 }
 
 // Save takes a TileRequest and an Image, and returns an error if it cannot be set.
-func (g *GroupCache) Save(t internal.TileRequest, img *internal.Image) error {
+func (g *GroupCache) Save(t pkg.TileRequest, img *pkg.Image) error {
 	file := fmt.Sprintf("%d/%d/%d", t.Z, t.X, t.Y) // TODO
 	if !g.Exists(t.LayerName) {
 		// Add the cache if it doesn't exist
@@ -36,7 +36,7 @@ func (g *GroupCache) Save(t internal.TileRequest, img *internal.Image) error {
 		conf.Name = t.LayerName
 		g.Add(conf, nil)
 	}
-	return g.Cache.Set(t.LayerName, file, *img)
+	return g.Cache.Set(t.LayerName, file, img.Content)
 }
 
 // NewGroupCache creates a new GroupCache from the specified config and returns it, or returns an error.

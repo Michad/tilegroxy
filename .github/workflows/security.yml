@@ -1,0 +1,124 @@
+name: Security Scans
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    - cron: '18 8 * * 2'
+permissions:
+  contents: read
+jobs:
+  ossf:
+    name: OSSF Scorecard analysis
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      id-token: write
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          persist-credentials: false
+      - name: "Run analysis"
+        uses: ossf/scorecard-action@62b2cac7ed8198b15735ed49ab1e5cf35480ba46 # v2.4.0
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: ${{ github.event_name != 'pull_request' }}
+      - name: "Upload artifact"
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+        with:
+          name: SARIF file
+          path: results.sarif
+          retention-days: 5
+      - name: "Upload to code-scanning"
+        if: github.event_name != 'pull_request'
+        uses: github/codeql-action/upload-sarif@294a9d92911152fe08befb9ec03e240add280cb3 # v3.26.8
+        with:
+          sarif_file: results.sarif
+  dependency-review:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: 'Checkout Repository'
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - name: 'Dependency Review'
+        uses: actions/dependency-review-action@5a2ce3f5b92ee19cbb1541a4984c76d921601d7c # v4.3.4
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ["go"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@294a9d92911152fe08befb9ec03e240add280cb3 # v3.26.8
+        with:
+          languages: ${{ matrix.language }}
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@294a9d92911152fe08befb9ec03e240add280cb3 # v3.26.8
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@294a9d92911152fe08befb9ec03e240add280cb3 # v3.26.8
+        with:
+          category: "/language:${{matrix.language}}"
+
+  govulncheck:
+    name: Run govulncheck
+    permissions:
+      contents: read
+      security-events: write 
+    runs-on: ubuntu-latest
+    steps:
+    - id: govulncheck
+      uses: golang/govulncheck-action@dd0578b371c987f96d1185abb54344b44352bd58 # v1.0.3
+      with:
+          go-version-input: 1.22.7
+          go-package: ./...
+          output-format: sarif
+          output-file: govuln.sarif
+    - name: Post-process sarif files
+      run : |
+        if [ "$(/usr/bin/jq '.runs[].results' < govuln.sarif)" = "null" ]; then 
+          /usr/bin/jq '.runs[] += {"results":[]}' < govuln.sarif > govuln2.sarif
+        else
+          cp govuln.sarif govuln2.sarif
+        fi
+    - name: Upload result to GitHub Code Scanning
+      uses: github/codeql-action/upload-sarif@294a9d92911152fe08befb9ec03e240add280cb3 # v3.26.8
+      with:
+        sarif_file: govuln2.sarif
+  gosec:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write 
+    env:
+      GO111MODULE: on
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Run Gosec Security Scanner
+        uses: securego/gosec@d4617f51baf75f4f809066386a4f9d27b3ac3e46 # v2.21.4
+        with:
+          args: '-no-fail -exclude=G504 -fmt sarif -out results.sarif ./...'
+      - name: Upload SARIF file
+        if: github.event_name != 'pull_request'
+        uses: github/codeql-action/upload-sarif@294a9d92911152fe08befb9ec03e240add280cb3 # v3.26.8
+        with:
+          sarif_file: results.sarif

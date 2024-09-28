@@ -15,38 +15,61 @@
 package caches
 
 import (
+	"context"
 	"time"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
 
 	"github.com/maypok86/otter"
 )
 
+const defaultMaxSize = 100
+const minMaxSize = 10
+const defaultTTL = 3600
+
 type MemoryConfig struct {
-	MaxSize uint16 //Maximum number of tiles to hold in the cache. Defaults to 100
-	Ttl     uint32 //Maximum time to live of a tile in seconds. Defaultss to 3600 (1 hour)
+	MaxSize uint16 // Maximum number of tiles to hold in the cache. Defaults to 100
+	TTL     uint32 // Maximum time to live of a tile in seconds. Defaults to 3600 (1 hour)
 }
 
 type Memory struct {
-	Config MemoryConfig
-	Cache  otter.Cache[string, []byte]
+	MemoryConfig
+	Cache otter.Cache[string, pkg.Image]
 }
 
-func ConstructMemory(config MemoryConfig, ErrorMessages *config.ErrorMessages) (*Memory, error) {
+func init() {
+	cache.RegisterCache(MemoryRegistration{})
+}
+
+type MemoryRegistration struct {
+}
+
+func (s MemoryRegistration) InitializeConfig() any {
+	return MemoryConfig{}
+}
+
+func (s MemoryRegistration) Name() string {
+	return "memory"
+}
+
+func (s MemoryRegistration) Initialize(configAny any, _ config.ErrorMessages) (cache.Cache, error) {
+	config := configAny.(MemoryConfig)
+
 	if config.MaxSize < 1 {
-		config.MaxSize = 100
+		config.MaxSize = defaultMaxSize
+	}
+	if config.MaxSize < minMaxSize {
+		config.MaxSize = minMaxSize
 	}
 
-	if config.Ttl < 1 {
-		config.Ttl = 3600
+	if config.TTL < 1 {
+		config.TTL = defaultTTL
 	}
 
-	cache, err := otter.MustBuilder[string, internal.Image](int(config.MaxSize)).
-		Cost(func(key string, value internal.Image) uint32 {
-			return uint32(len(value))
-		}).
-		WithTTL(time.Duration(config.Ttl * uint32(time.Second))).
+	cache, err := otter.MustBuilder[string, pkg.Image](int(config.MaxSize)).
+		WithTTL(time.Duration(config.TTL) * time.Second).
 		Build()
 	if err != nil {
 		return nil, err
@@ -55,10 +78,17 @@ func ConstructMemory(config MemoryConfig, ErrorMessages *config.ErrorMessages) (
 	return &Memory{config, cache}, nil
 }
 
-func (c Memory) Lookup(t internal.TileRequest) (*internal.Image, error) {
+func (c Memory) Lookup(_ context.Context, t pkg.TileRequest) (*pkg.Image, error) {
+	img, ok := c.Cache.Get(t.String())
+
+	if ok {
+		return &img, nil
+	}
+
 	return nil, nil
 }
 
-func (c Memory) Save(t internal.TileRequest, img *internal.Image) error {
+func (c Memory) Save(_ context.Context, t pkg.TileRequest, img *pkg.Image) error {
+	c.Cache.Set(t.String(), *img)
 	return nil
 }

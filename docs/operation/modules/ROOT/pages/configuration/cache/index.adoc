@@ -1,0 +1,7 @@
+= Cache
+
+The cache configuration defines the datastores where tiles should be stored/retrieved. We recommended you use a `multi`-tiered cache with a smaller, faster "near" cache first followed by a larger, slower "far" cache.
+
+There is no universal mechanism for expiring cache entries. Some cache options include built-in mechanisms for applying an TTL and maximum size however some require an external cleanup mechanism if desired. Be mindful of this as some options may incur their own costs if allowed to grow unchecked.
+
+When specifying a cache ensure you include the `name` parameter.

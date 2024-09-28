@@ -15,9 +15,12 @@
 package caches
 
 import (
+	"context"
 	"errors"
 
-	"github.com/Michad/tilegroxy/internal"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
 )
 
 type MultiConfig struct {
@@ -25,14 +28,47 @@ type MultiConfig struct {
 }
 
 type Multi struct {
-	Tiers []Cache
+	Tiers []cache.Cache
 }
 
-func (c Multi) Lookup(t internal.TileRequest) (*internal.Image, error) {
+func init() {
+	cache.RegisterCache(MultiRegistration{})
+}
+
+type MultiRegistration struct {
+}
+
+func (s MultiRegistration) InitializeConfig() any {
+	return MultiConfig{}
+}
+
+func (s MultiRegistration) Name() string {
+	return "multi"
+}
+
+func (s MultiRegistration) Initialize(configAny any, errorMessages config.ErrorMessages) (cache.Cache, error) {
+	config := configAny.(MultiConfig)
+
+	tierCaches := make([]cache.Cache, len(config.Tiers))
+
+	for i, tierRawConfig := range config.Tiers {
+		tierCache, err := cache.ConstructCache(tierRawConfig, errorMessages)
+
+		if err != nil {
+			return nil, err
+		}
+
+		tierCaches[i] = tierCache
+	}
+
+	return Multi{tierCaches}, nil
+}
+
+func (c Multi) Lookup(ctx context.Context, t pkg.TileRequest) (*pkg.Image, error) {
 	var allErrors error
 
 	for _, cache := range c.Tiers {
-		img, err := cache.Lookup(t)
+		img, err := cache.Lookup(ctx, t)
 		if err != nil {
 			allErrors = errors.Join(allErrors, err)
 		}
@@ -45,11 +81,11 @@ func (c Multi) Lookup(t internal.TileRequest) (*internal.Image, error) {
 	return nil, allErrors
 }
 
-func (c Multi) Save(t internal.TileRequest, img *internal.Image) error {
+func (c Multi) Save(ctx context.Context, t pkg.TileRequest, img *pkg.Image) error {
 	var allErrors error
 
 	for _, cache := range c.Tiers {
-		err := cache.Save(t, img)
+		err := cache.Save(ctx, t, img)
 		allErrors = errors.Join(allErrors, err)
 	}
 

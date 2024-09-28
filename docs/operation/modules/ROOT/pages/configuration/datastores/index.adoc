@@ -1,0 +1,5 @@
+= Datastores
+
+The Datastores configuration defines connections to shared resources, primarily databases, that are used by certain providers.  Each datastore definition creates a connection pool when the application is running. Like other entities, the datastores configuration uses a parameter called "name" to dictate the type of datastore which controls the specific list of configuration parameters available. Every datastore configuration must also have an "ID" defined which can be any string and is used by a corresponding provider configuration, usually as a `datastore` parameter.  See the following sections for the list of supported datastores.
+
+Datastore configurations are only used by providers, caches must have their connection information defined inline.

@@ -1,0 +1,38 @@
+cache:
+    name: none
+server:
+  headers:
+    Access-Control-Allow-Origin: "*"
+layers:
+  # Put these last so anything more specific will match first
+  # This layer is a vector tile version
+  - id: mapserver_layers_mvt
+    pattern: "mvt_{file}_{layer}"
+    paramValidator: 
+      "*": '^[a-zA-Z0-9\-]+$' #It's highly recommended you utilize as strict a validation pattern as possible to prevent attack vectors
+    provider:
+      # The CGI provider can work with any CGI executable that generates tiles. Mapserver is the primary example
+      name: cgi
+      # The filepath to the compiled CGI executable (no arguments)
+      exec: /usr/bin/mapserv
+      workingDir: .
+      #The http path and query string to use for requests supplied to the CGI executable. Should be a template that includes variables simple to the Proxy provider
+      uri: "/?map=mapfiles/{layer.file}.map&MODE=tile&layers={layer.layer}&TILEMODE=gmap&TILE={x}+{y}+{z}&map.imagetype=mvt"
+      env:
+        # Mapserver 8.0+ requires a configuration file. It's a good idea to use it to limit the mapfiles that can be used as defense-in-depth protection to avoid the risk of being able to explore the filesystem by passing in an invalid layername (e.g. ../../etc/passwd)
+        MAPSERVER_CONFIG_FILE: "mapserver.conf"
+  # This layer is mostly the same as above but returns PNG tiles
+  - id: mapserver_layers 
+    pattern: "{file}_{layer}"
+    paramValidator: 
+      "*": '^[a-zA-Z0-9\-]+$' 
+    provider:
+      name: cgi
+      exec: /usr/bin/mapserv
+      workingDir: .
+      #Similar to above but image type is left to the default in the mapfile and a tile size param is included
+      uri: "/?map=mapfiles/{layer.file}.map&MODE=tile&layers={layer.layer}&TILEMODE=gmap&TILE={x}+{y}+{z}&TILESIZE=512+512"
+      headers:
+        Accept: image/png
+      env:
+        MAPSERVER_CONFIG_FILE: "mapserver.conf"

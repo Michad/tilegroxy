@@ -1,0 +1,34 @@
+= Multi
+
+Implements a multi-tiered cache.
+
+When looking up cache entries each cache is tried in order. When storing cache entries each cache is called simultaneously. This means that the fastest cache(s) should be first and slower cache(s) last. As each cache needs to be tried before tile generation starts, it is not recommended to have more than 2 or 3 caches configured.
+
+Name should be "multi"
+
+Configuration options:
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| tiers
+| An array of Cache configurations. Multi should not be nested inside a Multi
+| Cache[]
+| Yes
+| None
+|===
+
+Example:
+
+[,yaml]
+----
+cache:
+  name: multi
+  tiers:
+    - name: memory
+      maxsize: 1000
+      ttl: 1000
+    - name: disk
+      path: "./disk_tile_cache"
+----

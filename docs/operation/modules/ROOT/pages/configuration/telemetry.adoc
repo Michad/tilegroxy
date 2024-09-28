@@ -1,0 +1,29 @@
+
+= Telemetry
+
+Configures telemetry using https://opentelemetry.io/[OpenTelemetry (OTEL)]. This configuration is currently limited to turning telemetry on and off, you must use https://opentelemetry.io/docs/languages/sdk-configuration/otlp-exporter/[standard OTEL environment variables] to point the HTTP exporter to your collector.
+
+More details on Telemetry capabilities can be found in xref:./telemetry.adoc[Telemetry.adoc].
+
+Configuration options:
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| Enabled
+| Turns on/off telemetry
+| bool
+| No
+| false
+|===
+
+The following can be supplied as environment variables:
+
+[cols="1,3"]
+|===
+| Configuration Parameter | Environment Variable
+
+| Enabled
+| TELEMETRY_ENABLED
+|===

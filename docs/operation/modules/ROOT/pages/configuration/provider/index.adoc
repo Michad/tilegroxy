@@ -1,0 +1,5 @@
+= Provider
+
+A provider represents the underlying functionality that "provides" the tiles that make up the mapping layer.  This is most commonly an external HTTP(s) endpoint using either the "proxy" or "URL template" providers. Custom providers can be created to extract tiles from other sources.
+
+When supplying a provider ensure you include the `name` parameter. Some providers require nested providers; be aware that repeated nesting has a performance cost.

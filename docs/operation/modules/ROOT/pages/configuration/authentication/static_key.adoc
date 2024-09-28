@@ -1,0 +1,20 @@
+= Static Key
+
+Requires incoming requests have a specific key supplied as a "Bearer" token in a "Authorization" Header.
+
+It is recommended you employ caution with this option. It should be regarded as a protection against casual web scrapers but not true security. It is recommended only for development and internal ("intranet") use-cases. Does not include any authz logic.
+
+Name should be "static key"
+
+Configuration options:
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter  | Description | Type | Required | Default
+
+| key
+| The bearer token to require be supplied. If not specified `tilegroxy` will generate a random token at startup and output it in logs
+| string
+| No
+| Auto
+|===

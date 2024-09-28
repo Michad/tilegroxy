@@ -15,34 +15,53 @@
 package caches
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/Michad/tilegroxy/internal"
-	"github.com/Michad/tilegroxy/internal/config"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/bradfitz/gomemcache/memcache"
 )
-
-type MemcacheConfig struct {
-	HostAndPort `mapstructure:",squash"`
-	Servers     []HostAndPort //The list of servers to use.
-	KeyPrefix   string        //Prefix to keynames stored in cache
-	Ttl         uint32        //Cache expiration in seconds. Max of 30 days. Default to 1 day
-}
 
 const (
 	memcacheDefaultHost = "127.0.0.1"
 	memcacheDefaultPort = 11211
-	memcacheDefaultTtl  = 60 * 60 * 24
-	memcacheMaxTtl      = 30 * 60 * 60 * 24
+	memcacheDefaultTTL  = 60 * 60 * 24
+	memcacheMaxTTL      = 30 * 60 * 60 * 24
 )
 
+type MemcacheConfig struct {
+	HostAndPort `mapstructure:",squash"`
+	Servers     []HostAndPort // The list of servers to use.
+	KeyPrefix   string        // Prefix to keynames stored in cache
+	TTL         uint          // Cache expiration in seconds. Max of 30 days. Default to 1 day
+}
+
 type Memcache struct {
-	*MemcacheConfig
+	MemcacheConfig
 	client *memcache.Client
 }
 
-func ConstructMemcache(config *MemcacheConfig, errorMessages *config.ErrorMessages) (*Memcache, error) {
-	if config.Servers == nil || len(config.Servers) == 0 {
+func init() {
+	cache.RegisterCache(MemcacheRegistration{})
+}
+
+type MemcacheRegistration struct {
+}
+
+func (s MemcacheRegistration) InitializeConfig() any {
+	return MemcacheConfig{}
+}
+
+func (s MemcacheRegistration) Name() string {
+	return "memcache"
+}
+
+func (s MemcacheRegistration) Initialize(configAny any, errorMessages config.ErrorMessages) (cache.Cache, error) {
+	config := configAny.(MemcacheConfig)
+
+	if len(config.Servers) == 0 {
 		if config.Host == "" {
 			config.Host = memcacheDefaultHost
 		}
@@ -51,17 +70,15 @@ func ConstructMemcache(config *MemcacheConfig, errorMessages *config.ErrorMessag
 		}
 
 		config.Servers = []HostAndPort{{config.Host, config.Port}}
-	} else {
-		if config.Host != "" {
-			return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "config.memcache.host", "config.memcache.servers")
-		}
+	} else if config.Host != "" {
+		return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "config.memcache.host", "config.memcache.servers")
 	}
 
-	if config.Ttl == 0 {
-		config.Ttl = memcacheDefaultTtl
+	if config.TTL == 0 {
+		config.TTL = memcacheDefaultTTL
 	}
-	if config.Ttl > memcacheMaxTtl {
-		config.Ttl = memcacheMaxTtl
+	if config.TTL > memcacheMaxTTL {
+		config.TTL = memcacheMaxTTL
 	}
 
 	addrs := HostAndPortArrayToStringArray(config.Servers)
@@ -73,18 +90,22 @@ func ConstructMemcache(config *MemcacheConfig, errorMessages *config.ErrorMessag
 
 }
 
-func (c Memcache) Lookup(t internal.TileRequest) (*internal.Image, error) {
+func (c Memcache) Lookup(_ context.Context, t pkg.TileRequest) (*pkg.Image, error) {
 	it, err := c.client.Get(c.KeyPrefix + t.String())
 
 	if err != nil {
 		return nil, err
 	}
 
-	result := internal.Image(it.Value)
-
-	return &result, nil
+	return pkg.DecodeImage(it.Value)
 }
 
-func (c Memcache) Save(t internal.TileRequest, img *internal.Image) error {
-	return c.client.Set(&memcache.Item{Key: c.KeyPrefix + t.String(), Value: *img, Expiration: int32(c.Ttl)})
+func (c Memcache) Save(_ context.Context, t pkg.TileRequest, img *pkg.Image) error {
+	val, err := img.Encode()
+
+	if err != nil {
+		return err
+	}
+
+	return c.client.Set(&memcache.Item{Key: c.KeyPrefix + t.String(), Value: val, Expiration: int32(c.TTL)}) // #nosec G115 -- max value applied in Initialize
 }

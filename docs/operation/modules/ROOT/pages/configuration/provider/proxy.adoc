@@ -1,0 +1,79 @@
+= Proxy
+
+The Proxy provider is the simplest option that simply forwards tile requests to another HTTP(s) endpoint. This provider can be used for mapping services that operate in tiles (ZXY, TMS, or WMTS) or against bounds (i.e. WMS). TMS inverts the y coordinate compared to ZXY and WMTS formats, which is handled by the InvertY parameter.
+
+The following is the typical request flow when using a proxy provider:
+
+image::diagram-proxy.png[Proxy flow diagram]
+
+Name should be "proxy"
+
+Configuration options:
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| url
+| A URL pointing to the tile server. Should contain placeholders surrounded by "{}" that are replaced on-the-fly
+| string
+| Yes
+| None
+
+| inverty
+| Changes Y tile numbering to be South-to-North instead of North-to-South. Only impacts Y/y placeholder
+| bool
+| No
+| false
+
+| srid
+| What projection bounds should be in. Can only be 4326 or 3857
+| uint
+| No
+| 4326
+|===
+
+The following placeholders are available in the URL:
+
+[cols="1,4"]
+|===
+| Placeholder | Description
+
+| x or X
+| The X tile coordinate from the incoming request
+
+| y or Y
+| The Y tile coordinate either from the incoming request or the "flipped" equivalent if the `invertY` parameter is specified.
+
+| z or Z
+| The Z tile coordinate from the incoming request (aka "zoom")
+
+| xmin
+| The "west" coordinate of the bounding box defined by the incoming tile coordinates. In the projection specified by `srid`.
+
+| xmax
+| The "east" coordinate of the bounding box defined by the incoming tile coordinates. In the projection specified by `srid`.
+
+| ymin
+| The "north" coordinate of the bounding box defined by the incoming tile coordinates. In the projection specified by `srid`. Not impacted by the `invertY` parameter.
+
+| ymax
+| The "south" coordinate of the bounding box defined by the incoming tile coordinates. In the projection specified by `srid`. Not impacted by the `invertY` parameter.
+
+| env.XXX
+| An environment variable whose name is XXX
+
+| ctx.XXX
+| A context variable (typically an HTTP header) whose name is XXX
+
+| layer.XXX
+| If the layer includes a pattern with a placeholder of XXX, this is the replacement value from the used layer name
+|===
+
+Example:
+
+----
+provider:
+  name: proxy
+  url: https://tile.openstreetmap.org/{z}/{x}/{y}.png?key={env.key}&agent={ctx.User-Agent}
+----

@@ -1,0 +1,18 @@
+logging: #Reminder: keys are case-insensitive 
+  Access:
+    Console: false #Ensure standard-out is just the json main log
+    path: access.log 
+  Main:
+    level: debug
+    format: json
+    Request: true #not actually needed, default is true when format=json
+    Headers: 
+      - User-Agent 
+      - X-Amzn-Trace-Id #Inserted by Amazon Load Balancers for distributed tracing
+error:
+  AlwaysOk: true #Always return 200 for compatibility with silly platforms that explode upon HTTP errors
+layers:
+  - id: osm
+    provider:
+        name: proxy
+        url: https://tile.openstreetmap.org/{z}/{x}/{y}.png

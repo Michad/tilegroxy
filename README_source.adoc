@@ -1,0 +1,40 @@
+= tilegroxy -- Tile G(o) (P)roxy
+
+image:https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml/badge.svg[Docker Image CI,link=https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml] image:https://goreportcard.com/badge/michad/tilegroxy[Go Report Card,link=https://goreportcard.com/report/michad/tilegroxy] image:https://img.shields.io/ossf-scorecard/github.com/Michad/tilegroxy?label=openssf%20scorecard&style=flat[OpenSSF Scorecard,link=https://scorecard.dev/viewer/?uri=github.com%2FMichad%2Ftilegroxy] image:https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/michad/d1b9e082f6608635494188d0f52bae69/raw/coverage.json[Coverage] image:https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/michad/d1b9e082f6608635494188d0f52bae69/raw/libyears.json[Libyears,link=https://libyear.com/]  +
+image:https://img.shields.io/github/go-mod/go-version/michad/tilegroxy[Go Version] image:https://img.shields.io/badge/License-Apache_2.0-blue.svg[License,link=https://opensource.org/licenses/Apache-2.0] xref:CODE_OF_CONDUCT.adoc[image:https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg[Contributor Covenant]]
+
+Tilegroxy lives between your map and your mapping providers to deliver a consistent, cached API for all your layers.
+
+🚀 Built in Go. +
+🔌 Features a flexible plugin system powered by https://github.com/traefik/yaegi[Yaegi]. +
+💡 Inspired by https://github.com/tilestache/tilestache[tilestache] +
+🛠️ This project is still a work in progress. Changes may occur prior to the 1.0 release.
+
+include::docs/operation/modules/ROOT/pages/index.adoc[leveloffset=1]
+
+== Documentation
+
+**Prebuilt Documentation for the most recent release is available link:https://tilegroxy.michael.davis.name[here]. **
+
+Documentation is served by tilegroxy at `/docs` (disable this behaviour by setting `Server.Production=true`). Documentation is powered by link:https://antora.org[Antora] with raw AsciiDoc located in link:./docs[docs] 
+
+
+include::docs/operation/modules/ROOT/pages/get-it.adoc[leveloffset=1]
+
+
+== Extending tilegroxy
+
+One of the top design goals of tilegroxy is to be highly flexible. If there's functionality you need, there's a couple different ways you can add it in.  See the link:https://tilegroxy.michael.davis.name/operation/extensibility.html[extensibility documentation] for instructions.
+
+== Contributing
+
+As this is a young project any contribution via an Issue or Pull Request is very welcome.
+
+A few please and thank yous:
+
+* Follow https://go.dev/doc/effective_go[go conventions] and the patterns you see elsewhere in the codebase.  Linters are configured in Github Actions, they can be run locally with `make lint`
+* Use https://gist.github.com/joshbuchea/6f47e86d2510bce28f8e7f42ae84c716[semantic] / https://www.conventionalcommits.org/en/v1.0.0/[conventional] commit messages.
+* Open an issue for discussion before making large, fundamental change/refactors
+* Ensure you add tests. You can use `make coverage` to ensure you're not dropping coverage.
+
+Very niche providers might be declined. Those are best suited as custom providers outside the core platform.
