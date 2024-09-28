@@ -226,7 +226,7 @@ func setupCheckRoutines(ctx context.Context, h config.HealthConfig, layerGroup *
 		if delay > math.MaxInt64 {
 			delay = math.MaxInt64
 		}
-		ttl := time.Second * time.Duration(delay) // #nosec G115 
+		ttl := time.Second * time.Duration(delay) // #nosec G115
 
 		ticker := time.NewTicker(ttl)
 		done := make(chan bool)

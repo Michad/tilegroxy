@@ -96,7 +96,7 @@ func (t URLTemplate) GenerateTile(ctx context.Context, _ layer.ProviderContext, 
 	url = strings.ReplaceAll(url, "$zoom", strconv.Itoa(tileRequest.Z))
 	url = strings.ReplaceAll(url, "$width", strconv.Itoa(int(t.Width)))
 	url = strings.ReplaceAll(url, "$height", strconv.Itoa(int(t.Height)))
-	url = strings.ReplaceAll(url, "$srs", fmt.Sprint(t.Srid))
+	url = strings.ReplaceAll(url, "$srs", strconv.FormatUint(uint64(t.Srid), 10))
 
 	return getTile(ctx, t.clientConfig, url, make(map[string]string))
 }

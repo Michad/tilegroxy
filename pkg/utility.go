@@ -215,7 +215,7 @@ func RandomString() string {
 
 	if err != nil {
 		// Fallback on v2 rand since better that than a potentially unrecoverable error
-		i = rand.Uint64() // #nosec G404
+		i = rand.Uint64()  // #nosec G404
 		i2 = rand.Uint64() // #nosec G404
 	} else {
 		i = binary.BigEndian.Uint64(b[0:(length / 2)])
