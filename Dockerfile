@@ -5,7 +5,7 @@ FROM node:20-alpine3.20@sha256:1a526b97cace6b4006256570efa1a29cd1fe4b96a5301f8d4
 WORKDIR /usr/app
 COPY . /usr/app
 
-RUN npm install --include dev --package-lock-only && node_modules/antora/bin/antora antora-playbook.yml
+RUN npm ci && node_modules/antora/bin/antora antora-playbook.yml
 
 FROM golang:1.22.7-alpine3.20@sha256:48eab5e3505d8c8b42a06fe5f1cf4c346c167cc6a89e772f31cb9e5c301dcf60 AS build_stage
 
