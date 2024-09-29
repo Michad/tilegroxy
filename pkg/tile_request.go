@@ -28,6 +28,8 @@ const (
 	delta                = .00000001
 	maxLat               = 85.0511
 	minLat               = -85.0511
+	maxLong              = 180
+	minLong              = -180
 	max3857CoordInMeters = 20037508.342789
 )
 
@@ -243,6 +245,26 @@ func (b Bounds) BufferRelative(pct float64) Bounds {
 		West:  b.West - deltaW,
 		East:  b.East + deltaW,
 		SRID:  b.SRID,
+	}
+}
+
+func (b Bounds) ConfineToPsuedoMercatorRange() Bounds {
+	if b.SRID == SRIDPsuedoMercator {
+		return Bounds{
+			SRID:  b.SRID,
+			North: math.Max(math.Min(b.North, max3857CoordInMeters), -max3857CoordInMeters),
+			South: math.Max(math.Min(b.South, max3857CoordInMeters), -max3857CoordInMeters),
+			West:  math.Max(math.Min(b.West, max3857CoordInMeters), -max3857CoordInMeters),
+			East:  math.Max(math.Min(b.East, max3857CoordInMeters), -max3857CoordInMeters),
+		}
+	}
+
+	return Bounds{
+		SRID:  b.SRID,
+		North: math.Max(math.Min(b.North, maxLat), minLat),
+		South: math.Max(math.Min(b.South, maxLat), minLat),
+		West:  math.Max(math.Min(b.West, maxLong), minLong),
+		East:  math.Max(math.Min(b.East, maxLong), minLong),
 	}
 }
 
