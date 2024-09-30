@@ -132,7 +132,7 @@ func (t PostgisMvt) GenerateTile(ctx context.Context, _ layer.ProviderContext, r
 		return nil, err
 	}
 	rawEnv := bounds.ToEWKT()
-	bufEnv := bounds.BufferRelative(t.Buffer).ToEWKT()
+	bufEnv := bounds.BufferRelative(t.Buffer).ConfineToPsuedoMercatorRange().ToEWKT()
 
 	if t.SourceSRID > math.MaxInt {
 		return nil, pkg.InvalidSridError{}
