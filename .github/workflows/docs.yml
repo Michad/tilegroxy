@@ -30,7 +30,7 @@ jobs:
         make docs
 
     - name: Set up s3cmd
-      uses: s3-actions/s3cmd@94a3bbf729819e9ce06b0ce2abaf7ea1086f36d4 # v1.7.0
+      uses: s3-actions/s3cmd@da1d638646cf6b11f8284163473d56bd2e8497d6 # v1.8.0
       if: startsWith(github.ref, 'refs/tags/v')
       with:
         provider: aws 
