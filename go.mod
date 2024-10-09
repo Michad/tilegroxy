@@ -9,7 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.37
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.17.25
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.63.3
-	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.32.5
+	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.34.0
 	github.com/bradfitz/gomemcache v0.0.0-20230905024940-24af94b03874
 	github.com/docker/go-connections v0.5.0
 	github.com/go-redis/cache/v9 v9.0.0
@@ -54,8 +54,8 @@ require (
 	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.5 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.14 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.18 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.18 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.19 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.19 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.1 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.3.18 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.11.5 // indirect
