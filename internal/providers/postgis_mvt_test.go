@@ -150,10 +150,15 @@ func Test_GenerateTile(t *testing.T) {
 	wrapper, ok := datastore.Get("test")
 	require.True(t, ok)
 	pg := wrapper.Native().(*pgxpool.Pool)
-	conn, err := pg.Acquire(ctx)
-	if err != nil {
-		time.Sleep(2 * time.Second)
+
+	var conn *pgxpool.Conn
+
+	for i := range []int{0, 1, 2, 4, 8} {
+		time.Sleep(time.Duration(i) * time.Second)
 		conn, err = pg.Acquire(ctx)
+		if err == nil {
+			break
+		}
 	}
 
 	require.NoError(t, err)
