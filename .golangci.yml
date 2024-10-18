@@ -1,4 +1,8 @@
 linters-settings:
+  gocritic:
+    settings:
+      ifElseChain:
+        minThreshold: 5
   goheader:
     values:
       regexp:
