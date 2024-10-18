@@ -223,8 +223,8 @@ func setupCheckRoutines(ctx context.Context, h config.HealthConfig, layerGroup *
 	for i, check := range checks {
 		delay := check.GetDelay()
 
-		if delay > math.MaxInt64 {
-			delay = math.MaxInt64
+		if delay > math.MaxInt32 {
+			delay = math.MaxInt32
 		}
 		ttl := time.Second * time.Duration(delay) // #nosec G115
 
