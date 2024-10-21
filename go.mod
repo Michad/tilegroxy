@@ -27,7 +27,7 @@ require (
 	github.com/traefik/yaegi v0.16.1
 	go.etcd.io/etcd/client/v3 v3.5.16
 	go.opentelemetry.io/contrib/bridges/otelslog v0.5.0
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.55.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.56.0
 	go.opentelemetry.io/otel v1.31.0
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.6.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v1.30.0
