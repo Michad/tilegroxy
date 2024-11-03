@@ -27,6 +27,8 @@ import (
 	"github.com/Michad/tilegroxy/pkg/config"
 )
 
+const StatusClientClosed = 499
+
 func errorVars(cfg *config.ErrorConfig, errorType pkg.TypeOfError) (int, slog.Level, string) {
 	var status int
 	var level slog.Level
@@ -66,6 +68,9 @@ func writeError(ctx context.Context, w http.ResponseWriter, cfg *config.ErrorCon
 	var te pkg.TypedError
 	if errors.As(err, &te) {
 		writeErrorMessage(ctx, w, cfg, te.Type(), te.Error(), te.External(cfg.Messages), debug.Stack())
+	} else if errors.Is(err, context.Canceled) || err.Error() == context.Canceled.Error() {
+		slog.DebugContext(ctx, err.Error())
+		w.WriteHeader(StatusClientClosed)
 	} else {
 		writeErrorMessage(ctx, w, cfg, pkg.TypeOfErrorOther, err.Error(), fmt.Sprintf(cfg.Messages.ServerError, err), debug.Stack())
 	}
@@ -95,7 +100,11 @@ func writeErrorMessage(ctx context.Context, w http.ResponseWriter, cfg *config.E
 		}
 
 		if err2 != nil {
-			slog.ErrorContext(ctx, err2.Error())
+			if errors.Is(err2, context.Canceled) || err2.Error() == context.Canceled.Error() {
+				slog.DebugContext(ctx, err2.Error())
+			} else {
+				slog.ErrorContext(ctx, err2.Error())
+			}
 		}
 	default:
 		w.WriteHeader(status)

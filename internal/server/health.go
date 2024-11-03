@@ -223,8 +223,8 @@ func setupCheckRoutines(ctx context.Context, h config.HealthConfig, layerGroup *
 	for i, check := range checks {
 		delay := check.GetDelay()
 
-		if delay > math.MaxInt64 {
-			delay = math.MaxInt64
+		if delay > math.MaxInt32 {
+			delay = math.MaxInt32
 		}
 		ttl := time.Second * time.Duration(delay) // #nosec G115
 
@@ -233,19 +233,15 @@ func setupCheckRoutines(ctx context.Context, h config.HealthConfig, layerGroup *
 		tickers = append(tickers, ticker)
 		exitChannels = append(exitChannels, done)
 
+		tickCheck(ctx, i, check, ttl, checkResultCache)
+
 		go func() {
 			for {
 				select {
 				case <-done:
 					return
-				case t := <-ticker.C:
-					slog.Log(ctx, config.LevelTrace, fmt.Sprintf("Ticking check %v after %v", i, t))
-
-					err := check.Check(ctx)
-
-					result := CheckResult{err: err, timestamp: time.Now(), ttl: ttl}
-
-					checkResultCache.Store(i, result)
+				case <-ticker.C:
+					tickCheck(ctx, i, check, ttl, checkResultCache)
 				}
 			}
 		}()
@@ -265,4 +261,24 @@ func setupCheckRoutines(ctx context.Context, h config.HealthConfig, layerGroup *
 	}
 
 	return checks, callback, nil
+}
+
+func tickCheck(ctx context.Context, i int, check health.HealthCheck, ttl time.Duration, checkResultCache *sync.Map) {
+	defer func() {
+		if r := recover(); r != nil {
+			slog.ErrorContext(ctx, "Unexpected panic during health check!", "panic", r, "stack", string(debug.Stack()))
+		}
+	}()
+
+	slog.Log(ctx, config.LevelTrace, fmt.Sprintf("health check %v running", i))
+
+	err := check.Check(ctx)
+
+	if err != nil {
+		slog.WarnContext(ctx, "health check failed", "error", err)
+	}
+
+	result := CheckResult{err: err, timestamp: time.Now(), ttl: ttl}
+
+	checkResultCache.Store(i, result)
 }

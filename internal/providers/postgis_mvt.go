@@ -120,11 +120,12 @@ func (t PostgisMvt) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.P
 
 func (t PostgisMvt) GenerateTile(ctx context.Context, _ layer.ProviderContext, req pkg.TileRequest) (*pkg.Image, error) {
 	conn, err := t.pool.Acquire(ctx)
-	defer conn.Release()
 
 	if err != nil {
 		return nil, err
 	}
+
+	defer conn.Release()
 
 	bounds, err := req.GetBoundsProjection(pkg.SRIDPsuedoMercator)
 
@@ -132,7 +133,7 @@ func (t PostgisMvt) GenerateTile(ctx context.Context, _ layer.ProviderContext, r
 		return nil, err
 	}
 	rawEnv := bounds.ToEWKT()
-	bufEnv := bounds.BufferRelative(t.Buffer).ToEWKT()
+	bufEnv := bounds.BufferRelative(t.Buffer).ConfineToPsuedoMercatorRange().ToEWKT()
 
 	if t.SourceSRID > math.MaxInt {
 		return nil, pkg.InvalidSridError{}

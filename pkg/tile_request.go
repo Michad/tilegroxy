@@ -28,14 +28,16 @@ const (
 	delta                = .00000001
 	maxLat               = 85.0511
 	minLat               = -85.0511
+	maxLong              = 180
+	minLong              = -180
 	max3857CoordInMeters = 20037508.342789
 )
 
 func convertLat4326To3857(lat float64) float64 {
-	return math.Log(math.Tan((90+lat)*math.Pi/360)) / (math.Pi / 180) * (max3857CoordInMeters / 180)
+	return math.Log(math.Tan((90+lat)*math.Pi/360)) / (math.Pi / maxLong) * (max3857CoordInMeters / maxLong)
 }
 func convertLon4326To3857(lon float64) float64 {
-	return lon * max3857CoordInMeters / 180
+	return lon * max3857CoordInMeters / maxLong
 }
 
 type TileRequest struct {
@@ -71,10 +73,10 @@ func (t TileRequest) GetBoundsProjection(srid uint) (*Bounds, error) {
 		return nil, RangeError{"Y", 0, n - 1}
 	}
 
-	x1 := x/n*360 - 180
-	x2 := (x+1)/n*360 - 180
-	y1 := 180 / math.Pi * math.Atan(math.Sinh(math.Pi*(1-2*y/n)))
-	y2 := 180 / math.Pi * math.Atan(math.Sinh(math.Pi*(1-2*(y+1)/n)))
+	x1 := x/n*360 - maxLong
+	x2 := (x+1)/n*360 - maxLong
+	y1 := maxLong / math.Pi * math.Atan(math.Sinh(math.Pi*(1-2*y/n)))
+	y2 := maxLong / math.Pi * math.Atan(math.Sinh(math.Pi*(1-2*(y+1)/n)))
 
 	north := math.Max(y1, y2)
 	south := math.Min(y1, y2)
@@ -150,26 +152,26 @@ func (b Bounds) FindTiles(layerName string, zoom uint, force bool) (*[]TileReque
 	z := float64(zoom)
 
 	lonMin := b.West
-	for lonMin > 180 {
-		lonMin -= 180
+	for lonMin > maxLong {
+		lonMin -= maxLong
 	}
-	for lonMin < -180 {
-		lonMin += 180
+	for lonMin < minLong {
+		lonMin -= minLong
 	}
 	lonMax := b.East
-	for lonMax > 180 {
-		lonMax -= 180
+	for lonMax > maxLong {
+		lonMax -= maxLong
 	}
-	for lonMax < -180 {
-		lonMax += 180
+	for lonMax < minLong {
+		lonMax -= minLong
 	}
 
 	n := math.Exp2(z)
-	latMin := math.Min(maxLat, math.Max(minLat, b.South)) * math.Pi / 180
-	latMax := math.Min(maxLat, math.Max(minLat, b.North)) * math.Pi / 180
+	latMin := math.Min(maxLat, math.Max(minLat, b.South)) * math.Pi / maxLong
+	latMax := math.Min(maxLat, math.Max(minLat, b.North)) * math.Pi / maxLong
 
-	x1 := n * ((lonMin + 180) / 360)
-	x2 := n * ((lonMax + 180) / 360)
+	x1 := n * ((lonMin + maxLong) / 360)
+	x2 := n * ((lonMax + maxLong) / 360)
 	y1 := math.Ceil(n * (1 - (math.Log(math.Tan(latMin)+1.0/math.Cos(latMin)) / math.Pi)) / 2)
 	y2 := math.Floor(n * (1 - (math.Log(math.Tan(latMax)+1.0/math.Cos(latMax)) / math.Pi)) / 2)
 
@@ -243,6 +245,26 @@ func (b Bounds) BufferRelative(pct float64) Bounds {
 		West:  b.West - deltaW,
 		East:  b.East + deltaW,
 		SRID:  b.SRID,
+	}
+}
+
+func (b Bounds) ConfineToPsuedoMercatorRange() Bounds {
+	if b.SRID == SRIDPsuedoMercator {
+		return Bounds{
+			SRID:  b.SRID,
+			North: math.Max(math.Min(b.North, max3857CoordInMeters), -max3857CoordInMeters),
+			South: math.Max(math.Min(b.South, max3857CoordInMeters), -max3857CoordInMeters),
+			West:  math.Max(math.Min(b.West, max3857CoordInMeters), -max3857CoordInMeters),
+			East:  math.Max(math.Min(b.East, max3857CoordInMeters), -max3857CoordInMeters),
+		}
+	}
+
+	return Bounds{
+		SRID:  b.SRID,
+		North: math.Max(math.Min(b.North, maxLat), minLat),
+		South: math.Max(math.Min(b.South, maxLat), minLat),
+		West:  math.Max(math.Min(b.West, maxLong), minLong),
+		East:  math.Max(math.Min(b.East, maxLong), minLong),
 	}
 }
 

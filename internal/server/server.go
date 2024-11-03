@@ -99,8 +99,8 @@ func setupHandlers(config *config.Config, layerGroup *layer.LayerGroup, auth aut
 		rootHandler = handlers.CompressHandler(rootHandler)
 	}
 
-	if config.Server.Timeout > math.MaxInt64 {
-		config.Server.Timeout = math.MaxInt64
+	if config.Server.Timeout > math.MaxInt32 {
+		config.Server.Timeout = math.MaxInt32
 	}
 
 	rootHandler = httpContextHandler{rootHandler, config.Error}

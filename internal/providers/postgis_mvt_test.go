@@ -24,6 +24,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	_ "github.com/Michad/tilegroxy/internal/datastores"
 	"github.com/Michad/tilegroxy/pkg"
@@ -64,8 +65,11 @@ func setupPostgisContainer(ctx context.Context, t *testing.T) (testcontainers.Co
 	req := testcontainers.ContainerRequest{
 		Image:        "postgis/postgis:latest",
 		ExposedPorts: []string{"5432/tcp"},
-		WaitingFor:   wait.ForExposedPort(),
-		Env:          map[string]string{"POSTGRES_PASSWORD": "hunter2"},
+		WaitingFor: wait.ForAll(
+			wait.ForLog("database system is ready to accept connections"),
+			wait.ForExposedPort(),
+		),
+		Env: map[string]string{"POSTGRES_PASSWORD": "hunter2"},
 	}
 	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: req,
@@ -146,7 +150,17 @@ func Test_GenerateTile(t *testing.T) {
 	wrapper, ok := datastore.Get("test")
 	require.True(t, ok)
 	pg := wrapper.Native().(*pgxpool.Pool)
-	conn, err := pg.Acquire(ctx)
+
+	var conn *pgxpool.Conn
+
+	for i := range []int{0, 1, 2, 4, 8} {
+		time.Sleep(time.Duration(i) * time.Second)
+		conn, err = pg.Acquire(ctx)
+		if err == nil {
+			break
+		}
+	}
+
 	require.NoError(t, err)
 	_, err = conn.Exec(ctx, "CREATE TABLE test AS SELECT ST_SetSRID(ST_MakePoint(10, 10), 4326) AS \"GEOM\", 0 AS gid, 'hello' AS str")
 	require.NoError(t, err)

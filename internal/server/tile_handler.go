@@ -151,9 +151,14 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	_, err = w.Write(img.Content)
 
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Result write error")
-		slog.WarnContext(ctx, fmt.Sprintf("Unable to write to request due to %v", err))
+		if errors.Is(err, context.Canceled) || err.Error() == context.Canceled.Error() {
+			slog.DebugContext(ctx, "Request canceled during write")
+			span.SetStatus(codes.Error, err.Error())
+		} else {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "Result write error")
+			slog.WarnContext(ctx, fmt.Sprintf("Unable to write to request due to %v", err))
+		}
 	} else {
 		span.SetStatus(codes.Ok, "")
 	}
