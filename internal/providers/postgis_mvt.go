@@ -198,5 +198,5 @@ func (t PostgisMvt) GenerateTile(ctx context.Context, _ layer.ProviderContext, r
 		slog.Log(ctx, config.LevelAbsurd, string(result))
 	}
 
-	return &pkg.Image{Content: result, ContentType: "application/vnd.mapbox-vector-tile"}, err
+	return &pkg.Image{Content: result, ContentType: mvtContentType}, err
 }
