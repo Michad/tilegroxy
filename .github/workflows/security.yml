@@ -35,7 +35,7 @@ jobs:
           retention-days: 5
       - name: "Upload to code-scanning"
         if: github.event_name != 'pull_request'
-        uses: github/codeql-action/upload-sarif@662472033e021d55d94146f66f6058822b0b39fd # v3.27.0
+        uses: github/codeql-action/upload-sarif@4f3212b61783c3c68e8309a0f18a699764811cda # v3.27.1
         with:
           sarif_file: results.sarif
   dependency-review:
@@ -65,13 +65,13 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@662472033e021d55d94146f66f6058822b0b39fd # v3.27.0
+        uses: github/codeql-action/init@4f3212b61783c3c68e8309a0f18a699764811cda # v3.27.1
         with:
           languages: ${{ matrix.language }}
       - name: Autobuild
-        uses: github/codeql-action/autobuild@662472033e021d55d94146f66f6058822b0b39fd # v3.27.0
+        uses: github/codeql-action/autobuild@4f3212b61783c3c68e8309a0f18a699764811cda # v3.27.1
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@662472033e021d55d94146f66f6058822b0b39fd # v3.27.0
+        uses: github/codeql-action/analyze@4f3212b61783c3c68e8309a0f18a699764811cda # v3.27.1
         with:
           category: "/language:${{matrix.language}}"
 
@@ -97,7 +97,7 @@ jobs:
           cp govuln.sarif govuln2.sarif
         fi
     - name: Upload result to GitHub Code Scanning
-      uses: github/codeql-action/upload-sarif@662472033e021d55d94146f66f6058822b0b39fd # v3.27.0
+      uses: github/codeql-action/upload-sarif@4f3212b61783c3c68e8309a0f18a699764811cda # v3.27.1
       with:
         sarif_file: govuln2.sarif
   gosec:
@@ -119,6 +119,6 @@ jobs:
           args: '-no-fail -exclude=G504 -fmt sarif -out results.sarif ./...'
       - name: Upload SARIF file
         if: github.event_name != 'pull_request'
-        uses: github/codeql-action/upload-sarif@662472033e021d55d94146f66f6058822b0b39fd # v3.27.0
+        uses: github/codeql-action/upload-sarif@4f3212b61783c3c68e8309a0f18a699764811cda # v3.27.1
         with:
           sarif_file: results.sarif
