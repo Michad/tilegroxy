@@ -54,6 +54,16 @@ var imageUnauthorized []byte
 
 const KeyImageUnauthorized = "embedded:unauthorized.png"
 
+//go:embed empty.mvt
+var mvtEmpty []byte
+
+const KeyMvtEmpty = "embedded:empty.mvt"
+
+//go:embed box.mvt
+var mvtBox []byte
+
+const KeyMvtBox = "embedded:box.mvt"
+
 const KeyPrefixColor = "color:"
 
 var dynamicImages = make(map[string]*[]byte, 0)
@@ -111,6 +121,14 @@ func GetStaticImage(path string) (*[]byte, error) {
 
 	if path == KeyImageUnauthorized {
 		return &imageUnauthorized, nil
+	}
+
+	if path == KeyMvtEmpty {
+		return &mvtEmpty, nil
+	}
+
+	if path == KeyMvtBox {
+		return &mvtBox, nil
 	}
 
 	if dynamicImages[path] != nil {
