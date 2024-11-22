@@ -36,6 +36,7 @@ import (
 var columnRegex = regexp.MustCompile("^[a-zA-Z0-9_]+$")
 
 type PostgisMvtConfig struct {
+	Layer      string
 	Datastore  string
 	Table      string
 	Extent     uint16
@@ -139,7 +140,12 @@ func (t PostgisMvt) GenerateTile(ctx context.Context, _ layer.ProviderContext, r
 		return nil, pkg.InvalidSridError{}
 	}
 
-	params := []any{int(t.SourceSRID), rawEnv, t.Extent, int(t.Buffer * float64(t.Extent)), bufEnv, req.LayerName, t.GID} // #nosec G115
+	layerName := t.Layer
+	if layerName == "" {
+		layerName = req.LayerName
+	}
+
+	params := []any{int(t.SourceSRID), rawEnv, t.Extent, int(t.Buffer * float64(t.Extent)), bufEnv, layerName, t.GID} // #nosec G115
 
 	query := `WITH mvtgeom AS(SELECT ST_AsMVTGeom(ST_Transform(ST_SetSRID("` + t.Geometry + `", $1::integer), 3857), $2::geometry, extent => $3, buffer => $4) AS "geom"`
 
