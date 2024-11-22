@@ -62,7 +62,7 @@ func (s CompositeMVTRegistration) Initialize(cfgAny any, clientConfig config.Cli
 
 	for _, p := range cfg.Providers {
 		provider, err := layer.ConstructProvider(p, clientConfig, errorMessages, layerGroup, datastores)
-		providers = append(providers, provider) 
+		providers = append(providers, provider)
 		errorSlice = append(errorSlice, err)
 	}
 
