@@ -14,6 +14,11 @@ Configuration options:
 |===
 | Parameter | Description | Type | Required | Default
 
+| Layer
+| The name to give the layer inside the MVTs. If not specified this defaults to the incoming layer name specified in the HTTP request. Make sure to specify this parameter to avoid conflicts if using this provider in conjunction with the compositemvt provider. 
+| string
+| No
+| Incoming layer name
 
 | Datastore
 | The ID of the datastore to use for retrieving data. The datastore must have a type of "postgresql".  Also see the xref:configuration/datastores/index.adoc[Datastores] documentation.

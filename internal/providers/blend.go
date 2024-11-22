@@ -215,7 +215,7 @@ func (t Blend) GenerateTile(ctx context.Context, providerContext layer.ProviderC
 
 	for i, p := range t.providers {
 		wg.Add(1)
-		go callProvider(ctx, providerContext, tileRequest, p, i, imgs, errs, &wg, &skipWrite)
+		go callBlendingProvider(ctx, providerContext, tileRequest, p, i, imgs, errs, &wg, &skipWrite)
 	}
 
 	wg.Wait()
@@ -326,7 +326,7 @@ func (t Blend) blendImage(ctx context.Context, img image.Image, size image.Point
 	return combinedImg
 }
 
-func callProvider(ctx context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest, provider layer.Provider, i int, imgs chan indexedImg, errs chan error, wg *sync.WaitGroup, skipWrite *atomic.Bool) {
+func callBlendingProvider(ctx context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest, provider layer.Provider, i int, imgs chan indexedImg, errs chan error, wg *sync.WaitGroup, skipWrite *atomic.Bool) {
 	defer func() {
 		if r := recover(); r != nil {
 			errs <- fmt.Errorf("unexpected blend error %v", r)

@@ -40,6 +40,8 @@ var envRegex = regexp.MustCompile(`{env\.[^{}}]*}`)
 var ctxRegex = regexp.MustCompile(`{ctx\.[^{}}]*}`)
 var lyrRegex = regexp.MustCompile(`{layer\.[^{}}]*}`)
 
+const mvtContentType = "application/vnd.mapbox-vector-tile"
+
 func replaceURLPlaceholders(ctx context.Context, tileRequest pkg.TileRequest, url string, invertY bool, srid uint) (string, error) {
 	url, replacements, err := replacePlaceholdersInString(ctx, tileRequest, url, 0, invertY, srid)
 
