@@ -25,5 +25,5 @@ func Test_ListenAndServe_Validate(t *testing.T) {
 	cfg := config.DefaultConfig()
 	cfg.Server.Encrypt = &config.EncryptionConfig{Certificate: "asfjaslkf", Domain: ""}
 
-	require.Error(t, ListenAndServe(&cfg, nil, nil))
+	require.Error(t, ListenAndServe(&cfg, nil, nil, nil))
 }
