@@ -56,11 +56,15 @@ func init() {
 func coreServeTest(t *testing.T, cfg string, port int, url string) (*http.Response, func(), error) {
 	exitStatus = -1
 	rootCmd.ResetFlags()
-	seedCmd.ResetFlags()
+	serveCmd.ResetFlags()
 	initRoot()
-	initSeed()
+	initServe()
 
-	rootCmd.SetArgs([]string{"serve", "--raw-config", cfg})
+	if _, err := os.Stat(cfg); err == nil {
+		rootCmd.SetArgs([]string{"serve", "-c", cfg, "--hot-reload"})
+	} else {
+		rootCmd.SetArgs([]string{"serve", "--raw-config", cfg})
+	}
 
 	// This isn't proper goroutine practice but done this way since we only care about errors that happen at startup of the server
 	var bindErr error
@@ -234,6 +238,74 @@ layers:
 	resp, err = http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	resp.Body.Close()
+}
+
+func Test_ServeCommand_Reload(t *testing.T) {
+	cfgDir := t.TempDir()
+	cfgFile := cfgDir + string(os.PathSeparator) + "test_servecommand_reload.yml"
+
+	cfg1 := `server:
+  port: 12343
+layers:
+  - id: color
+    provider:
+      name: static
+      color: "FFFFFF"
+`
+	cfg2 := `server:
+  port: 12343
+layers:
+  - id: color2
+    provider:
+      name: static
+      color: "FFFFFF"
+`
+	cfgInvalid := `asfasfasfasflkasfjaslfjlasasfjlkafkf`
+
+	err := os.WriteFile(cfgFile, []byte(cfg1), 0600)
+	require.NoError(t, err)
+
+	resp, postFunc, err := coreServeTest(t, cfgFile, 12343, "http://localhost:12343/tiles/color/8/12/32") //nolint:bodyclose // Linter doesn't detect this right
+	defer postFunc()
+
+	require.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, "image/png", resp.Header["Content-Type"][0])
+
+	err = os.WriteFile(cfgFile, []byte(cfg2), 0600)
+	require.NoError(t, err)
+	time.Sleep(time.Second * 3) // Might need to rethink this static sleep if test flakiness occurs.  No way currently to hook into when reload finishes
+
+	req, err := http.NewRequest(http.MethodGet, "http://localhost:12343/tiles/color/8/12/32", nil)
+	require.NoError(t, err)
+	resp, err = http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	assert.Equal(t, 401, resp.StatusCode)
+	resp.Body.Close()
+
+	req, err = http.NewRequest(http.MethodGet, "http://localhost:12343/tiles/color2/8/12/32", nil)
+	require.NoError(t, err)
+	resp, err = http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, "image/png", resp.Header["Content-Type"][0])
+	resp.Body.Close()
+
+	//Test that it keeps running on old config when given a broken config file to reload
+	err = os.WriteFile(cfgFile, []byte(cfgInvalid), 0600)
+	require.NoError(t, err)
+	time.Sleep(time.Second * 3) // Might need to rethink this static sleep if test flakiness occurs.  No way currently to hook into when reload finishes
+
+	req, err = http.NewRequest(http.MethodGet, "http://localhost:12343/tiles/color2/8/12/32", nil)
+	require.NoError(t, err)
+	resp, err = http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, "image/png", resp.Header["Content-Type"][0])
 	resp.Body.Close()
 }
 
