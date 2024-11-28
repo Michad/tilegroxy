@@ -333,47 +333,39 @@ func LoadAndWatchConfigFromFile(filename string, onReload func(Config, error)) (
 		return Config{}, err
 	}
 
-	lastConfigLoad := time.Now()
+	if onReload != nil {
+		lastConfigLoad := time.Now()
 
-	viper.OnConfigChange(func(_ fsnotify.Event) {
-		// Avoid duplicate file change events https://github.com/spf13/viper/issues/609
-		if time.Since(lastConfigLoad) < time.Second {
-			return
-		}
-
-		lastConfigLoad = time.Now()
-
-		// Do the reload in a separate thread than the main notify thread to avoid the delay below interfering with the dedupe logic above
-		go func() {
-			// fsnotify can send events before file has finished writing - give it a second to settle... this might need to be extended to a retry-with-exp-backoff in the future - https://github.com/spf13/viper/issues/1085
-			time.Sleep(time.Second)
-
-			err := viper.ReadInConfig()
-
-			if err != nil {
-				onReload(Config{}, err)
-			} else {
-				onReload(unmarshal(viper))
+		viper.OnConfigChange(func(_ fsnotify.Event) {
+			// Avoid duplicate file change events https://github.com/spf13/viper/issues/609
+			if time.Since(lastConfigLoad) < time.Second {
+				return
 			}
-		}()
-	})
-	viper.WatchConfig()
+
+			lastConfigLoad = time.Now()
+
+			// Do the reload in a separate thread than the main notify thread to avoid the delay below interfering with the dedupe logic above
+			go func() {
+				// fsnotify can send events before file has finished writing - give it a second to settle... this might need to be extended to a retry-with-exp-backoff in the future - https://github.com/spf13/viper/issues/1085
+				time.Sleep(time.Second)
+
+				err := viper.ReadInConfig()
+
+				if err != nil {
+					onReload(Config{}, err)
+				} else {
+					onReload(unmarshal(viper))
+				}
+			}()
+		})
+		viper.WatchConfig()
+	}
 
 	return unmarshal(viper)
 }
 
 func LoadConfigFromFile(filename string) (Config, error) {
-	viper := initViper()
-
-	viper.SetConfigFile(filename)
-
-	err := viper.ReadInConfig()
-
-	if err != nil {
-		return Config{}, err
-	}
-
-	return unmarshal(viper)
+	return LoadAndWatchConfigFromFile(filename, nil)
 }
 
 func LoadConfigFromRemote(provider, endpoint, path, format string) (Config, error) {

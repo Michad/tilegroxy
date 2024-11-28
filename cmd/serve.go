@@ -34,73 +34,33 @@ var serveCmd = &cobra.Command{
 	Run: runServe,
 }
 
-const reloadFlag = "hot-reload"
-
 func runServe(cmd *cobra.Command, _ []string) {
 	out := rootCmd.OutOrStdout()
 
-	reload, err := cmd.Flags().GetBool(reloadFlag)
+	var reloadPtr func(*config.Config) error
+
+	cfg, err := extractConfigFromCommand(cmd, func(c config.Config, err error) {
+		if err != nil {
+			fmt.Fprintf(out, "Error: %v\n", err.Error())
+		} else if reloadPtr != nil {
+			err := reloadPtr(&c)
+			if err != nil {
+				fmt.Fprintf(out, "Error: %v\n", err.Error())
+			}
+		}
+	})
 	if err != nil {
 		fmt.Fprintf(out, "Error: %v\n", err.Error())
 		exit(1)
 		return
 	}
 
-	var reloadPtr func(*config.Config) error
+	err = tg.Serve(cfg, tg.ServeOptions{}, out, &reloadPtr)
 
-	if reload {
-		fmt.Fprintln(out, "Hot-loading is enabled")
-		configPath, err := cmd.Flags().GetString("config")
-		if err != nil {
-			fmt.Fprintf(out, "Error: %v\n", err.Error())
-			exit(1)
-			return
-		}
-
-		var cfgPrime *config.Config
-
-		cfg, err := config.LoadAndWatchConfigFromFile(configPath, func(c config.Config, err error) {
-			if err != nil {
-				fmt.Fprintf(out, "Error: %v\n", err.Error())
-			} else if reloadPtr != nil {
-				err := (reloadPtr)(&c)
-				if err != nil {
-					fmt.Fprintf(out, "Error: %v\n", err.Error())
-				}
-			}
-		})
-
-		cfgPrime = &cfg
-
-		if err != nil {
-			fmt.Fprintf(out, "Error: %v\n", err.Error())
-			exit(1)
-			return
-		}
-
-		err = tg.Serve(cfgPrime, tg.ServeOptions{}, out, &reloadPtr)
-
-		if err != nil {
-			fmt.Fprintf(out, "Error: %v\n", err.Error())
-			exit(1)
-			return
-		}
-
-	} else {
-		cfg, err := extractConfigFromCommand(cmd)
-		if err != nil {
-			fmt.Fprintf(out, "Error: %v\n", err.Error())
-			exit(1)
-			return
-		}
-
-		err = tg.Serve(cfg, tg.ServeOptions{}, out, &reloadPtr)
-
-		if err != nil {
-			fmt.Fprintf(out, "Error: %v\n", err.Error())
-			exit(1)
-			return
-		}
+	if err != nil {
+		fmt.Fprintf(out, "Error: %v\n", err.Error())
+		exit(1)
+		return
 	}
 }
 
@@ -116,4 +76,5 @@ func initServe() {
 	serveCmd.MarkFlagsMutuallyExclusive("remote-endpoint", reloadFlag)
 	serveCmd.MarkFlagsMutuallyExclusive("remote-path", reloadFlag)
 	serveCmd.MarkFlagsMutuallyExclusive("remote-type", reloadFlag)
+	serveCmd.MarkFlagsRequiredTogether("config", reloadFlag)
 }

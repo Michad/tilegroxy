@@ -54,7 +54,7 @@ func runSeed(cmd *cobra.Command, _ []string) {
 		return
 	}
 
-	cfg, err := extractConfigFromCommand(cmd)
+	cfg, err := extractConfigFromCommand(cmd, nil)
 	if err != nil {
 		fmt.Fprintf(out, "Error: %v\n", err)
 		exit(1)

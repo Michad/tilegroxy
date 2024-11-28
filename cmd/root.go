@@ -27,6 +27,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const reloadFlag = "hot-reload"
+
 var rootCmd = &cobra.Command{
 	Use:   "tilegroxy",
 	Short: "A service to proxy and cache map tile layers",
@@ -71,8 +73,9 @@ func initRoot() {
 	rootCmd.MarkFlagsMutuallyExclusive("config", "raw-config", "remote-provider")
 }
 
-// A common utility for use by multiple commands to bootstrap the core application config
-func extractConfigFromCommand(cmd *cobra.Command) (*config.Config, error) {
+// A common utility for use by multiple commands to bootstrap the core application config.
+// reloadFunc is optional if hot reloading is not supported in triggering command
+func extractConfigFromCommand(cmd *cobra.Command, reloadFunc func(c config.Config, err error)) (*config.Config, error) {
 	var err error
 	configPath, err1 := cmd.Flags().GetString("config")
 	configRaw, err2 := cmd.Flags().GetString("raw-config")
@@ -81,20 +84,29 @@ func extractConfigFromCommand(cmd *cobra.Command) (*config.Config, error) {
 	remotePath, err5 := cmd.Flags().GetString("remote-path")
 	remoteType, err6 := cmd.Flags().GetString("remote-type")
 
+	reload, err := cmd.Flags().GetBool(reloadFlag)
+	if err != nil {
+		//This is only defined in the serve command so expect it to fail in commands that don't support reload
+		reload = false
+	}
+
 	if err = errors.Join(err1, err2, err3, err4, err5, err6); err != nil {
 		return nil, err
 	}
 
 	var cfg config.Config
 
-	if configRaw != "" { //nolint:gocritic
+	switch {
+	case reload && reloadFunc != nil:
+		cfg, err = config.LoadAndWatchConfigFromFile(configPath, reloadFunc)
+	case configRaw != "":
 		cfg, err = config.LoadConfig(configRaw)
-	} else if remoteProvider != "" {
+	case remoteProvider != "":
 		cfg, err = config.LoadConfigFromRemote(remoteProvider, remoteEndpoint, remotePath, remoteType)
-	} else if configPath != "" {
+	case configPath != "":
 		cfg, err = config.LoadConfigFromFile(configPath)
-	} else {
-		return nil, errors.New("no configuration supplied")
+	default:
+		err = errors.New("no configuration supplied")
 	}
 
 	if err != nil {

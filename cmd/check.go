@@ -32,7 +32,7 @@ func runCheck(cmd *cobra.Command, _ []string) {
 	echo, _ := cmd.Flags().GetBool("echo")
 	out := cmd.OutOrStdout()
 
-	cfg, err := extractConfigFromCommand(cmd)
+	cfg, err := extractConfigFromCommand(cmd, nil)
 	if err != nil {
 		fmt.Fprintf(out, "Invalid configuration: %v\n", err.Error())
 		exit(1)
