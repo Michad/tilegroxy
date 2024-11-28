@@ -1,12 +1,22 @@
 = Reloading Configuration
 
-Tilegroxy supports limited hot-loading of configuration without a restart. Configuration changes that affect the core functionality of the service, including changes to the HTTP server, do not support reloading and instead require a restart of the executable.  Reloading is only supported when running the `serve` command and must be explicitly enabled via the CLI parameter `--hot-reload`
+Tilegroxy supports automatic hot-loading of configuration without a restart or downtime when running as a server. Reloading must be explicitly enabled via the CLI parameter `--hot-reload`.
 
-Reloading occurs automatically within a few seconds of configuration changing on the filesystem.  It is not supported for remote providers such as etcd.  When reloading the configuration, the new configuration is stored side-by-side with the previous configuration and swapped atomically. The exact timing of that change cannot be controlled but should occur within several seconds of configuration being updated, depending on the size of your configuration.  Requests that are in-flight will continue operating against the old configuration while new requests coming in will use the new configuration.
+Reloading occurs automatically within a few seconds of the configuration changing on the filesystem. When reloading the configuration, the new configuration is stored side-by-side with the previous configuration and swapped atomically. The exact timing of that change cannot be controlled but should occur within several seconds of configuration being updated depending on the size of your configuration.  Requests that are already in-flight while this change occurs will continue operating against the old configuration while requests coming in after the swap completes will use the new configuration.
 
-When reloading occurs new connections will be established for configured xref:configuration/datastores/index.adoc[datastores]. This will lead to the number of connections to the databases to increase. Connections are not explicitly killed and instead rely on idle timeouts and garbage collection to occur for them to be cleaned up. If configuration changes repeatedly occur in a short period this can lead to a large number of connections being established. Consider relying on traditional deployment methodologies if you're sensitive to the number of active DB connections.
+== Warnings
 
-The following sections can be reloaded:
+Configuration changes that affect the core functionality of the service (for example changing the port of the HTTP server) still require a restart of the executable.
+
+When reloading occurs, new connections will be established for configured xref:configuration/datastores/index.adoc[datastores]. This will lead to an increase in the number of connections to the database. Connections are not explicitly killed and instead rely on idle timeouts and garbage collection to occur for them to be cleaned up. Therefore if configuration changes repeatedly occur in a short period, a large number of connections might be established. Consider relying on traditional deployment methodologies if you're sensitive to the number of active DB connections.
+
+Tilegroxy uses link:https://github.com/fsnotify/fsnotify[fsnotify] to detect when configuration has changed. It is possible for the file change event to reach tilegroxy before the file has finished being written. Tilegroxy waits 1 second before applying changes to avoid this but if you are using a filesystem with especially slow writes it is possible tilegroxy will attempt to read the configuration too early. This will usually result in an invalid configuration which will be ignored but could result in operating against incorrect configuration.  It is therefore recommended to avoid using hot reload if you're at risk of slow writes, especially if using YAML configurations.
+
+Automatic configuration reloading will not work with remote providers (such as etcd) or certain file systems that do not support file notifications (such as NFS, SMB, or FUSE).
+
+== Supported Configuration
+
+The following sections of the configuration can be reloaded:
 
 * xref:configuration/secret/index.adoc[secret]
 * xref:configuration/client.adoc[client]
@@ -18,6 +28,6 @@ The following sections can be reloaded:
 The following sections can be partially reloaded:
 
 * xref:configuration/error.adoc[error]
-** Overall error handling mode will not be changed but the error messages returned due to issues specific to individual layers will
+** Overall error handling mode will not be changed but most error messages can be hot reloaded
 
-
+Changes to unsupported sections will be ignored.
