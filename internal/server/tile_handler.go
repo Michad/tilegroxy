@@ -44,7 +44,7 @@ var version, ref, buildDate = static.GetVersionInformation()
 
 type tileHandler struct {
 	entities           reloadableEntities
-	mux                sync.RWMutex
+	entityMutex        sync.RWMutex // Access to the entities struct above should happen inside this mutex to enable requests to be able to complete without disruption when hot reloading occurs
 	tracer             trace.Tracer
 	meter              metric.Meter
 	tileAllCounter     metric.Int64Counter
@@ -75,18 +75,22 @@ func newTileHandler(handler reloadableEntities) (tileHandler, error) {
 
 func (h *tileHandler) reloadEntities(newEntities reloadableEntities) {
 	slog.WarnContext(pkg.BackgroundContext(), "Requesting to refresh entities from configuration")
-	h.mux.Lock()
+
+	// Not strictly necessary but left in place to allow for extra steps for hot reloading config in the future
+	h.entityMutex.Lock()
 	h.entities = newEntities
-	h.mux.Unlock()
+	h.entityMutex.Unlock()
 	slog.WarnContext(pkg.BackgroundContext(), "Completed refreshing entities from configuration")
 }
 
 func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	span := trace.SpanFromContext(ctx)
-	h.mux.RLock()
+
+	// Make a copy of entities to ensure entire request goes against the same version of entities even if a reload occurs - and avoid wrapping full request execution in lock
+	h.entityMutex.RLock()
 	entities := h.entities
-	h.mux.RUnlock()
+	h.entityMutex.RUnlock()
 
 	h.tileAllCounter.Add(ctx, 1)
 
