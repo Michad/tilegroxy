@@ -76,5 +76,4 @@ func initServe() {
 	serveCmd.MarkFlagsMutuallyExclusive("remote-endpoint", reloadFlag)
 	serveCmd.MarkFlagsMutuallyExclusive("remote-path", reloadFlag)
 	serveCmd.MarkFlagsMutuallyExclusive("remote-type", reloadFlag)
-	serveCmd.MarkFlagsRequiredTogether("config", reloadFlag)
 }
