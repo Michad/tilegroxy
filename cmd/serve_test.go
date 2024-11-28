@@ -294,7 +294,7 @@ layers:
 	assert.Equal(t, "image/png", resp.Header["Content-Type"][0])
 	resp.Body.Close()
 
-	//Test that it keeps running on old config when given a broken config file to reload
+	// Test that it keeps running on old config when given a broken config file to reload
 	err = os.WriteFile(cfgFile, []byte(cfgInvalid), 0600)
 	require.NoError(t, err)
 	time.Sleep(time.Second * 3) // Might need to rethink this static sleep if test flakiness occurs.  No way currently to hook into when reload finishes

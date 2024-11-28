@@ -86,7 +86,7 @@ func extractConfigFromCommand(cmd *cobra.Command, reloadFunc func(c config.Confi
 
 	reload, err := cmd.Flags().GetBool(reloadFlag)
 	if err != nil {
-		//This is only defined in the serve command so expect it to fail in commands that don't support reload
+		// This is only defined in the serve command so expect it to fail in commands that don't support reload
 		reload = false
 	}
 
