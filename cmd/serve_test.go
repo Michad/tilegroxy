@@ -276,7 +276,7 @@ layers:
 
 	err = os.WriteFile(cfgFile, []byte(cfg2), 0600)
 	require.NoError(t, err)
-	time.Sleep(time.Second * 3) // Might need to rethink this static sleep if test flakiness occurs.  No way currently to hook into when reload finishes
+	time.Sleep(time.Second * 4) // Might need to rethink this static sleep if test flakiness occurs.  No way currently to hook into when reload finishes
 
 	req, err := http.NewRequest(http.MethodGet, "http://localhost:12343/tiles/color/8/12/32", nil)
 	require.NoError(t, err)
@@ -297,7 +297,7 @@ layers:
 	// Test that it keeps running on old config when given a broken config file to reload
 	err = os.WriteFile(cfgFile, []byte(cfgInvalid), 0600)
 	require.NoError(t, err)
-	time.Sleep(time.Second * 3) // Might need to rethink this static sleep if test flakiness occurs.  No way currently to hook into when reload finishes
+	time.Sleep(time.Second * 4) // Might need to rethink this static sleep if test flakiness occurs.  No way currently to hook into when reload finishes
 
 	req, err = http.NewRequest(http.MethodGet, "http://localhost:12343/tiles/color2/8/12/32", nil)
 	require.NoError(t, err)
