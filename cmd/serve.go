@@ -19,6 +19,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/Michad/tilegroxy/pkg/config"
 	tg "github.com/Michad/tilegroxy/pkg/entry"
 )
 
@@ -36,14 +37,25 @@ var serveCmd = &cobra.Command{
 func runServe(cmd *cobra.Command, _ []string) {
 	out := rootCmd.OutOrStdout()
 
-	cfg, err := extractConfigFromCommand(cmd)
+	var reloadPtr func(*config.Config) error
+
+	cfg, err := extractConfigFromCommand(cmd, func(c config.Config, err error) {
+		if err != nil {
+			fmt.Fprintf(out, "Error: %v\n", err.Error())
+		} else if reloadPtr != nil {
+			err := reloadPtr(&c)
+			if err != nil {
+				fmt.Fprintf(out, "Error: %v\n", err.Error())
+			}
+		}
+	})
 	if err != nil {
 		fmt.Fprintf(out, "Error: %v\n", err.Error())
 		exit(1)
 		return
 	}
 
-	err = tg.Serve(cfg, tg.ServeOptions{}, out)
+	err = tg.Serve(cfg, tg.ServeOptions{}, out, &reloadPtr)
 
 	if err != nil {
 		fmt.Fprintf(out, "Error: %v\n", err.Error())
@@ -58,4 +70,10 @@ func init() {
 
 func initServe() {
 	rootCmd.AddCommand(serveCmd)
+	serveCmd.Flags().Bool(reloadFlag, false, "Automatically reload configuration upon changes")
+	serveCmd.MarkFlagsMutuallyExclusive("raw-config", reloadFlag)
+	serveCmd.MarkFlagsMutuallyExclusive("remote-provider", reloadFlag)
+	serveCmd.MarkFlagsMutuallyExclusive("remote-endpoint", reloadFlag)
+	serveCmd.MarkFlagsMutuallyExclusive("remote-path", reloadFlag)
+	serveCmd.MarkFlagsMutuallyExclusive("remote-type", reloadFlag)
 }

@@ -12,6 +12,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.34.3
 	github.com/bradfitz/gomemcache v0.0.0-20230905024940-24af94b03874
 	github.com/docker/go-connections v0.5.0
+	github.com/fsnotify/fsnotify v1.8.0
 	github.com/go-redis/cache/v9 v9.0.0
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/gorilla/handlers v1.5.2
@@ -82,7 +83,6 @@ require (
 	github.com/dolthub/maphash v0.1.0 // indirect
 	github.com/fatih/color v1.14.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/gammazero/deque v0.2.1 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect

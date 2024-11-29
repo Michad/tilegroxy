@@ -47,35 +47,44 @@ func handleNoContent(w http.ResponseWriter, _ *http.Request) {
 // not useful in practice due to OS-specific nature of signals
 var InterruptFlags = []os.Signal{os.Interrupt}
 
-func setupHandlers(config *config.Config, layerGroup *layer.LayerGroup, auth authentication.Authentication) (http.Handler, error) {
+func setupHandlers(cfg *config.Config, layerGroup *layer.LayerGroup, auth authentication.Authentication) (http.Handler, func(*config.Config, *layer.LayerGroup, authentication.Authentication) error, error) {
 	r := http.ServeMux{}
 
 	var myRootHandler http.Handler
 	var myTileHandler http.Handler
 	var myDocumentationHandler http.Handler
-	defaultHandler := defaultHandler{config: config, auth: auth, layerGroup: layerGroup}
+	entities := reloadableEntities{config: cfg, auth: auth, layerGroup: layerGroup}
+	myDefaultHandler := defaultHandler{entities}
 
-	if config.Server.Production {
+	if cfg.Server.Production {
 		myRootHandler = http.HandlerFunc(handleNoContent)
 	} else {
-		myRootHandler = &defaultHandler
+		myRootHandler = &myDefaultHandler
 
-		if config.Server.DocsPath != "" {
-			myDocumentationHandler = &documentationHandler{defaultHandler}
+		if cfg.Server.DocsPath != "" {
+			myDocumentationHandler = &documentationHandler{myDefaultHandler}
 		}
 	}
 
-	tilePath := config.Server.RootPath + config.Server.TilePath + "/{layer}/{z}/{x}/{y}"
-	docsPath := config.Server.RootPath + config.Server.DocsPath + "/{path...}"
-	handler, err := newTileHandler(defaultHandler)
+	tilePath := cfg.Server.RootPath + cfg.Server.TilePath + "/{layer}/{z}/{x}/{y}"
+	docsPath := cfg.Server.RootPath + cfg.Server.DocsPath + "/{path...}"
+	handler, err := newTileHandler(entities)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	myTileHandler = &handler
 
-	if config.Telemetry.Enabled {
-		myRootHandler = otelhttp.NewHandler(myRootHandler, config.Server.RootPath, otelhttp.WithMessageEvents(otelhttp.WriteEvents))
+	reloadFunc := func(cfg2 *config.Config, layerGroup2 *layer.LayerGroup, auth2 authentication.Authentication) error {
+		entities2 := reloadableEntities{config: cfg2, auth: auth2, layerGroup: layerGroup2}
+
+		handler.reloadEntities(entities2)
+
+		return nil
+	}
+
+	if cfg.Telemetry.Enabled {
+		myRootHandler = otelhttp.NewHandler(myRootHandler, cfg.Server.RootPath, otelhttp.WithMessageEvents(otelhttp.WriteEvents))
 		myTileHandler = otelhttp.NewHandler(myTileHandler, tilePath, otelhttp.WithMessageEvents(otelhttp.WriteEvents))
 
 		if myDocumentationHandler != nil {
@@ -83,7 +92,7 @@ func setupHandlers(config *config.Config, layerGroup *layer.LayerGroup, auth aut
 		}
 	}
 
-	r.Handle(config.Server.RootPath, myRootHandler)
+	r.Handle(cfg.Server.RootPath, myRootHandler)
 	r.Handle(tilePath, myTileHandler)
 	r.Handle(tilePath+"/", myTileHandler)
 
@@ -95,23 +104,23 @@ func setupHandlers(config *config.Config, layerGroup *layer.LayerGroup, auth aut
 
 	rootHandler = &r
 
-	if config.Server.Gzip {
+	if cfg.Server.Gzip {
 		rootHandler = handlers.CompressHandler(rootHandler)
 	}
 
-	if config.Server.Timeout > math.MaxInt32 {
-		config.Server.Timeout = math.MaxInt32
+	if cfg.Server.Timeout > math.MaxInt32 {
+		cfg.Server.Timeout = math.MaxInt32
 	}
 
-	rootHandler = httpContextHandler{rootHandler, config.Error}
-	rootHandler = http.TimeoutHandler(rootHandler, time.Duration(config.Server.Timeout)*time.Second, config.Error.Messages.Timeout) // #nosec G115
-	rootHandler, err = configureAccessLogging(config.Logging.Access, config.Error.Messages, rootHandler)
+	rootHandler = httpContextHandler{rootHandler, cfg.Error}
+	rootHandler = http.TimeoutHandler(rootHandler, time.Duration(cfg.Server.Timeout)*time.Second, cfg.Error.Messages.Timeout) // #nosec G115
+	rootHandler, err = configureAccessLogging(cfg.Logging.Access, cfg.Error.Messages, rootHandler)
 
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return rootHandler, nil
+	return rootHandler, reloadFunc, nil
 }
 
 func listenAndServeTLS(config *config.Config, srvErr chan error, srv *http.Server) {
@@ -162,12 +171,15 @@ func listenAndServeTLS(config *config.Config, srvErr chan error, srv *http.Serve
 	}
 }
 
-func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth authentication.Authentication) error {
+func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth authentication.Authentication, reloadPtr *func(*config.Config, *layer.LayerGroup, authentication.Authentication) error) error {
 	if config.Server.Encrypt != nil && config.Server.Encrypt.Domain == "" {
 		return fmt.Errorf(config.Error.Messages.ParamRequired, "server.encrypt.domain")
 	}
 
-	rootHandler, err := setupHandlers(config, layerGroup, auth)
+	rootHandler, handlerReloadFunc, err := setupHandlers(config, layerGroup, auth)
+	if reloadPtr != nil {
+		*reloadPtr = handlerReloadFunc
+	}
 
 	if err != nil {
 		return err

@@ -23,10 +23,14 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
-type defaultHandler struct {
+type reloadableEntities struct {
 	config     *config.Config
 	layerGroup *layer.LayerGroup
 	auth       authentication.Authentication
+}
+
+type defaultHandler struct {
+	reloadableEntities
 }
 
 func (h *defaultHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
