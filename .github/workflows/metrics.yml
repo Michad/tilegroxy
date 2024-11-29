@@ -31,9 +31,9 @@ jobs:
           OLD_VAL=$(curl "https://gist.githubusercontent.com/michad/d1b9e082f6608635494188d0f52bae69/raw/coverage.json" | jq '.message | rtrimstr("%") | tonumber')
           
           MSG="Code coverage"
-          if [ $(bc <<< "$VAL == $OLD_VAL") ]; then
+          if [ $(bc <<< "$VAL == $OLD_VAL") -eq 1 ]; then
             MSG="$MSG is unchanged at $VAL%"
-          elif [ $(bc <<< "$VAL < $OLD_VAL") ]; then
+          elif [ $(bc <<< "$VAL < $OLD_VAL") -eq 1 ]; then
             MSG="$MSG decreased from $OLD_VAL% to $VAL%"
           else
             MSG="$MSG increased from $OLD_VAL% to $VAL%"
@@ -113,9 +113,9 @@ jobs:
           OLD_VAL=$(curl "https://gist.githubusercontent.com/michad/d1b9e082f6608635494188d0f52bae69/raw/libyears.json" | jq '.message | rtrimstr(" years") | tonumber')
           
           MSG="Libyears"
-          if [ $(bc <<< "$VAL == $OLD_VAL") ]; then
+          if [ $(bc <<< "$VAL == $OLD_VAL") -eq 1 ]; then
             MSG="$MSG is unchanged at $VAL"
-          elif [ $(bc <<< "$VAL < $OLD_VAL") ]; then
+          elif [ $(bc <<< "$VAL < $OLD_VAL") -eq 1 ]; then
             MSG="$MSG decreased from $OLD_VAL to $VAL"
           else
             MSG="$MSG increased from $OLD_VAL to $VAL"
