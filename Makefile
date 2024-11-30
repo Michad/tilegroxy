@@ -40,8 +40,9 @@ docs:
 	@cp -r build/site/* internal/website/resources/
 
 readme:
-	@gem install asciidoctor-reducer
+	@asciidoctor-reducer -v >/dev/null 2>&1 || gem install asciidoctor-reducer
 	@asciidoctor-reducer -o README.adoc README_source.adoc
+	@echo Updated README.adoc
 
 version:
 	@./${OUT} version --json
