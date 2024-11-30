@@ -29,25 +29,24 @@ link:https://tilegroxy.michael.davis.name/operation/configuration/authentication
 +++</li><li>+++
 Create your own link:https://tilegroxy.michael.davis.name/operation/extensibility.html[custom provider] to pull in non-standard and proprietary imagery sources
 +++</li><li>+++
-Tweak your map layer with link:https://tilegroxy.michael.davis.name/operation/configuration/provider/effect.html[18 standard effects] or by providing your own link:https://tilegroxy.michael.davis.name/operation/configuration/provider/transform.html[pixel-level logic]
+Support for both raster and vector format tiles
 +++</li><li>+++
-link:https://tilegroxy.michael.davis.name/operation/configuration/provider/blend.html[Combine] multiple map layers with adjustable rules and blending methods
+Tweak your raster layers with link:https://tilegroxy.michael.davis.name/operation/configuration/provider/effect.html[18 standard effects] or by providing your own link:https://tilegroxy.michael.davis.name/operation/configuration/provider/transform.html[pixel-level logic]
++++</li><li>+++
+Combine link:https://tilegroxy.michael.davis.name/operation/configuration/provider/blend.html[raster] or link:https://tilegroxy.michael.davis.name/operation/configuration/provider/compositemvt.html[vector tile] layers
 +++</li><li>+++
 link:https://tilegroxy.michael.davis.name/operation/configuration/provider/cgi.html[Act as an HTTP server] for https://www.mapserver.org[MapServer] and any other CGI application that generates tiles
 +++</li><li>+++
 Commands for link:https://tilegroxy.michael.davis.name/operation/commands/seed.html[seeding] and link:https://tilegroxy.michael.davis.name/operation/commands/test.html[testing] your layers
 +++</li><li>+++
-Support for both raster and vector format tiles
+Run as link:https://tilegroxy.michael.davis.name/operation/configuration/encryption.html[HTTPS] including Let's Encrypt (ACME) support
 +++</li><li>+++
-Run as link:https://tilegroxy.michael.davis.name/operation/configuration/encryption.html[HTTPS] including Let's Encrypt support
-+++</li><li>+++
-Configurable link:https://tilegroxy.michael.davis.name/operation/configuration/server.html[timeout], link:https://tilegroxy.michael.davis.name/operation/configuration/log.html[logging], and link:https://tilegroxy.michael.davis.name/operation/configuration/error.html[error handling] rules
-+++</li><li>+++
-Override configuration via link:https://tilegroxy.michael.davis.name/operation/configuration/index.html[environment variables]
-+++</li><li>+++
-link:https://tilegroxy.michael.davis.name/operation/configuration/secret/index.html[Externalize passwords/keys] using AWS Secrets Manager
+Configurable via file or etcd with link:https://tilegroxy.michael.davis.name/operation/configuration/index.html[environment variable] override,
+link:https://tilegroxy.michael.davis.name/operation/configuration/secret/index.html[externalizable secrets], and link:https://tilegroxy.michael.davis.name/operation/reloading.html[zero-downtime reload]
 +++</li><li>+++
 link:#docker[Container deployment]
++++</li><li>+++
+Minimal HTTP footprint to decrease security exposure
 +++</li><li>+++
 Traces, metrics, and logs available via link:https://tilegroxy.michael.davis.name/operation/configuration/telemetry.html[OpenTelemetry]
 +++</li><li>+++
