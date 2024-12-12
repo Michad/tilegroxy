@@ -39,7 +39,7 @@ require (
 	go.opentelemetry.io/otel/sdk/log v0.7.0
 	go.opentelemetry.io/otel/sdk/metric v1.32.0
 	go.opentelemetry.io/otel/trace v1.32.0
-	golang.org/x/crypto v0.30.0
+	golang.org/x/crypto v0.31.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/utils v0.0.0-20240502163921-fe8a2dddb1d0
 )
