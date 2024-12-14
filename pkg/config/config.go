@@ -225,6 +225,9 @@ func DefaultConfig() Config {
 				Host:    "0.0.0.0",
 			},
 		},
+		Telemetry: TelemetryConfig{
+			Enabled: false,
+		},
 		Client: ClientConfig{
 			UserAgent:           "tilegroxy/" + version,
 			MaxLength:           1024 * 1024 * 10,
