@@ -1,6 +1,6 @@
 module github.com/Michad/tilegroxy
 
-go 1.22.7
+go 1.23.4
 
 require (
 	github.com/anthonynsimon/bild v0.14.0
