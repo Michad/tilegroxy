@@ -145,6 +145,7 @@ func (LayerGroup) checkPermission(ctx context.Context, l *Layer, tileRequest pkg
 	ctxLimitLayers, _ := pkg.LimitLayersFromContext(ctx)
 	ctxAllowedLayers, _ := pkg.AllowedLayersFromContext(ctx)
 	ctxAllowedArea, _ := pkg.AllowedAreaFromContext(ctx)
+	ctxLimitAreaPartial, _ := pkg.LimitAreaPartialFromContext(ctx)
 
 	if *ctxLimitLayers {
 		if !slices.Contains(*ctxAllowedLayers, l.ID) {
@@ -154,8 +155,14 @@ func (LayerGroup) checkPermission(ctx context.Context, l *Layer, tileRequest pkg
 
 	if !ctxAllowedArea.IsNullIsland() {
 		bounds, err := tileRequest.GetBounds()
-		if err != nil || !ctxAllowedArea.Contains(*bounds) {
-			return pkg.UnauthorizedError{Message: "Denying access to non-allowed area"}
+		if ctxLimitAreaPartial != nil && *ctxLimitAreaPartial {
+			if err != nil || !ctxAllowedArea.Intersects(*bounds) {
+				return pkg.UnauthorizedError{Message: "Denying access to non-allowed area"}
+			}
+		} else {
+			if err != nil || !ctxAllowedArea.Contains(*bounds) {
+				return pkg.UnauthorizedError{Message: "Denying access to non-allowed area"}
+			}
 		}
 	}
 	return nil

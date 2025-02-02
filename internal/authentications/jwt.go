@@ -317,6 +317,8 @@ func (c JWT) validateGeohash(ctx context.Context, rawClaim jwt.MapClaims) bool {
 
 	ctxAllowedArea, _ := pkg.AllowedAreaFromContext(ctx)
 	*ctxAllowedArea = bounds
+	ctxLimitAreaPartial, _ := pkg.LimitAreaPartialFromContext(ctx)
+	*ctxLimitAreaPartial = true
 
 	return true
 }

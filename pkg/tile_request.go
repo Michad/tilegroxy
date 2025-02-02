@@ -223,6 +223,10 @@ func (b Bounds) Contains(b2 Bounds) bool {
 	return b2.South+delta >= b.South && b2.North <= b.North+delta && b2.West+delta >= b.West && b2.East <= b.East+delta
 }
 
+func (b Bounds) ContainsPoint(x float64, y float64) bool {
+	return y+delta >= b.South && y <= b.North+delta && x+delta >= b.West && x <= b.East+delta
+}
+
 func (b Bounds) Width() float64 {
 	return math.Abs(b.East - b.West)
 }
@@ -246,6 +250,19 @@ func (b Bounds) BufferRelative(pct float64) Bounds {
 		East:  b.East + deltaW,
 		SRID:  b.SRID,
 	}
+}
+
+func (b Bounds) ConvertToPsuedoMercatorRange() Bounds {
+	if b.SRID != SRIDPsuedoMercator {
+		return Bounds{
+			convertLat4326To3857(b.South),
+			convertLat4326To3857(b.North),
+			convertLon4326To3857(b.West),
+			convertLon4326To3857(b.East),
+			SRIDPsuedoMercator}
+	}
+
+	return b
 }
 
 func (b Bounds) ConfineToPsuedoMercatorRange() Bounds {

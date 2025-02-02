@@ -4,7 +4,7 @@ Delegates calls to a Primary provider, then falls back Secondary provider when a
 
 Currently the preAuth method is never called for the secondary provider, therefore only authless providers should be used as fallbacks. In the future we may include calls to the preAuth method but only when the fallback logic is triggered.
 
-Currently the bounds parameter is only applied at a per-tile level. That is, the edge where the fallback begins to kick in will visibly change as you zoom in/out. In the future we may add an additional configuration option to make it apply at a per-pixel level instead.
+The bounds parameter is only applied at a per-tile level. That is, the edge where the fallback begins to kick in will visibly change as you zoom in/out. This allows this provider to work in a format agnostic manner for both raster and vector tiles.  See the xref:configuration/provider/crop.adoc[] provider to allow raster tiles to be limited at an exact geographic area.
 
 Name should be "fallback"
 
