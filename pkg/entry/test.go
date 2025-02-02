@@ -107,7 +107,7 @@ func Test(cfg *config.Config, opts TestOptions, out io.Writer) (uint32, error) {
 	writer := tabwriter.NewWriter(out, 1, 4, 4, ' ', tabwriter.StripEscape) //nolint:mnd
 	fmt.Fprintln(writer, "Thread\tLayer\tGenerated\tCache Write\tCache Read\tError\t")
 
-	for t := range len(reqSplit) {
+	for t := range reqSplit {
 		wg.Add(1)
 		go testTileRequests(layerObjects, opts, &errCount, writer, &wg, t, reqSplit[t])
 	}
