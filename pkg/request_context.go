@@ -21,12 +21,17 @@ import (
 	"time"
 )
 
+// Using context.Context in this way to pass along so much information is controversial. Due to the flexibility of the application
+// there's a lot of data that might be needed quite deep and there's places we need to pass control to libraries and back, making it
+// difficult to preserve all the information we might need deep in a specific provider any other way.
+
 //lint:file-ignore SA1029 Want values to be accessible
 
 const reqKey = "req"
 const startTimeKey = "startTime"
 const limitLayersKey = "limitLayers"
 const allowedLayersKey = "allowedLayers"
+const limitAreaPartialKey = "limitAreaPartial"
 const allowedAreaKey = "allowedArea"
 const userIDKey = "user"
 const layerPatternMatchesKey = "layerPatternMatches"
@@ -43,6 +48,7 @@ func NewRequestContext(req *http.Request) context.Context {
 	ctx = context.WithValue(ctx, startTimeKey, time.Now())
 	ctx = context.WithValue(ctx, limitLayersKey, p(false))
 	ctx = context.WithValue(ctx, allowedLayersKey, &([]string{}))
+	ctx = context.WithValue(ctx, limitAreaPartialKey, p(false))
 	ctx = context.WithValue(ctx, allowedAreaKey, &Bounds{})
 	ctx = context.WithValue(ctx, userIDKey, p(""))
 	ctx = context.WithValue(ctx, layerPatternMatchesKey, &map[string]string{})
@@ -67,36 +73,49 @@ func NewRequestContext(req *http.Request) context.Context {
 	return ctx
 }
 
+// The raw HTTP request that is being processed
 func ReqFromContext(ctx context.Context) (*http.Request, bool) {
 	u, ok := ctx.Value(reqKey).(*http.Request)
 	return u, ok
 }
 
+// When the request was received and started being processed
 func StartTimeFromContext(ctx context.Context) (time.Time, bool) {
 	u, ok := ctx.Value(startTimeKey).(time.Time)
 	return u, ok
 }
 
+// If true, allowed layers should be restricted. Used to distinguish between someone being restricted to no layers vs unrestricted
 func LimitLayersFromContext(ctx context.Context) (*bool, bool) {
 	u, ok := ctx.Value(limitLayersKey).(*bool)
 	return u, ok
 }
 
+// List of layers allowed via auth
 func AllowedLayersFromContext(ctx context.Context) (*[]string, bool) {
 	u, ok := ctx.Value(allowedLayersKey).(*[]string)
 	return u, ok
 }
 
+// If non-null-island then restrict map to a specific area
 func AllowedAreaFromContext(ctx context.Context) (*Bounds, bool) {
 	u, ok := ctx.Value(allowedAreaKey).(*Bounds)
 	return u, ok
 }
 
+// If true, allowed area should be an "Intersects" and if false allowed area should be a "Contains"
+func LimitAreaPartialFromContext(ctx context.Context) (*bool, bool) {
+	u, ok := ctx.Value(limitAreaPartialKey).(*bool)
+	return u, ok
+}
+
+// If auth specifies a way to retrieve a user identifier, it's contained here
 func UserIDFromContext(ctx context.Context) (*string, bool) {
 	u, ok := ctx.Value(userIDKey).(*string)
 	return u, ok
 }
 
+// Maps any parameters in the layer name from their key defined in config to the value from the real URL
 func LayerPatternMatchesFromContext(ctx context.Context) (*map[string]string, bool) {
 	u, ok := ctx.Value(layerPatternMatchesKey).(*map[string]string)
 	return u, ok

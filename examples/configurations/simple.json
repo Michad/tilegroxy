@@ -1,4 +1,9 @@
 {
+    "logging": {
+        "main": {
+            "level": "debug"
+        }
+    },
     "cache": {
         "name": "none"
     },
@@ -6,8 +11,21 @@
         {
             "id": "osm",
             "provider": {
-                "name": "proxy",
-                "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+                "name": "crop",
+                "bounds": {
+                    "south": 51,
+                    "north": 52,
+                    "west": -1,
+                    "east": 0
+                },
+                "primary": {
+                    "name": "proxy",
+                    "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+                },
+                "secondary": {
+                    "name": "static",
+                    "image": "embedded:transparent.png"
+                }
             }
         }
     ]

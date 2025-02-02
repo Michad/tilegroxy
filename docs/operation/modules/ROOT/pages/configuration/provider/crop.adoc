@@ -1,0 +1,55 @@
+= Crop
+
+Crops raster tiles from a primary provider to a specific geographic area and displays tiles from a secondary provider in those cropped areas.
+
+Name should be "crop"
+
+Configuration options:
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| primary
+| The provider of the imagery to crop
+| Provider
+| Yes
+| None
+
+| secondary
+| The provider to supply the imagery to use in areas that are cropped
+| Provider
+| Yes
+| None
+
+| bounds
+| Any pixels that fall outside these geographic bounds (in WGS-84/EPSG:4326) will be removed
+| Object with north, south, east, west
+| No
+| Whole world
+
+| boundsFromAuth
+| If true, use the bounds supplied via the auth context such as the geohash claim in xref:../authentication/jwt.adoc[JWT] auth.  If no bounds are specified via auth context then it falls back on the bounds parameter.
+| Boolean
+| No
+| No
+
+|===
+
+Example:
+
+----
+provider:
+  name: crop
+  bounds:
+    south: 51
+    north: 63
+    west: -7
+    east: 0.1
+  primary:
+    name: proxy
+    url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+  secondary:
+    name: static
+    color: "0000"
+----

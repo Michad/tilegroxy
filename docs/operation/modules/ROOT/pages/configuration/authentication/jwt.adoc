@@ -26,7 +26,7 @@ The following claims are supported/enforced:
 | Validate it contains a specific scope OR ensure a given prefix plus the layer in the current request is contained in scope
 
 | geohash
-| Validate the current tile being requested is fully contained in https://en.wikipedia.org/wiki/Geohash[the geohash]
+| Validate the current tile being requested is partially contained in https://en.wikipedia.org/wiki/Geohash[the geohash]. See the xref:../provider/crop.adoc[crop provider] to limit raster imagery layers to precise areas
 |===
 
 Name should be "jwt"
