@@ -146,9 +146,9 @@ func (t Transform) GenerateTile(ctx context.Context, providerContext layer.Provi
 
 	resultImage := image.NewRGBA(realImage.Bounds())
 
-	min := realImage.Bounds().Min
-	max := realImage.Bounds().Max
-	size := max.Sub(min)
+	minBounds := realImage.Bounds().Min
+	maxBounds := realImage.Bounds().Max
+	size := maxBounds.Sub(minBounds)
 	pixelCount := size.X * size.Y
 
 	// Split up all the requests for N threads
@@ -185,8 +185,8 @@ func (t Transform) GenerateTile(ctx context.Context, providerContext layer.Provi
 				dX := i % size.X
 				dY := i / size.X
 
-				x := dX + min.X
-				y := dY + min.Y
+				x := dX + minBounds.X
+				y := dY + minBounds.Y
 
 				c1 := realImage.At(x, y)
 				c2 := t.transform(ctx, c1)

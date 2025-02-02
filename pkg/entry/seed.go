@@ -101,7 +101,7 @@ func Seed(cfg *config.Config, opts SeedOptions, out io.Writer) error {
 
 	var wg sync.WaitGroup
 
-	for t := range len(reqSplit) {
+	for t := range reqSplit {
 		wg.Add(1)
 		go seedThread(&wg, opts, out, layerGroup, t, reqSplit[t])
 	}

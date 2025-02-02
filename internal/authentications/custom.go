@@ -141,7 +141,7 @@ func (s CustomRegistration) Initialize(cfgAny any, errorMessages config.ErrorMes
 	cfg := cfgAny.(CustomConfig)
 	var err error
 
-	if cfg.Token == nil || len(cfg.Token) == 0 {
+	if len(cfg.Token) == 0 {
 		return nil, fmt.Errorf(errorMessages.InvalidParam, "auth.custom.tokenextract", cfg.Token)
 	}
 
