@@ -8,6 +8,7 @@ linters-settings:
       regexp:
         ws: "[ 	]*" # Space and tab, not using \s to avoid allowing other forms of whitespace such as newlines
         AUTHOR: .*
+        AYEAR: "20[0-9]{2}"
     template-path: ./.preamble.txt
   maintidx:
     under: 30

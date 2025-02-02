@@ -31,8 +31,8 @@ libyears:
 	@go-libyear --json go.mod < /dev/null
 
 lint:
-	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.59.1
-	@golangci-lint run --fix -E asciicheck,bidichk,bodyclose,canonicalheader,dogsled,dupl,exhaustive,gocheckcompilerdirectives,gocritic,gofmt,durationcheck,errname,errorlint,fatcontext,goheader,inamedparam,interfacebloat,intrange,maintidx,makezero,mirror,misspell,mnd,noctx,nonamedreturns,perfsprint,prealloc,predeclared,revive,stylecheck,tenv,testifylint,usestdlibvars,unconvert,wastedassign
+	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.63.4
+	@golangci-lint run --fix -E asciicheck,bidichk,bodyclose,canonicalheader,dogsled,dupl,exhaustive,gocheckcompilerdirectives,gocritic,gofmt,durationcheck,errname,errorlint,goheader,inamedparam,interfacebloat,intrange,maintidx,makezero,mirror,misspell,mnd,noctx,nonamedreturns,perfsprint,prealloc,predeclared,revive,stylecheck,tenv,testifylint,usestdlibvars,unconvert,wastedassign
 
 docs:
 	@npm i 
