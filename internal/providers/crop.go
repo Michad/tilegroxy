@@ -127,7 +127,7 @@ func (t Crop) GenerateTile(ctx context.Context, providerContext layer.ProviderCo
 		return nil, err
 	}
 
-	resizeImages(ctx, realImage, realImage2)
+	realImage, realImage2 = resizeImages(ctx, realImage, realImage2)
 	resultImage := image.NewRGBA(realImage.Bounds())
 	width := resultImage.Bounds().Dx()
 	height := resultImage.Bounds().Dy()
@@ -173,7 +173,7 @@ func (t Crop) GenerateTile(ctx context.Context, providerContext layer.ProviderCo
 	return &pkg.Image{Content: output, ContentType: mimePng, ForceSkipCache: img.ForceSkipCache}, nil
 }
 
-func resizeImages(ctx context.Context, img image.Image, img2 image.Image) {
+func resizeImages(ctx context.Context, img image.Image, img2 image.Image) (image.Image, image.Image) {
 	if img.Bounds() != img2.Bounds() {
 		var size image.Point
 		if img.Bounds().Max.X > img2.Bounds().Max.X {
@@ -196,6 +196,7 @@ func resizeImages(ctx context.Context, img image.Image, img2 image.Image) {
 			slog.DebugContext(ctx, fmt.Sprintf("Resizing image 2 from %v to %v", img2.Bounds().Max, size))
 			img2 = transform.Resize(img2, size.X, size.Y, transform.NearestNeighbor)
 		}
-
 	}
+
+	return img, img2
 }
