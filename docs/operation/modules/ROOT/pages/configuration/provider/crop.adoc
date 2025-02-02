@@ -1,6 +1,8 @@
 = Crop
 
-Crops raster tiles from a primary provider to a specific geographic area and displays tiles from a secondary provider in those cropped areas.
+Crops raster tiles from a primary provider to a specific geographic area and displays tiles from a secondary provider in the remaining areas. 
+
+This is similar to the bounds parameter in the xref:configuration/provider/fallback.adoc[] provider but specific to raster tiles.  This provides a cleaner edge when zooming in and out but has greater overhead due to the image processing that occurs.
 
 Name should be "crop"
 
@@ -17,19 +19,19 @@ Configuration options:
 | None
 
 | secondary
-| The provider to supply the imagery to use in areas that are cropped
+| The provider to supply the imagery to use in areas that are cropped out
 | Provider
 | Yes
 | None
 
 | bounds
-| Any pixels that fall outside these geographic bounds (in WGS-84/EPSG:4326) will be removed
+| Any pixels that fall outside these geographic bounds (in WGS-84/EPSG:4326) will be removed. 
 | Object with north, south, east, west
 | No
 | Whole world
 
 | boundsFromAuth
-| If true, use the bounds supplied via the auth context such as the geohash claim in xref:../authentication/jwt.adoc[JWT] auth.  If no bounds are specified via auth context then it falls back on the bounds parameter.
+| If true, use the bounds supplied via the auth context such as the geohash claim in xref:configuration/authentication/jwt.adoc[JWT] auth.  If no bounds are specified via auth context then it falls back on the bounds parameter.
 | Boolean
 | No
 | No
