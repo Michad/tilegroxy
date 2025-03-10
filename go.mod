@@ -8,7 +8,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.29.8
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.61
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.17.64
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.78.0
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.78.1
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.34.19
 	github.com/bradfitz/gomemcache v0.0.0-20230905024940-24af94b03874
 	github.com/docker/go-connections v0.5.0
