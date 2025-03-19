@@ -31,7 +31,7 @@ jobs:
         make docs
 
     - name: Set up s3cmd
-      uses: s3-actions/s3cmd@702f629ce32a0c60522075f4bc211aa02989adea # v1.9.0
+      uses: s3-actions/s3cmd@c74c5c40ca017039558a716060ecca2047cf7856 # v1.10.0
       if: github.event_name != 'pull_request'
       with:
         provider: aws 
