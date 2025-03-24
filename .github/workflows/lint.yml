@@ -46,6 +46,7 @@ jobs:
           fail_on_error: true
           cache: false
           filter_mode: added
+          golangci_lint_version: v1.64.8
       - name: Suggestions 
         uses: reviewdog/action-golangci-lint@dd3fda91790ca90e75049e5c767509dc0ec7d99b # v2.7.0
         if: success() || failure()
