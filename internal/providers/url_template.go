@@ -87,7 +87,7 @@ func (s URLTemplateRegistration) Initialize(cfgAny any, clientConfig config.Clie
 	url = strings.ReplaceAll(url, "$srs", strconv.FormatUint(uint64(cfg.Srid), 10))
 
 	proxyCfg := ProxyConfig{
-		URL: url,
+		URL:  url,
 		Srid: cfg.Srid,
 	}
 
