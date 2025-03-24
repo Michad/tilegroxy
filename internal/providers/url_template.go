@@ -34,8 +34,7 @@ type URLTemplateConfig struct {
 }
 
 type URLTemplate struct {
-	URLTemplateConfig
-	clientConfig config.ClientConfig
+	Proxy
 }
 
 func (t URLTemplate) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.ProviderContext, error) {
@@ -78,25 +77,19 @@ func (s URLTemplateRegistration) Initialize(cfgAny any, clientConfig config.Clie
 		return nil, fmt.Errorf(errorMessages.EnumError, "provider.url template.srid", cfg.Srid, []int{pkg.SRIDPsuedoMercator, pkg.SRIDWGS84})
 	}
 
-	return &URLTemplate{cfg, clientConfig}, nil
-}
+	url := strings.ReplaceAll(cfg.Template, "$xmin", "{xmin}")
+	url = strings.ReplaceAll(url, "$xmax", "{xmax}")
+	url = strings.ReplaceAll(url, "$ymin", "{ymin}")
+	url = strings.ReplaceAll(url, "$ymax", "{ymax}")
+	url = strings.ReplaceAll(url, "$zoom", "{z}")
+	url = strings.ReplaceAll(url, "$width", strconv.Itoa(int(cfg.Width)))
+	url = strings.ReplaceAll(url, "$height", strconv.Itoa(int(cfg.Height)))
+	url = strings.ReplaceAll(url, "$srs", strconv.FormatUint(uint64(cfg.Srid), 10))
 
-func (t URLTemplate) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
-	b, err := tileRequest.GetBoundsProjection(t.Srid)
-
-	if err != nil {
-		return nil, err
+	proxyCfg := ProxyConfig{
+		URL: url,
+		Srid: cfg.Srid,
 	}
 
-	// width, height (in pixels), srs (in PROJ.4 format), xmin, ymin, xmax, ymax (in projected map units), and zoom
-	url := strings.ReplaceAll(t.Template, "$xmin", fmt.Sprintf("%f", b.West))
-	url = strings.ReplaceAll(url, "$xmax", fmt.Sprintf("%f", b.East))
-	url = strings.ReplaceAll(url, "$ymin", fmt.Sprintf("%f", b.South))
-	url = strings.ReplaceAll(url, "$ymax", fmt.Sprintf("%f", b.North))
-	url = strings.ReplaceAll(url, "$zoom", strconv.Itoa(tileRequest.Z))
-	url = strings.ReplaceAll(url, "$width", strconv.Itoa(int(t.Width)))
-	url = strings.ReplaceAll(url, "$height", strconv.Itoa(int(t.Height)))
-	url = strings.ReplaceAll(url, "$srs", strconv.FormatUint(uint64(t.Srid), 10))
-
-	return getTile(ctx, t.clientConfig, url, make(map[string]string))
+	return &URLTemplate{Proxy{proxyCfg, clientConfig}}, nil
 }
