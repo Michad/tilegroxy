@@ -14,7 +14,7 @@ require (
 	github.com/docker/go-connections v0.5.0
 	github.com/fsnotify/fsnotify v1.8.0
 	github.com/go-redis/cache/v9 v9.0.0
-	github.com/golang-jwt/jwt/v5 v5.2.1
+	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/gorilla/handlers v1.5.2
 	github.com/jackc/pgx/v5 v5.7.2
 	github.com/maypok86/otter v1.2.4
