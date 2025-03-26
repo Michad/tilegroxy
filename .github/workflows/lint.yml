@@ -17,7 +17,7 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
       - name: Run linkspector
-        uses: umbrelladocs/action-linkspector@49cf4f8da82db70e691bb8284053add5028fa244 # v1.3.2
+        uses: umbrelladocs/action-linkspector@3e12ade1e0b1823455dae8cf8b4f9cc92ec7dd20 # v1.3.3
         with:
           github_token: ${{ secrets.github_token }}
           reporter: github-pr-review
