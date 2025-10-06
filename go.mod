@@ -21,7 +21,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/mmcloughlin/geohash v0.10.0
 	github.com/redis/go-redis/v9 v9.12.0
-	github.com/spf13/cobra v1.9.1
+	github.com/spf13/cobra v1.10.1
 	github.com/spf13/viper v1.21.0
 	github.com/spf13/viper/remote v1.20.1
 	github.com/stretchr/testify v1.11.1
