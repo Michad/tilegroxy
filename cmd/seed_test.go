@@ -32,7 +32,8 @@ func Test_SeedCommand_Execute(t *testing.T) {
 	initSeed()
 
 	b := bytes.NewBufferString("")
-	rootCmd.SetOutput(b)
+	rootCmd.SetOut(b)
+	rootCmd.SetErr(b)
 	rootCmd.SetArgs([]string{"seed", "--verbose", "-c", "../examples/configurations/simple.json", "-l", "osm", "-z", "1"})
 	require.NoError(t, rootCmd.Execute())
 	out, err := io.ReadAll(b)
@@ -65,7 +66,8 @@ func Test_SeedCommand_InvalidLayer(t *testing.T) {
 	initSeed()
 
 	b := bytes.NewBufferString("")
-	rootCmd.SetOutput(b)
+	rootCmd.SetOut(b)
+	rootCmd.SetErr(b)
 	rootCmd.SetArgs([]string{"seed", "--verbose", "-c", "../examples/configurations/simple.json", "-l", "hello"})
 	require.NoError(t, rootCmd.Execute())
 	out, err := io.ReadAll(b)
@@ -87,7 +89,8 @@ func Test_SeedCommand_InvalidThread(t *testing.T) {
 	initSeed()
 
 	b := bytes.NewBufferString("")
-	rootCmd.SetOutput(b)
+	rootCmd.SetOut(b)
+	rootCmd.SetErr(b)
 	rootCmd.SetArgs([]string{"seed", "--verbose", "-c", "../examples/configurations/simple.json", "-l", "osm", "-t", "0"})
 	require.NoError(t, rootCmd.Execute())
 	out, err := io.ReadAll(b)
@@ -109,7 +112,8 @@ func Test_SeedCommand_InvalidZoom(t *testing.T) {
 	initSeed()
 
 	b := bytes.NewBufferString("")
-	rootCmd.SetOutput(b)
+	rootCmd.SetOut(b)
+	rootCmd.SetErr(b)
 	rootCmd.SetArgs([]string{"seed", "--verbose", "-c", "../examples/configurations/simple.json", "-l", "osm", "-z", "2000"})
 	require.NoError(t, rootCmd.Execute())
 	out, err := io.ReadAll(b)
@@ -131,7 +135,8 @@ func Test_SeedCommand_InvalidConfig(t *testing.T) {
 	initSeed()
 
 	b := bytes.NewBufferString("")
-	rootCmd.SetOutput(b)
+	rootCmd.SetOut(b)
+	rootCmd.SetErr(b)
 	rootCmd.SetArgs([]string{"seed", "--verbose", "--raw-config", "asfasfas", "-l", "osm"})
 	require.NoError(t, rootCmd.Execute())
 	out, err := io.ReadAll(b)
@@ -153,7 +158,8 @@ func Test_SeedCommand_ExcessTiles(t *testing.T) {
 	initSeed()
 
 	b := bytes.NewBufferString("")
-	rootCmd.SetOutput(b)
+	rootCmd.SetOut(b)
+	rootCmd.SetErr(b)
 	rootCmd.SetArgs([]string{"seed", "--verbose", "-c", "../examples/configurations/simple.json", "-l", "osm", "-z", "20"})
 	require.NoError(t, rootCmd.Execute())
 	out, err := io.ReadAll(b)

@@ -32,7 +32,8 @@ func Test_ExecuteVersionCommand(t *testing.T) {
 
 	cmd := rootCmd
 	b := bytes.NewBufferString("")
-	cmd.SetOutput(b)
+	cmd.SetOut(b)
+	cmd.SetErr(b)
 	cmd.SetArgs([]string{"version", "--json"})
 	require.NoError(t, cmd.Execute())
 
@@ -59,7 +60,8 @@ func Test_ExecuteVersionCommandShort(t *testing.T) {
 
 	cmd := rootCmd
 	b := bytes.NewBufferString("")
-	cmd.SetOutput(b)
+	cmd.SetOut(b)
+	cmd.SetErr(b)
 	cmd.SetArgs([]string{"version", "--json", "--short"})
 	require.NoError(t, cmd.Execute())
 	out, err := io.ReadAll(b)
@@ -85,7 +87,8 @@ func Test_ExecuteVersionCommandShortNoJson(t *testing.T) {
 
 	cmd := rootCmd
 	b := bytes.NewBufferString("")
-	cmd.SetOutput(b)
+	cmd.SetOut(b)
+	cmd.SetErr(b)
 	cmd.SetArgs([]string{"version", "--short"})
 	require.NoError(t, cmd.Execute())
 	out, err := io.ReadAll(b)
@@ -103,7 +106,8 @@ func Test_ExecuteVersionCommandNoJson(t *testing.T) {
 
 	cmd := rootCmd
 	b := bytes.NewBufferString("")
-	cmd.SetOutput(b)
+	cmd.SetOut(b)
+	cmd.SetErr(b)
 	cmd.SetArgs([]string{"version"})
 	require.NoError(t, cmd.Execute())
 	out, err := io.ReadAll(b)

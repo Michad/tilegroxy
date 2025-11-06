@@ -32,7 +32,8 @@ func Test_CreateCommand_Execute(t *testing.T) {
 	initCreate()
 
 	b := bytes.NewBufferString("")
-	rootCmd.SetOutput(b)
+	rootCmd.SetOut(b)
+	rootCmd.SetErr(b)
 	rootCmd.SetArgs([]string{"config", "create"})
 	require.NoError(t, rootCmd.Execute())
 	out, err := io.ReadAll(b)
@@ -51,7 +52,8 @@ func Test_CreateCommand_ExecuteJson(t *testing.T) {
 	initCreate()
 
 	b := bytes.NewBufferString("")
-	rootCmd.SetOutput(b)
+	rootCmd.SetOut(b)
+	rootCmd.SetErr(b)
 	rootCmd.SetArgs([]string{"config", "create", "--json"})
 	require.NoError(t, rootCmd.Execute())
 	out, err := io.ReadAll(b)
@@ -71,7 +73,8 @@ func Test_CreateCommand_ExecuteYml(t *testing.T) {
 	initCreate()
 
 	b := bytes.NewBufferString("")
-	rootCmd.SetOutput(b)
+	rootCmd.SetOut(b)
+	rootCmd.SetErr(b)
 	rootCmd.SetArgs([]string{"config", "create", "--yaml"})
 	require.NoError(t, rootCmd.Execute())
 	out, err := io.ReadAll(b)
@@ -96,7 +99,8 @@ func Test_CreateCommand_ExecuteJsonFile(t *testing.T) {
 	defer os.Remove(fil.Name())
 
 	b := bytes.NewBufferString("")
-	rootCmd.SetOutput(b)
+	rootCmd.SetOut(b)
+	rootCmd.SetErr(b)
 	rootCmd.SetArgs([]string{"config", "create", "-o", fil.Name()})
 	require.NoError(t, rootCmd.Execute())
 	_, err = io.ReadAll(b)
@@ -123,7 +127,8 @@ func Test_CreateCommand_ExecuteYmlFile(t *testing.T) {
 	defer os.Remove(fil.Name())
 
 	b := bytes.NewBufferString("")
-	rootCmd.SetOutput(b)
+	rootCmd.SetOut(b)
+	rootCmd.SetErr(b)
 	rootCmd.SetArgs([]string{"config", "create", "--default", "--yaml", "-o", fil.Name()})
 	require.NoError(t, rootCmd.Execute())
 	_, err = io.ReadAll(b)
