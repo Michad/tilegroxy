@@ -96,7 +96,7 @@ func Test_MatchPattern(t *testing.T) {
 	assert.Len(t, matches, 3)
 	assert.Equal(t, "HELLO", matches["b"])
 	assert.Equal(t, "WORLD", matches["d"])
-	assert.Equal(t, "", matches["f"])
+	assert.Empty(t, matches["f"])
 
 	pattern = []layerSegment{
 		{value: "b", placeholder: true},

@@ -154,11 +154,13 @@ func (t PostgisMvt) GenerateTile(ctx context.Context, _ layer.ProviderContext, r
 	query += `" `
 
 	if len(t.Attributes) > 0 {
+		var querySb157 strings.Builder
 		for _, col := range t.Attributes {
-			query += `, "`
-			query += col
-			query += `" `
+			querySb157.WriteString(`, "`)
+			querySb157.WriteString(col)
+			querySb157.WriteString(`" `)
 		}
+		query += querySb157.String()
 	}
 
 	query += `FROM ` + t.Table
