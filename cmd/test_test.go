@@ -52,7 +52,8 @@ func Test_ExecuteTestCommandNoCache(t *testing.T) {
 	initTest()
 	cmd := rootCmd
 	b := bytes.NewBufferString("")
-	cmd.SetOutput(b)
+	cmd.SetOut(b)
+	cmd.SetErr(b)
 	cmd.SetArgs([]string{"test", "-c", "../examples/configurations/simple.json", "--no-cache"})
 	require.NoError(t, cmd.Execute())
 	out, err := io.ReadAll(b)
@@ -75,7 +76,8 @@ func Test_ExecuteTestCommand(t *testing.T) {
 
 	cmd := rootCmd
 	b := bytes.NewBufferString("")
-	cmd.SetOutput(b)
+	cmd.SetOut(b)
+	cmd.SetErr(b)
 	cmd.SetArgs([]string{"test", "-c", "../examples/configurations/simple.json"})
 	require.NoError(t, cmd.Execute())
 	out, err := io.ReadAll(b)
@@ -118,7 +120,8 @@ layers:
 
 	cmd := rootCmd
 	b := bytes.NewBufferString("")
-	cmd.SetOutput(b)
+	cmd.SetOut(b)
+	cmd.SetErr(b)
 	cmd.SetArgs([]string{"test", "--raw-config", cfg})
 	require.NoError(t, cmd.Execute())
 	out, err := io.ReadAll(b)
@@ -179,7 +182,8 @@ layers:
 
 	cmd := rootCmd
 	b := bytes.NewBufferString("")
-	cmd.SetOutput(b)
+	cmd.SetOut(b)
+	cmd.SetErr(b)
 	cmd.SetArgs([]string{"test", "--raw-config", cfg})
 	require.NoError(t, cmd.Execute())
 	out, err := io.ReadAll(b)
@@ -205,7 +209,8 @@ func Test_TestCommand_InvalidConfig(t *testing.T) {
 
 	cmd := rootCmd
 	b := bytes.NewBufferString("")
-	cmd.SetOutput(b)
+	cmd.SetOut(b)
+	cmd.SetErr(b)
 	cmd.SetArgs([]string{"test", "-c", "not real file"})
 	require.NoError(t, cmd.Execute())
 	out, err := io.ReadAll(b)

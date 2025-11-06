@@ -40,26 +40,26 @@ jobs:
         uses: reviewdog/action-golangci-lint@f9bba13753278f6a73b27a56a3ffb1bfda90ed71 # v2.8.0
         with:
           github_token: ${{ secrets.github_token }}
-          golangci_lint_flags: "--fix --timeout 2m0s --disable-all -E asciicheck,bidichk,bodyclose,canonicalheader,dogsled,exhaustive,gocheckcompilerdirectives,gofmt,durationcheck,errname,errorlint,goheader,inamedparam,interfacebloat,intrange,makezero,mirror,misspell,noctx,nonamedreturns,prealloc,predeclared,tenv,testifylint,unconvert,usestdlibvars,wastedassign"
+          golangci_lint_flags: "--fix --timeout 2m0s --default=none -E asciicheck,bidichk,bodyclose,canonicalheader,dogsled,exhaustive,gocheckcompilerdirectives,durationcheck,errname,errorlint,goheader,inamedparam,interfacebloat,intrange,makezero,mirror,misspell,noctx,nonamedreturns,prealloc,predeclared,staticcheck,testifylint,unconvert,usestdlibvars,wastedassign"
           reporter: github-pr-review
           tool_name: Go Lint Issues
           fail_on_error: true
           cache: false
           filter_mode: added
-          golangci_lint_version: v1.64.8
+          golangci_lint_version: v2.6.1
       - name: Suggestions 
         uses: reviewdog/action-golangci-lint@f9bba13753278f6a73b27a56a3ffb1bfda90ed71 # v2.8.0
         if: success() || failure()
         with:
           github_token: ${{ secrets.github_token }}
-          golangci_lint_flags: "--fix --timeout 2m0s -E dupl,gocritic,maintidx,mnd,perfsprint,revive,stylecheck"
+          golangci_lint_flags: "--fix --timeout 2m0s -E dupl,gocritic,maintidx,mnd,perfsprint,revive,staticcheck"
           reporter: github-pr-review
           tool_name: Go Lint Suggestions 
           level: warning 
           fail_on_error: false
           cache: false
           filter_mode: file
-          golangci_lint_version: v1.64.8
+          golangci_lint_version: v2.6.1
       - uses: reviewdog/action-suggester@4747dbc9f9e37adba0943e681cc20db466642158 # v1.19.0
         if: success() || failure()
         with:

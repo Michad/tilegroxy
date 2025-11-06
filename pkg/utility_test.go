@@ -91,7 +91,7 @@ func Test_ReplaceEnv_WithVals(t *testing.T) {
 	cloned := ReplaceEnv(raw)
 
 	assert.Equal(t, "val", cloned["p"])
-	assert.Equal(t, "", cloned["fake"])
+	assert.Empty(t, cloned["fake"])
 	assert.Equal(t, "val2", cloned["child"].(map[string]interface{})["r"])
 	assert.Equal(t, "saf", cloned["child"].(map[string]interface{})["f"])
 }

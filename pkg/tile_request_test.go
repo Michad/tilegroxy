@@ -94,7 +94,6 @@ func TestTileRequestRangeError(t *testing.T) {
 
 	assert.Equal(t, (*Bounds)(nil), b)
 	require.Error(t, err)
-	assert.IsType(t, RangeError{}, err)
 
 	var re RangeError
 	require.ErrorAs(t, err, &re)

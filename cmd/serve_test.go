@@ -395,14 +395,16 @@ func setupEtcd(ctx context.Context) (testcontainers.Container, error) {
 
 	p, _ := nat.NewPort("tcp", "2379")
 	etcdReq := testcontainers.ContainerRequest{
-		Image: "bitnami/etcd:latest",
+		Image: "openeuler/etcd:latest",
 		WaitingFor: wait.ForAll(
 			wait.ForLog("ready to serve client requests"),
 			wait.ForListeningPort(p),
 		),
 		ExposedPorts: []string{"2379"},
 		Env: map[string]string{
-			"ALLOW_NONE_AUTHENTICATION": "yes",
+			"ALLOW_NONE_AUTHENTICATION":  "yes",
+			"ETCD_LISTEN_CLIENT_URLS":    "http://0.0.0.0:2379",
+			"ETCD_ADVERTISE_CLIENT_URLS": "http://etcd-server:2379",
 		},
 	}
 
@@ -427,7 +429,7 @@ func Test_ServeCommand_RemoteProvider(t *testing.T) {
 
 	for range 3 {
 		etcdC, err = setupEtcd(ctx)
-		time.Sleep(time.Second)
+		time.Sleep(3 * time.Second)
 		if err == nil {
 			endpoint, err = etcdC.Endpoint(ctx, "")
 		}

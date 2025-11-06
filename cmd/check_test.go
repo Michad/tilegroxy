@@ -33,7 +33,8 @@ func Test_CheckCommand_Execute(t *testing.T) {
 	initCheck()
 
 	b := bytes.NewBufferString("")
-	rootCmd.SetOutput(b)
+	rootCmd.SetOut(b)
+	rootCmd.SetErr(b)
 	rootCmd.SetArgs([]string{"config", "check", "-c", "../examples/configurations/simple.json"})
 	require.NoError(t, rootCmd.Execute())
 	out, err := io.ReadAll(b)
@@ -53,7 +54,8 @@ func Test_CheckCommand_ExecuteInline(t *testing.T) {
 	initCheck()
 
 	b := bytes.NewBufferString("")
-	rootCmd.SetOutput(b)
+	rootCmd.SetOut(b)
+	rootCmd.SetErr(b)
 
 	cfg := `cache:
   name: multi
@@ -87,7 +89,8 @@ func Test_CheckCommand_ExecuteInlineJson(t *testing.T) {
 	initCheck()
 
 	b := bytes.NewBufferString("")
-	rootCmd.SetOutput(b)
+	rootCmd.SetOut(b)
+	rootCmd.SetErr(b)
 
 	cfg := `
 	{
@@ -124,7 +127,8 @@ func Test_CheckCommand_ExecuteCompare(t *testing.T) {
 	initCheck()
 
 	b := bytes.NewBufferString("")
-	rootCmd.SetOutput(b)
+	rootCmd.SetOut(b)
+	rootCmd.SetErr(b)
 
 	cfg := `cache:
   name: multi
@@ -166,7 +170,8 @@ func Test_CheckCommand_Invalid(t *testing.T) {
 	initCheck()
 
 	b := bytes.NewBufferString("")
-	rootCmd.SetOutput(b)
+	rootCmd.SetOut(b)
+	rootCmd.SetErr(b)
 	cfg := `cache:
   name: multi
   tiers:

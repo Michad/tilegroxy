@@ -153,7 +153,7 @@ func TestGoodJwtClaimsWithCache(t *testing.T) {
 	assert.Equal(t, 1, jwt.Cache.Size())
 	date, ok := jwt.Cache.Get(req.Header["Authorization"][0])
 	assert.True(t, ok)
-	assert.Equal(t, int64(4294967295), date.Time.Unix())
+	assert.Equal(t, int64(4294967295), date.Unix())
 }
 
 func TestGoodJwtScopeLimit(t *testing.T) {
