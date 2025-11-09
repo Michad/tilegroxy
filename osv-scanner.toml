@@ -1,3 +1,6 @@
 [[IgnoredVulns]]
 id = "GO-2022-0646"
 reason = "No version considered fixed after 2+ years and doesn't meaningfully impact this service"
+[[IgnoredVulns]]
+id = "GHSA-ffrw-9mx8-89p8"
+reason = "CVE is against an internal tool that is not exploitable. Project maintainer classified as WONTFIX and is disputing."
