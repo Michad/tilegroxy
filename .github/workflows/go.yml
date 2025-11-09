@@ -27,4 +27,4 @@ jobs:
       with:
         node-version: 22
     - name: Build
-      run: make
+      run: make || make || make
