@@ -1,5 +1,5 @@
 
-FROM node:25-alpine3.21@sha256:afcd03e0c9ae83fc30d48c8f05de72938e116d83b58b8220debfd0f56aff67ae AS docs_stage
+FROM node:25-alpine3.21@sha256:32509199057d74a987fdd88cde00fdfd48ef52469adbd6bd11969fc701477761 AS docs_stage
 
 
 WORKDIR /usr/app
