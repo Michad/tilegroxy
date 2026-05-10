@@ -30,7 +30,6 @@ import (
 	"time"
 
 	"github.com/Michad/tilegroxy/internal/server"
-	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -393,12 +392,11 @@ layers:
 
 func setupEtcd(ctx context.Context) (testcontainers.Container, error) {
 
-	p, _ := nat.NewPort("tcp", "2379")
 	etcdReq := testcontainers.ContainerRequest{
 		Image: "openeuler/etcd:latest",
 		WaitingFor: wait.ForAll(
 			wait.ForLog("ready to serve client requests"),
-			wait.ForListeningPort(p),
+			wait.ForListeningPort("2379/tcp"),
 		),
 		ExposedPorts: []string{"2379"},
 		Env: map[string]string{
