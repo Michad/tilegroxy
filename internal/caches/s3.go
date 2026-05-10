@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"slices"
 	"strconv"
 	"strings"
@@ -31,7 +32,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
-	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager"
+	tmtypes "github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager/types"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
@@ -50,9 +52,8 @@ type S3Config struct {
 
 type S3 struct {
 	S3Config
-	client     *s3.Client
-	downloader *manager.Downloader
-	uploader   *manager.Uploader
+	client   *s3.Client
+	transfer *transfermanager.Client
 }
 
 func init() {
@@ -124,10 +125,9 @@ func (s S3Registration) Initialize(configAny any, errorMessages config.ErrorMess
 		o.UsePathStyle = config.UsePathStyle
 	})
 
-	downloader := manager.NewDownloader(client)
-	uploader := manager.NewUploader(client)
+	transfer := transfermanager.New(client)
 
-	return &S3{config, client, downloader, uploader}, nil
+	return &S3{config, client, transfer}, nil
 }
 
 func calcKey(config *S3, t *pkg.TileRequest) string {
@@ -141,19 +141,15 @@ func (c S3) makeBucket() error {
 }
 
 func (c S3) Lookup(ctx context.Context, t pkg.TileRequest) (*pkg.Image, error) {
-	writer := manager.NewWriteAtBuffer([]byte{})
-
-	_, err := c.downloader.Download(
-		ctx,
-		writer,
-		&s3.GetObjectInput{
-			Bucket: aws.String(c.Bucket),
-			Key:    aws.String(calcKey(&c, &t)),
-		})
+	out, err := c.transfer.GetObject(ctx, &transfermanager.GetObjectInput{
+		Bucket: aws.String(c.Bucket),
+		Key:    aws.String(calcKey(&c, &t)),
+	})
 
 	if err != nil {
-		var requestFailure *types.NoSuchKey
-		if errors.As(err, &requestFailure) {
+		var noSuchKey *types.NoSuchKey
+		var notFound *types.NotFound
+		if errors.As(err, &noSuchKey) || errors.As(err, &notFound) {
 			// Simple cache miss
 			return nil, nil
 		}
@@ -161,7 +157,10 @@ func (c S3) Lookup(ctx context.Context, t pkg.TileRequest) (*pkg.Image, error) {
 		return nil, err
 	}
 
-	b := writer.Bytes()
+	b, err := io.ReadAll(out.Body)
+	if err != nil {
+		return nil, err
+	}
 
 	return pkg.DecodeImage(b)
 }
@@ -173,16 +172,16 @@ func (c S3) Save(ctx context.Context, t pkg.TileRequest, img *pkg.Image) error {
 		return err
 	}
 
-	uploadConfig := &s3.PutObjectInput{
+	uploadConfig := &transfermanager.UploadObjectInput{
 		Bucket: &c.Bucket,
 		Key:    aws.String(calcKey(&c, &t)),
 		Body:   bytes.NewReader(b),
 	}
 
 	if c.StorageClass != "" {
-		uploadConfig.StorageClass = types.StorageClass(c.StorageClass)
+		uploadConfig.StorageClass = tmtypes.StorageClass(c.StorageClass)
 	}
 
-	_, err = c.uploader.Upload(ctx, uploadConfig)
+	_, err = c.transfer.UploadObject(ctx, uploadConfig)
 	return err
 }

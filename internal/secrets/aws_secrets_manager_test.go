@@ -24,7 +24,6 @@ import (
 	"testing"
 
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -59,10 +58,10 @@ func Test_SecretManager_Validate(t *testing.T) {
 func Test_SecretManager_Execute(t *testing.T) {
 	ctx := context.Background()
 	req := testcontainers.ContainerRequest{
-		Image:        "localstack/localstack",
+		Image:        "localstack/localstack:3.8.1",
 		ExposedPorts: []string{"4566/tcp"},
 		Privileged:   true,
-		WaitingFor:   wait.ForAll(wait.ForLog("Ready"), wait.ForListeningPort(nat.Port("4566/tcp"))),
+		WaitingFor:   wait.ForAll(wait.ForLog("Ready"), wait.ForListeningPort("4566/tcp")),
 	}
 
 	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
@@ -76,7 +75,7 @@ func Test_SecretManager_Execute(t *testing.T) {
 		}
 	}(c, ctx)
 
-	endpoint, err := c.PortEndpoint(ctx, nat.Port("4566/tcp"), "http")
+	endpoint, err := c.PortEndpoint(ctx, "4566/tcp", "http")
 	require.NoError(t, err)
 
 	so, err := AWSSecretsManagerSecreter{}.Initialize(AWSSecretsManagerConfig{
