@@ -165,6 +165,7 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		w.Header().Add("Content-Type", img.ContentType)
 	}
 
+	w.Header().Set("Content-Length", strconv.Itoa(len(img.Content)))
 	w.WriteHeader(http.StatusOK)
 
 	_, err = w.Write(img.Content)

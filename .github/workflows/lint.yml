@@ -12,12 +12,12 @@ jobs:
       pull-requests: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           fetch-tags: true
       - name: Run linkspector
-        uses: umbrelladocs/action-linkspector@963b6264d7de32c904942a70b488d3407453049e # v1.5.1
+        uses: umbrelladocs/action-linkspector@568ec8d29fa92b31fd9ea5381e155c51e922af83 # v1.5.5
         with:
           github_token: ${{ secrets.github_token }}
           reporter: github-pr-review
@@ -32,7 +32,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -46,22 +46,22 @@ jobs:
           fail_on_error: true
           cache: false
           filter_mode: added
-          golangci_lint_version: v2.6.1
-      - name: Suggestions 
+          golangci_lint_version: v2.12.2
+      - name: Suggestions
         uses: reviewdog/action-golangci-lint@c76cceaaab89abe74e649d2e34c6c9adc26662d2 # v2.10.0
         if: success() || failure()
         with:
           github_token: ${{ secrets.github_token }}
           golangci_lint_flags: "--fix --timeout 2m0s -E dupl,gocritic,maintidx,mnd,perfsprint,revive,staticcheck"
           reporter: github-pr-review
-          tool_name: Go Lint Suggestions 
-          level: warning 
+          tool_name: Go Lint Suggestions
+          level: warning
           fail_on_error: false
           cache: false
           filter_mode: file
-          golangci_lint_version: v2.6.1
-      - uses: reviewdog/action-suggester@fc4b06f8697e1e66bd66703f660005079be0b3dc # v1.24.0
+          golangci_lint_version: v2.12.2
+      - uses: reviewdog/action-suggester@2558ba17e65a9039e73764a73009fc05fef28a46 # v1.24.3
         if: success() || failure()
         with:
-          tool_name: Go Lint Issues 
+          tool_name: Go Lint Issues
           github_token: ${{ secrets.github_token }}

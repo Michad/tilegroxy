@@ -17,11 +17,11 @@ jobs:
       id-token: write
     steps:
       - name: "Checkout code"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: "Run analysis"
-        uses: ossf/scorecard-action@4eaacf0543bb3f2c246792bd56e8cdeffafb205a # v2.4.3
+        uses: ossf/scorecard-action@2d1146689b8cda280b9bc96326124645441f03bc # v2.4.4
         with:
           results_file: results.sarif
           results_format: sarif
@@ -35,7 +35,7 @@ jobs:
           retention-days: 5
       - name: "Upload to code-scanning"
         if: github.event_name != 'pull_request'
-        uses: github/codeql-action/upload-sarif@bc0b696b4103f5fe60f15749af68a046868d511a # v3.28.5
+        uses: github/codeql-action/upload-sarif@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6
         with:
           sarif_file: results.sarif
   dependency-review:
@@ -43,7 +43,7 @@ jobs:
     if: github.event_name == 'pull_request'
     steps:
       - name: 'Checkout Repository'
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: 'Dependency Review'
         uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
   codeql:
@@ -60,18 +60,18 @@ jobs:
         language: ["go"]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           fetch-tags: true
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@bc0b696b4103f5fe60f15749af68a046868d511a # v3.28.5
+        uses: github/codeql-action/init@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6
         with:
           languages: ${{ matrix.language }}
       - name: Autobuild
-        uses: github/codeql-action/autobuild@bc0b696b4103f5fe60f15749af68a046868d511a # v3.28.5
+        uses: github/codeql-action/autobuild@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@bc0b696b4103f5fe60f15749af68a046868d511a # v3.28.5
+        uses: github/codeql-action/analyze@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6
         with:
           category: "/language:${{matrix.language}}"
 
@@ -83,43 +83,43 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - id: govulncheck
-      uses: golang/govulncheck-action@b625fbe08f3bccbe446d94fbf87fcc875a4f50ee # v1.0.4
+      uses: golang/govulncheck-action@032d45514ae346b1db93c04b0c90b841c370344f # v1.1.0
       with:
-          go-version-input: 1.25.8
+          go-version-input: 1.26.5
           go-package: ./...
           output-format: sarif
           output-file: govuln.sarif
     - name: Post-process sarif files
       run : |
-        if [ "$(/usr/bin/jq '.runs[].results' < govuln.sarif)" = "null" ]; then 
+        if [ "$(/usr/bin/jq '.runs[].results' < govuln.sarif)" = "null" ]; then
           /usr/bin/jq '.runs[] += {"results":[]}' < govuln.sarif > govuln2.sarif
         else
           cp govuln.sarif govuln2.sarif
         fi
         /usr/bin/jq '.runs[]?.tool.driver.rules[]?.properties.tags |= unique' < govuln2.sarif > govuln3.sarif
     - name: Upload result to GitHub Code Scanning
-      uses: github/codeql-action/upload-sarif@bc0b696b4103f5fe60f15749af68a046868d511a # v3.28.5
+      uses: github/codeql-action/upload-sarif@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6
       with:
         sarif_file: govuln3.sarif
   gosec:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      security-events: write 
+      security-events: write
     env:
       GO111MODULE: on
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           fetch-tags: true
       - name: Run Gosec Security Scanner
-        uses: securego/gosec@4a3bd8af174872c778439083ded7adbf3747e770 # v2.26.1
+        uses: securego/gosec@9e75c0576c9878035d4221392108d458abe10fc3 # v2.28.0
         with:
           args: '-no-fail -exclude=G504 -fmt sarif -out results.sarif ./...'
       - name: Upload SARIF file
         if: github.event_name != 'pull_request'
-        uses: github/codeql-action/upload-sarif@bc0b696b4103f5fe60f15749af68a046868d511a # v3.28.5
+        uses: github/codeql-action/upload-sarif@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6
         with:
           sarif_file: results.sarif
