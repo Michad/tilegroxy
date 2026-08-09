@@ -39,7 +39,7 @@ include::configuration/analytics/index.adoc[leveloffset=1]
 include::configuration/analytics/none.adoc[leveloffset=2]
 include::configuration/analytics/clickhouse.adoc[leveloffset=2]
 include::configuration/analytics/postgres.adoc[leveloffset=2]
-include::configuration/analytics/google_analytics.adoc[leveloffset=2]
+// include::configuration/analytics/google_analytics.adoc[leveloffset=2]
 include::configuration/analytics/custom.adoc[leveloffset=2]
 
 include::configuration/secret/index.adoc[leveloffset=1]
