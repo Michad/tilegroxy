@@ -16,6 +16,7 @@ package providers
 
 import (
 	"net/http"
+	"strconv"
 	"testing"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -160,4 +161,70 @@ func Test_ReplaceURLPlaceholders_MixedEnvAndLayerOnlyEscapesLayer(t *testing.T) 
 	require.Contains(t, result, "https://tiles.example.com/tiles/")
 	require.Contains(t, result, "evil%3Fx=1")
 	require.NotContains(t, result, "?x=1/")
+}
+
+// A request-derived value containing the literal "$N" must never be re-substituted. Substitution
+// walks the template once, left to right, so text it inserts is not rescanned; a repeated-pass
+// implementation would replace this "$0" with the {env.*} value - splicing an operator secret into
+// the outbound URL. url.PathEscape leaves "$" unescaped, so in path position the value stays a
+// literal "$0"; what matters is that it's inert.
+func Test_ReplaceURLPlaceholders_CtxValueCannotReinjectPlaceholder(t *testing.T) {
+	t.Setenv("TILEGROXY_TEST_SECRET", "super-secret-value")
+
+	req, err := http.NewRequest(http.MethodGet, "http://example.com", nil)
+	require.NoError(t, err)
+	req.Header.Set("User-Agent", "$0")
+
+	ctx := pkg.NewRequestContext(req)
+
+	result, err := replaceURLPlaceholders(ctx, pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com/{env.TILEGROXY_TEST_SECRET}/{ctx.User-Agent}/{z}/{x}/{y}.png", false, pkg.SRIDWGS84)
+
+	require.NoError(t, err)
+	require.NotContains(t, result, "super-secret-value/super-secret-value")
+	require.Equal(t, "https://example.com/super-secret-value/$0/1/1/0.png", result)
+}
+
+// The same attack in query position, where url.QueryEscape does percent-encode "$".
+func Test_ReplaceURLPlaceholders_CtxValueCannotReinjectPlaceholderInQuery(t *testing.T) {
+	t.Setenv("TILEGROXY_TEST_SECRET", "super-secret-value")
+
+	req, err := http.NewRequest(http.MethodGet, "http://example.com", nil)
+	require.NoError(t, err)
+	req.Header.Set("User-Agent", "$0")
+
+	ctx := pkg.NewRequestContext(req)
+
+	result, err := replaceURLPlaceholders(ctx, pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com/{env.TILEGROXY_TEST_SECRET}/{z}/{x}/{y}.png?agent={ctx.User-Agent}", false, pkg.SRIDWGS84)
+
+	require.NoError(t, err)
+	require.NotContains(t, result, "agent=super-secret-value")
+	require.Contains(t, result, "agent=%240")
+}
+
+// Templates with more than ten placeholders must still resolve correctly - "$10" has to be read as
+// index 10 rather than index 1 followed by a literal "0".
+func Test_ReplaceURLPlaceholders_DoubleDigitIndices(t *testing.T) {
+	var template string
+	for i := range 12 {
+		name := "TILEGROXY_TEST_MULTI_" + strconv.Itoa(i)
+		t.Setenv(name, "v"+strconv.Itoa(i))
+		template += "/{env." + name + "}"
+	}
+
+	result, err := replaceURLPlaceholders(pkg.BackgroundContext(), pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com"+template, false, pkg.SRIDWGS84)
+
+	require.NoError(t, err)
+	require.NotContains(t, result, "$")
+	for i := range 12 {
+		require.Contains(t, result, "/v"+strconv.Itoa(i))
+	}
+}
+
+// A literal "$" in the template that isn't one of our generated placeholders must pass through
+// untouched.
+func Test_ReplaceURLPlaceholders_LiteralDollarPreserved(t *testing.T) {
+	result, err := replaceURLPlaceholders(pkg.BackgroundContext(), pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com/a$b/c$/{z}/{x}/{y}.png", false, pkg.SRIDWGS84)
+
+	require.NoError(t, err)
+	require.Equal(t, "https://example.com/a$b/c$/1/1/0.png", result)
 }

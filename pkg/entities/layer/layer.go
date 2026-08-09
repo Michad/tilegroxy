@@ -207,6 +207,31 @@ type Layer struct {
 	tileSuccessCounter metric.Int64Counter
 }
 
+// resolveLayerProviderValues substitutes {env.*} and {secret.*} values throughout a layer's
+// provider config, returning a config whose Provider holds the resolved values. The input is not
+// modified: ReplaceConfigValues builds new maps rather than mutating in place, and LayerConfig is
+// taken and returned by value, so the caller's copy keeps its unresolved placeholders.
+//
+// Split out of ConstructLayer so ConstructLayerGroup can resolve each layer once and pass the same
+// resolved config to both ConstructLayer and requestScopedLayers - the latter must see resolved
+// values to spot a {ctx.*} placeholder that arrives via an env var or secret. Running it twice on
+// the same config is harmless (substitution is idempotent on already-resolved values, which no
+// longer carry an "env."/"secret." prefix), but it would mean two lookups per secret, so the
+// group path resolves up front and hands the result down.
+func resolveLayerProviderValues(rawConfig config.LayerConfig, secreter secret.Secreter) (config.LayerConfig, error) {
+	var err error
+
+	rawConfig.Provider = pkg.ReplaceEnv(rawConfig.Provider)
+	if secreter != nil {
+		rawConfig.Provider, err = pkg.ReplaceConfigValues(rawConfig.Provider, "secret", secreter.Lookup)
+		if err != nil {
+			return rawConfig, err
+		}
+	}
+
+	return rawConfig, nil
+}
+
 func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup, secreter secret.Secreter, datastores *datastore.DatastoreRegistry) (*Layer, error) {
 	var err error
 	if rawConfig.Client == nil {
@@ -216,12 +241,9 @@ func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.Cli
 
 	}
 
-	rawConfig.Provider = pkg.ReplaceEnv(rawConfig.Provider)
-	if secreter != nil {
-		rawConfig.Provider, err = pkg.ReplaceConfigValues(rawConfig.Provider, "secret", secreter.Lookup)
-		if err != nil {
-			return nil, err
-		}
+	rawConfig, err = resolveLayerProviderValues(rawConfig, secreter)
+	if err != nil {
+		return nil, err
 	}
 
 	provider, err := ConstructProvider(rawConfig.Provider, *rawConfig.Client, errorMessages, layerGroup, datastores)

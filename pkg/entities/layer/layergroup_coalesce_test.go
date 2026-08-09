@@ -589,3 +589,93 @@ func Test_WriteCache_RecoversFromPanic(t *testing.T) {
 		writeCache(context.Background(), panicOnSaveCache{}, pkg.TileRequest{LayerName: "test", Z: 1, X: 0, Y: 0}, &pkg.Image{Content: []byte("x")})
 	})
 }
+
+// A ref provider targets a layer *name*, while noCoalesceLayers is keyed by layer *ID*. When the
+// target resolves to a pattern layer the two differ, and comparing them directly would drop the
+// edge - leaving a layer that transitively reaches a {ctx.*} provider coalescable, which is the
+// cross-user disclosure requestScopedLayers exists to prevent.
+func Test_RequestScopedLayers_RefToPatternLayerPropagates(t *testing.T) {
+	layers := []config.LayerConfig{
+		{
+			ID:       "secret",
+			Pattern:  "secret-{v}",
+			Provider: map[string]any{"name": "proxy", "url": "https://example.com/{ctx.Authorization}/{z}/{x}/{y}"},
+		},
+		{
+			ID:       "public",
+			Provider: map[string]any{"name": "ref", "layer": "secret-foo"},
+		},
+	}
+
+	unsafe := requestScopedLayers(layers)
+
+	require.True(t, unsafe["secret"], "a layer whose provider config uses {ctx.} must be marked request-scoped")
+	require.True(t, unsafe["public"], "a ref to a pattern layer's matched name must propagate the mark")
+}
+
+// The literal-ID case must keep working, and an unrelated layer must stay coalescable.
+func Test_RequestScopedLayers_RefToLiteralLayerPropagates(t *testing.T) {
+	layers := []config.LayerConfig{
+		{ID: "secret", Provider: map[string]any{"name": "proxy", "url": "https://example.com/{ctx.Authorization}"}},
+		{ID: "public", Provider: map[string]any{"name": "ref", "layer": "secret"}},
+		{ID: "unrelated", Provider: map[string]any{"name": "proxy", "url": "https://example.com/plain"}},
+	}
+
+	unsafe := requestScopedLayers(layers)
+
+	require.True(t, unsafe["secret"])
+	require.True(t, unsafe["public"])
+	require.False(t, unsafe["unrelated"], "a layer with no {ctx.} and no ref must stay coalescable")
+}
+
+// Propagation must reach a fixed point across a chain of pattern-named refs.
+func Test_RequestScopedLayers_RefChainThroughPatternLayers(t *testing.T) {
+	layers := []config.LayerConfig{
+		{ID: "leaf", Pattern: "leaf-{v}", Provider: map[string]any{"name": "proxy", "url": "https://example.com/{ctx.X-Api-Key}"}},
+		{ID: "mid", Pattern: "mid-{v}", Provider: map[string]any{"name": "ref", "layer": "leaf-1"}},
+		{ID: "top", Provider: map[string]any{"name": "ref", "layer": "mid-2"}},
+	}
+
+	unsafe := requestScopedLayers(layers)
+
+	require.True(t, unsafe["leaf"])
+	require.True(t, unsafe["mid"])
+	require.True(t, unsafe["top"], "the mark must propagate transitively across pattern-named refs")
+}
+
+// A {ctx.*} placeholder can arrive through an env var, where it's invisible in the raw config.
+// ConstructLayerGroup therefore resolves each layer's provider config before running the detector.
+func Test_RequestScopedLayers_CtxDeliveredViaEnvIsDetected(t *testing.T) {
+	t.Setenv("TILEGROXY_TEST_CTX_URL", "https://example.com/{ctx.Authorization}/{z}/{x}/{y}")
+
+	raw := config.LayerConfig{
+		ID:       "sneaky",
+		Provider: map[string]any{"name": "proxy", "url": "env.TILEGROXY_TEST_CTX_URL"},
+	}
+
+	require.False(t, requestScopedLayers([]config.LayerConfig{raw})["sneaky"],
+		"sanity check: against the unresolved config the placeholder is genuinely invisible")
+
+	resolved, err := resolveLayerProviderValues(raw, nil)
+	require.NoError(t, err)
+
+	require.True(t, requestScopedLayers([]config.LayerConfig{resolved})["sneaky"],
+		"a {ctx.} delivered via an env var must be detected once the provider config is resolved")
+}
+
+// resolveLayerProviderValues is called on the same config twice (once by ConstructLayerGroup, once
+// inside ConstructLayer), so it must leave its input untouched.
+func Test_ResolveLayerProviderValues_DoesNotMutateInput(t *testing.T) {
+	t.Setenv("TILEGROXY_TEST_PLAIN_URL", "https://example.com/tiles")
+
+	raw := config.LayerConfig{
+		ID:       "l",
+		Provider: map[string]any{"name": "proxy", "url": "env.TILEGROXY_TEST_PLAIN_URL"},
+	}
+
+	resolved, err := resolveLayerProviderValues(raw, nil)
+
+	require.NoError(t, err)
+	require.Equal(t, "env.TILEGROXY_TEST_PLAIN_URL", raw.Provider["url"], "the input config must keep its placeholder")
+	require.Equal(t, "https://example.com/tiles", resolved.Provider["url"])
+}

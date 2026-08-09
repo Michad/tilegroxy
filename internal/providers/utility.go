@@ -79,12 +79,41 @@ func replaceURLPlaceholders(ctx context.Context, tileRequest pkg.TileRequest, ra
 		}
 	}
 
-	for i := range replacements {
-		// Make sure longer keys are processed first to avoid e.g. $1's replacement messing up $10
-		realI := len(replacements) - i - 1
-		placeholder := "$" + strconv.Itoa(realI)
-		value := fmt.Sprint(replacements[realI])
-		source := sourceFor(realI)
+	// Substitution is a single left-to-right scan that appends to a separate builder, so text that
+	// has already been substituted is never re-examined. Repeated ReplaceAll passes over the whole
+	// URL would be unsafe here even processing high indices first: descending order stops $1's
+	// replacement from corrupting $10, but a *value* inserted by an earlier pass is still visible
+	// to every later pass. A request-derived value containing the literal "$0" survives escaping
+	// (url.PathEscape and url.QueryEscape both leave "$" unescaped) and would then be replaced by
+	// the $0 pass - splicing an operator's unescaped {env.*} value, typically a secret, into the
+	// outbound URL and the debug log. One scan makes inserted text inert by construction.
+	var out strings.Builder
+	queryStart := strings.Index(rawURL, "?")
+
+	for i := 0; i < len(rawURL); {
+		if rawURL[i] != '$' {
+			out.WriteByte(rawURL[i])
+			i++
+			continue
+		}
+
+		// Take the longest run of digits after '$' so "$10" reads as index 10, not index 1
+		// followed by a literal "0".
+		j := i + 1
+		for j < len(rawURL) && rawURL[j] >= '0' && rawURL[j] <= '9' {
+			j++
+		}
+
+		idx, err := strconv.Atoi(rawURL[i+1 : j])
+		if j == i+1 || err != nil || idx >= len(replacements) {
+			// Not a placeholder this call produced (a literal "$", or an index out of range):
+			// emit it untouched.
+			out.WriteByte(rawURL[i])
+			i++
+			continue
+		}
+
+		value := fmt.Sprint(replacements[idx])
 
 		// Placeholder values come from three sources with different trust levels:
 		//   - {env.*} is operator config (os.Getenv) - it must be allowed to contain a
@@ -96,31 +125,29 @@ func replaceURLPlaceholders(ctx context.Context, tileRequest pkg.TileRequest, ra
 		//     passthrough, not path segments, so escaping it costs no legitimate use case
 		//     we're aware of; if a future use needs literal slashes from {ctx.*}, that's a
 		//     deliberate tradeoff to revisit, not an oversight.
-		var escaped string
-		if source == sourceEnv {
-			escaped = value
+		if sourceFor(idx) == sourceEnv {
+			out.WriteString(value)
 		} else {
 			// Percent-encode the value for the position it lands in: query-escape after the
-			// first "?", path-escape before it. url.PathEscape leaves "&", "=", "+", ":", "@"
-			// unescaped, which is fine for a path segment on its own, but if this template also
-			// has a literal query string later on, a path-position value containing "&" or "="
-			// couldn't reorder/inject query params anyway since it's still before the "?". The
-			// gap would only matter if the value could smuggle in an unescaped "?" itself, and
-			// PathEscape does escape "?", so there's no gap here.
-			queryStart := strings.Index(rawURL, "?")
-			placeholderIdx := strings.Index(rawURL, placeholder)
-
-			if queryStart >= 0 && placeholderIdx > queryStart {
-				escaped = url.QueryEscape(value)
+			// first "?", path-escape before it. Positions are measured against the template,
+			// since an {env.*} value substituted earlier in this same scan could itself contain
+			// a "?" and must not retroactively change how later values are escaped. url.PathEscape
+			// leaves "&", "=", "+", ":", "@" unescaped, which is fine for a path segment on its
+			// own, but if this template also has a literal query string later on, a path-position
+			// value containing "&" or "=" couldn't reorder/inject query params anyway since it's
+			// still before the "?". The gap would only matter if the value could smuggle in an
+			// unescaped "?" itself, and PathEscape does escape "?", so there's no gap here.
+			if queryStart >= 0 && i > queryStart {
+				out.WriteString(url.QueryEscape(value))
 			} else {
-				escaped = url.PathEscape(value)
+				out.WriteString(url.PathEscape(value))
 			}
 		}
 
-		rawURL = strings.ReplaceAll(rawURL, placeholder, escaped)
+		i = j
 	}
 
-	return rawURL, nil
+	return out.String(), nil
 }
 
 // Replaces arbitrary application specific placeholders in an arbitrary string with more generic prepared statement style placeholders and returns a mapping of those final placeholders to the real values.  e.g. "blah {env.foo} blah" -> "blah $1 blah" and {"$1": "bar"}

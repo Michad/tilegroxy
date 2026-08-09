@@ -63,8 +63,20 @@ func ConstructLayerGroup(cfg config.Config, cache cache.Cache, secreter secret.S
 		return nil, err
 	}
 
+	// resolvedLayers mirrors cfg.Layers with every {env.*}/{secret.*} value in each provider config
+	// already substituted. requestScopedLayers has to inspect the *resolved* configs: a {ctx.*}
+	// placeholder can arrive through an env var or a secret (e.g. url: env.TILE_URL where TILE_URL
+	// holds "https://host/{ctx.X-Api-Key}/{z}/{x}/{y}"), and against the raw config that placeholder
+	// is invisible, so the layer would be coalesced despite rendering per-caller output.
+	resolvedLayers := make([]config.LayerConfig, len(cfg.Layers))
+
 	for i, l := range cfg.Layers {
-		layerObjects[i], err = ConstructLayer(l, cfg.Client, cfg.Error.Messages, &layerGroup, secreter, datastores)
+		resolvedLayers[i], err = resolveLayerProviderValues(l, secreter)
+		if err != nil {
+			return nil, fmt.Errorf("error constructing layer %v: %w", i, err)
+		}
+
+		layerObjects[i], err = ConstructLayer(resolvedLayers[i], cfg.Client, cfg.Error.Messages, &layerGroup, secreter, datastores)
 		if err != nil {
 			return nil, fmt.Errorf("error constructing layer %v: %w", i, err)
 		}
@@ -79,7 +91,7 @@ func ConstructLayerGroup(cfg config.Config, cache cache.Cache, secreter secret.S
 	layerGroup.layers = layerObjects
 	layerGroup.DefaultCache = cache
 	layerGroup.cacheWriteLimiter = make(chan struct{}, maxConcurrentCacheWrites)
-	layerGroup.noCoalesceLayers = requestScopedLayers(cfg.Layers)
+	layerGroup.noCoalesceLayers = requestScopedLayers(resolvedLayers)
 
 	return &layerGroup, errors.Join(err1, err2)
 }
@@ -132,6 +144,65 @@ func containsRequestScopedPlaceholder(node any) bool {
 	return false
 }
 
+// resolveRefTargetsToIDs maps `ref` provider targets, which are layer *names* as they'd arrive in a
+// request, onto the IDs of the layers that could serve them. The distinction matters because
+// unsafeLayers in requestScopedLayers is keyed by ID (matching RenderTile's lookup, which uses the
+// *Layer that FindLayer returned): a pattern layer with id "secret" and pattern "secret-{v}" is
+// reachable by the name "secret-foo", so a ref to "secret-foo" has to propagate the mark onto
+// "secret". Comparing the raw target against IDs would miss that edge entirely and leave the
+// referring layer coalescable.
+//
+// Resolution mirrors FindLayer: a literal layer matches when its ID equals the target, and a
+// pattern layer matches when its pattern matches the target the same way MatchesName would. A
+// target may resolve to several IDs when patterns overlap, and every candidate is returned -
+// FindLayer picks the first at request time, but which one that is can depend on the request, so
+// marking all of them is the conservative choice. ParamValidator is deliberately not consulted:
+// it can only ever reject a name, so ignoring it over-approximates, and over-approximating costs a
+// duplicate fetch while under-approximating discloses tiles across callers.
+//
+// A target that resolves to nothing is dropped. validateRefs already rejects statically dangling
+// targets when no pattern layers exist; when they do exist it intentionally permits targets it
+// can't resolve, and an edge to a layer that doesn't exist can't carry a mark regardless.
+func resolveRefTargetsToIDs(targets []string, layers []config.LayerConfig) []string {
+	if len(targets) == 0 {
+		return nil
+	}
+
+	ids := make([]string, 0, len(targets))
+	seen := make(map[string]bool, len(targets))
+
+	for _, target := range targets {
+		for _, l := range layers {
+			if seen[l.ID] {
+				continue
+			}
+
+			isPattern := l.Pattern != "" && l.Pattern != l.ID
+			if !isPattern {
+				if l.ID != target {
+					continue
+				}
+			} else {
+				segments, err := parsePattern(l.Pattern)
+				if err != nil {
+					// An unparseable pattern fails loudly in ConstructLayer, which runs for every
+					// layer before this is reached; treating it as non-matching here just avoids
+					// duplicating that error path.
+					continue
+				}
+				if doesMatch, _ := match(segments, target); !doesMatch {
+					continue
+				}
+			}
+
+			seen[l.ID] = true
+			ids = append(ids, l.ID)
+		}
+	}
+
+	return ids
+}
+
 // requestScopedLayers returns the set of layer IDs for which request coalescing (singleflight in
 // RenderTile) must be disabled because their rendered content can differ between two callers
 // asking for the same layer name and tile coordinates.
@@ -158,7 +229,9 @@ func containsRequestScopedPlaceholder(node any) bool {
 // The `ref` provider forwards a request to another layer, rebuilding the child context from the
 // original *http.Request (see internal/providers/ref.go), so headers propagate across a ref. A
 // layer that refs an unsafe layer is therefore itself unsafe, and the marking below is propagated
-// transitively across ref edges to a fixed point.
+// transitively across ref edges to a fixed point. Ref targets are layer *names* while this set is
+// keyed by layer *ID*, so each target is resolved through resolveRefTargetsToIDs first - comparing
+// the two directly would silently drop every edge into a pattern layer.
 //
 // Coalescing is a pure optimization, so declining it is always correct; false positives cost only
 // a duplicate upstream fetch, whereas a false negative is a cross-user information disclosure.
@@ -173,7 +246,7 @@ func requestScopedLayers(layers []config.LayerConfig) map[string]bool {
 
 		var targets []string
 		findRefTargets(l.Provider, &targets)
-		refsByLayer[l.ID] = targets
+		refsByLayer[l.ID] = resolveRefTargetsToIDs(targets, layers)
 	}
 
 	// Propagate across ref edges until nothing new is marked. Bounded by the number of layers
