@@ -19,6 +19,8 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/analytics"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/Michad/tilegroxy/pkg/entities/datastore"
@@ -26,44 +28,55 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
 )
 
-func configToEntities(cfg config.Config) (*layer.LayerGroup, authentication.Authentication, error) {
+func configToEntities(cfg config.Config) (*entities.Entities, error) {
 	cfg.Secret = pkg.ReplaceEnv(cfg.Secret)
 	secreter, err := secret.ConstructSecreter(cfg.Secret, cfg.Error.Messages)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error constructing secret: %w", err)
+		return nil, fmt.Errorf("error constructing secret: %w", err)
 	}
 
 	datastores, err := datastore.ConstructDatastoreRegistry(cfg.Datastores, secreter, cfg.Error.Messages)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error constructing secret: %w", err)
+		return nil, fmt.Errorf("error constructing datastores: %w", err)
 	}
 
 	cfg.Cache = pkg.ReplaceEnv(cfg.Cache)
 	cfg.Cache, err = pkg.ReplaceConfigValues(cfg.Cache, "secret", secreter.Lookup)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	cache, err := cache.ConstructCache(cfg.Cache, cfg.Error.Messages)
+	cacheObj, err := cache.ConstructCache(cfg.Cache, cfg.Error.Messages)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error constructing cache: %w", err)
+		return nil, fmt.Errorf("error constructing cache: %w", err)
 	}
 
 	cfg.Authentication = pkg.ReplaceEnv(cfg.Authentication)
 	cfg.Authentication, err = pkg.ReplaceConfigValues(cfg.Authentication, "secret", secreter.Lookup)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	auth, err := authentication.ConstructAuth(cfg.Authentication, cfg.Error.Messages)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error constructing auth: %w", err)
+		return nil, fmt.Errorf("error constructing auth: %w", err)
 	}
 
-	layerGroup, err := layer.ConstructLayerGroup(cfg, cache, secreter, datastores)
+	analyticsObj, err := analytics.ConstructAnalytics(cfg.Analytics, secreter, datastores, cfg.Error.Messages)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error constructing layers: %w", err)
+		return nil, fmt.Errorf("error constructing analytics: %w", err)
 	}
 
-	return layerGroup, auth, err
+	layerGroup, err := layer.ConstructLayerGroup(cfg, cacheObj, secreter, datastores)
+	if err != nil {
+		return nil, fmt.Errorf("error constructing layers: %w", err)
+	}
+
+	return &entities.Entities{
+		LayerGroup: layerGroup,
+		Auth:       auth,
+		Analytics:  analyticsObj,
+		Cache:      cacheObj,
+		Datastores: datastores,
+	}, nil
 }

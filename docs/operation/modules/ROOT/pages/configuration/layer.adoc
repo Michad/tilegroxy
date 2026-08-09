@@ -47,6 +47,12 @@ Configuration options:
 | bool
 | No
 | false
+
+| skipanalytics
+| If true, skip recording xref:configuration/analytics/index.adoc[analytics] events for this layer. Useful for internal or debugging layers you don't want cluttering usage data
+| bool
+| No
+| false
 |===
 
 Example:

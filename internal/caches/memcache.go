@@ -90,6 +90,15 @@ func (s MemcacheRegistration) Initialize(configAny any, errorMessages config.Err
 
 }
 
+// Close shuts down the memcache client, releasing its connection pool.
+func (c Memcache) Close(_ context.Context) error {
+	if c.client == nil {
+		return nil
+	}
+
+	return c.client.Close()
+}
+
 func (c Memcache) Lookup(_ context.Context, t pkg.TileRequest) (*pkg.Image, error) {
 	it, err := c.client.Get(c.KeyPrefix + t.String())
 

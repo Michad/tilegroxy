@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"slices"
 	"strconv"
 	"time"
@@ -59,6 +60,9 @@ const (
 type Redis struct {
 	RedisConfig
 	cache *rediscache.Cache
+	// The underlying client, retained solely so it can be shut down. rediscache.Cache doesn't
+	// expose what it wraps, so we have to hold onto it ourselves.
+	client io.Closer
 }
 
 func init() {
@@ -109,6 +113,8 @@ func (s RedisRegistration) Initialize(configAny any, errorMessages config.ErrorM
 		config.TTL = redisMaxTTL
 	}
 
+	var tileClient io.Closer
+
 	switch config.Mode {
 	case ModeCluster:
 		if config.DB != 0 {
@@ -122,6 +128,8 @@ func (s RedisRegistration) Initialize(configAny any, errorMessages config.ErrorM
 			Username: config.Username,
 			Password: config.Password,
 		})
+
+		tileClient = client
 
 		//TODO: Open bug with go-redis about `rediser` type being private so the below isn't needlessly repeated
 		tileCache = rediscache.New(&rediscache.Options{
@@ -145,6 +153,8 @@ func (s RedisRegistration) Initialize(configAny any, errorMessages config.ErrorM
 			DB:       config.DB,
 		})
 
+		tileClient = client
+
 		//TODO: Open bug with go-redis about `rediser` type being private so the below isn't needlessly repeated
 		tileCache = rediscache.New(&rediscache.Options{
 			Redis: client,
@@ -157,15 +167,26 @@ func (s RedisRegistration) Initialize(configAny any, errorMessages config.ErrorM
 			DB:       config.DB,
 		})
 
+		tileClient = client
+
 		//TODO: Open bug with go-redis about `rediser` type being private so the below isn't needlessly repeated
 		tileCache = rediscache.New(&rediscache.Options{
 			Redis: client,
 		})
 	}
 
-	r := Redis{RedisConfig: config, cache: tileCache}
+	r := Redis{RedisConfig: config, cache: tileCache, client: tileClient}
 
 	return &r, nil
+}
+
+// Close shuts down the underlying redis client, releasing its connection pool.
+func (c Redis) Close(_ context.Context) error {
+	if c.client == nil {
+		return nil
+	}
+
+	return c.client.Close()
 }
 
 func (c Redis) Lookup(ctx context.Context, t pkg.TileRequest) (*pkg.Image, error) {

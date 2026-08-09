@@ -15,8 +15,12 @@
 package datastore
 
 import (
+	"context"
+	"errors"
+
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
 )
 
@@ -27,6 +31,22 @@ type DatastoreRegistry struct {
 func (reg DatastoreRegistry) Get(id string) (DatastoreWrapper, bool) {
 	res, ok := reg.datastores[id]
 	return res, ok
+}
+
+// Close releases every datastore that holds resources, most notably connection pools. Called on
+// shutdown and after a hot reload swaps in a new generation of entities.
+func (reg *DatastoreRegistry) Close(ctx context.Context) error {
+	if reg == nil {
+		return nil
+	}
+
+	errs := make([]error, 0, len(reg.datastores))
+
+	for _, ds := range reg.datastores {
+		errs = append(errs, lifecycle.CloseIfCloser(ctx, ds))
+	}
+
+	return errors.Join(errs...)
 }
 
 func ConstructDatastoreRegistry(cfg []map[string]interface{}, secreter secret.Secreter, errorMessages config.ErrorMessages) (*DatastoreRegistry, error) {

@@ -8,7 +8,9 @@ Reloading occurs automatically within a few seconds of the configuration changin
 
 Configuration changes that affect the core functionality of the service (for example changing the port of the HTTP server) still require a restart of the executable.
 
-When reloading occurs, new connections will be established for configured xref:configuration/datastores/index.adoc[datastores]. This will lead to an increase in the number of connections to the database. Connections are not explicitly killed and instead rely on idle timeouts and garbage collection to occur for them to be cleaned up. Therefore if configuration changes repeatedly occur in a short period, a large number of connections might be established. Consider relying on traditional deployment methodologies if you're sensitive to the number of active DB connections.
+When reloading occurs, new connections will be established for configured xref:configuration/datastores/index.adoc[datastores] and caches. The previous connections are closed once in-flight requests using them have had time to complete, therefore the number of connections returns to its steady state instead of growing with each reload. Expect a temporary period after each reload where both the old and new connections are open.
+
+Buffered xref:configuration/analytics/index.adoc[analytics] events are flushed before the previous configuration is released so a reload doesn't lose the current batch.
 
 Tilegroxy uses link:https://github.com/fsnotify/fsnotify[fsnotify] to detect when configuration has changed. It is possible for the file change event to reach tilegroxy before the file has finished being written. Tilegroxy waits 1 second before applying changes to avoid this but if you are using a filesystem with especially slow writes it is possible tilegroxy will attempt to read the configuration too early. This will usually result in an invalid configuration which will be ignored but could result in operating against incorrect configuration.  It is therefore recommended to avoid using hot reload if you're at risk of slow writes, especially if using YAML configurations.
 
@@ -23,6 +25,7 @@ The following sections of the configuration can be reloaded:
 * xref:configuration/authentication/index.adoc[authentication]
 * xref:configuration/cache/index.adoc[cache]
 * xref:configuration/datastores/index.adoc[datastores]
+* xref:configuration/analytics/index.adoc[analytics]
 * xref:configuration/layer.adoc[layers]
 
 The following sections can be partially reloaded:

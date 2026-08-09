@@ -19,29 +19,28 @@ import (
 
 	"github.com/Michad/tilegroxy/internal/server"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/authentication"
-	"github.com/Michad/tilegroxy/pkg/entities/layer"
+	"github.com/Michad/tilegroxy/pkg/entities"
 )
 
 type ServeOptions struct {
 }
 
 func Serve(cfg *config.Config, _ ServeOptions, _ io.Writer, reloadPtr *func(*config.Config) error) error {
-	layerObjects, auth, err := configToEntities(*cfg)
+	ent, err := configToEntities(*cfg)
 	if err != nil {
 		return err
 	}
 
-	var nextReloadPtr func(*config.Config, *layer.LayerGroup, authentication.Authentication) error
+	var nextReloadPtr func(*config.Config, *entities.Entities) error
 
 	reloadCallback := func(newCfg *config.Config) error {
 		if nextReloadPtr != nil {
-			layerObjects2, auth2, err := configToEntities(*newCfg)
+			ent2, err := configToEntities(*newCfg)
 			if err != nil {
 				return err
 			}
 
-			return nextReloadPtr(newCfg, layerObjects2, auth2)
+			return nextReloadPtr(newCfg, ent2)
 		}
 
 		return nil
@@ -49,6 +48,6 @@ func Serve(cfg *config.Config, _ ServeOptions, _ io.Writer, reloadPtr *func(*con
 
 	*reloadPtr = reloadCallback
 
-	err = server.ListenAndServe(cfg, layerObjects, auth, &nextReloadPtr)
+	err = server.ListenAndServe(cfg, ent, &nextReloadPtr)
 	return err
 }

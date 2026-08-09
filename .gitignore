@@ -15,3 +15,5 @@ certs/
 *.log
 node_modules/
 internal/website/resources
+
+_scratch/

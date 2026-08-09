@@ -43,11 +43,15 @@ type TestOptions struct {
 func Test(cfg *config.Config, opts TestOptions, out io.Writer) (uint32, error) {
 	ctx := pkg.BackgroundContext()
 
-	layerObjects, _, err := configToEntities(*cfg)
+	ent, err := configToEntities(*cfg)
 
 	if err != nil {
 		return 0, err
 	}
+
+	defer ent.Close(ctx) //nolint:errcheck // Nothing actionable while tearing down a test run
+
+	layerObjects := ent.LayerGroup
 
 	if len(opts.LayerNames) == 0 {
 		opts.LayerNames = layerObjects.ListLayerIDs()

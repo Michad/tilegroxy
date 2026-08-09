@@ -13,4 +13,6 @@ When running tilegroxy by default it runs in a non-hardened mode most fit for de
 * [ ] Ensure you have monitoring of the health endpoints and the endpoints are not exposed to the internet
 * [ ] Ensure cache-ing is configured against a distributed, high availability data-store
 * [ ] Consume telemetry data into an observability solution with trace sampling set at a level that won't overwhelm you
+* [ ] If using xref:configuration/analytics/index.adoc[analytics], size `batch.queueSize` for your peak request rate and alert on the `tilegroxy.analytics.dropped` and `tilegroxy.analytics.error` metrics so data loss doesn't go unnoticed
+* [ ] If using analytics, ensure your destination has a retention or partitioning strategy since tilegroxy never expires events, and review whether the fields you collect (particularly `ip` and `useragent`) are compatible with your privacy policy
 * [ ] Verify tilegroxy will be restarted on the unfortunate event it crashes such as via Docker's run=unless-stopped, Kubernete's restart policy, or SystemD's Restart=on-failure

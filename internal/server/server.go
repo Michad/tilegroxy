@@ -30,8 +30,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/authentication"
-	"github.com/Michad/tilegroxy/pkg/entities/layer"
+	"github.com/Michad/tilegroxy/pkg/entities"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"golang.org/x/crypto/acme/autocert"
@@ -47,14 +46,16 @@ func handleNoContent(w http.ResponseWriter, _ *http.Request) {
 // not useful in practice due to OS-specific nature of signals
 var InterruptFlags = []os.Signal{os.Interrupt}
 
-func setupHandlers(cfg *config.Config, layerGroup *layer.LayerGroup, auth authentication.Authentication) (http.Handler, func(*config.Config, *layer.LayerGroup, authentication.Authentication) error, error) {
+// setupHandlers builds the HTTP handlers. The returned accessor yields whichever generation of entities is
+// currently serving, which is what shutdown needs to release after a hot reload has swapped generations
+func setupHandlers(cfg *config.Config, ent *entities.Entities) (http.Handler, func(*config.Config, *entities.Entities) error, func() *entities.Entities, error) {
 	r := http.ServeMux{}
 
 	var myRootHandler http.Handler
 	var myTileHandler http.Handler
 	var myDocumentationHandler http.Handler
-	entities := reloadableEntities{config: cfg, auth: auth, layerGroup: layerGroup}
-	myDefaultHandler := defaultHandler{entities}
+	reloadable := newReloadableEntities(cfg, ent)
+	myDefaultHandler := defaultHandler{reloadable}
 
 	if cfg.Server.Production {
 		myRootHandler = http.HandlerFunc(handleNoContent)
@@ -68,17 +69,15 @@ func setupHandlers(cfg *config.Config, layerGroup *layer.LayerGroup, auth authen
 
 	tilePath := cfg.Server.RootPath + cfg.Server.TilePath + "/{layer}/{z}/{x}/{y}"
 	docsPath := cfg.Server.RootPath + cfg.Server.DocsPath + "/{path...}"
-	handler, err := newTileHandler(entities)
+	handler, err := newTileHandler(reloadable)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	myTileHandler = &handler
 
-	reloadFunc := func(cfg2 *config.Config, layerGroup2 *layer.LayerGroup, auth2 authentication.Authentication) error {
-		entities2 := reloadableEntities{config: cfg2, auth: auth2, layerGroup: layerGroup2}
-
-		handler.reloadEntities(entities2)
+	reloadFunc := func(cfg2 *config.Config, ent2 *entities.Entities) error {
+		handler.reloadEntities(newReloadableEntities(cfg2, ent2))
 
 		return nil
 	}
@@ -117,10 +116,10 @@ func setupHandlers(cfg *config.Config, layerGroup *layer.LayerGroup, auth authen
 	rootHandler, err = configureAccessLogging(cfg.Logging.Access, cfg.Error.Messages, rootHandler)
 
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	return rootHandler, reloadFunc, nil
+	return rootHandler, reloadFunc, handler.currentEntities, nil
 }
 
 func listenAndServeTLS(config *config.Config, srvErr chan error, srv *http.Server) {
@@ -171,12 +170,12 @@ func listenAndServeTLS(config *config.Config, srvErr chan error, srv *http.Serve
 	}
 }
 
-func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth authentication.Authentication, reloadPtr *func(*config.Config, *layer.LayerGroup, authentication.Authentication) error) error {
+func ListenAndServe(config *config.Config, ent *entities.Entities, reloadPtr *func(*config.Config, *entities.Entities) error) error {
 	if config.Server.Encrypt != nil && config.Server.Encrypt.Domain == "" {
 		return fmt.Errorf(config.Error.Messages.ParamRequired, "server.encrypt.domain")
 	}
 
-	rootHandler, handlerReloadFunc, err := setupHandlers(config, layerGroup, auth)
+	rootHandler, handlerReloadFunc, currentEntities, err := setupHandlers(config, ent)
 	if reloadPtr != nil {
 		*reloadPtr = handlerReloadFunc
 	}
@@ -197,7 +196,7 @@ func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth au
 	var healthShutdown func(context.Context) error
 
 	if config.Server.Health.Enabled {
-		healthShutdown, err = SetupHealth(ctx, config, layerGroup)
+		healthShutdown, err = SetupHealth(ctx, config, ent.LayerGroup)
 
 		if err != nil {
 			return err
@@ -247,6 +246,15 @@ func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth au
 	}
 
 	err = srv.Shutdown(context.Background())
+
+	// Release entities after the HTTP server has drained so batched analytics can flush events from
+	// requests that were still in flight. Bounded by the same timeout that bounds a request.
+	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), time.Duration(config.Server.Timeout)*time.Second)
+	defer cancelShutdown()
+
+	// Close whatever generation is actually serving. A hot reload replaces the one passed in and releases
+	// it on its own, so closing that here would double-close it and leak the live one
+	err = errors.Join(err, currentEntities().Close(shutdownCtx))
 
 	if otelShutdown != nil {
 		err = errors.Join(err, otelShutdown(context.Background()))

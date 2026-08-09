@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
 	"go.opentelemetry.io/otel/codes"
 )
 
@@ -39,6 +40,12 @@ func (w CacheWrapper) Lookup(ctx context.Context, t pkg.TileRequest) (*pkg.Image
 	}
 
 	return pc, err
+}
+
+// Close forwards to the wrapped cache when it holds resources needing release. Without this the
+// wrapper would hide the underlying cache's Closer implementation from the shutdown path.
+func (w CacheWrapper) Close(ctx context.Context) error {
+	return lifecycle.CloseIfCloser(ctx, w.Cache)
 }
 
 func (w CacheWrapper) Save(ctx context.Context, t pkg.TileRequest, img *pkg.Image) error {

@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 )
 
@@ -27,12 +28,15 @@ type CheckOptions struct {
 }
 
 func CheckConfig(cfg *config.Config, opts CheckOptions, out io.Writer) error {
-	var err error
-	_, _, err = configToEntities(*cfg)
+	ent, err := configToEntities(*cfg)
 
 	if err != nil {
 		return err
 	}
+
+	// Checking the config establishes real connections, so release them instead of relying on
+	// process exit.
+	defer ent.Close(pkg.BackgroundContext()) //nolint:errcheck // Nothing actionable during a config check
 
 	if cfg != nil && opts.Echo {
 		enc := json.NewEncoder(out)

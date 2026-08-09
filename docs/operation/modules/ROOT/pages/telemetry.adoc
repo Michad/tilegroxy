@@ -45,6 +45,15 @@ Metrics are available for cache hit/miss and the number of tile requests broken 
 | tilegroxy.cache.total.miss
 | The number of cache lookups that don't result in a tile
 
+| tilegroxy.analytics.recorded
+| The number of xref:configuration/analytics/index.adoc[analytics] events successfully written to a destination
+
+| tilegroxy.analytics.dropped
+| The number of analytics events discarded because a module's queue was full
+
+| tilegroxy.analytics.error
+| The number of analytics events in batches that failed to write
+
 | http.server.response.size
 | Provided by otelhttp. Reflects the size of responses bodies returned from tilegroxy in bytes
 
@@ -65,6 +74,10 @@ Metrics are available for cache hit/miss and the number of tile requests broken 
 |===
 
 When using patterns with layers, metrics are logged against the ID of the layer not the name passed into the URL.  If using a Ref provider (including indirectly via the  Blend provider), the "child" layer requests are recorded in the layer-specific metrics *but not* the total metrics.
+
+The `tilegroxy.analytics.*` metrics describe the health of analytics delivery itself rather than usage. A rising `dropped` or `error` count means usage data is being lost even though tiles are being served normally, so it's worth alerting on separately.
+
+Metrics are aggregates and are constrained in cardinality, which makes them suited to answering questions about the health of the service. If instead you need to know which layers a given user or tenant consumed, see xref:configuration/analytics/index.adoc[Analytics] which records individual events attributable to a layer and a user.
 
 == Traces
 

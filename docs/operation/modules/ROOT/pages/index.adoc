@@ -36,5 +36,7 @@ Minimal HTTP footprint to decrease security exposure
 +++</li><li>+++
 Traces, metrics, and logs available via link:https://tilegroxy.michael.davis.name/operation/configuration/telemetry.html[OpenTelemetry]
 +++</li><li>+++
+Per-layer usage link:https://tilegroxy.michael.davis.name/operation/configuration/analytics/index.html[analytics] recorded to ClickHouse, PostgreSQL, Google Analytics, or a custom destination
++++</li><li>+++
 Usable as an application or a link:https://tilegroxy.michael.davis.name/operation/extensibility.html[library]
 +++</li></ul>+++
