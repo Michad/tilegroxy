@@ -1,0 +1,104 @@
+////
+= Google Analytics
+
+Sends events to link:https://developers.google.com/analytics/devguides/collection/protocol/ga4[Google Analytics 4] using the Measurement Protocol.  Useful when map usage should appear alongside the rest of your web analytics instead of in a database you query yourself.
+
+Name should be "googleanalytics"
+
+== Setup
+
+You will need a GA4 measurement ID and a Measurement Protocol API secret, created under Admin > Data Streams > your stream > Measurement Protocol API secrets.
+
+The API secret is a credential and should not be written into configuration directly. Use `env.` or a xref:configuration/secret/index.adoc[secret store]:
+
+----
+apiSecret: secret.ga-api-secret
+----
+
+To verify your payloads before sending real traffic, point `endpoint` at the validation server which returns a description of any problems instead of recording events:
+
+----
+endpoint: https://www.google-analytics.com/debug/mp/collect
+----
+
+There are a few behaviors worth being aware of. The Measurement Protocol accepts at most 25 events per request, therefore `batch.maxSize` is clamped to 25 with a warning if you configure it higher. GA requires a single `client_id` per request so events are grouped by user before sending, meaning a batch spanning many users becomes several requests. Anonymous requests have no user to identify; if the `ip` field is enabled a SHA-256 hash of the address is used as the client ID so the raw address is never sent to Google, otherwise all anonymous traffic shares the client ID `anonymous` which GA will treat as a single visitor. The layer, coordinates and every configured field are sent as event parameters and GA imposes its own limits on parameter counts and name lengths, silently ignoring what it does not accept.
+
+Be aware that sending user IDs or IP-derived identifiers to a third party has privacy implications beyond recording them in your own database.  Confirm this is compatible with your privacy policy and applicable law before enabling those fields.
+
+Configuration options:
+
+Also accepts the batching parameters described in xref:configuration/analytics/index.adoc[Analytics].
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| MeasurementID
+| The GA4 measurement ID, in the form G-XXXXXXX
+| string
+| Yes
+| None
+
+| APISecret
+| The Measurement Protocol API secret
+| string
+| Yes
+| None
+
+| EventName
+| The event name recorded in GA
+| string
+| No
+| tile_request
+
+| Endpoint
+| Overrides the collection endpoint, primarily to use the validation server
+| string
+| No
+| https://www.google-analytics.com/mp/collect
+
+| Timeout
+| How long (in seconds) a request to Google can be in flight before it is abandoned
+| uint
+| No
+| 10
+
+| UserAgent
+| The user agent to send with requests
+| string
+| No
+| None
+
+| ID
+| An identifier for this destination, used in logs to attribute analytics messages
+| string
+| No
+| googleanalytics
+
+| Fields
+| Additional attributes to record. See xref:configuration/analytics/index.adoc[Analytics]
+| string[]
+| No
+| None
+
+| ExtraFields
+| Arbitrary additional attributes. See xref:configuration/analytics/index.adoc[Analytics]
+| map[string]string
+| No
+| None
+|===
+
+Example:
+
+----
+analytics:
+  name: googleanalytics
+  measurementId: G-XXXXXXX
+  apiSecret: secret.ga-api-secret
+  eventName: map_tile
+  fields:
+    - layername
+  batch:
+    maxAge: 60
+----
+////

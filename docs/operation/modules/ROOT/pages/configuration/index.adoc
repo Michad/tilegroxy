@@ -14,7 +14,7 @@ Some parameters can be specified by environment variables which must be upper ca
 
 == Entities
 
-Some configuration sections (xref:configuration/authentication/index.adoc[authentication], xref:configuration/provider/index.adoc[provider], xref:configuration/cache/index.adoc[cache], xref:configuration/datastores/index.adoc[datastores] and xref:configuration/secret/index.adoc[secret]) support selecting different methods of operation that change the full list of parameters available. For example,  a "proxy" provider requires a `url` parameter to get a map tile from another server while a "static" provider takes in a `image` to return for every request. You select these operating modes using a parameter called `name`. 
+Some configuration sections (xref:configuration/authentication/index.adoc[authentication], xref:configuration/provider/index.adoc[provider], xref:configuration/cache/index.adoc[cache], xref:configuration/datastores/index.adoc[datastores], xref:configuration/analytics/index.adoc[analytics] and xref:configuration/secret/index.adoc[secret]) support selecting different methods of operation that change the full list of parameters available. For example,  a "proxy" provider requires a `url` parameter to get a map tile from another server while a "static" provider takes in a `image` to return for every request. You select these operating modes using a parameter called `name`. 
 
 Since these entities are too dynamic to have fixed environment variables and frequently may require a secret to operate, any string parameters can be made to use an environment variable by specifying a value in the format of `env.ENV_VAR_NAME`.  You can also use an external secret store xref:configuration/secret/index.adoc[if configured] by specifying a value in the format `secret.SECRET_NAME`
 
@@ -32,6 +32,8 @@ xref:configuration/secret/index.adoc[secret]: ... +
 xref:configuration/authentication/index.adoc[authentication]:  ... +
 xref:configuration/cache/index.adoc[cache]:  ... +
 xref:configuration/datastores/index.adoc[datastores]: +
+   - ... +
+xref:configuration/analytics/index.adoc[analytics]: +
    - ... +
 xref:configuration/layer.adoc[layers]:  +
    - ... +

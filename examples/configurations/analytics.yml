@@ -1,0 +1,60 @@
+# An example recording usage to a ClickHouse table for querying in detail.
+#
+# Tilegroxy never issues DDL so the ClickHouse table needs to be created first:
+#
+#   CREATE TABLE tile_events (
+#       time      DateTime,
+#       layer     LowCardinality(String),
+#       z         UInt8,
+#       x         UInt32,
+#       y         UInt32,
+#       user_id   String,
+#       extra     Map(String, String)
+#   ) ENGINE = MergeTree() ORDER BY (layer, time)
+
+datastores:
+  - name: clickhouse
+    id: ch-0
+    host: localhost
+    port: 9000
+    database: default
+    user: default
+    password: env.CLICKHOUSE_PASSWORD
+
+analytics:
+  name: clickhouse
+  id: warehouse
+  datastore: ch-0
+  table: tile_events
+  # Everything beyond the layer, coordinates and user is opt-in. Note ip and useragent are absent
+  # here; they're personal data so only enable them if you have a basis to record them
+  fields:
+    - duration
+    - bytes
+    - contenttype
+  extraFields:
+    tenant: hdr.X-Tenant-Id
+    environment: production
+  batch:
+    maxSize: 5000
+    maxAge: 30
+    queueSize: 50000
+    workers: 2
+    # The default. Under sustained overload, drop events instead of slowing down tile serving
+    onFull: drop
+
+cache:
+  name: memory
+
+layers:
+  - id: osm
+    provider:
+      name: proxy
+      url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+
+  # An internal layer we don't want cluttering the usage data
+  - id: debug-grid
+    skipAnalytics: true
+    provider:
+      name: static
+      color: "FF0000"

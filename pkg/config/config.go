@@ -16,6 +16,7 @@ package config
 
 import (
 	"bytes"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -189,6 +190,7 @@ type LayerConfig struct {
 	ParamValidator map[string]string // A mapping of regular expressions to use for each value extracted from the pattern. Keys must match the placeholders in pattern. This is external from the pattern itself to keep parsing the pattern simple and less error prone. If a key of "*" is defined it applies to all placeholders
 	Provider       map[string]any    // Raw config parameters for the provider to use. Name determines the specific schema
 	SkipCache      bool              // If true, don't use the cache
+	SkipAnalytics  bool              // If true, successful requests for this layer don't produce analytics events
 	Client         *ClientConfig     // If specified, the default Client is overridden.
 }
 
@@ -202,6 +204,7 @@ type Config struct {
 	Datastores     []map[string]interface{}
 	Authentication map[string]interface{}
 	Cache          map[string]interface{}
+	Analytics      map[string]interface{}
 	Layers         []LayerConfig
 }
 
@@ -288,6 +291,9 @@ func DefaultConfig() Config {
 		Cache: map[string]interface{}{
 			"name": "none",
 		},
+		Analytics: map[string]interface{}{
+			"name": "none",
+		},
 		Layers: []LayerConfig{},
 	}
 }
@@ -300,6 +306,14 @@ func initViper() *viper.Viper {
 
 func unmarshal(viper *viper.Viper) (Config, error) {
 	c := DefaultConfig()
+
+	// Viper merges a list of maps into a single map key-by-key, so an analytics section written as a list
+	// decodes without error into a silent mixture of its entries. Caught here because it's the shape
+	// analytics used during development and the failure is otherwise invisible
+	if _, ok := viper.Get("analytics").([]interface{}); ok {
+		return c, errors.New("analytics must be a single entry, not a list. Remove the leading '- ' and unindent the parameters beneath it")
+	}
+
 	err := viper.Unmarshal(&c)
 	if err != nil {
 		return c, err
