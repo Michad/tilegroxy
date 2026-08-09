@@ -16,10 +16,10 @@ package secret
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/mitchellh/mapstructure"
 )
 
 type Secreter interface {
@@ -32,18 +32,25 @@ type SecreterRegistration interface {
 	InitializeConfig() any
 }
 
+var registrationsMu sync.RWMutex
 var registrations = make(map[string]SecreterRegistration)
 
 func RegisterSecreter(reg SecreterRegistration) {
+	registrationsMu.Lock()
+	defer registrationsMu.Unlock()
 	registrations[reg.Name()] = reg
 }
 
 func RegisteredSecreter(name string) (SecreterRegistration, bool) {
+	registrationsMu.RLock()
+	defer registrationsMu.RUnlock()
 	o, ok := registrations[name]
 	return o, ok
 }
 
 func RegisteredSecreterNames() []string {
+	registrationsMu.RLock()
+	defer registrationsMu.RUnlock()
 	names := make([]string, 0, len(registrations))
 	for n := range registrations {
 		names = append(names, n)
@@ -60,7 +67,7 @@ func ConstructSecreter(rawConfig map[string]interface{}, errorMessages config.Er
 		reg, ok := RegisteredSecreter(name)
 		if ok {
 			cfg := reg.InitializeConfig()
-			err := mapstructure.Decode(rawConfig, &cfg)
+			err := config.DecodeEntityConfig(rawConfig, &cfg)
 			if err != nil {
 				return nil, err
 			}

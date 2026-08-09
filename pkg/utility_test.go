@@ -14,9 +14,13 @@
 package pkg
 
 import (
+	"context"
 	"math/rand/v2"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -96,9 +100,148 @@ func Test_ReplaceEnv_WithVals(t *testing.T) {
 	assert.Equal(t, "saf", cloned["child"].(map[string]interface{})["f"])
 }
 
+// ReplaceEnv used to only recurse into map[string]interface{}, so a header map
+// (map[string]string), a plain list ([]interface{}), or a list of maps
+// ([]map[string]interface{}) - all shapes config values legitimately arrive as - passed through
+// with the "env.X"/"secret.X" placeholder untouched instead of substituted.
+func Test_ReplaceEnv_MapStringString(t *testing.T) {
+	t.Setenv("TEST_HEADER", "secretvalue")
+
+	raw := map[string]interface{}{
+		"headers": map[string]string{
+			"Authorization": "env.TEST_HEADER",
+			"Other":         "literal",
+		},
+	}
+
+	cloned := ReplaceEnv(raw)
+
+	headers := cloned["headers"].(map[string]string)
+	assert.Equal(t, "secretvalue", headers["Authorization"])
+	assert.Equal(t, "literal", headers["Other"])
+}
+
+func Test_ReplaceEnv_ListOfInterface(t *testing.T) {
+	t.Setenv("TEST_LIST_VAL", "fromenv")
+
+	raw := map[string]interface{}{
+		"list": []interface{}{"env.TEST_LIST_VAL", "literal"},
+	}
+
+	cloned := ReplaceEnv(raw)
+
+	list := cloned["list"].([]interface{})
+	assert.Equal(t, "fromenv", list[0])
+	assert.Equal(t, "literal", list[1])
+}
+
+func Test_ReplaceEnv_ListOfMaps(t *testing.T) {
+	t.Setenv("TEST_TIER_PATH", "/from/env")
+
+	raw := map[string]interface{}{
+		"tiers": []map[string]interface{}{
+			{"path": "env.TEST_TIER_PATH"},
+		},
+	}
+
+	cloned := ReplaceEnv(raw)
+
+	tiers := cloned["tiers"].([]map[string]interface{})
+	assert.Equal(t, "/from/env", tiers[0]["path"])
+}
+
+// A YAML key written with no value (`ttl:`) parses to a nil, which the reflective walk used to
+// hand to reflect.ValueOf(nil).Convert(...) - the zero Value - panicking with a SIGSEGV that took
+// down `config check` and `serve` alike. Nils must pass through untouched.
+func Test_ReplaceEnv_NilInMap(t *testing.T) {
+	raw := map[string]interface{}{
+		"ttl":   nil,
+		"other": "literal",
+	}
+
+	cloned := ReplaceEnv(raw)
+
+	assert.Nil(t, cloned["ttl"])
+	assert.Equal(t, "literal", cloned["other"])
+}
+
+func Test_ReplaceEnv_NilInNestedMap(t *testing.T) {
+	t.Setenv("TEST_NESTED_NIL", "fromenv")
+
+	raw := map[string]interface{}{
+		"cache": map[string]interface{}{
+			"ttl":  nil,
+			"path": "env.TEST_NESTED_NIL",
+		},
+	}
+
+	cloned := ReplaceEnv(raw)
+
+	cacheCfg := cloned["cache"].(map[string]interface{})
+	assert.Nil(t, cacheCfg["ttl"])
+	assert.Equal(t, "fromenv", cacheCfg["path"])
+}
+
+func Test_ReplaceEnv_NilInSlice(t *testing.T) {
+	raw := map[string]interface{}{
+		"list": []interface{}{nil, "literal"},
+	}
+
+	cloned := ReplaceEnv(raw)
+
+	list := cloned["list"].([]interface{})
+	assert.Nil(t, list[0])
+	assert.Equal(t, "literal", list[1])
+}
+
+// The shape the real crash report used: a list of maps where one map value is nil.
+func Test_ReplaceEnv_NilInsideListOfMaps(t *testing.T) {
+	t.Setenv("TEST_TIER_NAME", "memory")
+
+	raw := map[string]interface{}{
+		"tiers": []interface{}{
+			map[string]interface{}{"name": "env.TEST_TIER_NAME", "ttl": nil},
+		},
+	}
+
+	cloned := ReplaceEnv(raw)
+
+	tiers := cloned["tiers"].([]interface{})
+	tier := tiers[0].(map[string]interface{})
+	assert.Equal(t, "memory", tier["name"])
+	assert.Nil(t, tier["ttl"])
+}
+
 func Test_Ternary(t *testing.T) {
 	assert.Equal(t, "a", Ternary(true, "a", "b"))
 	assert.Equal(t, "b", Ternary(false, "a", "b"))
+}
+
+// GetTile used to only exist as an unexported function in internal/providers, reachable by
+// real Go providers only by copy-pasting it (or reimplementing MaxLength/ContentTypes/StatusCodes
+// enforcement by hand) since internal/ can't be imported outside this module. It's now exported
+// from pkg so a library consumer writing a real Go provider (not a yaegi script) can call it.
+func Test_GetTile(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "image/png")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("tiledata"))
+	}))
+	defer server.Close()
+
+	clientConfig := config.ClientConfig{
+		StatusCodes:  []int{http.StatusOK},
+		ContentTypes: []string{"image/png"},
+		MaxLength:    1024,
+		Timeout:      5,
+	}
+
+	img, err := GetTile(context.Background(), clientConfig, server.URL, nil)
+
+	require.NoError(t, err)
+	require.NotNil(t, img)
+	assert.Equal(t, []byte("tiledata"), img.Content)
+	assert.Equal(t, "image/png", img.ContentType)
 }
 
 func Fuzz_EncodeDecodeImage(f *testing.F) {

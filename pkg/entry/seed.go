@@ -101,12 +101,30 @@ func Seed(cfg *config.Config, opts SeedOptions, out io.Writer) error {
 
 	var wg sync.WaitGroup
 
+	// Buffered to the number of threads so a panicking thread never blocks on the send and each
+	// can report at most once, matching the pattern used for provider panics in
+	// internal/providers/blend.go and composite_mvt.go.
+	errs := make(chan error, len(reqSplit))
+
 	for t := range reqSplit {
 		wg.Add(1)
-		go seedThread(&wg, opts, out, layerGroup, t, reqSplit[t])
+		go seedThread(&wg, opts, out, layerGroup, t, reqSplit[t], errs)
 	}
 
 	wg.Wait()
+	close(errs)
+
+	// A thread that panicked skipped its whole remaining chunk of tiles, so the seed did not do
+	// what was asked. Reporting it to `out` isn't enough - without a non-nil error here the
+	// command exits 0 and a partial seed looks like a successful one.
+	var threadErrs []error
+	for err := range errs {
+		threadErrs = append(threadErrs, err)
+	}
+	if len(threadErrs) > 0 {
+		return errors.Join(threadErrs...)
+	}
+
 	if opts.Verbose {
 		fmt.Fprintf(out, "Completed seeding")
 	}
@@ -140,7 +158,19 @@ func createTileRequests(z uint, curCount int, opts SeedOptions) (*[]pkg.TileRequ
 	return tileRequests, nil
 }
 
-func seedThread(wg *sync.WaitGroup, opts SeedOptions, out io.Writer, layerGroup *layer.LayerGroup, t int, myReqs []pkg.TileRequest) {
+// seedThread renders one chunk of tile requests. A panic - e.g. from a buggy custom provider -
+// is recovered so it doesn't crash the whole seed process and the other threads can finish, but
+// it is also reported on errs so Seed can fail: a recovered panic means this thread abandoned the
+// rest of its chunk.
+func seedThread(wg *sync.WaitGroup, opts SeedOptions, out io.Writer, layerGroup *layer.LayerGroup, t int, myReqs []pkg.TileRequest, errs chan<- error) {
+	defer wg.Done()
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintf(out, "Thread %v panicked: %v\n", t, r)
+			errs <- fmt.Errorf("thread %v panicked: %v", t, r)
+		}
+	}()
+
 	if opts.Verbose {
 		fmt.Fprintf(out, "Created thread %v with %v tiles\n", t, len(myReqs))
 	}
@@ -161,5 +191,4 @@ func seedThread(wg *sync.WaitGroup, opts SeedOptions, out io.Writer, layerGroup 
 	if opts.Verbose {
 		fmt.Fprintf(out, "Finished thread %v\n", t)
 	}
-	wg.Done()
 }

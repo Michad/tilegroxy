@@ -47,6 +47,168 @@ func TestTwoTierYml(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestLoadConfig_UnknownTopLevelKeyErrors(t *testing.T) {
+	_, err := LoadConfig(`
+server:
+  producton: true
+`)
+
+	require.Error(t, err)
+}
+
+func TestLoadConfig_UnknownPortKeyErrors(t *testing.T) {
+	_, err := LoadConfig(`
+server:
+  prot: 9999
+`)
+
+	require.Error(t, err)
+}
+
+func TestLoadConfig_UnknownLayerKeyErrors(t *testing.T) {
+	_, err := LoadConfig(`
+layers:
+  - id: main
+    skipcach: true
+    provider:
+      name: static
+      color: FFF
+`)
+
+	require.Error(t, err)
+}
+
+func TestLoadConfig_KnownKeysStillWork(t *testing.T) {
+	c, err := LoadConfig(`
+server:
+  production: true
+  port: 9999
+layers:
+  - id: main
+    skipCache: true
+    provider:
+      name: static
+      color: FFF
+`)
+
+	require.NoError(t, err)
+	assert.True(t, c.Server.Production)
+	assert.Equal(t, 9999, c.Server.Port)
+	assert.True(t, c.Layers[0].SkipCache)
+}
+
+func TestDecodeEntityConfig_UnknownKeyErrors(t *testing.T) {
+	type fooConfig struct {
+		Bar string
+	}
+
+	var out fooConfig
+	err := DecodeEntityConfig(map[string]interface{}{
+		"name": "foo",
+		"baz":  "typo'd field",
+	}, &out)
+
+	require.Error(t, err)
+}
+
+func TestDecodeEntityConfig_NameStrippedButFieldsWork(t *testing.T) {
+	type fooConfig struct {
+		Bar string
+	}
+
+	var out fooConfig
+	err := DecodeEntityConfig(map[string]interface{}{
+		"name": "foo",
+		"bar":  "value",
+	}, &out)
+
+	require.NoError(t, err)
+	assert.Equal(t, "value", out.Bar)
+}
+
+func TestDecodeEntityConfig_IDPassesThroughWhenStructWantsIt(t *testing.T) {
+	type withIDConfig struct {
+		ID  string
+		Bar string
+	}
+
+	var out withIDConfig
+	err := DecodeEntityConfig(map[string]interface{}{
+		"name": "foo",
+		"id":   "myid",
+		"bar":  "value",
+	}, &out)
+
+	require.NoError(t, err)
+	assert.Equal(t, "myid", out.ID)
+	assert.Equal(t, "value", out.Bar)
+}
+
+// Env var overrides used to only work for keys already present in the config file, because
+// viper's key set (which AutomaticEnv resolves against) came only from the file, not from
+// defaults. SERVER_PORT with no server.port in the file used to silently do nothing.
+func TestLoadConfig_EnvOverrideWorksForKeyAbsentFromFile(t *testing.T) {
+	t.Setenv("SERVER_PORT", "9999")
+
+	c, err := LoadConfig(`
+server:
+  production: true
+`)
+
+	require.NoError(t, err)
+	assert.Equal(t, 9999, c.Server.Port)
+}
+
+// The default ContentTypes allowlist used to only include raster mime types, so an HTTP-proxied
+// vector tile source (which is a legitimate, documented use case - see the proxy provider) failed
+// with InvalidContentTypeError until the operator manually extended the list - an undocumented
+// cliff for anyone proxying MVT.
+func TestDefaultConfig_ContentTypesIncludesVectorTileTypes(t *testing.T) {
+	c := DefaultConfig()
+
+	assert.Contains(t, c.Client.ContentTypes, "application/vnd.mapbox-vector-tile")
+	assert.Contains(t, c.Client.ContentTypes, "application/x-protobuf")
+}
+
+func TestValidate_InvalidErrorMode(t *testing.T) {
+	c := DefaultConfig()
+	c.Error.Mode = "not-a-real-mode"
+
+	err := c.Validate()
+	require.Error(t, err)
+}
+
+func TestValidate_InvalidLogLevel(t *testing.T) {
+	c := DefaultConfig()
+	c.Logging.Main.Level = "not-a-real-level"
+
+	err := c.Validate()
+	require.Error(t, err)
+}
+
+func TestValidate_InvalidMainLogFormat(t *testing.T) {
+	c := DefaultConfig()
+	c.Logging.Main.Format = "not-a-real-format"
+
+	err := c.Validate()
+	require.Error(t, err)
+}
+
+func TestValidate_InvalidAccessLogFormat(t *testing.T) {
+	c := DefaultConfig()
+	c.Logging.Access.Format = "not-a-real-format"
+
+	err := c.Validate()
+	require.Error(t, err)
+}
+
+func TestValidate_DefaultConfigIsValid(t *testing.T) {
+	c := DefaultConfig()
+
+	err := c.Validate()
+	require.NoError(t, err)
+}
+
 func TestMergeDefaultsFrom(t *testing.T) {
 	c1 := DefaultConfig().Client
 
@@ -76,4 +238,26 @@ func TestMergeDefaultsFrom(t *testing.T) {
 	assert.Equal(t, c1.Timeout, c3.Timeout)
 	assert.Equal(t, c1.UnknownLength, c3.UnknownLength)
 	assert.Equal(t, c1.UserAgent, c3.UserAgent)
+}
+
+// UnknownLength is a plain bool, so a layer that explicitly sets `unknownlength: false` to
+// tighten a permissive global default is indistinguishable from a layer that left it unset.
+// Inheriting it would therefore only ever be observable as overriding the explicit false - the
+// exact case that must not happen - so MergeDefaultsFrom leaves the field alone entirely.
+func TestMergeDefaultsFrom_UnknownLength(t *testing.T) {
+	defaults := ClientConfig{UnknownLength: true}
+
+	// A layer explicitly tightening the limit keeps its false.
+	explicitFalse := ClientConfig{UnknownLength: false, Timeout: 5}
+	explicitFalse.MergeDefaultsFrom(defaults)
+	assert.False(t, explicitFalse.UnknownLength, "an explicit layer-level false must not be overridden by a permissive global default")
+
+	// A layer that says nothing also stays false, since unset is not distinguishable from false.
+	var unset ClientConfig
+	unset.MergeDefaultsFrom(defaults)
+	assert.False(t, unset.UnknownLength, "unset is indistinguishable from an explicit false, so it stays false rather than silently loosening the limit")
+
+	// Unrelated fields still inherit normally.
+	assert.Equal(t, uint(0), unset.Timeout)
+	assert.Equal(t, uint(5), explicitFalse.Timeout)
 }

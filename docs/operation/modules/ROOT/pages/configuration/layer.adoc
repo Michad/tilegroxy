@@ -25,7 +25,7 @@ Configuration options:
 | id
 
 | paramValidator
-| A mapping of regular expressions to use to validate the values that match against the placeholders. The regular expressions must match the full value. Specify a key of "*" to apply it to all values
+| A mapping of regular expressions to use to validate the values that match against the placeholders. Each expression is automatically anchored - a `^` is prepended and a `$` appended if not already present - so it must match the full value rather than merely appear somewhere within it. Specify a key of "*" to apply it to all values
 | map[string]string
 | No
 | None

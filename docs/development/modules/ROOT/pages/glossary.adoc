@@ -8,7 +8,7 @@ A visual Layer to be displayed in a map. A frequent web map use case features a 
 
 == Layer Name
 
-The name of the layer as specified in incoming requests. The layer name is used, alongside tile coordinates, as the cache key. Layers are found based on the name in two ways 1) By matching the layer name against the layer's pattern if one is specified or if not 2) by exactly matching the layer's ID
+The name of the layer as specified in incoming requests. The layer name, sanitized to a safe set of characters, is used alongside tile coordinates as the cache key - see the sanitization notes on the xref:operation::configuration/cache/disk.adoc[disk], xref:operation::configuration/cache/s3.adoc[S3], and xref:operation::configuration/cache/memcache.adoc[memcache] cache pages. Layers are found based on the name in two ways 1) By matching the layer name against the layer's pattern if one is specified or if not 2) by exactly matching the layer's ID
 
 == Provider
 

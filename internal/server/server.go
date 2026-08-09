@@ -26,6 +26,7 @@ import (
 	"os/signal"
 	"runtime/debug"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -46,6 +47,83 @@ func handleNoContent(w http.ResponseWriter, _ *http.Request) {
 // This is just here to allow tests to specify a different signal to send to kill the webserver
 // not useful in practice due to OS-specific nature of signals
 var InterruptFlags = []os.Signal{os.Interrupt}
+
+// onReloadPtrSet is a test-only hook invoked right after ListenAndServe publishes the reload
+// callback through its reloadPtr argument. That write happens on whatever goroutine runs
+// ListenAndServe, so a test driving the server from another goroutine has no happens-before edge
+// permitting it to read the result; calling into this hook supplies one. Always nil in production,
+// and only ever assigned by a test before it starts a server.
+var onReloadPtrSet func()
+
+// reloadEntitiesFunc names the reload callback shape so it can be spelled out inside
+// ListenAndServe's body, where the "config" parameter name shadows the config package.
+type reloadEntitiesFunc = func(*config.Config, *layer.LayerGroup, authentication.Authentication) error
+
+// healthReloader tears down the current health subsystem generation and builds a fresh one against
+// the new LayerGroup, storing the new generation's shutdown func through healthShutdown. Declared
+// at package level - rather than as a closure inside ListenAndServe - purely so its parameter
+// types can spell out *config.Config, which ListenAndServe's own "config" parameter shadows within
+// its body.
+//
+// The whole teardown-then-rebuild sequence runs under healthMutex. The mutex is not merely
+// guarding the pointer: concurrent reloads are reachable in practice (pkg/config dispatches each
+// config-change event in its own goroutine), and without serialization two reloads would both read
+// the same old shutdown func, both tear the same generation down, and both race to bind the health
+// port. Holding the lock across the whole sequence makes reloads strictly sequential.
+func healthReloader(ctx context.Context, cfg *config.Config, layerGroup *layer.LayerGroup, healthMutex *sync.Mutex, healthShutdown *func(context.Context) error) error {
+	if !cfg.Server.Health.Enabled {
+		return nil
+	}
+
+	healthMutex.Lock()
+	defer healthMutex.Unlock()
+
+	// The old generation's HTTP server must be shut down (freeing its listener) before the new
+	// one binds - health host/port normally doesn't change between reloads, so binding first
+	// would collide with the still-listening old server.
+	oldHealthShutdown := *healthShutdown
+	*healthShutdown = nil
+
+	if oldHealthShutdown != nil {
+		if err := oldHealthShutdown(context.Background()); err != nil {
+			slog.WarnContext(ctx, fmt.Sprintf("Error shutting down previous health generation: %v", err))
+		}
+	}
+
+	newHealthShutdown, err := SetupHealth(ctx, cfg, layerGroup)
+
+	// SetupHealth can return a non-nil shutdown func alongside an error (it partially builds the
+	// subsystem before failing), so always record whatever it handed back. On failure that means
+	// the pointer holds a func that tears down the partial generation instead of a stale pointer
+	// to the already-shut-down previous generation, which the final shutdown in ListenAndServe
+	// would otherwise invoke. We deliberately do not try to resurrect the previous generation: it
+	// was built from the old config against the old LayerGroup and re-running SetupHealth on it
+	// could fail just as easily, leaving no clear recovery point. Instead the error propagates so
+	// the caller can surface a loud, actionable failure, and the next successful reload rebuilds
+	// health cleanly.
+	*healthShutdown = newHealthShutdown
+
+	if err != nil {
+		slog.ErrorContext(ctx, fmt.Sprintf("Failed to rebuild health subsystem on reload, health endpoint is DOWN until config is fixed and reloaded again: %v", err))
+		return err
+	}
+
+	return nil
+}
+
+// makeCombinedReloadFunc builds the reload callback ListenAndServe hands back to its caller: it
+// runs the tile handler's own reload (swapping to the new LayerGroup) and then rebuilds the
+// health subsystem against that same new LayerGroup, so health checks stop being permanently
+// pinned to the LayerGroup instance from startup.
+func makeCombinedReloadFunc(ctx context.Context, handlerReloadFunc reloadEntitiesFunc, healthMutex *sync.Mutex, healthShutdown *func(context.Context) error) reloadEntitiesFunc {
+	return func(cfg2 *config.Config, layerGroup2 *layer.LayerGroup, auth2 authentication.Authentication) error {
+		if err := handlerReloadFunc(cfg2, layerGroup2, auth2); err != nil {
+			return err
+		}
+
+		return healthReloader(ctx, cfg2, layerGroup2, healthMutex, healthShutdown)
+	}
+}
 
 func setupHandlers(cfg *config.Config, layerGroup *layer.LayerGroup, auth authentication.Authentication) (http.Handler, func(*config.Config, *layer.LayerGroup, authentication.Authentication) error, error) {
 	r := http.ServeMux{}
@@ -177,9 +255,6 @@ func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth au
 	}
 
 	rootHandler, handlerReloadFunc, err := setupHandlers(config, layerGroup, auth)
-	if reloadPtr != nil {
-		*reloadPtr = handlerReloadFunc
-	}
 
 	if err != nil {
 		return err
@@ -194,6 +269,9 @@ func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth au
 	ctx, stop := signal.NotifyContext(pkg.BackgroundContext(), InterruptFlags...)
 	defer stop()
 
+	// healthMutex guards healthShutdown, which the reload callback below replaces with a fresh
+	// generation's shutdown func every time config is reloaded.
+	var healthMutex sync.Mutex
 	var healthShutdown func(context.Context) error
 
 	if config.Server.Health.Enabled {
@@ -202,6 +280,17 @@ func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth au
 		if err != nil {
 			return err
 		}
+	}
+
+	if reloadPtr != nil {
+		*reloadPtr = makeCombinedReloadFunc(ctx, handlerReloadFunc, &healthMutex, &healthShutdown)
+	}
+
+	// reloadPtr is written from whatever goroutine runs ListenAndServe, so a caller on another
+	// goroutine has no happens-before edge letting it safely read the result. onReloadPtrSet is a
+	// test-only hook supplying that edge; it is nil in production.
+	if onReloadPtrSet != nil {
+		onReloadPtrSet()
 	}
 
 	var otelShutdown func(context.Context) error
@@ -252,8 +341,12 @@ func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth au
 		err = errors.Join(err, otelShutdown(context.Background()))
 	}
 
-	if healthShutdown != nil {
-		err = errors.Join(err, healthShutdown(context.Background()))
+	healthMutex.Lock()
+	finalHealthShutdown := healthShutdown
+	healthMutex.Unlock()
+
+	if finalHealthShutdown != nil {
+		err = errors.Join(err, finalHealthShutdown(context.Background()))
 	}
 
 	return err

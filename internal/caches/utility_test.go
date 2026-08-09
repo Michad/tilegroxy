@@ -40,6 +40,91 @@ func TestHostAndPortToStringArr(t *testing.T) {
 	assert.Equal(t, []string{"127.0.0.1:1234", "10.0.0.1:5678"}, HostAndPortArrayToStringArray([]HostAndPort{hp, hp2}))
 }
 
+/*** safeLayerName / safeMemcacheKey ***/
+
+func TestSafeLayerName_OrdinaryNamesPassThroughUnchanged(t *testing.T) {
+	for _, name := range []string{"osm", "my-layer", "layer.v2", "Layer123", "a-b.c"} {
+		assert.Equal(t, name, safeLayerName(name), "ordinary layer name %q should be unchanged", name)
+	}
+}
+
+func TestSafeLayerName_PathTraversalIsNeutralized(t *testing.T) {
+	assert.Equal(t, "____escaped", safeLayerName("../../escaped"))
+	assert.NotContains(t, safeLayerName("../../escaped"), "..")
+	assert.NotContains(t, safeLayerName("../../escaped"), "/")
+}
+
+func TestSafeLayerName_DotDotAlone(t *testing.T) {
+	assert.Equal(t, "_", safeLayerName(".."))
+}
+
+func TestSafeLayerName_DotAlone(t *testing.T) {
+	assert.Equal(t, "_", safeLayerName("."))
+}
+
+func TestSafeLayerName_RunsOfDotsAreNeutralized(t *testing.T) {
+	assert.Equal(t, "_", safeLayerName("..."))
+	assert.Equal(t, "_", safeLayerName("...."))
+	assert.Equal(t, "a_b", safeLayerName("a..b"))
+}
+
+func TestSafeLayerName_SlashSeparatedName(t *testing.T) {
+	assert.Equal(t, "a_b", safeLayerName("a/b"))
+}
+
+func TestSafeLayerName_NonASCIIIsReplaced(t *testing.T) {
+	assert.Equal(t, "caf_", safeLayerName("café"))
+	assert.Equal(t, "___", safeLayerName("日本語"))
+}
+
+func TestSafeLayerName_WhitespaceAndControlCharsAreReplaced(t *testing.T) {
+	assert.Equal(t, "a_b", safeLayerName("a b"))
+	assert.Equal(t, "a_b", safeLayerName("a\tb"))
+	assert.Equal(t, "a_b", safeLayerName("a\nb"))
+	assert.Equal(t, "a_b", safeLayerName("a\x00b"))
+}
+
+// Documents the accepted collision tradeoff of sanitizing instead of hashing: distinct layer
+// names that differ only in unsafe characters can map to the same sanitized value.
+func TestSafeLayerName_CollisionsAreExpectedForDistinctUnsafeNames(t *testing.T) {
+	assert.Equal(t, safeLayerName("a/b"), safeLayerName("a b"))
+}
+
+func TestSafeMemcacheKey_ShortKeyIsUnchanged(t *testing.T) {
+	key := safeMemcacheKey("prefix_", "osm/20/1/1")
+	assert.Equal(t, "prefix_osm/20/1/1", key)
+}
+
+func TestSafeMemcacheKey_LongKeyIsShortenedAndStaysWithinLimit(t *testing.T) {
+	prefix := "p_"
+	longBody := strings.Repeat("a", 400) + "/20/1/1"
+
+	key := safeMemcacheKey(prefix, longBody)
+
+	assert.LessOrEqual(t, len(key), memcacheMaxKeyLength)
+	assert.Contains(t, key, "_", "expected hash suffix to be appended")
+}
+
+func TestSafeMemcacheKey_LongKeysWithDifferentBodiesStayDistinct(t *testing.T) {
+	prefix := "p_"
+	body1 := strings.Repeat("a", 400) + "/20/1/1"
+	body2 := strings.Repeat("a", 400) + "/20/1/2"
+
+	key1 := safeMemcacheKey(prefix, body1)
+	key2 := safeMemcacheKey(prefix, body2)
+
+	assert.LessOrEqual(t, len(key1), memcacheMaxKeyLength)
+	assert.LessOrEqual(t, len(key2), memcacheMaxKeyLength)
+	assert.NotEqual(t, key1, key2, "distinct long keys should not collide after truncation")
+}
+
+func TestSafeMemcacheKey_PrefixCountsTowardLimit(t *testing.T) {
+	longPrefix := strings.Repeat("p", 245)
+	key := safeMemcacheKey(longPrefix, "osm/20/1/1")
+
+	assert.LessOrEqual(t, len(key), memcacheMaxKeyLength)
+}
+
 /*** Utility methods used in most other cache tests ***/
 
 func extractHostAndPort(t *testing.T, endpoint string) HostAndPort {

@@ -15,6 +15,8 @@
 package datastore
 
 import (
+	"fmt"
+
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
@@ -50,7 +52,15 @@ func ConstructDatastoreRegistry(cfg []map[string]interface{}, secreter secret.Se
 			return nil, err
 		}
 
-		reg.datastores[wrapper.GetID()] = wrapper
+		id := wrapper.GetID()
+		if id == "" {
+			return nil, fmt.Errorf("datastore is missing a required id")
+		}
+		if _, exists := reg.datastores[id]; exists {
+			return nil, fmt.Errorf("duplicate datastore id %q: every datastore must have a unique id", id)
+		}
+
+		reg.datastores[id] = wrapper
 	}
 
 	return &reg, nil

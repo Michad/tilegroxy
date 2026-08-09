@@ -210,7 +210,7 @@ func setupCheckRoutines(ctx context.Context, h config.HealthConfig, layerGroup *
 	checks := make([]health.HealthCheck, 0, len(h.Checks))
 	var callback func(context.Context) error
 	tickers := make([]*time.Ticker, 0, len(h.Checks))
-	exitChannels := make([]chan bool, 0, len(h.Checks))
+	exitChannels := make([]chan struct{}, 0, len(h.Checks))
 
 	for _, checkCfg := range h.Checks {
 		hc, err := health.ConstructHealthCheck(checkCfg, layerGroup, cfg)
@@ -229,7 +229,7 @@ func setupCheckRoutines(ctx context.Context, h config.HealthConfig, layerGroup *
 		ttl := time.Second * time.Duration(delay) // #nosec G115
 
 		ticker := time.NewTicker(ttl)
-		done := make(chan bool)
+		done := make(chan struct{})
 		tickers = append(tickers, ticker)
 		exitChannels = append(exitChannels, done)
 
@@ -247,15 +247,24 @@ func setupCheckRoutines(ctx context.Context, h config.HealthConfig, layerGroup *
 		}()
 	}
 
-	callback = func(ctx context.Context) error {
-		slog.InfoContext(ctx, "Terminating health subsystem")
+	// The stop signal is a broadcast close rather than a send: closing unblocks every receiver
+	// (and any future receive) and can never block the caller, whereas a send on an unbuffered
+	// channel deadlocks forever once the ticker goroutine has already exited - which is exactly
+	// what happened when two concurrent reloads both got hold of the same shutdown func. The
+	// sync.Once additionally makes a double shutdown a no-op instead of a close-of-closed panic.
+	var stopOnce sync.Once
 
-		for _, ticker := range tickers {
-			ticker.Stop()
-		}
-		for _, channel := range exitChannels {
-			channel <- true
-		}
+	callback = func(ctx context.Context) error {
+		stopOnce.Do(func() {
+			slog.InfoContext(ctx, "Terminating health subsystem")
+
+			for _, ticker := range tickers {
+				ticker.Stop()
+			}
+			for _, channel := range exitChannels {
+				close(channel)
+			}
+		})
 
 		return nil
 	}

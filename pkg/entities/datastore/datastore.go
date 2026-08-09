@@ -16,11 +16,11 @@ package datastore
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
-	"github.com/mitchellh/mapstructure"
 )
 
 // Wraps around an arbitrary struct for communicating with an arbitrary database. The goal for this datastore mechanism isn't to provide a uniform interface for querying databases but instead to provide a consistent way to declare database connection (pools) that can be reused between providers
@@ -37,18 +37,25 @@ type DatastoreWrapperRegistration interface {
 	InitializeConfig() any
 }
 
+var registrationsMu sync.RWMutex
 var registrations = make(map[string]DatastoreWrapperRegistration)
 
 func RegisterDatastoreWrapper(reg DatastoreWrapperRegistration) {
+	registrationsMu.Lock()
+	defer registrationsMu.Unlock()
 	registrations[reg.Name()] = reg
 }
 
 func RegisteredDatastoreWrapper(name string) (DatastoreWrapperRegistration, bool) {
+	registrationsMu.RLock()
+	defer registrationsMu.RUnlock()
 	o, ok := registrations[name]
 	return o, ok
 }
 
 func RegisteredDatastoreWrapperNames() []string {
+	registrationsMu.RLock()
+	defer registrationsMu.RUnlock()
 	names := make([]string, 0, len(registrations))
 	for n := range registrations {
 		names = append(names, n)
@@ -65,7 +72,7 @@ func ConstructDatastoreWrapper(rawConfig map[string]interface{}, secreter secret
 		reg, ok := RegisteredDatastoreWrapper(name)
 		if ok {
 			cfg := reg.InitializeConfig()
-			err := mapstructure.Decode(rawConfig, &cfg)
+			err := config.DecodeEntityConfig(rawConfig, &cfg)
 			if err != nil {
 				return nil, err
 			}

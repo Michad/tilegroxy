@@ -36,6 +36,35 @@ import (
 
 var packageName = static.GetPackage()
 
+// metricNameSafeChars matches characters that are safe to use verbatim when embedding
+// arbitrary user-supplied text (a layer ID) into the middle of an OTEL instrument name.
+var metricNameSafeChars = regexp.MustCompile(`[^A-Za-z0-9_-]`)
+
+// maxSanitizedMetricNameLen caps the sanitized ID contribution to the metric name so that,
+// combined with the "tilegroxy.tiles.layer." prefix and the longest suffix (".success"),
+// the full instrument name stays comfortably under OTEL's 255 character limit.
+const maxSanitizedMetricNameLen = 200
+
+// sanitizeMetricName makes a layer ID safe to embed inside an OTEL instrument name.
+// OTEL instrument names must start with an alphabetic character and may only contain
+// ASCII letters, digits, '_', '.', '-', and '/' (max 255 chars). Since the ID here is
+// embedded mid-name (as "tilegroxy.tiles.layer.{id}.request" etc.), we're conservative
+// and only allow A-Za-z0-9_- - everything else (including '.', '/', spaces, and all
+// non-ASCII characters) is replaced with '_' so the ID can't inject extra dot-segments
+// into the metric name, can't smuggle a leading non-alphabetic character into a segment,
+// and can't push the overall name past the length limit. A raw layer ID with a space or
+// certain non-ASCII characters used to make Int64Counter construction fail outright,
+// which was fatal at server startup - this sanitization avoids that entirely.
+func sanitizeMetricName(id string) string {
+	sanitized := metricNameSafeChars.ReplaceAllString(id, "_")
+
+	if len(sanitized) > maxSanitizedMetricNameLen {
+		sanitized = sanitized[:maxSanitizedMetricNameLen]
+	}
+
+	return sanitized
+}
+
 type layerSegment struct {
 	value       string
 	placeholder bool
@@ -222,27 +251,47 @@ func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.Cli
 
 	meter := otel.Meter(packageName)
 
-	tileAllCounter, err1 := meter.Int64Counter("tilegroxy.tiles.layer."+rawConfig.ID+".request", metric.WithDescription("Number of tile requests for "+rawConfig.ID))
-	tileAuthCounter, err2 := meter.Int64Counter("tilegroxy.tiles.layer."+rawConfig.ID+".auth", metric.WithDescription("Number of outgoing authentication checks for "+rawConfig.ID))
-	tileErrorCounter, err3 := meter.Int64Counter("tilegroxy.tiles.layer."+rawConfig.ID+".error", metric.WithDescription("Number of tile requests that error during generation for "+rawConfig.ID))
-	tileSuccessCounter, err4 := meter.Int64Counter("tilegroxy.tiles.layer."+rawConfig.ID+".success", metric.WithDescription("Number of tile requests that result in a tile for "+rawConfig.ID))
+	// The layer ID is embedded directly in the metric name so each layer gets its own
+	// counters. OTEL instrument names must start with a letter and may only contain
+	// ASCII letters, digits, '_', '.', '-', and '/' (max 255 chars) - an ID with a space,
+	// a dot/slash, or non-ASCII characters would otherwise produce an invalid instrument
+	// name and make Int64Counter construction fail, which is fatal at startup. sanitizeMetricName
+	// replaces anything outside A-Za-z0-9_- with '_' so the ID can't inject extra
+	// dot-segments into the metric name or push it past the length limit.
+	sanitizedID := sanitizeMetricName(rawConfig.ID)
+	tileAllCounter, err1 := meter.Int64Counter("tilegroxy.tiles.layer."+sanitizedID+".request", metric.WithDescription("Number of tile requests for "+rawConfig.ID))
+	tileAuthCounter, err2 := meter.Int64Counter("tilegroxy.tiles.layer."+sanitizedID+".auth", metric.WithDescription("Number of outgoing authentication checks for "+rawConfig.ID))
+	tileErrorCounter, err3 := meter.Int64Counter("tilegroxy.tiles.layer."+sanitizedID+".error", metric.WithDescription("Number of tile requests that error during generation for "+rawConfig.ID))
+	tileSuccessCounter, err4 := meter.Int64Counter("tilegroxy.tiles.layer."+sanitizedID+".success", metric.WithDescription("Number of tile requests that result in a tile for "+rawConfig.ID))
 
 	return &Layer{rawConfig.ID, segments, validator, rawConfig, provider, nil, errorMessages, ProviderContext{}, sync.Mutex{}, tileAllCounter, tileAuthCounter, tileErrorCounter, tileSuccessCounter}, errors.Join(err1, err2, err3, err4)
 }
 
-func (l *Layer) authWithProvider(ctx context.Context) error {
+// getProviderContext returns a snapshot of the current provider context, re-authenticating
+// first if needed. The mutex is held for the full read-check-write sequence so concurrent
+// requests can't observe a torn or stale value.
+func (l *Layer) getProviderContext(ctx context.Context) (ProviderContext, error) {
 	var err error
 
-	if !l.providerContext.AuthBypass {
-		l.authMutex.Lock()
-		if l.providerContext.AuthExpiration.Before(time.Now()) {
-			l.tileAuthCounter.Add(ctx, 1)
-			l.providerContext, err = l.Provider.PreAuth(ctx, l.providerContext)
-		}
-		l.authMutex.Unlock()
+	l.authMutex.Lock()
+	defer l.authMutex.Unlock()
+
+	if !l.providerContext.AuthBypass && l.providerContext.AuthExpiration.Before(time.Now()) {
+		l.tileAuthCounter.Add(ctx, 1)
+		l.providerContext, err = l.Provider.PreAuth(ctx, l.providerContext)
 	}
 
-	return err
+	return l.providerContext, err
+}
+
+// forceReauth discards the current provider context's expiration so the next getProviderContext
+// call re-authenticates, then returns the refreshed context.
+func (l *Layer) forceReauth(ctx context.Context) (ProviderContext, error) {
+	l.authMutex.Lock()
+	l.providerContext.AuthExpiration = time.Time{}
+	l.authMutex.Unlock()
+
+	return l.getProviderContext(ctx)
 }
 
 func (l *Layer) MatchesName(ctx context.Context, layerName string) bool {
@@ -266,23 +315,23 @@ func (l *Layer) RenderTileNoCache(ctx context.Context, tileRequest pkg.TileReque
 
 	l.tileAllCounter.Add(ctx, 1)
 
-	err = l.authWithProvider(ctx)
+	providerContext, err := l.getProviderContext(ctx)
 
 	if err != nil {
 		return nil, err
 	}
 
-	img, err = l.Provider.GenerateTile(ctx, l.providerContext, tileRequest)
+	img, err = l.Provider.GenerateTile(ctx, providerContext, tileRequest)
 
-	var authError *pkg.ProviderAuthError
+	var authError pkg.ProviderAuthError
 	if errors.As(err, &authError) {
-		err = l.authWithProvider(ctx)
+		providerContext, err = l.forceReauth(ctx)
 
 		if err != nil {
 			return nil, err
 		}
 
-		img, err = l.Provider.GenerateTile(ctx, l.providerContext, tileRequest)
+		img, err = l.Provider.GenerateTile(ctx, providerContext, tileRequest)
 
 		if err != nil {
 			l.tileErrorCounter.Add(ctx, 1)

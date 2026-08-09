@@ -81,8 +81,15 @@ func writeErrorMessage(ctx context.Context, w http.ResponseWriter, cfg *config.E
 
 	slog.Log(ctx, level, internalMessage, "stack", string(stack))
 
+	// An error response must never be cached: with AlwaysOK the status is 200 even for a real
+	// error, and even without it a CDN in front of tilegroxy could otherwise cache "tile
+	// unavailable" (an image-mode error body, or a plain-text one) long after the upstream
+	// recovers, since neither carried any cache-control signal before.
+	w.Header().Set("Cache-Control", "no-store")
+
 	switch cfg.Mode {
 	case config.ModeErrorPlainText:
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(status)
 		_, err := w.Write([]byte(externalMessage))
 		if err != nil {
@@ -92,9 +99,15 @@ func writeErrorMessage(ctx context.Context, w http.ResponseWriter, cfg *config.E
 		if cfg.Mode == config.ModeErrorImageHeader {
 			w.Header().Add("X-Error-Message", externalMessage)
 		}
-		w.WriteHeader(status)
 
 		img, err2 := images.GetStaticImage(imgPath)
+
+		if img != nil && err2 == nil {
+			w.Header().Set("Content-Type", "image/png")
+		}
+
+		w.WriteHeader(status)
+
 		if img != nil && err2 == nil {
 			_, err2 = w.Write(*img)
 		}

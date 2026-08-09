@@ -17,6 +17,7 @@ import (
 	"image/color"
 	"testing"
 
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -84,4 +85,22 @@ func TestImageLoad(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, imageError, *img)
+}
+
+// pkg/config can't import this package (it's internal/, so importing it would make an exported
+// struct's defaults depend on an unexportable package), so it mirrors these embedded image keys
+// as its own literal string constants. This guards against the two definitions drifting apart.
+func TestDefaultConfigImageKeysMatchEmbeddedKeys(t *testing.T) {
+	def := config.DefaultConfig()
+
+	assert.Equal(t, KeyImageTransparent, def.Error.Images.OutOfBounds)
+	assert.Equal(t, KeyImageUnauthorized, def.Error.Images.Authentication)
+	assert.Equal(t, KeyImageError, def.Error.Images.Provider)
+	assert.Equal(t, KeyImageError, def.Error.Images.Other)
+
+	for _, key := range []string{def.Error.Images.OutOfBounds, def.Error.Images.Authentication, def.Error.Images.Provider, def.Error.Images.Other} {
+		img, err := GetStaticImage(key)
+		require.NoError(t, err)
+		assert.NotNil(t, img)
+	}
 }

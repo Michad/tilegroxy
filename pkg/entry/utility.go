@@ -22,11 +22,16 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/Michad/tilegroxy/pkg/entities/datastore"
+	"github.com/Michad/tilegroxy/pkg/entities/health"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
 )
 
 func configToEntities(cfg config.Config) (*layer.LayerGroup, authentication.Authentication, error) {
+	if err := cfg.Validate(); err != nil {
+		return nil, nil, err
+	}
+
 	cfg.Secret = pkg.ReplaceEnv(cfg.Secret)
 	secreter, err := secret.ConstructSecreter(cfg.Secret, cfg.Error.Messages)
 	if err != nil {
@@ -63,6 +68,16 @@ func configToEntities(cfg config.Config) (*layer.LayerGroup, authentication.Auth
 	layerGroup, err := layer.ConstructLayerGroup(cfg, cache, secreter, datastores)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error constructing layers: %w", err)
+	}
+
+	// Health checks are constructed here purely so their config is validated - a bad check name or
+	// a typo'd field would otherwise only surface when `serve` binds the health port, letting
+	// `config check` report a config as Valid that can't actually start. The constructed checks are
+	// discarded; serve builds its own (see internal/server.setupCheckRoutines).
+	for _, checkCfg := range cfg.Server.Health.Checks {
+		if _, err := health.ConstructHealthCheck(checkCfg, layerGroup, &cfg); err != nil {
+			return nil, nil, fmt.Errorf("error constructing health check: %w", err)
+		}
 	}
 
 	return layerGroup, auth, err

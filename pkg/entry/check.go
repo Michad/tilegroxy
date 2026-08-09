@@ -27,6 +27,10 @@ type CheckOptions struct {
 }
 
 func CheckConfig(cfg *config.Config, opts CheckOptions, out io.Writer) error {
+	if out == nil {
+		out = io.Discard
+	}
+
 	var err error
 	_, _, err = configToEntities(*cfg)
 

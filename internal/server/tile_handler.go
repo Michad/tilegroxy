@@ -16,11 +16,14 @@ package server
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -165,6 +168,16 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		w.Header().Add("Content-Type", img.ContentType)
 	}
 
+	etag := etagFor(img.Content)
+	w.Header().Set("ETag", etag)
+
+	if requestETagMatches(req.Header.Get("If-None-Match"), etag) {
+		w.WriteHeader(http.StatusNotModified)
+		span.SetStatus(codes.Ok, "")
+		h.tileSuccessCounter.Add(ctx, 1)
+		return
+	}
+
 	w.Header().Set("Content-Length", strconv.Itoa(len(img.Content)))
 	w.WriteHeader(http.StatusOK)
 
@@ -185,6 +198,34 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	// This isn't in the else clause because the tile was still generated successfully even though request errored
 	h.tileSuccessCounter.Add(ctx, 1)
+}
+
+// etagFor produces a strong ETag from the tile content. Content is already in memory by the time
+// this runs, so hashing it is cheap - this is the "cheap win" for HTTP caching semantics: the
+// internal cache saves the upstream call, but without this every byte still crosses the wire on
+// every request and browsers re-fetch every tile on every pan/zoom.
+func etagFor(content []byte) string {
+	sum := sha256.Sum256(content)
+	return `"` + hex.EncodeToString(sum[:]) + `"`
+}
+
+// requestETagMatches implements the If-None-Match precondition from RFC 9110 §13.1.2: a
+// comma-separated list of one or more entity tags, or "*" to match any current representation.
+func requestETagMatches(ifNoneMatch string, etag string) bool {
+	if ifNoneMatch == "" {
+		return false
+	}
+	if ifNoneMatch == "*" {
+		return true
+	}
+	for _, candidate := range strings.Split(ifNoneMatch, ",") {
+		candidate = strings.TrimSpace(candidate)
+		candidate = strings.TrimPrefix(candidate, "W/")
+		if candidate == etag {
+			return true
+		}
+	}
+	return false
 }
 
 func (h *reloadableEntities) writeHeaders(w http.ResponseWriter) {

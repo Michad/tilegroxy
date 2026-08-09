@@ -16,6 +16,7 @@ package providers
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -23,6 +24,13 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"go.opentelemetry.io/otel/trace"
 )
+
+// Maximum number of hops a request may be forwarded through ref providers before we assume a cycle and bail out.
+// Startup validation catches statically-resolvable cycles; this is a backstop for patterned layer names that
+// can't be resolved until request time. The root request is hop 0, so a chain of maxRefDepth ref hops (depths
+// 0..maxRefDepth-1) is allowed and the (maxRefDepth+1)-th hop - the one that would make *depth reach
+// maxRefDepth - is rejected. That keeps the count in the error message equal to the actual number of hops made.
+const maxRefDepth = 25
 
 type RefConfig struct {
 	Layer string
@@ -62,9 +70,21 @@ func (t Ref) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.Provider
 func (t Ref) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	newRequest := pkg.TileRequest{LayerName: t.Layer, Z: tileRequest.Z, X: tileRequest.X, Y: tileRequest.Y}
 
+	depth, _ := pkg.RefDepthFromContext(ctx)
+	if depth != nil && *depth >= maxRefDepth {
+		return nil, fmt.Errorf("ref: maximum reference depth (%v) exceeded, likely a cycle involving layer %v", maxRefDepth, t.Layer)
+	}
+
 	// We need to make a new context for the child call to avoid e.g. layer placeholder from main layer interfering with that of the child layer
 	req, _ := pkg.ReqFromContext(ctx)
 	newCtx := pkg.NewRequestContext(req)
+
+	// pkg.NewRequestContext always installs a fresh refDepth pointer (initialized to 0), so this
+	// lookup can't fail in practice - but we still guard against a nil pointer rather than assume,
+	// in case that ever changes.
+	if newDepth, ok := pkg.RefDepthFromContext(newCtx); ok && newDepth != nil && depth != nil {
+		*newDepth = *depth + 1
+	}
 
 	// Copy span over from original context
 	span := trace.SpanFromContext(ctx)

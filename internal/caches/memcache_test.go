@@ -137,3 +137,29 @@ func TestMemcacheWithContainerDiffPrefix(t *testing.T) {
 	validateSaveAndLookup(t, r)
 	validateSaveAndLookup(t, r2)
 }
+
+// A cache miss (a tile never Saved) used to come back from memcache.Get as memcache.ErrCacheMiss
+// and get returned as a Lookup error, logged at WARN as "Cache read error" on every single miss -
+// unlike redis, which correctly treats a miss as "no result, no error". This made real cache
+// failures unfindable in the noise.
+func TestMemcacheWithContainerMissIsNotAnError(t *testing.T) {
+	ctx := context.Background()
+	memcacheC, cleanupF := setupMemcacheContainer(ctx, t)
+	if !assert.NotNil(t, memcacheC) {
+		return
+	}
+
+	defer cleanupF(t)
+
+	endpoint, err := memcacheC.Endpoint(ctx, "")
+	require.NoError(t, err)
+
+	cfg := MemcacheConfig{
+		HostAndPort: extractHostAndPort(t, endpoint),
+	}
+
+	r, err := MemcacheRegistration{}.Initialize(cfg, config.ErrorMessages{})
+	require.NoError(t, err)
+
+	validateNoLookup(t, r, makeReq(1))
+}

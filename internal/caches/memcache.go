@@ -16,6 +16,7 @@ package caches
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -90,9 +91,24 @@ func (s MemcacheRegistration) Initialize(configAny any, errorMessages config.Err
 
 }
 
-func (c Memcache) Lookup(_ context.Context, t pkg.TileRequest) (*pkg.Image, error) {
-	it, err := c.client.Get(c.KeyPrefix + t.String())
+// memcacheKey sanitizes LayerName (see safeLayerName) rather than using it directly, because
+// LayerName is attacker-controlled for pattern layers and memcache keys can't contain whitespace
+// or control characters. The rest of the key shape - KeyPrefix + LayerName/Z/X/Y, matching
+// pkg.TileRequest.String() - is preserved for readability/debuggability. safeMemcacheKey then
+// guards against memcache's 250-byte key length limit (which KeyPrefix counts toward), falling
+// back to a hash-suffixed, truncated key only when the sanitized key would otherwise be too long.
+func memcacheKey(prefix string, t pkg.TileRequest) string {
+	safe := t
+	safe.LayerName = safeLayerName(t.LayerName)
+	return safeMemcacheKey(prefix, safe.String())
+}
 
+func (c Memcache) Lookup(_ context.Context, t pkg.TileRequest) (*pkg.Image, error) {
+	it, err := c.client.Get(memcacheKey(c.KeyPrefix, t))
+
+	if errors.Is(err, memcache.ErrCacheMiss) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -107,5 +123,5 @@ func (c Memcache) Save(_ context.Context, t pkg.TileRequest, img *pkg.Image) err
 		return err
 	}
 
-	return c.client.Set(&memcache.Item{Key: c.KeyPrefix + t.String(), Value: val, Expiration: int32(c.TTL)}) // #nosec G115 -- max value applied in Initialize
+	return c.client.Set(&memcache.Item{Key: memcacheKey(c.KeyPrefix, t), Value: val, Expiration: int32(c.TTL)}) // #nosec G115 -- max value applied in Initialize
 }

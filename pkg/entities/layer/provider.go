@@ -17,12 +17,12 @@ package layer
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/datastore"
-	"github.com/mitchellh/mapstructure"
 )
 
 type Provider interface {
@@ -45,18 +45,25 @@ type ProviderRegistration interface {
 	InitializeConfig() any
 }
 
+var registrationsMu sync.RWMutex
 var registrations = make(map[string]ProviderRegistration)
 
 func RegisterProvider(reg ProviderRegistration) {
+	registrationsMu.Lock()
+	defer registrationsMu.Unlock()
 	registrations[reg.Name()] = reg
 }
 
 func RegisteredProvider(name string) (ProviderRegistration, bool) {
+	registrationsMu.RLock()
+	defer registrationsMu.RUnlock()
 	o, ok := registrations[name]
 	return o, ok
 }
 
 func RegisteredProviderNames() []string {
+	registrationsMu.RLock()
+	defer registrationsMu.RUnlock()
 	names := make([]string, 0, len(registrations))
 	for n := range registrations {
 		names = append(names, n)
@@ -71,7 +78,7 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig config.Cli
 		reg, ok := RegisteredProvider(name)
 		if ok {
 			cfg := reg.InitializeConfig()
-			err := mapstructure.Decode(rawConfig, &cfg)
+			err := config.DecodeEntityConfig(rawConfig, &cfg)
 			if err != nil {
 				return nil, err
 			}

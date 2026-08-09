@@ -15,9 +15,12 @@
 package caches
 
 import (
+	"context"
 	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/stretchr/testify/require"
 )
@@ -32,4 +35,37 @@ func TestDisk(t *testing.T) {
 	c, err := DiskRegistration{}.Initialize(cfg, config.ErrorMessages{})
 	require.NoError(t, err)
 	validateSaveAndLookup(t, c)
+}
+
+// A layer name of "../../escaped" used to let Save/Lookup write or read outside the configured
+// cache directory, since the filename was built by directly concatenating LayerName - which is
+// attacker-controlled for pattern layers - with the tile coordinates.
+func TestDisk_LayerNamePathTraversalIsContained(t *testing.T) {
+	dir, err := os.MkdirTemp("", "tilegroxy-test-disk")
+	defer os.RemoveAll(dir)
+	require.NoError(t, err)
+
+	cfg := DiskConfig{Path: dir}
+	cAny, err := DiskRegistration{}.Initialize(cfg, config.ErrorMessages{})
+	require.NoError(t, err)
+	c := cAny.(*Disk)
+
+	maliciousTile := pkg.TileRequest{LayerName: "../../escaped", Z: 1, X: 2, Y: 3}
+	img := pkg.Image{Content: []byte("payload")}
+
+	err = c.Save(context.Background(), maliciousTile, &img)
+	require.NoError(t, err)
+
+	// Nothing should have been written outside the cache directory.
+	_, statErr := os.Stat(filepath.Join(filepath.Dir(filepath.Dir(dir)), "escaped"))
+	require.True(t, os.IsNotExist(statErr), "traversal payload escaped the cache directory")
+
+	entries, err := os.ReadDir(dir)
+	require.NoError(t, err)
+	require.Len(t, entries, 1, "expected exactly one file written inside the cache directory")
+
+	result, err := c.Lookup(context.Background(), maliciousTile)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.Equal(t, img.Content, result.Content)
 }

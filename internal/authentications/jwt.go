@@ -50,9 +50,22 @@ type JWTConfig struct {
 	UserID           string // Use the specified grant as the user identifier. Defaults to sub
 }
 
+// cachedAuthResult holds everything CheckAuthentication derives from a validated token, so a
+// cache hit can replay the same authorization side effects (allowed layers, allowed area, user
+// ID) as a fresh validation instead of just checking expiration and leaving those context values
+// at their default (unrestricted) state.
+type cachedAuthResult struct {
+	expiration       jwt.NumericDate
+	limitLayers      bool
+	allowedLayers    []string
+	limitAreaPartial bool
+	allowedArea      pkg.Bounds
+	userID           string
+}
+
 type JWT struct {
 	JWTConfig
-	Cache         *otter.Cache[string, jwt.NumericDate]
+	Cache         *otter.Cache[string, cachedAuthResult]
 	errorMessages config.ErrorMessages
 }
 
@@ -98,7 +111,7 @@ func (s JWTRegistration) Initialize(configAny any, errorMessages config.ErrorMes
 		return &JWT{config, nil, errorMessages}, nil
 	}
 
-	cache, err := otter.MustBuilder[string, jwt.NumericDate](int(config.CacheSize)).Build()
+	cache, err := otter.MustBuilder[string, cachedAuthResult](int(config.CacheSize)).Build()
 	if err != nil {
 		return nil, err
 	}
@@ -113,24 +126,53 @@ func (c JWT) CheckAuthentication(ctx context.Context, req *http.Request) bool {
 	}
 
 	if c.Cache != nil {
-		date, ok := c.Cache.Get(tokenStr)
+		result, ok := c.Cache.Get(tokenStr)
 
 		if ok {
+			if !result.expiration.After(time.Now()) {
+				return false
+			}
+
 			slog.DebugContext(ctx, "JWT Cache hit")
-			return date.After(time.Now())
+			result.apply(ctx)
+			return true
 		}
 	}
 
-	exp, ok := c.checkAuthenticationWithoutCache(ctx, tokenStr)
+	result, ok := c.checkAuthenticationWithoutCache(ctx, tokenStr)
 	if !ok {
 		return false
 	}
 
 	if c.Cache != nil {
-		c.Cache.SetIfAbsent(tokenStr, *exp)
+		c.Cache.SetIfAbsent(tokenStr, *result)
 	}
 
 	return true
+}
+
+// apply replays the authorization side effects a fresh validation would have set on the
+// request context, so a cache hit behaves identically to a cache miss.
+func (r cachedAuthResult) apply(ctx context.Context) {
+	if ctxLimitLayers, ok := pkg.LimitLayersFromContext(ctx); ok {
+		*ctxLimitLayers = r.limitLayers
+	}
+	if ctxAllowedLayers, ok := pkg.AllowedLayersFromContext(ctx); ok {
+		*ctxAllowedLayers = append(*ctxAllowedLayers, r.allowedLayers...)
+	}
+	if ctxLimitAreaPartial, ok := pkg.LimitAreaPartialFromContext(ctx); ok {
+		*ctxLimitAreaPartial = r.limitAreaPartial
+	}
+	if !r.allowedArea.IsNullIsland() {
+		if ctxAllowedArea, ok := pkg.AllowedAreaFromContext(ctx); ok {
+			*ctxAllowedArea = r.allowedArea
+		}
+	}
+	if r.userID != "" {
+		if ctxUserID, ok := pkg.UserIDFromContext(ctx); ok {
+			*ctxUserID = r.userID
+		}
+	}
 }
 
 func (c JWT) extractToken(req *http.Request) (string, bool) {
@@ -152,7 +194,7 @@ func (c JWT) extractToken(req *http.Request) (string, bool) {
 	return tokenStr, true
 }
 
-func (c JWT) checkAuthenticationWithoutCache(ctx context.Context, tokenStr string) (*jwt.NumericDate, bool) {
+func (c JWT) checkAuthenticationWithoutCache(ctx context.Context, tokenStr string) (*cachedAuthResult, bool) {
 	parserOptions := make([]jwt.ParserOption, 0)
 	parserOptions = append(parserOptions, jwt.WithLeeway(defaultLeeway))
 	parserOptions = append(parserOptions, jwt.WithExpirationRequired())
@@ -216,7 +258,25 @@ func (c JWT) checkAuthenticationWithoutCache(ctx context.Context, tokenStr strin
 	} else {
 		return logInvalidClaimsType(ctx, tokenJwt)
 	}
-	return exp, true
+
+	result := cachedAuthResult{expiration: *exp}
+	if ctxLimitLayers, ok := pkg.LimitLayersFromContext(ctx); ok {
+		result.limitLayers = *ctxLimitLayers
+	}
+	if ctxAllowedLayers, ok := pkg.AllowedLayersFromContext(ctx); ok {
+		result.allowedLayers = *ctxAllowedLayers
+	}
+	if ctxLimitAreaPartial, ok := pkg.LimitAreaPartialFromContext(ctx); ok {
+		result.limitAreaPartial = *ctxLimitAreaPartial
+	}
+	if ctxAllowedArea, ok := pkg.AllowedAreaFromContext(ctx); ok {
+		result.allowedArea = *ctxAllowedArea
+	}
+	if ctxUserID, ok := pkg.UserIDFromContext(ctx); ok {
+		result.userID = *ctxUserID
+	}
+
+	return &result, true
 }
 
 func (c JWT) parseKey(_ *jwt.Token) (interface{}, error) {
@@ -239,7 +299,7 @@ func (c JWT) parseKey(_ *jwt.Token) (interface{}, error) {
 	return nil, fmt.Errorf(c.errorMessages.InvalidParam, "jwt.alg", c.Algorithm)
 }
 
-func logInvalidClaimsType(ctx context.Context, tokenJwt *jwt.Token) (*jwt.NumericDate, bool) {
+func logInvalidClaimsType(ctx context.Context, tokenJwt *jwt.Token) (*cachedAuthResult, bool) {
 	// notest
 
 	var debugType string
