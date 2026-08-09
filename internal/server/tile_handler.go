@@ -207,6 +207,21 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	writeTile(ctx, w, span, img)
+
+	// This isn't in the else clause because the tile was still generated successfully even though request errored
+	h.tileSuccessCounter.Add(ctx, 1)
+
+	// Recorded after the response is written so analytics never sits on the latency path. Like the
+	// success counter above, a failed write still counts as usage: the tile was produced and, for
+	// operators tracking consumption of a paid upstream, the cost was incurred.
+	entities.recordAnalytics(ctx, tileReq, img)
+}
+
+// writeTile sends a rendered tile as the response body, recording the outcome on the span. A write
+// failure is reported but not returned: the tile was already generated, so the caller still treats
+// the request as a success for counting and analytics purposes.
+func writeTile(ctx context.Context, w http.ResponseWriter, span trace.Span, img *pkg.Image) {
 	if img.ContentType != "" {
 		w.Header().Add("Content-Type", img.ContentType)
 	}
@@ -214,7 +229,7 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Length", strconv.Itoa(len(img.Content)))
 	w.WriteHeader(http.StatusOK)
 
-	_, err = w.Write(img.Content)
+	_, err := w.Write(img.Content)
 
 	if err != nil {
 		if errors.Is(err, context.Canceled) || err.Error() == context.Canceled.Error() {
@@ -228,14 +243,6 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	} else {
 		span.SetStatus(codes.Ok, "")
 	}
-
-	// This isn't in the else clause because the tile was still generated successfully even though request errored
-	h.tileSuccessCounter.Add(ctx, 1)
-
-	// Recorded after the response is written so analytics never sits on the latency path. Like the
-	// success counter above, a failed write still counts as usage: the tile was produced and, for
-	// operators tracking consumption of a paid upstream, the cost was incurred.
-	entities.recordAnalytics(ctx, tileReq, img)
 }
 
 // recordAnalytics emits a usage event for a successfully served tile. It resolves the layer a
