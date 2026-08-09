@@ -93,4 +93,6 @@ func Test_RegisterAuthentication_ConcurrentIsRaceFree(t *testing.T) {
 		}()
 	}
 	wg.Wait()
+
+	assert.Contains(t, RegisteredAuthenticationNames(), "stub-auth")
 }

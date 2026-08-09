@@ -26,6 +26,7 @@ import (
 	"math"
 	"math/rand/v2"
 	"net/http"
+	neturl "net/url"
 	"os"
 	"reflect"
 	"slices"
@@ -254,12 +255,46 @@ func ReplaceEnv(rawConfig map[string]interface{}) map[string]interface{} {
 	return result
 }
 
+// credentialQueryParams are query parameter names whose values are masked before a URL is
+// logged. Provider URLs are templated, and a {ctx.*} placeholder resolves to a value taken
+// straight off the incoming request (commonly an Authorization header or an API key), so an
+// otherwise innocuous debug log can end up holding a live credential.
+var credentialQueryParams = []string{"key", "token", "apikey", "api_key", "access_token", "password", "secret", "signature", "sig"}
+
+// RedactURLForLog strips userinfo and masks credential-bearing query parameter values so a URL
+// can be written to logs. It accepts relative URIs as well as absolute URLs. A URL that won't
+// parse is replaced entirely, since we can't tell which part of it is sensitive.
+//
+// Providers that log an outgoing URL should route it through this: templated provider URLs
+// resolve {ctx.*} placeholders against the incoming request, so the resolved value can hold a
+// live credential.
+func RedactURLForLog(rawURL string) string {
+	parsed, err := neturl.Parse(rawURL)
+	if err != nil {
+		return "(unparseable url)"
+	}
+
+	if parsed.User != nil {
+		parsed.User = neturl.User("redacted")
+	}
+
+	query := parsed.Query()
+	for name := range query {
+		if slices.Contains(credentialQueryParams, strings.ToLower(name)) {
+			query.Set(name, "redacted")
+		}
+	}
+	parsed.RawQuery = query.Encode()
+
+	return parsed.Redacted()
+}
+
 // GetTile performs a GET operation against a given URL and applies the standard Client
 // configuration options (headers, timeout, status code / content-type allowlists, content-type
 // rewriting, and length limits). Providers should call this instead of making their own HTTP
 // requests, so custom Go providers get the same enforcement as the built-in ones.
 func GetTile(ctx context.Context, clientConfig config.ClientConfig, url string, authHeaders map[string]string) (*Image, error) {
-	slog.DebugContext(ctx, fmt.Sprintf("Calling url %v\n", url))
+	slog.DebugContext(ctx, fmt.Sprintf("Calling url %v\n", RedactURLForLog(url)))
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {

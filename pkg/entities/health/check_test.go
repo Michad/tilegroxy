@@ -102,4 +102,6 @@ func Test_RegisterHealthCheck_ConcurrentIsRaceFree(t *testing.T) {
 		}()
 	}
 	wg.Wait()
+
+	assert.Contains(t, RegisteredHealthCheckNames(), "stub-check")
 }

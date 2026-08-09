@@ -217,7 +217,7 @@ func Test_LayerGroup_RenderTile_DoesNotCoalesceRequestScopedLayers(t *testing.T)
 		go func(i int) {
 			defer wg.Done()
 			token := "user-token-" + strconv.Itoa(i)
-			//nolint:staticcheck // matching how NewRequestContext stores header values
+			//nolint:staticcheck,revive // matching how NewRequestContext stores header values
 			ctx := context.WithValue(pkg.BackgroundContext(), header, token)
 			img, err := lg.RenderTile(ctx, pkg.TileRequest{LayerName: "secret", Z: 1, X: 0, Y: 0})
 			s := seen{want: token, err: err}

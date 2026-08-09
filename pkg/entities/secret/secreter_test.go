@@ -92,4 +92,6 @@ func Test_RegisterSecreter_ConcurrentIsRaceFree(t *testing.T) {
 		}()
 	}
 	wg.Wait()
+
+	assert.Contains(t, RegisteredSecreterNames(), "stub-secreter")
 }

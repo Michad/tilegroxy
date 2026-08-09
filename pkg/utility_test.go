@@ -217,12 +217,41 @@ func Test_Ternary(t *testing.T) {
 	assert.Equal(t, "b", Ternary(false, "a", "b"))
 }
 
+// Provider URLs are templated and a {ctx.*} placeholder resolves to a value off the incoming
+// request, so a debug log of the outgoing URL could carry a live credential.
+func Test_RedactURLForLog(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"ordinary url untouched", "https://example.com/1/2/3.png", "https://example.com/1/2/3.png"},
+		{"non-credential params kept", "https://example.com/t?z=1&x=2", "https://example.com/t?x=2&z=1"},
+		{"api key masked", "https://example.com/t?key=abc123", "https://example.com/t?key=redacted"},
+		{"access token masked", "https://example.com/t?access_token=abc123", "https://example.com/t?access_token=redacted"},
+		{"param name case insensitive", "https://example.com/t?ApiKey=abc123", "https://example.com/t?ApiKey=redacted"},
+		{"userinfo masked", "https://user:pass@example.com/t", "https://redacted@example.com/t"},
+		// The CGI provider logs a relative URI rather than an absolute URL.
+		{"relative uri untouched", "/cgi-bin/mapserv?z=1", "/cgi-bin/mapserv?z=1"},
+		{"relative uri key masked", "/cgi-bin/mapserv?key=abc123", "/cgi-bin/mapserv?key=redacted"},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			assert.Equal(t, c.want, RedactURLForLog(c.in))
+		})
+	}
+
+	assert.NotContains(t, RedactURLForLog("https://example.com/t?token=supersecret"), "supersecret")
+	assert.Equal(t, "(unparseable url)", RedactURLForLog("http://[::1]bad:99/"))
+}
+
 // GetTile used to only exist as an unexported function in internal/providers, reachable by
 // real Go providers only by copy-pasting it (or reimplementing MaxLength/ContentTypes/StatusCodes
 // enforcement by hand) since internal/ can't be imported outside this module. It's now exported
 // from pkg so a library consumer writing a real Go provider (not a yaegi script) can call it.
 func Test_GetTile(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "image/png")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("tiledata"))

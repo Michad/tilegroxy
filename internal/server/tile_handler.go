@@ -86,6 +86,58 @@ func (h *tileHandler) reloadEntities(newEntities reloadableEntities) {
 	slog.WarnContext(pkg.BackgroundContext(), "Completed refreshing entities from configuration")
 }
 
+func setServiceSpanAttributes(span trace.Span) {
+	if !span.IsRecording() {
+		return
+	}
+
+	span.SetAttributes(
+		attribute.String("service.name", "tilegroxy"),
+		attribute.String("service.version", version+"-"+ref),
+		attribute.String("service.build", buildDate),
+		attribute.String("code.namespace", static.GetPackage()+"/internal/server/tile_handler.go"),
+		attribute.String("code.function", "ServeHTTP"),
+	)
+}
+
+func setTileSpanAttributes(span trace.Span, tileReq pkg.TileRequest) {
+	if !span.IsRecording() {
+		return
+	}
+
+	span.SetAttributes(
+		attribute.String("tilegroxy.layer.name", tileReq.LayerName),
+		attribute.Int("tilegroxy.coordinate.x", tileReq.X),
+		attribute.Int("tilegroxy.coordinate.y", tileReq.Y),
+		attribute.Int("tilegroxy.coordinate.z", tileReq.Z),
+	)
+}
+
+// writeTile sends the rendered tile body, recording the outcome on the span. A write failure
+// still means the tile itself was generated successfully, so the caller counts it as a success
+// either way.
+func writeTile(ctx context.Context, w http.ResponseWriter, span trace.Span, img *pkg.Image) {
+	w.Header().Set("Content-Length", strconv.Itoa(len(img.Content)))
+	w.WriteHeader(http.StatusOK)
+
+	_, err := w.Write(img.Content)
+
+	if err == nil {
+		span.SetStatus(codes.Ok, "")
+		return
+	}
+
+	if errors.Is(err, context.Canceled) || err.Error() == context.Canceled.Error() {
+		slog.DebugContext(ctx, "Request canceled during write")
+		span.SetStatus(codes.Error, err.Error())
+		return
+	}
+
+	span.RecordError(err)
+	span.SetStatus(codes.Error, "Result write error")
+	slog.WarnContext(ctx, fmt.Sprintf("Unable to write to request due to %v", err))
+}
+
 func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	span := trace.SpanFromContext(ctx)
@@ -97,15 +149,7 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	h.tileAllCounter.Add(ctx, 1)
 
-	if span.IsRecording() {
-		span.SetAttributes(
-			attribute.String("service.name", "tilegroxy"),
-			attribute.String("service.version", version+"-"+ref),
-			attribute.String("service.build", buildDate),
-			attribute.String("code.namespace", static.GetPackage()+"/internal/server/tile_handler.go"),
-			attribute.String("code.function", "ServeHTTP"),
-		)
-	}
+	setServiceSpanAttributes(span)
 
 	slog.DebugContext(ctx, "server: tile handler started")
 	defer slog.DebugContext(ctx, "server: tile handler ended")
@@ -127,14 +171,7 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return // We already handled the error in the function
 	}
 
-	if span.IsRecording() {
-		span.SetAttributes(
-			attribute.String("tilegroxy.layer.name", tileReq.LayerName),
-			attribute.Int("tilegroxy.coordinate.x", tileReq.X),
-			attribute.Int("tilegroxy.coordinate.y", tileReq.Y),
-			attribute.Int("tilegroxy.coordinate.z", tileReq.Z),
-		)
-	}
+	setTileSpanAttributes(span, tileReq)
 
 	_, err := tileReq.GetBounds()
 
@@ -178,25 +215,9 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Length", strconv.Itoa(len(img.Content)))
-	w.WriteHeader(http.StatusOK)
+	writeTile(ctx, w, span, img)
 
-	_, err = w.Write(img.Content)
-
-	if err != nil {
-		if errors.Is(err, context.Canceled) || err.Error() == context.Canceled.Error() {
-			slog.DebugContext(ctx, "Request canceled during write")
-			span.SetStatus(codes.Error, err.Error())
-		} else {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "Result write error")
-			slog.WarnContext(ctx, fmt.Sprintf("Unable to write to request due to %v", err))
-		}
-	} else {
-		span.SetStatus(codes.Ok, "")
-	}
-
-	// This isn't in the else clause because the tile was still generated successfully even though request errored
+	// This counts even when the write failed, because the tile was still generated successfully
 	h.tileSuccessCounter.Add(ctx, 1)
 }
 

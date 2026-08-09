@@ -51,16 +51,16 @@ func (s docExampleSampleRegistration) Name() string {
 	return "doc-example-sample"
 }
 
-func (s docExampleSampleRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup, datastores *datastore.DatastoreRegistry) (Provider, error) {
+func (s docExampleSampleRegistration) Initialize(cfgAny any, _ config.ClientConfig, _ config.ErrorMessages, _ *LayerGroup, _ *datastore.DatastoreRegistry) (Provider, error) {
 	cfg := cfgAny.(docExampleSampleConfig)
 	return &docExampleSample{cfg}, nil
 }
 
-func (t docExampleSample) PreAuth(ctx context.Context, providerContext ProviderContext) (ProviderContext, error) {
+func (t docExampleSample) PreAuth(_ context.Context, providerContext ProviderContext) (ProviderContext, error) {
 	return providerContext, nil
 }
 
-func (t docExampleSample) GenerateTile(ctx context.Context, providerContext ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t docExampleSample) GenerateTile(_ context.Context, _ ProviderContext, _ pkg.TileRequest) (*pkg.Image, error) {
 	return nil, errors.New("not implemented")
 }
 

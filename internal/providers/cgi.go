@@ -160,7 +160,7 @@ func (t CGI) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequ
 		return nil, err
 	}
 
-	slog.DebugContext(ctx, fmt.Sprintf("Calling CGI via %v", uri))
+	slog.DebugContext(ctx, fmt.Sprintf("Calling CGI via %v", pkg.RedactURLForLog(uri)))
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+t.Domain+uri, nil)
 	if err != nil {

@@ -38,7 +38,9 @@ var lyrRegex = regexp.MustCompile(`{layer\.[^{}}]*}`)
 const mvtContentType = "application/vnd.mapbox-vector-tile"
 
 // placeholderSource identifies where a replacement value originated so callers that splice
-// the value into something else (e.g. a URL) can decide whether it needs escaping.
+// the value into something else (e.g. a URL) can decide whether it needs escaping. Note the
+// plain string substitutions performed directly by replacePlaceholdersInString (z/x/y/bbox)
+// never flow through the $N/replacements path, so they have no source of their own.
 type placeholderSource int
 
 const (
@@ -49,9 +51,6 @@ const (
 	sourceCtx
 	// sourceLayer is request-derived (pattern matches against the incoming tile request path) - untrusted.
 	sourceLayer
-	// sourceBuiltin covers the plain string substitutions performed directly by
-	// replacePlaceholdersInString (z/x/y/bbox) which never flow through the $N/replacements path.
-	sourceBuiltin
 )
 
 func replaceURLPlaceholders(ctx context.Context, tileRequest pkg.TileRequest, rawURL string, invertY bool, srid uint) (string, error) {

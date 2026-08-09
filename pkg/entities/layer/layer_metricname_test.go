@@ -15,6 +15,7 @@
 package layer
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -47,10 +48,11 @@ func Test_SanitizeMetricName(t *testing.T) {
 }
 
 func Test_SanitizeMetricName_TruncatesLongIDs(t *testing.T) {
-	longID := ""
+	var longIDSb strings.Builder
 	for range 300 {
-		longID += "a"
+		longIDSb.WriteString("a")
 	}
+	longID := longIDSb.String()
 
 	got := sanitizeMetricName(longID)
 	require.LessOrEqual(t, len(got), maxSanitizedMetricNameLen)
