@@ -1,0 +1,99 @@
+= PostgreSQL
+
+Writes events to a link:https://www.postgresql.org/[PostgreSQL] table.  A reasonable choice when you already run PostgreSQL and your event volume is moderate; for high volume analytics consider xref:configuration/analytics/clickhouse.adoc[ClickHouse] instead.
+
+Requires a xref:configuration/datastores/postgresql.adoc[postgresql datastore] to supply the connection. The same datastore can be shared with the xref:configuration/provider/postgismvt.adoc[postgismvt] provider, though pointing analytics at a separate database avoids adding write load to the one serving tiles.
+
+Name should be "postgres"
+
+== Table Setup
+
+Tilegroxy never issues DDL, you must create the table yourself before starting tilegroxy. This keeps the credentials tilegroxy uses free of schema privileges.
+
+The following matches the default column names:
+
+[,sql]
+----
+CREATE TABLE tilegroxy_analytics (
+    time      TIMESTAMPTZ NOT NULL,
+    layer     TEXT        NOT NULL,
+    z         INTEGER     NOT NULL,
+    x         INTEGER     NOT NULL,
+    y         INTEGER     NOT NULL,
+    user_id   TEXT,
+    extra     JSONB
+);
+
+CREATE INDEX ON tilegroxy_analytics (layer, time);
+----
+
+The `extra` column receives everything selected via `fields` and `extraFields` as a JSON object. Using JSONB instead of dedicated columns means changing which fields you collect never requires a schema migration.
+
+This table grows without bound, so consider partitioning it by time and dropping old partitions on a schedule. Tilegroxy does not expire events.
+
+Configuration options:
+
+Also accepts the batching parameters described in xref:configuration/analytics/index.adoc[Analytics].
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| Datastore
+| The ID of the datastore to use. The datastore must have a type of "postgresql".  Also see the xref:configuration/datastores/index.adoc[Datastores] documentation.
+| string
+| Yes
+| None
+
+| Table
+| The table to insert events into. May be schema qualified. Must be a plain identifier
+| string
+| Yes
+| None
+
+| ID
+| An identifier for this destination, used in logs to attribute analytics messages
+| string
+| No
+| postgres
+
+| Columns
+| Overrides for the default column names. Keys are the logical field names: time, layer, z, x, y, user_id, extra
+| map[string]string
+| No
+| None
+
+| Fields
+| Additional attributes to record. See xref:configuration/analytics/index.adoc[Analytics]
+| string[]
+| No
+| None
+
+| ExtraFields
+| Arbitrary additional attributes. See xref:configuration/analytics/index.adoc[Analytics]
+| map[string]string
+| No
+| None
+|===
+
+Example:
+
+----
+datastores:
+  - name: postgresql
+    id: pg-analytics
+    host: localhost
+    user: tilegroxy
+    password: env.PGPASSWORD
+    database: analytics
+
+analytics:
+  name: postgres
+  datastore: pg-analytics
+  table: tilegroxy_analytics
+  fields:
+    - duration
+    - contenttype
+  extraFields:
+    environment: production
+----

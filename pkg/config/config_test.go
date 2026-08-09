@@ -209,6 +209,29 @@ func TestValidate_DefaultConfigIsValid(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestAnalyticsYml(t *testing.T) {
+	c, err := LoadConfigFromFile("../../examples/configurations/analytics.yml")
+
+	require.NoError(t, err)
+	assert.Equal(t, "clickhouse", c.Analytics["name"])
+}
+
+func TestAnalyticsAsListRejected(t *testing.T) {
+	// Viper merges the entries of a list of maps into one map, so without an explicit check this decodes
+	// into a silent mixture of the two entries instead of an error.
+	_, err := LoadConfig("analytics:\n  - name: clickhouse\n    table: t\n  - name: none\n")
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "single entry")
+}
+
+func TestAnalyticsDefaultsToNone(t *testing.T) {
+	c, err := LoadConfig("layers:\n  - id: osm\n    provider:\n      name: static\n      color: FFF\n")
+
+	require.NoError(t, err)
+	assert.Equal(t, "none", c.Analytics["name"])
+}
+
 func TestMergeDefaultsFrom(t *testing.T) {
 	c1 := DefaultConfig().Client
 

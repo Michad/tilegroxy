@@ -19,6 +19,8 @@ import (
 	"net/http"
 
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/analytics"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
@@ -27,6 +29,23 @@ type reloadableEntities struct {
 	config     *config.Config
 	layerGroup *layer.LayerGroup
 	auth       authentication.Authentication
+	analytics  *analytics.AnalyticsWrapper
+	// The full set this generation came from, retained so the previous generation can be released
+	// after a reload swaps it out.
+	all *entities.Entities
+}
+
+// newReloadableEntities projects a constructed set of entities into the subset the handlers use.
+func newReloadableEntities(cfg *config.Config, ent *entities.Entities) reloadableEntities {
+	r := reloadableEntities{config: cfg, all: ent}
+
+	if ent != nil {
+		r.layerGroup = ent.LayerGroup
+		r.auth = ent.Auth
+		r.analytics = ent.Analytics
+	}
+
+	return r
 }
 
 type defaultHandler struct {

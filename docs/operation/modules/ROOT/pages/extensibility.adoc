@@ -2,13 +2,13 @@
 
 Is tilegroxy's out of the box capabilities not sufficing for your use-case?  Luckily tilegroxy is designed to be highly extensible so you can add whatever functionality yourself!  If possible, please consider contributing back whatever functionality you add if it has generic usefulness.
 
-There are two ways to extend tilegroxy. One is to use the various "custom" options to provide interpreted Go code to implement a provider or authentication scheme. The other is to use tilegroxy as a library and create your own executable with whatever tweaks you need.
+There are two ways to extend tilegroxy. One is to use the various "custom" options to provide interpreted Go code to implement a provider, authentication scheme, or analytics destination. The other is to use tilegroxy as a library and create your own executable with whatever tweaks you need.
 
 == "Custom"
 
 You might have noticed "custom" listed a few times in the xref:./configuration.adoc[Configuration documentation]. These options allow you to provide your own custom code that is interpreted on the fly to fulfill the specific needs you have.  These custom options must be written in Go and are interpreted using https://github.com/traefik/yaegi[Yaegi].  Yaegi offers a full featured implementation of the Go specification without the need to precompile.
 
-Your custom code must live within a single file for each provider/auth.  It can use the entire standard library including potentially dangerous function calls such as `exec` and `unsafe`; be as cautious using custom providers from third parties as you would be executing any other third party software.
+Your custom code must live within a single file for each provider/auth/analytics.  It can use the entire standard library including potentially dangerous function calls such as `exec` and `unsafe`; be as cautious using custom providers from third parties as you would be executing any other third party software.
 
 There is a performance cost of using a custom vs a built-in offering. The exact cost depends on the complexity of your code, however it is typically below 10 milliseconds while tile generation as a whole is usually more than an order of magnitude slower. With authentication especially tilegroxy utilizes caching to mitigate this impact.  However it is something you should keep in mid when deciding whether to implement a Custom provider/auth. Due to these being written in Go, it is easy to convert your custom code to a built-in equivalent if you find this overhead becomes a bottleneck.
 
@@ -101,6 +101,20 @@ The method how tokens are extracted from the request is configurable. The follow
 |===
 
 No custom types or methods are available.
+
+=== Custom Analytics
+
+A custom xref:configuration/analytics/index.adoc[analytics] module records usage events to whatever destination you need.  Example custom analytics modules can be found within link:../examples/analytics/[examples/analytics].  The package must be "custom" and you must include the following function:
+
+----
+func record(tilegroxy.Context, []tilegroxy.AnalyticsEvent, map[string]interface{}, tilegroxy.ErrorMessages) error
+----
+
+The arguments are the context, the batch of events, the parameters included under the analytics module in the configuration, and a mapping for localization of error messages.  An `AnalyticsEvent` contains `Time`, `LayerID`, `LayerName`, `Z`, `X`, `Y`, `UserID` and a `Fields` map holding the attributes selected via `fields` and `extraFields`.
+
+Unlike providers and authentication, `record` is called once per *batch* of events rather than once per request.  This keeps the interpretation overhead described above off the per-tile path and means the batching parameters control how often your code runs.
+
+Returning an error causes the batch to be logged as failed and discarded. It never affects the tile responses that produced those events.
 
 == Using tilegroxy as a library
 

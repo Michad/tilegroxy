@@ -25,8 +25,11 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/analytics"
 	"github.com/Michad/tilegroxy/pkg/static"
 
 	"go.opentelemetry.io/otel"
@@ -35,12 +38,17 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 
+	_ "github.com/Michad/tilegroxy/internal/analytics"
 	_ "github.com/Michad/tilegroxy/internal/authentications"
 	_ "github.com/Michad/tilegroxy/internal/caches"
 	_ "github.com/Michad/tilegroxy/internal/datastores"
 	_ "github.com/Michad/tilegroxy/internal/providers"
 	_ "github.com/Michad/tilegroxy/internal/secrets"
 )
+
+// How long the previous generation of entities gets to flush and release after a hot reload, once
+// in-flight requests have had time to finish.
+const entityCloseTimeout = 30 * time.Second
 
 var packageName = static.GetPackage()
 var version, ref, buildDate = static.GetVersionInformation()
@@ -79,11 +87,49 @@ func newTileHandler(handler reloadableEntities) (tileHandler, error) {
 func (h *tileHandler) reloadEntities(newEntities reloadableEntities) {
 	slog.WarnContext(pkg.BackgroundContext(), "Requesting to refresh entities from configuration")
 
-	// Not strictly necessary but left in place to allow for extra steps for hot reloading config in the future
 	h.entityMutex.Lock()
+	oldEntities := h.entities
 	h.entities = newEntities
 	h.entityMutex.Unlock()
 	slog.WarnContext(pkg.BackgroundContext(), "Completed refreshing entities from configuration")
+
+	// Release the previous generation in the background. Requests that started before the swap hold
+	// their own copy of it, so closing has to wait for them to finish; the server timeout is the
+	// longest any of them can still be running.
+	go h.closeOldEntities(oldEntities)
+}
+
+// currentEntities returns the generation currently serving requests. Shutdown closes this rather than the
+// generation the server was originally handed, which a reload may already have released
+func (h *tileHandler) currentEntities() *entities.Entities {
+	h.entityMutex.RLock()
+	defer h.entityMutex.RUnlock()
+
+	return h.entities.all
+}
+
+func (h *tileHandler) closeOldEntities(old reloadableEntities) {
+	if old.all == nil {
+		return
+	}
+
+	ctx := pkg.BackgroundContext()
+
+	grace := time.Duration(0)
+	if old.config != nil {
+		grace = time.Duration(old.config.Server.Timeout) * time.Second
+	}
+
+	time.Sleep(grace)
+
+	closeCtx, cancel := context.WithTimeout(ctx, entityCloseTimeout)
+	defer cancel()
+
+	if err := old.all.Close(closeCtx); err != nil {
+		slog.WarnContext(ctx, fmt.Sprintf("Error releasing entities from the previous configuration: %v", err))
+	} else {
+		slog.InfoContext(ctx, "Released entities from the previous configuration")
+	}
 }
 
 func setServiceSpanAttributes(span trace.Span) {
@@ -115,8 +161,23 @@ func setTileSpanAttributes(span trace.Span, tileReq pkg.TileRequest) {
 
 // writeTile sends the rendered tile body, recording the outcome on the span. A write failure
 // still means the tile itself was generated successfully, so the caller counts it as a success
-// either way.
-func writeTile(ctx context.Context, w http.ResponseWriter, span trace.Span, img *pkg.Image) {
+// either way. When the request carries a matching If-None-Match the body is skipped in favor of a
+// 304, which is likewise a success.
+func writeTile(ctx context.Context, w http.ResponseWriter, req *http.Request, span trace.Span, img *pkg.Image) {
+	if img.ContentType != "" {
+		w.Header().Add("Content-Type", img.ContentType)
+	}
+
+	etag := etagFor(img.Content)
+	w.Header().Set("ETag", etag)
+
+	if requestETagMatches(req.Header.Get("If-None-Match"), etag) {
+		w.WriteHeader(http.StatusNotModified)
+		span.SetStatus(codes.Ok, "")
+
+		return
+	}
+
 	w.Header().Set("Content-Length", strconv.Itoa(len(img.Content)))
 	w.WriteHeader(http.StatusOK)
 
@@ -201,24 +262,51 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if img.ContentType != "" {
-		w.Header().Add("Content-Type", img.ContentType)
-	}
+	writeTile(ctx, w, req, span, img)
 
-	etag := etagFor(img.Content)
-	w.Header().Set("ETag", etag)
+	// This isn't in the else clause because the tile was still generated successfully even though request errored
+	h.tileSuccessCounter.Add(ctx, 1)
 
-	if requestETagMatches(req.Header.Get("If-None-Match"), etag) {
-		w.WriteHeader(http.StatusNotModified)
-		span.SetStatus(codes.Ok, "")
-		h.tileSuccessCounter.Add(ctx, 1)
+	// Recorded after the response is written so analytics never sits on the latency path. Like the
+	// success counter above, a failed write still counts as usage: the tile was produced and, for
+	// operators tracking consumption of a paid upstream, the cost was incurred.
+	entities.recordAnalytics(ctx, tileReq, img)
+}
+
+// recordAnalytics emits a usage event for a successfully served tile. It resolves the layer a
+// second time to get its configured ID and skip flag; FindLayer is a cheap in-memory match and
+// keeps this off RenderTile, which also runs for seeding, health checks and ref providers.
+func (h *reloadableEntities) recordAnalytics(ctx context.Context, tileReq pkg.TileRequest, img *pkg.Image) {
+	if h.analytics.Empty() {
 		return
 	}
 
-	writeTile(ctx, w, span, img)
+	l := h.layerGroup.FindLayer(ctx, tileReq.LayerName)
 
-	// This counts even when the write failed, because the tile was still generated successfully
-	h.tileSuccessCounter.Add(ctx, 1)
+	if l == nil || l.Config.SkipAnalytics {
+		return
+	}
+
+	userID := ""
+	if u, ok := pkg.UserIDFromContext(ctx); ok && u != nil {
+		userID = *u
+	}
+
+	event := analytics.Event{
+		Time:      time.Now(),
+		LayerID:   l.ID,
+		LayerName: tileReq.LayerName,
+		Z:         tileReq.Z,
+		X:         tileReq.X,
+		Y:         tileReq.Y,
+		UserID:    userID,
+	}
+
+	h.analytics.RecordEvent(ctx, event, analytics.FieldSource{
+		LayerName:   tileReq.LayerName,
+		Bytes:       len(img.Content),
+		ContentType: img.ContentType,
+	})
 }
 
 // etagFor produces a strong ETag from the tile content. Content is already in memory by the time

@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/require"
 )
@@ -126,6 +127,13 @@ func healthTestConfig(t *testing.T) (config.Config, int) {
 	return cfg, healthPort
 }
 
+// entitiesFor wraps a LayerGroup in the entities bundle ListenAndServe takes. These tests only
+// exercise the health subsystem, which reads nothing but the LayerGroup, so the rest is left nil -
+// Entities.Close tolerates that.
+func entitiesFor(lg *layer.LayerGroup) *entities.Entities {
+	return &entities.Entities{LayerGroup: lg}
+}
+
 // startServer boots ListenAndServe in the background, waits until its health endpoint is live, and
 // returns the reload callback it published. Registers cleanup that signals the server to stop and
 // waits for it to return.
@@ -146,7 +154,7 @@ func startServer(t *testing.T, cfg *config.Config, lg *layer.LayerGroup) reloadE
 
 	done := make(chan error, 1)
 	go func() {
-		err := ListenAndServe(cfg, lg, nil, &reloadFn)
+		err := ListenAndServe(cfg, entitiesFor(lg), &reloadFn)
 		// Unblock the handoff if the server died before ever publishing.
 		select {
 		case published <- nil:
@@ -198,7 +206,7 @@ func Test_ListenAndServe_HealthChecksRebuildOnReload(t *testing.T) {
 	lg2, err := layer.ConstructLayerGroup(cfg2, nil, nil, nil)
 	require.NoError(t, err)
 
-	require.NoError(t, reloadFn(&cfg2, lg2, nil))
+	require.NoError(t, reloadFn(&cfg2, entitiesFor(lg2)))
 
 	waitForHealthStatus(t, healthPort, "error")
 }
@@ -239,7 +247,7 @@ func Test_ListenAndServe_ConcurrentHealthReloadsDoNotDeadlock(t *testing.T) {
 					t.Error(errN)
 					return
 				}
-				if errN = reloadFn(&cfg, lgN, nil); errN != nil {
+				if errN = reloadFn(&cfg, entitiesFor(lgN)); errN != nil {
 					t.Error(errN)
 				}
 			}()
@@ -284,14 +292,14 @@ func Test_ListenAndServe_FailedHealthRebuildRecovers(t *testing.T) {
 	badLg, err := layer.ConstructLayerGroup(badCfg, nil, nil, nil)
 	require.NoError(t, err)
 
-	require.Error(t, reloadFn(&badCfg, badLg, nil), "a reload with an unknown health check name must surface an error")
+	require.Error(t, reloadFn(&badCfg, entitiesFor(badLg)), "a reload with an unknown health check name must surface an error")
 
 	// A subsequent good reload must bring the health endpoint back rather than the process being
 	// stuck with a dead endpoint forever.
 	goodLg, err := layer.ConstructLayerGroup(cfg, nil, nil, nil)
 	require.NoError(t, err)
 
-	require.NoError(t, reloadFn(&cfg, goodLg, nil))
+	require.NoError(t, reloadFn(&cfg, entitiesFor(goodLg)))
 
 	waitForPort(t, healthPort)
 	waitForHealthStatus(t, healthPort, "ok")
@@ -322,7 +330,7 @@ func Test_healthReloader_FailedRebuildDoesNotRetainStalePointer(t *testing.T) {
 		{"name": "this-check-does-not-exist", "delay": 1},
 	}
 
-	require.Error(t, healthReloader(ctx, &badCfg, lg, &healthMutex, &healthShutdown))
+	require.Error(t, healthReloader(ctx, &badCfg, entitiesFor(lg), &healthMutex, &healthShutdown))
 	require.Equal(t, 1, oldCalls, "the previous generation should have been shut down exactly once")
 
 	if healthShutdown != nil {

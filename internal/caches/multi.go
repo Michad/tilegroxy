@@ -21,6 +21,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
+	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
 )
 
 type MultiConfig struct {
@@ -62,6 +63,18 @@ func (s MultiRegistration) Initialize(configAny any, errorMessages config.ErrorM
 	}
 
 	return Multi{tierCaches}, nil
+}
+
+// Close releases every tier that holds resources. Tiers are constructed by this cache so nothing
+// else is in a position to shut them down.
+func (c Multi) Close(ctx context.Context) error {
+	errs := make([]error, 0, len(c.Tiers))
+
+	for _, tier := range c.Tiers {
+		errs = append(errs, lifecycle.CloseIfCloser(ctx, tier))
+	}
+
+	return errors.Join(errs...)
 }
 
 func (c Multi) Lookup(ctx context.Context, t pkg.TileRequest) (*pkg.Image, error) {

@@ -31,8 +31,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/authentication"
-	"github.com/Michad/tilegroxy/pkg/entities/layer"
+	"github.com/Michad/tilegroxy/pkg/entities"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"golang.org/x/crypto/acme/autocert"
@@ -57,10 +56,10 @@ var onReloadPtrSet func()
 
 // reloadEntitiesFunc names the reload callback shape so it can be spelled out inside
 // ListenAndServe's body, where the "config" parameter name shadows the config package.
-type reloadEntitiesFunc = func(*config.Config, *layer.LayerGroup, authentication.Authentication) error
+type reloadEntitiesFunc = func(*config.Config, *entities.Entities) error
 
 // healthReloader tears down the current health subsystem generation and builds a fresh one against
-// the new LayerGroup, storing the new generation's shutdown func through healthShutdown. Declared
+// the new generation's LayerGroup, storing its shutdown func through healthShutdown. Declared
 // at package level - rather than as a closure inside ListenAndServe - purely so its parameter
 // types can spell out *config.Config, which ListenAndServe's own "config" parameter shadows within
 // its body.
@@ -70,7 +69,7 @@ type reloadEntitiesFunc = func(*config.Config, *layer.LayerGroup, authentication
 // config-change event in its own goroutine), and without serialization two reloads would both read
 // the same old shutdown func, both tear the same generation down, and both race to bind the health
 // port. Holding the lock across the whole sequence makes reloads strictly sequential.
-func healthReloader(ctx context.Context, cfg *config.Config, layerGroup *layer.LayerGroup, healthMutex *sync.Mutex, healthShutdown *func(context.Context) error) error {
+func healthReloader(ctx context.Context, cfg *config.Config, ent *entities.Entities, healthMutex *sync.Mutex, healthShutdown *func(context.Context) error) error {
 	if !cfg.Server.Health.Enabled {
 		return nil
 	}
@@ -90,7 +89,7 @@ func healthReloader(ctx context.Context, cfg *config.Config, layerGroup *layer.L
 		}
 	}
 
-	newHealthShutdown, err := SetupHealth(ctx, cfg, layerGroup)
+	newHealthShutdown, err := SetupHealth(ctx, cfg, ent.LayerGroup)
 
 	// SetupHealth can return a non-nil shutdown func alongside an error (it partially builds the
 	// subsystem before failing), so always record whatever it handed back. On failure that means
@@ -112,27 +111,29 @@ func healthReloader(ctx context.Context, cfg *config.Config, layerGroup *layer.L
 }
 
 // makeCombinedReloadFunc builds the reload callback ListenAndServe hands back to its caller: it
-// runs the tile handler's own reload (swapping to the new LayerGroup) and then rebuilds the
-// health subsystem against that same new LayerGroup, so health checks stop being permanently
+// runs the tile handler's own reload (swapping to the new entities) and then rebuilds the
+// health subsystem against that same new generation, so health checks stop being permanently
 // pinned to the LayerGroup instance from startup.
 func makeCombinedReloadFunc(ctx context.Context, handlerReloadFunc reloadEntitiesFunc, healthMutex *sync.Mutex, healthShutdown *func(context.Context) error) reloadEntitiesFunc {
-	return func(cfg2 *config.Config, layerGroup2 *layer.LayerGroup, auth2 authentication.Authentication) error {
-		if err := handlerReloadFunc(cfg2, layerGroup2, auth2); err != nil {
+	return func(cfg2 *config.Config, ent2 *entities.Entities) error {
+		if err := handlerReloadFunc(cfg2, ent2); err != nil {
 			return err
 		}
 
-		return healthReloader(ctx, cfg2, layerGroup2, healthMutex, healthShutdown)
+		return healthReloader(ctx, cfg2, ent2, healthMutex, healthShutdown)
 	}
 }
 
-func setupHandlers(cfg *config.Config, layerGroup *layer.LayerGroup, auth authentication.Authentication) (http.Handler, func(*config.Config, *layer.LayerGroup, authentication.Authentication) error, error) {
+// setupHandlers builds the HTTP handlers. The returned accessor yields whichever generation of entities is
+// currently serving, which is what shutdown needs to release after a hot reload has swapped generations
+func setupHandlers(cfg *config.Config, ent *entities.Entities) (http.Handler, func(*config.Config, *entities.Entities) error, func() *entities.Entities, error) {
 	r := http.ServeMux{}
 
 	var myRootHandler http.Handler
 	var myTileHandler http.Handler
 	var myDocumentationHandler http.Handler
-	entities := reloadableEntities{config: cfg, auth: auth, layerGroup: layerGroup}
-	myDefaultHandler := defaultHandler{entities}
+	reloadable := newReloadableEntities(cfg, ent)
+	myDefaultHandler := defaultHandler{reloadable}
 
 	if cfg.Server.Production {
 		myRootHandler = http.HandlerFunc(handleNoContent)
@@ -146,17 +147,15 @@ func setupHandlers(cfg *config.Config, layerGroup *layer.LayerGroup, auth authen
 
 	tilePath := cfg.Server.RootPath + cfg.Server.TilePath + "/{layer}/{z}/{x}/{y}"
 	docsPath := cfg.Server.RootPath + cfg.Server.DocsPath + "/{path...}"
-	handler, err := newTileHandler(entities)
+	handler, err := newTileHandler(reloadable)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	myTileHandler = &handler
 
-	reloadFunc := func(cfg2 *config.Config, layerGroup2 *layer.LayerGroup, auth2 authentication.Authentication) error {
-		entities2 := reloadableEntities{config: cfg2, auth: auth2, layerGroup: layerGroup2}
-
-		handler.reloadEntities(entities2)
+	reloadFunc := func(cfg2 *config.Config, ent2 *entities.Entities) error {
+		handler.reloadEntities(newReloadableEntities(cfg2, ent2))
 
 		return nil
 	}
@@ -195,10 +194,10 @@ func setupHandlers(cfg *config.Config, layerGroup *layer.LayerGroup, auth authen
 	rootHandler, err = configureAccessLogging(cfg.Logging.Access, cfg.Error.Messages, rootHandler)
 
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	return rootHandler, reloadFunc, nil
+	return rootHandler, reloadFunc, handler.currentEntities, nil
 }
 
 func listenAndServeTLS(config *config.Config, srvErr chan error, srv *http.Server) {
@@ -249,12 +248,14 @@ func listenAndServeTLS(config *config.Config, srvErr chan error, srv *http.Serve
 	}
 }
 
-func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth authentication.Authentication, reloadPtr *func(*config.Config, *layer.LayerGroup, authentication.Authentication) error) error {
+func ListenAndServe(config *config.Config, ent *entities.Entities, reloadPtr *func(*config.Config, *entities.Entities) error) error {
 	if config.Server.Encrypt != nil && config.Server.Encrypt.Domain == "" {
 		return fmt.Errorf(config.Error.Messages.ParamRequired, "server.encrypt.domain")
 	}
 
-	rootHandler, handlerReloadFunc, err := setupHandlers(config, layerGroup, auth)
+	// reloadPtr is published further down, once the health subsystem exists, so the callback can
+	// rebuild health alongside the handlers rather than only swapping the handlers' entities.
+	rootHandler, handlerReloadFunc, currentEntities, err := setupHandlers(config, ent)
 
 	if err != nil {
 		return err
@@ -275,7 +276,7 @@ func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth au
 	var healthShutdown func(context.Context) error
 
 	if config.Server.Health.Enabled {
-		healthShutdown, err = SetupHealth(ctx, config, layerGroup)
+		healthShutdown, err = SetupHealth(ctx, config, ent.LayerGroup)
 
 		if err != nil {
 			return err
@@ -336,6 +337,15 @@ func ListenAndServe(config *config.Config, layerGroup *layer.LayerGroup, auth au
 	}
 
 	err = srv.Shutdown(context.Background())
+
+	// Release entities after the HTTP server has drained so batched analytics can flush events from
+	// requests that were still in flight. Bounded by the same timeout that bounds a request.
+	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), time.Duration(config.Server.Timeout)*time.Second)
+	defer cancelShutdown()
+
+	// Close whatever generation is actually serving. A hot reload replaces the one passed in and releases
+	// it on its own, so closing that here would double-close it and leak the live one
+	err = errors.Join(err, currentEntities().Close(shutdownCtx))
 
 	if otelShutdown != nil {
 		err = errors.Join(err, otelShutdown(context.Background()))

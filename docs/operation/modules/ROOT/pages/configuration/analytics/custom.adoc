@@ -1,0 +1,96 @@
+= Custom
+
+Sends events wherever you want by way of a Go script interpreted at runtime. Use this to reach a destination tilegroxy doesn't support natively, such as a webhook, a message queue, or a file in a bespoke format, without building tilegroxy yourself.
+
+See xref:extensibility.adoc[Extensibility] for background on how custom modules work and their limitations.  Custom scripts run unrestricted and can use the entire standard library including `os/exec`, so be as cautious using a third party analytics script as you would be executing any other third party software.  Scripts cannot import third party libraries, therefore a destination requiring a vendor SDK needs a native module instead of a custom one.  `net/http` is available which is enough for most HTTP APIs.
+
+Name should be "custom"
+
+== The Script
+
+Your script must be in package `custom` and define a function named `record`:
+
+[,go]
+----
+package custom
+
+import (
+	"tilegroxy/tilegroxy"
+)
+
+func record(ctx tilegroxy.Context, events []tilegroxy.AnalyticsEvent, params map[string]interface{}, msgs tilegroxy.ErrorMessages) error {
+	// ...
+	return nil
+}
+----
+
+The `record` function is called once per *batch* of events, not once per event, because interpreting Go carries meaningful per-call overhead. Configure `batch.maxSize` and `batch.maxAge` to control how often it runs.
+
+Each `AnalyticsEvent` has `Time`, `LayerID`, `LayerName`, `Z`, `X`, `Y`, `UserID` and `Fields`, the last being a map of whatever you selected via `fields` and `extraFields`.
+
+The `params` argument receives every configuration parameter that isn't one of the module's own, which is how you pass a URL, a filename or credentials to the script. Note the `name` parameter is included in this map.
+
+Returning an error causes the batch to be logged as failed and discarded. The error never reaches the user.
+
+Configuration options:
+
+Also accepts the batching parameters described in xref:configuration/analytics/index.adoc[Analytics].
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| File
+| An absolute file path to find the Go code implementing the module. Mutually exclusive with Script
+| string
+| No
+| None
+
+| Script
+| The Go code implementing the module, supplied inline. Mutually exclusive with File
+| string
+| No
+| None
+
+| ID
+| An identifier for this destination, used in logs to attribute analytics messages
+| string
+| No
+| custom
+
+| Fields
+| Additional attributes to record. See xref:configuration/analytics/index.adoc[Analytics]
+| string[]
+| No
+| None
+
+| ExtraFields
+| Arbitrary additional attributes. See xref:configuration/analytics/index.adoc[Analytics]
+| map[string]string
+| No
+| None
+
+| Any
+| Any additional parameter you include will be automatically supplied to your custom module as-is
+| Any
+| No
+| None
+|===
+
+One of File or Script is required.
+
+Example:
+
+----
+analytics:
+  name: custom
+  file: examples/analytics/custom_webhook.go
+  url: https://example.com/usage
+  fields:
+    - duration
+  batch:
+    maxSize: 100
+    maxAge: 60
+----
+
+A complete working script is available in link:../examples/analytics/[examples/analytics].

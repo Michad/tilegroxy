@@ -46,11 +46,15 @@ func Seed(cfg *config.Config, opts SeedOptions, out io.Writer) error {
 		return errors.New("threads must be above 0")
 	}
 
-	layerGroup, _, err := configToEntities(*cfg)
+	ent, err := configToEntities(*cfg)
 
 	if err != nil {
 		return err
 	}
+
+	defer ent.Close(ctx) //nolint:errcheck // Nothing actionable while tearing down a seed run
+
+	layerGroup := ent.LayerGroup
 
 	layer := layerGroup.FindLayer(ctx, opts.LayerName)
 
