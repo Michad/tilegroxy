@@ -29,9 +29,8 @@ func validConfig() config.Config {
 	return cfg
 }
 
-// A nil io.Writer used to panic inside fmt.Fprintln/json.NewEncoder rather than erroring
-// gracefully, even though a caller who only wants pass/fail (not the "Valid" text or echoed
-// config) has no other value to pass.
+// A caller who only wants pass/fail, not the "Valid" text or echoed config, has no other value to
+// pass, so a nil writer has to error rather than panic inside fmt.Fprintln.
 func Test_CheckConfig_NilWriterDoesNotPanic(t *testing.T) {
 	cfg := validConfig()
 

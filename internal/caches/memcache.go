@@ -91,12 +91,8 @@ func (s MemcacheRegistration) Initialize(configAny any, errorMessages config.Err
 
 }
 
-// memcacheKey sanitizes LayerName (see safeLayerName) rather than using it directly, because
-// LayerName is attacker-controlled for pattern layers and memcache keys can't contain whitespace
-// or control characters. The rest of the key shape - KeyPrefix + LayerName/Z/X/Y, matching
-// pkg.TileRequest.String() - is preserved for readability/debuggability. safeMemcacheKey then
-// guards against memcache's 250-byte key length limit (which KeyPrefix counts toward), falling
-// back to a hash-suffixed, truncated key only when the sanitized key would otherwise be too long.
+// memcacheKey sanitizes LayerName (see safeLayerName) since memcache keys can't contain whitespace
+// or control characters, then bounds the total length, which KeyPrefix counts toward.
 func memcacheKey(prefix string, t pkg.TileRequest) string {
 	safe := t
 	safe.LayerName = safeLayerName(t.LayerName)

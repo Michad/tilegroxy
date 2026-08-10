@@ -192,10 +192,9 @@ func TestGoodJwtScopeLimit(t *testing.T) {
 	assert.Equal(t, "John Doe", *ctxUserID)
 }
 
-// Reproduces the JWT cache privilege-escalation bug: with CacheSize > 0, a cache hit used to
-// only check expiration and skip re-applying limitLayers/allowedLayers/userID to the request
-// context, so the second request for the same token got unrestricted layer access instead of
-// the scope-limited access the first (uncached) request enforced.
+// With CacheSize > 0, a cache hit that only checks expiration leaves limitLayers/allowedLayers/
+// userID at their unrestricted defaults, so a repeat request with a scope-limited token would
+// escalate to full layer access.
 func TestGoodJwtScopeLimit_CacheHitPreservesAuthorization(t *testing.T) {
 	jwtConfig := JWTConfig{
 		Algorithm:     "HS256",
@@ -225,8 +224,7 @@ func TestGoodJwtScopeLimit_CacheHitPreservesAuthorization(t *testing.T) {
 	require.Equal(t, []string{"test"}, *allowedLayers1)
 	require.Equal(t, "John Doe", *userID1)
 
-	// Request 2: same token, now served from cache. Must produce the identical restrictions,
-	// not silently revert to unrestricted access.
+	// Request 2: same token, now served from cache. Must produce the identical restrictions.
 	ctx2 := pkg.BackgroundContext()
 	require.True(t, jwtAuth.CheckAuthentication(ctx2, req))
 

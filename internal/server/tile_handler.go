@@ -159,10 +159,9 @@ func setTileSpanAttributes(span trace.Span, tileReq pkg.TileRequest) {
 	)
 }
 
-// writeTile sends the rendered tile body, recording the outcome on the span. A write failure
-// still means the tile itself was generated successfully, so the caller counts it as a success
-// either way. When the request carries a matching If-None-Match the body is skipped in favor of a
-// 304, which is likewise a success.
+// writeTile sends the rendered tile body, or a 304 when the request carries a matching
+// If-None-Match, recording the outcome on the span. A write failure still counts as a success
+// since the tile itself was generated.
 func writeTile(ctx context.Context, w http.ResponseWriter, req *http.Request, span trace.Span, img *pkg.Image) {
 	if img.ContentType != "" {
 		w.Header().Add("Content-Type", img.ContentType)
@@ -309,10 +308,8 @@ func (h *reloadableEntities) recordAnalytics(ctx context.Context, tileReq pkg.Ti
 	})
 }
 
-// etagFor produces a strong ETag from the tile content. Content is already in memory by the time
-// this runs, so hashing it is cheap - this is the "cheap win" for HTTP caching semantics: the
-// internal cache saves the upstream call, but without this every byte still crosses the wire on
-// every request and browsers re-fetch every tile on every pan/zoom.
+// etagFor produces a strong ETag from the tile content. The internal cache only saves the upstream
+// call; without a conditional request every byte still crosses the wire on every pan and zoom.
 func etagFor(content []byte) string {
 	sum := sha256.Sum256(content)
 	return `"` + hex.EncodeToString(sum[:]) + `"`

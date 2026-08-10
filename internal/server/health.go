@@ -247,11 +247,9 @@ func setupCheckRoutines(ctx context.Context, h config.HealthConfig, layerGroup *
 		}()
 	}
 
-	// The stop signal is a broadcast close rather than a send: closing unblocks every receiver
-	// (and any future receive) and can never block the caller, whereas a send on an unbuffered
-	// channel deadlocks forever once the ticker goroutine has already exited - which is exactly
-	// what happened when two concurrent reloads both got hold of the same shutdown func. The
-	// sync.Once additionally makes a double shutdown a no-op instead of a close-of-closed panic.
+	// Stopping broadcasts a close rather than sending: a send on an unbuffered channel deadlocks
+	// forever once the ticker goroutine has already exited, which two callers of the same shutdown
+	// func can reach. The Once keeps that second call from panicking on a closed channel.
 	var stopOnce sync.Once
 
 	callback = func(ctx context.Context) error {

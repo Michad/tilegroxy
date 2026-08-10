@@ -81,10 +81,9 @@ func writeErrorMessage(ctx context.Context, w http.ResponseWriter, cfg *config.E
 
 	slog.Log(ctx, level, internalMessage, "stack", string(stack))
 
-	// An error response must never be cached: with AlwaysOK the status is 200 even for a real
-	// error, and even without it a CDN in front of tilegroxy could otherwise cache "tile
-	// unavailable" (an image-mode error body, or a plain-text one) long after the upstream
-	// recovers, since neither carried any cache-control signal before.
+	// Nothing else marks an error response as uncacheable - with AlwaysOK the status is even 200 -
+	// so a CDN in front of tilegroxy would hold onto "tile unavailable" long after the upstream
+	// recovers.
 	w.Header().Set("Cache-Control", "no-store")
 
 	switch cfg.Mode {

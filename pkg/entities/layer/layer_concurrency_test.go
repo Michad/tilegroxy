@@ -41,10 +41,8 @@ func (p *countingProvider) GenerateTile(_ context.Context, _ ProviderContext, _ 
 	return &pkg.Image{}, nil
 }
 
-// Reproduces the concurrent-request path that raced on Layer.providerContext: many goroutines
-// calling RenderTileNoCache on a freshly constructed (zero-valued, unauthenticated) layer at once.
-// Run with -race to verify there's no data race; also asserts PreAuth only runs once despite the
-// concurrent callers all seeing an expired/zero AuthExpiration initially.
+// Many goroutines rendering on a freshly constructed layer all see the zero AuthExpiration at
+// once, so this covers both the race on Layer.providerContext and PreAuth running only once.
 func Test_Layer_ConcurrentRenderTileNoCache_NoRace(t *testing.T) {
 	provider := &countingProvider{}
 	l := &Layer{
@@ -60,8 +58,8 @@ func Test_Layer_ConcurrentRenderTileNoCache_NoRace(t *testing.T) {
 	const n = 50
 	var wg sync.WaitGroup
 	wg.Add(n)
-	// Collect errors rather than asserting inside the goroutines: require.* calls
-	// runtime.Goexit, which would skip the wg.Done and hang the test instead of failing it.
+	// Asserting in a goroutine would hang the test rather than fail it: require.* calls
+	// runtime.Goexit, skipping the wg.Done.
 	errs := make(chan error, n)
 	for range n {
 		go func() {

@@ -144,9 +144,8 @@ func TestDecodeEntityConfig_IDPassesThroughWhenStructWantsIt(t *testing.T) {
 	assert.Equal(t, "value", out.Bar)
 }
 
-// Env var overrides used to only work for keys already present in the config file, because
-// viper's key set (which AutomaticEnv resolves against) came only from the file, not from
-// defaults. SERVER_PORT with no server.port in the file used to silently do nothing.
+// AutomaticEnv resolves against viper's key set, so without defaults registered an env var only
+// takes effect for a key the config file already contains.
 func TestLoadConfig_EnvOverrideWorksForKeyAbsentFromFile(t *testing.T) {
 	t.Setenv("SERVER_PORT", "9999")
 
@@ -159,10 +158,8 @@ server:
 	assert.Equal(t, 9999, c.Server.Port)
 }
 
-// The default ContentTypes allowlist used to only include raster mime types, so an HTTP-proxied
-// vector tile source (which is a legitimate, documented use case - see the proxy provider) failed
-// with InvalidContentTypeError until the operator manually extended the list - an undocumented
-// cliff for anyone proxying MVT.
+// Proxying a vector tile source is a documented use case, so the default allowlist has to cover
+// the MVT content types and not just raster ones.
 func TestDefaultConfig_ContentTypesIncludesVectorTileTypes(t *testing.T) {
 	c := DefaultConfig()
 
@@ -263,10 +260,9 @@ func TestMergeDefaultsFrom(t *testing.T) {
 	assert.Equal(t, c1.UserAgent, c3.UserAgent)
 }
 
-// UnknownLength is a plain bool, so a layer that explicitly sets `unknownlength: false` to
-// tighten a permissive global default is indistinguishable from a layer that left it unset.
-// Inheriting it would therefore only ever be observable as overriding the explicit false - the
-// exact case that must not happen - so MergeDefaultsFrom leaves the field alone entirely.
+// UnknownLength is a plain bool, so a layer setting `unknownlength: false` to tighten a permissive
+// global default is indistinguishable from one that left it unset. Inheriting could only ever be
+// observed overriding that explicit false, so MergeDefaultsFrom leaves the field alone.
 func TestMergeDefaultsFrom_UnknownLength(t *testing.T) {
 	defaults := ClientConfig{UnknownLength: true}
 

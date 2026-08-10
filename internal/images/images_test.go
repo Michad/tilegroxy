@@ -87,9 +87,8 @@ func TestImageLoad(t *testing.T) {
 	assert.Equal(t, imageError, *img)
 }
 
-// pkg/config can't import this package (it's internal/, so importing it would make an exported
-// struct's defaults depend on an unexportable package), so it mirrors these embedded image keys
-// as its own literal string constants. This guards against the two definitions drifting apart.
+// pkg/config can't import this package, so it mirrors these keys as literal constants. Guards the
+// two definitions against drifting apart.
 func TestDefaultConfigImageKeysMatchEmbeddedKeys(t *testing.T) {
 	def := config.DefaultConfig()
 

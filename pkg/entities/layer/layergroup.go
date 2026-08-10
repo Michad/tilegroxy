@@ -33,9 +33,8 @@ import (
 	"golang.org/x/sync/singleflight"
 )
 
-// maxConcurrentCacheWrites bounds how many background `go writeCache(...)` goroutines can be in
-// flight at once. Without a bound, a slow cache backend plus sustained misses accumulates
-// goroutines and the *pkg.Image buffers they pin without limit.
+// Bounds the background writeCache goroutines. A slow cache backend plus sustained misses would
+// otherwise accumulate goroutines and the images they pin without limit.
 const maxConcurrentCacheWrites = 64
 
 type LayerGroup struct {
@@ -63,11 +62,8 @@ func ConstructLayerGroup(cfg config.Config, cache cache.Cache, secreter secret.S
 		return nil, err
 	}
 
-	// resolvedLayers mirrors cfg.Layers with every {env.*}/{secret.*} value in each provider config
-	// already substituted. requestScopedLayers has to inspect the *resolved* configs: a {ctx.*}
-	// placeholder can arrive through an env var or a secret (e.g. url: env.TILE_URL where TILE_URL
-	// holds "https://host/{ctx.X-Api-Key}/{z}/{x}/{y}"), and against the raw config that placeholder
-	// is invisible, so the layer would be coalesced despite rendering per-caller output.
+	// requestScopedLayers has to inspect resolved provider configs, since a {ctx.*} placeholder can
+	// arrive through an env var or secret and is invisible in the raw config.
 	resolvedLayers := make([]config.LayerConfig, len(cfg.Layers))
 
 	for i, l := range cfg.Layers {
@@ -96,10 +92,9 @@ func ConstructLayerGroup(cfg config.Config, cache cache.Cache, secreter secret.S
 	return &layerGroup, errors.Join(err1, err2)
 }
 
-// findRefTargets recursively walks a raw provider config (as parsed from YAML/JSON into
-// map[string]any / []any) looking for `ref` provider entries, collecting the layer names
-// they target. Providers like `blend` and `fallback` nest other provider configs inside
-// themselves, so this can't be limited to the top level.
+// findRefTargets recursively walks a raw provider config collecting the layer names that `ref`
+// entries target. Providers like `blend` and `fallback` nest other providers inside themselves, so
+// this can't be limited to the top level.
 func findRefTargets(node any, targets *[]string) {
 	switch v := node.(type) {
 	case map[string]any:
@@ -119,11 +114,9 @@ func findRefTargets(node any, targets *[]string) {
 }
 
 // containsRequestScopedPlaceholder reports whether any string anywhere in a raw provider config
-// (as parsed from YAML/JSON into map[string]any / []any) contains a `{ctx.` placeholder.
-// replacePlaceholdersInString in the providers package resolves those against the *rendering*
-// context at request time, which for a server request means any HTTP header (NewRequestContext
-// puts every header into the context). A provider URL/body using e.g. {ctx.Authorization} or
-// {ctx.X-Api-Key} therefore produces per-caller output.
+// contains a `{ctx.` placeholder. Those resolve against the rendering context at request time,
+// which holds every header of the incoming request, so a provider using one produces per-caller
+// output.
 func containsRequestScopedPlaceholder(node any) bool {
 	switch v := node.(type) {
 	case string:
@@ -144,25 +137,17 @@ func containsRequestScopedPlaceholder(node any) bool {
 	return false
 }
 
-// resolveRefTargetsToIDs maps `ref` provider targets, which are layer *names* as they'd arrive in a
-// request, onto the IDs of the layers that could serve them. The distinction matters because
-// unsafeLayers in requestScopedLayers is keyed by ID (matching RenderTile's lookup, which uses the
-// *Layer that FindLayer returned): a pattern layer with id "secret" and pattern "secret-{v}" is
-// reachable by the name "secret-foo", so a ref to "secret-foo" has to propagate the mark onto
-// "secret". Comparing the raw target against IDs would miss that edge entirely and leave the
-// referring layer coalescable.
+// resolveRefTargetsToIDs maps ref targets, which are layer *names* as they'd arrive in a request,
+// onto the IDs of the layers that could serve them. requestScopedLayers is keyed by ID, so
+// comparing raw targets against IDs would drop every edge into a pattern layer: a layer with id
+// "secret" and pattern "secret-{v}" is reachable by the name "secret-foo".
 //
-// Resolution mirrors FindLayer: a literal layer matches when its ID equals the target, and a
-// pattern layer matches when its pattern matches the target the same way MatchesName would. A
-// target may resolve to several IDs when patterns overlap, and every candidate is returned -
-// FindLayer picks the first at request time, but which one that is can depend on the request, so
-// marking all of them is the conservative choice. ParamValidator is deliberately not consulted:
-// it can only ever reject a name, so ignoring it over-approximates, and over-approximating costs a
-// duplicate fetch while under-approximating discloses tiles across callers.
+// Resolution mirrors FindLayer, except that every candidate is returned rather than the first,
+// since which one FindLayer picks can depend on the request, and ParamValidator is not consulted,
+// since it can only reject a name. Both choices over-approximate deliberately.
 //
-// A target that resolves to nothing is dropped. validateRefs already rejects statically dangling
-// targets when no pattern layers exist; when they do exist it intentionally permits targets it
-// can't resolve, and an edge to a layer that doesn't exist can't carry a mark regardless.
+// A target that resolves to nothing is dropped: an edge to a layer that doesn't exist can't carry
+// a mark. validateRefs handles statically dangling targets.
 func resolveRefTargetsToIDs(targets []string, layers []config.LayerConfig) []string {
 	if len(targets) == 0 {
 		return nil
@@ -185,9 +170,7 @@ func resolveRefTargetsToIDs(targets []string, layers []config.LayerConfig) []str
 			} else {
 				segments, err := parsePattern(l.Pattern)
 				if err != nil {
-					// An unparseable pattern fails loudly in ConstructLayer, which runs for every
-					// layer before this is reached; treating it as non-matching here just avoids
-					// duplicating that error path.
+					// ConstructLayer already errors on an unparseable pattern before this runs.
 					continue
 				}
 				if doesMatch, _ := match(segments, target); !doesMatch {
@@ -203,38 +186,24 @@ func resolveRefTargetsToIDs(targets []string, layers []config.LayerConfig) []str
 	return ids
 }
 
-// requestScopedLayers returns the set of layer IDs for which request coalescing (singleflight in
-// RenderTile) must be disabled because their rendered content can differ between two callers
-// asking for the same layer name and tile coordinates.
+// requestScopedLayers returns the set of layer IDs for which coalescing must be disabled because
+// their rendered content can differ between two callers asking for the same layer name and tile
+// coordinates.
 //
-// Coalescing hands one caller's rendered tile to every other caller waiting on the same key. That
-// is only sound when the render is a pure function of the key. The key covers the layer name and
-// the tile coordinates, so the request-scoped inputs that need considering are:
+// Coalescing hands the leader's tile to every waiter, which is only sound when the render is a
+// pure function of the singleflight key. Of the inputs a render can draw on, only {ctx.*} is
+// request-scoped and therefore unsafe: it resolves against the rendering context, which carries
+// the leader's HTTP headers, so a waiter would receive a tile fetched with the leader's
+// credentials. {layer.*} resolves from the pattern matches on the layer name, which is part of the
+// key. {env.*}, config, and secrets are process-scoped. Authorization runs per-caller in
+// checkPermission before the singleflight Do and doesn't feed the rendered bytes.
 //
-//   - {ctx.*} placeholders: resolved from the rendering context, which carries every HTTP header
-//     of whichever caller happened to become the singleflight leader. Serving that result to a
-//     different caller discloses a tile fetched with the leader's credentials. Unsafe - detected
-//     here.
-//   - {layer.*} placeholders: resolved from pkg.LayerPatternMatchesFromContext, which is populated
-//     by Layer.MatchesName from the requested layer name. Two callers sharing a singleflight key
-//     share the same tileRequest.LayerName, so they necessarily produce identical pattern matches.
-//     Safe - already keyed by the layer name being part of the key.
-//   - {env.*} placeholders and config/secret values: process-scoped, identical for all callers.
-//     Safe.
-//   - Authorization inputs (allowed layers/areas, user ID): layer-level authorization runs
-//     per-caller via checkPermission *before* the singleflight Do, so a caller never reaches a
-//     shared render they weren't permitted to make. Those values don't otherwise feed the
-//     rendered bytes.
+// The ref provider rebuilds the child context from the original request, so headers propagate
+// across a ref and a layer that refs an unsafe layer is itself unsafe. The marking is propagated
+// transitively below.
 //
-// The `ref` provider forwards a request to another layer, rebuilding the child context from the
-// original *http.Request (see internal/providers/ref.go), so headers propagate across a ref. A
-// layer that refs an unsafe layer is therefore itself unsafe, and the marking below is propagated
-// transitively across ref edges to a fixed point. Ref targets are layer *names* while this set is
-// keyed by layer *ID*, so each target is resolved through resolveRefTargetsToIDs first - comparing
-// the two directly would silently drop every edge into a pattern layer.
-//
-// Coalescing is a pure optimization, so declining it is always correct; false positives cost only
-// a duplicate upstream fetch, whereas a false negative is a cross-user information disclosure.
+// Coalescing is an optimization, so over-approximating here costs only a duplicate upstream fetch
+// while under-approximating is a cross-user disclosure.
 func requestScopedLayers(layers []config.LayerConfig) map[string]bool {
 	unsafeLayers := make(map[string]bool)
 	refsByLayer := make(map[string][]string, len(layers))
@@ -249,8 +218,7 @@ func requestScopedLayers(layers []config.LayerConfig) map[string]bool {
 		refsByLayer[l.ID] = resolveRefTargetsToIDs(targets, layers)
 	}
 
-	// Propagate across ref edges until nothing new is marked. Bounded by the number of layers
-	// since each pass either marks at least one additional layer or stops.
+	// Bounded by the layer count: each pass either marks another layer or stops.
 	for changed := true; changed; {
 		changed = false
 		for id, targets := range refsByLayer {
@@ -270,11 +238,9 @@ func requestScopedLayers(layers []config.LayerConfig) map[string]bool {
 	return unsafeLayers
 }
 
-// validateRefs performs startup validation of `ref` provider targets: it errors on refs that
-// point at a layer ID that doesn't statically exist, and on cycles formed by refs. Only layers
-// matched by a literal ID (no pattern) can be resolved statically; refs targeting a patterned
-// layer name are skipped here and are instead guarded at request time by a depth counter in
-// Ref.GenerateTile, since patterned layer names aren't all statically resolvable.
+// validateRefs errors on refs pointing at a layer ID that doesn't statically exist, and on cycles
+// formed by refs. Only literal-ID layers can be resolved statically; refs targeting a patterned
+// layer name are guarded at request time by the depth counter in Ref.GenerateTile instead.
 func validateRefs(layers []config.LayerConfig) error {
 	knownIDs := make(map[string]bool, len(layers))
 	hasPatternLayer := false
@@ -295,9 +261,8 @@ func validateRefs(layers []config.LayerConfig) error {
 		}
 	}
 
-	// A dangling target can only be flagged with confidence when every layer is
-	// literal-ID-matched; if any layer uses a pattern, an unmatched target might still
-	// resolve to it at request time and we can't tell statically.
+	// With any pattern layer present, an unmatched target might still resolve to it at request
+	// time, so a dangling target can only be flagged when every layer is literal-ID-matched.
 	if !hasPatternLayer {
 		for id, targets := range refsByLayer {
 			for _, target := range targets {
@@ -440,23 +405,17 @@ func (lg *LayerGroup) RenderTile(ctx context.Context, tileRequest pkg.TileReques
 	return img, nil
 }
 
-// errNilImage is returned when a provider reports success but hands back no image. Several
-// providers (composite_mvt, blend) already defend against a nested provider returning (nil, nil),
-// so it's a reachable state rather than a theoretical one; returning an error beats dereferencing
-// nil and panicking on the caller's goroutine.
+// errNilImage is returned when a provider reports success but hands back no image. composite_mvt
+// and blend already defend against nested providers doing this, so it's reachable in practice.
 var errNilImage = errors.New("provider returned no image and no error")
 
 // renderCoalesced renders a tile, collapsing concurrent misses for the same tile into a single
-// upstream render where that's safe, so a burst of requests for one tile doesn't turn into N
-// calls to the provider.
+// upstream render where that's safe.
 //
-// Callers must have already run checkPermission for their own context - coalescing deliberately
-// happens after authorization so a caller can never ride along on a render they weren't
-// permitted to request.
-//
-// Layers whose output depends on request-scoped context values (see requestScopedLayers) skip
-// coalescing entirely and render directly under the caller's own context, since handing them a
-// leader's result would serve content fetched under a different user's identity.
+// Callers must have already run checkPermission for their own context, so that a caller can never
+// ride along on a render they weren't permitted to request. Layers whose output depends on
+// request-scoped values (see requestScopedLayers) skip coalescing and render under the caller's
+// own context.
 func (lg *LayerGroup) renderCoalesced(ctx context.Context, l *Layer, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	if lg.noCoalesceLayers[l.ID] {
 		img, err := lg.RenderTileNoCache(ctx, tileRequest)
@@ -472,18 +431,11 @@ func (lg *LayerGroup) renderCoalesced(ctx context.Context, l *Layer, tileRequest
 	sfKey := tileRequest.LayerName + "/" + tileRequest.String()
 
 	imgAny, err, _ := lg.renderGroup.Do(sfKey, func() (any, error) {
-		// Render under a context detached from any single caller's cancellation. The leader's
-		// ctx is shared by every waiter, so tying the render to it means the leader
-		// disconnecting fails all the followers too, even though their own requests are still
-		// alive. detachedRenderContext keeps the values the render path needs (trace span,
-		// authorization defaults, layer pattern matches) while dropping the leader's Done
-		// channel and deadline, via context.WithoutCancel.
-		//
-		// Note the tradeoff this leaves: because the render no longer observes any caller's
-		// cancellation, a coalesced render runs to completion (bounded by the provider's own
-		// HTTP client timeouts) even if every waiter has gone away. That is the same lifetime
-		// the background cache write already has, and it's preferable to the alternative of one
-		// caller being able to cancel other callers' requests.
+		// Detached from the leader's cancellation, which every waiter shares: otherwise the
+		// leader disconnecting fails all the followers whose own requests are still alive. The
+		// tradeoff is that a coalesced render runs to completion even once every waiter has gone
+		// away, bounded only by the provider's HTTP timeouts. That's the same lifetime the
+		// background cache write has, and better than one caller cancelling another's request.
 		return lg.RenderTileNoCache(context.WithoutCancel(ctx), tileRequest)
 	})
 
@@ -496,12 +448,9 @@ func (lg *LayerGroup) renderCoalesced(ctx context.Context, l *Layer, tileRequest
 		return nil, errNilImage
 	}
 
-	// Every waiter on a singleflight key receives the identical pointer, and callers do mutate
-	// the returned Image in place - internal/providers/fallback.go sets ForceSkipCache on an
-	// image that may have come back through Ref.GenerateTile -> RenderTile. Handing out a shallow
-	// per-caller copy keeps those scalar writes private. The Content slice stays shared: it's
-	// only ever read or copied out of (composite_mvt builds a new slice via slices.Concat), never
-	// appended to or written through in place.
+	// Every waiter gets the identical pointer and callers do mutate the result in place, e.g.
+	// fallback.go setting ForceSkipCache, so hand out a shallow copy to keep those scalar writes
+	// private. Content stays shared since it's only ever read or copied out of.
 	c := *img
 	return &c, nil
 }
@@ -514,11 +463,8 @@ func writeCache(ctx context.Context, cache cache.Cache, tileRequest pkg.TileRequ
 	span := trace.SpanFromContext(ctx)
 	newCtx = trace.ContextWithSpan(newCtx, span)
 
-	// This runs on its own goroutine (see the `go writeCache(...)` call site) detached from any
-	// request, so a panic here - e.g. from a buggy third-party Cache.Save implementation - would
-	// otherwise be unrecoverable and take down the whole process for a background write that a
-	// client isn't even waiting on. Logs against newCtx for the same reason the save below does:
-	// the request ctx may already be cancelled by the time this fires.
+	// This runs on its own goroutine, so a panic from a third-party Cache.Save would otherwise be
+	// unrecoverable and take down the process over a write no client is waiting on.
 	defer func() {
 		if r := recover(); r != nil {
 			slog.ErrorContext(newCtx, fmt.Sprintf("Recovered from panic in background cache write: %v", r))
@@ -533,11 +479,9 @@ func writeCache(ctx context.Context, cache cache.Cache, tileRequest pkg.TileRequ
 }
 
 func (*LayerGroup) checkPermission(ctx context.Context, l *Layer, tileRequest pkg.TileRequest) error {
-	// LimitLayersFromContext et al only return a usable pointer when the context was built via
-	// pkg.NewRequestContext/pkg.BackgroundContext. A library consumer calling RenderTile with a
-	// plain context.Background() (a stdlib context, not one of ours) used to dereference these
-	// nil pointers and panic; default to "unrestricted" instead, matching what NewRequestContext
-	// itself installs as the zero-value default.
+	// These only return a usable pointer for a context built by pkg.NewRequestContext or
+	// pkg.BackgroundContext. A library consumer can pass a plain stdlib context, so fall back to
+	// unrestricted, which is what NewRequestContext installs anyway.
 	ctxLimitLayers, ok := pkg.LimitLayersFromContext(ctx)
 	limitLayers := ok && ctxLimitLayers != nil && *ctxLimitLayers
 

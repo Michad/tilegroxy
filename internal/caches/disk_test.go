@@ -37,9 +37,8 @@ func TestDisk(t *testing.T) {
 	validateSaveAndLookup(t, c)
 }
 
-// A layer name of "../../escaped" used to let Save/Lookup write or read outside the configured
-// cache directory, since the filename was built by directly concatenating LayerName - which is
-// attacker-controlled for pattern layers - with the tile coordinates.
+// LayerName is User input for pattern layers, so a traversal sequence in it must not let
+// Save/Lookup reach outside the configured cache directory.
 func TestDisk_LayerNamePathTraversalIsContained(t *testing.T) {
 	dir, err := os.MkdirTemp("", "tilegroxy-test-disk")
 	defer os.RemoveAll(dir)

@@ -36,12 +36,9 @@ type Disk struct {
 	DiskConfig
 }
 
-// requestToFilename sanitizes LayerName (see safeLayerName) rather than using it directly,
-// because LayerName is attacker-controlled for pattern layers (it comes from the request path)
-// and a value like "../../escaped" used to let a request write or read outside the configured
-// cache directory. The rest of the key shape (underscore-separated LayerName_Z_X_Y, matching
-// pkg.TileRequest.StringWithSeparator("_")) is preserved so filenames stay readable and existing
-// caches on disk keep matching after upgrade.
+// requestToFilename sanitizes LayerName (see safeLayerName) so a traversal sequence can't reach
+// outside the cache directory. The rest of the name is left alone so filenames stay readable and
+// caches written by earlier versions keep matching.
 func requestToFilename(t pkg.TileRequest) string {
 	safe := t
 	safe.LayerName = safeLayerName(t.LayerName)

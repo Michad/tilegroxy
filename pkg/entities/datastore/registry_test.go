@@ -48,8 +48,8 @@ func init() {
 	RegisterDatastoreWrapper(stubDatastoreRegistration{})
 }
 
-// Duplicate datastore IDs used to silently overwrite each other in the registry map with no
-// error, permanently hiding the first datastore.
+// Duplicate IDs would otherwise overwrite each other in the registry map, hiding the first
+// datastore with no error anywhere.
 func Test_ConstructDatastoreRegistry_DuplicateIDErrors(t *testing.T) {
 	cfg := []map[string]interface{}{
 		{"name": "stub", "id": "dupe"},
@@ -61,8 +61,7 @@ func Test_ConstructDatastoreRegistry_DuplicateIDErrors(t *testing.T) {
 	require.Contains(t, err.Error(), "duplicate datastore id")
 }
 
-// Two datastores with no ID at all used to both key into datastores[""], the second silently
-// replacing the first.
+// Two datastores with no ID would both key into datastores[""].
 func Test_ConstructDatastoreRegistry_EmptyIDErrors(t *testing.T) {
 	cfg := []map[string]interface{}{
 		{"name": "stub"},

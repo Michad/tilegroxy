@@ -79,8 +79,6 @@ func Test_RegisteredAuthenticationNames_IncludesRegistered(t *testing.T) {
 	assert.Contains(t, RegisteredAuthenticationNames(), "stub-auth")
 }
 
-// Registration used to have no mutex protecting the map; confirms concurrent registration and
-// lookups are race-free (run with -race).
 func Test_RegisterAuthentication_ConcurrentIsRaceFree(t *testing.T) {
 	var wg sync.WaitGroup
 	for range 20 {

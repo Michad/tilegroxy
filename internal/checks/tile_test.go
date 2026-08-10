@@ -54,6 +54,8 @@ func Test_Validate(t *testing.T) {
 	require.Error(t, err)
 }
 
+// Disabled: the hardcoded Result no longer matches the bytes the static provider renders, so the
+// expected value needs regenerating before this can run again.
 // func Test_Base64(t *testing.T) {
 // 	ctx := pkg.BackgroundContext()
 // 	cfgAll, lg, reg, cfg := initialize(t, false)

@@ -179,12 +179,10 @@ func ReplaceConfigValues(rawConfig map[string]interface{}, keyTag string, replac
 	return result.(map[string]interface{}), nil
 }
 
-// replaceConfigValuesAny recursively walks arbitrary config values - as produced by parsing
-// YAML/JSON into map[string]interface{}, []interface{}, or (via mapstructure-decoded types like
-// ClientConfig.Headers) map[string]string - looking for strings tagged "keyTag.keyName" to
-// replace. A plain type switch on map[string]interface{}/string alone misses map[string]string
-// fields and any list, so this uses reflection to recurse into every map and slice kind rather
-// than enumerating the concrete types config values happen to arrive as.
+// replaceConfigValuesAny recursively walks arbitrary config values looking for strings tagged
+// "keyTag.keyName" to replace. It recurses by reflect.Kind rather than by concrete type because
+// config values arrive in more shapes than a type switch can enumerate: mapstructure-decoded
+// fields like ClientConfig.Headers are map[string]string, not map[string]interface{}.
 func replaceConfigValuesAny(v any, keyTag string, replacer func(string) (string, error)) (any, error) {
 	if v == nil {
 		return nil, nil
@@ -201,8 +199,6 @@ func replaceConfigValuesAny(v any, keyTag string, replacer func(string) (string,
 
 	rv := reflect.ValueOf(v)
 
-	// Only composite kinds need recursing into; every other kind is returned as-is by the
-	// default arm, so enumerating the remaining ~20 reflect.Kind values would add nothing.
 	switch rv.Kind() { //nolint:exhaustive // the default arm handles all remaining kinds
 	case reflect.Map:
 		result := reflect.MakeMap(rv.Type())
@@ -212,12 +208,8 @@ func replaceConfigValuesAny(v any, keyTag string, replacer func(string) (string,
 			if err != nil {
 				return nil, err
 			}
-			// A nil replacement means the original value was nil (a YAML key with no value, e.g.
-			// `ttl:`). reflect.ValueOf(nil) is the zero Value and Convert would panic on it, so
-			// pass the original entry through untouched instead. For everything else the
-			// replacement is either a string or the original value's type; when the map's value
-			// type is narrower than `any` (e.g. map[string]string) a substituted value is always
-			// a string too, so the conversion is safe.
+			// A nil replacement means the original was nil, as a YAML key written with no value
+			// (`ttl:`) parses to. Convert would panic on the zero Value it produces.
 			if replaced == nil {
 				result.SetMapIndex(key, original)
 				continue
@@ -226,8 +218,8 @@ func replaceConfigValuesAny(v any, keyTag string, replacer func(string) (string,
 		}
 		return result.Interface(), nil
 	case reflect.Slice, reflect.Array:
-		// Note: arrays come back as slices since we always MakeSlice here. Config values parsed
-		// from YAML/JSON are never arrays, so this only affects hand-constructed input.
+		// Arrays come back as slices. Config parsed from YAML/JSON never contains arrays, so this
+		// only affects hand-constructed input.
 		result := reflect.MakeSlice(reflect.SliceOf(rv.Type().Elem()), rv.Len(), rv.Len())
 		for i := range rv.Len() {
 			original := rv.Index(i)
@@ -255,19 +247,16 @@ func ReplaceEnv(rawConfig map[string]interface{}) map[string]interface{} {
 	return result
 }
 
-// credentialQueryParams are query parameter names whose values are masked before a URL is
-// logged. Provider URLs are templated, and a {ctx.*} placeholder resolves to a value taken
-// straight off the incoming request (commonly an Authorization header or an API key), so an
-// otherwise innocuous debug log can end up holding a live credential.
+// Query parameter names whose values are masked before a URL is logged.
 var credentialQueryParams = []string{"key", "token", "apikey", "api_key", "access_token", "password", "secret", "signature", "sig"}
 
-// RedactURLForLog strips userinfo and masks credential-bearing query parameter values so a URL
-// can be written to logs. It accepts relative URIs as well as absolute URLs. A URL that won't
-// parse is replaced entirely, since we can't tell which part of it is sensitive.
+// RedactURLForLog strips userinfo and masks credential-bearing query parameter values so a URL can
+// be written to logs. It accepts relative URIs as well as absolute URLs. A URL that won't parse is
+// replaced entirely, since we can't tell which part of it is sensitive.
 //
-// Providers that log an outgoing URL should route it through this: templated provider URLs
-// resolve {ctx.*} placeholders against the incoming request, so the resolved value can hold a
-// live credential.
+// Providers that log an outgoing URL should route it through this. A {ctx.*} placeholder resolves
+// to a value taken off the incoming request, commonly an Authorization header or an API key, so a
+// debug log can otherwise end up holding a live credential.
 func RedactURLForLog(rawURL string) string {
 	parsed, err := neturl.Parse(rawURL)
 	if err != nil {

@@ -130,11 +130,9 @@ func (s S3Registration) Initialize(configAny any, errorMessages config.ErrorMess
 	return &S3{config, client, transfer}, nil
 }
 
-// calcKey sanitizes LayerName (see safeLayerName) rather than using it directly, because
-// LayerName is attacker-controlled for pattern layers and raw concatenation would let a request
-// smuggle "/" (or "../") into the object key, producing an unexpected key hierarchy in the
-// bucket. The rest of the key shape - path/layer/z/x/y - is preserved so the S3 key hierarchy
-// stays intact for lifecycle rules, prefix-scoped IAM policies, and general debuggability.
+// calcKey sanitizes LayerName (see safeLayerName) so a request can't smuggle "/" into the object
+// key and produce an unexpected hierarchy in the bucket. The path/layer/z/x/y shape is preserved
+// so lifecycle rules and prefix-scoped IAM policies keep working.
 func calcKey(config *S3, t *pkg.TileRequest) string {
 	return config.Path + safeLayerName(t.LayerName) + "/" + strconv.Itoa(t.Z) + "/" + strconv.Itoa(t.X) + "/" + strconv.Itoa(t.Y)
 }

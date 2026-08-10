@@ -25,11 +25,10 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// Maximum number of hops a request may be forwarded through ref providers before we assume a cycle and bail out.
-// Startup validation catches statically-resolvable cycles; this is a backstop for patterned layer names that
-// can't be resolved until request time. The root request is hop 0, so a chain of maxRefDepth ref hops (depths
-// 0..maxRefDepth-1) is allowed and the (maxRefDepth+1)-th hop - the one that would make *depth reach
-// maxRefDepth - is rejected. That keeps the count in the error message equal to the actual number of hops made.
+// Maximum number of hops a request may be forwarded through ref providers before we assume a cycle
+// and bail out. Startup validation catches statically-resolvable cycles; this is the backstop for
+// patterned layer names, which can't be resolved until request time. The root request is hop 0, so
+// exactly maxRefDepth ref hops are allowed.
 const maxRefDepth = 25
 
 type RefConfig struct {
@@ -79,9 +78,6 @@ func (t Ref) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequ
 	req, _ := pkg.ReqFromContext(ctx)
 	newCtx := pkg.NewRequestContext(req)
 
-	// pkg.NewRequestContext always installs a fresh refDepth pointer (initialized to 0), so this
-	// lookup can't fail in practice - but we still guard against a nil pointer rather than assume,
-	// in case that ever changes.
 	if newDepth, ok := pkg.RefDepthFromContext(newCtx); ok && newDepth != nil && depth != nil {
 		*newDepth = *depth + 1
 	}

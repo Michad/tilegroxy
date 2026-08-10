@@ -36,25 +36,17 @@ import (
 
 var packageName = static.GetPackage()
 
-// metricNameSafeChars matches characters that are safe to use verbatim when embedding
-// arbitrary user-supplied text (a layer ID) into the middle of an OTEL instrument name.
 var metricNameSafeChars = regexp.MustCompile(`[^A-Za-z0-9_-]`)
 
-// maxSanitizedMetricNameLen caps the sanitized ID contribution to the metric name so that,
-// combined with the "tilegroxy.tiles.layer." prefix and the longest suffix (".success"),
-// the full instrument name stays comfortably under OTEL's 255 character limit.
+// Leaves room for the "tilegroxy.tiles.layer." prefix and the longest suffix within OTEL's 255
+// character limit.
 const maxSanitizedMetricNameLen = 200
 
-// sanitizeMetricName makes a layer ID safe to embed inside an OTEL instrument name.
-// OTEL instrument names must start with an alphabetic character and may only contain
-// ASCII letters, digits, '_', '.', '-', and '/' (max 255 chars). Since the ID here is
-// embedded mid-name (as "tilegroxy.tiles.layer.{id}.request" etc.), we're conservative
-// and only allow A-Za-z0-9_- - everything else (including '.', '/', spaces, and all
-// non-ASCII characters) is replaced with '_' so the ID can't inject extra dot-segments
-// into the metric name, can't smuggle a leading non-alphabetic character into a segment,
-// and can't push the overall name past the length limit. A raw layer ID with a space or
-// certain non-ASCII characters used to make Int64Counter construction fail outright,
-// which was fatal at server startup - this sanitization avoids that entirely.
+// sanitizeMetricName makes a layer ID safe to embed inside an OTEL instrument name. Such names
+// must start with a letter and may only contain ASCII letters, digits, '_', '.', '-', and '/', so
+// an unsanitized ID makes Int64Counter construction fail, which is fatal at startup. '.' and '/'
+// are replaced too even though OTEL permits them, since the ID sits mid-name and shouldn't be able
+// to inject extra segments.
 func sanitizeMetricName(id string) string {
 	sanitized := metricNameSafeChars.ReplaceAllString(id, "_")
 
@@ -208,16 +200,12 @@ type Layer struct {
 }
 
 // resolveLayerProviderValues substitutes {env.*} and {secret.*} values throughout a layer's
-// provider config, returning a config whose Provider holds the resolved values. The input is not
-// modified: ReplaceConfigValues builds new maps rather than mutating in place, and LayerConfig is
-// taken and returned by value, so the caller's copy keeps its unresolved placeholders.
+// provider config. The caller's copy keeps its unresolved placeholders, since LayerConfig is taken
+// by value and ReplaceConfigValues builds new maps rather than mutating in place.
 //
-// Split out of ConstructLayer so ConstructLayerGroup can resolve each layer once and pass the same
-// resolved config to both ConstructLayer and requestScopedLayers - the latter must see resolved
-// values to spot a {ctx.*} placeholder that arrives via an env var or secret. Running it twice on
-// the same config is harmless (substitution is idempotent on already-resolved values, which no
-// longer carry an "env."/"secret." prefix), but it would mean two lookups per secret, so the
-// group path resolves up front and hands the result down.
+// Split out of ConstructLayer so ConstructLayerGroup can resolve each layer once and hand the
+// result to both ConstructLayer and requestScopedLayers. Running it twice is harmless, just an
+// extra lookup per secret.
 func resolveLayerProviderValues(rawConfig config.LayerConfig, secreter secret.Secreter) (config.LayerConfig, error) {
 	var err error
 
@@ -273,13 +261,7 @@ func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.Cli
 
 	meter := otel.Meter(packageName)
 
-	// The layer ID is embedded directly in the metric name so each layer gets its own
-	// counters. OTEL instrument names must start with a letter and may only contain
-	// ASCII letters, digits, '_', '.', '-', and '/' (max 255 chars) - an ID with a space,
-	// a dot/slash, or non-ASCII characters would otherwise produce an invalid instrument
-	// name and make Int64Counter construction fail, which is fatal at startup. sanitizeMetricName
-	// replaces anything outside A-Za-z0-9_- with '_' so the ID can't inject extra
-	// dot-segments into the metric name or push it past the length limit.
+	// The layer ID is embedded in the metric name so each layer gets its own counters.
 	sanitizedID := sanitizeMetricName(rawConfig.ID)
 	tileAllCounter, err1 := meter.Int64Counter("tilegroxy.tiles.layer."+sanitizedID+".request", metric.WithDescription("Number of tile requests for "+rawConfig.ID))
 	tileAuthCounter, err2 := meter.Int64Counter("tilegroxy.tiles.layer."+sanitizedID+".auth", metric.WithDescription("Number of outgoing authentication checks for "+rawConfig.ID))

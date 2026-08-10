@@ -77,10 +77,9 @@ func configToEntities(cfg config.Config) (*entities.Entities, error) {
 		return nil, fmt.Errorf("error constructing layers: %w", err)
 	}
 
-	// Health checks are constructed here purely so their config is validated - a bad check name or
-	// a typo'd field would otherwise only surface when `serve` binds the health port, letting
-	// `config check` report a config as Valid that can't actually start. The constructed checks are
-	// discarded; serve builds its own (see internal/server.setupCheckRoutines).
+	// Constructed only to validate their config, then discarded; serve builds its own. Otherwise a
+	// bad check name would first surface when serve binds the health port, after `config check`
+	// already called the config Valid.
 	for _, checkCfg := range cfg.Server.Health.Checks {
 		if _, err := health.ConstructHealthCheck(checkCfg, layerGroup, &cfg); err != nil {
 			return nil, fmt.Errorf("error constructing health check: %w", err)

@@ -78,8 +78,6 @@ func Test_RegisteredSecreterNames_IncludesRegistered(t *testing.T) {
 	assert.Contains(t, RegisteredSecreterNames(), "stub-secreter")
 }
 
-// Registration used to have no mutex protecting the map; confirms concurrent registration and
-// lookups are race-free (run with -race).
 func Test_RegisterSecreter_ConcurrentIsRaceFree(t *testing.T) {
 	var wg sync.WaitGroup
 	for range 20 {

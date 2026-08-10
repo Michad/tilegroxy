@@ -84,8 +84,8 @@ func TestSafeLayerName_WhitespaceAndControlCharsAreReplaced(t *testing.T) {
 	assert.Equal(t, "a_b", safeLayerName("a\x00b"))
 }
 
-// Documents the accepted collision tradeoff of sanitizing instead of hashing: distinct layer
-// names that differ only in unsafe characters can map to the same sanitized value.
+// The accepted collision tradeoff of sanitizing instead of hashing: layer names differing only in
+// unsafe characters map to the same sanitized value.
 func TestSafeLayerName_CollisionsAreExpectedForDistinctUnsafeNames(t *testing.T) {
 	assert.Equal(t, safeLayerName("a/b"), safeLayerName("a b"))
 }

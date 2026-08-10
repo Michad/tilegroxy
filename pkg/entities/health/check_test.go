@@ -88,8 +88,6 @@ func Test_RegisteredHealthCheckNames_IncludesRegistered(t *testing.T) {
 	assert.Contains(t, RegisteredHealthCheckNames(), "stub-check")
 }
 
-// Registration used to have no mutex protecting the map; confirms concurrent registration and
-// lookups are race-free (run with -race).
 func Test_RegisterHealthCheck_ConcurrentIsRaceFree(t *testing.T) {
 	var wg sync.WaitGroup
 	for range 20 {

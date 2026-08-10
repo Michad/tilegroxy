@@ -40,9 +40,6 @@ func (s stubCacheRegistration) Initialize(_ any, _ config.ErrorMessages) (Cache,
 	return stubCache{}, nil
 }
 
-// The registry's map used to have no mutex, so a consumer registering caches concurrently
-// (rather than only from init(), which Go serializes) raced. Reproduces that with concurrent
-// RegisterCache/RegisteredCache/RegisteredCacheNames calls; must pass under -race.
 func Test_CacheRegistry_ConcurrentRegistrationIsRaceFree(t *testing.T) {
 	var wg sync.WaitGroup
 	const n = 50

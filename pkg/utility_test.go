@@ -100,10 +100,8 @@ func Test_ReplaceEnv_WithVals(t *testing.T) {
 	assert.Equal(t, "saf", cloned["child"].(map[string]interface{})["f"])
 }
 
-// ReplaceEnv used to only recurse into map[string]interface{}, so a header map
-// (map[string]string), a plain list ([]interface{}), or a list of maps
-// ([]map[string]interface{}) - all shapes config values legitimately arrive as - passed through
-// with the "env.X"/"secret.X" placeholder untouched instead of substituted.
+// Config values legitimately arrive as map[string]string, []interface{}, and lists of maps, not
+// only map[string]interface{}, and a placeholder in any of them has to be substituted.
 func Test_ReplaceEnv_MapStringString(t *testing.T) {
 	t.Setenv("TEST_HEADER", "secretvalue")
 
@@ -150,9 +148,8 @@ func Test_ReplaceEnv_ListOfMaps(t *testing.T) {
 	assert.Equal(t, "/from/env", tiers[0]["path"])
 }
 
-// A YAML key written with no value (`ttl:`) parses to a nil, which the reflective walk used to
-// hand to reflect.ValueOf(nil).Convert(...) - the zero Value - panicking with a SIGSEGV that took
-// down `config check` and `serve` alike. Nils must pass through untouched.
+// A YAML key written with no value (`ttl:`) parses to a nil, which reflect.ValueOf turns into the
+// zero Value that Convert panics on. Nils must pass through untouched.
 func Test_ReplaceEnv_NilInMap(t *testing.T) {
 	raw := map[string]interface{}{
 		"ttl":   nil,
@@ -194,7 +191,7 @@ func Test_ReplaceEnv_NilInSlice(t *testing.T) {
 	assert.Equal(t, "literal", list[1])
 }
 
-// The shape the real crash report used: a list of maps where one map value is nil.
+// The shape from the original crash report: a list of maps where one map value is nil.
 func Test_ReplaceEnv_NilInsideListOfMaps(t *testing.T) {
 	t.Setenv("TEST_TIER_NAME", "memory")
 
@@ -246,10 +243,8 @@ func Test_RedactURLForLog(t *testing.T) {
 	assert.Equal(t, "(unparseable url)", RedactURLForLog("http://[::1]bad:99/"))
 }
 
-// GetTile used to only exist as an unexported function in internal/providers, reachable by
-// real Go providers only by copy-pasting it (or reimplementing MaxLength/ContentTypes/StatusCodes
-// enforcement by hand) since internal/ can't be imported outside this module. It's now exported
-// from pkg so a library consumer writing a real Go provider (not a yaegi script) can call it.
+// GetTile is exported from pkg so a library consumer writing their own Go provider gets the same
+// MaxLength/ContentTypes/StatusCodes enforcement as the built-in ones without reimplementing it.
 func Test_GetTile(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "image/png")

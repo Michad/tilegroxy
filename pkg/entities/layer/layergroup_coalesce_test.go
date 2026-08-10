@@ -58,8 +58,8 @@ func (c *alwaysMissCache) Save(_ context.Context, _ pkg.TileRequest, _ *pkg.Imag
 	return nil
 }
 
-// Reproduces the cache-stampede scenario: many concurrent requests for the same tile on a
-// cache miss should coalesce into a single upstream render via singleflight, not N renders.
+// Many concurrent requests for the same tile on a cache miss must coalesce into a single upstream
+// render rather than stampeding the provider.
 func Test_LayerGroup_RenderTile_CoalescesConcurrentMisses(t *testing.T) {
 	provider := &slowGenerateProvider{delay: 50 * time.Millisecond}
 	c := &alwaysMissCache{}
@@ -85,8 +85,8 @@ func Test_LayerGroup_RenderTile_CoalescesConcurrentMisses(t *testing.T) {
 	const n = 100
 	var wg sync.WaitGroup
 	wg.Add(n)
-	// Collect results rather than asserting inside the goroutines: require.* calls
-	// runtime.Goexit, which would skip the wg.Done and hang the test instead of failing it.
+	// Asserting in a goroutine would hang the test rather than fail it: require.* calls
+	// runtime.Goexit, skipping the wg.Done.
 	type result struct {
 		img *pkg.Image
 		err error
@@ -111,11 +111,9 @@ func Test_LayerGroup_RenderTile_CoalescesConcurrentMisses(t *testing.T) {
 	require.Equal(t, int32(1), provider.generateCalls.Load(), "expected concurrent misses for the same tile to coalesce into a single upstream render")
 }
 
-// RenderTile is exported API a library consumer could call with a plain context.Background()
-// (a stdlib context, not one built via pkg.NewRequestContext/pkg.BackgroundContext). It used to
-// dereference nil pointers from LimitLayersFromContext et al and panic; it should instead treat
-// a context with no restriction info set as unrestricted, the same default NewRequestContext
-// itself installs.
+// RenderTile is exported API, so a library consumer can call it with a plain stdlib context
+// rather than one from pkg.NewRequestContext. A context carrying no restriction info has to be
+// treated as unrestricted instead of dereferencing the nil pointers that come back.
 func Test_LayerGroup_RenderTile_PlainContextBackgroundDoesNotPanic(t *testing.T) {
 	provider := &slowGenerateProvider{delay: 0}
 	c := &alwaysMissCache{}
@@ -168,10 +166,9 @@ func (p *ctxEchoProvider) GenerateTile(ctx context.Context, _ ProviderContext, _
 	return &pkg.Image{Content: []byte(val)}, nil
 }
 
-// The central risk of coalescing: singleflight hands the leader's rendered tile to every waiter.
-// For a layer whose provider resolves {ctx.*} placeholders, every HTTP header of the request is in
-// the rendering context, so a waiter would receive a tile fetched with the *leader's* credentials.
-// Concurrent callers with different per-user context values must each get their own scoped result.
+// The central risk of coalescing: the leader's tile goes to every waiter, and for a provider
+// resolving {ctx.*} that tile was fetched with the leader's credentials. Concurrent callers with
+// different per-user context values must each get their own result.
 func Test_LayerGroup_RenderTile_DoesNotCoalesceRequestScopedLayers(t *testing.T) {
 	const header = "Authorization"
 	provider := &ctxEchoProvider{key: header, delay: 25 * time.Millisecond}
@@ -205,8 +202,8 @@ func Test_LayerGroup_RenderTile_DoesNotCoalesceRequestScopedLayers(t *testing.T)
 	const n = 20
 	var wg sync.WaitGroup
 	wg.Add(n)
-	// Collect per-caller results rather than asserting inside the goroutines: require.* calls
-	// runtime.Goexit, which would skip the wg.Done and hang the test instead of failing it.
+	// Asserting in a goroutine would hang the test rather than fail it: require.* calls
+	// runtime.Goexit, skipping the wg.Done.
 	type seen struct {
 		want string
 		got  string
@@ -232,16 +229,13 @@ func Test_LayerGroup_RenderTile_DoesNotCoalesceRequestScopedLayers(t *testing.T)
 
 	for s := range results {
 		require.NoError(t, s.err)
-		// Each caller must see the tile rendered under its OWN identity, never a
-		// concurrent caller's.
+		// Each caller must see the tile rendered under its own identity.
 		require.Equal(t, s.want, s.got)
 	}
 }
 
-// {layer.*} placeholders resolve from the layer pattern matches, which derive from the requested
-// layer name - and the layer name is part of the singleflight key. So two callers who coalesce
-// necessarily requested the same layer name and get the same matches; such layers stay safe to
-// coalesce and must not be marked request-scoped.
+// {layer.*} resolves from pattern matches on the layer name, which is part of the singleflight
+// key, so two callers who coalesce necessarily get the same matches. Such layers stay coalescable.
 func Test_RequestScopedLayers_Classification(t *testing.T) {
 	layers := []config.LayerConfig{
 		{ID: "plain", Provider: map[string]any{"name": "url", "url": "https://example.com/{z}/{x}/{y}"}},
@@ -275,10 +269,8 @@ func Test_RequestScopedLayers_Classification(t *testing.T) {
 	require.True(t, got["refsRefsCtx"], "request-scoped-ness must propagate transitively across refs")
 }
 
-// Every waiter on a singleflight key used to receive the identical *pkg.Image pointer, and callers
-// do mutate the result in place (internal/providers/fallback.go sets ForceSkipCache on an image
-// that may have come back through Ref.GenerateTile -> RenderTile). One caller's mutation must not
-// be visible to another.
+// Callers mutate the result in place, e.g. fallback.go setting ForceSkipCache, so one waiter's
+// mutation must not be visible to another.
 func Test_LayerGroup_RenderTile_CoalescedWaitersGetIndependentImages(t *testing.T) {
 	provider := &slowGenerateProvider{delay: 25 * time.Millisecond}
 	c := &alwaysMissCache{}
@@ -311,8 +303,7 @@ func Test_LayerGroup_RenderTile_CoalescedWaitersGetIndependentImages(t *testing.
 			defer wg.Done()
 			img, err := lg.RenderTile(pkg.BackgroundContext(), pkg.TileRequest{LayerName: "test", Z: 5, X: 1, Y: 1})
 			errs[i] = err
-			// Half the callers mutate in place, the way fallback.go does. Under -race this
-			// also catches the waiters sharing one struct.
+			// Half the callers mutate in place, the way fallback.go does.
 			if img != nil && i%2 == 0 {
 				img.ForceSkipCache = true
 				img.ContentType = "mutated/" + strconv.Itoa(i)
@@ -322,8 +313,8 @@ func Test_LayerGroup_RenderTile_CoalescedWaitersGetIndependentImages(t *testing.
 	}
 	wg.Wait()
 
-	// Asserted here rather than in the goroutines: require.* calls runtime.Goexit, which would
-	// skip the wg.Done and hang the test instead of failing it.
+	// Asserting in a goroutine would hang the test rather than fail it: require.* calls
+	// runtime.Goexit, skipping the wg.Done.
 	for i := range n {
 		require.NoError(t, errs[i])
 		require.NotNil(t, imgs[i])
@@ -339,8 +330,8 @@ func Test_LayerGroup_RenderTile_CoalescedWaitersGetIndependentImages(t *testing.
 	}
 }
 
-// nilImageProvider reports success but returns no image. composite_mvt.go and blend.go both
-// already defend against a nested provider doing this, so it's reachable rather than theoretical.
+// nilImageProvider reports success but returns no image. composite_mvt.go and blend.go already
+// defend against nested providers doing this, so it's reachable in practice.
 type nilImageProvider struct{}
 
 func (nilImageProvider) PreAuth(_ context.Context, providerContext ProviderContext) (ProviderContext, error) {
@@ -352,9 +343,8 @@ func (nilImageProvider) GenerateTile(_ context.Context, _ ProviderContext, _ pkg
 	return nil, nil
 }
 
-// A provider returning (nil, nil) used to reach an unchecked type assertion and then dereference
-// the nil image at `if !img.ForceSkipCache`, panicking on the request goroutine. It should surface
-// as an error instead.
+// A provider returning (nil, nil) must surface as an error rather than being dereferenced on the
+// request goroutine.
 func Test_LayerGroup_RenderTile_NilImageIsAnErrorNotAPanic(t *testing.T) {
 	c := &alwaysMissCache{}
 
@@ -385,7 +375,7 @@ func Test_LayerGroup_RenderTile_NilImageIsAnErrorNotAPanic(t *testing.T) {
 	require.Nil(t, img)
 }
 
-// Same for a layer that skips coalescing - the nil check has to cover both paths.
+// The nil check has to cover the non-coalescing path too.
 func Test_LayerGroup_RenderTile_NilImageIsAnErrorWhenNotCoalescing(t *testing.T) {
 	c := &alwaysMissCache{}
 
@@ -445,9 +435,8 @@ func (p *ctxAwareProvider) GenerateTile(ctx context.Context, _ ProviderContext, 
 	}
 }
 
-// The leader's cancellation used to be the only cancellation source for a coalesced render, so a
-// leader disconnecting failed every follower with its context.Canceled even though their own
-// requests were alive. The render now happens under a context detached from any single caller.
+// A coalesced render runs under a context detached from any single caller, so a leader
+// disconnecting must not fail the followers whose own requests are still alive.
 func Test_LayerGroup_RenderTile_LeaderCancellationDoesNotFailFollowers(t *testing.T) {
 	provider := &ctxAwareProvider{delay: 60 * time.Millisecond}
 	c := &alwaysMissCache{}
@@ -504,8 +493,8 @@ func Test_LayerGroup_RenderTile_LeaderCancellationDoesNotFailFollowers(t *testin
 	require.NotNil(t, followerImg)
 }
 
-// blockingCache never returns from Save until the test releases it, letting us pile up
-// concurrent background cache writes to prove the limiter actually bounds them.
+// blockingCache never returns from Save until the test releases it, so background cache writes
+// pile up and the limiter's bound becomes observable.
 type blockingCache struct {
 	inFlight atomic.Int32
 	maxSeen  atomic.Int32
@@ -529,10 +518,8 @@ func (c *blockingCache) Save(_ context.Context, _ pkg.TileRequest, _ *pkg.Image)
 	return nil
 }
 
-// Without a bound, a slow cache backend plus sustained misses accumulates unbounded goroutines
-// and the *pkg.Image buffers they pin. Fires many concurrent misses for distinct tiles (so
-// singleflight coalescing doesn't collapse them) against a cache whose Save blocks, and confirms
-// the number of concurrently in-flight background writes never exceeds maxConcurrentCacheWrites.
+// Without a bound, a slow cache backend plus sustained misses accumulates goroutines and the
+// images they pin. The tiles are distinct so singleflight doesn't collapse the misses.
 func Test_LayerGroup_RenderTile_BoundsConcurrentCacheWrites(t *testing.T) {
 	provider := &slowGenerateProvider{delay: 0}
 	c := &blockingCache{unblock: make(chan struct{})}
@@ -581,19 +568,17 @@ func (panicOnSaveCache) Save(_ context.Context, _ pkg.TileRequest, _ *pkg.Image)
 	panic("simulated panic from a buggy Cache.Save implementation")
 }
 
-// writeCache runs detached on its own goroutine after a cache miss (see the `go writeCache(...)`
-// call site in RenderTile), so an unrecovered panic there - e.g. from a buggy third-party cache -
-// used to take down the entire process for a background write the client isn't even waiting on.
+// writeCache runs on its own goroutine after a cache miss, so an unrecovered panic from a
+// third-party cache would take down the process over a write no client is waiting on.
 func Test_WriteCache_RecoversFromPanic(t *testing.T) {
 	require.NotPanics(t, func() {
 		writeCache(context.Background(), panicOnSaveCache{}, pkg.TileRequest{LayerName: "test", Z: 1, X: 0, Y: 0}, &pkg.Image{Content: []byte("x")})
 	})
 }
 
-// A ref provider targets a layer *name*, while noCoalesceLayers is keyed by layer *ID*. When the
-// target resolves to a pattern layer the two differ, and comparing them directly would drop the
-// edge - leaving a layer that transitively reaches a {ctx.*} provider coalescable, which is the
-// cross-user disclosure requestScopedLayers exists to prevent.
+// A ref targets a layer name while noCoalesceLayers is keyed by ID. Those differ when the target
+// resolves to a pattern layer, and dropping that edge leaves a layer that transitively reaches a
+// {ctx.*} provider coalescable.
 func Test_RequestScopedLayers_RefToPatternLayerPropagates(t *testing.T) {
 	layers := []config.LayerConfig{
 		{
@@ -643,8 +628,8 @@ func Test_RequestScopedLayers_RefChainThroughPatternLayers(t *testing.T) {
 	require.True(t, unsafe["top"], "the mark must propagate transitively across pattern-named refs")
 }
 
-// A {ctx.*} placeholder can arrive through an env var, where it's invisible in the raw config.
-// ConstructLayerGroup therefore resolves each layer's provider config before running the detector.
+// A {ctx.*} placeholder arriving through an env var is invisible in the raw config, so
+// ConstructLayerGroup resolves each provider config before running the detector.
 func Test_RequestScopedLayers_CtxDeliveredViaEnvIsDetected(t *testing.T) {
 	t.Setenv("TILEGROXY_TEST_CTX_URL", "https://example.com/{ctx.Authorization}/{z}/{x}/{y}")
 
@@ -663,8 +648,8 @@ func Test_RequestScopedLayers_CtxDeliveredViaEnvIsDetected(t *testing.T) {
 		"a {ctx.} delivered via an env var must be detected once the provider config is resolved")
 }
 
-// resolveLayerProviderValues is called on the same config twice (once by ConstructLayerGroup, once
-// inside ConstructLayer), so it must leave its input untouched.
+// ConstructLayerGroup and ConstructLayer both call this on the same config, so it must leave its
+// input untouched.
 func Test_ResolveLayerProviderValues_DoesNotMutateInput(t *testing.T) {
 	t.Setenv("TILEGROXY_TEST_PLAIN_URL", "https://example.com/tiles")
 

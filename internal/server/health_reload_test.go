@@ -38,9 +38,8 @@ func init() {
 	InterruptFlags = append(InterruptFlags, reloadTestSignal)
 }
 
-// freePort asks the kernel for an unused TCP port and immediately releases it. There's an inherent
-// race between releasing and the server binding, but it's far less flaky than hardcoded ports which
-// collide outright with anything else running in CI.
+// freePort asks the kernel for an unused TCP port and immediately releases it. The gap before the
+// server binds is racy, but less so than hardcoded ports colliding with anything else in CI.
 func freePort(t *testing.T) int {
 	t.Helper()
 
@@ -127,21 +126,17 @@ func healthTestConfig(t *testing.T) (config.Config, int) {
 	return cfg, healthPort
 }
 
-// entitiesFor wraps a LayerGroup in the entities bundle ListenAndServe takes. These tests only
-// exercise the health subsystem, which reads nothing but the LayerGroup, so the rest is left nil -
-// Entities.Close tolerates that.
+// entitiesFor wraps a LayerGroup in the entities bundle ListenAndServe takes. The health
+// subsystem reads nothing else, and Entities.Close tolerates the rest being nil.
 func entitiesFor(lg *layer.LayerGroup) *entities.Entities {
 	return &entities.Entities{LayerGroup: lg}
 }
 
 // startServer boots ListenAndServe in the background, waits until its health endpoint is live, and
-// returns the reload callback it published. Registers cleanup that signals the server to stop and
-// waits for it to return.
+// returns the reload callback it published, registering cleanup that stops the server.
 //
-// ListenAndServe writes through reloadPtr on its own goroutine with no synchronization of its own,
-// so reading that variable from the test goroutine would be an unsynchronized race that -race
-// rightly flags. The onReloadPtrSet hook lets the server goroutine hand the value over through a
-// channel immediately after writing it, which supplies the happens-before edge.
+// ListenAndServe writes through reloadPtr on its own goroutine with no synchronization, so the
+// value is handed over through a channel from the onReloadPtrSet hook rather than read directly.
 func startServer(t *testing.T, cfg *config.Config, lg *layer.LayerGroup) reloadEntitiesFunc {
 	t.Helper()
 
@@ -182,11 +177,9 @@ func startServer(t *testing.T, cfg *config.Config, lg *layer.LayerGroup) reloadE
 	}
 }
 
-// Health checks used to be constructed once at startup and never rebuilt on reload - their
-// tickers closed over the original LayerGroup permanently, so a reload that fixed (or broke) a
-// layer was invisible to health checks forever. Reproduces this via ListenAndServe's own
-// reloadPtr mechanism: start with a healthy layer, reload to a failing one (same layer ID, same
-// health check config), and confirm the health endpoint's status actually changes.
+// Health check tickers close over the LayerGroup they were built against, so without a rebuild on
+// reload a layer that a reload fixes or breaks stays invisible to health checks. Driven through
+// ListenAndServe's own reloadPtr, keeping the layer ID and check config identical throughout.
 func Test_ListenAndServe_HealthChecksRebuildOnReload(t *testing.T) {
 	cfg1, healthPort := healthTestConfig(t)
 
@@ -211,13 +204,9 @@ func Test_ListenAndServe_HealthChecksRebuildOnReload(t *testing.T) {
 	waitForHealthStatus(t, healthPort, "error")
 }
 
-// Concurrent reloads used to deadlock permanently: healthReloader released the mutex before
-// invoking the old generation's shutdown func, so two reloads both grabbed the SAME shutdown func
-// and both called it. That shutdown sent on unbuffered exit channels whose single receiver had
-// already returned after the first send, so the second caller blocked forever in [chan send].
-// Reachable in production because pkg/config dispatches each config-change event in its own
-// goroutine. The whole test body runs behind a timeout so a regression FAILS rather than hanging
-// the suite forever.
+// pkg/config dispatches each config-change event on its own goroutine, so concurrent reloads are
+// reachable in production. Two reloads that both invoke the same generation's shutdown func
+// deadlock the second caller, so the body runs behind a timeout to fail rather than hang.
 func Test_ListenAndServe_ConcurrentHealthReloadsDoNotDeadlock(t *testing.T) {
 	cfg, healthPort := healthTestConfig(t)
 
@@ -261,17 +250,14 @@ func Test_ListenAndServe_ConcurrentHealthReloadsDoNotDeadlock(t *testing.T) {
 		t.Fatalf("%v concurrent reloads deadlocked - they did not all complete within the timeout", reloadCount)
 	}
 
-	// After the dust settles exactly one generation should own the health port and it should be
-	// serving normally.
+	// Exactly one generation should own the health port and be serving normally.
 	waitForHealthStatus(t, healthPort, "ok")
 }
 
-// A rebuild that fails (bad check config arriving at reload time) used to shut the old generation
-// down and then return early, leaving the health endpoint permanently dead AND leaving
-// *healthShutdown pointing at the already-shut-down old generation. The tile handler reload has
-// already succeeded by that point, so the process keeps serving tiles while its liveness endpoint
-// is unreachable. Now the failure is reported, no stale pointer is retained, and a subsequent good
-// reload brings health back up.
+// A rebuild failing on bad check config leaves the old generation already shut down, and the tile
+// handler reload has succeeded by that point, so the process keeps serving tiles with its liveness
+// endpoint down. The failure has to be reported, no stale shutdown pointer retained, and a later
+// good reload has to bring health back.
 func Test_ListenAndServe_FailedHealthRebuildRecovers(t *testing.T) {
 	cfg, healthPort := healthTestConfig(t)
 
@@ -294,8 +280,7 @@ func Test_ListenAndServe_FailedHealthRebuildRecovers(t *testing.T) {
 
 	require.Error(t, reloadFn(&badCfg, entitiesFor(badLg)), "a reload with an unknown health check name must surface an error")
 
-	// A subsequent good reload must bring the health endpoint back rather than the process being
-	// stuck with a dead endpoint forever.
+	// A subsequent good reload must bring the health endpoint back.
 	goodLg, err := layer.ConstructLayerGroup(cfg, nil, nil, nil)
 	require.NoError(t, err)
 
@@ -305,9 +290,8 @@ func Test_ListenAndServe_FailedHealthRebuildRecovers(t *testing.T) {
 	waitForHealthStatus(t, healthPort, "ok")
 }
 
-// Directly exercises healthReloader's failure handling: after a failed rebuild the shutdown pointer
-// must not still reference the previous generation's (already invoked) shutdown func, which
-// ListenAndServe's final shutdown would otherwise call a second time.
+// After a failed rebuild the shutdown pointer must not still reference the previous generation's
+// already-invoked shutdown func, which ListenAndServe's final shutdown would call a second time.
 func Test_healthReloader_FailedRebuildDoesNotRetainStalePointer(t *testing.T) {
 	cfg, _ := healthTestConfig(t)
 
@@ -334,7 +318,7 @@ func Test_healthReloader_FailedRebuildDoesNotRetainStalePointer(t *testing.T) {
 	require.Equal(t, 1, oldCalls, "the previous generation should have been shut down exactly once")
 
 	if healthShutdown != nil {
-		// Whatever remains must be a NEW func (a partial-generation teardown), never the old one.
+		// Whatever remains must be a new func tearing down the partial generation.
 		require.NoError(t, healthShutdown(ctx))
 		require.Equal(t, 1, oldCalls, "the retained shutdown func must not be the stale previous generation's")
 	}

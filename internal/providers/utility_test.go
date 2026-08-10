@@ -23,10 +23,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// A {layer.*} placeholder value is attacker-influenced (it comes from the incoming request path
-// via pattern matching) and used to be spliced into the upstream URL raw. A value containing "?",
-// "#", or "/" could append query parameters, truncate the path, or traverse it. Percent-encoding
-// at substitution time should neutralize all three.
+// A {layer.*} value comes from the request path via pattern matching, so unescaped it could
+// append query parameters, truncate the path, or traverse it.
 func Test_ReplaceURLPlaceholders_EscapesInjectionInPath(t *testing.T) {
 	ctx := pkg.BackgroundContext()
 	lpm, _ := pkg.LayerPatternMatchesFromContext(ctx)
@@ -86,11 +84,8 @@ func Test_ReplaceURLPlaceholders_NormalValuesStillWork(t *testing.T) {
 	require.Equal(t, "https://example.com/tiles/20230917a/1/1/0.png", result)
 }
 
-// {env.*} is operator-controlled config (os.Getenv), not request-derived, so it must NOT be
-// escaped - the documented idiom is to use it for an entire base URL (scheme + host + path
-// prefix), which requires literal "://" and "/" to survive substitution intact. This is the
-// regression test for the bug: escaping every $N replacement uniformly (regardless of source)
-// silently mangled this into "https:%2F%2Ftiles.example.com%2Fv1/...".
+// {env.*} is operator config, and the documented idiom is to use it for an entire base URL, so
+// escaping it would mangle the "://" and "/" into "https:%2F%2Ftiles.example.com%2Fv1".
 func Test_ReplaceURLPlaceholders_EnvValuePassesThroughUnescaped(t *testing.T) {
 	t.Setenv("TILEGROXY_TEST_BASEURL", "https://tiles.example.com/v1")
 
@@ -102,8 +97,7 @@ func Test_ReplaceURLPlaceholders_EnvValuePassesThroughUnescaped(t *testing.T) {
 	require.Equal(t, "https://tiles.example.com/v1/1/1/0.png", result)
 }
 
-// A second env case: a value with a query string should also survive intact, since operators may
-// reasonably want to inject a full URL including query parameters via env var.
+// Operators may inject a full URL including query parameters, which must also survive intact.
 func Test_ReplaceURLPlaceholders_EnvValueWithQueryStringPassesThroughUnescaped(t *testing.T) {
 	t.Setenv("TILEGROXY_TEST_SUFFIX", "?key=abc&fmt=png")
 
@@ -115,8 +109,7 @@ func Test_ReplaceURLPlaceholders_EnvValueWithQueryStringPassesThroughUnescaped(t
 	require.Equal(t, "https://example.com/tiles/1/1/0?key=abc&fmt=png", result)
 }
 
-// {ctx.*} is request-derived (HTTP headers), so - like {layer.*} - it must be escaped to prevent
-// a header value from injecting query parameters or rewriting the path.
+// {ctx.*} resolves from HTTP headers, so like {layer.*} it must be escaped.
 func Test_ReplaceURLPlaceholders_CtxValueIsEscaped(t *testing.T) {
 	req, err := http.NewRequest(http.MethodGet, "http://example.com", nil)
 	require.NoError(t, err)
@@ -163,11 +156,10 @@ func Test_ReplaceURLPlaceholders_MixedEnvAndLayerOnlyEscapesLayer(t *testing.T) 
 	require.NotContains(t, result, "?x=1/")
 }
 
-// A request-derived value containing the literal "$N" must never be re-substituted. Substitution
-// walks the template once, left to right, so text it inserts is not rescanned; a repeated-pass
-// implementation would replace this "$0" with the {env.*} value - splicing an operator secret into
-// the outbound URL. url.PathEscape leaves "$" unescaped, so in path position the value stays a
-// literal "$0"; what matters is that it's inert.
+// A request-derived value containing a literal "$N" must never be re-substituted: a repeated-pass
+// implementation would replace this "$0" with the {env.*} value, splicing an operator secret into
+// the outbound URL. PathEscape leaves "$" alone, so the value stays a literal "$0" here; what
+// matters is that it's inert.
 func Test_ReplaceURLPlaceholders_CtxValueCannotReinjectPlaceholder(t *testing.T) {
 	t.Setenv("TILEGROXY_TEST_SECRET", "super-secret-value")
 

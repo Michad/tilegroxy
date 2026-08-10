@@ -37,28 +37,23 @@ var lyrRegex = regexp.MustCompile(`{layer\.[^{}}]*}`)
 
 const mvtContentType = "application/vnd.mapbox-vector-tile"
 
-// placeholderSource identifies where a replacement value originated so callers that splice
-// the value into something else (e.g. a URL) can decide whether it needs escaping. Note the
-// plain string substitutions performed directly by replacePlaceholdersInString (z/x/y/bbox)
-// never flow through the $N/replacements path, so they have no source of their own.
+// placeholderSource identifies where a replacement value originated so callers that splice the
+// value into something else (e.g. a URL) can decide whether it needs escaping.
 type placeholderSource int
 
 const (
-	// sourceEnv is operator-controlled (process environment) - trusted, must not be escaped
-	// since it's the documented way to inject things like an entire scheme+host+path prefix.
+	// Operator-controlled, so trusted.
 	sourceEnv placeholderSource = iota
-	// sourceCtx is request-derived (HTTP headers/context values) - untrusted.
+	// Request-derived (HTTP headers), so User input.
 	sourceCtx
-	// sourceLayer is request-derived (pattern matches against the incoming tile request path) - untrusted.
+	// Request-derived (pattern matches against the request path), so User input.
 	sourceLayer
 )
 
 func replaceURLPlaceholders(ctx context.Context, tileRequest pkg.TileRequest, rawURL string, invertY bool, srid uint) (string, error) {
-	// replacePlaceholdersInString processes {env.*} matches first, then {ctx.*}, then {layer.*}
-	// (see below), assigning $N in that order starting at 0. Count each category up front so we
-	// can classify each $N by source afterward without changing that function's shared signature
-	// (it's also used by postgis for SQL params, where raw values - not source-tagged ones - are
-	// required).
+	// replacePlaceholdersInString assigns $N in a fixed source order, so counting each category up
+	// front is enough to classify each $N afterwards. It keeps returning plain values because
+	// postgis uses it for SQL params, where the source tag is meaningless.
 	envCount := len(envRegex.FindAllString(rawURL, -1))
 	ctxCount := len(ctxRegex.FindAllString(rawURL, -1))
 
@@ -79,13 +74,10 @@ func replaceURLPlaceholders(ctx context.Context, tileRequest pkg.TileRequest, ra
 		}
 	}
 
-	// Substitution is a single left-to-right scan that appends to a separate builder, so text that
-	// has already been substituted is never re-examined. Repeated ReplaceAll passes over the whole
-	// URL would be unsafe here even processing high indices first: descending order stops $1's
-	// replacement from corrupting $10, but a *value* inserted by an earlier pass is still visible
-	// to every later pass. A request-derived value containing the literal "$0" survives escaping
-	// (url.PathEscape and url.QueryEscape both leave "$" unescaped) and would then be replaced by
-	// the $0 pass - splicing an operator's unescaped {env.*} value, typically a secret, into the
+	// A single left-to-right scan, so substituted text is never re-examined. Repeated ReplaceAll
+	// passes would be unsafe at any ordering: a request-derived value containing a literal "$0"
+	// survives escaping ("$" is escaped by neither PathEscape nor QueryEscape) and a later pass
+	// would then splice the operator's unescaped {env.*} value, typically a secret, into the
 	// outbound URL and the debug log. One scan makes inserted text inert by construction.
 	var out strings.Builder
 	queryStart := strings.Index(rawURL, "?")
@@ -115,28 +107,16 @@ func replaceURLPlaceholders(ctx context.Context, tileRequest pkg.TileRequest, ra
 
 		value := fmt.Sprint(replacements[idx])
 
-		// Placeholder values come from three sources with different trust levels:
-		//   - {env.*} is operator config (os.Getenv) - it must be allowed to contain a
-		//     scheme, host, and slashes (e.g. a base URL), so it is NOT escaped.
-		//   - {ctx.*} and {layer.*} are request-derived (HTTP headers / pattern matches
-		//     against the incoming request path) - an unescaped "?", "#", or "/" would let
-		//     an attacker inject query parameters, a fragment, or rewrite/traverse the path.
-		//     These ARE escaped. {ctx.*} is documented for things like auth tokens/header
-		//     passthrough, not path segments, so escaping it costs no legitimate use case
-		//     we're aware of; if a future use needs literal slashes from {ctx.*}, that's a
-		//     deliberate tradeoff to revisit, not an oversight.
+		// {env.*} must be allowed to carry a scheme, host, and slashes, since injecting a whole
+		// base URL is the documented use for it. The request-derived sources are escaped: an
+		// unescaped "?", "#", or "/" would let a User inject query parameters, truncate the path,
+		// or traverse it.
 		if sourceFor(idx) == sourceEnv {
 			out.WriteString(value)
 		} else {
-			// Percent-encode the value for the position it lands in: query-escape after the
-			// first "?", path-escape before it. Positions are measured against the template,
-			// since an {env.*} value substituted earlier in this same scan could itself contain
-			// a "?" and must not retroactively change how later values are escaped. url.PathEscape
-			// leaves "&", "=", "+", ":", "@" unescaped, which is fine for a path segment on its
-			// own, but if this template also has a literal query string later on, a path-position
-			// value containing "&" or "=" couldn't reorder/inject query params anyway since it's
-			// still before the "?". The gap would only matter if the value could smuggle in an
-			// unescaped "?" itself, and PathEscape does escape "?", so there's no gap here.
+			// Escape for the position the value lands in. Positions are measured against the
+			// template, since an {env.*} value substituted in this same scan could contain a "?"
+			// and must not retroactively change how later values are escaped.
 			if queryStart >= 0 && i > queryStart {
 				out.WriteString(url.QueryEscape(value))
 			} else {
@@ -153,10 +133,8 @@ func replaceURLPlaceholders(ctx context.Context, tileRequest pkg.TileRequest, ra
 // Replaces arbitrary application specific placeholders in an arbitrary string with more generic prepared statement style placeholders and returns a mapping of those final placeholders to the real values.  e.g. "blah {env.foo} blah" -> "blah $1 blah" and {"$1": "bar"}
 // Values that are guaranteed to be safe (such as tile coordinates) are replaced directly in the string.
 // {env.*} matches are processed first, then {ctx.*}, then {layer.*}, each assigning $N in that
-// order starting at startParamIndex - callers that need to know which source a given $N came from
-// (e.g. replaceURLPlaceholders, to decide whether to escape it) rely on that fixed ordering rather
-// than a source tag on each element, so this keeps returning plain values for callers like postgis
-// that just need them as SQL prepared statement params.
+// order starting at startParamIndex. replaceURLPlaceholders depends on that fixed ordering to tell
+// which source a given $N came from.
 func replacePlaceholdersInString(ctx context.Context, tileRequest pkg.TileRequest, str string, startParamIndex int, invertY bool, srid uint) (string, []any, error) {
 	b, err := tileRequest.GetBoundsProjection(srid)
 
@@ -240,9 +218,8 @@ func replacePlaceholdersInString(ctx context.Context, tileRequest pkg.TileReques
 	return str, replacements, nil
 }
 
-// getTile is kept as a thin alias so existing call sites in this package don't need to change;
-// the real implementation lives in pkg.GetTile so library consumers writing real Go providers
-// (not just yaegi scripts, which reach it via the injection in custom.go) can call it too.
+// getTile is an alias for the call sites in this package. The implementation lives in pkg so
+// library consumers writing their own Go providers can call it too.
 func getTile(ctx context.Context, clientConfig config.ClientConfig, url string, authHeaders map[string]string) (*pkg.Image, error) {
 	return pkg.GetTile(ctx, clientConfig, url, authHeaders)
 }

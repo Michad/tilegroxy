@@ -50,10 +50,9 @@ type JWTConfig struct {
 	UserID           string // Use the specified grant as the user identifier. Defaults to sub
 }
 
-// cachedAuthResult holds everything CheckAuthentication derives from a validated token, so a
-// cache hit can replay the same authorization side effects (allowed layers, allowed area, user
-// ID) as a fresh validation instead of just checking expiration and leaving those context values
-// at their default (unrestricted) state.
+// cachedAuthResult holds everything CheckAuthentication derives from a validated token. A cache
+// hit has to replay all of it, not just check expiration, or the restrictions the token carries
+// are silently dropped.
 type cachedAuthResult struct {
 	expiration       jwt.NumericDate
 	limitLayers      bool

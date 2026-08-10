@@ -87,15 +87,10 @@ func (c *ClientConfig) MergeDefaultsFrom(o ClientConfig) {
 	if c.MaxLength == 0 {
 		c.MaxLength = o.MaxLength
 	}
-	// UnknownLength is deliberately NOT inherited. It's a bool whose zero value, its default, and
-	// the value a layer would set to tighten the limit are all `false`, so "unset" and "explicitly
-	// false" are indistinguishable here. A `if !c.UnknownLength { c.UnknownLength = o.UnknownLength }`
-	// therefore only ever fires in the case you don't want: it overrides a layer that explicitly
-	// set `unknownlength: false` to tighten a permissive global default, and can never be observed
-	// doing anything else. Making the field a *bool would distinguish the two, but that ripples
-	// through call sites outside this package; until that happens, not inheriting (which is what
-	// this has always done) is the safe direction - a layer that wants the permissive behavior can
-	// state it explicitly.
+	// UnknownLength is deliberately not inherited. Being a plain bool, "unset" and "explicitly
+	// false" are indistinguishable, so inheriting could only ever be observed overriding a layer
+	// that set `unknownlength: false` to tighten a permissive global default. Making it a *bool
+	// would distinguish the two but ripples through call sites outside this package.
 	if len(c.Headers) == 0 {
 		c.Headers = o.Headers
 	}
@@ -140,9 +135,8 @@ type ErrorMessages struct {
 	ParamRegex              string
 }
 
-// Default embedded image keys, mirrored from internal/images (which pkg/config can't import - it's
-// an internal/ package, so importing it would make this exported struct's defaults depend on an
-// unexportable package). internal/images.GetStaticImage recognizes these same literal strings.
+// Default embedded image keys, mirrored as literals from internal/images.GetStaticImage since
+// pkg/config can't import an internal package.
 const (
 	defaultImageError        = "embedded:error.png"
 	defaultImageTransparent  = "embedded:transparent.png"
@@ -229,11 +223,9 @@ type Config struct {
 	Layers         []LayerConfig
 }
 
-// Validate checks config fields that are otherwise only caught when the specific code path that
-// uses them runs - meaning `config check` could report "Valid" for a config that fails as soon
-// as it's actually served. Entity construction (providers, caches, etc.) already happens as part
-// of `config check` and catches its own errors; this covers the fields that construction doesn't
-// touch: error.mode, logging levels, and logging formats.
+// Validate covers the fields entity construction doesn't touch: error.mode, logging levels, and
+// logging formats. Without this they'd only fail once the code path using them runs, letting
+// `config check` report "Valid" for a config that breaks as soon as it's served.
 func (c Config) Validate() error {
 	var errs []error
 
@@ -292,12 +284,9 @@ func DefaultConfig() Config {
 			UserAgent:     "tilegroxy/" + version,
 			MaxLength:     1024 * 1024 * 10,
 			UnknownLength: false,
-			// image/png, image/jpg, image/jpeg cover raster tiles; application/vnd.mapbox-vector-tile
-			// and application/x-protobuf cover HTTP-proxied MVT sources (mvtContentType in
-			// internal/providers/utility.go is the same value tilegroxy's own MVT providers set,
-			// duplicated here as a literal since pkg/config can't import an internal/ package).
-			// Without these, proxying vector tiles fails until the operator extends this list
-			// themselves - a cliff this makes the default no longer trip on.
+			// The two vector types cover HTTP-proxied MVT sources, which would otherwise fail
+			// until the operator extended this list themselves. They're literals here because
+			// pkg/config can't import internal/providers, where mvtContentType lives.
 			ContentTypes:        []string{"image/png", "image/jpg", "image/jpeg", "application/vnd.mapbox-vector-tile", "application/x-protobuf"},
 			StatusCodes:         []int{http.StatusOK},
 			Headers:             map[string]string{},
@@ -361,14 +350,11 @@ func DefaultConfig() Config {
 	}
 }
 
-// DecodeEntityConfig decodes a raw entity config map (as parsed from YAML/JSON provider, cache,
-// datastore, authentication, health check, or secret blocks) into the entity-specific config
-// struct returned by that entity's InitializeConfig(). It errors on unknown keys so a typo'd
-// config field isn't silently ignored - such as a security control quietly reverting to its
-// default. "name" picks the registration in the surrounding construction code and no entity
-// config struct declares its own Name field, so it's stripped before decoding rather than
-// treated as unused. "id" is left as-is: most entities don't use it, but at least one
-// (datastore) has its own ID field that needs to be populated from it.
+// DecodeEntityConfig decodes a raw entity config map into the config struct returned by that
+// entity's InitializeConfig(). It errors on unknown keys so a typo'd field isn't silently ignored,
+// which for a security control means quietly reverting to its default. "name" is stripped first
+// since it selects the registration and no entity config declares it. "id" is left in place
+// because datastore does declare one.
 func DecodeEntityConfig(rawConfig map[string]interface{}, out any) error {
 	stripped := make(map[string]interface{}, len(rawConfig))
 	for k, v := range rawConfig {
@@ -396,17 +382,13 @@ func initViper() *viper.Viper {
 	return viper
 }
 
-// registerDefaults makes every scalar in DefaultConfig() addressable via SetDefault, so
-// AutomaticEnv can resolve an environment variable like SERVER_PORT even when server.port is
-// absent from the config file entirely. Without this, viper's key set (and therefore which env
-// vars AutomaticEnv will look up) comes only from keys already present in the loaded file, so
-// "environment variables override config parameters" silently didn't hold for any key the
-// operator hadn't already written down.
+// registerDefaults makes every scalar in DefaultConfig() addressable via SetDefault. AutomaticEnv
+// only looks up env vars for keys viper already knows, which without this means only the keys the
+// operator happened to write in the config file.
 func registerDefaults(v *viper.Viper) {
 	b, err := json.Marshal(DefaultConfig())
 	if err != nil {
-		// DefaultConfig() is a fixed, statically known struct - a marshal failure here would be
-		// a programming error, not a runtime condition callers need to handle.
+		// DefaultConfig() is statically known, so a failure here is a programming error.
 		panic(err)
 	}
 

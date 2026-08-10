@@ -138,10 +138,9 @@ func TestMemcacheWithContainerDiffPrefix(t *testing.T) {
 	validateSaveAndLookup(t, r2)
 }
 
-// A cache miss (a tile never Saved) used to come back from memcache.Get as memcache.ErrCacheMiss
-// and get returned as a Lookup error, logged at WARN as "Cache read error" on every single miss -
-// unlike redis, which correctly treats a miss as "no result, no error". This made real cache
-// failures unfindable in the noise.
+// memcache.Get reports a miss as ErrCacheMiss. Surfacing that as a Lookup error logs a warning on
+// every miss and buries real cache failures, so a miss must be "no result, no error" as it is for
+// redis.
 func TestMemcacheWithContainerMissIsNotAnError(t *testing.T) {
 	ctx := context.Background()
 	memcacheC, cleanupF := setupMemcacheContainer(ctx, t)

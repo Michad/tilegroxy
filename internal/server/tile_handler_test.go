@@ -414,9 +414,8 @@ layers:
 	assert.Equal(t, http.StatusOK, resp2.StatusCode)
 }
 
-// The internal cache saves the upstream call, but with no ETag/conditional-request handling at
-// all, every byte still crossed the wire on every request and browsers re-fetched every tile on
-// every pan/zoom - the biggest functional gap for a CDN/browser-fronted tile server.
+// The internal cache only saves the upstream call. Without conditional request handling every
+// byte still crosses the wire and browsers re-fetch every tile on every pan and zoom.
 func Test_TileHandler_ETagAndConditionalRequest(t *testing.T) {
 	configRaw := `server:
   port: 12348

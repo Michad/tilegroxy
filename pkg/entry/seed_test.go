@@ -46,9 +46,8 @@ func (seedTestPanicRegistration) Initialize(_ any, _ config.ClientConfig, _ conf
 	return seedTestPanicProvider{}, nil
 }
 
-// seedThread runs detached on its own goroutine per chunk of tiles (see the `go seedThread(...)`
-// call site in Seed). An unrecovered panic there - e.g. from a buggy custom provider - used to
-// crash the entire seed process instead of being reported and letting other threads finish.
+// seedThread runs on its own goroutine per chunk of tiles, so an unrecovered panic there, e.g.
+// from a buggy custom provider, crashes the entire seed process.
 func Test_SeedThread_RecoversFromPanic(t *testing.T) {
 	layer.RegisterProvider(seedTestPanicRegistration{})
 
@@ -73,14 +72,13 @@ func Test_SeedThread_RecoversFromPanic(t *testing.T) {
 	close(errs)
 	require.Contains(t, out.String(), "panicked")
 
-	// Recovering the panic must not silently swallow it: the thread abandoned the rest of its
-	// chunk, so it has to surface as an error rather than only as text on `out`.
+	// The thread abandoned the rest of its chunk, so recovering must not swallow the panic.
 	require.Len(t, errs, 1)
 	require.ErrorContains(t, <-errs, "panicked")
 }
 
-// A panicking thread skips a whole chunk of tiles. Seed used to still return nil in that case, so
-// the command exited 0 and a partial seed was indistinguishable from a complete one.
+// A panicking thread skips a whole chunk of tiles. Without an error the command exits 0 and a
+// partial seed is indistinguishable from a complete one.
 func Test_Seed_ReturnsErrorWhenThreadPanics(t *testing.T) {
 	layer.RegisterProvider(seedTestPanicRegistration{})
 

@@ -25,11 +25,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// This file mirrors the "Sample" provider example in docs/operation/modules/ROOT/pages/
-// extensibility.adoc word for word (types renamed to avoid collisions in this package). If
-// ProviderRegistration.Initialize or the Provider interface's method signatures change, this
-// fails to compile - which is the CI signal the doc example itself can't provide, since AsciiDoc
-// code blocks aren't compiled. Keep this in sync with the doc block by hand when either changes.
+// Mirrors the "Sample" provider example in docs/operation/modules/ROOT/pages/extensibility.adoc
+// word for word, with types renamed to avoid collisions here. AsciiDoc code blocks aren't
+// compiled, so this is what fails CI when the Provider interface changes and the doc goes stale.
+// Keep the two in sync by hand.
 
 type docExampleSampleConfig struct {
 	// Insert configuration for your provider here

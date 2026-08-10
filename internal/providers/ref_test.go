@@ -24,9 +24,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// A ref cycle formed via a patterned layer name can't be caught by the static startup
-// validation in layer.validateRefs. This proves the request-time depth counter backstop
-// stops it instead of stack-overflowing the process.
+// layer.validateRefs can't catch a cycle formed via a patterned layer name, so the request-time
+// depth counter has to stop it before it overflows the stack.
 func Test_Ref_CycleViaPattern_HitsDepthBackstop(t *testing.T) {
 	cfg := config.DefaultConfig()
 
@@ -72,11 +71,8 @@ func buildRefChain(t *testing.T, n int) *layer.LayerGroup {
 	return lg
 }
 
-// The root request is hop 0, so a chain of exactly maxRefDepth ref hops must succeed - anything
-// beyond that is rejected, and the error message's stated limit should match the actual number
-// of hops attempted when it trips. This pins the off-by-one: previously the check ran before the
-// child depth was incremented, so the (maxRefDepth+1)-th hop tripped it while the message still
-// claimed only maxRefDepth were made.
+// The root request is hop 0, so exactly maxRefDepth ref hops must succeed and the limit named in
+// the error has to match the number of hops actually attempted. Pins the off-by-one.
 func Test_Ref_DepthLimit_MatchesDocumentedHopCount(t *testing.T) {
 	lg := buildRefChain(t, maxRefDepth)
 

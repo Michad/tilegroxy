@@ -29,13 +29,8 @@ func staticProvider() map[string]any {
 	return map[string]any{"name": "static", "color": "FFF"}
 }
 
-// A duplicate literal layer ID used to pass `config check` cleanly - FindLayer's linear scan
-// makes the first one win and the second permanently unreachable, with no error anywhere.
-// A layer ID with a space or certain non-ASCII characters used to be embedded directly into the
-// OTEL metric *name* (e.g. "tilegroxy.tiles.layer.my layer.request"), which isn't a valid
-// instrument name and made Int64Counter construction fail - fatal at startup, and on hot reload
-// it failed silently into the log while the old generation kept serving. The ID is now an
-// attribute on a fixed metric name instead.
+// An unsanitized layer ID with a space produces an invalid OTEL instrument name, failing
+// Int64Counter construction, which is fatal at startup and silent on hot reload.
 func Test_ConstructLayerGroup_LayerIDWithSpaceDoesNotFailConstruction(t *testing.T) {
 	RegisterProvider(docExampleSampleRegistration{})
 
