@@ -35,6 +35,7 @@ const limitAreaPartialKey = "limitAreaPartial"
 const allowedAreaKey = "allowedArea"
 const userIDKey = "user"
 const layerPatternMatchesKey = "layerPatternMatches"
+const refDepthKey = "refDepth"
 
 func p[A any](val A) *A {
 	return &val
@@ -52,6 +53,7 @@ func NewRequestContext(req *http.Request) context.Context {
 	ctx = context.WithValue(ctx, allowedAreaKey, &Bounds{})
 	ctx = context.WithValue(ctx, userIDKey, p(""))
 	ctx = context.WithValue(ctx, layerPatternMatchesKey, &map[string]string{})
+	ctx = context.WithValue(ctx, refDepthKey, p(0))
 
 	ctx = context.WithValue(ctx, "uri", req.RequestURI)
 	ctx = context.WithValue(ctx, "path", req.URL.Path)
@@ -118,6 +120,12 @@ func UserIDFromContext(ctx context.Context) (*string, bool) {
 // Maps any parameters in the layer name from their key defined in config to the value from the real URL
 func LayerPatternMatchesFromContext(ctx context.Context) (*map[string]string, bool) {
 	u, ok := ctx.Value(layerPatternMatchesKey).(*map[string]string)
+	return u, ok
+}
+
+// Tracks how many times a request has been forwarded internally via the ref provider, to guard against cycles
+func RefDepthFromContext(ctx context.Context) (*int, bool) {
+	u, ok := ctx.Value(refDepthKey).(*int)
 	return u, ok
 }
 

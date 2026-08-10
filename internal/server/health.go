@@ -210,7 +210,7 @@ func setupCheckRoutines(ctx context.Context, h config.HealthConfig, layerGroup *
 	checks := make([]health.HealthCheck, 0, len(h.Checks))
 	var callback func(context.Context) error
 	tickers := make([]*time.Ticker, 0, len(h.Checks))
-	exitChannels := make([]chan bool, 0, len(h.Checks))
+	exitChannels := make([]chan struct{}, 0, len(h.Checks))
 
 	for _, checkCfg := range h.Checks {
 		hc, err := health.ConstructHealthCheck(checkCfg, layerGroup, cfg)
@@ -229,7 +229,7 @@ func setupCheckRoutines(ctx context.Context, h config.HealthConfig, layerGroup *
 		ttl := time.Second * time.Duration(delay) // #nosec G115
 
 		ticker := time.NewTicker(ttl)
-		done := make(chan bool)
+		done := make(chan struct{})
 		tickers = append(tickers, ticker)
 		exitChannels = append(exitChannels, done)
 
@@ -247,15 +247,22 @@ func setupCheckRoutines(ctx context.Context, h config.HealthConfig, layerGroup *
 		}()
 	}
 
-	callback = func(ctx context.Context) error {
-		slog.InfoContext(ctx, "Terminating health subsystem")
+	// Stopping broadcasts a close rather than sending: a send on an unbuffered channel deadlocks
+	// forever once the ticker goroutine has already exited, which two callers of the same shutdown
+	// func can reach. The Once keeps that second call from panicking on a closed channel.
+	var stopOnce sync.Once
 
-		for _, ticker := range tickers {
-			ticker.Stop()
-		}
-		for _, channel := range exitChannels {
-			channel <- true
-		}
+	callback = func(ctx context.Context) error {
+		stopOnce.Do(func() {
+			slog.InfoContext(ctx, "Terminating health subsystem")
+
+			for _, ticker := range tickers {
+				ticker.Stop()
+			}
+			for _, channel := range exitChannels {
+				close(channel)
+			}
+		})
 
 		return nil
 	}

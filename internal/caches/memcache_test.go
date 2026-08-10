@@ -137,3 +137,28 @@ func TestMemcacheWithContainerDiffPrefix(t *testing.T) {
 	validateSaveAndLookup(t, r)
 	validateSaveAndLookup(t, r2)
 }
+
+// memcache.Get reports a miss as ErrCacheMiss. Surfacing that as a Lookup error logs a warning on
+// every miss and buries real cache failures, so a miss must be "no result, no error" as it is for
+// redis.
+func TestMemcacheWithContainerMissIsNotAnError(t *testing.T) {
+	ctx := context.Background()
+	memcacheC, cleanupF := setupMemcacheContainer(ctx, t)
+	if !assert.NotNil(t, memcacheC) {
+		return
+	}
+
+	defer cleanupF(t)
+
+	endpoint, err := memcacheC.Endpoint(ctx, "")
+	require.NoError(t, err)
+
+	cfg := MemcacheConfig{
+		HostAndPort: extractHostAndPort(t, endpoint),
+	}
+
+	r, err := MemcacheRegistration{}.Initialize(cfg, config.ErrorMessages{})
+	require.NoError(t, err)
+
+	validateNoLookup(t, r, makeReq(1))
+}

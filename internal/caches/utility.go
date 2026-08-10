@@ -15,6 +15,9 @@
 package caches
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"regexp"
 	"strconv"
 )
 
@@ -36,4 +39,68 @@ func HostAndPortArrayToStringArray(servers []HostAndPort) []string {
 	}
 
 	return addrs
+}
+
+var unsafeChar = regexp.MustCompile(`[^A-Za-z0-9\-.]`)
+
+// Dots are safe individually but a run of them is a traversal segment.
+var dotRun = regexp.MustCompile(`\.{2,}`)
+
+// safeLayerName sanitizes a tile request's LayerName for use as part of a cache key, filename, or
+// object key. LayerName is User input for pattern layers, so it can't be used verbatim: it could
+// otherwise escape the disk cache directory, smuggle "/" into an S3 object key, or violate a
+// backend's key charset limits.
+//
+// Substituting rather than hashing keeps keys human-readable, which S3 lifecycle rules and
+// prefix-scoped IAM policies depend on. The tradeoff is that the mapping is many-to-one: "a/b" and
+// "a b" both become "a_b" and then share cache entries.
+func safeLayerName(name string) string {
+	replaced := unsafeChar.ReplaceAllString(name, "_")
+	replaced = dotRun.ReplaceAllString(replaced, "_")
+
+	// A name that is only "." still resolves to a directory when used as a path component.
+	if replaced == "." {
+		replaced = "_"
+	}
+
+	return replaced
+}
+
+// memcache's hard key length limit, in bytes.
+const memcacheMaxKeyLength = 250
+
+const hashSuffixLength = 16
+
+// safeMemcacheKey builds a memcache key from a prefix and an already-sanitized body. A long but
+// otherwise safe layer name can still overflow the length limit, so an oversized key is truncated
+// with a hash suffix appended to keep it unique.
+func safeMemcacheKey(prefix, body string) string {
+	key := prefix + body
+
+	if len(key) <= memcacheMaxKeyLength {
+		return key
+	}
+
+	sum := sha256.Sum256([]byte(key))
+	suffix := "_" + hex.EncodeToString(sum[:])[:hashSuffixLength]
+
+	// An operator could set a prefix long enough that prefix+suffix alone exceeds the limit.
+	maxPrefixLen := len(prefix)
+	if maxPrefixLen > memcacheMaxKeyLength-len(suffix) {
+		maxPrefixLen = memcacheMaxKeyLength - len(suffix)
+	}
+	if maxPrefixLen < 0 {
+		maxPrefixLen = 0
+	}
+	truncatedPrefix := prefix[:maxPrefixLen]
+
+	maxBodyLen := memcacheMaxKeyLength - len(truncatedPrefix) - len(suffix)
+	if maxBodyLen < 0 {
+		maxBodyLen = 0
+	}
+	if maxBodyLen > len(body) {
+		maxBodyLen = len(body)
+	}
+
+	return truncatedPrefix + body[:maxBodyLen] + suffix
 }

@@ -26,6 +26,7 @@ import (
 	"os/signal"
 	"runtime/debug"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -45,6 +46,73 @@ func handleNoContent(w http.ResponseWriter, _ *http.Request) {
 // This is just here to allow tests to specify a different signal to send to kill the webserver
 // not useful in practice due to OS-specific nature of signals
 var InterruptFlags = []os.Signal{os.Interrupt}
+
+// onReloadPtrSet is a test-only hook invoked right after ListenAndServe publishes the reload
+// callback through its reloadPtr argument, giving a test on another goroutine a happens-before
+// edge for reading it. Nil in production.
+var onReloadPtrSet func()
+
+// reloadEntitiesFunc names the reload callback shape so it can be spelled out inside
+// ListenAndServe's body, where the "config" parameter name shadows the config package.
+type reloadEntitiesFunc = func(*config.Config, *entities.Entities) error
+
+// healthReloader tears down the current health subsystem generation and builds a fresh one against
+// the new generation's LayerGroup. Declared at package level rather than as a closure inside
+// ListenAndServe so its parameter types can name *config.Config, which that function's own
+// "config" parameter shadows.
+//
+// The mutex is held across the whole teardown-then-rebuild rather than just around the pointer.
+// pkg/config dispatches each config-change event on its own goroutine, so two concurrent reloads
+// would otherwise both tear down the same generation and race to bind the health port.
+func healthReloader(ctx context.Context, cfg *config.Config, ent *entities.Entities, healthMutex *sync.Mutex, healthShutdown *func(context.Context) error) error {
+	if !cfg.Server.Health.Enabled {
+		return nil
+	}
+
+	healthMutex.Lock()
+	defer healthMutex.Unlock()
+
+	oldHealthShutdown := *healthShutdown
+	*healthShutdown = nil
+
+	// The old generation has to free its listener before the new one binds, since the health
+	// host/port rarely changes between reloads.
+	if oldHealthShutdown != nil {
+		if err := oldHealthShutdown(context.Background()); err != nil {
+			slog.WarnContext(ctx, fmt.Sprintf("Error shutting down previous health generation: %v", err))
+		}
+	}
+
+	newHealthShutdown, err := SetupHealth(ctx, cfg, ent.LayerGroup)
+
+	// SetupHealth returns a non-nil shutdown func alongside an error when it fails partway, so
+	// record whatever it hands back either way. Otherwise the pointer keeps referencing the
+	// already-shut-down previous generation and ListenAndServe's final shutdown calls it again.
+	// The previous generation is not resurrected: it was built against the old config and
+	// LayerGroup, so rebuilding it could fail just as easily. The error propagates instead, and
+	// the next successful reload brings health back.
+	*healthShutdown = newHealthShutdown
+
+	if err != nil {
+		slog.ErrorContext(ctx, fmt.Sprintf("Failed to rebuild health subsystem on reload, health endpoint is DOWN until config is fixed and reloaded again: %v", err))
+		return err
+	}
+
+	return nil
+}
+
+// makeCombinedReloadFunc builds the reload callback ListenAndServe hands back to its caller: it
+// swaps the tile handlers to the new entities, then rebuilds the health subsystem against that
+// same generation so health checks aren't left pinned to the LayerGroup from startup.
+func makeCombinedReloadFunc(ctx context.Context, handlerReloadFunc reloadEntitiesFunc, healthMutex *sync.Mutex, healthShutdown *func(context.Context) error) reloadEntitiesFunc {
+	return func(cfg2 *config.Config, ent2 *entities.Entities) error {
+		if err := handlerReloadFunc(cfg2, ent2); err != nil {
+			return err
+		}
+
+		return healthReloader(ctx, cfg2, ent2, healthMutex, healthShutdown)
+	}
+}
 
 // setupHandlers builds the HTTP handlers. The returned accessor yields whichever generation of entities is
 // currently serving, which is what shutdown needs to release after a hot reload has swapped generations
@@ -175,10 +243,9 @@ func ListenAndServe(config *config.Config, ent *entities.Entities, reloadPtr *fu
 		return fmt.Errorf(config.Error.Messages.ParamRequired, "server.encrypt.domain")
 	}
 
+	// reloadPtr is published further down, once the health subsystem exists, so the callback can
+	// rebuild health alongside the handlers.
 	rootHandler, handlerReloadFunc, currentEntities, err := setupHandlers(config, ent)
-	if reloadPtr != nil {
-		*reloadPtr = handlerReloadFunc
-	}
 
 	if err != nil {
 		return err
@@ -193,6 +260,7 @@ func ListenAndServe(config *config.Config, ent *entities.Entities, reloadPtr *fu
 	ctx, stop := signal.NotifyContext(pkg.BackgroundContext(), InterruptFlags...)
 	defer stop()
 
+	var healthMutex sync.Mutex
 	var healthShutdown func(context.Context) error
 
 	if config.Server.Health.Enabled {
@@ -201,6 +269,14 @@ func ListenAndServe(config *config.Config, ent *entities.Entities, reloadPtr *fu
 		if err != nil {
 			return err
 		}
+	}
+
+	if reloadPtr != nil {
+		*reloadPtr = makeCombinedReloadFunc(ctx, handlerReloadFunc, &healthMutex, &healthShutdown)
+	}
+
+	if onReloadPtrSet != nil {
+		onReloadPtrSet()
 	}
 
 	var otelShutdown func(context.Context) error
@@ -260,8 +336,12 @@ func ListenAndServe(config *config.Config, ent *entities.Entities, reloadPtr *fu
 		err = errors.Join(err, otelShutdown(context.Background()))
 	}
 
-	if healthShutdown != nil {
-		err = errors.Join(err, healthShutdown(context.Background()))
+	healthMutex.Lock()
+	finalHealthShutdown := healthShutdown
+	healthMutex.Unlock()
+
+	if finalHealthShutdown != nil {
+		err = errors.Join(err, finalHealthShutdown(context.Background()))
 	}
 
 	return err

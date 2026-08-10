@@ -18,9 +18,9 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sync"
 
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/mitchellh/mapstructure"
 )
 
 type Authentication interface {
@@ -33,18 +33,25 @@ type AuthenticationRegistration interface {
 	InitializeConfig() any
 }
 
+var registrationsMu sync.RWMutex
 var registrations = make(map[string]AuthenticationRegistration)
 
 func RegisterAuthentication(reg AuthenticationRegistration) {
+	registrationsMu.Lock()
+	defer registrationsMu.Unlock()
 	registrations[reg.Name()] = reg
 }
 
 func RegisteredAuthentication(name string) (AuthenticationRegistration, bool) {
+	registrationsMu.RLock()
+	defer registrationsMu.RUnlock()
 	o, ok := registrations[name]
 	return o, ok
 }
 
 func RegisteredAuthenticationNames() []string {
+	registrationsMu.RLock()
+	defer registrationsMu.RUnlock()
 	names := make([]string, 0, len(registrations))
 	for n := range registrations {
 		names = append(names, n)
@@ -59,7 +66,7 @@ func ConstructAuth(rawConfig map[string]interface{}, errorMessages config.ErrorM
 		reg, ok := RegisteredAuthentication(name)
 		if ok {
 			cfg := reg.InitializeConfig()
-			err := mapstructure.Decode(rawConfig, &cfg)
+			err := config.DecodeEntityConfig(rawConfig, &cfg)
 			if err != nil {
 				return nil, err
 			}

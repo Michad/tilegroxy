@@ -17,10 +17,10 @@ package cache
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/mitchellh/mapstructure"
 )
 
 type Cache interface {
@@ -34,18 +34,27 @@ type CacheRegistration interface {
 	InitializeConfig() any
 }
 
+var registrationsMu sync.RWMutex
 var registrations = make(map[string]CacheRegistration)
 
+// Registration is normally only done from init(), which Go serializes, but the mutex covers a
+// consumer that registers concurrently instead.
 func RegisterCache(reg CacheRegistration) {
+	registrationsMu.Lock()
+	defer registrationsMu.Unlock()
 	registrations[reg.Name()] = reg
 }
 
 func RegisteredCache(name string) (CacheRegistration, bool) {
+	registrationsMu.RLock()
+	defer registrationsMu.RUnlock()
 	o, ok := registrations[name]
 	return o, ok
 }
 
 func RegisteredCacheNames() []string {
+	registrationsMu.RLock()
+	defer registrationsMu.RUnlock()
 	names := make([]string, 0, len(registrations))
 	for n := range registrations {
 		names = append(names, n)
@@ -57,6 +66,9 @@ func ConstructCache(rawConfig map[string]interface{}, errorMessages config.Error
 	name, ok := rawConfig["name"].(string)
 
 	if ok {
+		// An alias for the no-op cache, so fixtures can name an obviously-fake cache. It goes
+		// through the same construction path operator config does, so `cache: {name: test}` in
+		// production is a no-op cache rather than an error.
 		if name == "test" || name == "Test" {
 			name = "none"
 		}
@@ -64,7 +76,7 @@ func ConstructCache(rawConfig map[string]interface{}, errorMessages config.Error
 		reg, ok := RegisteredCache(name)
 		if ok {
 			cfg := reg.InitializeConfig()
-			err := mapstructure.Decode(rawConfig, &cfg)
+			err := config.DecodeEntityConfig(rawConfig, &cfg)
 			if err != nil {
 				return nil, err
 			}

@@ -36,8 +36,13 @@ type Disk struct {
 	DiskConfig
 }
 
+// requestToFilename sanitizes LayerName (see safeLayerName) so a traversal sequence can't reach
+// outside the cache directory. The rest of the name is left alone so filenames stay readable and
+// caches written by earlier versions keep matching.
 func requestToFilename(t pkg.TileRequest) string {
-	return t.StringWithSeparator("_")
+	safe := t
+	safe.LayerName = safeLayerName(t.LayerName)
+	return safe.StringWithSeparator("_")
 }
 
 func init() {
@@ -96,5 +101,5 @@ func (c Disk) Save(_ context.Context, t pkg.TileRequest, img *pkg.Image) error {
 		return err
 	}
 
-	return os.WriteFile(filepath.Join(c.Path, filename), b, fs.FileMode(c.FileMode))
+	return os.WriteFile(filepath.Clean(filepath.Join(c.Path, filename)), b, fs.FileMode(c.FileMode))
 }

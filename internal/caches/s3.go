@@ -130,8 +130,11 @@ func (s S3Registration) Initialize(configAny any, errorMessages config.ErrorMess
 	return &S3{config, client, transfer}, nil
 }
 
+// calcKey sanitizes LayerName (see safeLayerName) so a request can't smuggle "/" into the object
+// key and produce an unexpected hierarchy in the bucket. The path/layer/z/x/y shape is preserved
+// so lifecycle rules and prefix-scoped IAM policies keep working.
 func calcKey(config *S3, t *pkg.TileRequest) string {
-	return config.Path + t.LayerName + "/" + strconv.Itoa(t.Z) + "/" + strconv.Itoa(t.X) + "/" + strconv.Itoa(t.Y)
+	return config.Path + safeLayerName(t.LayerName) + "/" + strconv.Itoa(t.Z) + "/" + strconv.Itoa(t.X) + "/" + strconv.Itoa(t.Y)
 }
 
 // Just for testing purposes

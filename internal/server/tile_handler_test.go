@@ -20,6 +20,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/Michad/tilegroxy/internal/authentications"
@@ -413,6 +414,58 @@ layers:
 	assert.Equal(t, http.StatusOK, resp2.StatusCode)
 }
 
+// The internal cache only saves the upstream call. Without conditional request handling every
+// byte still crosses the wire and browsers re-fetch every tile on every pan and zoom.
+func Test_TileHandler_ETagAndConditionalRequest(t *testing.T) {
+	configRaw := `server:
+  port: 12348
+layers:
+  - id: color
+    provider:
+      name: static
+      color: "FFFFFF"
+`
+
+	cfg, err := config.LoadConfig(configRaw)
+	require.NoError(t, err)
+	lg, auth, err := configToEntities(cfg)
+	require.NoError(t, err)
+	handler, err := newTileHandler(reloadableEntities{config: &cfg, auth: auth, layerGroup: lg})
+	require.NoError(t, err)
+
+	req1 := httptest.NewRequest(http.MethodGet, "http://localhost:12348/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
+	req1.SetPathValue("layer", "color")
+	req1.SetPathValue("z", "8")
+	req1.SetPathValue("x", "12")
+	req1.SetPathValue("y", "32")
+
+	w1 := httptest.NewRecorder()
+	handler.ServeHTTP(w1, req1)
+	resp1 := w1.Result()
+	defer func() { require.NoError(t, resp1.Body.Close()) }()
+
+	require.Equal(t, http.StatusOK, resp1.StatusCode)
+	etag := resp1.Header.Get("ETag")
+	require.NotEmpty(t, etag, "expected an ETag header on a successful tile response")
+
+	req2 := httptest.NewRequest(http.MethodGet, "http://localhost:12348/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
+	req2.Header.Set("If-None-Match", etag)
+	req2.SetPathValue("layer", "color")
+	req2.SetPathValue("z", "8")
+	req2.SetPathValue("x", "12")
+	req2.SetPathValue("y", "32")
+
+	w2 := httptest.NewRecorder()
+	handler.ServeHTTP(w2, req2)
+	resp2 := w2.Result()
+	defer func() { require.NoError(t, resp2.Body.Close()) }()
+
+	assert.Equal(t, http.StatusNotModified, resp2.StatusCode)
+	body2, err := io.ReadAll(resp2.Body)
+	require.NoError(t, err)
+	assert.Empty(t, body2, "304 response must not include a body")
+}
+
 func Test_TileHandler_ExecuteErrorText(t *testing.T) {
 	configRaw := `server:
   port: 12346
@@ -451,6 +504,8 @@ layers:
 	assert.Equal(t, 401, resp.StatusCode)
 	assert.Equal(t, "Not authorized", string(body))
 	assert.Nil(t, resp.Header["X-Error-Message"])
+	assert.Equal(t, "text/plain; charset=utf-8", resp.Header.Get("Content-Type"), "error responses must carry a Content-Type")
+	assert.Equal(t, "no-store", resp.Header.Get("Cache-Control"), "error responses must never be cached, especially with AlwaysOK where the status alone can't signal failure to a CDN")
 }
 
 func Test_TileHandler_ExecuteErrorImage(t *testing.T) {
@@ -492,6 +547,8 @@ layers:
 	assert.Equal(t, 401, resp.StatusCode)
 	assert.Equal(t, *img, body)
 	assert.Nil(t, resp.Header["X-Error-Message"])
+	assert.Equal(t, "image/png", resp.Header.Get("Content-Type"), "error responses must carry a Content-Type")
+	assert.Equal(t, "no-store", resp.Header.Get("Cache-Control"), "error responses must never be cached, especially with AlwaysOK where the status alone can't signal failure to a CDN")
 }
 
 func Test_TileHandler_ExecuteErrorImageHeader(t *testing.T) {
@@ -533,4 +590,25 @@ layers:
 	assert.Equal(t, 401, resp.StatusCode)
 	assert.Equal(t, *img, body)
 	assert.NotNil(t, resp.Header["X-Error-Message"])
+}
+
+func Test_EtagFor_Deterministic(t *testing.T) {
+	a := etagFor([]byte("hello"))
+	b := etagFor([]byte("hello"))
+	c := etagFor([]byte("world"))
+
+	assert.Equal(t, a, b)
+	assert.NotEqual(t, a, c)
+	assert.True(t, strings.HasPrefix(a, `"`) && strings.HasSuffix(a, `"`), "ETag should be a quoted string per RFC 9110")
+}
+
+func Test_RequestETagMatches(t *testing.T) {
+	etag := etagFor([]byte("hello"))
+
+	assert.False(t, requestETagMatches("", etag))
+	assert.True(t, requestETagMatches("*", etag))
+	assert.True(t, requestETagMatches(etag, etag))
+	assert.True(t, requestETagMatches("W/"+etag, etag), "weak validators should still match per If-None-Match semantics")
+	assert.True(t, requestETagMatches(`"something-else", `+etag, etag), "should match anywhere in a comma-separated list")
+	assert.False(t, requestETagMatches(`"something-else"`, etag))
 }

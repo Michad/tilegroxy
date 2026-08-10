@@ -24,11 +24,16 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/Michad/tilegroxy/pkg/entities/datastore"
+	"github.com/Michad/tilegroxy/pkg/entities/health"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
 )
 
 func configToEntities(cfg config.Config) (*entities.Entities, error) {
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+
 	cfg.Secret = pkg.ReplaceEnv(cfg.Secret)
 	secreter, err := secret.ConstructSecreter(cfg.Secret, cfg.Error.Messages)
 	if err != nil {
@@ -70,6 +75,15 @@ func configToEntities(cfg config.Config) (*entities.Entities, error) {
 	layerGroup, err := layer.ConstructLayerGroup(cfg, cacheObj, secreter, datastores)
 	if err != nil {
 		return nil, fmt.Errorf("error constructing layers: %w", err)
+	}
+
+	// Constructed only to validate their config, then discarded; serve builds its own. Otherwise a
+	// bad check name would first surface when serve binds the health port, after `config check`
+	// already called the config Valid.
+	for _, checkCfg := range cfg.Server.Health.Checks {
+		if _, err := health.ConstructHealthCheck(checkCfg, layerGroup, &cfg); err != nil {
+			return nil, fmt.Errorf("error constructing health check: %w", err)
+		}
 	}
 
 	return &entities.Entities{

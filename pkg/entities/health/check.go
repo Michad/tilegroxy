@@ -17,12 +17,12 @@ package health
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
-	"github.com/mitchellh/mapstructure"
 )
 
 type HealthCheck interface {
@@ -40,18 +40,25 @@ type HealthCheckRegistration interface {
 	InitializeConfig() HealthCheckConfig
 }
 
+var registrationsMu sync.RWMutex
 var registrations = make(map[string]HealthCheckRegistration)
 
 func RegisterHealthCheck(reg HealthCheckRegistration) {
+	registrationsMu.Lock()
+	defer registrationsMu.Unlock()
 	registrations[reg.Name()] = reg
 }
 
 func RegisteredHealthCheck(name string) (HealthCheckRegistration, bool) {
+	registrationsMu.RLock()
+	defer registrationsMu.RUnlock()
 	o, ok := registrations[name]
 	return o, ok
 }
 
 func RegisteredHealthCheckNames() []string {
+	registrationsMu.RLock()
+	defer registrationsMu.RUnlock()
 	names := make([]string, 0, len(registrations))
 	for n := range registrations {
 		names = append(names, n)
@@ -68,7 +75,7 @@ func ConstructHealthCheck(rawConfig map[string]interface{}, lg *layer.LayerGroup
 		reg, ok := RegisteredHealthCheck(name)
 		if ok {
 			cfg := reg.InitializeConfig()
-			err := mapstructure.Decode(rawConfig, &cfg)
+			err := config.DecodeEntityConfig(rawConfig, &cfg)
 			if err != nil {
 				return nil, err
 			}

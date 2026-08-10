@@ -17,21 +17,16 @@ package providers
 import (
 	"context"
 	"fmt"
-	"io"
-	"log/slog"
 	"math"
-	"net/http"
+	"net/url"
 	"os"
 	"reflect"
 	"regexp"
-	"slices"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 const mimePng = "image/png"
@@ -42,24 +37,104 @@ var lyrRegex = regexp.MustCompile(`{layer\.[^{}}]*}`)
 
 const mvtContentType = "application/vnd.mapbox-vector-tile"
 
-func replaceURLPlaceholders(ctx context.Context, tileRequest pkg.TileRequest, url string, invertY bool, srid uint) (string, error) {
-	url, replacements, err := replacePlaceholdersInString(ctx, tileRequest, url, 0, invertY, srid)
+// placeholderSource identifies where a replacement value originated so callers that splice the
+// value into something else (e.g. a URL) can decide whether it needs escaping.
+type placeholderSource int
+
+const (
+	// Operator-controlled, so trusted.
+	sourceEnv placeholderSource = iota
+	// Request-derived (HTTP headers), so User input.
+	sourceCtx
+	// Request-derived (pattern matches against the request path), so User input.
+	sourceLayer
+)
+
+func replaceURLPlaceholders(ctx context.Context, tileRequest pkg.TileRequest, rawURL string, invertY bool, srid uint) (string, error) {
+	// replacePlaceholdersInString assigns $N in a fixed source order, so counting each category up
+	// front is enough to classify each $N afterwards. It keeps returning plain values because
+	// postgis uses it for SQL params, where the source tag is meaningless.
+	envCount := len(envRegex.FindAllString(rawURL, -1))
+	ctxCount := len(ctxRegex.FindAllString(rawURL, -1))
+
+	rawURL, replacements, err := replacePlaceholdersInString(ctx, tileRequest, rawURL, 0, invertY, srid)
 
 	if err != nil {
 		return "", err
 	}
 
-	for i := range replacements {
-		// Make sure longer keys are processed first to avoid e.g. $1's replacement messing up $10
-		realI := len(replacements) - i - 1
-		url = strings.ReplaceAll(url, "$"+strconv.Itoa(realI), fmt.Sprint(replacements[realI]))
+	sourceFor := func(idx int) placeholderSource {
+		switch {
+		case idx < envCount:
+			return sourceEnv
+		case idx < envCount+ctxCount:
+			return sourceCtx
+		default:
+			return sourceLayer
+		}
 	}
 
-	return url, nil
+	// A single left-to-right scan, so substituted text is never re-examined. Repeated ReplaceAll
+	// passes would be unsafe at any ordering: a request-derived value containing a literal "$0"
+	// survives escaping ("$" is escaped by neither PathEscape nor QueryEscape) and a later pass
+	// would then splice the operator's unescaped {env.*} value, typically a secret, into the
+	// outbound URL and the debug log. One scan makes inserted text inert by construction.
+	var out strings.Builder
+	queryStart := strings.Index(rawURL, "?")
+
+	for i := 0; i < len(rawURL); {
+		if rawURL[i] != '$' {
+			out.WriteByte(rawURL[i])
+			i++
+			continue
+		}
+
+		// Take the longest run of digits after '$' so "$10" reads as index 10, not index 1
+		// followed by a literal "0".
+		j := i + 1
+		for j < len(rawURL) && rawURL[j] >= '0' && rawURL[j] <= '9' {
+			j++
+		}
+
+		idx, err := strconv.Atoi(rawURL[i+1 : j])
+		if j == i+1 || err != nil || idx >= len(replacements) {
+			// Not a placeholder this call produced (a literal "$", or an index out of range):
+			// emit it untouched.
+			out.WriteByte(rawURL[i])
+			i++
+			continue
+		}
+
+		value := fmt.Sprint(replacements[idx])
+
+		// {env.*} must be allowed to carry a scheme, host, and slashes, since injecting a whole
+		// base URL is the documented use for it. The request-derived sources are escaped: an
+		// unescaped "?", "#", or "/" would let a User inject query parameters, truncate the path,
+		// or traverse it.
+		if sourceFor(idx) == sourceEnv {
+			out.WriteString(value)
+		} else {
+			// Escape for the position the value lands in. Positions are measured against the
+			// template, since an {env.*} value substituted in this same scan could contain a "?"
+			// and must not retroactively change how later values are escaped.
+			if queryStart >= 0 && i > queryStart {
+				out.WriteString(url.QueryEscape(value))
+			} else {
+				out.WriteString(url.PathEscape(value))
+			}
+		}
+
+		i = j
+	}
+
+	return out.String(), nil
 }
 
 // Replaces arbitrary application specific placeholders in an arbitrary string with more generic prepared statement style placeholders and returns a mapping of those final placeholders to the real values.  e.g. "blah {env.foo} blah" -> "blah $1 blah" and {"$1": "bar"}
-// Values that are guaranteed to be safe (such as tile coordinates) are replaced directly in the string
+// Values that are guaranteed to be safe (such as tile coordinates) are replaced directly in the string.
+// {env.*} matches are processed first, then {ctx.*}, then {layer.*}, each assigning $N in that
+// order starting at startParamIndex. replaceURLPlaceholders depends on that fixed ordering to tell
+// which source a given $N came from.
 func replacePlaceholdersInString(ctx context.Context, tileRequest pkg.TileRequest, str string, startParamIndex int, invertY bool, srid uint) (string, []any, error) {
 	b, err := tileRequest.GetBoundsProjection(srid)
 
@@ -143,83 +218,8 @@ func replacePlaceholdersInString(ctx context.Context, tileRequest pkg.TileReques
 	return str, replacements, nil
 }
 
-/**
- * Performs a GET operation against a given URL. Implementing providers should call this when possible. It has
- * standard reusable logic around various config options
- */
+// getTile is an alias for the call sites in this package. The implementation lives in pkg so
+// library consumers writing their own Go providers can call it too.
 func getTile(ctx context.Context, clientConfig config.ClientConfig, url string, authHeaders map[string]string) (*pkg.Image, error) {
-	slog.DebugContext(ctx, fmt.Sprintf("Calling url %v\n", url))
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("User-Agent", clientConfig.UserAgent)
-
-	for h, v := range clientConfig.Headers {
-		req.Header.Set(h, v)
-	}
-
-	for h, v := range authHeaders {
-		req.Header.Set(h, v)
-	}
-
-	if clientConfig.Timeout > math.MaxInt32 {
-		clientConfig.Timeout = math.MaxInt32
-	}
-
-	transport := otelhttp.NewTransport(http.DefaultTransport, otelhttp.WithMessageEvents(otelhttp.ReadEvents))
-	client := http.Client{Transport: transport, Timeout: time.Duration(clientConfig.Timeout) * time.Second}
-
-	resp, err := client.Do(req)
-	if resp != nil {
-		defer resp.Body.Close()
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	slog.DebugContext(ctx, fmt.Sprintf("Response status: %v", resp.StatusCode))
-
-	if !slices.Contains(clientConfig.StatusCodes, resp.StatusCode) {
-		return nil, &pkg.RemoteServerError{StatusCode: resp.StatusCode}
-	}
-
-	contentType := resp.Header.Get("Content-Type")
-
-	if !slices.Contains(clientConfig.ContentTypes, contentType) {
-		return nil, &pkg.InvalidContentTypeError{ContentType: contentType}
-	}
-
-	if clientConfig.RewriteContentTypes != nil {
-		newContentType, ok := clientConfig.RewriteContentTypes[contentType]
-
-		if ok {
-			contentType = newContentType
-		}
-	}
-
-	if resp.ContentLength == -1 {
-		if !clientConfig.UnknownLength {
-			return nil, &pkg.InvalidContentLengthError{Length: -1}
-		}
-	} else {
-		if resp.ContentLength > int64(clientConfig.MaxLength) {
-			return nil, &pkg.InvalidContentLengthError{Length: int(resp.ContentLength)}
-		}
-	}
-
-	img, err := io.ReadAll(resp.Body)
-
-	if err != nil {
-		return nil, &pkg.RemoteServerError{StatusCode: resp.StatusCode}
-	}
-
-	if len(img) > clientConfig.MaxLength {
-		return nil, &pkg.InvalidContentLengthError{Length: len(img)}
-	}
-
-	return &pkg.Image{Content: img, ContentType: contentType}, nil
+	return pkg.GetTile(ctx, clientConfig, url, authHeaders)
 }
