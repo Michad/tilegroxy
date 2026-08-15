@@ -17,6 +17,7 @@ package providers
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/Michad/tilegroxy/pkg"
