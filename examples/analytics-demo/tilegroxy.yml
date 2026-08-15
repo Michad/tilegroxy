@@ -1,0 +1,58 @@
+server:
+    # The default of 127.0.0.1 would only be reachable from inside the container
+    bindHost: 0.0.0.0
+    port: 8080
+    # The dashboard page is served from a different origin than the tiles
+    headers:
+        Access-Control-Allow-Origin: "*"
+
+logging:
+    main:
+        level: info
+
+datastores:
+    - name: postgresql
+      id: pg-analytics
+      host: postgres
+      port: 5432
+      user: tilegroxy
+      password: tilegroxy
+      database: analytics
+
+analytics:
+    name: postgres
+    datastore: pg-analytics
+    table: tilegroxy_analytics
+    # Everything past the layer, coordinates and user is opt-in. ip and useragent are personal data so
+    # they're left off here even though this is a local demo
+    fields:
+        - duration
+        - bytes
+        - contenttype
+    extraFields:
+        environment: demo
+    batch:
+        # Far lower than you'd run in production, so a tile you click shows up on the dashboard right away
+        maxSize: 10
+        maxAge: 2
+
+cache:
+    name: memory
+
+layers:
+    - id: osm
+      provider:
+          name: proxy
+          url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+
+    - id: osm-topo
+      provider:
+          name: proxy
+          url: https://tile.opentopomap.org/{z}/{x}/{y}.png
+
+    # An internal layer that shouldn't count as usage
+    - id: debug-grid
+      skipAnalytics: true
+      provider:
+          name: static
+          color: "00000000"
