@@ -1,6 +1,6 @@
 = tilegroxy -- Tile G(o) (P)roxy
 
-image:https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml/badge.svg[Docker Image CI,link=https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml] image:https://goreportcard.com/badge/michad/tilegroxy[Go Report Card,link=https://goreportcard.com/report/michad/tilegroxy] image:https://img.shields.io/ossf-scorecard/github.com/Michad/tilegroxy?label=openssf%20scorecard&style=flat[OpenSSF Scorecard,link=https://scorecard.dev/viewer/?uri=github.com%2FMichad%2Ftilegroxy] image:https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/michad/d1b9e082f6608635494188d0f52bae69/raw/coverage.json[Coverage] image:https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/michad/d1b9e082f6608635494188d0f52bae69/raw/libyears.json[Libyears,link=https://libyear.com/]  +
+image:https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml/badge.svg[Docker Image CI,link=https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml] image:https://img.shields.io/ossf-scorecard/github.com/Michad/tilegroxy?label=openssf%20scorecard&style=flat[OpenSSF Scorecard,link=https://scorecard.dev/viewer/?uri=github.com%2FMichad%2Ftilegroxy] image:https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/michad/d1b9e082f6608635494188d0f52bae69/raw/coverage.json[Coverage] image:https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/michad/d1b9e082f6608635494188d0f52bae69/raw/libyears.json[Libyears,link=https://libyear.com/]  +
 image:https://img.shields.io/github/go-mod/go-version/michad/tilegroxy[Go Version] image:https://img.shields.io/badge/License-Apache_2.0-blue.svg[License,link=https://opensource.org/licenses/Apache-2.0] xref:CODE_OF_CONDUCT.adoc[image:https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg[Contributor Covenant]]
 
 Tilegroxy lives between your map and your mapping providers to deliver a consistent, cached API for all your layers.
@@ -28,7 +28,7 @@ One of the top design goals of tilegroxy is to be highly flexible. If there's fu
 
 == Contributing
 
-As this is a young project any contribution via an Issue or Pull Request is very welcome.
+Any contribution via an Issue or Pull Request is very welcome.
 
 A few please and thank yous:
 
