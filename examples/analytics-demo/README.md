@@ -10,7 +10,7 @@ The only requirement is Docker with Compose. Tiles come from OpenStreetMap so th
 docker compose up
 ```
 
-Then open http://localhost:8000 for the map and http://localhost:8000/dashboard for the usage numbers. The dashboard refreshes every two seconds.
+Then open localhost:8000 for the map and localhost:8000/dashboard for the usage numbers. The dashboard refreshes every two seconds.
 
 Tear it down with `docker compose down -v`. The `-v` discards the recorded events along with the database.
 
@@ -28,9 +28,9 @@ Tear it down with `docker compose down -v`. The `-v` discards the recorded event
 
 The batch settings in `tilegroxy.yml` are tuned for a demo, writing every 10 events or every 2 seconds so a tile you request appears almost immediately. Production values are much higher, see the [analytics documentation](../../docs/operation/modules/ROOT/pages/configuration/analytics/index.adoc) for the defaults.
 
-Switching layers in the map's top right control changes which layer the events are attributed to. The `debug-grid` layer at `http://localhost:8080/tiles/debug-grid/1/1/1` never appears in the dashboard because it sets `skipAnalytics`.
+Switching layers in the map's top right control changes which layer the events are attributed to. The `debug-grid` layer at `localhost:8080/tiles/debug-grid/1/1/1` never appears in the dashboard because it sets `skipAnalytics`.
 
-Events are only recorded for tiles that were served successfully. Requesting a layer that doesn't exist, such as `http://localhost:8080/tiles/nope/1/1/1`, leaves the counts unchanged. A tile served from the cache still counts, since the event records that a user consumed a tile rather than that a provider generated one; reloading the map does not stop the counter.
+Events are only recorded for tiles that were served successfully. Requesting a layer that doesn't exist, such as `localhost:8080/tiles/nope/1/1/1`, leaves the counts unchanged. A tile served from the cache still counts, since the event records that a user consumed a tile rather than that a provider generated one; reloading the map does not stop the counter.
 
 The `extra` column in the recent events table holds the attributes selected by `fields` and `extraFields`. This demo collects duration, size and content type along with a constant `environment` tag. The `ip` and `useragent` fields are deliberately left off since they're personal data.
 
