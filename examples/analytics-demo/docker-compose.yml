@@ -1,0 +1,65 @@
+services:
+  postgres:
+    container_name: analytics-demo-postgres
+    image: postgres:17-alpine
+    security_opt:
+      - label:disable
+    environment:
+      POSTGRES_USER: tilegroxy
+      POSTGRES_PASSWORD: tilegroxy
+      POSTGRES_DB: analytics
+    # Not published to the host; tilegroxy and the dashboard reach it over the compose network. Use
+    # `docker compose exec postgres psql` to query it yourself
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tilegroxy -d analytics"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+    volumes:
+      - type: bind
+        source: ./schema.sql
+        target: /docker-entrypoint-initdb.d/schema.sql
+        read_only: true
+        bind:
+          selinux: Z
+
+  tilegroxy:
+    container_name: analytics-demo-tilegroxy
+    image: ghcr.io/michad/tilegroxy:edge
+    command: serve -c /tilegroxy/tilegroxy.yml
+    security_opt:
+      - label:disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - 8085:8080
+    volumes:
+      - type: bind
+        source: ./tilegroxy.yml
+        target: /tilegroxy/tilegroxy.yml
+        read_only: true
+        bind:
+          selinux: Z
+
+  dashboard:
+    container_name: analytics-demo-dashboard
+    image: python:3.13-alpine
+    command: sh -c "pip install --quiet 'psycopg[binary]==3.2.*' && python /app/app.py"
+    security_opt:
+      - label:disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://tilegroxy:tilegroxy@postgres:5432/analytics
+      TILE_URL: http://localhost:8085/tiles/{layer}/{z}/{x}/{y}
+    ports:
+      - 8086:8000
+    volumes:
+      - type: bind
+        source: ./dashboard
+        target: /app
+        read_only: true
+        bind:
+          selinux: Z
