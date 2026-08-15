@@ -29,7 +29,7 @@ import (
 // and bail out. Startup validation catches statically-resolvable cycles; this is the backstop for
 // patterned layer names, which can't be resolved until request time. The root request is hop 0, so
 // exactly maxRefDepth ref hops are allowed.
-const maxRefDepth = 25
+const maxRefDepth = 10
 
 type RefConfig struct {
 	Layer string

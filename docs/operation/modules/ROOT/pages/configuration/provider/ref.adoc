@@ -4,6 +4,8 @@ Ref refers requests to another layer. This is pointless by itself but can be use
 
 For instance you can have a layer with a complex client configuration that utilizes a `pattern` and points to a WMS server with the WMS layer being specified by a placeholder, then several other layers using `Ref` that fill in the blank.
 
+Ref has a recursion limit of 10. We attempt to detect chains that will violate this limit at startup, but not all cases can be statically detected. Any tiles generated at runtime that violate this limit will result in an error after the 10th hop. This protection only applies to recursive ref's in a single config, for example there is no protection against using a proxy provider between two separate instances of tilegroxy.
+
 Name should be "ref"
 
 Configuration options:

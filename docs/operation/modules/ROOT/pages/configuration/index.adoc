@@ -10,7 +10,7 @@ Parameter names (configuration keys) are case-insensitive unless indicated other
 
 Names (see below) are always lower case.
 
-Unknown or misspelled configuration keys are rejected as an error rather than silently ignored, both at the top level and within any entity block. See xref:commands/config_check.adoc[Config Check] for details, including how this can affect upgrades.
+Unknown or misspelled configuration keys are rejected as an error rather than silently ignored, both at the top level and within any entity block. See xref:commands/config_check.adoc[Config Check] for details.
 
 Some parameters can be specified by environment variables which must be upper case. Environment variables override config parameters which override default values.
 

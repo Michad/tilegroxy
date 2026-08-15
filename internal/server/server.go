@@ -243,8 +243,6 @@ func ListenAndServe(config *config.Config, ent *entities.Entities, reloadPtr *fu
 		return fmt.Errorf(config.Error.Messages.ParamRequired, "server.encrypt.domain")
 	}
 
-	// reloadPtr is published further down, once the health subsystem exists, so the callback can
-	// rebuild health alongside the handlers.
 	rootHandler, handlerReloadFunc, currentEntities, err := setupHandlers(config, ent)
 
 	if err != nil {
