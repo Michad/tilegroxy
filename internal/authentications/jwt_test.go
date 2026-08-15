@@ -151,9 +151,9 @@ func TestGoodJwtClaimsWithCache(t *testing.T) {
 	assert.True(t, jwt.CheckAuthentication(pkg.BackgroundContext(), req))
 
 	assert.Equal(t, 1, jwt.Cache.Size())
-	date, ok := jwt.Cache.Get(req.Header["Authorization"][0])
+	result, ok := jwt.Cache.Get(req.Header["Authorization"][0])
 	assert.True(t, ok)
-	assert.Equal(t, int64(4294967295), date.Unix())
+	assert.Equal(t, int64(4294967295), result.expiration.Unix())
 }
 
 func TestGoodJwtScopeLimit(t *testing.T) {
@@ -190,6 +190,51 @@ func TestGoodJwtScopeLimit(t *testing.T) {
 	}
 
 	assert.Equal(t, "John Doe", *ctxUserID)
+}
+
+// With CacheSize > 0, a cache hit that only checks expiration leaves limitLayers/allowedLayers/
+// userID at their unrestricted defaults, so a repeat request with a scope-limited token would
+// escalate to full layer access.
+func TestGoodJwtScopeLimit_CacheHitPreservesAuthorization(t *testing.T) {
+	jwtConfig := JWTConfig{
+		Algorithm:     "HS256",
+		Key:           "hunter2",
+		MaxExpiration: 4294967295, // 136 years from now
+		LayerScope:    true,
+		ScopePrefix:   "tile/",
+		UserID:        "name",
+		CacheSize:     100,
+	}
+	jwtAny, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
+	require.NoError(t, err)
+	jwtAuth := jwtAny.(*JWT)
+
+	req, err := http.NewRequest(http.MethodGet, "http://127.0.0.1/tiles/layer/0/0/0", nil)
+	require.NoError(t, err)
+	req.Header["Authorization"] = []string{"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdWJqZWN0IiwiYXVkIjoiYXVkaWVuY2UiLCJpc3MiOiJpc3N1ZXIiLCJzY29wZSI6InRpbGUvdGVzdCIsIm5hbWUiOiJKb2huIERvZSIsImlhdCI6MTUxNjIzOTAyMiwiZXhwIjo0Mjk0OTY3Mjk1fQ.j_-4ERnaVdkscbfjMKavieAtVH7GhZIBr5kwnKNHEAI"} // Valid JWT with scope=tile/test
+
+	// Request 1: cache miss, does the full validation.
+	ctx1 := pkg.BackgroundContext()
+	require.True(t, jwtAuth.CheckAuthentication(ctx1, req))
+
+	limitLayers1, _ := pkg.LimitLayersFromContext(ctx1)
+	allowedLayers1, _ := pkg.AllowedLayersFromContext(ctx1)
+	userID1, _ := pkg.UserIDFromContext(ctx1)
+	require.True(t, *limitLayers1)
+	require.Equal(t, []string{"test"}, *allowedLayers1)
+	require.Equal(t, "John Doe", *userID1)
+
+	// Request 2: same token, now served from cache. Must produce the identical restrictions.
+	ctx2 := pkg.BackgroundContext()
+	require.True(t, jwtAuth.CheckAuthentication(ctx2, req))
+
+	limitLayers2, _ := pkg.LimitLayersFromContext(ctx2)
+	allowedLayers2, _ := pkg.AllowedLayersFromContext(ctx2)
+	userID2, _ := pkg.UserIDFromContext(ctx2)
+
+	assert.True(t, *limitLayers2, "cache hit must not drop limitLayers back to false")
+	assert.Equal(t, []string{"test"}, *allowedLayers2, "cache hit must not drop the allowed layers")
+	assert.Equal(t, "John Doe", *userID2, "cache hit must not drop the user ID")
 }
 
 func TestBadJwtClaims(t *testing.T) {

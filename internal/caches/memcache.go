@@ -16,6 +16,7 @@ package caches
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -90,6 +91,14 @@ func (s MemcacheRegistration) Initialize(configAny any, errorMessages config.Err
 
 }
 
+// memcacheKey sanitizes LayerName (see safeLayerName) since memcache keys can't contain whitespace
+// or control characters, then bounds the total length, which KeyPrefix counts toward.
+func memcacheKey(prefix string, t pkg.TileRequest) string {
+	safe := t
+	safe.LayerName = safeLayerName(t.LayerName)
+	return safeMemcacheKey(prefix, safe.String())
+}
+
 // Close shuts down the memcache client, releasing its connection pool.
 func (c Memcache) Close(_ context.Context) error {
 	if c.client == nil {
@@ -100,8 +109,11 @@ func (c Memcache) Close(_ context.Context) error {
 }
 
 func (c Memcache) Lookup(_ context.Context, t pkg.TileRequest) (*pkg.Image, error) {
-	it, err := c.client.Get(c.KeyPrefix + t.String())
+	it, err := c.client.Get(memcacheKey(c.KeyPrefix, t))
 
+	if errors.Is(err, memcache.ErrCacheMiss) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -116,5 +128,5 @@ func (c Memcache) Save(_ context.Context, t pkg.TileRequest, img *pkg.Image) err
 		return err
 	}
 
-	return c.client.Set(&memcache.Item{Key: c.KeyPrefix + t.String(), Value: val, Expiration: int32(c.TTL)}) // #nosec G115 -- max value applied in Initialize
+	return c.client.Set(&memcache.Item{Key: memcacheKey(c.KeyPrefix, t), Value: val, Expiration: int32(c.TTL)}) // #nosec G115 -- max value applied in Initialize
 }

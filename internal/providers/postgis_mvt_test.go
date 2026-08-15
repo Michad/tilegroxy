@@ -139,7 +139,7 @@ func Test_GenerateTile(t *testing.T) {
 			"id":       "test",
 			"host":     host,
 			"port":     port,
-			"username": "postgres",
+			"user":     "postgres",
 			"password": "hunter2",
 		},
 	}

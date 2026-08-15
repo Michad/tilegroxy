@@ -70,6 +70,15 @@ The following placeholders are available in the URL:
 | If the layer includes a pattern with a placeholder of XXX, this is the replacement value from the used layer name
 |===
 
+[NOTE]
+====
+`env.XXX` values come from server-side environment variables and are inserted into the URL as-is, unescaped - this is intentional, since an environment variable is operator-controlled and is the documented way to inject something like an entire base URL (scheme, host, and path) via `{env.XXX}`.
+
+`ctx.XXX` and `layer.XXX` values are request-derived (an HTTP header/context value, or a match against the incoming layer pattern, respectively) and are therefore percent-encoded before being inserted into the URL - path-escaped if the placeholder appears before the first `?` in the `url` template, query-escaped if after it. This prevents a request from injecting a `?`, `#`, or `../` into the upstream URL to rewrite its path or smuggle in extra query parameters. One consequence: if a `ctx.XXX` or `layer.XXX` value legitimately needs to contain a `/`, it will be encoded as `%2F` rather than treated as a path separator.
+
+For an additional layer of control over what values a layer pattern will accept before they ever reach a placeholder, see `paramValidator` on the xref:configuration/layer.adoc[Layer] configuration.
+====
+
 Example:
 
 ----

@@ -16,11 +16,14 @@ package server
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -129,6 +132,72 @@ func (h *tileHandler) closeOldEntities(old reloadableEntities) {
 	}
 }
 
+func setServiceSpanAttributes(span trace.Span) {
+	if !span.IsRecording() {
+		return
+	}
+
+	span.SetAttributes(
+		attribute.String("service.name", "tilegroxy"),
+		attribute.String("service.version", version+"-"+ref),
+		attribute.String("service.build", buildDate),
+		attribute.String("code.namespace", static.GetPackage()+"/internal/server/tile_handler.go"),
+		attribute.String("code.function", "ServeHTTP"),
+	)
+}
+
+func setTileSpanAttributes(span trace.Span, tileReq pkg.TileRequest) {
+	if !span.IsRecording() {
+		return
+	}
+
+	span.SetAttributes(
+		attribute.String("tilegroxy.layer.name", tileReq.LayerName),
+		attribute.Int("tilegroxy.coordinate.x", tileReq.X),
+		attribute.Int("tilegroxy.coordinate.y", tileReq.Y),
+		attribute.Int("tilegroxy.coordinate.z", tileReq.Z),
+	)
+}
+
+// writeTile sends the rendered tile body, or a 304 when the request carries a matching
+// If-None-Match, recording the outcome on the span. A write failure still counts as a success
+// since the tile itself was generated.
+func writeTile(ctx context.Context, w http.ResponseWriter, req *http.Request, span trace.Span, img *pkg.Image) {
+	if img.ContentType != "" {
+		w.Header().Add("Content-Type", img.ContentType)
+	}
+
+	etag := etagFor(img.Content)
+	w.Header().Set("ETag", etag)
+
+	if requestETagMatches(req.Header.Get("If-None-Match"), etag) {
+		w.WriteHeader(http.StatusNotModified)
+		span.SetStatus(codes.Ok, "")
+
+		return
+	}
+
+	w.Header().Set("Content-Length", strconv.Itoa(len(img.Content)))
+	w.WriteHeader(http.StatusOK)
+
+	_, err := w.Write(img.Content)
+
+	if err == nil {
+		span.SetStatus(codes.Ok, "")
+		return
+	}
+
+	if errors.Is(err, context.Canceled) || err.Error() == context.Canceled.Error() {
+		slog.DebugContext(ctx, "Request canceled during write")
+		span.SetStatus(codes.Error, err.Error())
+		return
+	}
+
+	span.RecordError(err)
+	span.SetStatus(codes.Error, "Result write error")
+	slog.WarnContext(ctx, fmt.Sprintf("Unable to write to request due to %v", err))
+}
+
 func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	span := trace.SpanFromContext(ctx)
@@ -140,15 +209,7 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	h.tileAllCounter.Add(ctx, 1)
 
-	if span.IsRecording() {
-		span.SetAttributes(
-			attribute.String("service.name", "tilegroxy"),
-			attribute.String("service.version", version+"-"+ref),
-			attribute.String("service.build", buildDate),
-			attribute.String("code.namespace", static.GetPackage()+"/internal/server/tile_handler.go"),
-			attribute.String("code.function", "ServeHTTP"),
-		)
-	}
+	setServiceSpanAttributes(span)
 
 	slog.DebugContext(ctx, "server: tile handler started")
 	defer slog.DebugContext(ctx, "server: tile handler ended")
@@ -170,14 +231,7 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return // We already handled the error in the function
 	}
 
-	if span.IsRecording() {
-		span.SetAttributes(
-			attribute.String("tilegroxy.layer.name", tileReq.LayerName),
-			attribute.Int("tilegroxy.coordinate.x", tileReq.X),
-			attribute.Int("tilegroxy.coordinate.y", tileReq.Y),
-			attribute.Int("tilegroxy.coordinate.z", tileReq.Z),
-		)
-	}
+	setTileSpanAttributes(span, tileReq)
 
 	_, err := tileReq.GetBounds()
 
@@ -207,7 +261,7 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	writeTile(ctx, w, span, img)
+	writeTile(ctx, w, req, span, img)
 
 	// This isn't in the else clause because the tile was still generated successfully even though request errored
 	h.tileSuccessCounter.Add(ctx, 1)
@@ -216,33 +270,6 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// success counter above, a failed write still counts as usage: the tile was produced and, for
 	// operators tracking consumption of a paid upstream, the cost was incurred.
 	entities.recordAnalytics(ctx, tileReq, img)
-}
-
-// writeTile sends a rendered tile as the response body, recording the outcome on the span. A write
-// failure is reported but not returned: the tile was already generated, so the caller still treats
-// the request as a success for counting and analytics purposes.
-func writeTile(ctx context.Context, w http.ResponseWriter, span trace.Span, img *pkg.Image) {
-	if img.ContentType != "" {
-		w.Header().Add("Content-Type", img.ContentType)
-	}
-
-	w.Header().Set("Content-Length", strconv.Itoa(len(img.Content)))
-	w.WriteHeader(http.StatusOK)
-
-	_, err := w.Write(img.Content)
-
-	if err != nil {
-		if errors.Is(err, context.Canceled) || err.Error() == context.Canceled.Error() {
-			slog.DebugContext(ctx, "Request canceled during write")
-			span.SetStatus(codes.Error, err.Error())
-		} else {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "Result write error")
-			slog.WarnContext(ctx, fmt.Sprintf("Unable to write to request due to %v", err))
-		}
-	} else {
-		span.SetStatus(codes.Ok, "")
-	}
 }
 
 // recordAnalytics emits a usage event for a successfully served tile. It resolves the layer a
@@ -279,6 +306,32 @@ func (h *reloadableEntities) recordAnalytics(ctx context.Context, tileReq pkg.Ti
 		Bytes:       len(img.Content),
 		ContentType: img.ContentType,
 	})
+}
+
+// etagFor produces a strong ETag from the tile content. The internal cache only saves the upstream
+// call; without a conditional request every byte still crosses the wire on every pan and zoom.
+func etagFor(content []byte) string {
+	sum := sha256.Sum256(content)
+	return `"` + hex.EncodeToString(sum[:]) + `"`
+}
+
+// requestETagMatches implements the If-None-Match precondition from RFC 9110 §13.1.2: a
+// comma-separated list of one or more entity tags, or "*" to match any current representation.
+func requestETagMatches(ifNoneMatch string, etag string) bool {
+	if ifNoneMatch == "" {
+		return false
+	}
+	if ifNoneMatch == "*" {
+		return true
+	}
+	for _, candidate := range strings.Split(ifNoneMatch, ",") {
+		candidate = strings.TrimSpace(candidate)
+		candidate = strings.TrimPrefix(candidate, "W/")
+		if candidate == etag {
+			return true
+		}
+	}
+	return false
 }
 
 func (h *reloadableEntities) writeHeaders(w http.ResponseWriter) {

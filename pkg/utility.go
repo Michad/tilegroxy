@@ -21,13 +21,22 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
+	"math"
 	"math/rand/v2"
+	"net/http"
+	neturl "net/url"
 	"os"
+	"reflect"
+	"slices"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/static"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -162,29 +171,73 @@ func ParseZoomString(str string) ([]int, error) {
 
 // Find any string values that start with `keyTag.keyName` and replace it with replacer(keyName). Replaces the full value. Used for avoiding secrets in config so your configuration can be placed in source control
 func ReplaceConfigValues(rawConfig map[string]interface{}, keyTag string, replacer func(string) (string, error)) (map[string]interface{}, error) {
-	var err error
-	result := make(map[string]interface{})
-	for k, v := range rawConfig {
-		if vMap, ok := v.(map[string]interface{}); ok {
-			result[k], err = ReplaceConfigValues(vMap, keyTag, replacer)
-		} else if vStr, ok := v.(string); ok {
-			if strings.Index(vStr, keyTag+".") == 0 {
-				varName := vStr[len(keyTag)+1:]
-				slog.Debug("Replacing " + keyTag + " var " + varName)
-
-				result[k], err = replacer(varName)
-				if err != nil {
-					break
-				}
-			} else {
-				result[k] = vStr
-			}
-		} else {
-			result[k] = v
-		}
+	result, err := replaceConfigValuesAny(rawConfig, keyTag, replacer)
+	if err != nil {
+		return nil, err
 	}
 
-	return result, err
+	return result.(map[string]interface{}), nil
+}
+
+// replaceConfigValuesAny recursively walks arbitrary config values looking for strings tagged
+// "keyTag.keyName" to replace. It recurses by reflect.Kind rather than by concrete type because
+// config values arrive in more shapes than a type switch can enumerate: mapstructure-decoded
+// fields like ClientConfig.Headers are map[string]string, not map[string]interface{}.
+func replaceConfigValuesAny(v any, keyTag string, replacer func(string) (string, error)) (any, error) {
+	if v == nil {
+		return nil, nil
+	}
+
+	if vStr, ok := v.(string); ok {
+		if strings.Index(vStr, keyTag+".") == 0 {
+			varName := vStr[len(keyTag)+1:]
+			slog.Debug("Replacing " + keyTag + " var " + varName)
+			return replacer(varName)
+		}
+		return vStr, nil
+	}
+
+	rv := reflect.ValueOf(v)
+
+	switch rv.Kind() { //nolint:exhaustive // the default arm handles all remaining kinds
+	case reflect.Map:
+		result := reflect.MakeMap(rv.Type())
+		for _, key := range rv.MapKeys() {
+			original := rv.MapIndex(key)
+			replaced, err := replaceConfigValuesAny(original.Interface(), keyTag, replacer)
+			if err != nil {
+				return nil, err
+			}
+			// A nil replacement means the original was nil, as a YAML key written with no value
+			// (`ttl:`) parses to. Convert would panic on the zero Value it produces.
+			if replaced == nil {
+				result.SetMapIndex(key, original)
+				continue
+			}
+			result.SetMapIndex(key, reflect.ValueOf(replaced).Convert(rv.Type().Elem()))
+		}
+		return result.Interface(), nil
+	case reflect.Slice, reflect.Array:
+		// Arrays come back as slices. Config parsed from YAML/JSON never contains arrays, so this
+		// only affects hand-constructed input.
+		result := reflect.MakeSlice(reflect.SliceOf(rv.Type().Elem()), rv.Len(), rv.Len())
+		for i := range rv.Len() {
+			original := rv.Index(i)
+			replaced, err := replaceConfigValuesAny(original.Interface(), keyTag, replacer)
+			if err != nil {
+				return nil, err
+			}
+			// See the nil note in the Map branch above.
+			if replaced == nil {
+				result.Index(i).Set(original)
+				continue
+			}
+			result.Index(i).Set(reflect.ValueOf(replaced).Convert(rv.Type().Elem()))
+		}
+		return result.Interface(), nil
+	default:
+		return v, nil
+	}
 }
 
 // Find any string values that start with `env.` and interpret the rest as an environment variable. Replaces the full value with the contents of the respective environment variable. Useful for avoiding secrets in config so your configuration can be placed in source control
@@ -192,6 +245,118 @@ func ReplaceEnv(rawConfig map[string]interface{}) map[string]interface{} {
 	result, _ := ReplaceConfigValues(rawConfig, "env", func(s string) (string, error) { return os.Getenv(s), nil })
 
 	return result
+}
+
+// Query parameter names whose values are masked before a URL is logged.
+var credentialQueryParams = []string{"key", "token", "apikey", "api_key", "access_token", "password", "secret", "signature", "sig"}
+
+// RedactURLForLog strips userinfo and masks credential-bearing query parameter values so a URL can
+// be written to logs. It accepts relative URIs as well as absolute URLs. A URL that won't parse is
+// replaced entirely, since we can't tell which part of it is sensitive.
+//
+// Providers that log an outgoing URL should route it through this. A {ctx.*} placeholder resolves
+// to a value taken off the incoming request, commonly an Authorization header or an API key, so a
+// debug log can otherwise end up holding a live credential.
+func RedactURLForLog(rawURL string) string {
+	parsed, err := neturl.Parse(rawURL)
+	if err != nil {
+		return "(unparseable url)"
+	}
+
+	if parsed.User != nil {
+		parsed.User = neturl.User("redacted")
+	}
+
+	query := parsed.Query()
+	for name := range query {
+		if slices.Contains(credentialQueryParams, strings.ToLower(name)) {
+			query.Set(name, "redacted")
+		}
+	}
+	parsed.RawQuery = query.Encode()
+
+	return parsed.Redacted()
+}
+
+// GetTile performs a GET operation against a given URL and applies the standard Client
+// configuration options (headers, timeout, status code / content-type allowlists, content-type
+// rewriting, and length limits). Providers should call this instead of making their own HTTP
+// requests, so custom Go providers get the same enforcement as the built-in ones.
+func GetTile(ctx context.Context, clientConfig config.ClientConfig, url string, authHeaders map[string]string) (*Image, error) {
+	slog.DebugContext(ctx, fmt.Sprintf("Calling url %v\n", RedactURLForLog(url)))
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("User-Agent", clientConfig.UserAgent)
+
+	for h, v := range clientConfig.Headers {
+		req.Header.Set(h, v)
+	}
+
+	for h, v := range authHeaders {
+		req.Header.Set(h, v)
+	}
+
+	if clientConfig.Timeout > math.MaxInt32 {
+		clientConfig.Timeout = math.MaxInt32
+	}
+
+	transport := otelhttp.NewTransport(http.DefaultTransport, otelhttp.WithMessageEvents(otelhttp.ReadEvents))
+	client := http.Client{Transport: transport, Timeout: time.Duration(clientConfig.Timeout) * time.Second}
+
+	resp, err := client.Do(req)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	slog.DebugContext(ctx, fmt.Sprintf("Response status: %v", resp.StatusCode))
+
+	if !slices.Contains(clientConfig.StatusCodes, resp.StatusCode) {
+		return nil, &RemoteServerError{StatusCode: resp.StatusCode}
+	}
+
+	contentType := resp.Header.Get("Content-Type")
+
+	if !slices.Contains(clientConfig.ContentTypes, contentType) {
+		return nil, &InvalidContentTypeError{ContentType: contentType}
+	}
+
+	if clientConfig.RewriteContentTypes != nil {
+		newContentType, ok := clientConfig.RewriteContentTypes[contentType]
+
+		if ok {
+			contentType = newContentType
+		}
+	}
+
+	if resp.ContentLength == -1 {
+		if !clientConfig.UnknownLength {
+			return nil, &InvalidContentLengthError{Length: -1}
+		}
+	} else {
+		if resp.ContentLength > int64(clientConfig.MaxLength) {
+			return nil, &InvalidContentLengthError{Length: int(resp.ContentLength)}
+		}
+	}
+
+	img, err := io.ReadAll(resp.Body)
+
+	if err != nil {
+		return nil, &RemoteServerError{StatusCode: resp.StatusCode}
+	}
+
+	if len(img) > clientConfig.MaxLength {
+		return nil, &InvalidContentLengthError{Length: len(img)}
+	}
+
+	return &Image{Content: img, ContentType: contentType}, nil
 }
 
 // cond ? a : b

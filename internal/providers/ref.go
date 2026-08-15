@@ -16,6 +16,7 @@ package providers
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -23,6 +24,12 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"go.opentelemetry.io/otel/trace"
 )
+
+// Maximum number of hops a request may be forwarded through ref providers before we assume a cycle
+// and bail out. Startup validation catches statically-resolvable cycles; this is the backstop for
+// patterned layer names, which can't be resolved until request time. The root request is hop 0, so
+// exactly maxRefDepth ref hops are allowed.
+const maxRefDepth = 10
 
 type RefConfig struct {
 	Layer string
@@ -62,9 +69,18 @@ func (t Ref) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.Provider
 func (t Ref) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	newRequest := pkg.TileRequest{LayerName: t.Layer, Z: tileRequest.Z, X: tileRequest.X, Y: tileRequest.Y}
 
+	depth, _ := pkg.RefDepthFromContext(ctx)
+	if depth != nil && *depth >= maxRefDepth {
+		return nil, fmt.Errorf("ref: maximum reference depth (%v) exceeded, likely a cycle involving layer %v", maxRefDepth, t.Layer)
+	}
+
 	// We need to make a new context for the child call to avoid e.g. layer placeholder from main layer interfering with that of the child layer
 	req, _ := pkg.ReqFromContext(ctx)
 	newCtx := pkg.NewRequestContext(req)
+
+	if newDepth, ok := pkg.RefDepthFromContext(newCtx); ok && newDepth != nil && depth != nil {
+		*newDepth = *depth + 1
+	}
 
 	// Copy span over from original context
 	span := trace.SpanFromContext(ctx)

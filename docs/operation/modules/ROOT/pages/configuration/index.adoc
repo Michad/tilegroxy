@@ -6,11 +6,15 @@ link:https://github.com/Michad/tilegroxy/tree/main/examples/configurations[Compl
 
 == Conventions
 
-Parameter names (configuration keys) are case-insensitive unless indicated otherwise. 
+Parameter names (configuration keys) are case-insensitive unless indicated otherwise.
 
 Names (see below) are always lower case.
 
+Unknown or misspelled configuration keys are rejected as an error rather than silently ignored, both at the top level and within any entity block. See xref:commands/config_check.adoc[Config Check] for details.
+
 Some parameters can be specified by environment variables which must be upper case. Environment variables override config parameters which override default values.
+
+The environment variable name is derived by joining the parameter's full key path with `_`, upper-cased. For example, `server.port` becomes `SERVER_PORT` and `logging.main.level` becomes `LOGGING_MAIN_LEVEL`. This works for any scalar parameter with a fixed key, even if it's not set in your config file at all - it does not apply to the dynamic, per-entity parameters described below (those support `env.ENV_VAR_NAME` value substitution instead).
 
 == Entities
 
