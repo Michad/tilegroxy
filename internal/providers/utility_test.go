@@ -197,11 +197,13 @@ func Test_ReplaceURLPlaceholders_CtxValueCannotReinjectPlaceholderInQuery(t *tes
 // index 10 rather than index 1 followed by a literal "0".
 func Test_ReplaceURLPlaceholders_DoubleDigitIndices(t *testing.T) {
 	var template string
+	var templateSb200 strings.Builder
 	for i := range 12 {
 		name := "TILEGROXY_TEST_MULTI_" + strconv.Itoa(i)
 		t.Setenv(name, "v"+strconv.Itoa(i))
-		template += "/{env." + name + "}"
+		templateSb200.WriteString("/{env." + name + "}")
 	}
+	template += templateSb200.String()
 
 	result, err := replaceURLPlaceholders(pkg.BackgroundContext(), pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com"+template, false, pkg.SRIDWGS84)
 
