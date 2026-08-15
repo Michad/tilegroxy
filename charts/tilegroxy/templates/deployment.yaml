@@ -1,0 +1,159 @@
+{{- $serverPort := include "tilegroxy.serverPort" . | int -}}
+{{- $healthEnabled := include "tilegroxy.healthEnabled" . | eq "true" -}}
+{{- $healthPort := include "tilegroxy.healthPort" . | int -}}
+{{- $httpPort := include "tilegroxy.httpPort" . | int -}}
+{{- $encrypt := fromYaml (include "tilegroxy.encrypt" .) -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tilegroxy.fullname" . }}
+  labels:
+    {{- include "tilegroxy.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "tilegroxy.selectorLabels" . | nindent 6 }}
+  {{- with .Values.updateStrategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "tilegroxy.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        {{- if and .Values.restartOnConfigChange (not .Values.existingConfigMap) }}
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if .Values.secrets }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- end }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "tilegroxy.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      {{- if .Values.configCheck.enabled }}
+      initContainers:
+        - name: config-check
+          image: {{ include "tilegroxy.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - config
+            - check
+            - -c
+            - {{ .Values.configPath }}
+          {{- with include "tilegroxy.env" . | trim }}
+          env:
+            {{- . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            {{- include "tilegroxy.volumeMounts" . | nindent 12 }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+      {{- end }}
+      containers:
+        - name: tilegroxy
+          image: {{ include "tilegroxy.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - serve
+            - -c
+            - {{ .Values.configPath }}
+            {{- if .Values.hotReload }}
+            - --hot-reload
+            {{- end }}
+            {{- with .Values.extraArgs }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ $serverPort }}
+              protocol: TCP
+            {{- if and $encrypt $httpPort }}
+            - name: http-acme
+              containerPort: {{ $httpPort }}
+              protocol: TCP
+            {{- end }}
+            {{- if $healthEnabled }}
+            - name: health
+              containerPort: {{ $healthPort }}
+              protocol: TCP
+            {{- end }}
+          {{- with include "tilegroxy.env" . | trim }}
+          env:
+            {{- . | nindent 12 }}
+          {{- end }}
+          {{- if $healthEnabled }}
+          {{- if .Values.startupProbe.enabled }}
+          startupProbe:
+            httpGet:
+              path: /
+              port: health
+            periodSeconds: {{ .Values.startupProbe.periodSeconds }}
+            failureThreshold: {{ .Values.startupProbe.failureThreshold }}
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: health
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: health
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            {{- include "tilegroxy.volumeMounts" . | nindent 12 }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        {{- include "tilegroxy.volumes" . | nindent 8 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

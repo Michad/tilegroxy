@@ -1,0 +1,90 @@
+# A high-availability deployment: several replicas behind an ingress, sharing a
+# redis cache, with credentials coming from Secrets managed outside this chart.
+
+replicaCount: 3
+
+config:
+  server:
+    bindHost: 0.0.0.0
+    port: 8080
+    production: true
+    gzip: true
+    headers:
+      Access-Control-Allow-Origin: "*"
+      X-Content-Type-Options: nosniff
+    health:
+      enabled: true
+      port: 3000
+      checks:
+        - name: cache
+          delay: 60
+        - name: tile
+          layer: osm
+          validation: success
+          delay: 60
+  client:
+    userAgent: tilegroxy/example-org
+  logging:
+    main:
+      level: warn
+      format: json
+  telemetry:
+    enabled: true
+  cache:
+    name: multi
+    tiers:
+      - name: memory
+        maxsize: 1000
+        ttl: 1000
+      - name: redis
+        host: redis-master.data.svc.cluster.local
+        port: 6379
+        password: env.REDIS_PASSWORD
+        ttl: 86400
+  layers:
+    - id: osm
+      provider:
+        name: proxy
+        url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+
+env:
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.observability:4318
+  OTEL_SERVICE_NAME: tilegroxy
+
+existingSecretKeys:
+  REDIS_PASSWORD:
+    name: redis-auth
+    key: password
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 1m
+  hosts:
+    - host: tiles.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: tilegroxy-tls
+      hosts:
+        - tiles.example.com
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 12
+  targetCPUUtilizationPercentage: 70
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: kubernetes.io/hostname
+    whenUnsatisfiable: ScheduleAnyway
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: tilegroxy

@@ -1,0 +1,363 @@
+# A fully AWS deployment on EKS, showing everywhere an AWS service fits into a
+# tilegroxy deployment.
+#
+#   S3                    tile cache
+#   Secrets Manager       every credential in the config, resolved by tilegroxy
+#   IAM Roles for         how tilegroxy authenticates to S3 and Secrets Manager
+#     Service Accounts    without any static access keys
+#   Aurora PostgreSQL     PostGIS source for vector tiles, and the analytics
+#     (or RDS)            destination
+#   Cognito               issues the JWTs tilegroxy validates
+#   ALB + ACM             ingress and TLS termination
+#   CloudFront            CDN in front of the ALB (configured outside the chart)
+#   ADOT / X-Ray          OpenTelemetry traces and metrics
+#   CloudWatch Logs       JSON logs picked up off stdout by Fluent Bit
+#   EKS managed node      scheduling, spread across availability zones
+#     groups + Karpenter
+#
+# Two distinct credential mechanisms are in play and it's worth keeping them
+# straight:
+#
+#  1. Tilegroxy's own AWS calls (the S3 cache, Secrets Manager) use the standard
+#     AWS credential chain, so IRSA works with no credentials in the config at
+#     all -- just annotate the service account below.
+#  2. Non-AWS credentials that tilegroxy needs (the database password, the JWT
+#     verification key) are pulled from Secrets Manager by tilegroxy itself
+#     using `secret.<name>` references. Nothing sensitive lands in the
+#     ConfigMap, and the chart's own `secrets:` value goes unused.
+
+replicaCount: 3
+
+# ---------------------------------------------------------------------------
+# IRSA. Create the role with a trust policy for the cluster's OIDC provider:
+#
+#   eksctl create iamserviceaccount \
+#     --cluster my-cluster --namespace tiles --name tilegroxy \
+#     --role-name tilegroxy --approve \
+#     --attach-policy-arn arn:aws:iam::123456789012:policy/tilegroxy
+#
+# The attached policy needs, at minimum:
+#
+#   s3:GetObject, s3:PutObject     on arn:aws:s3:::my-tile-cache/*
+#   s3:ListBucket                  on arn:aws:s3:::my-tile-cache
+#                                  (without this every cache miss logs a
+#                                  misleading 403)
+#   kms:Decrypt, kms:GenerateDataKey
+#                                  on the bucket's CMK if using SSE-KMS
+#   secretsmanager:GetSecretValue  on the secrets referenced below
+#   kms:Decrypt                    on the CMK protecting those secrets
+#
+# The token has to be mounted for IRSA to work, so unlike the chart default
+# automountServiceAccountToken is true here.
+# ---------------------------------------------------------------------------
+serviceAccount:
+  create: true
+  name: tilegroxy
+  automountServiceAccountToken: true
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/tilegroxy
+    eks.amazonaws.com/sts-regional-endpoints: "true"
+
+config:
+  server:
+    bindHost: 0.0.0.0
+    port: 8080
+    production: true
+    gzip: true
+    headers:
+      # CloudFront and the ALB sit in front, so CORS is handled here.
+      Access-Control-Allow-Origin: "*"
+      X-Content-Type-Options: nosniff
+    health:
+      enabled: true
+      port: 3000
+      checks:
+        - name: cache
+          delay: 60
+        - name: tile
+          layer: basemap
+          validation: success
+          delay: 60
+
+  # -------------------------------------------------------------------------
+  # Secrets Manager. Once this is configured, any `secret.<name>` value
+  # elsewhere in the config is resolved from Secrets Manager at startup.
+  # Region comes from the pod environment (see `env` below) but is set
+  # explicitly here for clarity. No access/secret keys: IRSA supplies them.
+  #
+  # Console-created secrets hold JSON, so `id:key` addresses one field of one
+  # secret -- e.g. `secret.tilegroxy/aurora:password` reads the "password" key
+  # out of the "tilegroxy/aurora" secret, which is exactly the shape of the
+  # secret RDS creates when it manages the master password for you.
+  # -------------------------------------------------------------------------
+  secret:
+    name: awssecretsmanager
+    region: us-east-1
+    separator: ":"
+    ttl: 3600
+
+  # -------------------------------------------------------------------------
+  # Cognito issues the JWTs. Tilegroxy validates RS256 signatures against the
+  # public key from the user pool's JWKS
+  # (https://cognito-idp.us-east-1.amazonaws.com/<pool-id>/.well-known/jwks.json).
+  #
+  # Note tilegroxy takes a single fixed key rather than fetching the JWKS, so
+  # store the PEM of the current signing key in Secrets Manager and rotate it
+  # there. `sub` from the token becomes the user recorded in analytics below.
+  # -------------------------------------------------------------------------
+  authentication:
+    name: jwt
+    algorithm: RS256
+    key: secret.tilegroxy/cognito-signing-key
+    expectedIssuer: https://cognito-idp.us-east-1.amazonaws.com/us-east-1_ABC123DEF
+    expectedAudience: 1example23456789abcdefghij
+    maxExpiration: 86400
+
+  # -------------------------------------------------------------------------
+  # S3 as the shared cache. A small in-process memory tier in front absorbs
+  # hot tiles and keeps the S3 request bill down; S3 is what every replica
+  # shares. Again no credentials -- IRSA covers it.
+  #
+  # For a latency-sensitive deployment, an S3 Express One Zone directory
+  # bucket can replace the standard bucket:
+  #
+  #   - name: s3
+  #     bucket: my-tile-cache--use1-az6--x-s3
+  #     endpoint: https://s3express-use1-az6.us-east-1.amazonaws.com
+  #     storageclass: EXPRESS_ONEZONE
+  #     region: us-east-1
+  #
+  # Set a lifecycle policy on the bucket to expire old tiles; tilegroxy's S3
+  # cache has no TTL of its own.
+  # -------------------------------------------------------------------------
+  cache:
+    name: multi
+    tiers:
+      - name: memory
+        maxsize: 2000
+        ttl: 300
+      - name: s3
+        bucket: my-tile-cache
+        region: us-east-1
+        path: tiles
+        storageclass: INTELLIGENT_TIERING
+
+  # -------------------------------------------------------------------------
+  # Aurora PostgreSQL (or RDS for PostgreSQL) with PostGIS. Two datastores:
+  # the writer endpoint isn't needed for tile reads, so vector tiles go to a
+  # reader endpoint, while analytics writes go to a separate database so
+  # event inserts never contend with tile queries.
+  #
+  # Passwords come from Secrets Manager, which is also where RDS puts the
+  # credentials when it manages them.
+  # -------------------------------------------------------------------------
+  datastores:
+    - name: postgresql
+      id: gis-reader
+      host: my-cluster.cluster-ro-abc123.us-east-1.rds.amazonaws.com
+      port: 5432
+      user: tilegroxy_ro
+      password: secret.tilegroxy/aurora-gis:password
+      database: gis
+      minConnections: 5
+      maxConnections: 25
+    - name: postgresql
+      id: analytics-writer
+      host: my-analytics.cluster-abc123.us-east-1.rds.amazonaws.com
+      port: 5432
+      user: tilegroxy_analytics
+      password: secret.tilegroxy/aurora-analytics:password
+      database: analytics
+      minConnections: 2
+      maxConnections: 10
+
+  # -------------------------------------------------------------------------
+  # Usage analytics into Aurora. Create the table yourself first (tilegroxy
+  # issues no DDL) and partition it by time -- events are never expired:
+  #
+  #   CREATE TABLE tilegroxy_analytics (
+  #       time TIMESTAMPTZ NOT NULL, layer TEXT NOT NULL,
+  #       z INTEGER NOT NULL, x INTEGER NOT NULL, y INTEGER NOT NULL,
+  #       user_id TEXT, extra JSONB
+  #   ) PARTITION BY RANGE (time);
+  #
+  # `ip` and `useragent` are deliberately not collected here; add them only
+  # with a basis to record personal data. Alert on the
+  # tilegroxy.analytics.dropped and .error metrics exported via ADOT.
+  # -------------------------------------------------------------------------
+  analytics:
+    name: postgres
+    id: aurora
+    datastore: analytics-writer
+    table: tilegroxy_analytics
+    fields:
+      - duration
+      - bytes
+      - contenttype
+    extraFields:
+      region: us-east-1
+      environment: production
+      tenant: hdr.X-Tenant-Id
+    batch:
+      maxSize: 5000
+      maxAge: 30
+      queueSize: 50000
+
+  # Traces and metrics go to the ADOT collector, which forwards to X-Ray and
+  # CloudWatch. Endpoint is set through the standard OTEL environment
+  # variables in `env` below.
+  telemetry:
+    enabled: true
+
+  # Everything to stdout, where Fluent Bit (the aws-for-fluent-bit DaemonSet)
+  # picks it up and ships it to CloudWatch Logs. Application logs are JSON so
+  # CloudWatch Logs Insights can query the fields directly; access logs only
+  # come in the Apache formats, so "combined" is as structured as they get.
+  logging:
+    main:
+      level: warn
+      format: json
+    access:
+      console: true
+      format: combined
+
+  client:
+    userAgent: tilegroxy/example-org
+
+  layers:
+    # Vector tiles straight out of Aurora PostGIS.
+    - id: parcels
+      provider:
+        name: postgismvt
+        datastore: gis-reader
+        table: public.parcels
+        gid: id
+        geometry: geom
+        sourcesrid: 4326
+        attributes:
+          - owner
+          - assessed_value
+    # A raster basemap proxied from an upstream vendor, with the API key held
+    # in Secrets Manager rather than the ConfigMap.
+    - id: basemap
+      provider:
+        name: proxy
+        url: https://api.example-vendor.com/v1/{z}/{x}/{y}.png?key={secret.tilegroxy/vendor-api-key}
+
+# ---------------------------------------------------------------------------
+# The AWS SDK inside tilegroxy reads these. AWS_REGION covers the S3 cache and
+# Secrets Manager; the OTEL variables point at the ADOT collector sidecar or
+# DaemonSet. Nothing here is sensitive, so plain env is fine -- actual secrets
+# come from Secrets Manager via the `secret.` references above.
+# ---------------------------------------------------------------------------
+env:
+  AWS_REGION: us-east-1
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://adot-collector.observability:4318
+  OTEL_SERVICE_NAME: tilegroxy
+  OTEL_TRACES_SAMPLER: parentbased_traceidratio
+  OTEL_TRACES_SAMPLER_ARG: "0.05"
+
+# ---------------------------------------------------------------------------
+# AWS Load Balancer Controller. This provisions an internet-facing ALB with an
+# ACM certificate; tilegroxy speaks plain HTTP behind it, so config.server.encrypt
+# stays unset.
+#
+# Point CloudFront at the ALB for edge caching of tiles -- with the ALB as the
+# origin, respecting the Cache-Control headers tilegroxy sets. Tilegroxy also
+# serves ETags and answers If-None-Match with a 304, which CloudFront uses to
+# revalidate cheaply.
+# ---------------------------------------------------------------------------
+ingress:
+  enabled: true
+  className: alb
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:123456789012:certificate/abcd1234-ef56-7890-abcd-ef1234567890
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS13-1-2-2021-06
+    # Health checks hit the main port; the health port is intentionally not
+    # exposed through the Service, so the ALB checks a cheap tile path instead.
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
+    alb.ingress.kubernetes.io/load-balancer-attributes: idle_timeout.timeout_seconds=70
+    # Restrict the ALB to CloudFront's prefix list so nothing bypasses the CDN.
+    alb.ingress.kubernetes.io/security-groups: sg-0123456789abcdef0
+    alb.ingress.kubernetes.io/wafv2-acl-arn: arn:aws:wafv2:us-east-1:123456789012:regional/webacl/tilegroxy/abcd1234
+  hosts:
+    - host: tiles.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+
+service:
+  type: ClusterIP
+  port: 80
+
+# No persistent volume is needed: the cache is S3 and certificates are handled
+# by ACM on the ALB. If a layer used the cgi provider with mapserver data, or
+# you wanted a local disk tier, an EBS gp3 volume via the EBS CSI driver would
+# go here (ReadWriteOnce, so per-pod), or EFS via the EFS CSI driver for a
+# volume shared across replicas and availability zones:
+#
+# persistence:
+#   enabled: true
+#   storageClass: efs-sc          # or gp3
+#   accessModes: [ReadWriteMany]  # ReadWriteOnce for EBS
+#   size: 20Gi
+persistence:
+  enabled: false
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 20
+  targetCPUUtilizationPercentage: 70
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+resources:
+  requests:
+    cpu: 1
+    memory: 1Gi
+  limits:
+    memory: 3Gi
+
+# Spread across availability zones so a zone failure doesn't take out the
+# deployment. Karpenter or a multi-AZ managed node group provides the capacity.
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: ScheduleAnyway
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: tilegroxy
+  - maxSkew: 1
+    topologyKey: kubernetes.io/hostname
+    whenUnsatisfiable: ScheduleAnyway
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: tilegroxy
+
+nodeSelector:
+  kubernetes.io/arch: arm64
+
+# Prepopulate S3 with the low zoom levels of the vector layer after each
+# upgrade, so the first users after a config change don't pay to render them.
+seed:
+  enabled: true
+  layers:
+    - id: parcels
+      zoom: [0, 1, 2, 3, 4, 5, 6]
+      threads: 4
+      verbose: true
+      bounds:
+        minLongitude: -125
+        minLatitude: 24
+        maxLongitude: -66
+        maxLatitude: 50
+
+# The ALB target group needs time to drain before the pod goes away.
+terminationGracePeriodSeconds: 90

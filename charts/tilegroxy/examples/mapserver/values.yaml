@@ -1,0 +1,199 @@
+# Tilegroxy rendering tiles with MapServer through the cgi provider.
+#
+# Unlike the other examples, this one can't run on the stock image. The cgi
+# provider invokes an executable on the local filesystem, so mapserv has to be
+# in the same container as tilegroxy -- see the Dockerfile alongside this file.
+#
+# Mapfiles and their data are the other half. They're mounted here from a
+# ConfigMap (mapfiles, which are small text files) plus a PVC (geospatial data,
+# which usually isn't). Baking both into the image instead is a perfectly good
+# alternative if your data is small and changes at the same rate as your
+# deployments.
+#
+# Deploy with:
+#   kubectl create configmap tilegroxy-mapfiles \
+#     --from-file=states.map --from-file=mapserver.conf
+#   helm install tilegroxy ./charts/tilegroxy -f values.yaml
+
+image:
+  # Built from the Dockerfile in this directory; there is no published image
+  # with mapserver in it.
+  repository: my-registry/tilegroxy-mapserver
+  tag: "0.10.0"
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+config:
+  server:
+    bindHost: 0.0.0.0
+    port: 8080
+    production: true
+    headers:
+      Access-Control-Allow-Origin: "*"
+    health:
+      enabled: true
+      port: 3000
+      checks:
+        - name: cache
+          delay: 60
+        # Exercises the whole CGI path, so a broken mapfile or a missing
+        # shapefile takes the pod out of the Service instead of serving
+        # errors. Uses a fixed layer name rather than the pattern below.
+        - name: tile
+          layer: states_states
+          validation: success
+          delay: 120
+
+  cache:
+    name: memory
+    maxsize: 1000
+    ttl: 3600
+
+  layers:
+    # PNG tiles from MapServer.
+    #
+    # The layer is a pattern, so one entry serves every mapfile/layer
+    # combination: /tiles/states_states/{z}/{x}/{y} resolves to the "states"
+    # layer of mapfiles/states.map. paramValidator is doing security work here,
+    # not just validation -- without it a crafted layer name could try to walk
+    # the filesystem via the map= parameter. Keep it as strict as you can.
+    - id: mapserver_png
+      pattern: "{file}_{layer}"
+      paramValidator:
+        "*": '^[a-zA-Z0-9\-]+$'
+      provider:
+        name: cgi
+        exec: /usr/bin/mapserv
+        # Relative paths in the uri and in MAPSERVER_CONFIG_FILE resolve from
+        # here, and mapfiles/ is what the ConfigMap is mounted as.
+        workingDir: /tilegroxy/mapserver
+        uri: "/?map=mapfiles/{layer.file}.map&MODE=tile&layers={layer.layer}&TILEMODE=gmap&TILE={x}+{y}+{z}&TILESIZE=512+512"
+        headers:
+          Accept:
+            - image/png
+        env:
+          # MapServer 8+ requires a config file. MS_MAP_PATTERN in it is
+          # defense in depth behind paramValidator: it restricts which paths
+          # the map= parameter can name at all.
+          MAPSERVER_CONFIG_FILE: mapserver.conf
+          # An empty value forwards the variable from tilegroxy's own
+          # environment rather than setting it to empty.
+          PROJ_LIB: ""
+
+    # The same data as vector tiles, by asking MapServer for MVT output.
+    #
+    # The per-layer client override is required: tilegroxy's default accepted
+    # content types are image/png, image/jpg and image/jpeg, so an MVT response
+    # would otherwise be rejected as an error. Overriding client per layer
+    # keeps the PNG layer above strict.
+    - id: mapserver_mvt
+      pattern: "mvt_{file}_{layer}"
+      paramValidator:
+        "*": '^[a-zA-Z0-9\-]+$'
+      client:
+        contentTypes:
+          - application/vnd.mapbox-vector-tile
+          - application/x-protobuf
+      provider:
+        name: cgi
+        exec: /usr/bin/mapserv
+        workingDir: /tilegroxy/mapserver
+        uri: "/?map=mapfiles/{layer.file}.map&MODE=tile&layers={layer.layer}&TILEMODE=gmap&TILE={x}+{y}+{z}&map.imagetype=mvt"
+        env:
+          MAPSERVER_CONFIG_FILE: mapserver.conf
+          PROJ_LIB: ""
+
+  logging:
+    main:
+      level: info
+      format: json
+
+# ---------------------------------------------------------------------------
+# Mapfiles and the MapServer config come from a ConfigMap; the shapefiles and
+# rasters they reference come from a volume. Both are mounted under the
+# provider's workingDir.
+#
+# Create the ConfigMap from the files in this directory:
+#
+#   kubectl create configmap tilegroxy-mapfiles \
+#     --from-file=mapserver.conf \
+#     --from-file=states.map
+#
+# Note the ConfigMap is mounted twice: once at mapserver/ for mapserver.conf
+# and once at mapserver/mapfiles/ for the .map files, since MS_MAP_PATTERN
+# expects mapfiles/ as a subdirectory. subPath is used for the config file so
+# it doesn't shadow the directory.
+# ---------------------------------------------------------------------------
+extraVolumes:
+  - name: tmp
+    emptyDir: {}
+  - name: mapfiles
+    configMap:
+      name: tilegroxy-mapfiles
+  # Geospatial data referenced by DATA statements in the mapfiles. ReadOnlyMany
+  # so every replica shares it; populate it with a Job, an init container, or
+  # by pre-provisioning the volume. For small, slow-changing datasets, baking
+  # the data into the image instead is simpler and avoids the shared volume.
+  - name: gis-data
+    persistentVolumeClaim:
+      claimName: gis-data
+      readOnly: true
+
+extraVolumeMounts:
+  - name: tmp
+    mountPath: /tmp
+  - name: mapfiles
+    mountPath: /tilegroxy/mapserver/mapserver.conf
+    subPath: mapserver.conf
+    readOnly: true
+  - name: mapfiles
+    mountPath: /tilegroxy/mapserver/mapfiles
+    readOnly: true
+  # Matches the relative DATA path in the example mapfile
+  # ("../data/cb_2018_us_state_20m.shp" from within mapfiles/).
+  - name: gis-data
+    mountPath: /tilegroxy/mapserver/data
+    readOnly: true
+
+# MapServer forks a process per tile and does the rendering work, so this is
+# noticeably heavier than a proxy layer. Size against your mapfile complexity
+# and expect CPU, not memory, to be the constraint.
+resources:
+  requests:
+    cpu: 1
+    memory: 512Mi
+  limits:
+    memory: 2Gi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+
+# The rendered tiles are worth caching hard, since regenerating them is
+# expensive. Point this at redis or s3 for a real multi-replica deployment
+# rather than the per-pod memory cache configured above.
+persistence:
+  enabled: false
+
+# The CGI provider forks mapserv, which is fine under the chart's default
+# hardening: no extra capabilities or privilege escalation is needed. MapServer
+# does want somewhere writable for temporary files, which the /tmp emptyDir
+# above provides, so readOnlyRootFilesystem stays on.
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: tiles.example.com
+      paths:
+        - path: /
+          pathType: Prefix

@@ -1,0 +1,57 @@
+# Tilegroxy terminating TLS itself using Let's Encrypt, rather than terminating
+# at an ingress. Port 80 must reach the pod for the ACME challenge, so this
+# needs a LoadBalancer Service (or an ingress passing TCP through).
+#
+# The certificate cache lives on a shared ReadWriteMany volume so replicas don't
+# each request their own certificate and trip Let's Encrypt rate limits.
+
+replicaCount: 2
+
+config:
+  server:
+    bindHost: 0.0.0.0
+    port: 8443
+    production: true
+    encrypt:
+      domain: tiles.example.com
+      httpport: 8080
+      cache: /tilegroxy/data/certs
+    health:
+      enabled: true
+      port: 3000
+      checks:
+        - name: cache
+          delay: 60
+  cache:
+    name: s3
+    bucket: my-tile-cache
+    region: us-east-1
+  layers:
+    - id: osm
+      provider:
+        name: proxy
+        url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+
+existingSecretKeys:
+  AWS_ACCESS_KEY_ID:
+    name: tile-cache-s3
+    key: access-key
+  AWS_SECRET_ACCESS_KEY:
+    name: tile-cache-s3
+    key: secret-key
+
+service:
+  type: LoadBalancer
+  port: 80
+  tlsPort: 443
+
+persistence:
+  enabled: true
+  size: 1Gi
+  accessModes:
+    - ReadWriteMany
+  storageClass: nfs
+  mountPath: /tilegroxy/data
+
+ingress:
+  enabled: false

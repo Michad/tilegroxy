@@ -1,0 +1,106 @@
+{{- if .Values.seed.enabled }}
+{{- range $i, $layer := .Values.seed.layers }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "tilegroxy.fullname" $ }}-seed-{{ $layer.id }}
+  labels:
+    {{- include "tilegroxy.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: seed
+  {{- if $.Values.seed.useHelmHook }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "5"
+    helm.sh/hook-delete-policy: before-hook-creation
+  {{- end }}
+spec:
+  backoffLimit: {{ $.Values.seed.backoffLimit }}
+  {{- with $.Values.seed.ttlSecondsAfterFinished }}
+  ttlSecondsAfterFinished: {{ . }}
+  {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "tilegroxy.selectorLabels" $ | nindent 8 }}
+        app.kubernetes.io/component: seed
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "tilegroxy.serviceAccountName" $ }}
+      automountServiceAccountToken: {{ $.Values.serviceAccount.automountServiceAccountToken }}
+      {{- with $.Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $.Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: seed
+          image: {{ include "tilegroxy.image" $ }}
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          args:
+            - seed
+            - -c
+            - {{ $.Values.configPath }}
+            - -l
+            - {{ $layer.id }}
+            {{- range default (list 0 1 2 3 4 5) $layer.zoom }}
+            - -z
+            - {{ . | quote }}
+            {{- end }}
+            {{- with $layer.threads }}
+            - -t
+            - {{ . | quote }}
+            {{- end }}
+            {{- with $layer.bounds }}
+            {{- with .minLongitude }}
+            - -w
+            - {{ . | quote }}
+            {{- end }}
+            {{- with .minLatitude }}
+            - -s
+            - {{ . | quote }}
+            {{- end }}
+            {{- with .maxLongitude }}
+            - -e
+            - {{ . | quote }}
+            {{- end }}
+            {{- with .maxLatitude }}
+            - -n
+            - {{ . | quote }}
+            {{- end }}
+            {{- end }}
+            {{- if $layer.force }}
+            - --force
+            {{- end }}
+            {{- if $layer.verbose }}
+            - -v
+            {{- end }}
+          {{- with include "tilegroxy.env" $ | trim }}
+          env:
+            {{- . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            {{- include "tilegroxy.volumeMounts" $ | nindent 12 }}
+          {{- with $.Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $.Values.seed.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        {{- include "tilegroxy.volumes" $ | nindent 8 }}
+      {{- with $.Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $.Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
+{{- end }}

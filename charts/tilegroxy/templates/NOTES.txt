@@ -1,0 +1,50 @@
+{{- $config := fromYaml (include "tilegroxy.config" .) -}}
+{{- $server := fromYaml (include "tilegroxy.server" .) -}}
+tilegroxy {{ .Chart.AppVersion }} has been deployed as {{ include "tilegroxy.fullname" . }}.
+
+Tiles are served under:
+
+  {{ printf "%s/%s" (dig "rootPath" "/" $server | trimSuffix "/") (dig "tilePath" "tiles" $server | trimAll "/") }}/{layer}/{z}/{x}/{y}
+
+{{- if .Values.ingress.enabled }}
+
+Via ingress:
+{{- range .Values.ingress.hosts }}
+{{- $host := .host }}
+{{- range .paths }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host }}{{ .path }}
+{{- end }}
+{{- end }}
+{{- else if eq .Values.service.type "ClusterIP" }}
+
+The service is ClusterIP only. To reach it locally:
+
+  kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ include "tilegroxy.fullname" . }} 8080:{{ .Values.service.port }}
+{{- end }}
+
+{{- with dig "layers" (list) $config }}
+
+Configured layers:
+{{- range . }}
+  - {{ .id }}
+{{- end }}
+{{- end }}
+
+{{- if ne (include "tilegroxy.healthEnabled" .) "true" }}
+
+WARNING: config.server.health.enabled is not set, so no liveness or readiness
+probes were created. Kubernetes will not notice a wedged or unhealthy pod.
+{{- end }}
+
+{{- if not (dig "production" false $server) }}
+
+WARNING: config.server.production is not true. The splash page, bundled
+documentation and X-Powered-By header are being served.
+{{- end }}
+
+{{- if and (gt (int .Values.replicaCount) 1) (has (dig "cache" "name" "none" $config) (list "memory" "none")) }}
+
+WARNING: {{ .Values.replicaCount }} replicas are configured with a "{{ dig "cache" "name" "none" $config }}" cache, which is not
+shared between pods, so each replica separately fetches every tile from
+upstream. Consider redis, memcache or s3 for a multi-replica deployment.
+{{- end }}

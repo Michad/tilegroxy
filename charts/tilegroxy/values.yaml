@@ -1,0 +1,252 @@
+# Default values for tilegroxy.
+
+image:
+  repository: ghcr.io/michad/tilegroxy
+  # Defaults to the chart appVersion.
+  tag: ""
+  # Pin by digest instead of tag. Takes precedence over tag when set.
+  digest: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+commonLabels: {}
+
+# Number of tilegroxy replicas. Ignored when autoscaling.enabled is true.
+replicaCount: 2
+
+# -- The tilegroxy configuration, rendered verbatim into a ConfigMap as
+# tilegroxy.yml. Every option documented at
+# https://tilegroxy.michael.davis.name/operation/configuration/index.html is
+# valid here; the chart only reads server.port, server.health and
+# server.encrypt.httpport to wire up ports and probes.
+#
+# Values that shouldn't live in a ConfigMap (API keys, database passwords) are
+# referenced as `env.VAR_NAME` here and supplied via .Values.secrets below.
+config:
+  server:
+    bindHost: 0.0.0.0
+    port: 8080
+    # Recommended for any real deployment: disables the splash page, bundled
+    # documentation and the X-Powered-By header.
+    production: true
+    health:
+      enabled: true
+      port: 3000
+      checks:
+        - name: cache
+          delay: 60
+  logging:
+    main:
+      level: info
+      format: json
+  cache:
+    name: memory
+  layers:
+    - id: osm
+      provider:
+        name: proxy
+        url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+
+# Mount an existing ConfigMap containing a tilegroxy.yml key instead of
+# rendering .Values.config. The chart still reads .Values.config for ports and
+# probes, so keep the server section there in sync with the external config.
+existingConfigMap: ""
+
+# Where the config file is mounted. The parent directory is the mount point, so
+# nothing else may be written there.
+configPath: /tilegroxy/config/tilegroxy.yml
+
+# Watch the config file and hot reload supported sections without a restart.
+# Off by default: ConfigMap updates land as an atomic symlink swap that fsnotify
+# does report, but core sections (server, telemetry) still need a restart, so a
+# rollout is the predictable path. See
+# https://tilegroxy.michael.davis.name/operation/reloading.html
+hotReload: false
+
+# Restart pods when the rendered config changes. Only meaningful when the chart
+# owns the ConfigMap (existingConfigMap unset).
+restartOnConfigChange: true
+
+# Extra arguments appended to `tilegroxy serve -c <configPath>`.
+extraArgs: []
+
+# Plain environment variables, e.g. OTEL exporter settings for telemetry.
+env: {}
+#  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+
+# Secret values created and managed by this chart. Each key becomes both a key
+# in the chart's Secret and an environment variable on the pod, so it can be
+# referenced from the config as `env.KEY`.
+# Prefer existingSecretKeys if you don't want secrets in your values file.
+secrets: {}
+#  MAPBOX_KEY: "..."
+#  TG_PGPASSWORD: "..."
+
+# Environment variables sourced from Secrets managed outside this chart.
+# key defaults to the environment variable name.
+existingSecretKeys: {}
+#  TG_PGPASSWORD:
+#    name: my-db-secret
+#    key: password
+
+# Raw env entries for anything the above doesn't cover (fieldRef, configMapRef).
+extraEnv: []
+
+service:
+  type: ClusterIP
+  port: 80
+  # Port for TLS traffic. Only created when config.server.encrypt is set.
+  tlsPort: 443
+  annotations: {}
+  # Set for type LoadBalancer.
+  loadBalancerIP: ""
+  externalTrafficPolicy: ""
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: tiles.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  #  - secretName: tilegroxy-tls
+  #    hosts:
+  #      - tiles.example.com
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 512Mi
+  limits:
+    memory: 2Gi
+
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 75
+  targetMemoryUtilizationPercentage: ""
+
+# Storage for a disk cache, Let's Encrypt certificate cache, or CGI/mapserver
+# data. Mounted at mountPath on both the server and the seed job; point the
+# relevant config paths inside it. Use a ReadWriteMany class if replicaCount > 1
+# and the volume backs a shared cache.
+persistence:
+  enabled: false
+  existingClaim: ""
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 10Gi
+  mountPath: /tilegroxy/data
+  annotations: {}
+
+# Run `tilegroxy seed` as a Job on install and upgrade to prepopulate the cache.
+seed:
+  enabled: false
+  # Layers to seed. One Job is created per layer.
+  layers: []
+  #  - id: osm
+  #    zoom: [0, 1, 2, 3, 4, 5]
+  #    threads: 4
+  #    bounds:
+  #      minLongitude: -180
+  #      minLatitude: -90
+  #      maxLongitude: 180
+  #      maxLatitude: 90
+  #    force: false
+  #    verbose: true
+  # Run as a Helm hook after the deployment is upgraded rather than alongside it.
+  useHelmHook: true
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 3600
+  resources: {}
+
+# Validate the config with `tilegroxy config check` in an init container before
+# the server starts, so a bad config fails the rollout instead of crash looping.
+configCheck:
+  enabled: true
+
+podAnnotations: {}
+podLabels: {}
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+  automountServiceAccountToken: false
+
+# The image creates /tilegroxy owned by uid 1000 but declares no USER, so a
+# runAsUser is set here explicitly.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# Needed with readOnlyRootFilesystem for anything tilegroxy writes outside a
+# persistent volume (the memory cache needs none, but /tmp is cheap insurance).
+extraVolumes:
+  - name: tmp
+    emptyDir: {}
+extraVolumeMounts:
+  - name: tmp
+    mountPath: /tmp
+
+livenessProbe:
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# Backed by /health, which runs the checks configured under
+# config.server.health.checks. With a tile check configured this takes the pod
+# out of the Service when an upstream provider is failing.
+readinessProbe:
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+startupProbe:
+  enabled: false
+  periodSeconds: 5
+  failureThreshold: 30
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+  maxUnavailable: ""
+
+terminationGracePeriodSeconds: 60
+
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+topologySpreadConstraints: []
+priorityClassName: ""
+
+# Extra objects to render alongside the chart, e.g. a ServiceMonitor or an
+# external-secrets ExternalSecret. Each entry is a full manifest and is passed
+# through `tpl`.
+extraObjects: []
