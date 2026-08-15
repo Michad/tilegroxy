@@ -159,3 +159,5 @@ analytics:
     maxSize: 5000
     maxAge: 30
 ----
+
+A runnable demo combining tilegroxy, a PostgreSQL destination, a map and a dashboard over the recorded events is available in link:../examples/analytics-demo/[examples/analytics-demo].
