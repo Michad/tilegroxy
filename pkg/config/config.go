@@ -26,8 +26,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg/static"
 	"github.com/fsnotify/fsnotify"
-	viperMapstructure "github.com/go-viper/mapstructure/v2"
-	"github.com/mitchellh/mapstructure"
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/spf13/viper"
 	_ "github.com/spf13/viper/remote"
 )
@@ -425,7 +424,7 @@ func unmarshal(viper *viper.Viper) (Config, error) {
 		return c, errors.New("analytics must be a single entry, not a list. Remove the leading '- ' and unindent the parameters beneath it")
 	}
 
-	err := viper.Unmarshal(&c, func(dc *viperMapstructure.DecoderConfig) {
+	err := viper.Unmarshal(&c, func(dc *mapstructure.DecoderConfig) {
 		dc.ErrorUnused = true
 	})
 	if err != nil {

@@ -37,8 +37,7 @@ xref:configuration/authentication/index.adoc[authentication]:  ... +
 xref:configuration/cache/index.adoc[cache]:  ... +
 xref:configuration/datastores/index.adoc[datastores]: +
    - ... +
-xref:configuration/analytics/index.adoc[analytics]: +
-   - ... +
+xref:configuration/analytics/index.adoc[analytics]: ... +
 xref:configuration/layer.adoc[layers]:  +
    - ... +
 ____

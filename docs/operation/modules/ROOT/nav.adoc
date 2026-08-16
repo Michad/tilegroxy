@@ -34,7 +34,7 @@
 ** xref:configuration/analytics/index.adoc[]
 *** xref:configuration/analytics/none.adoc[]
 *** xref:configuration/analytics/clickhouse.adoc[]
-*** xref:configuration/analytics/postgres.adoc[]
+*** xref:configuration/analytics/postgresql.adoc[]
 // *** xref:configuration/analytics/google_analytics.adoc[]
 *** xref:configuration/analytics/custom.adoc[]
 ** xref:configuration/secret/index.adoc[]

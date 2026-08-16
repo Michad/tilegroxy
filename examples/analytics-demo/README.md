@@ -18,7 +18,7 @@ Tear it down with `docker compose down -v`. The `-v` discards the recorded event
 
 `docker-compose.yml` wires up the three containers. PostgreSQL starts first and the others wait for its health check.
 
-`tilegroxy.yml` is the tilegroxy configuration. It defines a `postgresql` datastore, points the `postgres` analytics module at it, and serves two proxy layers plus a third with `skipAnalytics` set.
+`tilegroxy.yml` is the tilegroxy configuration. It defines a `postgresql` datastore, points the `postgresql` analytics module at it, and serves two proxy layers plus a third with `skipAnalytics` set.
 
 `schema.sql` creates the analytics table. Tilegroxy never issues DDL, so the table has to exist before it starts; compose applies this on the database's first boot.
 
