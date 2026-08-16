@@ -1,0 +1,19 @@
+apiVersion: v2
+name: tilegroxy
+description: A map tile proxy, cache and server
+type: application
+version: 0.1.0
+appVersion: "0.10.0"
+keywords:
+  - tilegroxy
+  - tiles
+  - map
+  - gis
+  - proxy
+  - cache
+home: https://tilegroxy.michael.davis.name
+sources:
+  - https://github.com/Michad/tilegroxy
+maintainers:
+  - name: Michad
+    url: https://github.com/Michad

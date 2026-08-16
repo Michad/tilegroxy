@@ -1,0 +1,40 @@
+{{- $encrypt := fromYaml (include "tilegroxy.encrypt" .) -}}
+{{- $httpPort := include "tilegroxy.httpPort" . | int -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tilegroxy.fullname" . }}
+  labels:
+    {{- include "tilegroxy.labels" . | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  {{- with .Values.service.loadBalancerIP }}
+  loadBalancerIP: {{ . }}
+  {{- end }}
+  {{- with .Values.service.externalTrafficPolicy }}
+  externalTrafficPolicy: {{ . }}
+  {{- end }}
+  selector:
+    {{- include "tilegroxy.selectorLabels" . | nindent 4 }}
+  ports:
+    {{- if $encrypt }}
+    - name: https
+      port: {{ .Values.service.tlsPort }}
+      targetPort: http
+      protocol: TCP
+    {{- if $httpPort }}
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: http-acme
+      protocol: TCP
+    {{- end }}
+    {{- else }}
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+    {{- end }}

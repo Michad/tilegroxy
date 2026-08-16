@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "tilegroxy chart values",
+  "type": "object",
+  "properties": {
+    "image": {
+      "type": "object",
+      "properties": {
+        "repository": { "type": "string", "minLength": 1 },
+        "tag": { "type": "string" },
+        "digest": { "type": "string" },
+        "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"] }
+      },
+      "required": ["repository"]
+    },
+    "replicaCount": { "type": "integer", "minimum": 0 },
+    "config": {
+      "description": "The tilegroxy configuration. Rendered verbatim into a ConfigMap; validated by tilegroxy itself, not here.",
+      "type": ["object", "null"]
+    },
+    "existingConfigMap": { "type": "string" },
+    "configPath": { "type": "string", "pattern": "^/.*\\.(ya?ml|json)$" },
+    "hotReload": { "type": "boolean" },
+    "restartOnConfigChange": { "type": "boolean" },
+    "extraArgs": { "type": "array", "items": { "type": "string" } },
+    "env": { "type": "object", "additionalProperties": { "type": ["string", "number", "boolean"] } },
+    "secrets": { "type": "object", "additionalProperties": { "type": ["string", "number", "boolean"] } },
+    "existingSecretKeys": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "key": { "type": "string" }
+        },
+        "required": ["name"]
+      }
+    },
+    "extraEnv": { "type": "array" },
+    "service": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["ClusterIP", "NodePort", "LoadBalancer", "ExternalName"] },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "tlsPort": { "type": "integer", "minimum": 1, "maximum": 65535 }
+      }
+    },
+    "ingress": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "className": { "type": "string" },
+        "hosts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "host": { "type": "string", "minLength": 1 },
+              "paths": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "path": { "type": "string" },
+                    "pathType": { "type": "string", "enum": ["Exact", "Prefix", "ImplementationSpecific"] }
+                  },
+                  "required": ["path"]
+                }
+              }
+            },
+            "required": ["host"]
+          }
+        },
+        "tls": { "type": "array" }
+      }
+    },
+    "autoscaling": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "minReplicas": { "type": "integer", "minimum": 1 },
+        "maxReplicas": { "type": "integer", "minimum": 1 },
+        "targetCPUUtilizationPercentage": { "type": ["integer", "string"] },
+        "targetMemoryUtilizationPercentage": { "type": ["integer", "string"] }
+      }
+    },
+    "persistence": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "existingClaim": { "type": "string" },
+        "storageClass": { "type": "string" },
+        "accessModes": { "type": "array", "items": { "type": "string" } },
+        "size": { "type": "string" },
+        "mountPath": { "type": "string", "pattern": "^/" }
+      }
+    },
+    "seed": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "useHelmHook": { "type": "boolean" },
+        "backoffLimit": { "type": "integer", "minimum": 0 },
+        "layers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "zoom": { "type": "array", "items": { "type": "integer", "minimum": 0, "maximum": 24 } },
+              "threads": { "type": "integer", "minimum": 1 },
+              "force": { "type": "boolean" },
+              "verbose": { "type": "boolean" },
+              "bounds": {
+                "type": "object",
+                "properties": {
+                  "minLongitude": { "type": "number", "minimum": -180, "maximum": 180 },
+                  "maxLongitude": { "type": "number", "minimum": -180, "maximum": 180 },
+                  "minLatitude": { "type": "number", "minimum": -90, "maximum": 90 },
+                  "maxLatitude": { "type": "number", "minimum": -90, "maximum": 90 }
+                }
+              }
+            },
+            "required": ["id"]
+          }
+        }
+      }
+    },
+    "configCheck": {
+      "type": "object",
+      "properties": { "enabled": { "type": "boolean" } }
+    },
+    "podDisruptionBudget": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "minAvailable": { "type": ["integer", "string"] },
+        "maxUnavailable": { "type": ["integer", "string"] }
+      }
+    },
+    "serviceAccount": {
+      "type": "object",
+      "properties": {
+        "create": { "type": "boolean" },
+        "name": { "type": "string" },
+        "automountServiceAccountToken": { "type": "boolean" }
+      }
+    },
+    "extraObjects": { "type": "array", "items": { "type": "object" } }
+  }
+}
