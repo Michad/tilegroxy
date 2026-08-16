@@ -17,13 +17,13 @@
 // This example implements a custom analytics module that POSTs each batch of events to a webhook as JSON. Configure it with something like:
 //
 //	analytics:
-//	  - name: custom
-//	    file: examples/analytics/custom_webhook.go
-//	    url: https://example.com/usage
-//	    token: env.WEBHOOK_TOKEN
-//	    batch:
-//	      maxSize: 100
-//	      maxAge: 60
+//	  name: custom
+//	  file: examples/analytics/custom_webhook.go
+//	  url: https://example.com/usage
+//	  token: env.WEBHOOK_TOKEN
+//	  batch:
+//	    maxSize: 100
+//	    maxAge: 60
 
 // Package must always be custom
 package custom
