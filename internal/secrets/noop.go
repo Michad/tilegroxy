@@ -44,9 +44,9 @@ func (s NoopRegistration) Name() string {
 	return "none"
 }
 
-func (s NoopRegistration) Initialize(cfgAny any, errorMessages config.ErrorMessages) (secret.Secreter, error) {
+func (s NoopRegistration) Initialize(cfgAny any, deps secret.SecreterDeps) (secret.Secreter, error) {
 	cfg := cfgAny.(NoopConfig)
-	return Noop{cfg, errorMessages}, nil
+	return Noop{cfg, deps.ErrorMessages}, nil
 }
 
 func (s Noop) Lookup(key string) (string, error) {

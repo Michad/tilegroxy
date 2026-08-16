@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -81,7 +82,7 @@ func TestMemcacheWithContainerHostAndPort(t *testing.T) {
 		HostAndPort: extractHostAndPort(t, endpoint),
 	}
 
-	r, err := MemcacheRegistration{}.Initialize(cfg, config.ErrorMessages{})
+	r, err := MemcacheRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 	validateSaveAndLookup(t, r)
 }
@@ -102,7 +103,7 @@ func TestMemcacheWithContainerSingleServersArr(t *testing.T) {
 		Servers: []HostAndPort{extractHostAndPort(t, endpoint)},
 	}
 
-	r, err := MemcacheRegistration{}.Initialize(cfg, config.ErrorMessages{})
+	r, err := MemcacheRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 	validateSaveAndLookup(t, r)
 }
@@ -124,7 +125,7 @@ func TestMemcacheWithContainerDiffPrefix(t *testing.T) {
 		KeyPrefix:   "first_",
 	}
 
-	r, err := MemcacheRegistration{}.Initialize(cfg, config.ErrorMessages{})
+	r, err := MemcacheRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 
 	config2 := MemcacheConfig{
@@ -132,7 +133,7 @@ func TestMemcacheWithContainerDiffPrefix(t *testing.T) {
 		KeyPrefix:   "second_",
 	}
 
-	r2, err := MemcacheRegistration{}.Initialize(config2, config.ErrorMessages{})
+	r2, err := MemcacheRegistration{}.Initialize(config2, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 	validateSaveAndLookup(t, r)
 	validateSaveAndLookup(t, r2)
@@ -157,7 +158,7 @@ func TestMemcacheWithContainerMissIsNotAnError(t *testing.T) {
 		HostAndPort: extractHostAndPort(t, endpoint),
 	}
 
-	r, err := MemcacheRegistration{}.Initialize(cfg, config.ErrorMessages{})
+	r, err := MemcacheRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 
 	validateNoLookup(t, r, makeReq(1))

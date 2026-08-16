@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -52,7 +51,7 @@ func (stubHealthCheckRegistration) Name() string { return "stub-check" }
 func (stubHealthCheckRegistration) InitializeConfig() HealthCheckConfig {
 	return stubHealthCheckConfig{}
 }
-func (stubHealthCheckRegistration) Initialize(cfg HealthCheckConfig, _ *layer.LayerGroup, _ cache.Cache, _ *config.Config) (HealthCheck, error) {
+func (stubHealthCheckRegistration) Initialize(cfg HealthCheckConfig, _ HealthCheckDeps) (HealthCheck, error) {
 	sc := cfg.(stubHealthCheckConfig)
 	return stubHealthCheck{delay: sc.Delay}, nil
 }

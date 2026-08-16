@@ -110,7 +110,7 @@ func Test_Clickhouse_WritesEvents(t *testing.T) {
 	cfg.Batch.MaxSize = 1000
 	cfg.Batch.MaxAge = 600
 
-	a, err := ClickhouseRegistration{}.Initialize(cfg, datastores, msgs)
+	a, err := ClickhouseRegistration{}.Initialize(cfg, analytics.AnalyticsDeps{Datastores: datastores, ErrorMessages: msgs})
 	require.NoError(t, err)
 
 	require.NoError(t, a.Record(ctx, analytics.Event{
@@ -155,16 +155,16 @@ func Test_Clickhouse_InvalidConfig(t *testing.T) {
 	empty, err := datastore.ConstructDatastoreRegistry(nil, nil, msgs)
 	require.NoError(t, err)
 
-	_, err = ClickhouseRegistration{}.Initialize(ClickhouseConfig{Table: "t"}, empty, msgs)
+	_, err = ClickhouseRegistration{}.Initialize(ClickhouseConfig{Table: "t"}, analytics.AnalyticsDeps{Datastores: empty, ErrorMessages: msgs})
 	require.Error(t, err, "datastore is required")
 
-	_, err = ClickhouseRegistration{}.Initialize(ClickhouseConfig{Datastore: "x"}, empty, msgs)
+	_, err = ClickhouseRegistration{}.Initialize(ClickhouseConfig{Datastore: "x"}, analytics.AnalyticsDeps{Datastores: empty, ErrorMessages: msgs})
 	require.Error(t, err, "table is required")
 
-	_, err = ClickhouseRegistration{}.Initialize(ClickhouseConfig{Datastore: "x", Table: "events;DROP TABLE x"}, empty, msgs)
+	_, err = ClickhouseRegistration{}.Initialize(ClickhouseConfig{Datastore: "x", Table: "events;DROP TABLE x"}, analytics.AnalyticsDeps{Datastores: empty, ErrorMessages: msgs})
 	require.Error(t, err, "table must be a valid identifier")
 
-	_, err = ClickhouseRegistration{}.Initialize(ClickhouseConfig{Datastore: "nonexistent", Table: "t"}, empty, msgs)
+	_, err = ClickhouseRegistration{}.Initialize(ClickhouseConfig{Datastore: "nonexistent", Table: "t"}, analytics.AnalyticsDeps{Datastores: empty, ErrorMessages: msgs})
 	require.Error(t, err, "an unknown datastore id should be reported clearly")
 }
 
@@ -183,7 +183,7 @@ func Test_Clickhouse_WrongDatastoreType(t *testing.T) {
 
 	defer datastores.Close(ctx) //nolint:errcheck // Test cleanup
 
-	_, err = ClickhouseRegistration{}.Initialize(ClickhouseConfig{Datastore: "pg", Table: "t"}, datastores, msgs)
+	_, err = ClickhouseRegistration{}.Initialize(ClickhouseConfig{Datastore: "pg", Table: "t"}, analytics.AnalyticsDeps{Datastores: datastores, ErrorMessages: msgs})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "pg")
 }

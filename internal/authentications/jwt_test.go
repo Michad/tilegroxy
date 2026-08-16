@@ -20,6 +20,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -28,7 +29,7 @@ import (
 
 func TestFailMissingArgs(t *testing.T) {
 	jwtConfig := JWTConfig{}
-	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
+	jwt, err := JWTRegistration{}.Initialize(jwtConfig, authentication.AuthenticationDeps{ErrorMessages: config.ErrorMessages{}})
 
 	require.Error(t, err)
 	assert.Nil(t, jwt)
@@ -37,7 +38,7 @@ func TestFailMissingKey(t *testing.T) {
 	jwtConfig := JWTConfig{
 		Algorithm: "HS256",
 	}
-	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
+	jwt, err := JWTRegistration{}.Initialize(jwtConfig, authentication.AuthenticationDeps{ErrorMessages: config.ErrorMessages{}})
 
 	require.Error(t, err)
 	assert.Nil(t, jwt)
@@ -46,7 +47,7 @@ func TestFailMissingAlg(t *testing.T) {
 	jwtConfig := JWTConfig{
 		Key: "hunter2",
 	}
-	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
+	jwt, err := JWTRegistration{}.Initialize(jwtConfig, authentication.AuthenticationDeps{ErrorMessages: config.ErrorMessages{}})
 
 	require.Error(t, err)
 	assert.Nil(t, jwt)
@@ -58,7 +59,7 @@ func TestGoodJwts(t *testing.T) {
 		Key:           "hunter2",
 		MaxExpiration: 4294967295, // 136 years from now
 	}
-	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
+	jwt, err := JWTRegistration{}.Initialize(jwtConfig, authentication.AuthenticationDeps{ErrorMessages: config.ErrorMessages{}})
 
 	require.NoError(t, err)
 	require.NotNil(t, jwt)
@@ -77,7 +78,7 @@ func TestBadJwts(t *testing.T) {
 		Algorithm: "HS256",
 		Key:       "hunter2",
 	}
-	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
+	jwt, err := JWTRegistration{}.Initialize(jwtConfig, authentication.AuthenticationDeps{ErrorMessages: config.ErrorMessages{}})
 
 	require.NoError(t, err)
 	require.NotNil(t, jwt)
@@ -110,7 +111,7 @@ func TestGoodJwtClaims(t *testing.T) {
 		ExpectedIssuer:   "issuer",
 		ExpectedScope:    "tile",
 	}
-	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
+	jwt, err := JWTRegistration{}.Initialize(jwtConfig, authentication.AuthenticationDeps{ErrorMessages: config.ErrorMessages{}})
 
 	require.NoError(t, err)
 	require.NotNil(t, jwt)
@@ -135,7 +136,7 @@ func TestGoodJwtClaimsWithCache(t *testing.T) {
 		ExpectedScope:    "tile",
 		CacheSize:        100,
 	}
-	jwtAny, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
+	jwtAny, err := JWTRegistration{}.Initialize(jwtConfig, authentication.AuthenticationDeps{ErrorMessages: config.ErrorMessages{}})
 	jwt := jwtAny.(*JWT)
 
 	require.NoError(t, err)
@@ -165,7 +166,7 @@ func TestGoodJwtScopeLimit(t *testing.T) {
 		ScopePrefix:   "tile/",
 		UserID:        "name",
 	}
-	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
+	jwt, err := JWTRegistration{}.Initialize(jwtConfig, authentication.AuthenticationDeps{ErrorMessages: config.ErrorMessages{}})
 
 	require.NoError(t, err)
 	require.NotNil(t, jwt)
@@ -205,7 +206,7 @@ func TestGoodJwtScopeLimit_CacheHitPreservesAuthorization(t *testing.T) {
 		UserID:        "name",
 		CacheSize:     100,
 	}
-	jwtAny, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
+	jwtAny, err := JWTRegistration{}.Initialize(jwtConfig, authentication.AuthenticationDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 	jwtAuth := jwtAny.(*JWT)
 
@@ -247,7 +248,7 @@ func TestBadJwtClaims(t *testing.T) {
 		ExpectedIssuer:   "issuer",
 		ExpectedScope:    "tile",
 	}
-	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
+	jwt, err := JWTRegistration{}.Initialize(jwtConfig, authentication.AuthenticationDeps{ErrorMessages: config.ErrorMessages{}})
 
 	require.NoError(t, err)
 	require.NotNil(t, jwt)
@@ -290,7 +291,7 @@ vxNWUY5rv006ZwPuWVEhno8CAwEAAQ==
 -----END PUBLIC KEY-----`,
 		MaxExpiration: 4294967295, // 136 years from now
 	}
-	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
+	jwt, err := JWTRegistration{}.Initialize(jwtConfig, authentication.AuthenticationDeps{ErrorMessages: config.ErrorMessages{}})
 
 	require.NoError(t, err)
 	require.NotNil(t, jwt)
@@ -315,7 +316,7 @@ rqGjrzwgkmGypGsfnplZv4okkdfUrPb0VX1PICa0vTotAH97umIvEDBB3Q==
 -----END PUBLIC KEY-----`,
 		MaxExpiration: 4294967295, // 136 years from now
 	}
-	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
+	jwt, err := JWTRegistration{}.Initialize(jwtConfig, authentication.AuthenticationDeps{ErrorMessages: config.ErrorMessages{}})
 
 	require.NoError(t, err)
 	require.NotNil(t, jwt)
@@ -350,7 +351,7 @@ vxNWUY5rv006ZwPuWVEhno8CAwEAAQ==
 -----END PUBLIC KEY-----`,
 		MaxExpiration: 4294967295, // 136 years from now
 	}
-	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
+	jwt, err := JWTRegistration{}.Initialize(jwtConfig, authentication.AuthenticationDeps{ErrorMessages: config.ErrorMessages{}})
 
 	require.NoError(t, err)
 	require.NotNil(t, jwt)
@@ -385,7 +386,7 @@ vxNWUY5rv006ZwPuWVEhno8CAwEAAQ==
 -----END PUBLIC KEY-----`,
 		MaxExpiration: 4294967295, // 136 years from now
 	}
-	jwt, err := JWTRegistration{}.Initialize(jwtConfig, config.ErrorMessages{})
+	jwt, err := JWTRegistration{}.Initialize(jwtConfig, authentication.AuthenticationDeps{ErrorMessages: config.ErrorMessages{}})
 
 	require.NoError(t, err)
 	require.NotNil(t, jwt)

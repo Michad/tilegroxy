@@ -34,9 +34,19 @@ type HealthCheckConfig interface {
 	GetDelay() uint
 }
 
+// HealthCheckDeps carries everything a health check is given at construction. New dependencies are added
+// as fields so the Initialize signature stays stable
+type HealthCheckDeps struct {
+	LayerGroup *layer.LayerGroup
+	// The default cache of the layer group, hoisted out so a check does not have to reach through it
+	Cache cache.Cache
+	// The full configuration, since a check may need to inspect settings outside its own block
+	AllConfig *config.Config
+}
+
 type HealthCheckRegistration interface {
 	Name() string
-	Initialize(checkConfig HealthCheckConfig, lg *layer.LayerGroup, cache cache.Cache, allCfg *config.Config) (HealthCheck, error)
+	Initialize(checkConfig HealthCheckConfig, deps HealthCheckDeps) (HealthCheck, error)
 	InitializeConfig() HealthCheckConfig
 }
 
@@ -79,7 +89,7 @@ func ConstructHealthCheck(rawConfig map[string]interface{}, lg *layer.LayerGroup
 			if err != nil {
 				return nil, err
 			}
-			return reg.Initialize(cfg, lg, lg.DefaultCache, allCfg)
+			return reg.Initialize(cfg, HealthCheckDeps{LayerGroup: lg, Cache: lg.DefaultCache, AllConfig: allCfg})
 		}
 	}
 

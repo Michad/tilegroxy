@@ -26,9 +26,15 @@ type Secreter interface {
 	Lookup(key string) (string, error)
 }
 
+// SecreterDeps carries everything a secret module is given at construction. New dependencies are added as
+// fields so the Initialize signature stays stable
+type SecreterDeps struct {
+	ErrorMessages config.ErrorMessages
+}
+
 type SecreterRegistration interface {
 	Name() string
-	Initialize(config any, errorMessages config.ErrorMessages) (Secreter, error)
+	Initialize(config any, deps SecreterDeps) (Secreter, error)
 	InitializeConfig() any
 }
 
@@ -58,7 +64,7 @@ func RegisteredSecreterNames() []string {
 	return names
 }
 
-func ConstructSecreter(rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (Secreter, error) {
+func ConstructSecreter(rawConfig map[string]interface{}, deps SecreterDeps) (Secreter, error) {
 	rawConfig = pkg.ReplaceEnv(rawConfig)
 
 	name, ok := rawConfig["name"].(string)
@@ -71,10 +77,10 @@ func ConstructSecreter(rawConfig map[string]interface{}, errorMessages config.Er
 			if err != nil {
 				return nil, err
 			}
-			return reg.Initialize(cfg, errorMessages)
+			return reg.Initialize(cfg, deps)
 		}
 	}
 
 	nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
-	return nil, fmt.Errorf(errorMessages.EnumError, "secret.name", nameCoerce, RegisteredSecreterNames())
+	return nil, fmt.Errorf(deps.ErrorMessages.EnumError, "secret.name", nameCoerce, RegisteredSecreterNames())
 }

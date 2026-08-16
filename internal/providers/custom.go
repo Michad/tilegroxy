@@ -21,7 +21,6 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 
 	"github.com/traefik/yaegi/interp"
@@ -58,7 +57,7 @@ func (s CustomRegistration) Name() string {
 	return "custom"
 }
 
-func (s CustomRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, _ *layer.LayerGroup, _ *datastore.DatastoreRegistry) (layer.Provider, error) {
+func (s CustomRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(CustomConfig)
 
 	var err error
@@ -119,7 +118,7 @@ func (s CustomRegistration) Initialize(cfgAny any, clientConfig config.ClientCon
 
 	generateTileFunc := generateTileVal.Interface().(func(context.Context, layer.ProviderContext, pkg.TileRequest, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (*pkg.Image, error))
 
-	return &Custom{cfg, clientConfig, errorMessages, i, preAuthFunc, generateTileFunc}, nil
+	return &Custom{cfg, deps.ClientConfig, deps.ErrorMessages, i, preAuthFunc, generateTileFunc}, nil
 }
 
 func (t Custom) PreAuth(ctx context.Context, providerContext layer.ProviderContext) (layer.ProviderContext, error) {

@@ -22,7 +22,6 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -76,7 +75,7 @@ type fakeRegistration struct {
 func (s fakeRegistration) InitializeConfig() any { return fakeConfig{} }
 func (s fakeRegistration) Name() string          { return "testfake" }
 
-func (s fakeRegistration) Initialize(_ any, _ *datastore.DatastoreRegistry, _ config.ErrorMessages) (Analytics, error) {
+func (s fakeRegistration) Initialize(_ any, _ AnalyticsDeps) (Analytics, error) {
 	f := &fake{}
 	*s.instances = append(*s.instances, f)
 
@@ -86,7 +85,7 @@ func (s fakeRegistration) Initialize(_ any, _ *datastore.DatastoreRegistry, _ co
 func Test_ConstructAnalytics_UnknownName(t *testing.T) {
 	msgs := config.DefaultConfig().Error.Messages
 
-	_, err := ConstructAnalytics(map[string]interface{}{"name": "nosuchmodule"}, nil, nil, msgs)
+	_, err := ConstructAnalytics(map[string]interface{}{"name": "nosuchmodule"}, nil, AnalyticsDeps{ErrorMessages: msgs})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "nosuchmodule")
 }
@@ -94,7 +93,7 @@ func Test_ConstructAnalytics_UnknownName(t *testing.T) {
 func Test_ConstructAnalytics_MissingName(t *testing.T) {
 	msgs := config.DefaultConfig().Error.Messages
 
-	_, err := ConstructAnalytics(map[string]interface{}{}, nil, nil, msgs)
+	_, err := ConstructAnalytics(map[string]interface{}{}, nil, AnalyticsDeps{ErrorMessages: msgs})
 	require.Error(t, err)
 }
 
@@ -104,11 +103,11 @@ func Test_ConstructAnalytics_DefaultsIDToName(t *testing.T) {
 	var instances []*fake
 	RegisterAnalytics(fakeRegistration{instances: &instances})
 
-	a, err := ConstructAnalytics(map[string]interface{}{"name": "testfake"}, nil, nil, msgs)
+	a, err := ConstructAnalytics(map[string]interface{}{"name": "testfake"}, nil, AnalyticsDeps{ErrorMessages: msgs})
 	require.NoError(t, err)
 	assert.Equal(t, "testfake", a.ID)
 
-	b, err := ConstructAnalytics(map[string]interface{}{"name": "testfake", "id": "custom"}, nil, nil, msgs)
+	b, err := ConstructAnalytics(map[string]interface{}{"name": "testfake", "id": "custom"}, nil, AnalyticsDeps{ErrorMessages: msgs})
 	require.NoError(t, err)
 	assert.Equal(t, "custom", b.ID)
 }
@@ -119,7 +118,7 @@ func Test_AnalyticsWrapper_Empty(t *testing.T) {
 	var instances []*fake
 	RegisterAnalytics(fakeRegistration{instances: &instances})
 
-	a, err := ConstructAnalytics(map[string]interface{}{"name": "testfake"}, nil, nil, msgs)
+	a, err := ConstructAnalytics(map[string]interface{}{"name": "testfake"}, nil, AnalyticsDeps{ErrorMessages: msgs})
 	require.NoError(t, err)
 	assert.False(t, a.Empty())
 
@@ -143,7 +142,7 @@ func Test_AnalyticsWrapper_RecordEventResolvesFields(t *testing.T) {
 		"name":        "testfake",
 		"fields":      []string{"contenttype"},
 		"extrafields": map[string]string{"env": "prod"},
-	}, nil, nil, msgs)
+	}, nil, AnalyticsDeps{ErrorMessages: msgs})
 	require.NoError(t, err)
 	require.Len(t, instances, 1)
 
@@ -165,7 +164,7 @@ func Test_ConstructAnalytics_RejectsBadFieldConfig(t *testing.T) {
 
 	_, err := ConstructAnalytics(map[string]interface{}{
 		"name": "testfake", "fields": []string{"bogus"},
-	}, nil, nil, msgs)
+	}, nil, AnalyticsDeps{ErrorMessages: msgs})
 
 	require.Error(t, err, "field validation should happen during construction, not at request time")
 }
@@ -176,7 +175,7 @@ func Test_AnalyticsWrapper_Close(t *testing.T) {
 	var instances []*fake
 	RegisterAnalytics(fakeRegistration{instances: &instances})
 
-	a, err := ConstructAnalytics(map[string]interface{}{"name": "testfake"}, nil, nil, msgs)
+	a, err := ConstructAnalytics(map[string]interface{}{"name": "testfake"}, nil, AnalyticsDeps{ErrorMessages: msgs})
 	require.NoError(t, err)
 	require.Len(t, instances, 1)
 

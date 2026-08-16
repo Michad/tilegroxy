@@ -20,7 +20,6 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
@@ -50,20 +49,20 @@ func (s ProxyRegistration) Name() string {
 	return "proxy"
 }
 
-func (s ProxyRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, _ *layer.LayerGroup, _ *datastore.DatastoreRegistry) (layer.Provider, error) {
+func (s ProxyRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(ProxyConfig)
 	if cfg.URL == "" {
-		return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.proxy.url", "")
+		return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "provider.proxy.url", "")
 	}
 
 	if cfg.Srid == 0 {
 		cfg.Srid = pkg.SRIDWGS84
 	}
 	if cfg.Srid != pkg.SRIDWGS84 && cfg.Srid != pkg.SRIDPsuedoMercator {
-		return nil, fmt.Errorf(errorMessages.EnumError, "provider.proxy.srid", cfg.Srid, []int{pkg.SRIDPsuedoMercator, pkg.SRIDWGS84})
+		return nil, fmt.Errorf(deps.ErrorMessages.EnumError, "provider.proxy.srid", cfg.Srid, []int{pkg.SRIDPsuedoMercator, pkg.SRIDWGS84})
 	}
 
-	return &Proxy{cfg, clientConfig}, nil
+	return &Proxy{cfg, deps.ClientConfig}, nil
 }
 
 func (t Proxy) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.ProviderContext, error) {

@@ -19,7 +19,6 @@ import (
 	"errors"
 
 	"github.com/Michad/tilegroxy/pkg"
-	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
 )
@@ -47,13 +46,13 @@ func (s MultiRegistration) Name() string {
 	return "multi"
 }
 
-func (s MultiRegistration) Initialize(configAny any, errorMessages config.ErrorMessages) (cache.Cache, error) {
+func (s MultiRegistration) Initialize(configAny any, deps cache.CacheDeps) (cache.Cache, error) {
 	config := configAny.(MultiConfig)
 
 	tierCaches := make([]cache.Cache, len(config.Tiers))
 
 	for i, tierRawConfig := range config.Tiers {
-		tierCache, err := cache.ConstructCache(tierRawConfig, errorMessages)
+		tierCache, err := cache.ConstructCache(tierRawConfig, deps)
 
 		if err != nil {
 			return nil, err

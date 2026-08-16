@@ -54,9 +54,16 @@ type Analytics interface {
 	Record(ctx context.Context, event Event) error
 }
 
+// AnalyticsDeps carries everything an analytics module is given at construction. New dependencies are
+// added as fields so the Initialize signature stays stable
+type AnalyticsDeps struct {
+	Datastores    *datastore.DatastoreRegistry
+	ErrorMessages config.ErrorMessages
+}
+
 type AnalyticsRegistration interface {
 	Name() string
-	Initialize(config any, datastores *datastore.DatastoreRegistry, errorMessages config.ErrorMessages) (Analytics, error)
+	Initialize(config any, deps AnalyticsDeps) (Analytics, error)
 	InitializeConfig() any
 }
 
@@ -98,7 +105,9 @@ func RegisteredAnalyticsNames() []string {
 // the same as an explicitly disabled one
 const noneName = "none"
 
-func ConstructAnalytics(rawConfig map[string]interface{}, secreter secret.Secreter, datastores *datastore.DatastoreRegistry, errorMessages config.ErrorMessages) (*AnalyticsWrapper, error) {
+// secreter is separate from deps because it resolves values in the raw config before the module is
+// constructed, rather than being handed to the module
+func ConstructAnalytics(rawConfig map[string]interface{}, secreter secret.Secreter, deps AnalyticsDeps) (*AnalyticsWrapper, error) {
 	var err error
 
 	rawConfig = pkg.ReplaceEnv(rawConfig)
@@ -122,12 +131,12 @@ func ConstructAnalytics(rawConfig map[string]interface{}, secreter secret.Secret
 			}
 
 			// Built from the same raw config the module sees so field validation happens once here
-			resolver, err := newFieldResolver(rawConfig, errorMessages)
+			resolver, err := newFieldResolver(rawConfig, deps.ErrorMessages)
 			if err != nil {
 				return nil, err
 			}
 
-			a, err := reg.Initialize(cfg, datastores, errorMessages)
+			a, err := reg.Initialize(cfg, deps)
 			if err != nil {
 				return nil, err
 			}
@@ -142,5 +151,5 @@ func ConstructAnalytics(rawConfig map[string]interface{}, secreter secret.Secret
 	}
 
 	nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
-	return nil, fmt.Errorf(errorMessages.EnumError, "analytics.name", nameCoerce, RegisteredAnalyticsNames())
+	return nil, fmt.Errorf(deps.ErrorMessages.EnumError, "analytics.name", nameCoerce, RegisteredAnalyticsNames())
 }

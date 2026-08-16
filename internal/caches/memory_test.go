@@ -20,13 +20,14 @@ import (
 	"time"
 
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMemory(t *testing.T) {
 	cfg := MemoryConfig{}
 
-	r, err := MemoryRegistration{}.Initialize(cfg, config.ErrorMessages{})
+	r, err := MemoryRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 
 	validateSaveAndLookup(t, r)
@@ -35,7 +36,7 @@ func TestMemory(t *testing.T) {
 func TestTtl(t *testing.T) {
 	cfg := MemoryConfig{TTL: 1}
 
-	r, err := MemoryRegistration{}.Initialize(cfg, config.ErrorMessages{})
+	r, err := MemoryRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 
 	tile := makeReq(53)

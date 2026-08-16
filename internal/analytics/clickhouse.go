@@ -20,9 +20,7 @@ import (
 	"strings"
 
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
-	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/analytics"
-	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 )
 
 type ClickhouseConfig struct {
@@ -70,38 +68,38 @@ var clickhouseDefaultColumns = map[string]string{
 	ColumnExtra: ColumnExtra,
 }
 
-func (s ClickhouseRegistration) Initialize(cfgAny any, datastores *datastore.DatastoreRegistry, errorMessages config.ErrorMessages) (analytics.Analytics, error) {
+func (s ClickhouseRegistration) Initialize(cfgAny any, deps analytics.AnalyticsDeps) (analytics.Analytics, error) {
 	cfg := cfgAny.(ClickhouseConfig)
 
 	if cfg.Datastore == "" {
-		return nil, fmt.Errorf(errorMessages.ParamRequired, "analytics.clickhouse.datastore")
+		return nil, fmt.Errorf(deps.ErrorMessages.ParamRequired, "analytics.clickhouse.datastore")
 	}
 
 	if cfg.Table == "" {
-		return nil, fmt.Errorf(errorMessages.ParamRequired, "analytics.clickhouse.table")
+		return nil, fmt.Errorf(deps.ErrorMessages.ParamRequired, "analytics.clickhouse.table")
 	}
 
-	if err := validateIdentifier(cfg.Table, "analytics.clickhouse.table", errorMessages); err != nil {
+	if err := validateIdentifier(cfg.Table, "analytics.clickhouse.table", deps.ErrorMessages); err != nil {
 		return nil, err
 	}
 
-	columns, err := resolveColumns(clickhouseDefaultColumns, cfg.Columns, "analytics.clickhouse", errorMessages)
+	columns, err := resolveColumns(clickhouseDefaultColumns, cfg.Columns, "analytics.clickhouse", deps.ErrorMessages)
 	if err != nil {
 		return nil, err
 	}
 
 	var conn driver.Conn
 
-	ds, ok := datastores.Get(cfg.Datastore)
+	ds, ok := deps.Datastores.Get(cfg.Datastore)
 	if ok {
 		conn, ok = ds.Native().(driver.Conn)
 	}
 
 	if !ok {
-		return nil, fmt.Errorf(errorMessages.InvalidParam, "analytics.clickhouse.datastore", cfg.Datastore)
+		return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "analytics.clickhouse.datastore", cfg.Datastore)
 	}
 
-	batchCfg, err := analytics.ApplyBatchDefaults(cfg.Batch, errorMessages)
+	batchCfg, err := analytics.ApplyBatchDefaults(cfg.Batch, deps.ErrorMessages)
 	if err != nil {
 		return nil, err
 	}

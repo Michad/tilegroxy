@@ -25,7 +25,6 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/anthonynsimon/bild/transform"
 )
@@ -58,14 +57,14 @@ func (s CropRegistration) Name() string {
 	return "crop"
 }
 
-func (s CropRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layer.LayerGroup, datastores *datastore.DatastoreRegistry) (layer.Provider, error) {
+func (s CropRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(CropConfig)
 
-	primary, err := layer.ConstructProvider(cfg.Primary, clientConfig, errorMessages, layerGroup, datastores)
+	primary, err := layer.ConstructProvider(cfg.Primary, deps)
 	if err != nil {
 		return nil, err
 	}
-	secondary, err := layer.ConstructProvider(cfg.Secondary, clientConfig, errorMessages, layerGroup, datastores)
+	secondary, err := layer.ConstructProvider(cfg.Secondary, deps)
 	if err != nil {
 		return nil, err
 	}

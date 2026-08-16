@@ -74,7 +74,7 @@ func (h healthHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			detail["componentId"] = strconv.Itoa(i)
 
 			var checkType string
-			if t := reflect.TypeOf(check); t.Kind() == reflect.Ptr {
+			if t := reflect.TypeOf(check); t.Kind() == reflect.Pointer {
 				checkType = t.Elem().Name()
 			} else {
 				checkType = t.Name()

@@ -18,7 +18,6 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 )
 
@@ -44,7 +43,7 @@ func (s NoopRegistration) Name() string {
 	return "none"
 }
 
-func (s NoopRegistration) Initialize(config any, _ config.ErrorMessages) (authentication.Authentication, error) {
+func (s NoopRegistration) Initialize(config any, deps authentication.AuthenticationDeps) (authentication.Authentication, error) {
 	return &Noop{config.(NoopConfig)}, nil
 }
 

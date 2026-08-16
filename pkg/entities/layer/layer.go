@@ -216,7 +216,12 @@ func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.Cli
 		}
 	}
 
-	provider, err := ConstructProvider(rawConfig.Provider, *rawConfig.Client, errorMessages, layerGroup, datastores)
+	provider, err := ConstructProvider(rawConfig.Provider, ProviderDeps{
+		ClientConfig:  *rawConfig.Client,
+		ErrorMessages: errorMessages,
+		LayerGroup:    layerGroup,
+		Datastores:    datastores,
+	})
 
 	if err != nil {
 		return nil, err

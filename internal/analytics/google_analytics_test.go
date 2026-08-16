@@ -85,7 +85,7 @@ func newGA(t *testing.T, endpoint string, mutate func(*GoogleAnalyticsConfig)) a
 		mutate(&cfg)
 	}
 
-	a, err := GoogleAnalyticsRegistration{}.Initialize(cfg, nil, config.DefaultConfig().Error.Messages)
+	a, err := GoogleAnalyticsRegistration{}.Initialize(cfg, analytics.AnalyticsDeps{ErrorMessages: config.DefaultConfig().Error.Messages})
 	require.NoError(t, err)
 
 	return a
@@ -247,10 +247,10 @@ func Test_GoogleAnalytics_ServerErrorIsContained(t *testing.T) {
 func Test_GoogleAnalytics_RequiredParams(t *testing.T) {
 	msgs := config.DefaultConfig().Error.Messages
 
-	_, err := GoogleAnalyticsRegistration{}.Initialize(GoogleAnalyticsConfig{APISecret: "x"}, nil, msgs)
+	_, err := GoogleAnalyticsRegistration{}.Initialize(GoogleAnalyticsConfig{APISecret: "x"}, analytics.AnalyticsDeps{ErrorMessages: msgs})
 	require.Error(t, err, "measurementId is required")
 
-	_, err = GoogleAnalyticsRegistration{}.Initialize(GoogleAnalyticsConfig{MeasurementID: "G-X"}, nil, msgs)
+	_, err = GoogleAnalyticsRegistration{}.Initialize(GoogleAnalyticsConfig{MeasurementID: "G-X"}, analytics.AnalyticsDeps{ErrorMessages: msgs})
 	require.Error(t, err, "apiSecret is required")
 }
 

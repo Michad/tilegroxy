@@ -172,7 +172,7 @@ func replacePlaceholdersInString(ctx context.Context, tileRequest pkg.TileReques
 			val := ctx.Value(ctxVar)
 			valVal := reflect.ValueOf(val)
 
-			if valVal.Kind() == reflect.Ptr {
+			if valVal.Kind() == reflect.Pointer {
 				val = valVal.Elem().Interface()
 			}
 

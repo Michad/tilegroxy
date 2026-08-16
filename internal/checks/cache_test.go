@@ -20,6 +20,8 @@ import (
 
 	"github.com/Michad/tilegroxy/internal/caches"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
+	"github.com/Michad/tilegroxy/pkg/entities/health"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -30,12 +32,12 @@ func Test_Fail(t *testing.T) {
 
 	cacheReg := caches.NoopRegistration{}
 	cacheCfg := cacheReg.InitializeConfig()
-	cache, err := cacheReg.Initialize(cacheCfg, msg)
+	cache, err := cacheReg.Initialize(cacheCfg, cache.CacheDeps{ErrorMessages: msg})
 	require.NoError(t, err)
 
 	reg := CacheCheckRegistration{}
 	cfgAny := reg.InitializeConfig()
-	hc, err := reg.Initialize(cfgAny, nil, cache, &cfgAll)
+	hc, err := reg.Initialize(cfgAny, health.HealthCheckDeps{Cache: cache, AllConfig: &cfgAll})
 	require.NoError(t, err)
 
 	err = hc.Check(context.Background())
@@ -48,12 +50,12 @@ func Test_Works(t *testing.T) {
 
 	cacheReg := caches.MemoryRegistration{}
 	cacheCfg := cacheReg.InitializeConfig()
-	cache, err := cacheReg.Initialize(cacheCfg, msg)
+	cache, err := cacheReg.Initialize(cacheCfg, cache.CacheDeps{ErrorMessages: msg})
 	require.NoError(t, err)
 
 	reg := CacheCheckRegistration{}
 	cfgAny := reg.InitializeConfig()
-	hc, err := reg.Initialize(cfgAny, nil, cache, &cfgAll)
+	hc, err := reg.Initialize(cfgAny, health.HealthCheckDeps{Cache: cache, AllConfig: &cfgAll})
 	require.NoError(t, err)
 
 	require.IsType(t, &CacheCheck{}, hc)

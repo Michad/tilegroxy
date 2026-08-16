@@ -27,7 +27,6 @@ import (
 	"strings"
 
 	"github.com/Michad/tilegroxy/pkg"
-	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
@@ -71,10 +70,10 @@ func (s S3Registration) Name() string {
 	return "s3"
 }
 
-func (s S3Registration) Initialize(configAny any, errorMessages config.ErrorMessages) (cache.Cache, error) {
+func (s S3Registration) Initialize(configAny any, deps cache.CacheDeps) (cache.Cache, error) {
 	config := configAny.(S3Config)
 	if (config.Access != "" && config.Secret == "") || (config.Access == "" && config.Secret != "") {
-		return nil, fmt.Errorf(errorMessages.ParamsBothOrNeither, "cache.s3.access", "cache.s3.secret")
+		return nil, fmt.Errorf(deps.ErrorMessages.ParamsBothOrNeither, "cache.s3.access", "cache.s3.secret")
 	}
 
 	// Ensure path doesn't start with / but does end with one
@@ -86,7 +85,7 @@ func (s S3Registration) Initialize(configAny any, errorMessages config.ErrorMess
 	}
 
 	if config.Bucket == "" {
-		return nil, fmt.Errorf(errorMessages.InvalidParam, "cache.s3.bucket", config.Bucket)
+		return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "cache.s3.bucket", config.Bucket)
 	}
 
 	awsConfig, err := awsconfig.LoadDefaultConfig(pkg.BackgroundContext(), func(lo *awsconfig.LoadOptions) error {
@@ -114,7 +113,7 @@ func (s S3Registration) Initialize(configAny any, errorMessages config.ErrorMess
 		validValues := types.StorageClass.Values("")
 
 		if !slices.Contains(validValues, types.StorageClass(config.StorageClass)) {
-			return nil, fmt.Errorf(errorMessages.EnumError, "cache.s3.storageclass", config.StorageClass, validValues)
+			return nil, fmt.Errorf(deps.ErrorMessages.EnumError, "cache.s3.storageclass", config.StorageClass, validValues)
 		}
 	}
 

@@ -22,6 +22,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/stretchr/testify/require"
 )
 
@@ -32,7 +33,7 @@ func TestDisk(t *testing.T) {
 	require.NoError(t, err)
 	cfg := DiskConfig{Path: dir}
 
-	c, err := DiskRegistration{}.Initialize(cfg, config.ErrorMessages{})
+	c, err := DiskRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 	validateSaveAndLookup(t, c)
 }
@@ -45,7 +46,7 @@ func TestDisk_LayerNamePathTraversalIsContained(t *testing.T) {
 	require.NoError(t, err)
 
 	cfg := DiskConfig{Path: dir}
-	cAny, err := DiskRegistration{}.Initialize(cfg, config.ErrorMessages{})
+	cAny, err := DiskRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 	c := cAny.(*Disk)
 

@@ -23,7 +23,6 @@ import (
 	"path/filepath"
 
 	"github.com/Michad/tilegroxy/pkg"
-	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 )
 
@@ -60,11 +59,11 @@ func (s DiskRegistration) Name() string {
 	return "disk"
 }
 
-func (s DiskRegistration) Initialize(configAny any, errorMessages config.ErrorMessages) (cache.Cache, error) {
+func (s DiskRegistration) Initialize(configAny any, deps cache.CacheDeps) (cache.Cache, error) {
 	config := configAny.(DiskConfig)
 
 	if config.Path == "" {
-		return nil, fmt.Errorf(errorMessages.InvalidParam, "Cache.Disk.path", config.Path)
+		return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "Cache.Disk.path", config.Path)
 	}
 	if config.FileMode == 0 {
 		config.FileMode = 0777

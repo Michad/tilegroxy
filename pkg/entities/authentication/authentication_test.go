@@ -41,7 +41,7 @@ type stubAuthRegistration struct{}
 
 func (stubAuthRegistration) Name() string          { return "stub-auth" }
 func (stubAuthRegistration) InitializeConfig() any { return stubAuthConfig{} }
-func (stubAuthRegistration) Initialize(cfgAny any, _ config.ErrorMessages) (Authentication, error) {
+func (stubAuthRegistration) Initialize(cfgAny any, _ AuthenticationDeps) (Authentication, error) {
 	cfg := cfgAny.(stubAuthConfig)
 	return stubAuth{allow: cfg.Allow}, nil
 }
@@ -51,12 +51,12 @@ func init() {
 }
 
 func Test_ConstructAuth_UnknownNameErrors(t *testing.T) {
-	_, err := ConstructAuth(map[string]interface{}{"name": "not-a-real-auth"}, config.ErrorMessages{EnumError: "%v %v %v"})
+	_, err := ConstructAuth(map[string]interface{}{"name": "not-a-real-auth"}, AuthenticationDeps{ErrorMessages: config.ErrorMessages{EnumError: "%v %v %v"}})
 	require.Error(t, err)
 }
 
 func Test_ConstructAuth_ConstructsRegisteredAuth(t *testing.T) {
-	auth, err := ConstructAuth(map[string]interface{}{"name": "stub-auth", "allow": true}, config.ErrorMessages{})
+	auth, err := ConstructAuth(map[string]interface{}{"name": "stub-auth", "allow": true}, AuthenticationDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 	require.NotNil(t, auth)
 
@@ -67,7 +67,7 @@ func Test_ConstructAuth_ConstructsRegisteredAuth(t *testing.T) {
 }
 
 func Test_ConstructAuth_WrapsWithName(t *testing.T) {
-	auth, err := ConstructAuth(map[string]interface{}{"name": "stub-auth", "allow": false}, config.ErrorMessages{})
+	auth, err := ConstructAuth(map[string]interface{}{"name": "stub-auth", "allow": false}, AuthenticationDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 
 	wrapper, ok := auth.(AuthWrapper)

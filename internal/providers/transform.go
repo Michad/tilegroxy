@@ -30,7 +30,6 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/traefik/yaegi/interp"
 	"github.com/traefik/yaegi/stdlib"
@@ -64,7 +63,7 @@ func (s TransformRegistration) Name() string {
 	return "transform"
 }
 
-func (s TransformRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layer.LayerGroup, datastores *datastore.DatastoreRegistry) (layer.Provider, error) {
+func (s TransformRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(TransformConfig)
 	var err error
 
@@ -72,7 +71,7 @@ func (s TransformRegistration) Initialize(cfgAny any, clientConfig config.Client
 		cfg.Threads = 1
 	}
 
-	provider, err := layer.ConstructProvider(cfg.Provider, clientConfig, errorMessages, layerGroup, datastores)
+	provider, err := layer.ConstructProvider(cfg.Provider, deps)
 	if err != nil {
 		return nil, err
 	}

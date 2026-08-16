@@ -28,6 +28,7 @@ These apply to every change. Follow them without being asked.
    sentence, or that affects more than one place in the code, belongs in the development
    documentation instead.
 9. **Update the comments and docs your change impacts.** A stale comment is worse than none.
+10. **Do not generate ADRs** ADRs are for humans making decisions, never generate one as an AI Agent.
 
 Otherwise: match the idioms of the code you are editing, keep changes focused on what was
 asked, and add tests alongside behavior changes.

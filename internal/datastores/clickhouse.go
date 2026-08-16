@@ -23,9 +23,7 @@ import (
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
-	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/datastore"
-	"github.com/Michad/tilegroxy/pkg/entities/secret"
 )
 
 // The wire protocols clickhouse-go can speak
@@ -85,7 +83,7 @@ func (s ClickhouseWrapperRegistration) Name() string {
 	return "clickhouse"
 }
 
-func (s ClickhouseWrapperRegistration) Initialize(cfgAny any, _ secret.Secreter, errorMessages config.ErrorMessages) (datastore.DatastoreWrapper, error) {
+func (s ClickhouseWrapperRegistration) Initialize(cfgAny any, deps datastore.DatastoreDeps) (datastore.DatastoreWrapper, error) {
 	cfg := cfgAny.(ClickhouseWrapperConfig)
 
 	var proto clickhouse.Protocol
@@ -96,7 +94,7 @@ func (s ClickhouseWrapperRegistration) Initialize(cfgAny any, _ secret.Secreter,
 	case ClickhouseProtocolHTTP:
 		proto = clickhouse.HTTP
 	default:
-		return nil, fmt.Errorf(errorMessages.EnumError, "datastore.clickhouse.protocol", cfg.Protocol, AllClickhouseProtocols)
+		return nil, fmt.Errorf(deps.ErrorMessages.EnumError, "datastore.clickhouse.protocol", cfg.Protocol, AllClickhouseProtocols)
 	}
 
 	opts := &clickhouse.Options{

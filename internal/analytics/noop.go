@@ -17,9 +17,7 @@ package analytics
 import (
 	"context"
 
-	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/analytics"
-	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 )
 
 type NoopConfig struct {
@@ -45,7 +43,7 @@ func (s NoopRegistration) Name() string {
 	return "none"
 }
 
-func (s NoopRegistration) Initialize(cfgAny any, _ *datastore.DatastoreRegistry, _ config.ErrorMessages) (analytics.Analytics, error) {
+func (s NoopRegistration) Initialize(cfgAny any, deps analytics.AnalyticsDeps) (analytics.Analytics, error) {
 	cfg := cfgAny.(NoopConfig)
 	return Noop{cfg}, nil
 }

@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	"github.com/Michad/tilegroxy/pkg"
-	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/stretchr/testify/require"
 )
 
@@ -36,7 +35,7 @@ type stubCacheRegistration struct {
 
 func (s stubCacheRegistration) Name() string          { return s.name }
 func (s stubCacheRegistration) InitializeConfig() any { return struct{}{} }
-func (s stubCacheRegistration) Initialize(_ any, _ config.ErrorMessages) (Cache, error) {
+func (s stubCacheRegistration) Initialize(_ any, _ CacheDeps) (Cache, error) {
 	return stubCache{}, nil
 }
 

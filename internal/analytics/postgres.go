@@ -20,9 +20,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/analytics"
-	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -71,38 +69,38 @@ var postgresDefaultColumns = map[string]string{
 	ColumnExtra: ColumnExtra,
 }
 
-func (s PostgresRegistration) Initialize(cfgAny any, datastores *datastore.DatastoreRegistry, errorMessages config.ErrorMessages) (analytics.Analytics, error) {
+func (s PostgresRegistration) Initialize(cfgAny any, deps analytics.AnalyticsDeps) (analytics.Analytics, error) {
 	cfg := cfgAny.(PostgresConfig)
 
 	if cfg.Datastore == "" {
-		return nil, fmt.Errorf(errorMessages.ParamRequired, "analytics.postgres.datastore")
+		return nil, fmt.Errorf(deps.ErrorMessages.ParamRequired, "analytics.postgres.datastore")
 	}
 
 	if cfg.Table == "" {
-		return nil, fmt.Errorf(errorMessages.ParamRequired, "analytics.postgres.table")
+		return nil, fmt.Errorf(deps.ErrorMessages.ParamRequired, "analytics.postgres.table")
 	}
 
-	if err := validateIdentifier(cfg.Table, "analytics.postgres.table", errorMessages); err != nil {
+	if err := validateIdentifier(cfg.Table, "analytics.postgres.table", deps.ErrorMessages); err != nil {
 		return nil, err
 	}
 
-	columns, err := resolveColumns(postgresDefaultColumns, cfg.Columns, "analytics.postgres", errorMessages)
+	columns, err := resolveColumns(postgresDefaultColumns, cfg.Columns, "analytics.postgres", deps.ErrorMessages)
 	if err != nil {
 		return nil, err
 	}
 
 	var pool *pgxpool.Pool
 
-	ds, ok := datastores.Get(cfg.Datastore)
+	ds, ok := deps.Datastores.Get(cfg.Datastore)
 	if ok {
 		pool, ok = ds.Native().(*pgxpool.Pool)
 	}
 
 	if !ok {
-		return nil, fmt.Errorf(errorMessages.InvalidParam, "analytics.postgres.datastore", cfg.Datastore)
+		return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "analytics.postgres.datastore", cfg.Datastore)
 	}
 
-	batchCfg, err := analytics.ApplyBatchDefaults(cfg.Batch, errorMessages)
+	batchCfg, err := analytics.ApplyBatchDefaults(cfg.Batch, deps.ErrorMessages)
 	if err != nil {
 		return nil, err
 	}

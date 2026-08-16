@@ -28,9 +28,15 @@ type Cache interface {
 	Save(ctx context.Context, t pkg.TileRequest, img *pkg.Image) error
 }
 
+// CacheDeps carries everything a cache is given at construction. New dependencies are added as fields so
+// the Initialize signature stays stable
+type CacheDeps struct {
+	ErrorMessages config.ErrorMessages
+}
+
 type CacheRegistration interface {
 	Name() string
-	Initialize(config any, errorMessages config.ErrorMessages) (Cache, error)
+	Initialize(config any, deps CacheDeps) (Cache, error)
 	InitializeConfig() any
 }
 
@@ -62,7 +68,7 @@ func RegisteredCacheNames() []string {
 	return names
 }
 
-func ConstructCache(rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (Cache, error) {
+func ConstructCache(rawConfig map[string]interface{}, deps CacheDeps) (Cache, error) {
 	name, ok := rawConfig["name"].(string)
 
 	if ok {
@@ -80,11 +86,11 @@ func ConstructCache(rawConfig map[string]interface{}, errorMessages config.Error
 			if err != nil {
 				return nil, err
 			}
-			a, err := reg.Initialize(cfg, errorMessages)
+			a, err := reg.Initialize(cfg, deps)
 			return CacheWrapper{Name: name, Cache: a}, err
 		}
 	}
 
 	nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
-	return nil, fmt.Errorf(errorMessages.EnumError, "cache.name", nameCoerce, RegisteredCacheNames())
+	return nil, fmt.Errorf(deps.ErrorMessages.EnumError, "cache.name", nameCoerce, RegisteredCacheNames())
 }

@@ -33,7 +33,6 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 
 	"github.com/anthonynsimon/bild/blend"
@@ -82,14 +81,14 @@ func (s BlendRegistration) Name() string {
 	return "blend"
 }
 
-func (s BlendRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layer.LayerGroup, datastores *datastore.DatastoreRegistry) (layer.Provider, error) {
+func (s BlendRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(BlendConfig)
 	var err error
 	if !slices.Contains(allBlendModes, cfg.Mode) {
-		return nil, fmt.Errorf(errorMessages.EnumError, "provider.blend.mode", cfg.Mode, allBlendModes)
+		return nil, fmt.Errorf(deps.ErrorMessages.EnumError, "provider.blend.mode", cfg.Mode, allBlendModes)
 	}
 	if cfg.Mode != "opacity" && cfg.Opacity != 0 {
-		return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "provider.blend.opacity", cfg.Mode)
+		return nil, fmt.Errorf(deps.ErrorMessages.ParamsMutuallyExclusive, "provider.blend.opacity", cfg.Mode)
 	}
 	var providers []layer.Provider
 	if cfg.Layer != nil {
@@ -103,7 +102,7 @@ func (s BlendRegistration) Initialize(cfgAny any, clientConfig config.ClientConf
 				layerName = strings.ReplaceAll(layerName, "{"+k+"}", v)
 			}
 
-			ref, err = layer.ConstructProvider(map[string]interface{}{"name": "ref", "layer": layerName}, clientConfig, errorMessages, layerGroup, datastores)
+			ref, err = layer.ConstructProvider(map[string]interface{}{"name": "ref", "layer": layerName}, deps)
 			if err != nil {
 				return nil, err
 			}
@@ -114,7 +113,7 @@ func (s BlendRegistration) Initialize(cfgAny any, clientConfig config.ClientConf
 		errorSlice := make([]error, 0)
 
 		for _, p := range cfg.Providers {
-			provider, err := layer.ConstructProvider(p, clientConfig, errorMessages, layerGroup, datastores)
+			provider, err := layer.ConstructProvider(p, deps)
 			providers = append(providers, provider) //nolint:makezero //Linter is easily confused if initialized before the make
 			errorSlice = append(errorSlice, err)
 		}
@@ -126,7 +125,7 @@ func (s BlendRegistration) Initialize(cfgAny any, clientConfig config.ClientConf
 	}
 
 	if len(providers) < 2 || len(providers) > maxProviders {
-		return nil, fmt.Errorf(errorMessages.RangeError, "provider.blend.providers.length", 2, maxProviders)
+		return nil, fmt.Errorf(deps.ErrorMessages.RangeError, "provider.blend.providers.length", 2, maxProviders)
 	}
 
 	return &Blend{cfg, providers}, nil

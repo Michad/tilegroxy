@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/Michad/tilegroxy/pkg"
-	"github.com/Michad/tilegroxy/pkg/config"
 
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	rediscache "github.com/go-redis/cache/v9"
@@ -80,7 +79,7 @@ func (s RedisRegistration) Name() string {
 	return "redis"
 }
 
-func (s RedisRegistration) Initialize(configAny any, errorMessages config.ErrorMessages) (cache.Cache, error) {
+func (s RedisRegistration) Initialize(configAny any, deps cache.CacheDeps) (cache.Cache, error) {
 	config := configAny.(RedisConfig)
 
 	var tileCache *rediscache.Cache
@@ -90,7 +89,7 @@ func (s RedisRegistration) Initialize(configAny any, errorMessages config.ErrorM
 	}
 
 	if !slices.Contains(AllModes, config.Mode) {
-		return nil, fmt.Errorf(errorMessages.EnumError, "cache.redis.mode", config.Mode, AllModes)
+		return nil, fmt.Errorf(deps.ErrorMessages.EnumError, "cache.redis.mode", config.Mode, AllModes)
 	}
 
 	if len(config.Servers) == 0 {
@@ -103,7 +102,7 @@ func (s RedisRegistration) Initialize(configAny any, errorMessages config.ErrorM
 
 		config.Servers = []HostAndPort{{config.Host, config.Port}}
 	} else if config.Host != "" {
-		return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "config.redis.host", "config.redis.servers")
+		return nil, fmt.Errorf(deps.ErrorMessages.ParamsMutuallyExclusive, "config.redis.host", "config.redis.servers")
 	}
 
 	if config.TTL == 0 {
@@ -118,7 +117,7 @@ func (s RedisRegistration) Initialize(configAny any, errorMessages config.ErrorM
 	switch config.Mode {
 	case ModeCluster:
 		if config.DB != 0 {
-			return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "cache.redis.db", "cache.redis.cluster")
+			return nil, fmt.Errorf(deps.ErrorMessages.ParamsMutuallyExclusive, "cache.redis.db", "cache.redis.cluster")
 		}
 
 		addrs := HostAndPortArrayToStringArray(config.Servers)
@@ -138,7 +137,7 @@ func (s RedisRegistration) Initialize(configAny any, errorMessages config.ErrorM
 	case ModeRing:
 		if len(config.Servers) < 2 {
 			// Not the best error message but the typical user of this should be able to figure it out
-			return nil, fmt.Errorf(errorMessages.InvalidParam, "length(cache.redis.servers)", len(config.Servers))
+			return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "length(cache.redis.servers)", len(config.Servers))
 		}
 
 		addrMap := make(map[string]string)

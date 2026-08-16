@@ -65,7 +65,7 @@ func ConstructDatastoreRegistry(cfg []map[string]interface{}, secreter secret.Se
 			}
 		}
 
-		wrapper, err := ConstructDatastoreWrapper(curCfg, secreter, errorMessages)
+		wrapper, err := ConstructDatastoreWrapper(curCfg, DatastoreDeps{Secreter: secreter, ErrorMessages: errorMessages})
 
 		if err != nil {
 			return nil, err

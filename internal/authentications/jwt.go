@@ -83,15 +83,15 @@ func (s JWTRegistration) Name() string {
 	return "jwt"
 }
 
-func (s JWTRegistration) Initialize(configAny any, errorMessages config.ErrorMessages) (authentication.Authentication, error) {
+func (s JWTRegistration) Initialize(configAny any, deps authentication.AuthenticationDeps) (authentication.Authentication, error) {
 	config := configAny.(JWTConfig)
 
 	if !slices.Contains([]string{"HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "EdDSA"}, config.Algorithm) {
-		return nil, fmt.Errorf(errorMessages.InvalidParam, "authentication.algorithm", config.Algorithm)
+		return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "authentication.algorithm", config.Algorithm)
 	}
 
 	if len(config.Key) < 1 {
-		return nil, fmt.Errorf(errorMessages.InvalidParam, "authentication.key", "")
+		return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "authentication.key", "")
 	}
 
 	if len(config.HeaderName) < 1 {
@@ -107,7 +107,7 @@ func (s JWTRegistration) Initialize(configAny any, errorMessages config.ErrorMes
 	}
 
 	if config.CacheSize == 0 {
-		return &JWT{config, nil, errorMessages}, nil
+		return &JWT{config, nil, deps.ErrorMessages}, nil
 	}
 
 	cache, err := otter.MustBuilder[string, cachedAuthResult](int(config.CacheSize)).Build()
@@ -115,7 +115,7 @@ func (s JWTRegistration) Initialize(configAny any, errorMessages config.ErrorMes
 		return nil, err
 	}
 
-	return &JWT{config, &cache, errorMessages}, nil
+	return &JWT{config, &cache, deps.ErrorMessages}, nil
 }
 
 func (c JWT) CheckAuthentication(ctx context.Context, req *http.Request) bool {
@@ -302,7 +302,7 @@ func logInvalidClaimsType(ctx context.Context, tokenJwt *jwt.Token) (*cachedAuth
 	// notest
 
 	var debugType string
-	if t := reflect.TypeOf(tokenJwt.Claims); t.Kind() == reflect.Ptr {
+	if t := reflect.TypeOf(tokenJwt.Claims); t.Kind() == reflect.Pointer {
 		debugType = "*" + t.Elem().Name()
 	} else {
 		debugType = t.Name()

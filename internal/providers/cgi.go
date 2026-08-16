@@ -29,7 +29,6 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
@@ -100,17 +99,17 @@ func (s CGIRegistration) Name() string {
 	return "cgi"
 }
 
-func (s CGIRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, _ *layer.LayerGroup, _ *datastore.DatastoreRegistry) (layer.Provider, error) {
+func (s CGIRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(CGIConfig)
 	env := make([]string, 0)
 	inheritEnv := make([]string, 0)
 
 	if cfg.Exec == "" {
-		return nil, fmt.Errorf(errorMessages.ParamRequired, "provider.cgi.exec")
+		return nil, fmt.Errorf(deps.ErrorMessages.ParamRequired, "provider.cgi.exec")
 	}
 
 	if cfg.URI == "" {
-		return nil, fmt.Errorf(errorMessages.ParamRequired, "provider.cgi.uri")
+		return nil, fmt.Errorf(deps.ErrorMessages.ParamRequired, "provider.cgi.uri")
 	}
 
 	if cfg.Domain == "" {
@@ -135,7 +134,7 @@ func (s CGIRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig
 		Dir:        cfg.WorkingDir,
 	}
 
-	return &CGI{cfg, h, clientConfig}, nil
+	return &CGI{cfg, h, deps.ClientConfig}, nil
 }
 
 func (t CGI) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.ProviderContext, error) {

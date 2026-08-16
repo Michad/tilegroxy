@@ -20,18 +20,19 @@ import (
 	"testing"
 
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func Test_UrlTemplateValidate(t *testing.T) {
-	p, err := URLTemplateRegistration{}.Initialize(URLTemplateConfig{}, config.ClientConfig{}, testErrMessages, nil, nil)
+	p, err := URLTemplateRegistration{}.Initialize(URLTemplateConfig{}, layer.ProviderDeps{ClientConfig: config.ClientConfig{}, ErrorMessages: testErrMessages})
 
 	assert.Nil(t, p)
 	require.Error(t, err)
 
 	var clientConfig = config.ClientConfig{StatusCodes: []int{400}, MaxLength: 2000, ContentTypes: []string{"image/png"}, UnknownLength: true}
-	p, err = URLTemplateRegistration{}.Initialize(URLTemplateConfig{Template: "url here"}, clientConfig, testErrMessages, nil, nil)
+	p, err = URLTemplateRegistration{}.Initialize(URLTemplateConfig{Template: "url here"}, layer.ProviderDeps{ClientConfig: clientConfig, ErrorMessages: testErrMessages})
 	assert.NotNil(t, p)
 	require.NoError(t, err)
 }

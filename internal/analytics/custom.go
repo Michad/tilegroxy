@@ -22,7 +22,6 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/analytics"
-	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/traefik/yaegi/interp"
 	"github.com/traefik/yaegi/stdlib"
 )
@@ -59,15 +58,15 @@ func (s CustomRegistration) Name() string {
 	return "custom"
 }
 
-func (s CustomRegistration) Initialize(cfgAny any, _ *datastore.DatastoreRegistry, errorMessages config.ErrorMessages) (analytics.Analytics, error) {
+func (s CustomRegistration) Initialize(cfgAny any, deps analytics.AnalyticsDeps) (analytics.Analytics, error) {
 	cfg := cfgAny.(CustomConfig)
 
 	if cfg.File == "" && cfg.Script == "" {
-		return nil, fmt.Errorf(errorMessages.OneOfRequired, "analytics.custom.file, analytics.custom.script")
+		return nil, fmt.Errorf(deps.ErrorMessages.OneOfRequired, "analytics.custom.file, analytics.custom.script")
 	}
 
 	if cfg.File != "" && cfg.Script != "" {
-		return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "analytics.custom.file", "analytics.custom.script")
+		return nil, fmt.Errorf(deps.ErrorMessages.ParamsMutuallyExclusive, "analytics.custom.file", "analytics.custom.script")
 	}
 
 	i := interp.New(interp.Options{Unrestricted: true})
@@ -101,20 +100,20 @@ func (s CustomRegistration) Initialize(cfgAny any, _ *datastore.DatastoreRegistr
 	}
 
 	if _, err := i.Eval(script); err != nil {
-		return nil, fmt.Errorf(errorMessages.ScriptError, "analytics.custom", err)
+		return nil, fmt.Errorf(deps.ErrorMessages.ScriptError, "analytics.custom", err)
 	}
 
 	recordVal, err := i.Eval("custom.record")
 	if err != nil {
-		return nil, fmt.Errorf(errorMessages.ScriptError, "analytics.custom", err)
+		return nil, fmt.Errorf(deps.ErrorMessages.ScriptError, "analytics.custom", err)
 	}
 
 	recordFunc, ok := recordVal.Interface().(func(context.Context, []analytics.Event, map[string]interface{}, config.ErrorMessages) error)
 	if !ok {
-		return nil, fmt.Errorf(errorMessages.ScriptError, "analytics.custom", "record function has the wrong signature")
+		return nil, fmt.Errorf(deps.ErrorMessages.ScriptError, "analytics.custom", "record function has the wrong signature")
 	}
 
-	batchCfg, err := analytics.ApplyBatchDefaults(cfg.Batch, errorMessages)
+	batchCfg, err := analytics.ApplyBatchDefaults(cfg.Batch, deps.ErrorMessages)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +123,7 @@ func (s CustomRegistration) Initialize(cfgAny any, _ *datastore.DatastoreRegistr
 		id = s.Name()
 	}
 
-	c := &Custom{CustomConfig: cfg, recordFunc: recordFunc, errorMsgs: errorMessages}
+	c := &Custom{CustomConfig: cfg, recordFunc: recordFunc, errorMsgs: deps.ErrorMessages}
 
 	batcher, err := analytics.NewBatcher(id, batchCfg, c.flush)
 	if err != nil {

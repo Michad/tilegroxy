@@ -25,8 +25,6 @@ import (
 	"slices"
 
 	"github.com/Michad/tilegroxy/pkg"
-	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/anthonynsimon/bild/adjust"
 	"github.com/anthonynsimon/bild/blur"
@@ -64,17 +62,17 @@ func (s EffectRegistration) Name() string {
 	return "effect"
 }
 
-func (s EffectRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layer.LayerGroup, datastores *datastore.DatastoreRegistry) (layer.Provider, error) {
+func (s EffectRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	config := cfgAny.(EffectConfig)
 	if !slices.Contains(allEffectModes, config.Mode) {
-		return nil, fmt.Errorf(errorMessages.EnumError, "provider.effect.mode", config.Mode, allEffectModes)
+		return nil, fmt.Errorf(deps.ErrorMessages.EnumError, "provider.effect.mode", config.Mode, allEffectModes)
 	}
 
 	if slices.Contains(noIntensityModes, config.Mode) && config.Intensity != 0 {
-		return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "provider.effect.intensity", "provider.effect.mode="+config.Mode)
+		return nil, fmt.Errorf(deps.ErrorMessages.ParamsMutuallyExclusive, "provider.effect.intensity", "provider.effect.mode="+config.Mode)
 	}
 
-	provider, err := layer.ConstructProvider(config.Provider, clientConfig, errorMessages, layerGroup, datastores)
+	provider, err := layer.ConstructProvider(config.Provider, deps)
 	if err != nil {
 		return nil, err
 	}

@@ -18,7 +18,6 @@ import (
 	"testing"
 
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/secret"
 	"github.com/stretchr/testify/require"
 )
 
@@ -39,7 +38,7 @@ type stubDatastoreRegistration struct{}
 
 func (stubDatastoreRegistration) Name() string          { return "stub" }
 func (stubDatastoreRegistration) InitializeConfig() any { return stubDatastoreConfig{} }
-func (stubDatastoreRegistration) Initialize(cfgAny any, _ secret.Secreter, _ config.ErrorMessages) (DatastoreWrapper, error) {
+func (stubDatastoreRegistration) Initialize(cfgAny any, _ DatastoreDeps) (DatastoreWrapper, error) {
 	cfg := cfgAny.(stubDatastoreConfig)
 	return stubDatastoreWrapper{id: cfg.ID}, nil
 }

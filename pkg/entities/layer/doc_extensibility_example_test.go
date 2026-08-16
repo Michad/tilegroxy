@@ -21,7 +21,6 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/stretchr/testify/require"
 )
 
@@ -50,7 +49,7 @@ func (s docExampleSampleRegistration) Name() string {
 	return "doc-example-sample"
 }
 
-func (s docExampleSampleRegistration) Initialize(cfgAny any, _ config.ClientConfig, _ config.ErrorMessages, _ *LayerGroup, _ *datastore.DatastoreRegistry) (Provider, error) {
+func (s docExampleSampleRegistration) Initialize(cfgAny any, _ ProviderDeps) (Provider, error) {
 	cfg := cfgAny.(docExampleSampleConfig)
 	return &docExampleSample{cfg}, nil
 }
@@ -66,7 +65,7 @@ func (t docExampleSample) GenerateTile(_ context.Context, _ ProviderContext, _ p
 func Test_DocExtensibilityExample_RegistersAndConstructs(t *testing.T) {
 	RegisterProvider(docExampleSampleRegistration{})
 
-	provider, err := ConstructProvider(map[string]interface{}{"name": "doc-example-sample"}, config.ClientConfig{}, config.ErrorMessages{}, nil, nil)
+	provider, err := ConstructProvider(map[string]interface{}{"name": "doc-example-sample"}, ProviderDeps{ClientConfig: config.ClientConfig{}, ErrorMessages: config.ErrorMessages{}})
 
 	require.NoError(t, err)
 	require.NotNil(t, provider)

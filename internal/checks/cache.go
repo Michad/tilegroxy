@@ -27,7 +27,6 @@ import (
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/Michad/tilegroxy/pkg/entities/health"
-	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
 var cacheReq = pkg.TileRequest{LayerName: "___hc___", Z: 0, X: 0, Y: 0}
@@ -61,14 +60,14 @@ func (s CacheCheckRegistration) Name() string {
 	return "cache"
 }
 
-func (s CacheCheckRegistration) Initialize(checkConfig health.HealthCheckConfig, _ *layer.LayerGroup, cache cache.Cache, allCfg *config.Config) (health.HealthCheck, error) {
+func (s CacheCheckRegistration) Initialize(checkConfig health.HealthCheckConfig, deps health.HealthCheckDeps) (health.HealthCheck, error) {
 	cfg := checkConfig.(CacheCheckConfig)
 
 	if cfg.Delay == 0 {
 		cfg.Delay = 600
 	}
 
-	return &CacheCheck{cfg, cache, allCfg.Error.Messages}, nil
+	return &CacheCheck{cfg, deps.Cache, deps.AllConfig.Error.Messages}, nil
 }
 
 const numColorDigits = 6
