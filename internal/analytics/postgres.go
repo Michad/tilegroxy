@@ -48,6 +48,7 @@ type Postgres struct {
 
 func init() {
 	analytics.RegisterAnalytics(PostgresRegistration{})
+	analytics.RegisterAnalytics(PostgresLegacyRegistration{})
 }
 
 type PostgresRegistration struct {
@@ -58,6 +59,15 @@ func (s PostgresRegistration) InitializeConfig() any {
 }
 
 func (s PostgresRegistration) Name() string {
+	return "postgresql"
+}
+
+// PostgresLegacyRegistration is the deprecated "postgres" alias for PostgresRegistration
+type PostgresLegacyRegistration struct {
+	PostgresRegistration
+}
+
+func (s PostgresLegacyRegistration) Name() string {
 	return "postgres"
 }
 
@@ -75,18 +85,18 @@ func (s PostgresRegistration) Initialize(cfgAny any, datastores *datastore.Datas
 	cfg := cfgAny.(PostgresConfig)
 
 	if cfg.Datastore == "" {
-		return nil, fmt.Errorf(errorMessages.ParamRequired, "analytics.postgres.datastore")
+		return nil, fmt.Errorf(errorMessages.ParamRequired, "analytics.postgresql.datastore")
 	}
 
 	if cfg.Table == "" {
-		return nil, fmt.Errorf(errorMessages.ParamRequired, "analytics.postgres.table")
+		return nil, fmt.Errorf(errorMessages.ParamRequired, "analytics.postgresql.table")
 	}
 
-	if err := validateIdentifier(cfg.Table, "analytics.postgres.table", errorMessages); err != nil {
+	if err := validateIdentifier(cfg.Table, "analytics.postgresql.table", errorMessages); err != nil {
 		return nil, err
 	}
 
-	columns, err := resolveColumns(postgresDefaultColumns, cfg.Columns, "analytics.postgres", errorMessages)
+	columns, err := resolveColumns(postgresDefaultColumns, cfg.Columns, "analytics.postgresql", errorMessages)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +109,7 @@ func (s PostgresRegistration) Initialize(cfgAny any, datastores *datastore.Datas
 	}
 
 	if !ok {
-		return nil, fmt.Errorf(errorMessages.InvalidParam, "analytics.postgres.datastore", cfg.Datastore)
+		return nil, fmt.Errorf(errorMessages.InvalidParam, "analytics.postgresql.datastore", cfg.Datastore)
 	}
 
 	batchCfg, err := analytics.ApplyBatchDefaults(cfg.Batch, errorMessages)

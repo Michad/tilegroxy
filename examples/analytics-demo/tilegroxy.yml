@@ -20,7 +20,7 @@ datastores:
       database: analytics
 
 analytics:
-    name: postgres
+    name: postgresql
     datastore: pg-analytics
     table: tilegroxy_analytics
     # Everything past the layer, coordinates and user is opt-in. ip and useragent are personal data so

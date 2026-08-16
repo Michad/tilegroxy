@@ -4,7 +4,7 @@ Writes events to a link:https://www.postgresql.org/[PostgreSQL] table.  A reason
 
 Requires a xref:configuration/datastores/postgresql.adoc[postgresql datastore] to supply the connection. The same datastore can be shared with the xref:configuration/provider/postgismvt.adoc[postgismvt] provider, though pointing analytics at a separate database avoids adding write load to the one serving tiles.
 
-Name should be "postgres"
+Name should be "postgresql"
 
 == Table Setup
 
@@ -55,7 +55,7 @@ Also accepts the batching parameters described in xref:configuration/analytics/i
 | An identifier for this destination, used in logs to attribute analytics messages
 | string
 | No
-| postgres
+| postgresql
 
 | Columns
 | Overrides for the default column names. Keys are the logical field names: time, layer, z, x, y, user_id, extra
@@ -88,7 +88,7 @@ datastores:
     database: analytics
 
 analytics:
-  name: postgres
+  name: postgresql
   datastore: pg-analytics
   table: tilegroxy_analytics
   fields:

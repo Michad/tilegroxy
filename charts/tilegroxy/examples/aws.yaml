@@ -186,7 +186,7 @@ config:
   # tilegroxy.analytics.dropped and .error metrics exported via ADOT.
   # -------------------------------------------------------------------------
   analytics:
-    name: postgres
+    name: postgresql
     id: aurora
     datastore: analytics-writer
     table: tilegroxy_analytics
