@@ -43,7 +43,7 @@ func (s NoopRegistration) Name() string {
 	return "none"
 }
 
-func (s NoopRegistration) Initialize(config any, deps authentication.AuthenticationDeps) (authentication.Authentication, error) {
+func (s NoopRegistration) Initialize(config any, _ authentication.AuthenticationDeps) (authentication.Authentication, error) {
 	return &Noop{config.(NoopConfig)}, nil
 }
 
