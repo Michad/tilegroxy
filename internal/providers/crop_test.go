@@ -29,15 +29,15 @@ import (
 
 func makeCropProvidersImages() (map[string]interface{}, map[string]interface{}, map[string]interface{}) {
 	return map[string]interface{}{
-		"name":  "static",
-		"image": "test_files/10_pixel_blue.png",
-	}, map[string]interface{}{
-		"name":  "static",
-		"image": "test_files/single_pixel_red.png",
-	}, map[string]interface{}{
-		"name":  "static",
-		"image": "test_files/10_pixel_red_blue.png",
-	}
+			"name":  "static",
+			"image": "test_files/10_pixel_blue.png",
+		}, map[string]interface{}{
+			"name":  "static",
+			"image": "test_files/single_pixel_red.png",
+		}, map[string]interface{}{
+			"name":  "static",
+			"image": "test_files/10_pixel_red_blue.png",
+		}
 }
 
 func Test_Crop_ExecuteNoCrop(t *testing.T) {

@@ -26,21 +26,21 @@ import (
 
 func makeFallbackProvidersNoFail() (map[string]interface{}, map[string]interface{}) {
 	return map[string]interface{}{
-		"name":  "static",
-		"color": "F00",
-	}, map[string]interface{}{
-		"name":  "static",
-		"color": "0F0",
-	}
+			"name":  "static",
+			"color": "F00",
+		}, map[string]interface{}{
+			"name":  "static",
+			"color": "0F0",
+		}
 }
 func makeFallbackProvidersFail() (map[string]interface{}, map[string]interface{}) {
 	return map[string]interface{}{
-		"name":    "fail",
-		"message": "failed intentionally",
-	}, map[string]interface{}{
-		"name":  "static",
-		"color": "0F0",
-	}
+			"name":    "fail",
+			"message": "failed intentionally",
+		}, map[string]interface{}{
+			"name":  "static",
+			"color": "0F0",
+		}
 }
 
 func Test_Fallback_Validate(t *testing.T) {
