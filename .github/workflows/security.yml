@@ -35,7 +35,7 @@ jobs:
           retention-days: 5
       - name: "Upload to code-scanning"
         if: github.event_name != 'pull_request'
-        uses: github/codeql-action/upload-sarif@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6
+        uses: github/codeql-action/upload-sarif@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4.37.7
         with:
           sarif_file: results.sarif
   dependency-review:
@@ -98,7 +98,7 @@ jobs:
         fi
         /usr/bin/jq '.runs[]?.tool.driver.rules[]?.properties.tags |= unique' < govuln2.sarif > govuln3.sarif
     - name: Upload result to GitHub Code Scanning
-      uses: github/codeql-action/upload-sarif@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6
+      uses: github/codeql-action/upload-sarif@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4.37.7
       with:
         sarif_file: govuln3.sarif
   gosec:
@@ -120,6 +120,6 @@ jobs:
           args: '-no-fail -exclude=G504 -fmt sarif -out results.sarif ./...'
       - name: Upload SARIF file
         if: github.event_name != 'pull_request'
-        uses: github/codeql-action/upload-sarif@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6
+        uses: github/codeql-action/upload-sarif@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4.37.7
         with:
           sarif_file: results.sarif
