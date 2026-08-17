@@ -26,7 +26,6 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -80,36 +79,36 @@ func (s PostgisMvtRegistration) Name() string {
 	return "postgismvt"
 }
 
-func (s PostgisMvtRegistration) Initialize(cfgAny any, _ config.ClientConfig, errorMessages config.ErrorMessages, _ *layer.LayerGroup, datastores *datastore.DatastoreRegistry) (layer.Provider, error) {
+func (s PostgisMvtRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(PostgisMvtConfig)
 
 	if cfg.GID != "" {
 		if !columnRegex.MatchString(cfg.GID) {
-			return nil, fmt.Errorf(errorMessages.InvalidParam, "postgismvt.gid", cfg.GID, columnRegex)
+			return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "postgismvt.gid", cfg.GID, columnRegex)
 		}
 	}
 	if cfg.Geometry != "" {
 		if !columnRegex.MatchString(cfg.Geometry) {
-			return nil, fmt.Errorf(errorMessages.InvalidParam, "postgismvt.geometry", cfg.Geometry, columnRegex)
+			return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "postgismvt.geometry", cfg.Geometry, columnRegex)
 		}
 	}
 	if len(cfg.Attributes) > 0 {
 		for i, attribute := range cfg.Attributes {
 			if !columnRegex.MatchString(attribute) {
-				return nil, fmt.Errorf(errorMessages.InvalidParam, "postgismvt.attributes."+strconv.Itoa(i), attribute, columnRegex)
+				return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "postgismvt.attributes."+strconv.Itoa(i), attribute, columnRegex)
 			}
 		}
 	}
 
 	var dbpool *pgxpool.Pool
 
-	ds, ok := datastores.Get(cfg.Datastore)
+	ds, ok := deps.Datastores.Get(cfg.Datastore)
 	if ok {
 		dbpool, ok = ds.Native().(*pgxpool.Pool)
 	}
 
 	if !ok {
-		return nil, fmt.Errorf(errorMessages.InvalidParam, "postgismvt.datastore", cfg.Datastore)
+		return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "postgismvt.datastore", cfg.Datastore)
 	}
 
 	return &PostgisMvt{cfg, dbpool}, nil

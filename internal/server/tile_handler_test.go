@@ -36,8 +36,8 @@ import (
 )
 
 func configToEntities(cfg config.Config) (*layer.LayerGroup, authentication.Authentication, error) {
-	cache, err1 := cache.ConstructCache(cfg.Cache, cfg.Error.Messages)
-	auth, err2 := authentication.ConstructAuth(cfg.Authentication, cfg.Error.Messages)
+	cache, err1 := cache.ConstructCache(cfg.Cache, cache.CacheDeps{ErrorMessages: cfg.Error.Messages})
+	auth, err2 := authentication.ConstructAuth(cfg.Authentication, authentication.AuthenticationDeps{ErrorMessages: cfg.Error.Messages})
 	layerGroup, err3 := layer.ConstructLayerGroup(cfg, cache, nil, nil)
 
 	return layerGroup, auth, errors.Join(err1, err2, err3)
@@ -232,7 +232,7 @@ func Test_TileHandler_ExecuteCustom(t *testing.T) {
 	lg, err := layer.ConstructLayerGroup(cfg, cache, nil, nil)
 	require.NoError(t, err)
 
-	authO, err := authentication.ConstructAuth(auth, cfg.Error.Messages)
+	authO, err := authentication.ConstructAuth(auth, authentication.AuthenticationDeps{ErrorMessages: cfg.Error.Messages})
 	require.NoError(t, err)
 
 	handler, err := newTileHandler(reloadableEntities{config: &cfg, auth: authO, layerGroup: lg})

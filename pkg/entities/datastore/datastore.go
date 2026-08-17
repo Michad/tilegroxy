@@ -31,9 +31,16 @@ type DatastoreWrapper interface {
 	Native() any
 }
 
+// DatastoreDeps carries everything a datastore is given at construction. New dependencies are added as
+// fields so the Initialize signature stays stable
+type DatastoreDeps struct {
+	Secreter      secret.Secreter
+	ErrorMessages config.ErrorMessages
+}
+
 type DatastoreWrapperRegistration interface {
 	Name() string
-	Initialize(config any, secreter secret.Secreter, errorMessages config.ErrorMessages) (DatastoreWrapper, error)
+	Initialize(config any, deps DatastoreDeps) (DatastoreWrapper, error)
 	InitializeConfig() any
 }
 
@@ -63,7 +70,7 @@ func RegisteredDatastoreWrapperNames() []string {
 	return names
 }
 
-func ConstructDatastoreWrapper(rawConfig map[string]interface{}, secreter secret.Secreter, errorMessages config.ErrorMessages) (DatastoreWrapper, error) {
+func ConstructDatastoreWrapper(rawConfig map[string]interface{}, deps DatastoreDeps) (DatastoreWrapper, error) {
 	rawConfig = pkg.ReplaceEnv(rawConfig)
 
 	name, ok := rawConfig["name"].(string)
@@ -76,10 +83,10 @@ func ConstructDatastoreWrapper(rawConfig map[string]interface{}, secreter secret
 			if err != nil {
 				return nil, err
 			}
-			return reg.Initialize(cfg, secreter, errorMessages)
+			return reg.Initialize(cfg, deps)
 		}
 	}
 
 	nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
-	return nil, fmt.Errorf(errorMessages.EnumError, "datastore.name", nameCoerce, RegisteredDatastoreWrapperNames())
+	return nil, fmt.Errorf(deps.ErrorMessages.EnumError, "datastore.name", nameCoerce, RegisteredDatastoreWrapperNames())
 }

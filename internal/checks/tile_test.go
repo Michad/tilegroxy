@@ -20,6 +20,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/health"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,12 +33,12 @@ func Test_Validate(t *testing.T) {
 	cfgAll, lg, reg, cfg := initialize(t, false)
 	cfg.Layer = "fake"
 
-	_, err := reg.Initialize(cfg, lg, nil, &cfgAll)
+	_, err := reg.Initialize(cfg, health.HealthCheckDeps{LayerGroup: lg, AllConfig: &cfgAll})
 	require.Error(t, err)
 
 	cfg.Layer = "test"
 
-	hc, err := reg.Initialize(cfg, lg, nil, &cfgAll)
+	hc, err := reg.Initialize(cfg, health.HealthCheckDeps{LayerGroup: lg, AllConfig: &cfgAll})
 	require.NoError(t, err)
 	require.IsType(t, &TileCheck{}, hc)
 
@@ -50,7 +51,7 @@ func Test_Validate(t *testing.T) {
 
 	cfg.Validation = "fake"
 
-	_, err = reg.Initialize(cfg, lg, nil, &cfgAll)
+	_, err = reg.Initialize(cfg, health.HealthCheckDeps{LayerGroup: lg, AllConfig: &cfgAll})
 	require.Error(t, err)
 }
 
@@ -63,7 +64,7 @@ func Test_Validate(t *testing.T) {
 // 	cfg.Validation = ValidationBase64
 // 	cfg.Result = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAHIklEQVR4nOzVMREAIAzAQI7Dv+Uio0P+FWTLm5kDQM/dDgBghwEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBAlAEARBkAQJQBAEQZAECUAQBEGQBA1A8AAP//gX0HANL7JAoAAAAASUVORK5CYII="
 
-// 	hc, err := reg.Initialize(cfg, lg, nil, &cfgAll)
+// 	hc, err := reg.Initialize(cfg, health.HealthCheckDeps{LayerGroup: lg, AllConfig: &cfgAll})
 // 	require.NoError(t, err)
 // 	require.IsType(t, &TileCheck{}, hc)
 // 	tc := hc.(*TileCheck)
@@ -90,7 +91,7 @@ func Test_File(t *testing.T) {
 	cfg.Validation = ValidationFile
 	cfg.Result = file
 
-	hc, err := reg.Initialize(cfg, lg, nil, &cfgAll)
+	hc, err := reg.Initialize(cfg, health.HealthCheckDeps{LayerGroup: lg, AllConfig: &cfgAll})
 	require.NoError(t, err)
 
 	err = hc.Check(ctx)
@@ -111,7 +112,7 @@ func Test_Success(t *testing.T) {
 	cfg.Layer = "test"
 	cfg.Validation = ValidationSuccess
 
-	hc, err := reg.Initialize(cfg, lg, nil, &cfgAll)
+	hc, err := reg.Initialize(cfg, health.HealthCheckDeps{LayerGroup: lg, AllConfig: &cfgAll})
 	require.NoError(t, err)
 	require.IsType(t, &TileCheck{}, hc)
 
@@ -125,7 +126,7 @@ func Test_SuccessFail(t *testing.T) {
 	cfg.Layer = "test"
 	cfg.Validation = ValidationSuccess
 
-	hc, err := reg.Initialize(cfg, lg, nil, &cfgAll)
+	hc, err := reg.Initialize(cfg, health.HealthCheckDeps{LayerGroup: lg, AllConfig: &cfgAll})
 	require.NoError(t, err)
 	require.IsType(t, &TileCheck{}, hc)
 
@@ -140,7 +141,7 @@ func Test_ContentType(t *testing.T) {
 	cfg.Validation = ValidationContentType
 	cfg.Result = "image/png"
 
-	hc, err := reg.Initialize(cfg, lg, nil, &cfgAll)
+	hc, err := reg.Initialize(cfg, health.HealthCheckDeps{LayerGroup: lg, AllConfig: &cfgAll})
 	require.NoError(t, err)
 	require.IsType(t, &TileCheck{}, hc)
 	tc := hc.(*TileCheck)
@@ -159,7 +160,7 @@ func Test_Same(t *testing.T) {
 	cfg.Layer = "test"
 	cfg.Validation = ValidationSame
 
-	hc, err := reg.Initialize(cfg, lg, nil, &cfgAll)
+	hc, err := reg.Initialize(cfg, health.HealthCheckDeps{LayerGroup: lg, AllConfig: &cfgAll})
 	require.NoError(t, err)
 	require.IsType(t, &TileCheck{}, hc)
 	tc := hc.(*TileCheck)

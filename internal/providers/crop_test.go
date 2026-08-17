@@ -42,7 +42,7 @@ func makeCropProvidersImages() (map[string]interface{}, map[string]interface{}, 
 
 func Test_Crop_ExecuteNoCrop(t *testing.T) {
 	p, s, _ := makeCropProvidersImages()
-	f, err := CropRegistration{}.Initialize(CropConfig{Bounds: pkg.Bounds{South: -90, North: 90, West: 0, East: 180}, Primary: p, Secondary: s}, config.ClientConfig{}, testErrMessages, nil, nil)
+	f, err := CropRegistration{}.Initialize(CropConfig{Bounds: pkg.Bounds{South: -90, North: 90, West: 0, East: 180}, Primary: p, Secondary: s}, layer.ProviderDeps{ErrorMessages: testErrMessages})
 
 	assert.NotNil(t, f)
 	require.NoError(t, err)
@@ -68,7 +68,7 @@ func Test_Crop_ExecuteNoCrop(t *testing.T) {
 
 func Test_Crop_ExecuteCrop(t *testing.T) {
 	p, s, ps := makeCropProvidersImages()
-	f, err := CropRegistration{}.Initialize(CropConfig{Bounds: pkg.Bounds{South: -90, North: 90, West: 0, East: 180}, Primary: p, Secondary: s}, config.ClientConfig{}, testErrMessages, nil, nil)
+	f, err := CropRegistration{}.Initialize(CropConfig{Bounds: pkg.Bounds{South: -90, North: 90, West: 0, East: 180}, Primary: p, Secondary: s}, layer.ProviderDeps{ErrorMessages: testErrMessages})
 
 	assert.NotNil(t, f)
 	require.NoError(t, err)
@@ -94,7 +94,7 @@ func Test_Crop_ExecuteCrop(t *testing.T) {
 
 func Test_Crop_ExecuteCropReverseOrder(t *testing.T) {
 	s, p, ps := makeCropProvidersImages()
-	f, err := CropRegistration{}.Initialize(CropConfig{Bounds: pkg.Bounds{South: -90, North: 90, West: -180, East: 0}, Primary: p, Secondary: s}, config.ClientConfig{}, testErrMessages, nil, nil)
+	f, err := CropRegistration{}.Initialize(CropConfig{Bounds: pkg.Bounds{South: -90, North: 90, West: -180, East: 0}, Primary: p, Secondary: s}, layer.ProviderDeps{ErrorMessages: testErrMessages})
 
 	assert.NotNil(t, f)
 	require.NoError(t, err)
@@ -120,7 +120,7 @@ func Test_Crop_ExecuteCropReverseOrder(t *testing.T) {
 
 func Test_Crop_ExecuteCropWithAuth(t *testing.T) {
 	p, s, ps := makeCropProvidersImages()
-	f, err := CropRegistration{}.Initialize(CropConfig{Primary: p, Secondary: s, BoundsFromAuth: true}, config.ClientConfig{}, testErrMessages, nil, nil)
+	f, err := CropRegistration{}.Initialize(CropConfig{Primary: p, Secondary: s, BoundsFromAuth: true}, layer.ProviderDeps{ErrorMessages: testErrMessages})
 
 	assert.NotNil(t, f)
 	require.NoError(t, err)
@@ -152,7 +152,7 @@ func Test_Crop_ExecuteCropNoBounds(t *testing.T) {
 	cfg := CropRegistration{}.InitializeConfig().(CropConfig)
 	cfg.Primary = p
 	cfg.Secondary = s
-	f, err := CropRegistration{}.Initialize(cfg, config.ClientConfig{}, testErrMessages, nil, nil)
+	f, err := CropRegistration{}.Initialize(cfg, layer.ProviderDeps{ClientConfig: config.ClientConfig{}, ErrorMessages: testErrMessages})
 
 	assert.NotNil(t, f)
 	require.NoError(t, err)

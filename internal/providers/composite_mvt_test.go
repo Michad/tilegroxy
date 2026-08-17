@@ -30,7 +30,7 @@ func Test_Composite_ExecuteStatic(t *testing.T) {
 		"image": "embedded:box.mvt",
 	}
 
-	c, err := CompositeMVTRegistration{}.Initialize(CompositeMVTConfig{Providers: []map[string]interface{}{provConfig, provConfig}}, testClientConfig, testErrMessages, nil, nil)
+	c, err := CompositeMVTRegistration{}.Initialize(CompositeMVTConfig{Providers: []map[string]interface{}{provConfig, provConfig}}, layer.ProviderDeps{ClientConfig: testClientConfig, ErrorMessages: testErrMessages})
 
 	assert.NotNil(t, c)
 	require.NoError(t, err)

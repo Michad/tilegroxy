@@ -21,8 +21,6 @@ import (
 	"strings"
 
 	"github.com/Michad/tilegroxy/pkg"
-	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
@@ -56,10 +54,10 @@ func (s URLTemplateRegistration) Name() string {
 	return "url template"
 }
 
-func (s URLTemplateRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, _ *layer.LayerGroup, _ *datastore.DatastoreRegistry) (layer.Provider, error) {
+func (s URLTemplateRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(URLTemplateConfig)
 	if cfg.Template == "" {
-		return nil, fmt.Errorf(errorMessages.InvalidParam, "provider.url template.url", "")
+		return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "provider.url template.url", "")
 	}
 
 	if cfg.Height == 0 {
@@ -74,7 +72,7 @@ func (s URLTemplateRegistration) Initialize(cfgAny any, clientConfig config.Clie
 		cfg.Srid = pkg.SRIDWGS84
 	}
 	if cfg.Srid != pkg.SRIDWGS84 && cfg.Srid != pkg.SRIDPsuedoMercator {
-		return nil, fmt.Errorf(errorMessages.EnumError, "provider.url template.srid", cfg.Srid, []int{pkg.SRIDPsuedoMercator, pkg.SRIDWGS84})
+		return nil, fmt.Errorf(deps.ErrorMessages.EnumError, "provider.url template.srid", cfg.Srid, []int{pkg.SRIDPsuedoMercator, pkg.SRIDWGS84})
 	}
 
 	url := strings.ReplaceAll(cfg.Template, "$xmin", "{xmin}")
@@ -91,5 +89,5 @@ func (s URLTemplateRegistration) Initialize(cfgAny any, clientConfig config.Clie
 		Srid: cfg.Srid,
 	}
 
-	return &URLTemplate{Proxy{proxyCfg, clientConfig}}, nil
+	return &URLTemplate{Proxy{proxyCfg, deps.ClientConfig}}, nil
 }

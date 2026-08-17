@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/secret"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -49,7 +50,7 @@ func Test_SecretManager_Validate(t *testing.T) {
 		Secret:  "asfasfas",
 		Region:  "safasfasfasf",
 		Profile: "sfjasklfjaslkfjla",
-	}, config.ErrorMessages{})
+	}, secret.SecreterDeps{ErrorMessages: config.ErrorMessages{}})
 
 	require.Error(t, err)
 	assert.Nil(t, s)
@@ -83,7 +84,7 @@ func Test_SecretManager_Execute(t *testing.T) {
 		Secret:   "a",
 		Region:   "us-east-1",
 		Endpoint: endpoint,
-	}, config.ErrorMessages{})
+	}, secret.SecreterDeps{ErrorMessages: config.ErrorMessages{}})
 	s := so.(*AWSSecretsManager)
 
 	require.NoError(t, err)
@@ -109,7 +110,7 @@ func Test_SecretManager_Execute(t *testing.T) {
 		Region:   "us-east-1",
 		Endpoint: endpoint,
 		TTL:      -1,
-	}, config.ErrorMessages{})
+	}, secret.SecreterDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 	s = so.(*AWSSecretsManager)
 

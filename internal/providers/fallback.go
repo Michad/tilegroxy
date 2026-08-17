@@ -21,8 +21,6 @@ import (
 	"slices"
 
 	"github.com/Michad/tilegroxy/pkg"
-	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
@@ -66,7 +64,7 @@ func (s FallbackRegistration) Name() string {
 	return "fallback"
 }
 
-func (s FallbackRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layer.LayerGroup, datastores *datastore.DatastoreRegistry) (layer.Provider, error) {
+func (s FallbackRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(FallbackConfig)
 	var zoom []int
 
@@ -88,14 +86,14 @@ func (s FallbackRegistration) Initialize(cfgAny any, clientConfig config.ClientC
 	}
 
 	if !slices.Contains(allCacheModes, cfg.Cache) {
-		return nil, fmt.Errorf(errorMessages.EnumError, "provider.fallback.cachemode", cfg.Cache, allCacheModes)
+		return nil, fmt.Errorf(deps.ErrorMessages.EnumError, "provider.fallback.cachemode", cfg.Cache, allCacheModes)
 	}
 
-	primary, err := layer.ConstructProvider(cfg.Primary, clientConfig, errorMessages, layerGroup, datastores)
+	primary, err := layer.ConstructProvider(cfg.Primary, deps)
 	if err != nil {
 		return nil, err
 	}
-	secondary, err := layer.ConstructProvider(cfg.Secondary, clientConfig, errorMessages, layerGroup, datastores)
+	secondary, err := layer.ConstructProvider(cfg.Secondary, deps)
 	if err != nil {
 		return nil, err
 	}

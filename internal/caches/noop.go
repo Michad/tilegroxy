@@ -18,7 +18,6 @@ import (
 	"context"
 
 	"github.com/Michad/tilegroxy/pkg"
-	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 )
 
@@ -44,7 +43,7 @@ func (s NoopRegistration) Name() string {
 	return "none"
 }
 
-func (s NoopRegistration) Initialize(configAny any, _ config.ErrorMessages) (cache.Cache, error) {
+func (s NoopRegistration) Initialize(configAny any, deps cache.CacheDeps) (cache.Cache, error) {
 	config := configAny.(NoopConfig)
 	return Noop{config}, nil
 }

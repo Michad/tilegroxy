@@ -20,7 +20,6 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
@@ -51,7 +50,7 @@ func (s FailRegistration) Name() string {
 	return "fail"
 }
 
-func (s FailRegistration) Initialize(cfgAny any, _ config.ClientConfig, _ config.ErrorMessages, _ *layer.LayerGroup, _ *datastore.DatastoreRegistry) (layer.Provider, error) {
+func (s FailRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	config := cfgAny.(FailConfig)
 	return &Fail{config}, nil
 }

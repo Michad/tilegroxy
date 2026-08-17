@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	"github.com/Michad/tilegroxy/pkg"
-	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/bradfitz/gomemcache/memcache"
 )
@@ -59,7 +58,7 @@ func (s MemcacheRegistration) Name() string {
 	return "memcache"
 }
 
-func (s MemcacheRegistration) Initialize(configAny any, errorMessages config.ErrorMessages) (cache.Cache, error) {
+func (s MemcacheRegistration) Initialize(configAny any, deps cache.CacheDeps) (cache.Cache, error) {
 	config := configAny.(MemcacheConfig)
 
 	if len(config.Servers) == 0 {
@@ -72,7 +71,7 @@ func (s MemcacheRegistration) Initialize(configAny any, errorMessages config.Err
 
 		config.Servers = []HostAndPort{{config.Host, config.Port}}
 	} else if config.Host != "" {
-		return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "config.memcache.host", "config.memcache.servers")
+		return nil, fmt.Errorf(deps.ErrorMessages.ParamsMutuallyExclusive, "config.memcache.host", "config.memcache.servers")
 	}
 
 	if config.TTL == 0 {

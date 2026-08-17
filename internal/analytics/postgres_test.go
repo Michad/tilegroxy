@@ -141,7 +141,7 @@ func Test_Postgres_WritesEvents(t *testing.T) {
 	cfg.Batch.MaxSize = 1000
 	cfg.Batch.MaxAge = 600
 
-	a, err := PostgresRegistration{}.Initialize(cfg, datastores, msgs)
+	a, err := PostgresRegistration{}.Initialize(cfg, analytics.AnalyticsDeps{Datastores: datastores, ErrorMessages: msgs})
 	require.NoError(t, err)
 
 	require.NoError(t, a.Record(ctx, analytics.Event{
@@ -189,15 +189,15 @@ func Test_Postgres_InvalidConfig(t *testing.T) {
 	empty, err := datastore.ConstructDatastoreRegistry(nil, nil, msgs)
 	require.NoError(t, err)
 
-	_, err = PostgresRegistration{}.Initialize(PostgresConfig{Table: "t"}, empty, msgs)
+	_, err = PostgresRegistration{}.Initialize(PostgresConfig{Table: "t"}, analytics.AnalyticsDeps{Datastores: empty, ErrorMessages: msgs})
 	require.Error(t, err, "datastore is required")
 
-	_, err = PostgresRegistration{}.Initialize(PostgresConfig{Datastore: "x"}, empty, msgs)
+	_, err = PostgresRegistration{}.Initialize(PostgresConfig{Datastore: "x"}, analytics.AnalyticsDeps{Datastores: empty, ErrorMessages: msgs})
 	require.Error(t, err, "table is required")
 
-	_, err = PostgresRegistration{}.Initialize(PostgresConfig{Datastore: "x", Table: "bad table"}, empty, msgs)
+	_, err = PostgresRegistration{}.Initialize(PostgresConfig{Datastore: "x", Table: "bad table"}, analytics.AnalyticsDeps{Datastores: empty, ErrorMessages: msgs})
 	require.Error(t, err, "table must be a valid identifier")
 
-	_, err = PostgresRegistration{}.Initialize(PostgresConfig{Datastore: "nonexistent", Table: "t"}, empty, msgs)
+	_, err = PostgresRegistration{}.Initialize(PostgresConfig{Datastore: "nonexistent", Table: "t"}, analytics.AnalyticsDeps{Datastores: empty, ErrorMessages: msgs})
 	require.Error(t, err, "an unknown datastore id should be reported clearly")
 }

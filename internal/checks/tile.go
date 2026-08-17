@@ -24,7 +24,6 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/Michad/tilegroxy/pkg/entities/health"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
@@ -79,7 +78,7 @@ func (s TileCheckRegistration) Name() string {
 	return "tile"
 }
 
-func (s TileCheckRegistration) Initialize(checkConfig health.HealthCheckConfig, lg *layer.LayerGroup, _ cache.Cache, allCfg *config.Config) (health.HealthCheck, error) {
+func (s TileCheckRegistration) Initialize(checkConfig health.HealthCheckConfig, deps health.HealthCheckDeps) (health.HealthCheck, error) {
 	cfg := checkConfig.(TileCheckConfig)
 
 	if cfg.Delay == 0 {
@@ -100,11 +99,11 @@ func (s TileCheckRegistration) Initialize(checkConfig health.HealthCheckConfig, 
 	}
 
 	if !slices.Contains(AllValidationModes, cfg.Validation) {
-		return nil, fmt.Errorf(allCfg.Error.Messages.EnumError, "check.validation", cfg.Validation, AllValidationModes)
+		return nil, fmt.Errorf(deps.AllConfig.Error.Messages.EnumError, "check.validation", cfg.Validation, AllValidationModes)
 	}
 
-	if lg.FindLayer(pkg.BackgroundContext(), cfg.Layer) == nil {
-		return nil, fmt.Errorf(allCfg.Error.Messages.EnumError, "check.layer", cfg.Layer, lg.ListLayerIDs())
+	if deps.LayerGroup.FindLayer(pkg.BackgroundContext(), cfg.Layer) == nil {
+		return nil, fmt.Errorf(deps.AllConfig.Error.Messages.EnumError, "check.layer", cfg.Layer, deps.LayerGroup.ListLayerIDs())
 	}
 
 	req := pkg.TileRequest{LayerName: cfg.Layer, Z: cfg.Z, X: cfg.X, Y: cfg.Y}
@@ -115,7 +114,7 @@ func (s TileCheckRegistration) Initialize(checkConfig health.HealthCheckConfig, 
 		return nil, err
 	}
 
-	return &TileCheck{cfg, lg, allCfg.Error.Messages, req, nil}, nil
+	return &TileCheck{cfg, deps.LayerGroup, deps.AllConfig.Error.Messages, req, nil}, nil
 }
 
 func (h *TileCheck) Check(ctx context.Context) error {

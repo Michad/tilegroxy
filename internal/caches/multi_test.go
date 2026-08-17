@@ -26,12 +26,12 @@ import (
 func TestMultiSaveAndLookup(t *testing.T) {
 	memConfig1 := MemoryConfig{}
 
-	mem1, err := MemoryRegistration{}.Initialize(memConfig1, config.ErrorMessages{})
+	mem1, err := MemoryRegistration{}.Initialize(memConfig1, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 
 	memConfig2 := MemoryConfig{}
 
-	mem2, err := MemoryRegistration{}.Initialize(memConfig2, config.ErrorMessages{})
+	mem2, err := MemoryRegistration{}.Initialize(memConfig2, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 
 	multi := Multi{Tiers: []cache.Cache{mem1, mem2}}
@@ -48,12 +48,12 @@ func TestMultiSaveAndLookup(t *testing.T) {
 func TestMultiIn1(t *testing.T) {
 	memConfig1 := MemoryConfig{}
 
-	mem1, err := MemoryRegistration{}.Initialize(memConfig1, config.ErrorMessages{})
+	mem1, err := MemoryRegistration{}.Initialize(memConfig1, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 
 	memConfig2 := MemoryConfig{}
 
-	mem2, err := MemoryRegistration{}.Initialize(memConfig2, config.ErrorMessages{})
+	mem2, err := MemoryRegistration{}.Initialize(memConfig2, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 
 	multi := Multi{Tiers: []cache.Cache{mem1, mem2}}
@@ -68,12 +68,12 @@ func TestMultiIn1(t *testing.T) {
 func TestMultiIn2(t *testing.T) {
 	memConfig1 := MemoryConfig{}
 
-	mem1, err := MemoryRegistration{}.Initialize(memConfig1, config.ErrorMessages{})
+	mem1, err := MemoryRegistration{}.Initialize(memConfig1, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 
 	memConfig2 := MemoryConfig{}
 
-	mem2, err := MemoryRegistration{}.Initialize(memConfig2, config.ErrorMessages{})
+	mem2, err := MemoryRegistration{}.Initialize(memConfig2, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 
 	multi := Multi{Tiers: []cache.Cache{mem1, mem2}}

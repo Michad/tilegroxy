@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/Michad/tilegroxy/pkg"
-	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 
 	"github.com/maypok86/otter"
@@ -54,7 +53,7 @@ func (s MemoryRegistration) Name() string {
 	return "memory"
 }
 
-func (s MemoryRegistration) Initialize(configAny any, _ config.ErrorMessages) (cache.Cache, error) {
+func (s MemoryRegistration) Initialize(configAny any, deps cache.CacheDeps) (cache.Cache, error) {
 	config := configAny.(MemoryConfig)
 
 	if config.MaxSize < 1 {

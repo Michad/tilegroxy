@@ -97,21 +97,21 @@ func Test_Validate(t *testing.T) {
 	cfg.Limit = 1
 
 	cfg.GID = "; safkjas @(%$)!@IU%"
-	_, err := reg.Initialize(cfg, config.DefaultConfig().Client, config.DefaultConfig().Error.Messages, nil, &datastore.DatastoreRegistry{})
+	_, err := reg.Initialize(cfg, layer.ProviderDeps{ClientConfig: config.DefaultConfig().Client, ErrorMessages: config.DefaultConfig().Error.Messages, Datastores: &datastore.DatastoreRegistry{}})
 	require.Error(t, err)
 	cfg.GID = "gid"
 
 	cfg.Geometry = "; safkjas @(%$)!@IU%"
-	_, err = reg.Initialize(cfg, config.DefaultConfig().Client, config.DefaultConfig().Error.Messages, nil, &datastore.DatastoreRegistry{})
+	_, err = reg.Initialize(cfg, layer.ProviderDeps{ClientConfig: config.DefaultConfig().Client, ErrorMessages: config.DefaultConfig().Error.Messages, Datastores: &datastore.DatastoreRegistry{}})
 	require.Error(t, err)
 	cfg.Geometry = "GEOM"
 
 	cfg.Attributes = []string{"; safkjas @(%$)!@IU%"}
-	_, err = reg.Initialize(cfg, config.DefaultConfig().Client, config.DefaultConfig().Error.Messages, nil, &datastore.DatastoreRegistry{})
+	_, err = reg.Initialize(cfg, layer.ProviderDeps{ClientConfig: config.DefaultConfig().Client, ErrorMessages: config.DefaultConfig().Error.Messages, Datastores: &datastore.DatastoreRegistry{}})
 	require.Error(t, err)
 	cfg.Attributes = []string{"str"}
 
-	_, err = reg.Initialize(cfg, config.DefaultConfig().Client, config.DefaultConfig().Error.Messages, nil, &datastore.DatastoreRegistry{})
+	_, err = reg.Initialize(cfg, layer.ProviderDeps{ClientConfig: config.DefaultConfig().Client, ErrorMessages: config.DefaultConfig().Error.Messages, Datastores: &datastore.DatastoreRegistry{}})
 	require.Error(t, err)
 
 }
@@ -178,7 +178,7 @@ func Test_GenerateTile(t *testing.T) {
 	cfg.Filter = "{z}=0 AND {layer.test}::text IS NULL"
 	cfg.Limit = 1
 
-	prov, err := reg.Initialize(cfg, config.DefaultConfig().Client, config.DefaultConfig().Error.Messages, nil, datastore)
+	prov, err := reg.Initialize(cfg, layer.ProviderDeps{ClientConfig: config.DefaultConfig().Client, ErrorMessages: config.DefaultConfig().Error.Messages, Datastores: datastore})
 	require.NoError(t, err)
 
 	provCtx, err := prov.PreAuth(ctx, layer.ProviderContext{})

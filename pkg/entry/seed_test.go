@@ -22,7 +22,6 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/require"
 )
@@ -42,7 +41,7 @@ type seedTestPanicRegistration struct{}
 
 func (seedTestPanicRegistration) Name() string          { return "seed-test-panic-provider" }
 func (seedTestPanicRegistration) InitializeConfig() any { return struct{}{} }
-func (seedTestPanicRegistration) Initialize(_ any, _ config.ClientConfig, _ config.ErrorMessages, _ *layer.LayerGroup, _ *datastore.DatastoreRegistry) (layer.Provider, error) {
+func (seedTestPanicRegistration) Initialize(_ any, _ layer.ProviderDeps) (layer.Provider, error) {
 	return seedTestPanicProvider{}, nil
 }
 

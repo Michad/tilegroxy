@@ -137,12 +137,12 @@ func (s CustomRegistration) Name() string {
 	return "custom"
 }
 
-func (s CustomRegistration) Initialize(cfgAny any, errorMessages config.ErrorMessages) (authentication.Authentication, error) {
+func (s CustomRegistration) Initialize(cfgAny any, deps authentication.AuthenticationDeps) (authentication.Authentication, error) {
 	cfg := cfgAny.(CustomConfig)
 	var err error
 
 	if len(cfg.Token) == 0 {
-		return nil, fmt.Errorf(errorMessages.InvalidParam, "auth.custom.tokenextract", cfg.Token)
+		return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "auth.custom.tokenextract", cfg.Token)
 	}
 
 	i := interp.New(interp.Options{Unrestricted: true})
@@ -165,21 +165,21 @@ func (s CustomRegistration) Initialize(cfgAny any, errorMessages config.ErrorMes
 
 	_, err = i.Eval(script)
 	if err != nil {
-		return nil, fmt.Errorf(errorMessages.ScriptError, "auth.custom", err)
+		return nil, fmt.Errorf(deps.ErrorMessages.ScriptError, "auth.custom", err)
 	}
 
 	validationVal, err := i.Eval("custom.validate")
 	if err != nil {
-		return nil, fmt.Errorf(errorMessages.ScriptError, "auth.custom", err)
+		return nil, fmt.Errorf(deps.ErrorMessages.ScriptError, "auth.custom", err)
 	}
 	if validationVal.IsNil() {
-		return nil, fmt.Errorf(errorMessages.ScriptError, "auth.custom", "nil")
+		return nil, fmt.Errorf(deps.ErrorMessages.ScriptError, "auth.custom", "nil")
 	}
 
 	validationFunc, ok := validationVal.Interface().(func(string) (bool, time.Time, string, []string))
 
 	if !ok {
-		return nil, fmt.Errorf(errorMessages.ScriptError, "auth.custom", validationVal)
+		return nil, fmt.Errorf(deps.ErrorMessages.ScriptError, "auth.custom", validationVal)
 	}
 
 	if cfg.CacheSize == 0 {

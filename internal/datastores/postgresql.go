@@ -19,9 +19,7 @@ import (
 	"time"
 
 	"github.com/Michad/tilegroxy/pkg"
-	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/datastore"
-	"github.com/Michad/tilegroxy/pkg/entities/secret"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.opentelemetry.io/otel/attribute"
@@ -76,7 +74,7 @@ func (s PostgresqlWrapperRegistration) Name() string {
 }
 
 //nolint:mnd
-func (s PostgresqlWrapperRegistration) Initialize(cfgAny any, _ secret.Secreter, _ config.ErrorMessages) (datastore.DatastoreWrapper, error) {
+func (s PostgresqlWrapperRegistration) Initialize(cfgAny any, deps datastore.DatastoreDeps) (datastore.DatastoreWrapper, error) {
 	cfg := cfgAny.(PostgresqlWrapperConfig)
 
 	dbCfg, err := pgxpool.ParseConfig("")

@@ -45,6 +45,6 @@ func Test_Postgres_LegacyAliasInitializes(t *testing.T) {
 	reg, ok := analytics.RegisteredAnalytics("postgres")
 	require.True(t, ok)
 
-	_, err = reg.Initialize(PostgresConfig{Datastore: "nonexistent", Table: "t"}, empty, msgs)
+	_, err = reg.Initialize(PostgresConfig{Datastore: "nonexistent", Table: "t"}, analytics.AnalyticsDeps{Datastores: empty, ErrorMessages: msgs})
 	require.ErrorContains(t, err, "analytics.postgresql.datastore")
 }

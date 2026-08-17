@@ -39,7 +39,7 @@ type stubSecreterRegistration struct{}
 
 func (stubSecreterRegistration) Name() string          { return "stub-secreter" }
 func (stubSecreterRegistration) InitializeConfig() any { return stubSecreterConfig{} }
-func (stubSecreterRegistration) Initialize(cfgAny any, _ config.ErrorMessages) (Secreter, error) {
+func (stubSecreterRegistration) Initialize(cfgAny any, _ SecreterDeps) (Secreter, error) {
 	cfg := cfgAny.(stubSecreterConfig)
 	return stubSecreter{value: cfg.Value}, nil
 }
@@ -49,12 +49,12 @@ func init() {
 }
 
 func Test_ConstructSecreter_UnknownNameErrors(t *testing.T) {
-	_, err := ConstructSecreter(map[string]interface{}{"name": "not-a-real-secreter"}, config.ErrorMessages{EnumError: "%v %v %v"})
+	_, err := ConstructSecreter(map[string]interface{}{"name": "not-a-real-secreter"}, SecreterDeps{ErrorMessages: config.ErrorMessages{EnumError: "%v %v %v"}})
 	require.Error(t, err)
 }
 
 func Test_ConstructSecreter_ConstructsRegisteredSecreter(t *testing.T) {
-	s, err := ConstructSecreter(map[string]interface{}{"name": "stub-secreter", "value": "hunter2"}, config.ErrorMessages{})
+	s, err := ConstructSecreter(map[string]interface{}{"name": "stub-secreter", "value": "hunter2"}, SecreterDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 	require.NotNil(t, s)
 
@@ -66,7 +66,7 @@ func Test_ConstructSecreter_ConstructsRegisteredSecreter(t *testing.T) {
 func Test_ConstructSecreter_ReplacesEnvInRawConfig(t *testing.T) {
 	t.Setenv("STUB_SECRETER_VALUE", "from-env")
 
-	s, err := ConstructSecreter(map[string]interface{}{"name": "stub-secreter", "value": "env.STUB_SECRETER_VALUE"}, config.ErrorMessages{})
+	s, err := ConstructSecreter(map[string]interface{}{"name": "stub-secreter", "value": "env.STUB_SECRETER_VALUE"}, SecreterDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 
 	val, err := s.Lookup("anything")

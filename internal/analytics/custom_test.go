@@ -75,7 +75,7 @@ func Test_Custom_RecordsEvents(t *testing.T) {
 	msgs := config.DefaultConfig().Error.Messages
 	out := filepath.Join(t.TempDir(), "events.txt")
 
-	a, err := CustomRegistration{}.Initialize(testCustomConfig(t, workingScript, map[string]interface{}{"path": out}), nil, msgs)
+	a, err := CustomRegistration{}.Initialize(testCustomConfig(t, workingScript, map[string]interface{}{"path": out}), analytics.AnalyticsDeps{ErrorMessages: msgs})
 	require.NoError(t, err)
 
 	ctx := pkg.BackgroundContext()
@@ -99,7 +99,7 @@ func Test_Custom_BatchesEvents(t *testing.T) {
 	cfg.Batch.MaxSize = 100
 	cfg.Batch.MaxAge = 600
 
-	a, err := CustomRegistration{}.Initialize(cfg, nil, msgs)
+	a, err := CustomRegistration{}.Initialize(cfg, analytics.AnalyticsDeps{ErrorMessages: msgs})
 	require.NoError(t, err)
 
 	ctx := pkg.BackgroundContext()
@@ -130,7 +130,7 @@ func Test_Custom_FromFile(t *testing.T) {
 	cfg.Params = map[string]interface{}{"path": out}
 	cfg.Batch.MaxSize = 1
 
-	a, err := CustomRegistration{}.Initialize(cfg, nil, msgs)
+	a, err := CustomRegistration{}.Initialize(cfg, analytics.AnalyticsDeps{ErrorMessages: msgs})
 	require.NoError(t, err)
 
 	ctx := pkg.BackgroundContext()
@@ -180,7 +180,7 @@ func Test_Custom_InvalidConfigurations(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, err := CustomRegistration{}.Initialize(test.cfg, nil, msgs)
+			_, err := CustomRegistration{}.Initialize(test.cfg, analytics.AnalyticsDeps{ErrorMessages: msgs})
 			require.Error(t, err)
 		})
 	}
@@ -205,7 +205,7 @@ func record(ctx context.Context, events []tilegroxy.AnalyticsEvent, params map[s
 }
 `
 
-	a, err := CustomRegistration{}.Initialize(testCustomConfig(t, failing, nil), nil, msgs)
+	a, err := CustomRegistration{}.Initialize(testCustomConfig(t, failing, nil), analytics.AnalyticsDeps{ErrorMessages: msgs})
 	require.NoError(t, err)
 
 	ctx := pkg.BackgroundContext()

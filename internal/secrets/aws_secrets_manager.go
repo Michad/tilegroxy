@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/Michad/tilegroxy/pkg"
-	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
 
 	"github.com/maypok86/otter"
@@ -69,7 +68,7 @@ func (s AWSSecretsManagerSecreter) Name() string {
 	return "awssecretsmanager"
 }
 
-func (s AWSSecretsManagerSecreter) Initialize(cfgAny any, _ config.ErrorMessages) (secret.Secreter, error) {
+func (s AWSSecretsManagerSecreter) Initialize(cfgAny any, _ secret.SecreterDeps) (secret.Secreter, error) {
 	cfg := cfgAny.(AWSSecretsManagerConfig)
 	if cfg.Separator == "" {
 		cfg.Separator = ":"

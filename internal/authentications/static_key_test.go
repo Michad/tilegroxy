@@ -30,7 +30,7 @@ func Test_StaticKey_TypoedFieldNameErrors(t *testing.T) {
 		"statickey": "mysecret",
 	}
 
-	_, err := authentication.ConstructAuth(rawConfig, config.DefaultConfig().Error.Messages)
+	_, err := authentication.ConstructAuth(rawConfig, authentication.AuthenticationDeps{ErrorMessages: config.DefaultConfig().Error.Messages})
 
 	require.Error(t, err)
 }
@@ -41,7 +41,7 @@ func Test_StaticKey_CorrectFieldNameWorks(t *testing.T) {
 		"key":  "mysecret",
 	}
 
-	auth, err := authentication.ConstructAuth(rawConfig, config.DefaultConfig().Error.Messages)
+	auth, err := authentication.ConstructAuth(rawConfig, authentication.AuthenticationDeps{ErrorMessages: config.DefaultConfig().Error.Messages})
 
 	require.NoError(t, err)
 	require.NotNil(t, auth)

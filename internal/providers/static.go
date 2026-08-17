@@ -20,8 +20,6 @@ import (
 
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/Michad/tilegroxy/pkg"
-	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
@@ -50,13 +48,13 @@ func (s StaticRegistration) Name() string {
 	return "static"
 }
 
-func (s StaticRegistration) Initialize(cfgAny any, _ config.ClientConfig, errorMessages config.ErrorMessages, _ *layer.LayerGroup, _ *datastore.DatastoreRegistry) (layer.Provider, error) {
+func (s StaticRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(StaticConfig)
 	if cfg.Image == "" {
 		if cfg.Color != "" {
 			cfg.Image = images.KeyPrefixColor + cfg.Color
 		} else {
-			return nil, fmt.Errorf(errorMessages.OneOfRequired, []string{"provider.static.image", "provider.static.color"})
+			return nil, fmt.Errorf(deps.ErrorMessages.OneOfRequired, []string{"provider.static.image", "provider.static.color"})
 		}
 	}
 

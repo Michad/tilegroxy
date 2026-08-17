@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -81,7 +82,7 @@ func TestRedisWithContainerHostAndPort(t *testing.T) {
 		HostAndPort: extractHostAndPort(t, endpoint),
 	}
 
-	r, err := RedisRegistration{}.Initialize(cfg, config.ErrorMessages{})
+	r, err := RedisRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 
 	validateSaveAndLookup(t, r)
@@ -103,7 +104,7 @@ func TestRedisWithContainerSingleServersArr(t *testing.T) {
 		Servers: []HostAndPort{extractHostAndPort(t, endpoint)},
 	}
 
-	r, err := RedisRegistration{}.Initialize(cfg, config.ErrorMessages{})
+	r, err := RedisRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 
 	validateSaveAndLookup(t, r)
@@ -130,7 +131,7 @@ func TestRedisWithContainerRing(t *testing.T) {
 		Servers: []HostAndPort{extractHostAndPort(t, endpoint), extractHostAndPort(t, endpoint2)},
 	}
 
-	r, err := RedisRegistration{}.Initialize(cfg, config.ErrorMessages{})
+	r, err := RedisRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 
 	validateSaveAndLookup(t, r)
@@ -153,7 +154,7 @@ func TestRedisWithContainerDiffPrefix(t *testing.T) {
 		KeyPrefix:   "first_",
 	}
 
-	r, err := RedisRegistration{}.Initialize(cfg, config.ErrorMessages{})
+	r, err := RedisRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 
 	config2 := RedisConfig{
@@ -161,7 +162,7 @@ func TestRedisWithContainerDiffPrefix(t *testing.T) {
 		KeyPrefix:   "second_",
 	}
 
-	r2, err := RedisRegistration{}.Initialize(config2, config.ErrorMessages{})
+	r2, err := RedisRegistration{}.Initialize(config2, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 
 	validateSaveAndLookup(t, r)
@@ -184,7 +185,7 @@ func TestRedisWithContainerDiffDb(t *testing.T) {
 		DB:          0,
 	}
 
-	r, err := RedisRegistration{}.Initialize(cfg, config.ErrorMessages{})
+	r, err := RedisRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 
 	config2 := RedisConfig{
@@ -192,7 +193,7 @@ func TestRedisWithContainerDiffDb(t *testing.T) {
 		DB:          1,
 	}
 
-	r2, err := RedisRegistration{}.Initialize(config2, config.ErrorMessages{})
+	r2, err := RedisRegistration{}.Initialize(config2, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 	validateSaveAndLookup(t, r)
 	validateSaveAndLookup(t, r2)

@@ -31,7 +31,6 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/analytics"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
-	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -69,7 +68,7 @@ type recordingRegistration struct {
 func (s recordingRegistration) InitializeConfig() any { return analytics.CommonConfig{} }
 func (s recordingRegistration) Name() string          { return "servertestrecorder" }
 
-func (s recordingRegistration) Initialize(_ any, _ *datastore.DatastoreRegistry, _ config.ErrorMessages) (analytics.Analytics, error) {
+func (s recordingRegistration) Initialize(_ any, _ analytics.AnalyticsDeps) (analytics.Analytics, error) {
 	return s.instance, nil
 }
 
@@ -95,7 +94,7 @@ func setupAnalyticsHandler(t *testing.T, layers []config.LayerConfig, fields []s
 		moduleCfg["fields"] = fields
 	}
 
-	a, err := analytics.ConstructAnalytics(moduleCfg, nil, nil, cfg.Error.Messages)
+	a, err := analytics.ConstructAnalytics(moduleCfg, nil, analytics.AnalyticsDeps{ErrorMessages: cfg.Error.Messages})
 	require.NoError(t, err)
 
 	handler, err := newTileHandler(reloadableEntities{config: &cfg, auth: auth, layerGroup: lg, analytics: a})
@@ -258,7 +257,7 @@ type closeTrackerRegistration struct {
 func (s closeTrackerRegistration) InitializeConfig() any { return analytics.CommonConfig{} }
 func (s closeTrackerRegistration) Name() string          { return "servertestcloser" }
 
-func (s closeTrackerRegistration) Initialize(_ any, _ *datastore.DatastoreRegistry, _ config.ErrorMessages) (analytics.Analytics, error) {
+func (s closeTrackerRegistration) Initialize(_ any, _ analytics.AnalyticsDeps) (analytics.Analytics, error) {
 	return s.instance, nil
 }
 
@@ -276,7 +275,7 @@ func generationFor(t *testing.T) (*config.Config, *entities.Entities) {
 	require.NoError(t, err)
 
 	a, err := analytics.ConstructAnalytics(
-		map[string]interface{}{"name": "servertestcloser"}, nil, nil, cfg.Error.Messages)
+		map[string]interface{}{"name": "servertestcloser"}, nil, analytics.AnalyticsDeps{ErrorMessages: cfg.Error.Messages})
 	require.NoError(t, err)
 
 	return &cfg, &entities.Entities{

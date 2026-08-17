@@ -19,7 +19,6 @@ import (
 
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/Michad/tilegroxy/pkg"
-	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -46,7 +45,7 @@ func makeFallbackProvidersFail() (map[string]interface{}, map[string]interface{}
 
 func Test_Fallback_Validate(t *testing.T) {
 	p, s := makeFallbackProvidersNoFail()
-	f, err := FallbackRegistration{}.Initialize(FallbackConfig{Zoom: "aksfajl", Primary: p, Secondary: s}, config.ClientConfig{}, testErrMessages, nil, nil)
+	f, err := FallbackRegistration{}.Initialize(FallbackConfig{Zoom: "aksfajl", Primary: p, Secondary: s}, layer.ProviderDeps{ErrorMessages: testErrMessages})
 
 	assert.Nil(t, f)
 	require.Error(t, err)
@@ -54,7 +53,7 @@ func Test_Fallback_Validate(t *testing.T) {
 
 func Test_Fallback_ExecuteNoFallback(t *testing.T) {
 	p, s := makeFallbackProvidersNoFail()
-	f, err := FallbackRegistration{}.Initialize(FallbackConfig{Zoom: "1-5", Primary: p, Secondary: s}, config.ClientConfig{}, testErrMessages, nil, nil)
+	f, err := FallbackRegistration{}.Initialize(FallbackConfig{Zoom: "1-5", Primary: p, Secondary: s}, layer.ProviderDeps{ErrorMessages: testErrMessages})
 
 	assert.NotNil(t, f)
 	require.NoError(t, err)
@@ -71,7 +70,7 @@ func Test_Fallback_ExecuteNoFallback(t *testing.T) {
 
 func Test_Fallback_ExecuteZoom(t *testing.T) {
 	p, s := makeFallbackProvidersNoFail()
-	f, err := FallbackRegistration{}.Initialize(FallbackConfig{Zoom: "1-5", Primary: p, Secondary: s}, config.ClientConfig{}, testErrMessages, nil, nil)
+	f, err := FallbackRegistration{}.Initialize(FallbackConfig{Zoom: "1-5", Primary: p, Secondary: s}, layer.ProviderDeps{ErrorMessages: testErrMessages})
 
 	assert.NotNil(t, f)
 	require.NoError(t, err)
@@ -94,7 +93,7 @@ func Test_Fallback_ExecuteBounds(t *testing.T) {
 	b, _ := pkg.TileRequest{LayerName: "layer", Z: 20, X: 23, Y: 32}.GetBounds()
 
 	p, s := makeFallbackProvidersNoFail()
-	f, err := FallbackRegistration{}.Initialize(FallbackConfig{Bounds: *b, Primary: p, Secondary: s}, config.ClientConfig{}, testErrMessages, nil, nil)
+	f, err := FallbackRegistration{}.Initialize(FallbackConfig{Bounds: *b, Primary: p, Secondary: s}, layer.ProviderDeps{ErrorMessages: testErrMessages})
 
 	assert.NotNil(t, f)
 	require.NoError(t, err)
@@ -115,7 +114,7 @@ func Test_Fallback_ExecuteBounds(t *testing.T) {
 
 func Test_Fallback_ExecuteFallback(t *testing.T) {
 	p, s := makeFallbackProvidersFail()
-	f, err := FallbackRegistration{}.Initialize(FallbackConfig{Primary: p, Secondary: s}, config.ClientConfig{}, testErrMessages, nil, nil)
+	f, err := FallbackRegistration{}.Initialize(FallbackConfig{Primary: p, Secondary: s}, layer.ProviderDeps{ErrorMessages: testErrMessages})
 
 	assert.NotNil(t, f)
 	require.NoError(t, err)
@@ -132,19 +131,19 @@ func Test_Fallback_CacheMode(t *testing.T) {
 	p, s := makeFallbackProvidersFail()
 
 	ctx := pkg.BackgroundContext()
-	f, _ := FallbackRegistration{}.Initialize(FallbackConfig{Cache: CacheModeUnlessError, Primary: p, Secondary: s}, config.ClientConfig{}, testErrMessages, nil, nil)
+	f, _ := FallbackRegistration{}.Initialize(FallbackConfig{Cache: CacheModeUnlessError, Primary: p, Secondary: s}, layer.ProviderDeps{ErrorMessages: testErrMessages})
 	img, err := f.GenerateTile(ctx, layer.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 20, X: 1, Y: 1})
 	require.NoError(t, err)
 	assert.True(t, img.ForceSkipCache)
 
 	ctx = pkg.BackgroundContext()
-	f, _ = FallbackRegistration{}.Initialize(FallbackConfig{Cache: CacheModeAlways, Primary: p, Secondary: s}, config.ClientConfig{}, testErrMessages, nil, nil)
+	f, _ = FallbackRegistration{}.Initialize(FallbackConfig{Cache: CacheModeAlways, Primary: p, Secondary: s}, layer.ProviderDeps{ErrorMessages: testErrMessages})
 	img, err = f.GenerateTile(ctx, layer.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 20, X: 1, Y: 1})
 	require.NoError(t, err)
 	assert.False(t, img.ForceSkipCache)
 
 	ctx = pkg.BackgroundContext()
-	f, _ = FallbackRegistration{}.Initialize(FallbackConfig{Cache: CacheModeUnlessFallback, Primary: p, Secondary: s}, config.ClientConfig{}, testErrMessages, nil, nil)
+	f, _ = FallbackRegistration{}.Initialize(FallbackConfig{Cache: CacheModeUnlessFallback, Primary: p, Secondary: s}, layer.ProviderDeps{ErrorMessages: testErrMessages})
 	img, err = f.GenerateTile(ctx, layer.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 20, X: 1, Y: 1})
 	require.NoError(t, err)
 	assert.True(t, img.ForceSkipCache)
@@ -152,37 +151,37 @@ func Test_Fallback_CacheMode(t *testing.T) {
 	p, s = makeFallbackProvidersNoFail()
 
 	ctx = pkg.BackgroundContext()
-	f, _ = FallbackRegistration{}.Initialize(FallbackConfig{Cache: CacheModeUnlessError, Primary: p, Secondary: s}, config.ClientConfig{}, testErrMessages, nil, nil)
+	f, _ = FallbackRegistration{}.Initialize(FallbackConfig{Cache: CacheModeUnlessError, Primary: p, Secondary: s}, layer.ProviderDeps{ErrorMessages: testErrMessages})
 	img, err = f.GenerateTile(ctx, layer.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 20, X: 1, Y: 1})
 	require.NoError(t, err)
 	assert.False(t, img.ForceSkipCache)
 
 	ctx = pkg.BackgroundContext()
-	f, _ = FallbackRegistration{}.Initialize(FallbackConfig{Cache: CacheModeAlways, Primary: p, Secondary: s}, config.ClientConfig{}, testErrMessages, nil, nil)
+	f, _ = FallbackRegistration{}.Initialize(FallbackConfig{Cache: CacheModeAlways, Primary: p, Secondary: s}, layer.ProviderDeps{ErrorMessages: testErrMessages})
 	img, err = f.GenerateTile(ctx, layer.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 20, X: 1, Y: 1})
 	require.NoError(t, err)
 	assert.False(t, img.ForceSkipCache)
 
 	ctx = pkg.BackgroundContext()
-	f, _ = FallbackRegistration{}.Initialize(FallbackConfig{Cache: CacheModeUnlessFallback, Primary: p, Secondary: s}, config.ClientConfig{}, testErrMessages, nil, nil)
+	f, _ = FallbackRegistration{}.Initialize(FallbackConfig{Cache: CacheModeUnlessFallback, Primary: p, Secondary: s}, layer.ProviderDeps{ErrorMessages: testErrMessages})
 	img, err = f.GenerateTile(ctx, layer.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 20, X: 1, Y: 1})
 	require.NoError(t, err)
 	assert.False(t, img.ForceSkipCache)
 
 	ctx = pkg.BackgroundContext()
-	f, _ = FallbackRegistration{}.Initialize(FallbackConfig{Zoom: "1-5", Cache: CacheModeUnlessError, Primary: p, Secondary: s}, config.ClientConfig{}, testErrMessages, nil, nil)
+	f, _ = FallbackRegistration{}.Initialize(FallbackConfig{Zoom: "1-5", Cache: CacheModeUnlessError, Primary: p, Secondary: s}, layer.ProviderDeps{ErrorMessages: testErrMessages})
 	img, err = f.GenerateTile(ctx, layer.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 20, X: 1, Y: 1})
 	require.NoError(t, err)
 	assert.False(t, img.ForceSkipCache)
 
 	ctx = pkg.BackgroundContext()
-	f, _ = FallbackRegistration{}.Initialize(FallbackConfig{Zoom: "1-5", Cache: CacheModeAlways, Primary: p, Secondary: s}, config.ClientConfig{}, testErrMessages, nil, nil)
+	f, _ = FallbackRegistration{}.Initialize(FallbackConfig{Zoom: "1-5", Cache: CacheModeAlways, Primary: p, Secondary: s}, layer.ProviderDeps{ErrorMessages: testErrMessages})
 	img, err = f.GenerateTile(ctx, layer.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 20, X: 1, Y: 1})
 	require.NoError(t, err)
 	assert.False(t, img.ForceSkipCache)
 
 	ctx = pkg.BackgroundContext()
-	f, _ = FallbackRegistration{}.Initialize(FallbackConfig{Zoom: "1-5", Cache: CacheModeUnlessFallback, Primary: p, Secondary: s}, config.ClientConfig{}, testErrMessages, nil, nil)
+	f, _ = FallbackRegistration{}.Initialize(FallbackConfig{Zoom: "1-5", Cache: CacheModeUnlessFallback, Primary: p, Secondary: s}, layer.ProviderDeps{ErrorMessages: testErrMessages})
 	img, err = f.GenerateTile(ctx, layer.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 20, X: 1, Y: 1})
 	require.NoError(t, err)
 	assert.True(t, img.ForceSkipCache)

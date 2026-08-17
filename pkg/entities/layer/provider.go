@@ -39,9 +39,19 @@ type ProviderContext struct {
 	Other          map[string]interface{} // A generic holder in cases where a provider needs extra storage - for instance Blend which needs Context for child providers
 }
 
+// ProviderDeps carries everything a provider is given at construction. New dependencies are added as
+// fields so the Initialize signature stays stable
+type ProviderDeps struct {
+	ClientConfig  config.ClientConfig
+	ErrorMessages config.ErrorMessages
+	// The group the provider belongs to, used by nesting providers to reach sibling layers
+	LayerGroup *LayerGroup
+	Datastores *datastore.DatastoreRegistry
+}
+
 type ProviderRegistration interface {
 	Name() string
-	Initialize(config any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup, datastores *datastore.DatastoreRegistry) (Provider, error)
+	Initialize(config any, deps ProviderDeps) (Provider, error)
 	InitializeConfig() any
 }
 
@@ -71,7 +81,7 @@ func RegisteredProviderNames() []string {
 	return names
 }
 
-func ConstructProvider(rawConfig map[string]interface{}, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup, datastores *datastore.DatastoreRegistry) (Provider, error) {
+func ConstructProvider(rawConfig map[string]interface{}, deps ProviderDeps) (Provider, error) {
 	name, ok := rawConfig["name"].(string)
 
 	if ok {
@@ -82,7 +92,7 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig config.Cli
 			if err != nil {
 				return nil, err
 			}
-			provider, err := reg.Initialize(cfg, clientConfig, errorMessages, layerGroup, datastores)
+			provider, err := reg.Initialize(cfg, deps)
 
 			if err != nil {
 				return nil, err
@@ -93,5 +103,5 @@ func ConstructProvider(rawConfig map[string]interface{}, clientConfig config.Cli
 	}
 
 	nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
-	return nil, fmt.Errorf(errorMessages.EnumError, "provider.name", nameCoerce, RegisteredProviderNames())
+	return nil, fmt.Errorf(deps.ErrorMessages.EnumError, "provider.name", nameCoerce, RegisteredProviderNames())
 }

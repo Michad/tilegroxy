@@ -27,9 +27,15 @@ type Authentication interface {
 	CheckAuthentication(ctx context.Context, req *http.Request) bool
 }
 
+// AuthenticationDeps carries everything an authentication module is given at construction. New
+// dependencies are added as fields so the Initialize signature stays stable
+type AuthenticationDeps struct {
+	ErrorMessages config.ErrorMessages
+}
+
 type AuthenticationRegistration interface {
 	Name() string
-	Initialize(config any, errorMessages config.ErrorMessages) (Authentication, error)
+	Initialize(config any, deps AuthenticationDeps) (Authentication, error)
 	InitializeConfig() any
 }
 
@@ -59,7 +65,7 @@ func RegisteredAuthenticationNames() []string {
 	return names
 }
 
-func ConstructAuth(rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (Authentication, error) {
+func ConstructAuth(rawConfig map[string]interface{}, deps AuthenticationDeps) (Authentication, error) {
 	name, ok := rawConfig["name"].(string)
 
 	if ok {
@@ -70,11 +76,11 @@ func ConstructAuth(rawConfig map[string]interface{}, errorMessages config.ErrorM
 			if err != nil {
 				return nil, err
 			}
-			a, err := reg.Initialize(cfg, errorMessages)
+			a, err := reg.Initialize(cfg, deps)
 			return AuthWrapper{Name: name, Auth: a}, err
 		}
 	}
 
 	nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
-	return nil, fmt.Errorf(errorMessages.EnumError, "authentication.name", nameCoerce, RegisteredAuthenticationNames())
+	return nil, fmt.Errorf(deps.ErrorMessages.EnumError, "authentication.name", nameCoerce, RegisteredAuthenticationNames())
 }

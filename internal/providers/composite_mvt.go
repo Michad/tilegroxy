@@ -25,7 +25,6 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
@@ -54,14 +53,14 @@ func (s CompositeMVTRegistration) Name() string {
 	return "compositemvt"
 }
 
-func (s CompositeMVTRegistration) Initialize(cfgAny any, clientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *layer.LayerGroup, datastores *datastore.DatastoreRegistry) (layer.Provider, error) {
+func (s CompositeMVTRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(CompositeMVTConfig)
 
 	providers := make([]layer.Provider, 0, len(cfg.Providers))
 	errorSlice := make([]error, 0)
 
 	for _, p := range cfg.Providers {
-		provider, err := layer.ConstructProvider(p, clientConfig, errorMessages, layerGroup, datastores)
+		provider, err := layer.ConstructProvider(p, deps)
 		providers = append(providers, provider)
 		errorSlice = append(errorSlice, err)
 	}
@@ -71,7 +70,7 @@ func (s CompositeMVTRegistration) Initialize(cfgAny any, clientConfig config.Cli
 		return nil, errorsFlat
 	}
 
-	return &CompositeMVT{providers: providers, errorMessages: errorMessages}, nil
+	return &CompositeMVT{providers: providers, errorMessages: deps.ErrorMessages}, nil
 }
 
 func (t CompositeMVT) PreAuth(_ context.Context, providerContext layer.ProviderContext) (layer.ProviderContext, error) {

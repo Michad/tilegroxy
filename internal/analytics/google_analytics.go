@@ -28,9 +28,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/analytics"
-	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 )
 
 const (
@@ -79,15 +77,15 @@ func (s GoogleAnalyticsRegistration) Name() string {
 	return "googleanalytics"
 }
 
-func (s GoogleAnalyticsRegistration) Initialize(cfgAny any, _ *datastore.DatastoreRegistry, errorMessages config.ErrorMessages) (analytics.Analytics, error) {
+func (s GoogleAnalyticsRegistration) Initialize(cfgAny any, deps analytics.AnalyticsDeps) (analytics.Analytics, error) {
 	cfg := cfgAny.(GoogleAnalyticsConfig)
 
 	if cfg.MeasurementID == "" {
-		return nil, fmt.Errorf(errorMessages.ParamRequired, "analytics.googleanalytics.measurementid")
+		return nil, fmt.Errorf(deps.ErrorMessages.ParamRequired, "analytics.googleanalytics.measurementid")
 	}
 
 	if cfg.APISecret == "" {
-		return nil, fmt.Errorf(errorMessages.ParamRequired, "analytics.googleanalytics.apisecret")
+		return nil, fmt.Errorf(deps.ErrorMessages.ParamRequired, "analytics.googleanalytics.apisecret")
 	}
 
 	if cfg.EventName == "" {
@@ -102,7 +100,7 @@ func (s GoogleAnalyticsRegistration) Initialize(cfgAny any, _ *datastore.Datasto
 		cfg.Timeout = gaDefaultTimeout
 	}
 
-	batchCfg, err := analytics.ApplyBatchDefaults(cfg.Batch, errorMessages)
+	batchCfg, err := analytics.ApplyBatchDefaults(cfg.Batch, deps.ErrorMessages)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +117,7 @@ func (s GoogleAnalyticsRegistration) Initialize(cfgAny any, _ *datastore.Datasto
 
 	endpoint, err := url.Parse(cfg.Endpoint)
 	if err != nil {
-		return nil, fmt.Errorf(errorMessages.InvalidParam, "analytics.googleanalytics.endpoint", cfg.Endpoint)
+		return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "analytics.googleanalytics.endpoint", cfg.Endpoint)
 	}
 
 	query := endpoint.Query()

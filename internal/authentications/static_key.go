@@ -21,7 +21,6 @@ import (
 	"net/http"
 
 	"github.com/Michad/tilegroxy/pkg"
-	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 )
 
@@ -48,7 +47,7 @@ func (s StaticKeyRegistration) Name() string {
 	return "static key"
 }
 
-func (s StaticKeyRegistration) Initialize(cfgAny any, _ config.ErrorMessages) (authentication.Authentication, error) {
+func (s StaticKeyRegistration) Initialize(cfgAny any, _ authentication.AuthenticationDeps) (authentication.Authentication, error) {
 	cfg := cfgAny.(StaticKeyConfig)
 	if cfg.Key == "" {
 		keyStr := pkg.RandomString()

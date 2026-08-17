@@ -19,19 +19,18 @@ import (
 	"testing"
 
 	"github.com/Michad/tilegroxy/pkg"
-	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func Test_CustomValidate(t *testing.T) {
-	c, err := CustomRegistration{}.Initialize(CustomConfig{}, testClientConfig, testErrMessages, nil, nil)
+	c, err := CustomRegistration{}.Initialize(CustomConfig{}, layer.ProviderDeps{ClientConfig: testClientConfig, ErrorMessages: testErrMessages})
 
 	assert.Nil(t, c)
 	require.Error(t, err)
 
-	c, err = CustomRegistration{}.Initialize(CustomConfig{Script: "package custom"}, testClientConfig, testErrMessages, nil, nil)
+	c, err = CustomRegistration{}.Initialize(CustomConfig{Script: "package custom"}, layer.ProviderDeps{ClientConfig: testClientConfig, ErrorMessages: testErrMessages})
 
 	assert.Nil(t, c)
 	require.Error(t, err)
@@ -56,7 +55,7 @@ func preAuth(ctx tilegroxy.Context, providerContext tilegroxy.ProviderContext, p
 func generateTile(ctx tilegroxy.Context, providerContext tilegroxy.ProviderContext, tileRequest tilegroxy.TileRequest, params map[string]interface{}, clientConfig tilegroxy.ClientConfig, errorMessages tilegroxy.ErrorMessages ) (*tilegroxy.Image, error ) {
 	return &tilegroxy.Image{Content:[]byte{0x01,0x02}}, nil
 }
-	`}, config.ClientConfig{}, testErrMessages, nil, nil)
+	`}, layer.ProviderDeps{ErrorMessages: testErrMessages})
 
 	if err != nil {
 		fmt.Println(err)
