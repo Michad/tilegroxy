@@ -343,8 +343,8 @@ func ListenAndServe(config *config.Config, ent *entities.Entities, reloadPtr *fu
 	return runShutdown(context.Background(), newShutdownBudget(config), buildShutdownPhases(shutdownDeps{
 		healthMutex:    &healthMutex,
 		draining:       &draining,
-		healthShutdown: healthShutdown,
-		healthDrain:    healthDrain,
+		healthShutdown: &healthShutdown,
+		healthDrain:    &healthDrain,
 		srv:            srv,
 		registry:       registry,
 		otelShutdown:   otelShutdown,
@@ -358,8 +358,8 @@ func ListenAndServe(config *config.Config, ent *entities.Entities, reloadPtr *fu
 type shutdownDeps struct {
 	healthMutex    *sync.Mutex
 	draining       *bool
-	healthShutdown func(context.Context) error
-	healthDrain    func()
+	healthShutdown *func(context.Context) error
+	healthDrain    *func()
 	srv            *http.Server
 	registry       *generationRegistry
 	otelShutdown   func(context.Context) error
@@ -368,9 +368,11 @@ type shutdownDeps struct {
 }
 
 func buildShutdownPhases(d shutdownDeps) shutdownPhases {
+	// Read under the mutex healthReloader writes them under, so a reload landing as shutdown
+	// starts can't be observed half-applied
 	d.healthMutex.Lock()
-	finalHealthShutdown := d.healthShutdown
-	finalHealthDrain := d.healthDrain
+	finalHealthShutdown := *d.healthShutdown
+	finalHealthDrain := *d.healthDrain
 	d.healthMutex.Unlock()
 
 	return shutdownPhases{
