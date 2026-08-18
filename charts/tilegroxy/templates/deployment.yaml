@@ -129,6 +129,12 @@ spec:
               port: health
             {{- toYaml .Values.readinessProbe | nindent 12 }}
           {{- end }}
+          {{- if .Values.preStop.enabled }}
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", "{{ .Values.preStop.sleepSeconds }}"]
+          {{- end }}
           volumeMounts:
             {{- include "tilegroxy.volumeMounts" . | nindent 12 }}
           {{- with .Values.securityContext }}

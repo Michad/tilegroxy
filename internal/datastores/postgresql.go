@@ -74,7 +74,7 @@ func (s PostgresqlWrapperRegistration) Name() string {
 }
 
 //nolint:mnd
-func (s PostgresqlWrapperRegistration) Initialize(cfgAny any, deps datastore.DatastoreDeps) (datastore.DatastoreWrapper, error) {
+func (s PostgresqlWrapperRegistration) Initialize(cfgAny any, _ datastore.DatastoreDeps) (datastore.DatastoreWrapper, error) {
 	cfg := cfgAny.(PostgresqlWrapperConfig)
 
 	dbCfg, err := pgxpool.ParseConfig("")

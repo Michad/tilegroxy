@@ -44,12 +44,13 @@ func (h slogContextHandler) Handle(ctx context.Context, r slog.Record) error {
 	return h.Handler.Handle(ctx, r)
 }
 
-func makeLogFileWriter(path string, alsoStdOut bool) (io.Writer, error) {
+func makeLogFileWriter(path string, alsoStdOut bool) (io.Writer, func() error, error) {
 	logFile, err := os.OpenFile(filepath.Clean(path), os.O_CREATE|os.O_APPEND|os.O_RDWR, 0600)
 
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+
 	var out io.Writer
 
 	if alsoStdOut {
@@ -57,26 +58,19 @@ func makeLogFileWriter(path string, alsoStdOut bool) (io.Writer, error) {
 	} else {
 		out = logFile
 	}
-	return out, nil
+
+	return out, logFile.Close, nil
 }
 
-func configureMainLogging(cfg *config.Config) error {
+func configureMainLogging(cfg *config.Config) (func() error, error) {
+	noopClose := func() error { return nil }
+
 	if !cfg.Logging.Main.Console && len(cfg.Logging.Main.Path) == 0 {
 		slog.SetLogLoggerLevel(slog.LevelError + 1)
-		return nil
+		return noopClose, nil
 	}
 
-	var err error
-	var out io.Writer
-	if len(cfg.Logging.Main.Path) > 0 {
-		out, err = makeLogFileWriter(cfg.Logging.Main.Path, cfg.Logging.Main.Console)
-		if err != nil {
-			return err
-		}
-	} else {
-		out = os.Stdout
-	}
-
+	// Validate format and level before opening files to avoid leaks on validation errors.
 	var level slog.Level
 	custLogLevel, ok := config.CustomLogLevel[strings.ToLower(cfg.Logging.Main.Level)]
 
@@ -84,10 +78,29 @@ func configureMainLogging(cfg *config.Config) error {
 		level = custLogLevel
 	} else {
 		err := level.UnmarshalText([]byte(cfg.Logging.Main.Level))
-
 		if err != nil {
-			return err
+			return nil, err
 		}
+	}
+
+	switch cfg.Logging.Main.Format {
+	case config.MainFormatPlain, config.MainFormatJSON:
+		// Valid formats; continue to file opening and handler setup.
+	default:
+		return nil, fmt.Errorf(cfg.Error.Messages.InvalidParam, "logging.main.format", cfg.Logging.Main.Format)
+	}
+
+	var err error
+	var out io.Writer
+	closeLog := noopClose
+
+	if len(cfg.Logging.Main.Path) > 0 {
+		out, closeLog, err = makeLogFileWriter(cfg.Logging.Main.Path, cfg.Logging.Main.Console)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		out = os.Stdout
 	}
 
 	opt := slog.HandlerOptions{
@@ -111,8 +124,6 @@ func configureMainLogging(cfg *config.Config) error {
 		if cfg.Logging.Main.Request == "auto" {
 			cfg.Logging.Main.Request = "true"
 		}
-	default:
-		return fmt.Errorf(cfg.Error.Messages.InvalidParam, "logging.main.format", cfg.Logging.Main.Format)
 	}
 
 	var attr []string
@@ -142,31 +153,40 @@ func configureMainLogging(cfg *config.Config) error {
 
 	slog.SetDefault(slog.New(logHandler))
 
-	return nil
+	return closeLog, nil
 }
 
-func configureAccessLogging(cfg config.AccessConfig, errorMessages config.ErrorMessages, rootHandler http.Handler) (http.Handler, error) {
+func configureAccessLogging(cfg config.AccessConfig, errorMessages config.ErrorMessages, rootHandler http.Handler) (http.Handler, func() error, error) {
+	closeLog := func() error { return nil }
+
 	if cfg.Console || len(cfg.Path) > 0 {
+		// Pick the handler before opening anything, so an invalid format can't strand a file
+		var wrap func(io.Writer, http.Handler) http.Handler
+
+		switch cfg.Format {
+		case config.AccessFormatCommon:
+			wrap = handlers.LoggingHandler
+		case config.AccessFormatCombined:
+			wrap = handlers.CombinedLoggingHandler
+		default:
+			return nil, closeLog, fmt.Errorf(errorMessages.InvalidParam, "logging.access.format", cfg.Format)
+		}
+
 		var out io.Writer
 		var err error
+
 		if len(cfg.Path) > 0 {
-			out, err = makeLogFileWriter(cfg.Path, cfg.Console)
+			out, closeLog, err = makeLogFileWriter(cfg.Path, cfg.Console)
 
 			if err != nil {
-				return nil, err
+				return nil, closeLog, err
 			}
 		} else {
 			out = os.Stdout
 		}
 
-		switch cfg.Format {
-		case config.AccessFormatCommon:
-			rootHandler = handlers.LoggingHandler(out, rootHandler)
-		case config.AccessFormatCombined:
-			rootHandler = handlers.CombinedLoggingHandler(out, rootHandler)
-		default:
-			return nil, fmt.Errorf(errorMessages.InvalidParam, "logging.access.format", cfg.Format)
-		}
+		rootHandler = wrap(out, rootHandler)
 	}
-	return rootHandler, nil
+
+	return rootHandler, closeLog, nil
 }

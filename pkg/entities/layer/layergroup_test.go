@@ -15,11 +15,72 @@
 package layer
 
 import (
+	"context"
 	"testing"
 
+	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+type closableProvider struct {
+	closed bool
+}
+
+func (p *closableProvider) Close(_ context.Context) error {
+	p.closed = true
+	return nil
+}
+
+func (p *closableProvider) PreAuth(_ context.Context, _ ProviderContext) (ProviderContext, error) {
+	return ProviderContext{}, nil
+}
+
+func (p *closableProvider) GenerateTile(_ context.Context, _ ProviderContext, _ pkg.TileRequest) (*pkg.Image, error) {
+	return nil, nil
+}
+
+func Test_LayerGroupClosesProviders(t *testing.T) {
+	prov := &closableProvider{}
+	lg := &LayerGroup{layers: []*Layer{{Provider: prov}}}
+
+	require.NoError(t, lg.Close(context.Background()))
+
+	// A custom provider whose script defines a close hook is the case this exists for.
+	assert.True(t, prov.closed)
+}
+
+func Test_LayerGroupCloseIgnoresPlainProviders(t *testing.T) {
+	// Most providers hold nothing and must not be required to implement Close.
+	lg := &LayerGroup{layers: []*Layer{{Provider: nil}}}
+
+	require.NoError(t, lg.Close(context.Background()))
+}
+
+func Test_LayerGroupCloseHandlesNilLayerGroup(t *testing.T) {
+	var lg *LayerGroup
+
+	require.NoError(t, lg.Close(context.Background()))
+}
+
+func Test_LayerGroupCloseSkipsNilLayers(t *testing.T) {
+	lg := &LayerGroup{layers: []*Layer{nil}}
+
+	require.NoError(t, lg.Close(context.Background()))
+}
+
+// ProviderWrapper wraps every constructed provider for tracing, so Close has to see through it to
+// the real provider or nothing nested inside blend/fallback/ref would ever be released.
+func Test_LayerGroupClosesProviderThroughWrapper(t *testing.T) {
+	prov := &closableProvider{}
+	wrapped := ProviderWrapper{Name: "test", Provider: prov}
+	lg := &LayerGroup{layers: []*Layer{{Provider: wrapped}}}
+
+	require.NoError(t, lg.Close(context.Background()))
+
+	assert.True(t, prov.closed)
+}
 
 func refProvider(target string) map[string]any {
 	return map[string]any{"name": "ref", "layer": target}

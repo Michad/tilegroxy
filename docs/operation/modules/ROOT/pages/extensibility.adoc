@@ -33,6 +33,15 @@ The `preAuth` function is responsible for authenticating outgoing requests and r
 
 The `generateTile` function is the main function which returns an image for a given tile request. You should never trigger a call to `preAuth` yourself from `generateTile` (instead return an `AuthError`) to prevent excessive calls to the upstream provider from multiple tiles.
 
+You can optionally also define a `close` function:
+
+[,go]
+----
+func close(tilegroxy.Context) error
+----
+
+This is for releasing any resources your provider holds, such as a database handle or a background goroutine. When present, it's called with a context carrying the shutdown deadline, both when tilegroxy shuts down and when the layer is torn down as part of a config hot reload.
+
 The following types are available for custom providers:
 
 |===
@@ -102,6 +111,14 @@ The method how tokens are extracted from the request is configurable. The follow
 
 No custom types or methods are available.
 
+You can optionally also define a `close` function:
+
+----
+func close(context.Context) error
+----
+
+This is for releasing any resources your authentication scheme holds. When present, it's called with a context carrying the shutdown deadline, both when tilegroxy shuts down and when authentication is torn down as part of a config hot reload.
+
 === Custom Analytics
 
 A custom xref:configuration/analytics/index.adoc[analytics] module records usage events to whatever destination you need.  Example custom analytics modules can be found within link:../examples/analytics/[examples/analytics].  The package must be "custom" and you must include the following function:
@@ -115,6 +132,14 @@ The arguments are the context, the batch of events, the parameters included unde
 Unlike providers and authentication, `record` is called once per *batch* of events rather than once per request.  This keeps the interpretation overhead described above off the per-tile path and means the batching parameters control how often your code runs.
 
 Returning an error causes the batch to be logged as failed and discarded. It never affects the tile responses that produced those events.
+
+You can optionally also define a `close` function:
+
+----
+func close(tilegroxy.Context) error
+----
+
+This is for releasing any resources your analytics module holds beyond the batching tilegroxy already manages for you. When present, it's called with a context carrying the shutdown deadline, both when tilegroxy shuts down and when analytics is torn down as part of a config hot reload. It runs after the final batch has been flushed.
 
 == Using tilegroxy as a library
 

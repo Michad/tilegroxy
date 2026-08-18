@@ -16,6 +16,7 @@ package providers
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"reflect"
 
@@ -40,6 +41,7 @@ type Custom struct {
 	interp           *interp.Interpreter
 	preAuthFunc      func(context.Context, layer.ProviderContext, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (layer.ProviderContext, error)
 	generateTileFunc func(context.Context, layer.ProviderContext, pkg.TileRequest, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (*pkg.Image, error)
+	closeFunc        func(context.Context) error
 }
 
 func init() {
@@ -118,7 +120,17 @@ func (s CustomRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (lay
 
 	generateTileFunc := generateTileVal.Interface().(func(context.Context, layer.ProviderContext, pkg.TileRequest, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (*pkg.Image, error))
 
-	return &Custom{cfg, deps.ClientConfig, deps.ErrorMessages, i, preAuthFunc, generateTileFunc}, nil
+	// close is optional so scripts written before it existed keep working unchanged.
+	var closeFunc func(context.Context) error
+	if closeVal, closeErr := i.Eval("custom.close"); closeErr == nil {
+		fn, ok := closeVal.Interface().(func(context.Context) error)
+		if !ok {
+			return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "provider.custom.close", "close function has the wrong signature")
+		}
+		closeFunc = fn
+	}
+
+	return &Custom{cfg, deps.ClientConfig, deps.ErrorMessages, i, preAuthFunc, generateTileFunc, closeFunc}, nil
 }
 
 func (t Custom) PreAuth(ctx context.Context, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
@@ -127,4 +139,14 @@ func (t Custom) PreAuth(ctx context.Context, providerContext layer.ProviderConte
 
 func (t Custom) GenerateTile(ctx context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	return t.generateTileFunc(ctx, providerContext, tileRequest, t.Params, t.clientConfig, t.errorMessages)
+}
+
+// Close calls the script's close function when it defines one. The symbol is optional so scripts written
+// before this existed keep working
+func (t Custom) Close(ctx context.Context) error {
+	if t.closeFunc == nil {
+		return nil
+	}
+
+	return t.closeFunc(ctx)
 }

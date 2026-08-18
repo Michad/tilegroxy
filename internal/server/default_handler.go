@@ -33,11 +33,14 @@ type reloadableEntities struct {
 	// The full set this generation came from, retained so the previous generation can be released
 	// after a reload swaps it out.
 	all *entities.Entities
+	// The refcounted generation this projection belongs to. Requests hold it for their duration so
+	// a reload cannot release entities out from under them.
+	gen *generation
 }
 
 // newReloadableEntities projects a constructed set of entities into the subset the handlers use.
-func newReloadableEntities(cfg *config.Config, ent *entities.Entities) reloadableEntities {
-	r := reloadableEntities{config: cfg, all: ent}
+func newReloadableEntities(cfg *config.Config, ent *entities.Entities, gen *generation) reloadableEntities {
+	r := reloadableEntities{config: cfg, all: ent, gen: gen}
 
 	if ent != nil {
 		r.layerGroup = ent.LayerGroup

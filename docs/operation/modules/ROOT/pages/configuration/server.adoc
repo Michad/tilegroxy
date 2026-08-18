@@ -57,6 +57,18 @@ Configuration options:
 | No
 | false
 
+| ShutdownTimeout
+| How long (in seconds) the whole shutdown sequence gets. See xref:reloading.adoc[Shutdown]
+| uint
+| No
+| Timeout plus DrainDelay
+
+| DrainDelay
+| How long (in seconds) to report unready before draining requests. See xref:reloading.adoc[Shutdown]
+| uint
+| No
+| 5
+
 | Encrypt
 | Configuration for enabling TLS (HTTPS). Don't specify to operate without encryption (the default)
 | xref:configuration/encryption.adoc[Encryption]
@@ -96,5 +108,10 @@ The following can be supplied as environment variables:
 
 | Gzip
 | SERVER_GZIP
-|===
 
+| ShutdownTimeout
+| SERVER_SHUTDOWNTIMEOUT
+
+| DrainDelay
+| SERVER_DRAINDELAY
+|===

@@ -111,7 +111,9 @@ func staticLayer(id string, skipAnalytics bool) config.LayerConfig {
 	}
 }
 
-func doTileRequest(t *testing.T, handler *tileHandler, layerName, z, x, y string) *http.Response {
+// doTileRequest runs one tile request and returns just the status code. The body is closed here
+// rather than handed back, since no caller reads it
+func doTileRequest(t *testing.T, handler *tileHandler, layerName, z, x, y string) int {
 	t.Helper()
 
 	req := httptest.NewRequest(http.MethodGet, "http://example.com/tiles/"+layerName+"/"+z+"/"+x+"/"+y, nil).
@@ -125,16 +127,16 @@ func doTileRequest(t *testing.T, handler *tileHandler, layerName, z, x, y string
 	handler.ServeHTTP(w, req)
 
 	resp := w.Result()
-	t.Cleanup(func() { require.NoError(t, resp.Body.Close()) })
+	require.NoError(t, resp.Body.Close())
 
-	return resp
+	return resp.StatusCode
 }
 
 func Test_TileHandler_Analytics_SuccessEmitsEvent(t *testing.T) {
 	handler, rec := setupAnalyticsHandler(t, []config.LayerConfig{staticLayer("main", false)}, nil)
 
-	resp := doTileRequest(t, handler, "main", "8", "12", "32")
-	require.Equal(t, http.StatusOK, resp.StatusCode)
+	status := doTileRequest(t, handler, "main", "8", "12", "32")
+	require.Equal(t, http.StatusOK, status)
 
 	events := rec.snapshot()
 	require.Len(t, events, 1)
@@ -151,8 +153,8 @@ func Test_TileHandler_Analytics_SuccessEmitsEvent(t *testing.T) {
 func Test_TileHandler_Analytics_SkipAnalyticsLayer(t *testing.T) {
 	handler, rec := setupAnalyticsHandler(t, []config.LayerConfig{staticLayer("quiet", true)}, nil)
 
-	resp := doTileRequest(t, handler, "quiet", "8", "12", "32")
-	require.Equal(t, http.StatusOK, resp.StatusCode)
+	status := doTileRequest(t, handler, "quiet", "8", "12", "32")
+	require.Equal(t, http.StatusOK, status)
 
 	assert.Empty(t, rec.snapshot(), "a layer with skipAnalytics set must not produce events")
 }
@@ -161,8 +163,8 @@ func Test_TileHandler_Analytics_NotEmittedOnError(t *testing.T) {
 	handler, rec := setupAnalyticsHandler(t, []config.LayerConfig{staticLayer("main", false)}, nil)
 
 	// A layer that doesn't exist fails before a tile is produced.
-	resp := doTileRequest(t, handler, "nonexistent", "8", "12", "32")
-	require.NotEqual(t, http.StatusOK, resp.StatusCode)
+	status := doTileRequest(t, handler, "nonexistent", "8", "12", "32")
+	require.NotEqual(t, http.StatusOK, status)
 
 	assert.Empty(t, rec.snapshot(), "analytics reflects successful usage only")
 }
@@ -170,8 +172,8 @@ func Test_TileHandler_Analytics_NotEmittedOnError(t *testing.T) {
 func Test_TileHandler_Analytics_NotEmittedOnBadCoordinates(t *testing.T) {
 	handler, rec := setupAnalyticsHandler(t, []config.LayerConfig{staticLayer("main", false)}, nil)
 
-	resp := doTileRequest(t, handler, "main", "8", "notanumber", "32")
-	require.NotEqual(t, http.StatusOK, resp.StatusCode)
+	status := doTileRequest(t, handler, "main", "8", "notanumber", "32")
+	require.NotEqual(t, http.StatusOK, status)
 
 	assert.Empty(t, rec.snapshot())
 }
@@ -182,8 +184,8 @@ func Test_TileHandler_Analytics_ResolvesConfiguredFields(t *testing.T) {
 		[]string{"contenttype", "bytes", "layername"},
 	)
 
-	resp := doTileRequest(t, handler, "main", "8", "12", "32")
-	require.Equal(t, http.StatusOK, resp.StatusCode)
+	status := doTileRequest(t, handler, "main", "8", "12", "32")
+	require.Equal(t, http.StatusOK, status)
 
 	events := rec.snapshot()
 	require.Len(t, events, 1)
@@ -207,8 +209,8 @@ func Test_TileHandler_Analytics_PatternLayerRecordsID(t *testing.T) {
 
 	handler, rec := setupAnalyticsHandler(t, []config.LayerConfig{layerCfg}, []string{"layername"})
 
-	resp := doTileRequest(t, handler, "tile-red", "8", "12", "32")
-	require.Equal(t, http.StatusOK, resp.StatusCode)
+	status := doTileRequest(t, handler, "tile-red", "8", "12", "32")
+	require.Equal(t, http.StatusOK, status)
 
 	events := rec.snapshot()
 	require.Len(t, events, 1)
@@ -233,8 +235,8 @@ func Test_TileHandler_Analytics_NoModulesConfigured(t *testing.T) {
 	handler, err := newTileHandler(reloadableEntities{config: &cfg, auth: auth, layerGroup: lg})
 	require.NoError(t, err)
 
-	resp := doTileRequest(t, &handler, "main", "8", "12", "32")
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	status := doTileRequest(t, &handler, "main", "8", "12", "32")
+	assert.Equal(t, http.StatusOK, status)
 }
 
 // closeTracker records how many times a generation was released so a reload can be checked for both
@@ -290,22 +292,24 @@ func Test_TileHandler_ReloadReleasesOldGenerationOnce(t *testing.T) {
 	oldTracker := &closeTracker{}
 	newTracker := &closeTracker{}
 
+	registry := newGenerationRegistry()
+
 	analytics.RegisterAnalytics(closeTrackerRegistration{instance: oldTracker})
 	oldCfg, oldEnt := generationFor(t)
+	oldGen := newGeneration(oldEnt)
+	registry.add(oldGen)
 
-	// Server.Timeout drives the grace period before the old generation is released, so keep it at zero
-	// to avoid the test waiting on it.
-	oldCfg.Server.Timeout = 0
-
-	handler, err := newTileHandler(newReloadableEntities(oldCfg, oldEnt))
+	handler, err := newTileHandler(newReloadableEntities(oldCfg, oldEnt, oldGen))
 	require.NoError(t, err)
 
 	analytics.RegisterAnalytics(closeTrackerRegistration{instance: newTracker})
 	newCfg, newEnt := generationFor(t)
-	newCfg.Server.Timeout = 0
+	newGen := newGeneration(newEnt)
+	registry.add(newGen)
 
-	handler.reloadEntities(newReloadableEntities(newCfg, newEnt))
+	handler.reloadEntities(newReloadableEntities(newCfg, newEnt, newGen))
 
+	// No in-flight requests hold the old generation, so it releases once markClosing's floor elapses.
 	assert.Eventually(t, func() bool {
 		return oldTracker.closes.Load() == 1
 	}, 5*time.Second, 20*time.Millisecond, "the superseded generation should be released exactly once")

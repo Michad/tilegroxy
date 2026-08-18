@@ -15,6 +15,7 @@
 package providers
 
 import (
+	"context"
 	"testing"
 
 	"github.com/Michad/tilegroxy/internal/images"
@@ -23,6 +24,20 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// Fallback holds Primary/Secondary directly, outside any layer, so they're unreachable through
+// LayerGroup.Close unless Fallback forwards to them itself.
+func Test_FallbackCloseClosesChildProviders(t *testing.T) {
+	primary := &closableProvider{}
+	secondary := &closableProvider{}
+	// Wrapped to match production, where ConstructProvider hands Fallback wrapped children
+	f := &Fallback{Primary: layer.ProviderWrapper{Name: "primary", Provider: primary}, Secondary: secondary}
+
+	require.NoError(t, f.Close(context.Background()))
+
+	assert.True(t, primary.closed)
+	assert.True(t, secondary.closed)
+}
 
 func makeFallbackProvidersNoFail() (map[string]interface{}, map[string]interface{}) {
 	return map[string]interface{}{

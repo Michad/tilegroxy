@@ -25,6 +25,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/Michad/tilegroxy/pkg/entities/datastore"
+	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
@@ -336,6 +337,29 @@ func (*LayerGroup) checkPermission(ctx context.Context, l *Layer, tileRequest pk
 		}
 	}
 	return nil
+}
+
+// Close releases any layer provider holding resources, most notably custom providers whose operator
+// script defines a close hook. Providers
+// aren't required to implement Closer, so most layers are a no-op. Nesting providers (blend,
+// fallback) forward to their own child providers via their own Close methods; ref deliberately
+// doesn't, since it references another layer by name rather than owning a provider.
+func (lg *LayerGroup) Close(ctx context.Context) error {
+	if lg == nil {
+		return nil
+	}
+
+	errs := make([]error, 0, len(lg.layers))
+
+	for _, l := range lg.layers {
+		if l == nil {
+			continue
+		}
+
+		errs = append(errs, lifecycle.CloseIfCloser(ctx, l.Provider))
+	}
+
+	return errors.Join(errs...)
 }
 
 func (lg *LayerGroup) RenderTileNoCache(ctx context.Context, tileRequest pkg.TileRequest) (*pkg.Image, error) {

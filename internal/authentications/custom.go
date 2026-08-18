@@ -52,6 +52,7 @@ type Custom struct {
 	// Only used when cache is used to avoid multiple calls to the validation func for the same token at once
 	locks          keymutex.KeyMutex
 	validationFunc func(string) (bool, time.Time, string, []string)
+	closeFunc      func(context.Context) error
 }
 
 type ValidationResult struct {
@@ -182,12 +183,22 @@ func (s CustomRegistration) Initialize(cfgAny any, deps authentication.Authentic
 		return nil, fmt.Errorf(deps.ErrorMessages.ScriptError, "auth.custom", validationVal)
 	}
 
+	// close is optional so scripts written before it existed keep working unchanged.
+	var closeFunc func(context.Context) error
+	if closeVal, closeErr := i.Eval("custom.close"); closeErr == nil {
+		fn, ok := closeVal.Interface().(func(context.Context) error)
+		if !ok {
+			return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "auth.custom.close", "close function has the wrong signature")
+		}
+		closeFunc = fn
+	}
+
 	if cfg.CacheSize == 0 {
 		cfg.CacheSize = 100
 	}
 
 	if cfg.CacheSize < 0 {
-		return &Custom{cfg, nil, nil, validationFunc}, nil
+		return &Custom{cfg, nil, nil, validationFunc, closeFunc}, nil
 	}
 
 	lock := keymutex.NewHashed(-1)
@@ -197,7 +208,7 @@ func (s CustomRegistration) Initialize(cfgAny any, deps authentication.Authentic
 		return nil, err
 	}
 
-	return &Custom{cfg, &cache, lock, validationFunc}, nil
+	return &Custom{cfg, &cache, lock, validationFunc, closeFunc}, nil
 }
 
 func (c Custom) CheckAuthentication(ctx context.Context, req *http.Request) bool {
@@ -251,4 +262,14 @@ func (c Custom) CheckAuthentication(ctx context.Context, req *http.Request) bool
 	}
 
 	return false
+}
+
+// Close calls the script's close function when it defines one. The symbol is optional so scripts written
+// before this existed keep working
+func (c Custom) Close(ctx context.Context) error {
+	if c.closeFunc == nil {
+		return nil
+	}
+
+	return c.closeFunc(ctx)
 }

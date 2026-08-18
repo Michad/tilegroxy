@@ -16,12 +16,14 @@ package providers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
+	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
 )
 
 type CacheMode string
@@ -154,4 +156,13 @@ func (t Fallback) GenerateTile(ctx context.Context, providerContext layer.Provid
 	}
 
 	return img, err
+}
+
+// Close releases both child providers. Fallback holds them directly rather than through a Layer,
+// so they're unreachable from LayerGroup.Close without this.
+func (t Fallback) Close(ctx context.Context) error {
+	return errors.Join(
+		lifecycle.CloseIfCloser(ctx, t.Primary),
+		lifecycle.CloseIfCloser(ctx, t.Secondary),
+	)
 }

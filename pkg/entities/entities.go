@@ -40,12 +40,21 @@ type Entities struct {
 	Datastores *datastore.DatastoreRegistry
 }
 
-// Close releases every entity holding resources. Analytics is closed first so batched events can still be
-// written through the datastore connections they depend on
+// Close releases every entity holding resources. Providers close first: they hold nothing the analytics
+// flush depends on, and a custom provider's close hook should get the deadline while there's still
+// budget. Analytics closes next so batched events can still be written through the datastore
+// connections they depend on
 func (e *Entities) Close(ctx context.Context) error {
 	if e == nil {
 		return nil
 	}
+
+	// Providers and auth go first: neither holds anything the analytics flush needs, and a custom
+	// auth script may own resources of its own
+	preFlushErr := errors.Join(
+		e.LayerGroup.Close(ctx),
+		lifecycle.CloseIfCloser(ctx, e.Auth),
+	)
 
 	// Sequenced instead of joined in one call because errors.Join evaluates its arguments eagerly. If
 	// analytics times out its workers may still be flushing, and closing the pools they write through
@@ -56,10 +65,11 @@ func (e *Entities) Close(ctx context.Context) error {
 
 	if analyticsErr != nil {
 		slog.WarnContext(ctx, "Leaving datastore connections open because analytics did not finish flushing: "+analyticsErr.Error())
-		return errors.Join(analyticsErr, lifecycle.CloseIfCloser(ctx, e.Cache))
+		return errors.Join(preFlushErr, analyticsErr, lifecycle.CloseIfCloser(ctx, e.Cache))
 	}
 
 	return errors.Join(
+		preFlushErr,
 		lifecycle.CloseIfCloser(ctx, e.Cache),
 		e.Datastores.Close(ctx),
 	)

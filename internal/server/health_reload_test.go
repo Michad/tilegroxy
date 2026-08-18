@@ -290,6 +290,40 @@ func Test_ListenAndServe_FailedHealthRebuildRecovers(t *testing.T) {
 	waitForHealthStatus(t, healthPort, "ok")
 }
 
+// If shutdown has already flipped draining before a concurrent reload lands, the rebuilt health
+// subsystem must come up already reporting 503, not ready - otherwise the reload reopens the
+// readiness window shutdown just closed. Asserted by hitting the rebuilt /health endpoint rather
+// than spying on newHealthDrain being called.
+func Test_healthReloader_RebuildsAlreadyDrainingWhenShutdownStarted(t *testing.T) {
+	cfg, healthPort := healthTestConfig(t)
+
+	lg, err := layer.ConstructLayerGroup(cfg, nil, nil, nil)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	var healthMutex sync.Mutex
+	var healthShutdown func(context.Context) error
+	var healthDrain func()
+	draining := true
+
+	require.NoError(t, healthReloader(ctx, &cfg, entitiesFor(lg), &healthMutex, &healthShutdown, &healthDrain, &draining))
+	t.Cleanup(func() {
+		if healthShutdown != nil {
+			_ = healthShutdown(context.Background())
+		}
+	})
+
+	waitForPort(t, healthPort)
+
+	resp, err := http.DefaultClient.Get("http://127.0.0.1:" + strconv.Itoa(healthPort) + "/health")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusServiceUnavailable, resp.StatusCode,
+		"a reload landing after shutdown started draining must not resurrect readiness")
+}
+
 // After a failed rebuild the shutdown pointer must not still reference the previous generation's
 // already-invoked shutdown func, which ListenAndServe's final shutdown would call a second time.
 func Test_healthReloader_FailedRebuildDoesNotRetainStalePointer(t *testing.T) {
@@ -308,13 +342,15 @@ func Test_healthReloader_FailedRebuildDoesNotRetainStalePointer(t *testing.T) {
 		return nil
 	}
 	healthShutdown := oldShutdown
+	var healthDrain func()
+	draining := false
 
 	badCfg := cfg
 	badCfg.Server.Health.Checks = []map[string]any{
 		{"name": "this-check-does-not-exist", "delay": 1},
 	}
 
-	require.Error(t, healthReloader(ctx, &badCfg, entitiesFor(lg), &healthMutex, &healthShutdown))
+	require.Error(t, healthReloader(ctx, &badCfg, entitiesFor(lg), &healthMutex, &healthShutdown, &healthDrain, &draining))
 	require.Equal(t, 1, oldCalls, "the previous generation should have been shut down exactly once")
 
 	if healthShutdown != nil {

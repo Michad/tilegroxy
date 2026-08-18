@@ -4,6 +4,8 @@ services:
     container_name: tilegroxy
     image: ghcr.io/michad/tilegroxy:latest
     command: serve -c /tilegroxy/tilegroxy.yml
+    stop_signal: SIGTERM
+    stop_grace_period: 75s
     security_opt:
       - label:disable
     ports:

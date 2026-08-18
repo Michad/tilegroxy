@@ -15,6 +15,7 @@
 package providers
 
 import (
+	"context"
 	"testing"
 
 	"github.com/Michad/tilegroxy/internal/images"
@@ -23,6 +24,21 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// CompositeMVT holds its children directly, outside any layer, so they're unreachable through
+// LayerGroup.Close unless CompositeMVT forwards to them itself.
+func Test_CompositeMVTCloseClosesChildProviders(t *testing.T) {
+	p1 := &closableProvider{}
+	p2 := &closableProvider{}
+	// ConstructProvider always wraps, so one child is wrapped here to match what production
+	// actually builds: the close has to survive both hops, not just the forwarding one
+	c := &CompositeMVT{providers: []layer.Provider{layer.ProviderWrapper{Name: "child", Provider: p1}, p2}}
+
+	require.NoError(t, c.Close(context.Background()))
+
+	assert.True(t, p1.closed)
+	assert.True(t, p2.closed)
+}
 
 func Test_Composite_ExecuteStatic(t *testing.T) {
 	provConfig := map[string]interface{}{

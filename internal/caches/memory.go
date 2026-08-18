@@ -53,7 +53,7 @@ func (s MemoryRegistration) Name() string {
 	return "memory"
 }
 
-func (s MemoryRegistration) Initialize(configAny any, deps cache.CacheDeps) (cache.Cache, error) {
+func (s MemoryRegistration) Initialize(configAny any, _ cache.CacheDeps) (cache.Cache, error) {
 	config := configAny.(MemoryConfig)
 
 	if config.MaxSize < 1 {

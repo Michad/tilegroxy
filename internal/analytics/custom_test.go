@@ -186,6 +186,78 @@ func Test_Custom_InvalidConfigurations(t *testing.T) {
 	}
 }
 
+func Test_Custom_CloseInvokesScript(t *testing.T) {
+	msgs := config.DefaultConfig().Error.Messages
+	out := filepath.Join(t.TempDir(), "closed.txt")
+
+	script := `
+package custom
+
+import (
+	"context"
+	"os"
+
+	"tilegroxy/tilegroxy"
+)
+
+func record(ctx context.Context, events []tilegroxy.AnalyticsEvent, params map[string]interface{}, msgs tilegroxy.ErrorMessages) error {
+	return nil
+}
+
+func close(ctx context.Context) error {
+	return os.WriteFile("` + out + `", []byte("closed"), 0600)
+}
+`
+
+	a, err := CustomRegistration{}.Initialize(testCustomConfig(t, script, nil), analytics.AnalyticsDeps{ErrorMessages: msgs})
+	require.NoError(t, err)
+
+	closeCtx, cancel := context.WithTimeout(pkg.BackgroundContext(), 10*time.Second)
+	defer cancel()
+	require.NoError(t, a.(*Custom).Close(closeCtx))
+
+	content, err := os.ReadFile(out)
+	require.NoError(t, err)
+	assert.Equal(t, "closed", string(content))
+}
+
+func Test_Custom_CloseOptionalWhenAbsent(t *testing.T) {
+	// Scripts written before this existed must keep working untouched.
+	msgs := config.DefaultConfig().Error.Messages
+
+	a, err := CustomRegistration{}.Initialize(testCustomConfig(t, workingScript, map[string]interface{}{"path": filepath.Join(t.TempDir(), "events.txt")}), analytics.AnalyticsDeps{ErrorMessages: msgs})
+	require.NoError(t, err)
+
+	closeCtx, cancel := context.WithTimeout(pkg.BackgroundContext(), 10*time.Second)
+	defer cancel()
+	require.NoError(t, a.(*Custom).Close(closeCtx))
+}
+
+func Test_Custom_CloseWrongSignatureFailsAtInitialize(t *testing.T) {
+	msgs := config.DefaultConfig().Error.Messages
+
+	script := `
+package custom
+
+import (
+	"context"
+
+	"tilegroxy/tilegroxy"
+)
+
+func record(ctx context.Context, events []tilegroxy.AnalyticsEvent, params map[string]interface{}, msgs tilegroxy.ErrorMessages) error {
+	return nil
+}
+
+func close() {}
+`
+
+	a, err := CustomRegistration{}.Initialize(testCustomConfig(t, script, nil), analytics.AnalyticsDeps{ErrorMessages: msgs})
+
+	assert.Nil(t, a)
+	require.Error(t, err)
+}
+
 func Test_Custom_ScriptErrorIsContained(t *testing.T) {
 	msgs := config.DefaultConfig().Error.Messages
 

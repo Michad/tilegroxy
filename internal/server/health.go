@@ -27,6 +27,7 @@ import (
 	"runtime/debug"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	_ "github.com/Michad/tilegroxy/internal/checks"
@@ -48,6 +49,50 @@ type CheckResult struct {
 type healthHandler struct {
 	checks           []health.HealthCheck
 	checkResultCache *sync.Map
+	// Set when shutdown begins so readiness fails before the server starts draining
+	draining *atomic.Bool
+}
+
+// checkDetail builds the per-check entry of the health response, reporting whether that check is
+// currently passing. A result that's missing or older than its TTL counts as a failure
+func checkDetail(i int, check health.HealthCheck, cache *sync.Map) (map[string]any, bool) {
+	detail := make(map[string]any)
+	detail["componentId"] = strconv.Itoa(i)
+
+	if t := reflect.TypeOf(check); t.Kind() == reflect.Pointer {
+		detail["componentType"] = t.Elem().Name()
+	} else {
+		detail["componentType"] = t.Name()
+	}
+
+	result, found := cache.Load(i)
+	resultCheck, isResult := result.(CheckResult)
+
+	if !found || !isResult {
+		detail["status"] = "error"
+		detail["output"] = "Check has not updated stored health value"
+
+		return detail, false
+	}
+
+	detail["time"] = resultCheck.timestamp.Format(time.RFC3339)
+	detail["ttl"] = resultCheck.ttl / time.Second
+
+	switch {
+	case resultCheck.err != nil:
+		detail["status"] = "error"
+		detail["output"] = resultCheck.err.Error()
+	// Include 5 second leeway for check not being performed instantly
+	case resultCheck.timestamp.Add(resultCheck.ttl).Add(checkLeeway).Before(time.Now()):
+		detail["status"] = "error"
+		detail["output"] = "stale"
+	default:
+		detail["status"] = "ok"
+
+		return detail, true
+	}
+
+	return detail, false
 }
 
 func (h healthHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -60,6 +105,16 @@ func (h healthHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	if h.draining != nil && h.draining.Load() {
+		w.WriteHeader(http.StatusServiceUnavailable)
+
+		if _, err := w.Write([]byte(`{"status":"draining"}`)); err != nil {
+			slog.DebugContext(ctx, "server: failed writing draining response")
+		}
+
+		return
+	}
+
 	body := make(map[string]any)
 	checks := make(map[string]any)
 	details := make([]map[string]any, 0, len(h.checks))
@@ -68,44 +123,11 @@ func (h healthHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	if h.checkResultCache != nil {
 		for i, check := range h.checks {
-			detail := make(map[string]any)
+			detail, ok := checkDetail(i, check, h.checkResultCache)
 			details = append(details, detail)
 
-			detail["componentId"] = strconv.Itoa(i)
-
-			var checkType string
-			if t := reflect.TypeOf(check); t.Kind() == reflect.Pointer {
-				checkType = t.Elem().Name()
-			} else {
-				checkType = t.Name()
-			}
-
-			detail["componentType"] = checkType
-
-			result, ok := h.checkResultCache.Load(i)
-			resultCheck, ok2 := result.(CheckResult)
-
-			if !ok || !ok2 {
+			if !ok {
 				isOk = false
-				detail["status"] = "error"
-				detail["output"] = "Check has not updated stored health value"
-			} else {
-				if resultCheck.err != nil {
-					isOk = false
-					detail["status"] = "error"
-					detail["output"] = resultCheck.err.Error()
-				} else {
-					// Include 5 second leeway for check not being performed instantly
-					if resultCheck.timestamp.Add(resultCheck.ttl).Add(checkLeeway).Before(time.Now()) {
-						isOk = false
-						detail["status"] = "error"
-						detail["output"] = "stale"
-					} else {
-						detail["status"] = "ok"
-					}
-				}
-				detail["time"] = resultCheck.timestamp.Format(time.RFC3339)
-				detail["ttl"] = resultCheck.ttl / time.Second
 			}
 		}
 	} else {
@@ -146,7 +168,7 @@ func (h healthHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func SetupHealth(ctx context.Context, cfg *config.Config, layerGroup *layer.LayerGroup) (func(context.Context) error, error) {
+func SetupHealth(ctx context.Context, cfg *config.Config, layerGroup *layer.LayerGroup) (func(context.Context) error, func(), error) {
 	h := cfg.Server.Health
 
 	slog.InfoContext(ctx, fmt.Sprintf("Initializing health subsystem with %v checks on %v:%v", len(h.Checks), h.Host, h.Port))
@@ -155,36 +177,43 @@ func SetupHealth(ctx context.Context, cfg *config.Config, layerGroup *layer.Laye
 	var callback func(context.Context) error
 	checkResultCache := sync.Map{}
 	var checks []health.HealthCheck
+	noopDrain := func() {}
 
 	if len(h.Checks) > 0 {
 		checks, callback, err = setupCheckRoutines(ctx, h, layerGroup, cfg, &checkResultCache)
 		if err != nil {
-			return callback, err
+			return callback, noopDrain, err
 		}
 	}
 
-	callback2, err := setupHealthEndpoints(ctx, h, checks, &checkResultCache)
+	callback2, startDraining, err := setupHealthEndpoints(ctx, h, checks, &checkResultCache)
+
+	if startDraining == nil {
+		startDraining = noopDrain
+	}
 
 	if callback2 != nil {
 		if callback != nil {
 			return func(ctx context.Context) error {
 				return errors.Join(callback(ctx), callback2(ctx))
-			}, err
+			}, startDraining, err
 		}
 
-		return callback2, err
+		return callback2, startDraining, err
 	}
 
-	return callback, err
+	return callback, startDraining, err
 }
 
-func setupHealthEndpoints(ctx context.Context, h config.HealthConfig, checks []health.HealthCheck, checkResultCache *sync.Map) (func(context.Context) error, error) {
+func setupHealthEndpoints(ctx context.Context, h config.HealthConfig, checks []health.HealthCheck, checkResultCache *sync.Map) (func(context.Context) error, func(), error) {
 	srvErr := make(chan error, 1)
 	httpHostPort := net.JoinHostPort(h.Host, strconv.Itoa(h.Port))
 
+	draining := &atomic.Bool{}
+
 	r := http.ServeMux{}
 	r.HandleFunc("/", handleNoContent)
-	r.Handle("/health", healthHandler{checks, checkResultCache})
+	r.Handle("/health", healthHandler{checks, checkResultCache, draining})
 
 	srv := &http.Server{
 		Addr:              httpHostPort,
@@ -203,7 +232,7 @@ func setupHealthEndpoints(ctx context.Context, h config.HealthConfig, checks []h
 	case <-time.After(startupWaitTime):
 	}
 
-	return srv.Shutdown, err
+	return srv.Shutdown, func() { draining.Store(true) }, err
 }
 
 func setupCheckRoutines(ctx context.Context, h config.HealthConfig, layerGroup *layer.LayerGroup, cfg *config.Config, checkResultCache *sync.Map) ([]health.HealthCheck, func(context.Context) error, error) {

@@ -15,6 +15,7 @@
 package providers
 
 import (
+	"context"
 	"testing"
 
 	"github.com/Michad/tilegroxy/internal/images"
@@ -23,6 +24,38 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+type closableProvider struct {
+	closed bool
+}
+
+func (p *closableProvider) Close(_ context.Context) error {
+	p.closed = true
+	return nil
+}
+
+func (p *closableProvider) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.ProviderContext, error) {
+	return layer.ProviderContext{}, nil
+}
+
+func (p *closableProvider) GenerateTile(_ context.Context, _ layer.ProviderContext, _ pkg.TileRequest) (*pkg.Image, error) {
+	return nil, nil
+}
+
+// Blend holds its children directly, outside any layer, so they're unreachable through
+// LayerGroup.Close unless Blend forwards to them itself.
+func Test_BlendCloseClosesChildProviders(t *testing.T) {
+	p1 := &closableProvider{}
+	p2 := &closableProvider{}
+	// ConstructProvider always wraps, so one child is wrapped here to match what production
+	// actually builds: the close has to survive both hops, not just the forwarding one
+	b := &Blend{providers: []layer.Provider{layer.ProviderWrapper{Name: "child", Provider: p1}, p2}}
+
+	require.NoError(t, b.Close(context.Background()))
+
+	assert.True(t, p1.closed)
+	assert.True(t, p2.closed)
+}
 
 func makeBlendProviders() []map[string]interface{} {
 	return []map[string]interface{}{{
