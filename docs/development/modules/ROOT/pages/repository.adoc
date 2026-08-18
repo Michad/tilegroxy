@@ -17,6 +17,10 @@ Any deletion/rename/signature changes to code in this folder constitutes a break
 
 The majority of code/business logic for tilegroxy should live in here.  Code in here can't be directly called by extensions of tilegroxy so it's generally safe to modify without constituting a breaking change.  
 
+== charts
+
+Contains a Helm chart for installing tilegroxy on kubernetes
+
 == cmd
 
 Code specific for defining the CLI interface of tilegroxy go in here.  We should try to keep these files minimal with just the necessary cobra scaffolding, the core logic should be placed in the pkg/internal packages with the cmd code being essentially just a CLI wrapper.
@@ -36,4 +40,5 @@ Contains the source data for images used elsewhere in the application or documen
 == .github/workflows
 
 Contains Github Actions CI/CD workflows
+
 

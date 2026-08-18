@@ -34,12 +34,29 @@ Configured layers:
 
 WARNING: config.server.health.enabled is not set, so no liveness or readiness
 probes were created. Kubernetes will not notice a wedged or unhealthy pod.
+{{- if .Values.preStop.enabled }} The preStop hook is covering endpoint
+propagation on shutdown in its place, but add health checks for the liveness
+and readiness gap.
+{{- end }}
 {{- end }}
 
 {{- if not (dig "production" false $server) }}
 
 WARNING: config.server.production is not true. The splash page, bundled
 documentation and X-Powered-By header are being served.
+{{- end }}
+
+{{- $budget := dig "shutdowntimeout" 0 $server | int }}
+{{- if eq $budget 0 }}
+{{- $budget = add (dig "timeout" 60 $server | int) (dig "draindelay" 5 $server | int) }}
+{{- end }}
+{{- $preStopSleep := ternary (.Values.preStop.sleepSeconds | int) 0 .Values.preStop.enabled }}
+{{- if ge (add $budget $preStopSleep) (int .Values.terminationGracePeriodSeconds) }}
+
+WARNING: terminationGracePeriodSeconds ({{ .Values.terminationGracePeriodSeconds }}) does not
+exceed the shutdown budget ({{ $budget }}s) plus the preStop sleep ({{ $preStopSleep }}s).
+Kubernetes will SIGKILL the pod before it finishes flushing analytics and closing
+connections. Raise terminationGracePeriodSeconds above {{ add $budget $preStopSleep }}.
 {{- end }}
 
 {{- if and (gt (int .Values.replicaCount) 1) (has (dig "cache" "name" "none" $config) (list "memory" "none")) }}

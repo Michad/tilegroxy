@@ -43,7 +43,7 @@ func (s NoopRegistration) Name() string {
 	return "none"
 }
 
-func (s NoopRegistration) Initialize(configAny any, deps cache.CacheDeps) (cache.Cache, error) {
+func (s NoopRegistration) Initialize(configAny any, _ cache.CacheDeps) (cache.Cache, error) {
 	config := configAny.(NoopConfig)
 	return Noop{config}, nil
 }

@@ -50,7 +50,7 @@ func (s FailRegistration) Name() string {
 	return "fail"
 }
 
-func (s FailRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
+func (s FailRegistration) Initialize(cfgAny any, _ layer.ProviderDeps) (layer.Provider, error) {
 	config := cfgAny.(FailConfig)
 	return &Fail{config}, nil
 }

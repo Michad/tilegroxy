@@ -18,7 +18,10 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strconv"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -76,12 +79,12 @@ func Test_Health_Setup(t *testing.T) {
 	ctx := pkg.BackgroundContext()
 	cfg, lg := initialize(t, false)
 
-	callback, err := SetupHealth(ctx, &cfg, lg)
+	callback, _, err := SetupHealth(ctx, &cfg, lg)
 	require.NoError(t, err)
 	err = callback(ctx)
 	require.NoError(t, err)
 
-	callback, err = SetupHealth(ctx, &cfg, lg)
+	callback, _, err = SetupHealth(ctx, &cfg, lg)
 	require.NoError(t, err)
 	err = callback(ctx)
 	require.NoError(t, err)
@@ -91,7 +94,7 @@ func Test_Health_Success(t *testing.T) {
 	ctx := pkg.BackgroundContext()
 	cfg, lg := initialize(t, false)
 
-	callback, err := SetupHealth(ctx, &cfg, lg)
+	callback, _, err := SetupHealth(ctx, &cfg, lg)
 	require.NoError(t, err)
 	time.Sleep(1 * time.Second)
 
@@ -124,11 +127,69 @@ func Test_Health_Success(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func Test_HealthReportsUnreadyWhenDraining(t *testing.T) {
+	draining := &atomic.Bool{}
+	cache := &sync.Map{}
+	h := healthHandler{checks: nil, checkResultCache: cache, draining: draining}
+
+	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code, "a running server reports ready")
+
+	draining.Store(true)
+
+	req2 := httptest.NewRequest(http.MethodGet, "/health", nil)
+	w2 := httptest.NewRecorder()
+	h.ServeHTTP(w2, req2)
+
+	// 503 takes the pod out of the Service before the drain starts, so no new tile requests
+	// arrive at a process that is about to stop accepting them.
+	assert.Equal(t, http.StatusServiceUnavailable, w2.Code)
+	assert.Contains(t, w2.Body.String(), "draining")
+}
+
+// Draining must only affect readiness (/health). Liveness (/) has to stay 200 so Kubernetes
+// lets the pod finish draining instead of killing it outright. Routed through the real mux
+// setupHealthEndpoints builds, not direct handler calls, so a future change that wires drain
+// state into the liveness path would actually be caught here.
+func Test_HealthDrainingLeavesLivenessOK(t *testing.T) {
+	ctx := pkg.BackgroundContext()
+	drainPort := port + 1
+	h := config.HealthConfig{Host: "127.0.0.1", Port: drainPort}
+
+	shutdown, startDraining, err := setupHealthEndpoints(ctx, h, nil, &sync.Map{})
+	require.NoError(t, err)
+	require.NotNil(t, startDraining)
+
+	baseURL := "http://127.0.0.1:" + strconv.Itoa(drainPort)
+
+	resp, err := http.DefaultClient.Get(baseURL)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusNoContent, resp.StatusCode, "liveness ok before draining")
+	require.NoError(t, resp.Body.Close())
+
+	startDraining()
+
+	respReady, err := http.DefaultClient.Get(baseURL + "/health")
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusServiceUnavailable, respReady.StatusCode, "readiness fails while draining")
+	require.NoError(t, respReady.Body.Close())
+
+	respLive, err := http.DefaultClient.Get(baseURL)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusNoContent, respLive.StatusCode, "liveness must stay ok while draining so k8s doesn't kill the pod mid-drain")
+	require.NoError(t, respLive.Body.Close())
+
+	require.NoError(t, shutdown(ctx))
+}
+
 func Test_Health_Fail(t *testing.T) {
 	ctx := pkg.BackgroundContext()
 	cfg, lg := initialize(t, true)
 
-	callback, err := SetupHealth(ctx, &cfg, lg)
+	callback, _, err := SetupHealth(ctx, &cfg, lg)
 	require.NoError(t, err)
 
 	baseURL := "http://127.0.0.1:" + strconv.Itoa(port)

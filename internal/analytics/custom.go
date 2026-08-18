@@ -16,6 +16,7 @@ package analytics
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -39,6 +40,7 @@ type CustomConfig struct {
 type Custom struct {
 	CustomConfig
 	recordFunc func(context.Context, []analytics.Event, map[string]interface{}, config.ErrorMessages) error
+	closeFunc  func(context.Context) error
 	errorMsgs  config.ErrorMessages
 	batcher    *analytics.Batcher
 }
@@ -113,6 +115,16 @@ func (s CustomRegistration) Initialize(cfgAny any, deps analytics.AnalyticsDeps)
 		return nil, fmt.Errorf(deps.ErrorMessages.ScriptError, "analytics.custom", "record function has the wrong signature")
 	}
 
+	// close is optional so scripts written before it existed keep working unchanged.
+	var closeFunc func(context.Context) error
+	if closeVal, closeErr := i.Eval("custom.close"); closeErr == nil {
+		fn, ok := closeVal.Interface().(func(context.Context) error)
+		if !ok {
+			return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "analytics.custom.close", "close function has the wrong signature")
+		}
+		closeFunc = fn
+	}
+
 	batchCfg, err := analytics.ApplyBatchDefaults(cfg.Batch, deps.ErrorMessages)
 	if err != nil {
 		return nil, err
@@ -123,7 +135,7 @@ func (s CustomRegistration) Initialize(cfgAny any, deps analytics.AnalyticsDeps)
 		id = s.Name()
 	}
 
-	c := &Custom{CustomConfig: cfg, recordFunc: recordFunc, errorMsgs: deps.ErrorMessages}
+	c := &Custom{CustomConfig: cfg, recordFunc: recordFunc, closeFunc: closeFunc, errorMsgs: deps.ErrorMessages}
 
 	batcher, err := analytics.NewBatcher(id, batchCfg, c.flush)
 	if err != nil {
@@ -145,6 +157,14 @@ func (c *Custom) flush(ctx context.Context, events []analytics.Event) error {
 	return c.recordFunc(ctx, events, c.Params, c.errorMsgs)
 }
 
+// Close flushes the batcher and, if the script defines one, calls its close function. The symbol is
+// optional so scripts written before this existed keep working
 func (c *Custom) Close(ctx context.Context) error {
-	return c.batcher.Close(ctx)
+	batcherErr := c.batcher.Close(ctx)
+
+	if c.closeFunc == nil {
+		return batcherErr
+	}
+
+	return errors.Join(batcherErr, c.closeFunc(ctx))
 }

@@ -43,7 +43,7 @@ func (s NoopRegistration) Name() string {
 	return "none"
 }
 
-func (s NoopRegistration) Initialize(cfgAny any, deps analytics.AnalyticsDeps) (analytics.Analytics, error) {
+func (s NoopRegistration) Initialize(cfgAny any, _ analytics.AnalyticsDeps) (analytics.Analytics, error) {
 	cfg := cfgAny.(NoopConfig)
 	return Noop{cfg}, nil
 }

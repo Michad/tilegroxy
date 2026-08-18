@@ -35,7 +35,7 @@ func Test_ValidateIdentifier(t *testing.T) {
 	}
 
 	for _, name := range valid {
-		assert.NoError(t, validateIdentifier(name, "test", msgs), "%v should be accepted", name)
+		require.NoError(t, validateIdentifier(name, "test", msgs), "%v should be accepted", name)
 	}
 
 	// Identifiers are interpolated into SQL rather than bound, so anything that could terminate or

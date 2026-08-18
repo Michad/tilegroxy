@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -60,6 +61,20 @@ type ServerConfig struct {
 	Production bool              // Controls serving splash page, documentation, x-powered-by header. Defaults to false, set true to harden for prod
 	Timeout    uint              // How long (in seconds) a request can be in flight before we cancel it and return an error
 	Gzip       bool              // Whether to apply gzip compression. Not super helpful when just serving up raster images
+
+	ShutdownTimeout uint // How long (in seconds) the whole shutdown sequence gets. Defaults to Timeout plus DrainDelay.
+	DrainDelay      uint // How long (in seconds) to report unready before draining. Defaults to 5, set 0 when a preStop hook covers it.
+}
+
+// EffectiveShutdownTimeout resolves the shutdown budget. When unset it covers both phases that
+// consume it, the drain wait and a full-length request, so the budget is never smaller than the
+// work it has to fit
+func (c ServerConfig) EffectiveShutdownTimeout() uint {
+	if c.ShutdownTimeout == 0 {
+		return c.Timeout + c.DrainDelay
+	}
+
+	return c.ShutdownTimeout
 }
 
 type ClientConfig struct {
@@ -253,6 +268,10 @@ func (c Config) Validate() error {
 		errs = append(errs, fmt.Errorf("invalid logging.access.format %q", c.Logging.Access.Format))
 	}
 
+	if c.Server.DrainDelay >= c.Server.EffectiveShutdownTimeout() {
+		errs = append(errs, fmt.Errorf(c.Error.Messages.InvalidParam, "server.draindelay", strconv.FormatUint(uint64(c.Server.DrainDelay), 10)))
+	}
+
 	return errors.Join(errs...)
 }
 
@@ -270,6 +289,7 @@ func DefaultConfig() Config {
 			Production: false,
 			Timeout:    60,
 			Gzip:       false,
+			DrainDelay: 5,
 			Health: HealthConfig{
 				Enabled: false,
 				Port:    3000,

@@ -46,10 +46,6 @@ import (
 	_ "github.com/Michad/tilegroxy/internal/secrets"
 )
 
-// How long the previous generation of entities gets to flush and release after a hot reload, once
-// in-flight requests have had time to finish.
-const entityCloseTimeout = 30 * time.Second
-
 var packageName = static.GetPackage()
 var version, ref, buildDate = static.GetVersionInformation()
 
@@ -93,10 +89,11 @@ func (h *tileHandler) reloadEntities(newEntities reloadableEntities) {
 	h.entityMutex.Unlock()
 	slog.WarnContext(pkg.BackgroundContext(), "Completed refreshing entities from configuration")
 
-	// Release the previous generation in the background. Requests that started before the swap hold
-	// their own copy of it, so closing has to wait for them to finish; the server timeout is the
-	// longest any of them can still be running.
-	go h.closeOldEntities(oldEntities)
+	// Retire the previous generation. It releases as soon as its in-flight requests finish rather
+	// than after a fixed wait, so rapid reloads no longer pin several sets of connections at once
+	if oldEntities.gen != nil {
+		oldEntities.gen.markClosing(pkg.BackgroundContext(), generationCloseFloor)
+	}
 }
 
 // currentEntities returns the generation currently serving requests. Shutdown closes this rather than the
@@ -106,30 +103,6 @@ func (h *tileHandler) currentEntities() *entities.Entities {
 	defer h.entityMutex.RUnlock()
 
 	return h.entities.all
-}
-
-func (h *tileHandler) closeOldEntities(old reloadableEntities) {
-	if old.all == nil {
-		return
-	}
-
-	ctx := pkg.BackgroundContext()
-
-	grace := time.Duration(0)
-	if old.config != nil {
-		grace = time.Duration(old.config.Server.Timeout) * time.Second
-	}
-
-	time.Sleep(grace)
-
-	closeCtx, cancel := context.WithTimeout(ctx, entityCloseTimeout)
-	defer cancel()
-
-	if err := old.all.Close(closeCtx); err != nil {
-		slog.WarnContext(ctx, fmt.Sprintf("Error releasing entities from the previous configuration: %v", err))
-	} else {
-		slog.InfoContext(ctx, "Released entities from the previous configuration")
-	}
 }
 
 func setServiceSpanAttributes(span trace.Span) {
@@ -202,9 +175,14 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	span := trace.SpanFromContext(ctx)
 
-	// Make a copy of entities to ensure entire request goes against the same version of entities even if a reload occurs - and avoid wrapping full request execution in lock
+	// Copy the entities and take a hold on their generation in the same critical section as the
+	// pointer read, so a concurrent reload either sees this request or hands us the new generation
 	h.entityMutex.RLock()
 	entities := h.entities
+	if entities.gen != nil {
+		entities.gen.acquire()
+		defer entities.gen.release()
+	}
 	h.entityMutex.RUnlock()
 
 	h.tileAllCounter.Add(ctx, 1)

@@ -21,8 +21,20 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
+	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// Ref refers to another layer by name; it doesn't own that layer's provider. It must not
+// implement Closer, since closing through a ref would either double-close the target layer's
+// provider or close it out from under the layer that actually owns it.
+func Test_Ref_IsNotACloser(t *testing.T) {
+	r := &Ref{}
+
+	_, ok := any(r).(lifecycle.Closer)
+	assert.False(t, ok, "Ref must not implement Closer: it references another layer's provider rather than owning one")
+}
 
 // layer.validateRefs can't catch a cycle formed via a patterned layer name, so the request-time
 // depth counter has to stop it before it overflows the stack.

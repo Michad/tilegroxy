@@ -280,3 +280,59 @@ func TestMergeDefaultsFrom_UnknownLength(t *testing.T) {
 	assert.Equal(t, uint(0), unset.Timeout)
 	assert.Equal(t, uint(5), explicitFalse.Timeout)
 }
+
+func Test_ShutdownTimeoutDerivesFromItsPhases(t *testing.T) {
+	c := DefaultConfig()
+	c.Server.Timeout = 45
+	c.Server.DrainDelay = 5
+	c.Server.ShutdownTimeout = 0
+
+	require.NoError(t, c.Validate())
+
+	// Unset covers both phases that spend it, so the budget always fits a full-length request
+	// plus the drain wait.
+	assert.Equal(t, uint(50), c.Server.EffectiveShutdownTimeout())
+}
+
+func Test_ShutdownTimeoutFitsShortRequestTimeouts(t *testing.T) {
+	// A short request timeout with the default drain delay used to be rejected outright, which
+	// broke configs that were valid before the drain delay existed.
+	c := DefaultConfig()
+	c.Server.Timeout = 1
+
+	require.NoError(t, c.Validate())
+	assert.Equal(t, uint(6), c.Server.EffectiveShutdownTimeout())
+}
+
+func Test_ShutdownTimeoutExplicitWins(t *testing.T) {
+	c := DefaultConfig()
+	c.Server.Timeout = 45
+	c.Server.ShutdownTimeout = 10
+
+	require.NoError(t, c.Validate())
+
+	assert.Equal(t, uint(10), c.Server.EffectiveShutdownTimeout())
+}
+
+func Test_DrainDelayDefaultsToFive(t *testing.T) {
+	c := DefaultConfig()
+
+	assert.Equal(t, uint(5), c.Server.DrainDelay)
+}
+
+func Test_DrainDelayZeroIsValid(t *testing.T) {
+	// Zero is meaningful: it means a preStop hook already covered endpoint propagation.
+	c := DefaultConfig()
+	c.Server.DrainDelay = 0
+
+	require.NoError(t, c.Validate())
+}
+
+func Test_DrainDelayCannotConsumeWholeBudget(t *testing.T) {
+	c := DefaultConfig()
+	c.Server.ShutdownTimeout = 5
+	c.Server.DrainDelay = 5
+
+	// A drain delay at or above the budget leaves no time to actually drain or flush.
+	require.Error(t, c.Validate())
+}

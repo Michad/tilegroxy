@@ -128,7 +128,7 @@ func Test_AnalyticsWrapper_Empty(t *testing.T) {
 	// A nil wrapper is what tests and the seed/test commands end up with.
 	var nilWrapper *AnalyticsWrapper
 	assert.True(t, nilWrapper.Empty())
-	assert.NoError(t, nilWrapper.Close(context.Background()))
+	require.NoError(t, nilWrapper.Close(context.Background()))
 	assert.NotPanics(t, func() { nilWrapper.RecordEvent(context.Background(), Event{}, FieldSource{}) })
 }
 

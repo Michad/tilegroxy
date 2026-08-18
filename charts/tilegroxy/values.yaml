@@ -232,7 +232,19 @@ podDisruptionBudget:
   minAvailable: 1
   maxUnavailable: ""
 
-terminationGracePeriodSeconds: 60
+# Not derived from the shutdown budget: if you raise config.server.shutdowntimeout, or
+# config.server.timeout when shutdowntimeout is unset, raise this to match. It must exceed the
+# budget plus preStop.sleepSeconds or the process is SIGKILLed mid-flush.
+terminationGracePeriodSeconds: 75
+
+# Runs before Kubernetes sends SIGTERM, covering the window where endpoints have not yet been
+# withdrawn. Needed because config.server.health.enabled defaults to false, so many deployments
+# have no readiness signal to fall back on. When enabled, the chart also sets
+# config.server.draindelay to 0 so the in-process drain wait isn't paid twice. Any
+# config.server.draindelay you set yourself is overridden while this is enabled.
+preStop:
+  enabled: true
+  sleepSeconds: 5
 
 updateStrategy:
   type: RollingUpdate

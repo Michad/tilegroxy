@@ -75,9 +75,19 @@ chart renders no ConfigMap of its own and mounts that one instead.
 The config, guaranteed to be a dict so `dig` below is safe even when the user
 sets `config: null`. Config keys are case-insensitive in tilegroxy itself, but
 the lookups here are not, so the documented casing is what the chart reads.
+
+When preStop.enabled is true, server.draindelay is forced to 0: the preStop
+sleep already covers the wait for endpoint propagation, and draindelay runs
+after preStop completes, so leaving it non-zero would pay for the same wait
+twice.
 */}}
 {{- define "tilegroxy.config" -}}
-{{- default dict .Values.config | toYaml -}}
+{{- $config := deepCopy (default dict .Values.config) -}}
+{{- if .Values.preStop.enabled -}}
+{{- $server := dig "server" dict $config -}}
+{{- $_ := set $config "server" (mergeOverwrite (deepCopy $server) (dict "draindelay" 0)) -}}
+{{- end -}}
+{{- $config | toYaml -}}
 {{- end }}
 
 {{- define "tilegroxy.server" -}}

@@ -57,7 +57,7 @@ func (s CompositeMVTRegistration) Initialize(cfgAny any, deps layer.ProviderDeps
 	cfg := cfgAny.(CompositeMVTConfig)
 
 	providers := make([]layer.Provider, 0, len(cfg.Providers))
-	errorSlice := make([]error, 0)
+	errorSlice := make([]error, 0, len(cfg.Providers))
 
 	for _, p := range cfg.Providers {
 		provider, err := layer.ConstructProvider(p, deps)

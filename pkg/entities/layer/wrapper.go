@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
 	"go.opentelemetry.io/otel/codes"
 )
 
@@ -53,4 +54,11 @@ func (t ProviderWrapper) GenerateTile(ctx context.Context, providerContext Provi
 	}
 
 	return img, err
+}
+
+// Close forwards to the wrapped provider. Every constructed provider is wrapped for tracing, so
+// without this a nesting provider like blend or fallback closing its children would never reach
+// the underlying Closer.
+func (t ProviderWrapper) Close(ctx context.Context) error {
+	return lifecycle.CloseIfCloser(ctx, t.Provider)
 }
