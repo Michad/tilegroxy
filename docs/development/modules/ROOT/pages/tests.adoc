@@ -6,7 +6,19 @@ The majority of tests are unit tests.
 
 There are integration tests, especially with cache code, that utilize testcontainers to provide a better level of assurance of functionality.  The integration tests should be placed in dedicated files with a build flag to disable the test when the `unit` flag is specified, this allows building with these testcontainer tests excluded in situations where they're problematic (e.g. inside the dockerfile).
 
-There are a couple places where psuedo-end-to-end tests are placed: tile handler and serve command.  Tests in these places are suited for testing a full configuration, standing up a server (or at least one endpoint), sending requests in, and verifying the results.  This confirms everything is working with the exception of details of the final binary itself. Any tests for verifying functionality that only makes sense to check end-to-end should be placed for now.  In the future we may add an external test harness to cover the functionality that can't be validated from within the project.
+There are a couple places where psuedo-end-to-end tests are placed: tile handler and serve command.  Tests in these places are suited for testing a full configuration, standing up a server (or at least one endpoint), sending requests in, and verifying the results.  This confirms everything is working with the exception of details of the final binary itself.
+
+== End-to-end tests
+
+Tests in `test/e2e` run the compiled binary as a child process.  This covers what an in-process test can't reach: the version information injected by linker flags, the documentation website embedded at build time, the build tags the released binary carries, real exit codes, and signal handling the way a container runtime exercises it.
+
+Run them with `make e2e`, which builds the documentation and the binary first so the artifact under test is complete.  They're excluded from `make test` and `make unit` by the `e2e` build tag.  Files behind a build tag are only linted because `.golangci.yml` lists the tag in `run.build-tags`, so a new tag needs to be added there too.
+
+Set `TILEGROXY_E2E_BINARY` to test a binary built elsewhere, such as a release artifact or one extracted from the container image.  When it isn't set the harness uses the repository root binary that `make build` produces.  Running `go test` directly rather than through `make e2e` skips that build, so the binary may be stale.
+
+Set `TILEGROXY_E2E_TIMEOUT_SCALE` to a multiplier to stretch every deadline when running somewhere slower than a developer machine.
+
+Prefer an in-process test whenever one is possible.  A test that can be written with `httptest` belongs beside the code it covers, where it runs faster and counts towards coverage.  The end-to-end suite is for the binary, the process, and the build.
 
 == Coverage
 

@@ -90,6 +90,7 @@ and ldflags matter.
 make            # clean, test, docs, build, version (the full check)
 make test       # go test with -tags viper_bind_struct
 make unit       # unit only, excludes testcontainer integration tests
+make e2e        # end-to-end tests against the compiled binary, builds docs and binary first
 make lint       # golangci-lint with --fix
 make cover      # coverage via Courtney, writes coveragef.out
 make docs       # Antora build, required before `make build` works

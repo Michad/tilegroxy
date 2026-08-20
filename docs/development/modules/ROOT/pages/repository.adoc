@@ -33,6 +33,10 @@ Documentation lives here structured in Antora modules split into three separate 
 
 Contains dedicated files that provide examples of how tilegroxy can be used.  
 
+== test
+
+Contains end-to-end tests that run the compiled binary as a child process.  Nothing in here is imported by the rest of the application, it exists solely to exercise the built artifact.
+
 == img_source
 
 Contains the source data for images used elsewhere in the application or documentation.  For example this might be a graphviz definition that is then turned into a PNG for the docs or a GIMP project file for our built-in images.
