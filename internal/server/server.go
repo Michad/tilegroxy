@@ -271,7 +271,12 @@ func ListenAndServe(config *config.Config, ent *entities.Entities, reloadPtr *fu
 		return err
 	}
 
-	ctx, stop := signal.NotifyContext(pkg.BackgroundContext(), InterruptFlags...)
+	// Requests hang off the un-signalled root. Deriving them from the signal context instead would
+	// cancel every in-flight request the moment SIGTERM lands, which TimeoutHandler turns into an
+	// empty 503, defeating both the drain delay and the server's own graceful shutdown
+	rootCtx := pkg.BackgroundContext()
+
+	ctx, stop := signal.NotifyContext(rootCtx, InterruptFlags...)
 	defer stop()
 
 	var healthMutex sync.Mutex
@@ -310,7 +315,7 @@ func ListenAndServe(config *config.Config, ent *entities.Entities, reloadPtr *fu
 
 	srv := &http.Server{
 		Addr:              config.Server.BindHost + ":" + strconv.Itoa(config.Server.Port),
-		BaseContext:       func(_ net.Listener) context.Context { return ctx },
+		BaseContext:       func(_ net.Listener) context.Context { return rootCtx },
 		Handler:           rootHandler,
 		ReadHeaderTimeout: time.Second,
 	}
