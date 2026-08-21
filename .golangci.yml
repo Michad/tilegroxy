@@ -1,4 +1,11 @@
 version: "2"
+run:
+  # Without these, every file behind a build tag is silently skipped, so tagged tests go unlinted.
+  # `unit` is deliberately absent: it disables the testcontainer files rather than enabling any, so
+  # setting it would hide their callers and report the functions they use as unused.
+  build-tags:
+    - e2e
+    - viper_bind_struct
 linters:
   settings:
     gocritic:

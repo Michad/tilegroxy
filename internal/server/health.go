@@ -215,9 +215,13 @@ func setupHealthEndpoints(ctx context.Context, h config.HealthConfig, checks []h
 	r.HandleFunc("/", handleNoContent)
 	r.Handle("/health", healthHandler{checks, checkResultCache, draining})
 
+	// Health has to keep answering through the drain window, so its requests hang off the
+	// un-signalled root rather than the signal context that cancels when shutdown begins
+	healthRootCtx := context.WithoutCancel(ctx)
+
 	srv := &http.Server{
 		Addr:              httpHostPort,
-		BaseContext:       func(_ net.Listener) context.Context { return ctx },
+		BaseContext:       func(_ net.Listener) context.Context { return healthRootCtx },
 		Handler:           &r,
 		ReadHeaderTimeout: time.Second,
 	}

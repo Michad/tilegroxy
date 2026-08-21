@@ -15,6 +15,9 @@ test:
 unit:
 	@go test ./internal/... $(go list ./pkg/... | grep -v mod) ./cmd/... -v -count=1 -tags "unit,viper_bind_struct"
 
+e2e: docs build
+	@go test ./test/... -count=1 -tags "e2e,viper_bind_struct"
+
 cover:
 	@go install github.com/dave/courtney@latest
 	@courtney ./internal/... ./pkg/... ./cmd/...
@@ -54,4 +57,4 @@ clean:
 	@go clean
 	-@rm ${OUT}
 
-.PHONY: build clean cover cover-out coverage docs lint libyears readme test unit version
+.PHONY: build clean cover cover-out coverage docs e2e lint libyears readme test unit version
