@@ -1,0 +1,81 @@
+= TileJSON
+
+Tilegroxy can describe its layers using the https://github.com/mapbox/tilejson-spec/tree/master/3.0.0[TileJSON 3.0.0] format. This lets TileJSON-aware clients, such as MapLibre or Mapbox GL, discover a layer's tile URL, zoom range, bounds, and format directly from tilegroxy instead of the Operator hand-writing that information into every client separately.
+
+TileJSON support is disabled by default. Enabling it doesn't change how tiles themselves are served, it only adds read-only endpoints that describe layers already configured elsewhere. See xref:configuration/tilejson.adoc[TileJSON configuration] for the configuration reference.
+
+== Endpoints
+
+Two endpoints become available once TileJSON is enabled:
+
+`+RootPath/IndexPath+` returns a JSON array of every eligible layer, each entry giving the layer's `name` and a `tilejson` URL pointing at its individual document. `IndexPath` defaults to `tilejson.json`.
+
+`+TilePath/{layer}.json+` returns the TileJSON document for a single layer, sitting alongside the existing `+TilePath/{layer}/{z}/{x}/{y}+` tile endpoint.
+
+Both endpoints are read-only GET requests and never touch the xref:configuration/cache/index.adoc[cache] or trigger a request to an upstream provider; the document is built from configuration alone.
+
+== Eligible layers
+
+A layer defined with a plain `id` (no `pattern` placeholders) is eligible automatically.
+
+A layer defined with a `pattern` has no single concrete tile URL to describe, since the placeholders in `pattern` can match many different incoming layer names. Such a layer is excluded from both endpoints unless it configures `examples`, a list of concrete layer names that each get matched against `pattern` the same way an incoming request would be. Each example produces its own TileJSON document, named and pathed after the example string rather than the layer's `id`.
+
+A layer with `skipCache` or `skipAnalytics` set is *still* eligible; those flags don't affect TileJSON.
+
+== What goes into a document
+
+Most of a TileJSON document is derived from configuration that already exists for other purposes, rather than duplicated onto the layer:
+
+`name` is always the layer's `id`, or the resolved example string for a layer generated from `examples`.
+
+`tiles` is a single-entry array built from the scheme, host, and path that reach tilegroxy from the caller's perspective. By default this is read from the standard `X-Forwarded-Proto`, `X-Forwarded-Host`, and `X-Forwarded-Prefix` headers when present, falling back to the request's own scheme and `Host` header otherwise. This matches how tilegroxy is typically deployed, behind a reverse proxy that terminates TLS and may route by a path prefix rather than by hostname. An Operator who doesn't trust those headers, or who fronts tilegroxy with something that doesn't set them, can pin the value instead with `PublicURL`. See xref:configuration/tilejson.adoc[TileJSON configuration].
+
+`minzoom`, `maxzoom`, and `bounds` reflect the layer's actual xref:configuration/layer.adoc[zoom and bounds] restrictions, which are enforced on every request to the layer, not just reported in TileJSON. They default to `0`, `21`, and the whole world unless the layer sets them explicitly. There's no attempt to derive them from a provider's own configuration, such as the xref:configuration/provider/fallback.adoc[fallback] provider's `zoom` and `bounds` parameters; those parameters govern when a provider falls back to a secondary source rather than describing the layer's true coverage, since a fallback layer typically continues to have data past that point, just from somewhere else. See <<Authentication and authorization>> for how an authenticated caller's own restrictions can further narrow `bounds`.
+
+`format` is inferred from the layer's top-level provider when that provider always produces the same content type: `postgismvt` and `compositemvt` report `pbf`, while `blend`, `crop`, `effect`, `transform`, and `static` report `png`. Providers whose content type depends on an upstream response, such as `proxy`, `url_template`, `cgi`, `fallback`, and `ref`, can't be determined statically so `format` is omitted from the document unless the layer sets it explicitly. See xref:content-type.adoc[Content Type] for how tilegroxy handles content types generally. A layer with `bounds` set must configure `format` explicitly, since inference alone isn't enough for tilegroxy to know how to enforce a partial-tile boundary; see xref:configuration/layer.adoc[Zoom and bounds] for what that enforcement actually does.
+
+`description` and `attribution` are only populated when explicitly configured on the layer; they have no derived fallback.
+
+== Authentication and authorization
+
+TileJSON endpoints go through the same xref:configuration/authentication/index.adoc[authentication] check as a tile request, once per request, before any layer is looked up. If authentication is required, requesting either endpoint without valid credentials returns 401, the same as an unauthenticated tile request would.
+
+The xref:configuration/authentication/jwt.adoc[jwt] module and a xref:configuration/authentication/custom.adoc[custom] module offer the same two kinds of restriction, and TileJSON honors both the same way regardless of which module produced them:
+
+A restriction that limits which layers a caller may access, such as `jwt`'s `LayerScope`, resolves to a list of layer names. This applies to both endpoints: the index only lists layers the caller has scope for, and requesting the per-layer endpoint for a layer outside that scope returns 401, exactly as a tile request for that layer would. A custom module only gets this protection if it populates the same allowed-layers list `jwt` does; one that only validates individual tile coordinates leaves the layer list unrestricted beyond basic authentication.
+
+A restriction that limits which geographic area a caller may access, such as `jwt`'s `geohash` claim, narrows the `bounds` reported for that caller rather than filtering which layers are listed. The `bounds` in a TileJSON document is the intersection of the layer's own `bounds` (see <<What goes into a document>>) and the caller's permitted area, so a caller with a restricted area never sees a wider extent than they're actually allowed to fetch tiles from. `minzoom` and `maxzoom` aren't affected, since these restrictions describe an area, not a zoom range. As with layer-name restrictions, a custom module only narrows `bounds` this way if it supplies a permitted area the same way `jwt`'s `geohash` claim does; one that doesn't leaves `bounds` at the layer's own configured or default extent.
+
+None of this changes how authentication behaves for the tile endpoints themselves. If you don't want TileJSON documents to be reachable at all, leave `Enabled` false under xref:configuration/tilejson.adoc[TileJSON configuration]; there's no separate way to expose the endpoints without going through the layer's existing authentication.
+
+== Example
+
+Given a pattern layer configured with `examples: [my_foo_v1, my_bar_v2]`, requesting `+TilePath/my_foo_v1.json+` returns something like:
+
+----
+{
+  "tilejson": "3.0.0",
+  "name": "my_foo_v1",
+  "tiles": [
+    "https://example.com/tiles/my_foo_v1/{z}/{x}/{y}"
+  ],
+  "minzoom": 0,
+  "maxzoom": 21,
+  "bounds": [-180, -85.05112878, 180, 85.05112878]
+}
+----
+
+And `+RootPath/tilejson.json+` would list it alongside any other eligible layers:
+
+----
+[
+  {
+    "name": "my_foo_v1",
+    "tilejson": "https://example.com/tiles/my_foo_v1.json"
+  },
+  {
+    "name": "my_bar_v2",
+    "tilejson": "https://example.com/tiles/my_bar_v2.json"
+  }
+]
+----
