@@ -30,7 +30,7 @@ import (
 
 const (
 	ValidationSame        = "same"
-	ValidationContentType = "content-tye"
+	ValidationContentType = "content-type"
 	ValidationBase64      = "base-64"
 	ValidationFile        = "file"
 	ValidationSuccess     = "success"
