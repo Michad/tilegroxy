@@ -1,7 +1,62 @@
 = Serve
 
-The main operating mode of tilegroxy. Starts up an HTTP server and responds to incoming web requests.
+The main operating mode of tilegroxy. Starts up an HTTP server and responds to incoming web requests. The process runs blocking in the foreground until terminated. 
+
+Full, up-to-date usage information can be found with `tilegroxy serve -h`.
+
+----
+Creates an HTTP server that listens for requests for tiles and serves
+them up in accordance with the configuration.
+
+The process will run blocking in the foreground until terminated. The
+majority of configuration should be supplied via a configuration file.
+
+Usage:
+  tilegroxy serve [flags]
+
+Flags:
+  -h, --help         help for serve
+      --hot-reload   Automatically reload configuration upon changes
+----
 
 ----
 tilegroxy serve -c /path/to/tilegroxy.yml
 ----
+
+
+== Endpoints
+
+There are three primary endpoints (paths are all relative to the `RootPath` config):
+
+[cols="1,3"]
+|===
+| Endpoint | Production | Description 
+
+| `/tiles/\{layerName}/\{z}/\{x}/\{y}`
+| Yes
+| The tile endpoint. `\{layerName}` is a layer ID or a pattern match against one, the coordinates are standard ZXY. The path segment comes from `TilePath`. 
+
+| `/docs`
+| No
+| Serves this documentation from inside the binary. 
+
+| `/`
+| No
+| Redirects to the documentation, or returns 204 if the documentation is disabled
+|===
+
+The `Production` configuration controls which endpoints are available.It's recommended you turn that on for anything internet facing.
+
+xref:configuration/health.adoc[Health] checks, if enabled, listen on their own port separate from the port serving tiles.
+
+== Startup
+
+The configuration is fully validated before the server binds. If anything fails to check out, the error is outputted and the command exits with a non-zero status code.
+
+Use xref:commands/config_check.adoc[config check] to validate the configuration without starting a server. xref:commands/test.adoc[Test] checks config and also confirms layers render.
+
+== Reloading and shutdown
+
+The `--hot-reload` flag watches the configuration file and applies changes without a restart. It requires a file, therefore it cannot be combined with `--raw-config` or the `--remote-*` flags. See xref:reloading.adoc[Reloading Configuration] for details.
+
+The SIGINT or SIGTERM signals cause the server to gracefully shut down, allowing in-flight requests to finish and buffered analytics to flush. See xref:reloading.adoc[Shutdown] for more on that.

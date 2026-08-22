@@ -122,9 +122,9 @@ authentication:
 
 == JWKS
 
-Instead of a single static Key, verification keys can be fetched from a remote https://datatracker.ietf.org/doc/html/rfc7517[JWKS] endpoint, as commonly published by an OIDC issuer. When JWKS is configured, Key must not be set.
+Instead of a single static Key, verification keys can be fetched from a remote https://datatracker.ietf.org/doc/html/rfc7517[JWKS] endpoint as commonly published by an OIDC issuer.  When JWKS is configured, Key must not be set.
 
-If a token references a key ID that isn't in the currently cached keyset, the keyset is refreshed, rate limited by `RefreshMinInterval`. This lets an issuer rotate its keys without any operator action. If the issuer becomes unreachable, the last successfully fetched keyset keeps serving, so existing keys keep verifying; only tokens signed with a genuinely new key ID fail while the endpoint is down.
+If a token references a key ID that isn't in the currently cached keyset then the keyset is refreshed, rate limited by `RefreshMinInterval`.  This allows an issuer to rotate its keys without any action from the Operator.  If the issuer becomes unreachable the last successfully fetched keyset continues to be used, so existing keys still verify and only tokens signed with a new key ID fail while the endpoint is down.
 
 Configuration options:
 

@@ -137,7 +137,7 @@ Once the tile is generated there's a few options for how you validate the tile i
 
 | content-type
 | Checks the content type of the resulting tile but doesn't check the tile itself. This requires the tile to come back from the provider with a known MIME type. 
-// See link:https://tilegroxy.michael.davis.name/operation/content-type.html[content-type] for details on how this is handled.
+See xref:content-type.adoc[Content Type] for details on how this is handled.
 | Result is the exact MIME-type of the tile
 
 | base-64

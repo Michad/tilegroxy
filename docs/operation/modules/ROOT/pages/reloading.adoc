@@ -38,11 +38,11 @@ Changes to unsupported sections will be ignored.
 
 == Shutdown
 
-For cases when you do need to terminate the tilegroxy instance (when changing a non-reloadable section of config, or cycling pods), tilegroxy supports graceful shutdown to ensure requests aren't lost
+For cases where you need to terminate the tilegroxy instance (when changing a non-reloadable section of config, or cycling pods), tilegroxy supports graceful shutdown to ensure requests aren't lost
 
 === Shutdown behaviour
 
-When tilegroxy receives SIGINT or SIGTERM it shuts down in a fixed order rather than exiting immediately.  This gives batched analytics a chance to flush and connection pools a chance to close.  Container runtimes send SIGTERM when stopping a container, so this is the normal path in Docker and Kubernetes.
+When tilegroxy receives SIGINT or SIGTERM it shuts down in a fixed order rather than exiting immediately.  This gives batched analytics a chance to flush and connection pools a chance to close.  
 
 The phases run in this order:
 
@@ -54,28 +54,24 @@ The phases run in this order:
 . OpenTelemetry shuts down
 . Log file handles close
 
-Readiness fails first because orchestrators remove a pod from their load balancer asynchronously from sending the signal.  Reporting unready and then waiting gives that removal time to propagate, so new requests stop arriving before the drain begins.  Liveness stays healthy throughout, since a draining server is not a broken one and failing liveness would get the container killed instead of allowed to finish.
+Every phase draws from a single deadline of `ShutdownTimeout` seconds.  If the deadline passes or a second signal is sent, the remaining phases are skipped and an error is logged. 
 
-The background health checks stop before entities close, since those checks call into the same caches and providers being released.
+When `ShutdownTimeout` isn't specified it defaults to `Server.Timeout` plus `DrainDelay`, which covers the two phases that consume it: the wait before draining and one full-length request finishing during the drain.  A value at or below DrainDelay is rejected as it leaves no time to drain.
 
-Every phase draws from a single deadline of ShutdownTimeout seconds.  If that deadline passes the remaining phases are skipped and the error is logged, so a hung upstream cannot hold shutdown open indefinitely.  Sending a second signal exits immediately without waiting for the rest of the sequence.  Log handles close last and outside the deadline so the earlier phases can still write to them.
-
-When ShutdownTimeout isn't set it defaults to Timeout plus DrainDelay, which covers both phases that spend it: the wait before draining, and one full-length request finishing during the drain.  Setting it explicitly to a value at or below DrainDelay is rejected, since that leaves no time to drain.
-
-Setting it below Timeout is allowed but means a slow request can outlive the budget.  When that happens the entities close underneath it and the request fails with a connection error rather than the configured timeout message.  A warning naming the number of requests still in flight is logged when it does.
+A value below `Server.Timeout` is allowed but means a slow request can outlive the budget.
 
 === Coordinating with your orchestrator
 
-Your orchestrator's grace period has to be longer than the shutdown sequence it's waiting on, otherwise the process gets killed partway through and the analytics it was flushing are lost.  Three values need to stay in order:
+Your orchestrator's grace period must be longer than the shutdown sequence it's waiting on, otherwise the process is killed partway through and any analytics being flushed are lost.  Three values need to stay in order:
 
 [source]
 ----
 preStop sleep (or DrainDelay)  <  ShutdownTimeout  <  termination grace period
 ----
 
-Be careful to preserve this order when messing with the dials.  Raising ShutdownTimeout without raising the grace period means the process is killed before it finishes.
+Be careful to preserve this order when adjusting these values.  Raising `ShutdownTimeout` without also raising the grace period means the process is killed before it finishes.
 
-In Docker Compose the grace period is `stop_grace_period`, which defaults to 10 seconds and so needs raising for the default budget.  In Kubernetes it's `terminationGracePeriodSeconds`.  The Helm chart included with tilegroxy sets both that and a preStop hook for you.
+In Docker Compose the grace period is `stop_grace_period` which defaults to 10 seconds and therefore needs raising for the default budget.  In Kubernetes it's `terminationGracePeriodSeconds`.  The Helm chart included with tilegroxy sets both that and a preStop hook for you.
 
 A preStop hook runs to completion before the signal is sent, so its sleep and DrainDelay are additive.  Use one or the other, not both.  The Helm chart handles this by setting DrainDelay to 0 whenever its preStop hook is enabled.
 

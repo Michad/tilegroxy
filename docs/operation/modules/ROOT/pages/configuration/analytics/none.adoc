@@ -1,12 +1,12 @@
 = None
 
-Records nothing. Since analytics is disabled by default this is rarely needed, but it is useful for temporarily disabling a configured destination without deleting its configuration and as a placeholder in templated configurations.
+Disables analytics.  Since analytics is off by default this is mainly useful for temporarily disabling a destination without removing its configuration.
 
 Name should be "none"
 
 Configuration options:
 
-No configuration options of its own.  The `id`, `fields`, `extraFields` and `batch` parameters common to every analytics module are still accepted and validated but have no effect.
+None of its own.  The `id`, `fields`, `extraFields` and `batch` parameters common to every analytics module are still accepted and validated but have no effect.
 
 Example:
 

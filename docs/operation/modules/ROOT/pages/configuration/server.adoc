@@ -1,4 +1,3 @@
-
 = Server
 
 Configures how the HTTP server should operate
@@ -32,6 +31,12 @@ Configuration options:
 | string
 | No
 | tiles
+
+| DocsPath
+| The HTTP Path to serve the documentation website under in addition to RootPath. Supply an empty string to disable serving documentation. Ignored when Production is set
+| string
+| No
+| docs
 
 | Headers
 | Include these headers in all response from server
@@ -99,6 +104,9 @@ The following can be supplied as environment variables:
 
 | TilePath
 | SERVER_TILEPATH
+
+| DocsPath
+| SERVER_DOCSPATH
 
 | Production
 | SERVER_PRODUCTION

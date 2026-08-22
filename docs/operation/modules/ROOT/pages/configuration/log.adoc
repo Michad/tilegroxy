@@ -1,4 +1,3 @@
-
 = Log
 
 Configures how the application should log during operation.

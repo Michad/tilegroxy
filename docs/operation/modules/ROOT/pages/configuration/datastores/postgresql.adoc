@@ -4,7 +4,7 @@ Defines a connection pool to a link:https://www.postgresql.org/[PostgreSQL] data
 
 Name should be "postgresql"
 
-== Configuration options:
+== Configuration options
 
 [cols="1,3,1,1,1"]
 |===
@@ -72,7 +72,7 @@ Name should be "postgresql"
 |===
 
 
-== Example:
+== Example
 
 ----
 datastores:

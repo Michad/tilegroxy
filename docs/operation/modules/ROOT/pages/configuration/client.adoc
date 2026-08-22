@@ -27,10 +27,10 @@ Configuration options:
 | false
 
 | ContentTypes
-| The content-types to allow remote servers to return. Anything else will be interpreted as an error
+| The content-types to allow remote servers to return. Anything else will be interpreted as an error. See xref:../content-type.adoc[Content Type] for details
 | string[]
 | No
-| image/png, image/jpg
+| image/png, image/jpg, image/jpeg, application/vnd.mapbox-vector-tile, application/x-protobuf
 
 | StatusCodes
 | The status codes from the remote server to consider successful

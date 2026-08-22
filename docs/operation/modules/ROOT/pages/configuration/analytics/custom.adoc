@@ -1,8 +1,8 @@
 = Custom
 
-Sends events wherever you want by way of a Go script interpreted at runtime. Use this to reach a destination tilegroxy doesn't support natively, such as a webhook, a message queue, or a file in a bespoke format, without building tilegroxy yourself.
+Records events to whatever destination you can imagine by way of a Go script interpreted at runtime.  This allows reaching a destination tilegroxy doesn't support natively, such as a webhook, a message queue, or a file in a bespoke format, without building tilegroxy yourself.
 
-See xref:extensibility.adoc[Extensibility] for background on how custom modules work and their limitations.  Custom scripts run unrestricted and can use the entire standard library including `os/exec`, so be as cautious using a third party analytics script as you would be executing any other third party software.  Scripts cannot import third party libraries, therefore a destination requiring a vendor SDK needs a native module instead of a custom one.  `net/http` is available which is enough for most HTTP APIs.
+See xref:extensibility.adoc[Extensibility] for details on how custom modules work and their limitations.  Custom scripts run unrestricted and can use the entire standard library including `os/exec`; be as cautious using a third party analytics script as you would be executing any other third party software.  Scripts cannot import third party libraries so a destination requiring a vendor SDK needs a native module instead.  `net/http` is available which suffices for most HTTP APIs.
 
 Name should be "custom"
 
@@ -24,13 +24,13 @@ func record(ctx tilegroxy.Context, events []tilegroxy.AnalyticsEvent, params map
 }
 ----
 
-The `record` function is called once per *batch* of events, not once per event, because interpreting Go carries meaningful per-call overhead. Configure `batch.maxSize` and `batch.maxAge` to control how often it runs.
+The `record` function is called once per *batch* of events rather than once per event since interpreting Go carries a per-call overhead.  Use `batch.maxSize` and `batch.maxAge` to control how often it runs.
 
-Each `AnalyticsEvent` has `Time`, `LayerID`, `LayerName`, `Z`, `X`, `Y`, `UserID` and `Fields`, the last being a map of whatever you selected via `fields` and `extraFields`.
+Each `AnalyticsEvent` contains `Time`, `LayerID`, `LayerName`, `Z`, `X`, `Y`, `UserID` and `Fields`, the last being a map of whatever you selected via `fields` and `extraFields`.
 
-The `params` argument receives every configuration parameter that isn't one of the module's own, which is how you pass a URL, a filename or credentials to the script. Note the `name` parameter is included in this map.
+The `params` argument receives every configuration parameter that isn't one of the module's own.  Use this to pass a URL, a filename, or credentials to the script.  Note the `name` parameter is included in this map.
 
-Returning an error causes the batch to be logged as failed and discarded. The error never reaches the user.
+Returning an error causes the batch to be logged as failed and discarded.  The error never reaches the user.
 
 Configuration options:
 
