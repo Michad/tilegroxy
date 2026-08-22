@@ -1,18 +1,12 @@
 = Analytics
 
-The Analytics configuration defines where tilegroxy records lightweight events describing successful tile usage.  Where xref:telemetry.adoc[telemetry] aggregates counters for operating the service, analytics records individual events that can be attributed to a layer, a coordinate and optionally a user, written to a destination you own and can query. This is useful for understanding which layers are actually consumed, attributing usage to tenants or users, and tracking consumption of a metered upstream provider.
+Records usage events to a destination in batches for tracking purposes.
 
-Like other entities, the analytics configuration uses a parameter called "name" to dictate the type of analytics module which controls the specific list of configuration parameters available.
+More details on Analytics capabilities can be found in xref:../analytics.adoc[Analytics].
 
-Analytics is disabled by default; with no `analytics` section configured the xref:configuration/analytics/none.adoc[none] module is used, no events are produced and the cost to each request is a single check.
+Like other entities, the analytics configuration uses a parameter called "name" to dictate the type of analytics tracking to use, but batching configuration below is used by all options. Analytics is disabled by default.
 
-An event is produced when, and only when, a tile is successfully served over HTTP. Requests that fail, such as a bad layer name, invalid coordinates, an out-of-bounds tile or a provider error, produce no event, nor do requests rejected by authentication. Tiles produced by the xref:commands/seed.adoc[seed] and xref:commands/test.adoc[test] commands and xref:configuration/health.adoc[health check] tiles produce no events since they don't represent real usage. A layer rendered indirectly through the xref:configuration/provider/ref.adoc[ref] provider isn't recorded separately; only the layer that was actually requested is. A cache hit still produces an event; the event reflects that a user consumed a tile, not that a provider generated one.
-
-The event is emitted after the response has been written, so recording never adds latency to the request. Individual layers can be excluded by setting `skipAnalytics` on the layer, see xref:configuration/layer.adoc[Layer].
-
-Analytics is best-effort. A failing or slow destination must never degrade tile serving, therefore errors from an analytics module are logged and discarded; they never reach the user and never change a response. Events are buffered in memory and written in batches. If the buffer fills because the destination cannot keep up, events are *dropped* by default instead of delaying requests. Set `batch.onFull` to `block` if you would rather apply backpressure than lose events. Buffered events are flushed on shutdown and when configuration is hot reloaded, so an orderly restart doesn't lose the current batch, however events still buffered during an abrupt termination are lost. If you need a complete, auditable record of every request, use xref:configuration/log.adoc[access logs] instead.
-
-Every module accepts the same `batch` parameters. A batch is written when either `maxSize` events have accumulated or the oldest event in the buffer reaches `maxAge`.  Note the age of a partial batch is only checked periodically so a batch may be written up to 25% later than `maxAge`.
+Configuration Options:
 
 [cols="1,3,1,1,1"]
 |===
@@ -31,7 +25,7 @@ Every module accepts the same `batch` parameters. A batch is written when either
 | 10
 
 | QueueSize
-| The number of events held in memory awaiting a write. Raise this to absorb larger bursts at the cost of memory
+| The maximum number of events that can be held in memory. Raise this to absorb larger bursts at the cost of memory
 | uint
 | No
 | 10000
@@ -43,103 +37,11 @@ Every module accepts the same `batch` parameters. A batch is written when either
 | 1
 
 | OnFull
-| What to do when the queue is full. Can be `drop` or `block`. Drop discards the event and logs a periodic warning; block makes the request wait for room
+| What to do when the queue is full. Can be `drop` or `block`. Drop discards the event and logs a periodic warning. Block blocks (duh) incoming requests until there's room
 | string
 | No
 | drop
 |===
-
-== Event Contents
-
-Every event always includes the following, which cannot be disabled:
-
-[cols="1,3"]
-|===
-| Field | Description
-
-| time
-| When the tile was served
-
-| layer
-| The *ID* of the layer as configured. When a layer uses a pattern this is the configured ID, not the name from the URL, matching how per-layer telemetry metrics are recorded
-
-| z, x, y
-| The tile coordinates
-
-| user
-| The authenticated user, or empty when the request was anonymous. Only the xref:configuration/authentication/jwt.adoc[jwt] and xref:configuration/authentication/custom.adoc[custom] authentication modules establish a user identity
-|===
-
-Additional attributes are opt-in via `fields`, which accepts any of the following names:
-
-[cols="1,3"]
-|===
-| Name | Description
-
-| layername
-| The layer name exactly as it appeared in the URL, which differs from the layer ID when the layer uses a pattern
-
-| layerparams
-| The placeholder values extracted from a patterned layer name, as a map
-
-| ip
-| The client IP address
-
-| useragent
-| The User-Agent header
-
-| referer
-| The Referer header
-
-| host
-| The Host header
-
-| method
-| The HTTP method
-
-| path
-| The request path
-
-| query
-| The raw query string
-
-| duration
-| How long the request took, in milliseconds
-
-| bytes
-| The size of the served tile in bytes
-
-| contenttype
-| The MIME type of the served tile
-|===
-
-An unrecognized name causes startup to fail, so a typo surfaces when you run `tilegroxy config check` instead of producing a column of empty values.
-
-Be aware that `ip`, `useragent` and user IDs are personal data in many jurisdictions.  They are off by default; enable them only if you have a basis to record them and consider your retention policy for the destination.
-
-== Custom Attributes
-
-The `extraFields` parameter records arbitrary additional attributes.  Each key is the attribute name in the destination and each value selects where it comes from:
-
-[cols="1,3"]
-|===
-| Value form | Description
-
-| `ctx.<key>`
-| A value from the request context. Includes `ip`, `path`, `method`, `host`, `query`, `query-string`, `proto` and `uri`
-
-| `hdr.<name>`
-| A request header. The name is canonicalized to Header-Case before lookup
-
-| anything else
-| Used as a literal constant, useful for tagging events with an environment or region name
-|===
-
-Because `env.` and `secret.` are handled generically for all configuration, they also work here and resolve once at startup instead of per request.
-
-== Metrics
-
-When xref:telemetry.adoc[telemetry] is enabled, analytics reports three counters: `tilegroxy.analytics.recorded` for events successfully written to a destination, `tilegroxy.analytics.dropped` for events discarded because a queue was full, and `tilegroxy.analytics.error` for events in batches that failed to write.  A steadily increasing `dropped` or `error` count means analytics is losing data even though tiles are being served normally, so alert on these separately from tile metrics.
 
 Example:
 
@@ -159,5 +61,3 @@ analytics:
     maxSize: 5000
     maxAge: 30
 ----
-
-A runnable demo combining tilegroxy, a PostgreSQL destination, a map and a dashboard over the recorded events is available in link:../examples/analytics-demo/[examples/analytics-demo].

@@ -75,11 +75,9 @@ Metrics are available for cache hit/miss and the number of tile requests broken 
 
 When using patterns with layers, metrics are logged against the ID of the layer not the name passed into the URL.  If using a Ref provider (including indirectly via the  Blend provider), the "child" layer requests are recorded in the layer-specific metrics *but not* the total metrics.
 
-Since the layer ID is embedded directly in the metric name, only the characters `A-Za-z0-9_-` from the ID are preserved - any other character (spaces, dots, slashes, non-ASCII characters, etc.) is replaced with `_` so the ID always produces a valid OTEL instrument name. This means two layer IDs that differ only in such characters can collapse to the same metric name, in which case their measurements are combined. For example, layer IDs `my layer` and `my.layer` both sanitize to `my_layer`, so `tilegroxy.tiles.layer.my_layer.request` would count requests for both layers.
+The layer ID is sanitized to only alphanumeric characters and underscores, everything else is replaced with underscores. This keeps the instrument name valid for OTEL.  This can cause collisions, usage for "my-layer" and "my_layer" will get written the same metrics.
 
-The `tilegroxy.analytics.*` metrics describe the health of analytics delivery itself rather than usage. A rising `dropped` or `error` count means usage data is being lost even though tiles are being served normally, so it's worth alerting on separately.
-
-Metrics are aggregates and are constrained in cardinality, which makes them suited to answering questions about the health of the service. If instead you need to know which layers a given user or tenant consumed, see xref:configuration/analytics/index.adoc[Analytics] which records individual events attributable to a layer and a user.
+The `tilegroxy.analytics.*` metrics are meant to help monitor the health of xref:configuration/analytics/index.adoc[Analytics] delivery.  A spike in `dropped` or `error` count means usage tracking is getting dropped, so it's worth alerting on these separately.
 
 == Traces
 

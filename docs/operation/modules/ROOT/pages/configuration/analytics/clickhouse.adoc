@@ -1,6 +1,6 @@
 = ClickHouse
 
-Writes events to a link:https://clickhouse.com/[ClickHouse] table using its native batch insert.  ClickHouse is well suited to this workload since analytics events are append-only, high volume, and usually queried in aggregate.
+Writes events to a link:https://clickhouse.com/[ClickHouse] table using its native batch insert.  
 
 Requires a xref:configuration/datastores/clickhouse.adoc[clickhouse datastore] to supply the connection.
 
@@ -8,7 +8,7 @@ Name should be "clickhouse"
 
 == Table Setup
 
-Tilegroxy never issues DDL, you must create the table yourself before starting tilegroxy. This keeps the credentials tilegroxy uses free of schema privileges and leaves partitioning and retention under your control.
+Tilegroxy never issues DDL so you must create the table yourself before starting tilegroxy.  This keeps the credentials tilegroxy uses free of schema privileges and leaves partitioning and retention under your control.
 
 The following matches the default column names:
 
@@ -26,9 +26,9 @@ CREATE TABLE tile_events (
 ORDER BY (layer, time)
 ----
 
-The `extra` column receives everything selected via `fields` and `extraFields`, with values rendered as strings. Using a map instead of dedicated columns means changing which fields you collect never requires a schema migration.
+The `extra` column receives everything selected via `fields` and `extraFields` with values rendered as strings.  A map is used instead of dedicated columns so that changing which fields you collect doesn't require a schema migration.
 
-For a table that expires old data automatically, add a TTL:
+To expire old data automatically, add a TTL:
 
 [,sql]
 ----

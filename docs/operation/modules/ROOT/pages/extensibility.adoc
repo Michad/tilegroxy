@@ -10,7 +10,7 @@ You might have noticed "custom" listed a few times in the xref:./configuration.a
 
 Your custom code must live within a single file for each provider/auth/analytics.  It can use the entire standard library including potentially dangerous function calls such as `exec` and `unsafe`; be as cautious using custom providers from third parties as you would be executing any other third party software.
 
-There is a performance cost of using a custom vs a built-in offering. The exact cost depends on the complexity of your code, however it is typically below 10 milliseconds while tile generation as a whole is usually more than an order of magnitude slower. With authentication especially tilegroxy utilizes caching to mitigate this impact.  However it is something you should keep in mid when deciding whether to implement a Custom provider/auth. Due to these being written in Go, it is easy to convert your custom code to a built-in equivalent if you find this overhead becomes a bottleneck.
+There is a performance cost of using a custom vs a built-in offering. The exact cost depends on the complexity of your code, however it is typically below 10 milliseconds while tile generation as a whole is usually more than an order of magnitude slower. With authentication especially tilegroxy utilizes caching to mitigate this impact.  However it is something you should keep in mind when deciding whether to implement a Custom provider/auth. Due to these being written in Go, it is easy to convert your custom code to a built-in equivalent if you find this overhead becomes a bottleneck.
 
 Custom caches are not currently possible. This is because it's most likely you would need/want to use an external library to talk to whatever cache, which isn't currently possible (limitation of Yaegi).
 
@@ -20,7 +20,9 @@ For cases where the built-in providers don't suffice, you can write your own cus
 
 Example custom providers can be found within link:../examples/providers/[examples/providers].
 
-Custom providers must be within the `custom` package and must import the `tilegroxy/tilegroxy` package for mandatory datatypes. There are two mandatory functions:
+Custom providers must be within the `custom` package and must import the `tilegroxy/tilegroxy` package for mandatory datatypes. 
+
+There are two mandatory functions:
 
 [,go]
 ----
@@ -29,18 +31,18 @@ func preAuth(tilegroxy.Context, tilegroxy.ProviderContext, map[string]interface{
 func generateTile(tilegroxy.Context, tilegroxy.ProviderContext, tilegroxy.TileRequest, map[string]interface{}, tilegroxy.ClientConfig,tilegroxy.ErrorMessages) (*tilegroxy.Image, error)
 ----
 
-The `preAuth` function is responsible for authenticating outgoing requests and returning a token or whatever else is needed. It is called when needed by the application when either `expiration` is reached or an `AuthError` is returned by `generateTile`. A given instance of tilegroxy will only call this method once at a time and then shares the result among threads. However, ProviderContext is not shared between instances of tilegroxy.
-
-The `generateTile` function is the main function which returns an image for a given tile request. You should never trigger a call to `preAuth` yourself from `generateTile` (instead return an `AuthError`) to prevent excessive calls to the upstream provider from multiple tiles.
-
-You can optionally also define a `close` function:
+And one optional function:
 
 [,go]
 ----
 func close(tilegroxy.Context) error
 ----
 
-This is for releasing any resources your provider holds, such as a database handle or a background goroutine. When present, it's called with a context carrying the shutdown deadline, both when tilegroxy shuts down and when the layer is torn down as part of a config hot reload.
+The `preAuth` function is responsible for authenticating outgoing requests and returning a token or whatever else is needed. It is called when needed by the application when either `expiration` is reached or an `AuthError` is returned by `generateTile`. A given instance of tilegroxy will only call this method once at a time and then shares the result among threads. However, ProviderContext is not shared between instances of tilegroxy.
+
+The `generateTile` function is the main function which returns an image for a given tile request. You should never trigger a call to `preAuth` yourself from `generateTile` (instead return an `AuthError`) to prevent excessive calls to the upstream provider from multiple tiles.
+
+The `close` function is for releasing any resources your provider holds, such as a database handle or a background goroutine. It will be called either when tilegroxy shuts down or during a hot reload.
 
 The following types are available for custom providers:
 
@@ -80,6 +82,12 @@ A custom authentication works much the same way as a custom provider.  The code 
 func validate(string) (bool, time.Time, string, []string)
 ----
 
+You can optionally also define a `close` function:
+
+----
+func close(context.Context) error
+----
+
 The `validate` method will be supplied with a single token.  The function should then return (in order):
 
 * pass (bool): Whether the token is valid and should allow the request to proceed
@@ -111,27 +119,16 @@ The method how tokens are extracted from the request is configurable. The follow
 
 No custom types or methods are available.
 
-You can optionally also define a `close` function:
 
-----
-func close(context.Context) error
-----
-
-This is for releasing any resources your authentication scheme holds. When present, it's called with a context carrying the shutdown deadline, both when tilegroxy shuts down and when authentication is torn down as part of a config hot reload.
+Close should release any resources your authentication scheme holds.
 
 === Custom Analytics
 
-A custom xref:configuration/analytics/index.adoc[analytics] module records usage events to whatever destination you need.  Example custom analytics modules can be found within link:../examples/analytics/[examples/analytics].  The package must be "custom" and you must include the following function:
+You can provide a custom xref:configuration/analytics/index.adoc[analytics] for recording usage events to wherever. The package must be "custom" and you must include the following function:
 
 ----
 func record(tilegroxy.Context, []tilegroxy.AnalyticsEvent, map[string]interface{}, tilegroxy.ErrorMessages) error
 ----
-
-The arguments are the context, the batch of events, the parameters included under the analytics module in the configuration, and a mapping for localization of error messages.  An `AnalyticsEvent` contains `Time`, `LayerID`, `LayerName`, `Z`, `X`, `Y`, `UserID` and a `Fields` map holding the attributes selected via `fields` and `extraFields`.
-
-Unlike providers and authentication, `record` is called once per *batch* of events rather than once per request.  This keeps the interpretation overhead described above off the per-tile path and means the batching parameters control how often your code runs.
-
-Returning an error causes the batch to be logged as failed and discarded. It never affects the tile responses that produced those events.
 
 You can optionally also define a `close` function:
 
@@ -139,7 +136,12 @@ You can optionally also define a `close` function:
 func close(tilegroxy.Context) error
 ----
 
-This is for releasing any resources your analytics module holds beyond the batching tilegroxy already manages for you. When present, it's called with a context carrying the shutdown deadline, both when tilegroxy shuts down and when analytics is torn down as part of a config hot reload. It runs after the final batch has been flushed.
+
+An `AnalyticsEvent` contains `Time`, `LayerID`, `LayerName`, `Z`, `X`, `Y`, `UserID` and a `Fields` map holding the attributes selected via `fields` and `extraFields`.
+
+The `record` method is called with a batch of events, not once per request. Returning an error causes the batch to be logged as failed and discarded. 
+
+When present, `close` is called when tilegroxy shuts down or when analytics is torn down as part of a hot reload. It runs after the final batch has been flushed.
 
 == Using tilegroxy as a library
 

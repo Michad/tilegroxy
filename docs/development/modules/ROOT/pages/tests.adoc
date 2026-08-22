@@ -10,15 +10,15 @@ There are a couple places where psuedo-end-to-end tests are placed: tile handler
 
 == End-to-end tests
 
-Tests in `test/e2e` run the compiled binary as a child process.  This covers what an in-process test can't reach: the version information injected by linker flags, the documentation website embedded at build time, the build tags the released binary carries, real exit codes, and signal handling the way a container runtime exercises it.
+Tests in `test/e2e` run the compiled binary as a child process.  This covers what an in-process test can't reach, such as the version information injected by linker flags, the documentation website embedded at build time, the build tags the released binary carries, exit codes, and signal handling as a container runtime performs it.
 
-Run them with `make e2e`, which builds the documentation and the binary first so the artifact under test is complete.  They're excluded from `make test` and `make unit` by the `e2e` build tag.  Files behind a build tag are only linted because `.golangci.yml` lists the tag in `run.build-tags`, so a new tag needs to be added there too.
+Run them with `make e2e` which builds the documentation and the binary first so the artifact under test is complete.  They're excluded from `make test` and `make unit` by the `e2e` build tag.  Files behind a build tag are only linted because `.golangci.yml` lists the tag in `run.build-tags`, so a new tag needs to be added there as well.
 
-Set `TILEGROXY_E2E_BINARY` to test a binary built elsewhere, such as a release artifact or one extracted from the container image.  When it isn't set the harness uses the repository root binary that `make build` produces.  Running `go test` directly rather than through `make e2e` skips that build, so the binary may be stale.
+Set `TILEGROXY_E2E_BINARY` to test a binary built elsewhere such as a release artifact or one extracted from the container image.  If unset the harness uses the repository root binary produced by `make build`.  Note that running `go test` directly rather than through `make e2e` skips that build so the binary may be stale.
 
 Set `TILEGROXY_E2E_TIMEOUT_SCALE` to a multiplier to stretch every deadline when running somewhere slower than a developer machine.
 
-Prefer an in-process test whenever one is possible.  A test that can be written with `httptest` belongs beside the code it covers, where it runs faster and counts towards coverage.  The end-to-end suite is for the binary, the process, and the build.
+It's recommended you write an in-process test whenever possible.  A test that can be written with `httptest` belongs beside the code it covers where it runs faster and counts towards coverage.  The end-to-end tests are for verifying the binary, the process, and the build.
 
 == Coverage
 

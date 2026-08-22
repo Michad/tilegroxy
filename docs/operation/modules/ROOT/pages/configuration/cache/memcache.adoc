@@ -20,7 +20,7 @@ Configuration options:
 | The port of the memcache server. A convenience equivalent to supplying `servers` with a single entry. Do not supply both this and `servers`
 | int
 | No
-| 6379
+| 11211
 
 | keyprefix
 | A prefix to use for keys stored in cache. Helps avoid collisions when multiple applications use the same memcache

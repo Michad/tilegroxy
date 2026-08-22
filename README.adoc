@@ -156,7 +156,7 @@ config:
         url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
 ----
 
-Everything outside of `config` covers the usual deployment concerns: replicas, resources, ingress, autoscaling, storage and scheduling.  Credentials should not be placed in `config` since it becomes a ConfigMap; instead reference them as `env.VAR_NAME` in the configuration and supply the value with the chart's `secrets` or `existingSecretKeys` values.
+The values outside of `config` cover the usual deployment concerns such as replicas, resources, ingress, autoscaling, storage, and scheduling.  Avoid placing credentials in `config` since it becomes a ConfigMap.  Instead reference them as `env.VAR_NAME` in the configuration and supply the value using the chart's `secrets` or `existingSecretKeys` values.
 
 Probes are wired to the xref:configuration/health.adoc[health] endpoints when `config.server.health.enabled` is true, an init container validates the configuration before the server starts, and `tilegroxy seed` can be run as a Job after install and upgrade.  See the link:https://github.com/Michad/tilegroxy/blob/main/charts/tilegroxy/README.md[chart README] for the full list of values.
 

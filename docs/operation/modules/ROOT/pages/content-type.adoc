@@ -1,3 +1,35 @@
 = Content Type
 
-TODO: details about how content-type is handled
+Every tile returned by tilegroxy carries a `Content-Type`, either received from an upstream server or known to the provider that generated it.  Content types from upstream servers are validated against an allowlist before being used.
+
+== Where the Content Type comes from
+
+Providers that call an external HTTP server, such as xref:configuration/provider/proxy.adoc[proxy] and xref:configuration/provider/url_template.adoc[url template], use the `Content-Type` returned by that server after it passes validation.  The xref:configuration/provider/cgi.adoc[cgi] provider uses the `Content-Type` header written by the CGI application.
+
+Providers that generate imagery themselves set the content type unconditionally.  xref:configuration/provider/blend.adoc[blend], xref:configuration/provider/crop.adoc[crop], xref:configuration/provider/effect.adoc[effect], xref:configuration/provider/transform.adoc[transform], and xref:configuration/provider/static.adoc[static] always produce `image/png`.  xref:configuration/provider/postgismvt.adoc[postgis mvt] and xref:configuration/provider/compositemvt.adoc[composite mvt] always produce `application/vnd.mapbox-vector-tile`.
+
+Providers that wrap another provider, such as xref:configuration/provider/fallback.adoc[fallback] and xref:configuration/provider/ref.adoc[ref], pass through the content type of whichever provider produced the tile.
+
+A xref:extensibility.adoc[custom provider] sets the `ContentType` field on the `Image` it returns.  Custom providers using the `GetTile` utility method receive the same validation and rewriting as built-in providers, which is one reason to prefer it over making your own HTTP request.
+
+== Validation and rewriting
+
+Two xref:configuration/client.adoc[client] options control what an external server is allowed to return.
+
+`ContentTypes` is an allowlist.  A response with a `Content-Type` outside this list is treated as an error and no tile is returned, even if the status code indicates success.  The default allows `image/png`, `image/jpg`, `image/jpeg`, `application/vnd.mapbox-vector-tile`, and `application/x-protobuf`.  Matching is exact, so a server sending `image/png; charset=binary` requires that full string be added to the list.
+
+`RewriteContentTypes` replaces a content type after it passes the allowlist.  This is for servers that describe every tile with a generic type.  The default maps `application/octet-stream` to an empty string as described below.
+
+Rewriting happens after validation, therefore the original content type must appear in `ContentTypes` for the rewrite to be reached.  Adding an entry to `RewriteContentTypes` without also adding the key to `ContentTypes` has no effect.
+
+== Empty content types
+
+An empty content type means tilegroxy sets no `Content-Type` header and lets Go determine one by inspecting the first bytes of the tile.  This is accurate for PNG and JPEG which have recognizable file signatures.  It is not accurate for vector tiles, which Go sees as arbitrary binary data and reports as `application/octet-stream`.  If your upstream server returns a generic content type for MVT, map it explicitly to `application/vnd.mapbox-vector-tile` rather than to an empty string.
+
+== Caching and downstream use
+
+The content type is stored alongside the tile contents in every xref:configuration/cache/index.adoc[cache], so a tile served from cache returns the same `Content-Type` as when it was first generated.
+
+The content type is also available as the `contenttype` field in xref:configuration/analytics/index.adoc[analytics] and the `content-type` validation mode for xref:configuration/health.adoc[health checks] compares it against an expected value.
+
+Error responses are handled separately.  They set a `Content-Type` based on the configured xref:configuration/error.adoc[error] mode rather than anything a provider returned.

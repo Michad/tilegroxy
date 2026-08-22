@@ -4,10 +4,10 @@ Tilegroxy is designed to minimize downtime by supporting hot-reloading of config
 
 == Mechanism
 
-When a configuration change is detected and loaded, a new generation of entities  (layers, caches, analytics, datastores) are grouped into a generation.  A hot reload constructs a second generation and swaps it in, which means the old one has to be released without disturbing the requests still using it.
+Entities (layers, caches, analytics, datastores) are grouped into a generation.  A hot reload constructs a second generation and swaps it in, therefore the old generation must be released without disturbing the requests still using it.
 
-Each generation carries a reference count.  A tile request takes a hold on the generation it reads and drops it when the request finishes, so a retired generation closes as soon as its last request returns.  This replaced a fixed sleep that waited out the request timeout before releasing: with a 60 second timeout, several config saves in a row would pin several full generations at once, each holding its own connection pools.
+Each generation carries a reference count.  A tile request takes a hold on the generation it reads and drops it when the request finishes so a retired generation closes as soon as its last request returns.  This replaced a fixed sleep that waited out the request timeout before releasing; with a 60 second timeout, several config saves in a row would pin several full generations at once, each holding its own connection pools.
 
-The reference is taken inside the same lock that reads the generation pointer.  That is what closes the swap race.  A request either increments before the swap happens and is visible to the outgoing generation, or it blocks and reads the new pointer instead.  Taking the reference after releasing the lock would leave a window where a reload sees a count of zero and closes a generation a request is about to use.
+The reference is taken inside the same lock that reads the generation pointer to avoid a race with the swap.  A request either increments before the swap occurs and is visible to the outgoing generation, or it blocks and reads the new pointer instead.  Taking the reference after releasing the lock would leave a window where a reload sees a count of zero and closes a generation that a request is about to use.
 
 A registry holds every live generation so shutdown can release all of them rather than only the one currently serving.  Without it, a reload landing shortly before shutdown would leave the previous generation's analytics batcher draining with nothing waiting on it.

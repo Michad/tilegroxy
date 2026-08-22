@@ -14,9 +14,9 @@ There are four primary operating modes:
 
 It is highly recommended you use the Image mode for production usage.  Returning an Image provides the most user friendly experience as it provides feedback to the user in the map they're looking at that something is wrong.  More importantly, it avoids exposing the specific error message to the end user, which could contain information you don't want exposed.  "Image with error" is useful for development workflows, it gives the same user experience but allows you to easily get to the error messages.
 
-Error responses set a `Content-Type` matching the mode: `text/plain; charset=utf-8` for Text mode, `image/png` for Image and Image with Header modes. None mode sets no body and thus no `Content-Type`.
+Error responses set a `Content-Type` matching the mode: `text/plain; charset=utf-8` for Text and `image/png` for Image and Image with Header.  None mode returns no body and therefore no `Content-Type`.
 
-Every error response also sets `Cache-Control: no-store`, regardless of mode. This matters most in combination with `AlwaysOk` below: with `AlwaysOk` set, an error is returned with HTTP status 200 just like a real tile, so without an explicit `no-store` a CDN or browser sitting in front of tilegroxy could cache a "tile unavailable" response as if it were a legitimate tile - and keep serving that cached error long after the underlying provider issue is resolved. `Cache-Control: no-store` prevents that regardless of `AlwaysOk`.
+Every error response also sets `Cache-Control: no-store` regardless of mode.  This is most important when using `AlwaysOk` described below, since errors are then returned with a status of 200 like any other tile and a CDN or browser in front of tilegroxy would otherwise be free to cache them long after the underlying problem is resolved.
 
 Configuration options:
 
