@@ -1,8 +1,8 @@
 = JWT
 
-Requires incoming requests include a https://jwt.io/[JSON Web Token (JWT)]. The signature of the token is verified against a fixed secret and grants are validated.
+Requires incoming requests include a https://jwt.io/[JSON Web Token (JWT)]. The signature of the token is verified and grants are validated.
 
-Currently this implementation only supports a single key specified against a single signing algorithm. The key can either be stored in configuration or supplied via environment variable. Support for multiple keys and keys pulled from secret stores is a desired future roadmap item.
+The verification key can either be a single key stored in configuration or supplied via environment variable, or a set of keys fetched from a remote https://datatracker.ietf.org/doc/html/rfc7517[JWKS] endpoint. See <<JWKS>>.
 
 The following claims are supported/enforced:
 
@@ -35,18 +35,24 @@ Configuration options:
 
 [cols="1,3,1,1,1"]
 |===
-| Parameter | Type | Required | Default | Description
+| Parameter | Description | Type | Required | Default
 
 | Key
-| The key for verifying the signature. The public key if using asymmetric signing. If the value starts with "env." the remainder is interpreted as the name of the Environment Variable to use to retrieve the verification key.
+| The key for verifying the signature. The public key if using asymmetric signing. If the value starts with "env." the remainder is interpreted as the name of the Environment Variable to use to retrieve the verification key. Required unless JWKS is supplied
 | string
+| No
+| None
+
+| Algorithms
+| Algorithms to allow for JWT signatures. One or more of: "HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "EdDSA". When Key is used instead of JWKS, all listed algorithms must belong to the same key family since only one key is supplied - RS and PS count as the same family
+| string[]
 | Yes
 | None
 
-| Algorithm
-| Algorithm to allow for JWT signature. One of: "HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "EdDSA"
-| string
-| Yes
+| JWKS
+| Fetch verification keys from a remote JWKS endpoint instead of Key. See <<JWKS>>
+| JWKS
+| No
 | None
 
 | HeaderName
@@ -110,5 +116,63 @@ Example:
 authentication:
   name: jwt
   key: env.JWT_KEY
-  algorithm: HS256
+  algorithms:
+    - HS256
+----
+
+== JWKS
+
+Instead of a single static Key, verification keys can be fetched from a remote https://datatracker.ietf.org/doc/html/rfc7517[JWKS] endpoint, as commonly published by an OIDC issuer. When JWKS is configured, Key must not be set.
+
+If a token references a key ID that isn't in the currently cached keyset, the keyset is refreshed, rate limited by `RefreshMinInterval`. This lets an issuer rotate its keys without any operator action. If the issuer becomes unreachable, the last successfully fetched keyset keeps serving, so existing keys keep verifying; only tokens signed with a genuinely new key ID fail while the endpoint is down.
+
+Configuration options:
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| URL
+| The HTTPS URL of the JWKS endpoint. Plain http is rejected
+| string
+| Yes
+| None
+
+| RefreshInterval
+| How many seconds between unconditional refreshes of the keyset
+| uint
+| No
+| 900
+
+| RefreshMinInterval
+| The minimum seconds between refreshes triggered by an unknown key ID
+| uint
+| No
+| 60
+
+| RequestTimeout
+| How many seconds before a fetch of the keyset is cancelled
+| uint
+| No
+| 10
+
+| AllowStartupFailure
+| If false, a failed fetch of the keyset at startup prevents the server from starting. If true, it logs a warning instead and the server starts anyway
+| bool
+| No
+| false
+|===
+
+
+Example:
+
+----
+authentication:
+  name: jwt
+  algorithms:
+    - RS256
+  jwks:
+    url: https://issuer.example.com/.well-known/jwks.json
+  expectedIssuer: https://issuer.example.com/
+  expectedAudience: tilegroxy
 ----

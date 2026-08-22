@@ -15,7 +15,9 @@
 package authentications
 
 import (
+	"context"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -402,4 +404,134 @@ vxNWUY5rv006ZwPuWVEhno8CAwEAAQ==
 	assert.True(t, jwt.CheckAuthentication(ctx, req))
 	ctxAllowedArea, _ := pkg.AllowedAreaFromContext(ctx)
 	assert.False(t, ctxAllowedArea.IsNullIsland())
+}
+
+func Test_JWT_ConfigValidation(t *testing.T) {
+	tests := []struct {
+		name   string
+		config JWTConfig
+	}{
+		{"both key and jwks", JWTConfig{
+			Algorithms: []string{"RS256"},
+			Key:        "hunter2",
+			JWKS:       &JWKSConfig{URL: "https://example.com/jwks.json"},
+		}},
+		{"neither key nor jwks", JWTConfig{
+			Algorithms: []string{"RS256"},
+		}},
+		{"both algorithm and algorithms", JWTConfig{
+			Algorithm:  "HS256",
+			Algorithms: []string{"HS256"},
+			Key:        "hunter2",
+		}},
+		{"no algorithm at all", JWTConfig{
+			Key: "hunter2",
+		}},
+		{"empty algorithms list", JWTConfig{
+			Algorithms: []string{},
+			Key:        "hunter2",
+		}},
+		{"unknown algorithm", JWTConfig{
+			Algorithms: []string{"NOTREAL"},
+			Key:        "hunter2",
+		}},
+		{"symmetric algorithm with jwks", JWTConfig{
+			Algorithms: []string{"HS256"},
+			JWKS:       &JWKSConfig{URL: "https://example.com/jwks.json"},
+		}},
+		{"jwks without url", JWTConfig{
+			Algorithms: []string{"RS256"},
+			JWKS:       &JWKSConfig{},
+		}},
+		{"jwks url not https", JWTConfig{
+			Algorithms: []string{"RS256"},
+			JWKS:       &JWKSConfig{URL: "http://example.com/jwks.json"},
+		}},
+		{"jwks url unparseable", JWTConfig{
+			Algorithms: []string{"RS256"},
+			JWKS:       &JWKSConfig{URL: "://not a url"},
+		}},
+		{"static key mixed HS and RS families", JWTConfig{
+			Algorithms: []string{"HS256", "RS256"},
+			Key:        "hunter2",
+		}},
+		{"static key mixed RS and ES families", JWTConfig{
+			Algorithms: []string{"RS256", "ES256"},
+			Key:        "hunter2",
+		}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			auth, err := JWTRegistration{}.Initialize(test.config, authentication.AuthenticationDeps{ErrorMessages: config.ErrorMessages{}})
+
+			require.Error(t, err)
+			assert.Nil(t, auth)
+		})
+	}
+}
+
+func Test_JWT_DeprecatedAlgorithmStillWorks(t *testing.T) {
+	// Operators have this in production YAML; it stays functional even though it is no longer
+	// documented.
+	auth, err := JWTRegistration{}.Initialize(JWTConfig{
+		Algorithm: "HS256",
+		Key:       "hunter2",
+	}, authentication.AuthenticationDeps{ErrorMessages: config.ErrorMessages{}})
+
+	require.NoError(t, err)
+	assert.NotNil(t, auth)
+}
+
+func Test_JWT_AlgorithmsListAccepted(t *testing.T) {
+	auth, err := JWTRegistration{}.Initialize(JWTConfig{
+		Algorithms: []string{"HS256", "HS512"},
+		Key:        "hunter2",
+	}, authentication.AuthenticationDeps{ErrorMessages: config.ErrorMessages{}})
+
+	require.NoError(t, err)
+	assert.NotNil(t, auth)
+}
+
+func Test_JWT_AlgorithmsListAccepted_MixedRSAFamily(t *testing.T) {
+	// RS and PS both parse as an RSA PEM public key, so mixing them is not a family conflict.
+	auth, err := JWTRegistration{}.Initialize(JWTConfig{
+		Algorithms: []string{"RS256", "PS256"},
+		Key:        "hunter2",
+	}, authentication.AuthenticationDeps{ErrorMessages: config.ErrorMessages{}})
+
+	require.NoError(t, err)
+	assert.NotNil(t, auth)
+}
+
+func Test_JWT_AlgorithmsListAccepted_JWKSMixedFamilies(t *testing.T) {
+	// The mixed-family restriction only applies to static keys; a remote JWKS legitimately
+	// carries keys of different families and keyFor picks per key. The goal is only to prove
+	// Initialize gets past the mixed-family check, not to reach a real JWKS endpoint, so a local
+	// TLS server with an untrusted cert is used: the fetch fails fast and deterministically
+	// (rejected by cert verification) instead of waiting on a real network timeout, and
+	// AllowStartupFailure keeps that failure from being fatal.
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	_, err := JWTRegistration{}.Initialize(JWTConfig{
+		Algorithms: []string{"RS256", "ES256"},
+		JWKS:       &JWKSConfig{URL: server.URL, RequestTimeout: 1, AllowStartupFailure: true},
+	}, authentication.AuthenticationDeps{ErrorMessages: config.ErrorMessages{}})
+
+	require.NoError(t, err)
+}
+
+func Test_JWT_Close_StaticKeyModeIsNoop(t *testing.T) {
+	// Static-key mode has no keys field, so Close relies on keySet.Close's nil-receiver safety.
+	auth, err := JWTRegistration{}.Initialize(JWTConfig{
+		Algorithm: "HS256",
+		Key:       "hunter2",
+	}, authentication.AuthenticationDeps{ErrorMessages: config.ErrorMessages{}})
+	require.NoError(t, err)
+
+	jwtAuth := auth.(*JWT)
+	assert.NoError(t, jwtAuth.Close(context.Background()))
 }
