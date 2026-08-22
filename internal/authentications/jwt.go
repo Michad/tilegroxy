@@ -36,18 +36,20 @@ const defaultLeeway = 5 * time.Second
 
 type JWTConfig struct {
 	//TODO: Performance profile if the cache is actually worthwhile
-	CacheSize        uint16 // Configures the size of the cache of already verified JWTs to avoid re-verifying keys for every token. Expiration still applies. Set to 0 to disable. Defaults to 0
-	Key              string // The key for verifying the signature. The public key if using asymmetric signing. Required
-	Algorithm        string // Algorithm to allow for JWT signature. Required
-	HeaderName       string // The header to extract the JWT from. If this is "Authorization" it removes the "Bearer " from the start. Defaults to "Authorization"
-	MaxExpiration    uint32 // How many seconds from now can the expiration be. JWTs more than X seconds from now will result in a 401. Defaults to 1 day
-	ExpectedAudience string // If specified, require the "aud" grant to be this string
-	ExpectedSubject  string // If specified, require the "sub" grant to be this string
-	ExpectedIssuer   string // If specified, require the "iss" grant to be this string
-	ExpectedScope    string // If specified, require the "scope" grant to contain this string.
-	LayerScope       bool   // If specified, the "scope" grant is used to limit access to layer
-	ScopePrefix      string // If LayerScope is true, this prefix indicates scopes to use
-	UserID           string // Use the specified grant as the user identifier. Defaults to sub
+	CacheSize        uint16      // Configures the size of the cache of already verified JWTs to avoid re-verifying keys for every token. Expiration still applies. Set to 0 to disable. Defaults to 0
+	Key              string      // The key for verifying the signature. The public key if using asymmetric signing. Required unless JWKS is supplied
+	Algorithm        string      // Deprecated: use Algorithms. Retained so existing configurations keep working
+	Algorithms       []string    // Algorithms to allow for JWT signatures. Required
+	JWKS             *JWKSConfig // Fetch verification keys from a remote JWKS endpoint instead of Key
+	HeaderName       string      // The header to extract the JWT from. If this is "Authorization" it removes the "Bearer " from the start. Defaults to "Authorization"
+	MaxExpiration    uint32      // How many seconds from now can the expiration be. JWTs more than X seconds from now will result in a 401. Defaults to 1 day
+	ExpectedAudience string      // If specified, require the "aud" grant to be this string
+	ExpectedSubject  string      // If specified, require the "sub" grant to be this string
+	ExpectedIssuer   string      // If specified, require the "iss" grant to be this string
+	ExpectedScope    string      // If specified, require the "scope" grant to contain this string.
+	LayerScope       bool        // If specified, the "scope" grant is used to limit access to layer
+	ScopePrefix      string      // If LayerScope is true, this prefix indicates scopes to use
+	UserID           string      // Use the specified grant as the user identifier. Defaults to sub
 }
 
 // cachedAuthResult holds everything CheckAuthentication derives from a validated token. A cache
@@ -65,6 +67,7 @@ type cachedAuthResult struct {
 type JWT struct {
 	JWTConfig
 	Cache         *otter.Cache[string, cachedAuthResult]
+	keys          *keySet
 	errorMessages config.ErrorMessages
 }
 
@@ -86,12 +89,52 @@ func (s JWTRegistration) Name() string {
 func (s JWTRegistration) Initialize(configAny any, deps authentication.AuthenticationDeps) (authentication.Authentication, error) {
 	config := configAny.(JWTConfig)
 
-	if !slices.Contains([]string{"HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "EdDSA"}, config.Algorithm) {
-		return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "authentication.algorithm", config.Algorithm)
+	algorithms, err := resolveAlgorithms(config, deps.ErrorMessages)
+	if err != nil {
+		return nil, err
+	}
+	config.Algorithms = algorithms
+
+	usingJWKS := config.JWKS != nil
+
+	if usingJWKS && len(config.Key) > 0 {
+		return nil, fmt.Errorf(deps.ErrorMessages.ParamsMutuallyExclusive, "authentication.key", "authentication.jwks")
 	}
 
-	if len(config.Key) < 1 {
-		return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "authentication.key", "")
+	if !usingJWKS && len(config.Key) < 1 {
+		return nil, fmt.Errorf(deps.ErrorMessages.OneOfRequired, []string{"authentication.key", "authentication.jwks.url"})
+	}
+
+	if !usingJWKS {
+		// A static Key is one key of one type, so parseKey trusts algorithms[0] to pick the
+		// parser. Mixing families would leave every algorithm but the first silently unusable.
+		family := algorithmFamily(algorithms[0])
+		for _, alg := range algorithms[1:] {
+			if algorithmFamily(alg) != family {
+				return nil, fmt.Errorf(deps.ErrorMessages.ParamsMutuallyExclusive, algorithms[0], alg)
+			}
+		}
+	}
+
+	var keys *keySet
+	if usingJWKS {
+		if err = validateURL(config.JWKS.URL, deps.ErrorMessages); err != nil {
+			return nil, err
+		}
+
+		// Symmetric keys from a remote keyset are the classic algorithm-confusion bypass.
+		for _, alg := range algorithms {
+			if strings.HasPrefix(alg, "HS") {
+				return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "authentication.algorithms", alg)
+			}
+		}
+
+		// context.Background() rather than a request context: the cache's goroutines must outlive
+		// construction. Close is what stops them, via AuthWrapper on the shutdown path.
+		keys, err = newKeySet(context.Background(), *config.JWKS, algorithms, deps.ErrorMessages)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if len(config.HeaderName) < 1 {
@@ -107,7 +150,7 @@ func (s JWTRegistration) Initialize(configAny any, deps authentication.Authentic
 	}
 
 	if config.CacheSize == 0 {
-		return &JWT{config, nil, deps.ErrorMessages}, nil
+		return &JWT{JWTConfig: config, Cache: nil, keys: keys, errorMessages: deps.ErrorMessages}, nil
 	}
 
 	cache, err := otter.MustBuilder[string, cachedAuthResult](int(config.CacheSize)).Build()
@@ -115,7 +158,50 @@ func (s JWTRegistration) Initialize(configAny any, deps authentication.Authentic
 		return nil, err
 	}
 
-	return &JWT{config, &cache, deps.ErrorMessages}, nil
+	return &JWT{JWTConfig: config, Cache: &cache, keys: keys, errorMessages: deps.ErrorMessages}, nil
+}
+
+// resolveAlgorithms reconciles the deprecated single Algorithm against the Algorithms list.
+// Setting both is an error rather than a precedence rule, so no operator has to guess which won.
+func resolveAlgorithms(cfg JWTConfig, errorMessages config.ErrorMessages) ([]string, error) {
+	if cfg.Algorithm != "" && len(cfg.Algorithms) > 0 {
+		return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "authentication.algorithm", "authentication.algorithms")
+	}
+
+	algorithms := cfg.Algorithms
+	if cfg.Algorithm != "" {
+		algorithms = []string{cfg.Algorithm}
+	}
+
+	if len(algorithms) < 1 {
+		return nil, fmt.Errorf(errorMessages.ParamRequired, "authentication.algorithms")
+	}
+
+	validAlgorithms := []string{"HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "EdDSA"}
+	for _, alg := range algorithms {
+		if !slices.Contains(validAlgorithms, alg) {
+			return nil, fmt.Errorf(errorMessages.InvalidParam, "authentication.algorithms", alg)
+		}
+	}
+
+	return algorithms, nil
+}
+
+// algorithmFamily maps an algorithm to the key type parseKey needs for it. RS and PS share a
+// family since both parse as an RSA PEM public key.
+func algorithmFamily(alg string) string {
+	switch {
+	case strings.HasPrefix(alg, "HS"):
+		return "HS"
+	case strings.HasPrefix(alg, "RS"), strings.HasPrefix(alg, "PS"):
+		return "RSA"
+	case strings.HasPrefix(alg, "ES"):
+		return "ES"
+	case alg == "EdDSA":
+		return "EdDSA"
+	default:
+		return alg
+	}
 }
 
 func (c JWT) CheckAuthentication(ctx context.Context, req *http.Request) bool {
@@ -197,7 +283,7 @@ func (c JWT) checkAuthenticationWithoutCache(ctx context.Context, tokenStr strin
 	parserOptions := make([]jwt.ParserOption, 0)
 	parserOptions = append(parserOptions, jwt.WithLeeway(defaultLeeway))
 	parserOptions = append(parserOptions, jwt.WithExpirationRequired())
-	parserOptions = append(parserOptions, jwt.WithValidMethods([]string{c.Algorithm}))
+	parserOptions = append(parserOptions, jwt.WithValidMethods(c.Algorithms))
 
 	if len(c.ExpectedAudience) > 0 {
 		parserOptions = append(parserOptions, jwt.WithAudience(c.ExpectedAudience))
@@ -209,7 +295,7 @@ func (c JWT) checkAuthenticationWithoutCache(ctx context.Context, tokenStr strin
 		parserOptions = append(parserOptions, jwt.WithIssuer(c.ExpectedIssuer))
 	}
 
-	tokenJwt, err := jwt.Parse(tokenStr, c.parseKey, parserOptions...)
+	tokenJwt, err := jwt.Parse(tokenStr, c.keyFunc(ctx), parserOptions...)
 
 	if err != nil {
 		slog.InfoContext(ctx, "JWT parsing error: "+err.Error())
@@ -279,23 +365,45 @@ func (c JWT) checkAuthenticationWithoutCache(ctx context.Context, tokenStr strin
 }
 
 func (c JWT) parseKey(_ *jwt.Token) (interface{}, error) {
-	if strings.Index(c.Algorithm, "HS") == 0 {
+	// Algorithms is always populated by resolveAlgorithms; the static key format is determined by
+	// the first entry, since a single Key can only ever be one key type.
+	alg := c.Algorithms[0]
+
+	if strings.Index(alg, "HS") == 0 {
 		return []byte(c.Key), nil
 	}
-	if strings.Index(c.Algorithm, "RS") == 0 {
+	if strings.Index(alg, "RS") == 0 {
 		return jwt.ParseRSAPublicKeyFromPEM([]byte(c.Key))
 	}
-	if strings.Index(c.Algorithm, "ES") == 0 {
+	if strings.Index(alg, "ES") == 0 {
 		return jwt.ParseECPublicKeyFromPEM([]byte(c.Key))
 	}
-	if strings.Index(c.Algorithm, "PS") == 0 {
+	if strings.Index(alg, "PS") == 0 {
 		return jwt.ParseRSAPublicKeyFromPEM([]byte(c.Key))
 	}
-	if c.Algorithm == "EdDSA" {
+	if alg == "EdDSA" {
 		return jwt.ParseEdPublicKeyFromPEM([]byte(c.Key))
 	}
 
-	return nil, fmt.Errorf(c.errorMessages.InvalidParam, "jwt.alg", c.Algorithm)
+	return nil, fmt.Errorf(c.errorMessages.InvalidParam, "jwt.alg", alg)
+}
+
+// keyFunc resolves the verification key. In JWKS mode it closes over the request context so a
+// key fetch inherits its cancellation.
+func (c JWT) keyFunc(ctx context.Context) jwt.Keyfunc {
+	if c.keys == nil {
+		return c.parseKey
+	}
+
+	return func(token *jwt.Token) (interface{}, error) {
+		kid, _ := token.Header["kid"].(string)
+		return c.keys.keyFor(ctx, kid)
+	}
+}
+
+// Close releases the JWKS cache and its background goroutines.
+func (c JWT) Close(ctx context.Context) error {
+	return c.keys.Close(ctx)
 }
 
 func logInvalidClaimsType(ctx context.Context, tokenJwt *jwt.Token) (*cachedAuthResult, bool) {

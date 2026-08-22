@@ -19,6 +19,7 @@ import (
 	"net/http"
 
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
 )
 
 // A struct that wraps all other auths in order to add in instrumentation, specifically child spans for tracing flow. This is used even when telemetry is disabled but OTEL handles no-op'ing in that case so performance impact is minimal
@@ -32,4 +33,10 @@ func (w AuthWrapper) CheckAuthentication(ctx context.Context, req *http.Request)
 	defer span.End()
 
 	return w.Auth.CheckAuthentication(newCtx, req)
+}
+
+// Close forwards to the wrapped auth when it holds resources needing release. Without this the
+// wrapper would hide the underlying auth's Closer implementation from the shutdown path.
+func (w AuthWrapper) Close(ctx context.Context) error {
+	return lifecycle.CloseIfCloser(ctx, w.Auth)
 }
