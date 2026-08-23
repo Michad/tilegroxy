@@ -21,8 +21,8 @@ Configuration options:
 | secondary
 | The provider to supply the imagery to use in areas that are cropped out
 | Provider
-| Yes
-| None
+| No
+| Fully transparent pixels
 
 | bounds
 | Any pixels that fall outside these geographic bounds (in WGS-84/EPSG:4326) will be removed. 

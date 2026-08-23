@@ -64,7 +64,13 @@ func (s CropRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer
 	if err != nil {
 		return nil, err
 	}
-	secondary, err := layer.ConstructProvider(cfg.Secondary, deps)
+
+	secondaryCfg := cfg.Secondary
+	if secondaryCfg == nil {
+		secondaryCfg = map[string]interface{}{"name": "static", "color": "0000"}
+	}
+
+	secondary, err := layer.ConstructProvider(secondaryCfg, deps)
 	if err != nil {
 		return nil, err
 	}
