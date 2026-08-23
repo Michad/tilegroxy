@@ -20,13 +20,9 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
-	"github.com/go-spatial/geom"
-	"github.com/go-spatial/geom/encoding/mvt"
-	"github.com/go-spatial/geom/planar/clip"
-	"github.com/go-spatial/geom/planar/makevalid"
-	"github.com/go-spatial/geom/planar/makevalid/hitmap"
-	"github.com/go-spatial/geom/winding"
-	"github.com/golang/protobuf/proto" //nolint:staticcheck // go-spatial/geom's mvt.Tile.VTile returns a legacy protoc-gen-go v1 message type; google.golang.org/protobuf/proto can't marshal it.
+	"github.com/paulmach/orb"
+	"github.com/paulmach/orb/encoding/mvt"
+	"github.com/paulmach/orb/maptile"
 )
 
 type CropMvtConfig struct {
@@ -85,7 +81,7 @@ func (t CropMvt) GenerateTile(ctx context.Context, providerContext layer.Provide
 		return nil, err
 	}
 
-	if !tileBounds.Intersects(boundsToCrop) {
+	if !boundsToCrop.IsNullIsland() && !tileBounds.Intersects(boundsToCrop) {
 		slog.Log(ctx, slog.LevelDebug, "Tile fully outside crop bounds")
 		return &pkg.Image{Content: []byte{}, ContentType: mvtContentType, ForceSkipCache: true}, nil
 	}
@@ -104,29 +100,18 @@ func (t CropMvt) GenerateTile(ctx context.Context, providerContext layer.Provide
 		return img, nil
 	}
 
-	tileProjBounds, err := tileRequest.GetBoundsProjection(pkg.SRIDPsuedoMercator)
+	layers, err := mvt.Unmarshal(img.Content)
 	if err != nil {
 		return nil, err
 	}
 
-	inTile, err := mvt.DecodeByte(img.Content)
-	if err != nil {
-		return nil, err
-	}
+	tile := maptile.New(uint32(tileRequest.X), uint32(tileRequest.Y), maptile.Zoom(tileRequest.Z)) //#nosec G115 -- tileRequest coordinates are already range-checked by GetBounds above
 
-	clipBoxPixels := boundsToPixelExtent(boundsToCrop.ConvertToPsuedoMercatorRange().ConfineToPsuedoMercatorRange(), *tileProjBounds)
+	layers.ProjectToWGS84(tile)
+	layers.Clip(boundsToOrbBound(boundsToCrop))
+	layers.ProjectToTile(tile)
 
-	outTile, err := cropMvtTile(ctx, inTile, clipBoxPixels)
-	if err != nil {
-		return nil, err
-	}
-
-	vTile, err := outTile.VTile(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	output, err := proto.Marshal(vTile)
+	output, err := mvt.Marshal(layers)
 	if err != nil {
 		return nil, err
 	}
@@ -134,67 +119,9 @@ func (t CropMvt) GenerateTile(ctx context.Context, providerContext layer.Provide
 	return &pkg.Image{Content: output, ContentType: mvtContentType, ForceSkipCache: img.ForceSkipCache}, nil
 }
 
-// boundsToPixelExtent converts a crop region, in the same projection as tileBounds, into the tile-local
-// pixel space (0,0)-(extent,extent) that MVT geometries are encoded in. pixelExtent should match the
-// extent of the layers being cropped; mvt.DefaultExtent is used since MVT layers can each declare their
-// own extent and this is only used to build the clip box, not to reproject the geometry itself.
-func boundsToPixelExtent(crop pkg.Bounds, tileBounds pkg.Bounds) *geom.Extent {
-	pixelExtent := float64(mvt.DefaultExtent)
-
-	minX := (crop.West - tileBounds.West) / tileBounds.Width() * pixelExtent
-	maxX := (crop.East - tileBounds.West) / tileBounds.Width() * pixelExtent
-	// MVT pixel space has Y increasing downward (south), geographic bounds have North at the top.
-	minY := (tileBounds.North - crop.North) / tileBounds.Height() * pixelExtent
-	maxY := (tileBounds.North - crop.South) / tileBounds.Height() * pixelExtent
-
-	return geom.NewExtent([2]float64{minX, minY}, [2]float64{maxX, maxY})
-}
-
-func cropMvtTile(ctx context.Context, inTile *mvt.Tile, clipBox *geom.Extent) (*mvt.Tile, error) {
-	outTile := new(mvt.Tile)
-	order := winding.Order{}
-
-	for _, l := range inTile.Layers() {
-		newLayer := new(mvt.Layer)
-		newLayer.Name = l.Name
-		newLayer.SetExtent(l.Extent())
-
-		for _, f := range l.Features() {
-			croppedGeo, err := cropMvtGeometry(ctx, f.Geometry, clipBox, order)
-			if err != nil {
-				return nil, err
-			}
-			if croppedGeo == nil {
-				continue
-			}
-
-			newFeatures := mvt.NewFeatures(croppedGeo, f.Tags)
-			for i := range newFeatures {
-				newFeatures[i].ID = f.ID
-			}
-			newLayer.AddFeatures(newFeatures...)
-		}
-
-		if err := outTile.AddLayers(newLayer); err != nil {
-			return nil, err
-		}
+func boundsToOrbBound(b pkg.Bounds) orb.Bound {
+	return orb.Bound{
+		Min: orb.Point{b.West, b.South},
+		Max: orb.Point{b.East, b.North},
 	}
-
-	return outTile, nil
-}
-
-func cropMvtGeometry(ctx context.Context, geo geom.Geometry, clipBox *geom.Extent, order winding.Order) (geom.Geometry, error) {
-	hm, err := hitmap.New(clipBox, geo)
-	if err != nil {
-		return nil, err
-	}
-
-	mv := makevalid.Makevalid{Hitmap: hm, Clipper: clip.Default, Order: order}
-
-	croppedGeo, _, err := mv.Makevalid(ctx, geo, clipBox)
-	if err != nil {
-		return nil, err
-	}
-
-	return croppedGeo, nil
 }

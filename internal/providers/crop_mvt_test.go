@@ -19,8 +19,8 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
-	"github.com/go-spatial/geom"
-	"github.com/go-spatial/geom/encoding/mvt"
+	"github.com/paulmach/orb"
+	"github.com/paulmach/orb/encoding/mvt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -47,10 +47,10 @@ func Test_CropMvt_ExecuteNoCrop(t *testing.T) {
 	assert.NotNil(t, img)
 	require.NoError(t, err)
 
-	outTile, err := mvt.DecodeByte(img.Content)
+	outLayers, err := mvt.Unmarshal(img.Content)
 	require.NoError(t, err)
-	require.Len(t, outTile.Layers(), 1)
-	assert.Len(t, outTile.Layers()[0].Features(), 1)
+	require.Len(t, outLayers, 1)
+	assert.Len(t, outLayers[0].Features, 1)
 }
 
 func Test_CropMvt_ExecuteNoBounds(t *testing.T) {
@@ -70,10 +70,10 @@ func Test_CropMvt_ExecuteNoBounds(t *testing.T) {
 	assert.NotNil(t, img)
 	require.NoError(t, err)
 
-	outTile, err := mvt.DecodeByte(img.Content)
+	outLayers, err := mvt.Unmarshal(img.Content)
 	require.NoError(t, err)
-	require.Len(t, outTile.Layers(), 1)
-	assert.Len(t, outTile.Layers()[0].Features(), 1)
+	require.Len(t, outLayers, 1)
+	assert.Len(t, outLayers[0].Features, 1)
 }
 
 func Test_CropMvt_ExecuteCropHalf(t *testing.T) {
@@ -92,13 +92,13 @@ func Test_CropMvt_ExecuteCropHalf(t *testing.T) {
 	assert.NotNil(t, img)
 	require.NoError(t, err)
 
-	outTile, err := mvt.DecodeByte(img.Content)
+	outLayers, err := mvt.Unmarshal(img.Content)
 	require.NoError(t, err)
-	require.Len(t, outTile.Layers(), 1)
-	require.Len(t, outTile.Layers()[0].Features(), 1)
+	require.Len(t, outLayers, 1)
+	require.Len(t, outLayers[0].Features, 1)
 
-	geo := outTile.Layers()[0].Features()[0].Geometry
-	poly, ok := geo.(geom.Polygon)
+	geo := outLayers[0].Features[0].Geometry
+	poly, ok := geo.(orb.Polygon)
 	require.True(t, ok, "expected a polygon, got %T", geo)
 
 	for _, ring := range poly {
@@ -145,8 +145,8 @@ func Test_CropMvt_ExecuteCropWithAuth(t *testing.T) {
 	assert.NotNil(t, img)
 	require.NoError(t, err)
 
-	outTile, err := mvt.DecodeByte(img.Content)
+	outLayers, err := mvt.Unmarshal(img.Content)
 	require.NoError(t, err)
-	require.Len(t, outTile.Layers(), 1)
-	assert.Len(t, outTile.Layers()[0].Features(), 1)
+	require.Len(t, outLayers, 1)
+	assert.Len(t, outLayers[0].Features, 1)
 }
