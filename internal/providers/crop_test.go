@@ -147,6 +147,34 @@ func Test_Crop_ExecuteCropWithAuth(t *testing.T) {
 	assert.Equal(t, img1, img2)
 }
 
+func Test_Crop_ExecuteCropNoSecondary(t *testing.T) {
+	p, _, _ := makeCropProvidersImages()
+	f, err := CropRegistration{}.Initialize(CropConfig{Bounds: pkg.Bounds{South: -90, North: 90, West: 0, East: 180}, Primary: p}, layer.ProviderDeps{ErrorMessages: testErrMessages})
+
+	assert.NotNil(t, f)
+	require.NoError(t, err)
+
+	pc, err := f.PreAuth(pkg.BackgroundContext(), layer.ProviderContext{})
+	assert.NotNil(t, pc)
+	require.NoError(t, err)
+
+	img, err := f.GenerateTile(pkg.BackgroundContext(), pc, pkg.TileRequest{LayerName: "l", Z: 0, X: 0, Y: 0})
+
+	assert.NotNil(t, img)
+	require.NoError(t, err)
+
+	img1, _, err := image.Decode(bytes.NewReader(img.Content))
+	require.NoError(t, err)
+
+	bounds := img1.Bounds()
+	for x := bounds.Min.X; x < bounds.Max.X/2; x++ {
+		for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+			_, _, _, a := img1.At(x, y).RGBA()
+			assert.Equal(t, uint32(0), a)
+		}
+	}
+}
+
 func Test_Crop_ExecuteCropNoBounds(t *testing.T) {
 	p, s, _ := makeCropProvidersImages()
 	cfg := CropRegistration{}.InitializeConfig().(CropConfig)
