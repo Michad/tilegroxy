@@ -97,3 +97,22 @@ func Test_RenderTileNoCache_NoZoomLimitsConfigured_Succeeds(t *testing.T) {
 
 	require.NoError(t, err)
 }
+
+func Test_CheckZoomBounds_BothLimitsConfigured_ReportsConfiguredRangeNotGlobalDefaults(t *testing.T) {
+	minZoom := 4
+	maxZoom := 10
+	l := &Layer{Config: config.LayerConfig{ID: "z5", MinZoom: &minZoom, MaxZoom: &maxZoom}}
+
+	err := l.CheckZoomBounds(pkg.TileRequest{LayerName: "z5", Z: 2, X: 0, Y: 0})
+	require.Error(t, err)
+	var rangeErr pkg.RangeError
+	require.ErrorAs(t, err, &rangeErr)
+	require.InDelta(t, float64(minZoom), rangeErr.MinValue, 0)
+	require.InDelta(t, float64(maxZoom), rangeErr.MaxValue, 0)
+
+	err = l.CheckZoomBounds(pkg.TileRequest{LayerName: "z5", Z: 15, X: 0, Y: 0})
+	require.Error(t, err)
+	require.ErrorAs(t, err, &rangeErr)
+	require.InDelta(t, float64(minZoom), rangeErr.MinValue, 0)
+	require.InDelta(t, float64(maxZoom), rangeErr.MaxValue, 0)
+}

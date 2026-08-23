@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/metric/noop"
 )
@@ -157,6 +158,52 @@ func Test_LayerGroup_RenderTile_BoundsConcurrentCacheWrites(t *testing.T) {
 	wg.Wait()
 
 	require.LessOrEqual(t, int(c.maxSeen.Load()), maxConcurrentCacheWrites)
+}
+
+// alwaysHitCache returns a canned tile on every lookup, regardless of the request.
+type alwaysHitCache struct{}
+
+func (alwaysHitCache) Lookup(_ context.Context, _ pkg.TileRequest) (*pkg.Image, error) {
+	return &pkg.Image{Content: []byte("cached")}, nil
+}
+
+func (alwaysHitCache) Save(_ context.Context, _ pkg.TileRequest, _ *pkg.Image) error {
+	return nil
+}
+
+// A zoom limit added after a tile was cached (or a tile seeded outside the layer's configured
+// range) must still be enforced on a cache hit, not just on the miss path that reaches the
+// provider.
+func Test_LayerGroup_RenderTile_RejectsOutOfZoomRangeEvenOnCacheHit(t *testing.T) {
+	provider := &slowGenerateProvider{delay: 0}
+	c := alwaysHitCache{}
+	minZoom := 4
+
+	l := &Layer{
+		ID:       "test",
+		Pattern:  []layerSegment{{value: "test", placeholder: false}},
+		Provider: provider,
+		Cache:    c,
+		Config:   config.LayerConfig{MinZoom: &minZoom},
+	}
+	l.tileAllCounter = noop.Int64Counter{}
+	l.tileAuthCounter = noop.Int64Counter{}
+	l.tileErrorCounter = noop.Int64Counter{}
+	l.tileSuccessCounter = noop.Int64Counter{}
+
+	lg := &LayerGroup{
+		layers:           []*Layer{l},
+		DefaultCache:     c,
+		cacheHitCounter:  noop.Int64Counter{},
+		cacheMissCounter: noop.Int64Counter{},
+	}
+
+	_, err := lg.RenderTile(context.Background(), pkg.TileRequest{LayerName: "test", Z: 1, X: 0, Y: 0})
+
+	require.Error(t, err)
+	var rangeErr pkg.RangeError
+	require.ErrorAs(t, err, &rangeErr)
+	require.Equal(t, int32(0), provider.generateCalls.Load())
 }
 
 type panicOnSaveCache struct{}

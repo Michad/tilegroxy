@@ -276,6 +276,16 @@ func (c Config) Validate() error {
 		errs = append(errs, fmt.Errorf(c.Error.Messages.InvalidParam, "server.draindelay", strconv.FormatUint(uint64(c.Server.DrainDelay), 10)))
 	}
 
+	for i, l := range c.Layers {
+		if l.MinZoom != nil && l.MaxZoom != nil && *l.MinZoom > *l.MaxZoom {
+			errs = append(errs, fmt.Errorf(c.Error.Messages.InvalidParam, fmt.Sprintf("layers[%d].maxzoom", i), strconv.Itoa(*l.MaxZoom)))
+		}
+
+		if l.Bounds != (BoundsConfig{}) && (l.Bounds.South > l.Bounds.North || l.Bounds.West > l.Bounds.East) {
+			errs = append(errs, fmt.Errorf(c.Error.Messages.InvalidParam, fmt.Sprintf("layers[%d].bounds", i), fmt.Sprintf("%+v", l.Bounds)))
+		}
+	}
+
 	return errors.Join(errs...)
 }
 

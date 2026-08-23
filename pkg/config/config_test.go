@@ -206,6 +206,48 @@ func TestValidate_DefaultConfigIsValid(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestValidate_MinZoomAboveMaxZoomRejected(t *testing.T) {
+	c := DefaultConfig()
+	minZoom, maxZoom := 10, 4
+	c.Layers = []LayerConfig{{ID: "l1", MinZoom: &minZoom, MaxZoom: &maxZoom}}
+
+	err := c.Validate()
+	require.Error(t, err)
+}
+
+func TestValidate_MinZoomBelowMaxZoomAccepted(t *testing.T) {
+	c := DefaultConfig()
+	minZoom, maxZoom := 4, 10
+	c.Layers = []LayerConfig{{ID: "l1", MinZoom: &minZoom, MaxZoom: &maxZoom}}
+
+	err := c.Validate()
+	require.NoError(t, err)
+}
+
+func TestValidate_InvertedBoundsRejected(t *testing.T) {
+	c := DefaultConfig()
+	c.Layers = []LayerConfig{{ID: "l1", Bounds: BoundsConfig{South: 63, North: 51, West: -10, East: 2}}}
+
+	err := c.Validate()
+	require.Error(t, err)
+}
+
+func TestValidate_WellFormedBoundsAccepted(t *testing.T) {
+	c := DefaultConfig()
+	c.Layers = []LayerConfig{{ID: "l1", Bounds: BoundsConfig{South: 51, North: 63, West: -10, East: 2}}}
+
+	err := c.Validate()
+	require.NoError(t, err)
+}
+
+func TestValidate_UnsetBoundsAccepted(t *testing.T) {
+	c := DefaultConfig()
+	c.Layers = []LayerConfig{{ID: "l1"}}
+
+	err := c.Validate()
+	require.NoError(t, err)
+}
+
 func TestAnalyticsYml(t *testing.T) {
 	c, err := LoadConfigFromFile("../../examples/configurations/analytics.yml")
 

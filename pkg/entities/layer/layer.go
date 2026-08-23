@@ -219,7 +219,7 @@ func resolveProviderWithBounds(rawConfig config.LayerConfig, errorMessages confi
 
 	boundsSet := rawConfig.Bounds != (config.BoundsConfig{})
 
-	// Bounds filtering needs a known data type to pick the right crop wrapper (see Task 6).
+	// Bounds filtering needs a known data type to pick the right crop wrapper.
 	if boundsSet && effectiveDataType == pkg.DataTypeUnknown {
 		return nil, fmt.Errorf(errorMessages.ParamRequired, "layer.datatype")
 	}
@@ -370,15 +370,31 @@ func (l *Layer) MatchesName(ctx context.Context, layerName string) bool {
 	return false
 }
 
+// CheckZoomBounds rejects a request outside this layer's configured minzoom/maxzoom. Called
+// before the cache lookup so a cached tile can't bypass a zoom limit added after it was cached.
+func (l *Layer) CheckZoomBounds(tileRequest pkg.TileRequest) error {
+	minZoom := 0
+	if l.Config.MinZoom != nil {
+		minZoom = *l.Config.MinZoom
+	}
+	maxZoom := pkg.MaxZoom
+	if l.Config.MaxZoom != nil {
+		maxZoom = *l.Config.MaxZoom
+	}
+
+	if tileRequest.Z < minZoom || tileRequest.Z > maxZoom {
+		return pkg.RangeError{ParamName: "z", MinValue: float64(minZoom), MaxValue: float64(maxZoom)}
+	}
+
+	return nil
+}
+
 func (l *Layer) RenderTileNoCache(ctx context.Context, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	var img *pkg.Image
 	var err error
 
-	if l.Config.MinZoom != nil && tileRequest.Z < *l.Config.MinZoom {
-		return nil, pkg.RangeError{ParamName: "z", MinValue: float64(*l.Config.MinZoom), MaxValue: float64(pkg.MaxZoom)}
-	}
-	if l.Config.MaxZoom != nil && tileRequest.Z > *l.Config.MaxZoom {
-		return nil, pkg.RangeError{ParamName: "z", MinValue: 0, MaxValue: float64(*l.Config.MaxZoom)}
+	if err := l.CheckZoomBounds(tileRequest); err != nil {
+		return nil, err
 	}
 
 	l.tileAllCounter.Add(ctx, 1)

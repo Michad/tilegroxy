@@ -221,6 +221,10 @@ func (lg *LayerGroup) RenderTile(ctx context.Context, tileRequest pkg.TileReques
 		return nil, pkg.UnauthorizedError{Message: "Layer " + tileRequest.LayerName + " does not exist"}
 	}
 
+	if err := l.CheckZoomBounds(tileRequest); err != nil {
+		return nil, err
+	}
+
 	if l.Config.SkipCache {
 		return lg.RenderTileNoCache(ctx, tileRequest)
 	}

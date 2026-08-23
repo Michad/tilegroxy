@@ -67,8 +67,8 @@ func Test_ConstructLayer_Bounds_MVT_WrapsInRealCropMvt(t *testing.T) {
 // builds the primary provider once to read its DataType(), then again inside the crop wrapper
 // (crop/cropmvt only accept raw config, not an already-built Provider); the first instance must be
 // closed, not discarded, or a Custom provider's close hook - and whatever cleanup it does - never
-// runs. Custom itself reports DataTypeUnknown (Task 3), so datatype must be set explicitly here
-// for bounds wrapping to resolve at all.
+// runs. Custom itself reports DataTypeUnknown, so datatype must be set explicitly here for
+// bounds wrapping to resolve at all.
 func Test_ConstructLayer_Bounds_ClosesDiscardedCustomProvider(t *testing.T) {
 	out := filepath.Join(t.TempDir(), "closed.txt")
 
