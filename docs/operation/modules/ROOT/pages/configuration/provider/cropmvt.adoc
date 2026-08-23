@@ -1,8 +1,8 @@
 = Crop MVT
 
-Crops vector tiles from a primary provider to a specific geographic area, discarding any geometry that falls outside.
+Crops vector tiles from another provider to a specific bounds.
 
-This is the vector tile equivalent of the xref:configuration/provider/crop.adoc[crop] provider. Unlike crop it has no secondary provider: areas outside the bounds are simply removed from the tile rather than backfilled with alternate content.
+This is the vector tile equivalent of the xref:configuration/provider/crop.adoc[crop] provider, except without the secondary provider (combine this with xref:configuration/provider/compositemvt.adoc[compositemvt] for the same effect).
 
 Name should be "cropmvt"
 
