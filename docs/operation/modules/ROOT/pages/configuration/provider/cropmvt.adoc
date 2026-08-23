@@ -1,0 +1,49 @@
+= Crop MVT
+
+Crops vector tiles from a primary provider to a specific geographic area, discarding any geometry that falls outside.
+
+This is the vector tile equivalent of the xref:configuration/provider/crop.adoc[crop] provider. Unlike crop it has no secondary provider: areas outside the bounds are simply removed from the tile rather than backfilled with alternate content.
+
+Name should be "cropmvt"
+
+Configuration options:
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| primary
+| The provider of the vector tile to crop
+| Provider
+| Yes
+| None
+
+| bounds
+| Any geometry that falls outside these geographic bounds (in WGS-84/EPSG:4326) will be removed.
+| Object with north, south, east, west
+| No
+| Whole world
+
+| boundsFromAuth
+| If true, use the bounds supplied via the auth context such as the geohash claim in xref:configuration/authentication/jwt.adoc[JWT] auth.  If no bounds are specified via auth context then it falls back on the bounds parameter.
+| Boolean
+| No
+| No
+
+|===
+
+Example:
+
+----
+provider:
+  name: cropmvt
+  bounds:
+    south: 51
+    north: 63
+    west: -7
+    east: 0.1
+  primary:
+    name: postgismvt
+    datastore: mydb
+    table: roads
+----

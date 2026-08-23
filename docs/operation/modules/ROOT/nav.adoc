@@ -5,6 +5,7 @@
 *** xref:configuration/provider/proxy.adoc[]
 *** xref:configuration/provider/blend.adoc[]
 *** xref:configuration/provider/crop.adoc[]
+*** xref:configuration/provider/cropmvt.adoc[]
 *** xref:configuration/provider/cgi.adoc[]
 *** xref:configuration/provider/custom.adoc[]
 *** xref:configuration/provider/effect.adoc[]
