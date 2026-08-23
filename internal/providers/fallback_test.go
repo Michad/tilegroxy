@@ -25,6 +25,29 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// fixedDataTypeTestProvider is a minimal layer.Provider whose DataType() is set by the caller,
+// used to test providers (Fallback, Crop) that pass through their primary's data type.
+type fixedDataTypeTestProvider struct {
+	dt pkg.DataType
+}
+
+func (p fixedDataTypeTestProvider) PreAuth(_ context.Context, pc layer.ProviderContext) (layer.ProviderContext, error) {
+	return pc, nil
+}
+
+func (p fixedDataTypeTestProvider) GenerateTile(_ context.Context, _ layer.ProviderContext, _ pkg.TileRequest) (*pkg.Image, error) {
+	return nil, nil
+}
+
+func (p fixedDataTypeTestProvider) DataType() pkg.DataType {
+	return p.dt
+}
+
+func Test_DataType_Fallback_PassesThroughPrimary(t *testing.T) {
+	f := Fallback{Primary: fixedDataTypeTestProvider{pkg.DataTypeMVT}}
+	assert.Equal(t, pkg.DataTypeMVT, f.DataType())
+}
+
 // Fallback holds Primary/Secondary directly, outside any layer, so they're unreachable through
 // LayerGroup.Close unless Fallback forwards to them itself.
 func Test_FallbackCloseClosesChildProviders(t *testing.T) {

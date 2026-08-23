@@ -24,6 +24,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func Test_DataType_Effect(t *testing.T) {
+	assert.Equal(t, pkg.DataTypeRaster, Effect{}.DataType())
+}
+
 func makeEffectProvider() map[string]interface{} {
 	return map[string]interface{}{
 		"name":  "static",

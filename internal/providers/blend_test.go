@@ -46,6 +46,10 @@ func (p *closableProvider) DataType() pkg.DataType {
 	return pkg.DataTypeUnknown
 }
 
+func Test_DataType_Blend(t *testing.T) {
+	assert.Equal(t, pkg.DataTypeRaster, Blend{}.DataType())
+}
+
 // Blend holds its children directly, outside any layer, so they're unreachable through
 // LayerGroup.Close unless Blend forwards to them itself.
 func Test_BlendCloseClosesChildProviders(t *testing.T) {

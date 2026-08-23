@@ -25,6 +25,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func Test_DataType_CropMvt(t *testing.T) {
+	assert.Equal(t, pkg.DataTypeMVT, CropMvt{}.DataType())
+}
+
 func makeCropMvtProviderConfig() map[string]interface{} {
 	return map[string]interface{}{
 		"name":  "static",

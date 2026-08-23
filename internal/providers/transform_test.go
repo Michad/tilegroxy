@@ -24,6 +24,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func Test_DataType_Transform(t *testing.T) {
+	assert.Equal(t, pkg.DataTypeRaster, Transform{}.DataType())
+}
+
 func makeTransformProvider() map[string]interface{} {
 	return map[string]interface{}{
 		"name":  "static",

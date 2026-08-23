@@ -49,6 +49,21 @@ type HealthConfig struct {
 	Checks  []map[string]any // An array defining the specific checks to perform.
 }
 
+type DataType string
+
+const (
+	DataTypeRaster  DataType = "raster"
+	DataTypeMVT     DataType = "mvt"
+	DataTypeUnknown DataType = "unknown"
+)
+
+type BoundsConfig struct {
+	South float64
+	North float64
+	West  float64
+	East  float64
+}
+
 type ServerConfig struct {
 	Encrypt    *EncryptionConfig // Whether and how to use TLS. Defaults to none AKA no encryption.
 	Health     HealthConfig      // Whether to enable health endpoints on a secondary port.

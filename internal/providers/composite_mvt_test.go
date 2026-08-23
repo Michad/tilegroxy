@@ -25,6 +25,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func Test_DataType_CompositeMVT(t *testing.T) {
+	assert.Equal(t, pkg.DataTypeMVT, CompositeMVT{}.DataType())
+}
+
 // CompositeMVT holds its children directly, outside any layer, so they're unreachable through
 // LayerGroup.Close unless CompositeMVT forwards to them itself.
 func Test_CompositeMVTCloseClosesChildProviders(t *testing.T) {

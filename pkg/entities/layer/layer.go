@@ -200,10 +200,7 @@ type Layer struct {
 	tileSuccessCounter metric.Int64Counter
 }
 
-// resolveProviderWithBounds reconciles the layer's declared datatype against what the provider
-// actually produces, then wraps the provider in "crop"/"cropmvt" when bounds is set. Split out of
-// ConstructLayer to keep that function's complexity in check.
-func resolveProviderWithBounds(rawConfig config.LayerConfig, errorMessages config.ErrorMessages, provider Provider, layerGroup *LayerGroup, datastores *datastore.DatastoreRegistry) (Provider, error) {
+func resolveDataType(rawConfig config.LayerConfig, errorMessages config.ErrorMessages, provider Provider) (*config.DataType, error) {
 	effectiveDataType := rawConfig.DataType
 	providerDataType := provider.DataType()
 
@@ -217,19 +214,12 @@ func resolveProviderWithBounds(rawConfig config.LayerConfig, errorMessages confi
 		effectiveDataType = providerDataType
 	}
 
-	boundsSet := rawConfig.Bounds != (config.BoundsConfig{})
+	return &effectiveDataType, nil
+}
 
-	// Bounds filtering needs a known data type to pick the right crop wrapper.
-	if boundsSet && effectiveDataType == pkg.DataTypeUnknown {
-		return nil, fmt.Errorf(errorMessages.ParamRequired, "layer.datatype")
-	}
-
-	if !boundsSet {
-		return provider, nil
-	}
-
+func constructCropWrappedProvider(rawConfig config.LayerConfig, errorMessages config.ErrorMessages, provider Provider, layerGroup *LayerGroup, datatype config.DataType, datastores *datastore.DatastoreRegistry) (Provider, error) {
 	wrapperName := "cropmvt"
-	if effectiveDataType == pkg.DataTypeRaster {
+	if datatype == pkg.DataTypeRaster {
 		wrapperName = "crop"
 	}
 
@@ -292,9 +282,23 @@ func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.Cli
 		return nil, err
 	}
 
-	provider, err = resolveProviderWithBounds(rawConfig, errorMessages, provider, layerGroup, datastores)
+	datatype, err := resolveDataType(rawConfig, errorMessages, provider)
 	if err != nil {
 		return nil, err
+	}
+
+	boundsSet := rawConfig.Bounds != (config.BoundsConfig{})
+
+	// Bounds filtering needs a known data type to pick the right crop wrapper.
+	if boundsSet && *datatype == pkg.DataTypeUnknown {
+		return nil, fmt.Errorf(errorMessages.ParamRequired, "layer.datatype")
+	}
+
+	if boundsSet {
+		provider, err = constructCropWrappedProvider(rawConfig, errorMessages, provider, layerGroup, *datatype, datastores)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	var segments []layerSegment

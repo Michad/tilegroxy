@@ -60,6 +60,10 @@ func buildCustomProviderFromScript(t *testing.T, body string) *Custom {
 	return c.(*Custom)
 }
 
+func Test_DataType_Custom(t *testing.T) {
+	assert.Equal(t, pkg.DataTypeUnknown, Custom{}.DataType())
+}
+
 func Test_CustomValidate(t *testing.T) {
 	c, err := CustomRegistration{}.Initialize(CustomConfig{}, layer.ProviderDeps{ClientConfig: testClientConfig, ErrorMessages: testErrMessages})
 
