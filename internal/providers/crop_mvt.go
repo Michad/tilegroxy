@@ -96,7 +96,7 @@ func (t CropMvt) GenerateTile(ctx context.Context, providerContext layer.Provide
 	}
 
 	if boundsToCrop.Contains(*tileBounds) {
-		slog.Log(ctx, slog.LevelDebug, "Tile fully contains crop bounds")
+		slog.Log(ctx, slog.LevelDebug, "Tile fully contained by crop bounds")
 		return img, nil
 	}
 
