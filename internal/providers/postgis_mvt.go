@@ -207,3 +207,7 @@ func (t PostgisMvt) GenerateTile(ctx context.Context, _ layer.ProviderContext, r
 
 	return &pkg.Image{Content: result, ContentType: mvtContentType}, err
 }
+
+func (t PostgisMvt) DataType() pkg.DataType {
+	return pkg.DataTypeMVT
+}

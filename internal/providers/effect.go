@@ -155,3 +155,7 @@ func (t Effect) GenerateTile(ctx context.Context, providerContext layer.Provider
 
 	return &pkg.Image{Content: output, ContentType: mimePng, ForceSkipCache: img.ForceSkipCache}, nil
 }
+
+func (t Effect) DataType() pkg.DataType {
+	return pkg.DataTypeRaster
+}

@@ -141,6 +141,10 @@ func (t Custom) GenerateTile(ctx context.Context, providerContext layer.Provider
 	return t.generateTileFunc(ctx, providerContext, tileRequest, t.Params, t.clientConfig, t.errorMessages)
 }
 
+func (t Custom) DataType() pkg.DataType {
+	return pkg.DataTypeUnknown
+}
+
 // Close calls the script's close function when it defines one. The symbol is optional so scripts written
 // before this existed keep working
 func (t Custom) Close(ctx context.Context) error {

@@ -41,6 +41,10 @@ func (p *countingProvider) GenerateTile(_ context.Context, _ ProviderContext, _ 
 	return &pkg.Image{}, nil
 }
 
+func (p *countingProvider) DataType() pkg.DataType {
+	return pkg.DataTypeUnknown
+}
+
 // Many goroutines rendering on a freshly constructed layer all see the zero AuthExpiration at
 // once, so this covers both the race on Layer.providerContext and PreAuth running only once.
 func Test_Layer_ConcurrentRenderTileNoCache_NoRace(t *testing.T) {
@@ -98,6 +102,10 @@ func (p *reauthProvider) GenerateTile(_ context.Context, _ ProviderContext, _ pk
 		return nil, pkg.ProviderAuthError{Message: "token expired"}
 	}
 	return &pkg.Image{}, nil
+}
+
+func (p *reauthProvider) DataType() pkg.DataType {
+	return pkg.DataTypeUnknown
 }
 
 func Test_Layer_RenderTileNoCache_ReauthsOnProviderAuthError(t *testing.T) {

@@ -119,6 +119,10 @@ func (t CropMvt) GenerateTile(ctx context.Context, providerContext layer.Provide
 	return &pkg.Image{Content: output, ContentType: mvtContentType, ForceSkipCache: img.ForceSkipCache}, nil
 }
 
+func (t CropMvt) DataType() pkg.DataType {
+	return pkg.DataTypeMVT
+}
+
 func boundsToOrbBound(b pkg.Bounds) orb.Bound {
 	return orb.Bound{
 		Min: orb.Point{b.West, b.South},

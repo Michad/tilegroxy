@@ -178,6 +178,10 @@ func (t Crop) GenerateTile(ctx context.Context, providerContext layer.ProviderCo
 	return &pkg.Image{Content: output, ContentType: mimePng, ForceSkipCache: img.ForceSkipCache}, nil
 }
 
+func (t Crop) DataType() pkg.DataType {
+	return t.Primary.DataType()
+}
+
 func resizeImages(ctx context.Context, img image.Image, img2 image.Image) (image.Image, image.Image) {
 	if img.Bounds() != img2.Bounds() {
 		var size image.Point

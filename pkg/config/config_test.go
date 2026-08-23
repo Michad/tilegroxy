@@ -336,3 +336,25 @@ func Test_DrainDelayCannotConsumeWholeBudget(t *testing.T) {
 	// A drain delay at or above the budget leaves no time to actually drain or flush.
 	require.Error(t, c.Validate())
 }
+
+func Test_LayerConfig_HasDataTypeZoomBoundsFields(t *testing.T) {
+	minZoom := 4
+	maxZoom := 18
+	cfg := LayerConfig{
+		DataType: DataTypeRaster,
+		MinZoom:  &minZoom,
+		MaxZoom:  &maxZoom,
+		Bounds:   BoundsConfig{South: -10, North: 10, West: -10, East: 10},
+	}
+
+	assert.Equal(t, DataTypeRaster, cfg.DataType)
+	assert.Equal(t, 4, *cfg.MinZoom)
+	assert.Equal(t, 18, *cfg.MaxZoom)
+	assert.InDelta(t, 10.0, cfg.Bounds.North, 0)
+}
+
+func Test_DataType_Constants_Values(t *testing.T) {
+	assert.Equal(t, DataTypeRaster, DataType("raster"))
+	assert.Equal(t, DataTypeMVT, DataType("mvt"))
+	assert.Equal(t, DataTypeUnknown, DataType("unknown"))
+}

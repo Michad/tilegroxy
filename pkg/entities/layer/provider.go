@@ -30,6 +30,8 @@ type Provider interface {
 	// based on the expiration in layergroup.ProviderContext and when an AuthError is returned from GenerateTile
 	PreAuth(ctx context.Context, providerContext ProviderContext) (ProviderContext, error)
 	GenerateTile(ctx context.Context, providerContext ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error)
+	// Declares whether this provider produces raster or vector tiles, or pkg.DataTypeUnknown if it depends on config/upstream. Checked against a layer's datatype setting at startup
+	DataType() pkg.DataType
 }
 
 type ProviderContext struct {

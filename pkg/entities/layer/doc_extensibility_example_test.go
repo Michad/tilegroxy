@@ -62,6 +62,10 @@ func (t docExampleSample) GenerateTile(_ context.Context, _ ProviderContext, _ p
 	return nil, errors.New("not implemented")
 }
 
+func (t docExampleSample) DataType() pkg.DataType {
+	return pkg.DataTypeUnknown
+}
+
 func Test_DocExtensibilityExample_RegistersAndConstructs(t *testing.T) {
 	RegisterProvider(docExampleSampleRegistration{})
 

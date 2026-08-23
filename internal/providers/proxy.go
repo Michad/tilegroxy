@@ -77,3 +77,7 @@ func (t Proxy) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRe
 
 	return getTile(ctx, t.clientConfig, url, make(map[string]string))
 }
+
+func (t Proxy) DataType() pkg.DataType {
+	return pkg.DataTypeUnknown
+}

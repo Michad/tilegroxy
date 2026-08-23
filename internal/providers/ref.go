@@ -86,3 +86,7 @@ func (t Ref) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequ
 
 	return t.layerGroup.RenderTile(newCtx, newRequest)
 }
+
+func (t Ref) DataType() pkg.DataType {
+	return pkg.DataTypeUnknown
+}

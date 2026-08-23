@@ -42,6 +42,10 @@ func (p *slowGenerateProvider) GenerateTile(_ context.Context, _ ProviderContext
 	return &pkg.Image{Content: []byte("tile")}, nil
 }
 
+func (p *slowGenerateProvider) DataType() pkg.DataType {
+	return pkg.DataTypeUnknown
+}
+
 // alwaysMissCache always reports a miss and records how many times Save is called.
 type alwaysMissCache struct {
 	saveCalls atomic.Int32

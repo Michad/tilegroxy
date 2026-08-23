@@ -37,6 +37,10 @@ func (seedTestPanicProvider) GenerateTile(_ context.Context, _ layer.ProviderCon
 	panic("simulated panic from a buggy provider")
 }
 
+func (seedTestPanicProvider) DataType() pkg.DataType {
+	return pkg.DataTypeUnknown
+}
+
 type seedTestPanicRegistration struct{}
 
 func (seedTestPanicRegistration) Name() string          { return "seed-test-panic-provider" }

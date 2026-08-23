@@ -128,6 +128,10 @@ func (t CompositeMVT) GenerateTile(ctx context.Context, providerContext layer.Pr
 	return &resultImg, nil
 }
 
+func (t CompositeMVT) DataType() pkg.DataType {
+	return pkg.DataTypeMVT
+}
+
 func callCompositingProvider(ctx context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest, provider layer.Provider, i int, imgs chan *pkg.Image, errs chan error, wg *sync.WaitGroup) {
 	defer func() {
 		if r := recover(); r != nil {

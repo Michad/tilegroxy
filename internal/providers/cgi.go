@@ -195,3 +195,7 @@ func (t CGI) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequ
 
 	return &pkg.Image{Content: b, ContentType: contentType}, nil
 }
+
+func (t CGI) DataType() pkg.DataType {
+	return pkg.DataTypeUnknown
+}

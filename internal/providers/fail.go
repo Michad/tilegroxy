@@ -65,3 +65,7 @@ func (t Fail) PreAuth(_ context.Context, providerContext layer.ProviderContext) 
 func (t Fail) GenerateTile(_ context.Context, _ layer.ProviderContext, _ pkg.TileRequest) (*pkg.Image, error) {
 	return nil, errors.New(t.Message)
 }
+
+func (t Fail) DataType() pkg.DataType {
+	return pkg.DataTypeUnknown
+}

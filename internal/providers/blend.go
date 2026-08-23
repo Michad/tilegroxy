@@ -277,6 +277,10 @@ func (t Blend) GenerateTile(ctx context.Context, providerContext layer.ProviderC
 	return &pkg.Image{Content: output, ContentType: mimePng, ForceSkipCache: skipWrite.Load()}, nil
 }
 
+func (t Blend) DataType() pkg.DataType {
+	return pkg.DataTypeRaster
+}
+
 // Close releases the child providers. Blend holds them directly rather than through a Layer, so
 // they're unreachable from LayerGroup.Close without this.
 func (t Blend) Close(ctx context.Context) error {

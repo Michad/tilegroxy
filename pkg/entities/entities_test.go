@@ -42,6 +42,10 @@ func (p closeCountingProvider) GenerateTile(_ context.Context, _ layer.ProviderC
 	return nil, nil
 }
 
+func (p closeCountingProvider) DataType() pkg.DataType {
+	return pkg.DataTypeUnknown
+}
+
 func (p closeCountingProvider) Close(_ context.Context) error {
 	*p.closed = true
 	return nil

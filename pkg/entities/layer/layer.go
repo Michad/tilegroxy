@@ -28,6 +28,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/Michad/tilegroxy/pkg/entities/datastore"
+	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
 	"github.com/Michad/tilegroxy/pkg/static"
 	"go.opentelemetry.io/otel"
@@ -199,6 +200,70 @@ type Layer struct {
 	tileSuccessCounter metric.Int64Counter
 }
 
+// resolveProviderWithBounds reconciles the layer's declared datatype against what the provider
+// actually produces, then wraps the provider in "crop"/"cropmvt" when bounds is set. Split out of
+// ConstructLayer to keep that function's complexity in check.
+func resolveProviderWithBounds(rawConfig config.LayerConfig, errorMessages config.ErrorMessages, provider Provider, layerGroup *LayerGroup, datastores *datastore.DatastoreRegistry) (Provider, error) {
+	effectiveDataType := rawConfig.DataType
+	providerDataType := provider.DataType()
+
+	// An explicit datatype that disagrees with what the provider actually produces is a config error.
+	if effectiveDataType != "" && effectiveDataType != pkg.DataTypeUnknown &&
+		providerDataType != pkg.DataTypeUnknown && effectiveDataType != providerDataType {
+		return nil, fmt.Errorf(errorMessages.InvalidParam, "layer.datatype", string(effectiveDataType))
+	}
+
+	if effectiveDataType == "" || effectiveDataType == pkg.DataTypeUnknown {
+		effectiveDataType = providerDataType
+	}
+
+	boundsSet := rawConfig.Bounds != (config.BoundsConfig{})
+
+	// Bounds filtering needs a known data type to pick the right crop wrapper (see Task 6).
+	if boundsSet && effectiveDataType == pkg.DataTypeUnknown {
+		return nil, fmt.Errorf(errorMessages.ParamRequired, "layer.datatype")
+	}
+
+	if !boundsSet {
+		return provider, nil
+	}
+
+	wrapperName := "cropmvt"
+	if effectiveDataType == pkg.DataTypeRaster {
+		wrapperName = "crop"
+	}
+
+	wrapperConfig := map[string]interface{}{
+		"name": wrapperName,
+		"bounds": pkg.Bounds{
+			South: rawConfig.Bounds.South,
+			North: rawConfig.Bounds.North,
+			West:  rawConfig.Bounds.West,
+			East:  rawConfig.Bounds.East,
+		},
+		"primary": rawConfig.Provider,
+	}
+
+	wrapped, err := ConstructProvider(wrapperConfig, ProviderDeps{
+		ClientConfig:  *rawConfig.Client,
+		ErrorMessages: errorMessages,
+		LayerGroup:    layerGroup,
+		Datastores:    datastores,
+	})
+
+	// The crop/cropmvt wrapper builds its own primary from rawConfig.Provider (ConstructProvider
+	// only accepts raw config, not an already-built Provider), so the instance passed in here
+	// becomes an orphan once wrapping succeeds or fails. Close it so a Custom provider's Yaegi
+	// interpreter (or any other provider with startup side effects) isn't leaked.
+	closeErr := lifecycle.CloseIfCloser(pkg.BackgroundContext(), provider)
+
+	if err != nil {
+		return nil, errors.Join(err, closeErr)
+	}
+
+	return wrapped, closeErr
+}
+
 func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup, secreter secret.Secreter, datastores *datastore.DatastoreRegistry) (*Layer, error) {
 	var err error
 	if rawConfig.Client == nil {
@@ -223,6 +288,11 @@ func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.Cli
 		Datastores:    datastores,
 	})
 
+	if err != nil {
+		return nil, err
+	}
+
+	provider, err = resolveProviderWithBounds(rawConfig, errorMessages, provider, layerGroup, datastores)
 	if err != nil {
 		return nil, err
 	}
@@ -303,6 +373,13 @@ func (l *Layer) MatchesName(ctx context.Context, layerName string) bool {
 func (l *Layer) RenderTileNoCache(ctx context.Context, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	var img *pkg.Image
 	var err error
+
+	if l.Config.MinZoom != nil && tileRequest.Z < *l.Config.MinZoom {
+		return nil, pkg.RangeError{ParamName: "z", MinValue: float64(*l.Config.MinZoom), MaxValue: float64(pkg.MaxZoom)}
+	}
+	if l.Config.MaxZoom != nil && tileRequest.Z > *l.Config.MaxZoom {
+		return nil, pkg.RangeError{ParamName: "z", MinValue: 0, MaxValue: float64(*l.Config.MaxZoom)}
+	}
 
 	l.tileAllCounter.Add(ctx, 1)
 

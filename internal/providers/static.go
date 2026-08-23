@@ -74,3 +74,7 @@ func (t Static) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.Provi
 func (t Static) GenerateTile(_ context.Context, _ layer.ProviderContext, _ pkg.TileRequest) (*pkg.Image, error) {
 	return t.img, nil
 }
+
+func (t Static) DataType() pkg.DataType {
+	return pkg.DataTypeRaster
+}

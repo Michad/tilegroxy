@@ -42,6 +42,10 @@ func (p *closableProvider) GenerateTile(_ context.Context, _ layer.ProviderConte
 	return nil, nil
 }
 
+func (p *closableProvider) DataType() pkg.DataType {
+	return pkg.DataTypeUnknown
+}
+
 // Blend holds its children directly, outside any layer, so they're unreachable through
 // LayerGroup.Close unless Blend forwards to them itself.
 func Test_BlendCloseClosesChildProviders(t *testing.T) {

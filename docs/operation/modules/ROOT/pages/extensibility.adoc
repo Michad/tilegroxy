@@ -193,6 +193,11 @@ func (t Sample) PreAuth(ctx context.Context, providerContext layer.ProviderConte
 func (t Sample) GenerateTile(ctx context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	return nil, errors.New("not implemented")
 }
+
+// Declares what kind of tile this provider produces. Return pkg.DataTypeRaster or pkg.DataTypeMVT if it's always one or the other, or pkg.DataTypeUnknown if it depends
+func (t Sample) DataType() pkg.DataType {
+	return pkg.DataTypeUnknown
+}
 ----
 
 From here, implementing the provider is the same as implementing a Custom provider.  The other entities can be specified in the same way.

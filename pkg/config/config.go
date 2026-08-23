@@ -221,6 +221,10 @@ type LayerConfig struct {
 	SkipCache      bool              // If true, don't use the cache
 	SkipAnalytics  bool              // If true, successful requests for this layer don't produce analytics events
 	Client         *ClientConfig     // If specified, the default Client is overridden.
+	DataType       DataType          // Optional. Declares this layer's data type. Must not contradict the provider's own DataType(); required if Bounds is set and the provider's type is unknown
+	MinZoom        *int              // Optional. Requests below this zoom are rejected as out of bounds. nil means no lower limit
+	MaxZoom        *int              // Optional. Requests above this zoom are rejected as out of bounds. nil means no upper limit
+	Bounds         BoundsConfig      // Optional. Automatically wraps this layer's provider in crop/cropmvt, restricting it to this geographic area
 }
 
 type Config struct {
