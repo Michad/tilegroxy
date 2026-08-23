@@ -62,6 +62,19 @@ func cropMvtBound(t *testing.T, bounds pkg.Bounds, tile pkg.TileRequest) orb.Bou
 	return poly.Bound()
 }
 
+// Projects a latitude into the y coordinate of a tile's 0-4096 extent, so expectations follow
+// the same web mercator math as the code rather than a hand computed constant. Y grows southward.
+func latToTileY(t *testing.T, lat float64, z, y int) float64 {
+	t.Helper()
+
+	tb, err := pkg.TileRequest{LayerName: "l", Z: z, X: 0, Y: y}.GetBoundsProjection(pkg.SRIDPsuedoMercator)
+	require.NoError(t, err)
+
+	m := pkg.Bounds{South: lat, North: lat, West: -180, East: 180}.ConvertToPsuedoMercatorRange()
+
+	return (tb.North - m.North) / (tb.North - tb.South) * 4096
+}
+
 func assertBound(t *testing.T, expMinX, expMinY, expMaxX, expMaxY float64, actual orb.Bound) {
 	t.Helper()
 
@@ -170,10 +183,14 @@ func Test_CropMvt_ExecuteCropOutside(t *testing.T) {
 	assert.Empty(t, img.Content)
 }
 
+// The latitude falling on the 25%/75% lines of a z0 tile, atan(sinh(pi/2)) in degrees. Latitude
+// is not linear in the y axis under web mercator, so this is not 45.
+const quarterMercatorLat = 66.51326044311186
+
 // Crop bounds (A) strictly inside the tile bounds (B), which cover the whole world at z0/x0/y0.
-// The east/west halves of the world map to x 1024-3072, and lat +-45 to y 1024-3072.
+// Longitude +-90 is a quarter in from each side on x, and the latitude above matches that on y.
 func Test_CropMvt_ExecuteCropBoundsInsideTile(t *testing.T) {
-	b := cropMvtBound(t, pkg.Bounds{South: -45, North: 45, West: -90, East: 90}, pkg.TileRequest{LayerName: "l", Z: 0, X: 0, Y: 0})
+	b := cropMvtBound(t, pkg.Bounds{South: -quarterMercatorLat, North: quarterMercatorLat, West: -90, East: 90}, pkg.TileRequest{LayerName: "l", Z: 0, X: 0, Y: 0})
 
 	assertBound(t, 1024, 1024, 3072, 3072, b)
 }
@@ -210,11 +227,11 @@ func Test_CropMvt_ExecuteCropLongitudeOnlyWithinMercatorLimit(t *testing.T) {
 }
 
 // The west half of the north-west quadrant tile, using a crop well inside the mercator limit.
+// The z1 tile spans the equator to the mercator limit, so latitude 45 lands partway down it.
 func Test_CropMvt_ExecuteCropWestHalfOfQuadrantTile(t *testing.T) {
 	b := cropMvtBound(t, pkg.Bounds{South: 0, North: 45, West: -180, East: -90}, pkg.TileRequest{LayerName: "l", Z: 1, X: 0, Y: 0})
 
-	assert.InDelta(t, 0.0, b.Min[0], 1, "min x")
-	assert.InDelta(t, 2048.0, b.Max[0], 1, "max x")
+	assertBound(t, 0, latToTileY(t, 45, 1, 0), 2048, 4096, b)
 }
 
 func Test_CropMvt_ExecuteCropWithAuth(t *testing.T) {
