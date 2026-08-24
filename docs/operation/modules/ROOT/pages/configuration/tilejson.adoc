@@ -80,7 +80,7 @@ xref:configuration/layer.adoc[Layer] configuration options relevant to TileJSON:
 | None
 |===
 
-`format`, `minzoom`, `maxzoom`, and `bounds` also appear in a layer's TileJSON document, but they aren't specific to TileJSON. See xref:configuration/layer.adoc[Zoom and bounds] for how they're actually enforced.
+`datatype`, `minzoom`, `maxzoom`, and `bounds` also appear in a layer's TileJSON document, but they aren't specific to TileJSON. See xref:configuration/layer.adoc[Zoom and bounds] for how they're actually enforced.
 
 Example:
 
@@ -89,7 +89,7 @@ layer:
   id: my_layer
   description: Aerial imagery from 2023
   attribution: "© Example Imagery Co"
-  format: png
+  datatype: raster
   minzoom: 4
   maxzoom: 16
   bounds:

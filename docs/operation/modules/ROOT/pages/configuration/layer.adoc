@@ -68,7 +68,6 @@ Configuration options:
 | No
 | None
 
-
 | datatype
 | Declares what type of tiles this layer returns. This is inferred from the provider when possible. If this contradicts the provider (for example datatype is raster but the provider always produces vector tiles) startup fails. Required if it can't be inferred and a feature relying on it (such as bounds) is used
 | string, one of: raster, mvt
@@ -129,6 +128,6 @@ layer:
 
 This is layer-level and separate from any bounds or zoom range configured on a provider such as `fallback`'s `zoom`/`bounds` or `crop`'s `bounds`. Those control when a provider falls back to a secondary source or which pixels get cropped from imagery it already generated; layer-level `minzoom`/`maxzoom`/`bounds` reject the request outright rather than delegating to another provider or partially rendering a tile.
 
-`bounds` requires `format` to also be set, since tilegroxy needs to know how to enforce a partial-tile boundary. For a raster `format` (`png` or `jpg`), a tile that only partially intersects `bounds` is cropped the same way the `crop` provider crops imagery, with the area outside `bounds` left transparent. For a vector `format` (`pbf`), tilegroxy cannot yet clip individual feature geometries to `bounds`, so a tile that intersects `bounds` at all is served whole; only a tile with no intersection is rejected. Setting `bounds` without `format` is rejected at startup, the same as any other invalid configuration, rather than failing on the first matching request.
+`bounds` requires `datatype` to be resolvable, since tilegroxy needs to know how to enforce a partial-tile boundary. For a raster `datatype`, a tile that only partially intersects `bounds` is cropped the same way the `crop` provider crops imagery, with the area outside `bounds` left transparent. For a vector (`mvt`) `datatype`, tilegroxy cannot yet clip individual feature geometries to `bounds`, so a tile that intersects `bounds` at all is served whole; only a tile with no intersection is rejected. Setting `bounds` without a resolvable `datatype` is rejected at startup, the same as any other invalid configuration, rather than failing on the first matching request.
 
-`minzoom` and `maxzoom` don't require `format`, since rejecting a zoom level doesn't depend on the tile's content.
+`minzoom` and `maxzoom` don't require `datatype`, since rejecting a zoom level doesn't depend on the tile's content.

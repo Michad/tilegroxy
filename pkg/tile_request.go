@@ -131,6 +131,18 @@ type Bounds struct {
 	SRID  uint
 }
 
+// preciseMaxLat is the Web Mercator latitude limit at full precision, atan(sinh(pi)) in degrees.
+// maxLat/minLat above are truncated to 4 decimals, fine for the tile-grid clamping they're used
+// for, but not precise enough for a reported extent like WorldBounds.
+const preciseMaxLat = 85.0511287798066
+
+// WorldBounds is the whole-world extent in WGS84, clipped to the latitude range the Web Mercator
+// tile grid actually covers. Used as the default reported extent for anything unbounded, such as
+// a layer with no configured bounds.
+func WorldBounds() Bounds {
+	return Bounds{South: -preciseMaxLat, North: preciseMaxLat, West: -maxLong, East: maxLong, SRID: SRIDWGS84}
+}
+
 // Generates a bounding box representation of a given geohash
 func NewBoundsFromGeohash(hashStr string) (Bounds, error) {
 	err := geohash.Validate(hashStr)
@@ -221,6 +233,19 @@ func (b Bounds) Intersects(b2 Bounds) bool {
 // The bounds passed in is fully contained by this bounds
 func (b Bounds) Contains(b2 Bounds) bool {
 	return b2.South+delta >= b.South && b2.North <= b.North+delta && b2.West+delta >= b.West && b2.East <= b.East+delta
+}
+
+// IntersectionWith returns the overlapping rectangle between this bounds and b2. Only meaningful
+// when the two actually intersect; a non-overlapping pair still produces a result but with South >
+// North or West > East.
+func (b Bounds) IntersectionWith(b2 Bounds) Bounds {
+	return Bounds{
+		South: math.Max(b.South, b2.South),
+		North: math.Min(b.North, b2.North),
+		West:  math.Max(b.West, b2.West),
+		East:  math.Min(b.East, b2.East),
+		SRID:  b.SRID,
+	}
 }
 
 func (b Bounds) ContainsPoint(x float64, y float64) bool {
