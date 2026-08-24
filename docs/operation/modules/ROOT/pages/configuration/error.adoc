@@ -14,7 +14,7 @@ There are four primary operating modes:
 
 It is highly recommended you use the Image mode for production usage.  Returning an Image provides the most user friendly experience as it provides feedback to the user in the map they're looking at that something is wrong.  More importantly, it avoids exposing the specific error message to the end user, which could contain information you don't want exposed.  "Image with error" is useful for development workflows, it gives the same user experience but allows you to easily get to the error messages.
 
-Error responses set a `Content-Type` matching the mode: `text/plain; charset=utf-8` for Text and `image/png` for Image and Image with Header.  None mode returns no body and therefore no `Content-Type`.
+Error responses set a `Content-Type` matching the mode: `text/plain; charset=utf-8` for Text and, for Image and Image with Header, `image/png` or `application/vnd.mapbox-vector-tile` depending on the erroring layer's data type as described below.  None mode returns no body and therefore no `Content-Type`.
 
 Every error response also sets `Cache-Control: no-store` regardless of mode.  This is most important when using `AlwaysOk` described below, since errors are then returned with a status of 200 like any other tile and a CDN or browser in front of tilegroxy would otherwise be free to cache them long after the underlying problem is resolved.
 
@@ -66,6 +66,8 @@ The following can be supplied as environment variables:
 
 When using the image or image+header modes you can configure the images you want to be returned to the user.  Either use a built-in image or an image provided yourself on the local filesystem via relative or absolute file path.
 
+Most error conditions have two fields: a raster one and an `Mvt`-suffixed vector one. We do our best to return the appropriate format based on the layer. It defaults to a PNG if the error happens early (like bad auth) or if we can't determine the layer's format (see layer datatype parameter).
+
 Configuration options:
 
 [cols="1,3,1,1,1"]
@@ -73,28 +75,46 @@ Configuration options:
 | Parameter | Description | Type | Required | Default
 
 | OutOfBounds
-| The image to display for requests outside the extent of the layer
+| The raster image to display for requests outside the extent of the layer
 | string
 | No
 | embedded:transparent.png
 
+| OutOfBoundsMvt
+| The vector tile to display for requests outside the extent of an mvt layer
+| string
+| No
+| embedded:empty.mvt
+
 | Authentication
-| The image to display for auth errors
+| The image to display for auth errors. Always this raster image, regardless of the layer's data type
 | string
 | No
 | embedded:unauthorized.png
 
 | Provider
-| The image to display for errors returned by the layer's provider
+| The raster image to display for errors returned by the layer's provider
 | string
 | No
 | embedded:error.png
 
+| ProviderMvt
+| The vector tile to display for errors returned by an mvt layer's provider
+| string
+| No
+| embedded:empty.mvt
+
 | Other
-| The image to display for all other errors
+| The raster image to display for all other errors
 | string
 | No
 | embedded:error.png
+
+| OtherMvt
+| The vector tile to display for all other errors on an mvt layer
+| string
+| No
+| embedded:empty.mvt
 |===
 
 The following can be supplied as environment variables:
@@ -106,21 +126,30 @@ The following can be supplied as environment variables:
 | OutOfBounds
 | ERROR_IMAGES_OUTOFBOUNDS
 
+| OutOfBoundsMvt
+| ERROR_IMAGES_OUTOFBOUNDSMVT
+
 | Authentication
 | ERROR_IMAGES_AUTHENTICATION
 
 | Provider
 | ERROR_IMAGES_PROVIDER
 
+| ProviderMvt
+| ERROR_IMAGES_PROVIDERMVT
+
 | Other
 | ERROR_IMAGES_OTHER
+
+| OtherMvt
+| ERROR_IMAGES_OTHERMVT
 |===
 
 === Image Options
 
 In addition to an image on the filesystem you can refer to a static color or a built-in image.
 
-There are currently 4 built-in images available:
+There are currently 4 built-in raster images available:
 
 |===
 | Image name | Description | Preview
@@ -142,9 +171,21 @@ There are currently 4 built-in images available:
 | image:unauthorized.png[]
 |===
 
-To utilize them prepend "embedded:" before the name.  For example `embedded:transparent.png`
+There are also 2 built-in vector tiles available, for use with the `Mvt`-suffixed fields above:
 
-You can also reference any color by including an hex code prefixed by "color:". The color code can be RGB or RGBA and have single or double hex digits. For example the following all generate an identical violet tile: `color:FF00FFFF`, `color:FF00FF`, `color:F0F`, `color:F0FF`
+|===
+| Image name | Description
+
+| empty.mvt
+| A zero-byte, valid empty vector tile with no layers or features
+
+| box.mvt
+| A vector tile with a single layer containing one polygon covering the tile's full extent
+|===
+
+To utilize them prepend "embedded:" before the name.  For example `embedded:transparent.png` or `embedded:empty.mvt`
+
+You can also reference any color by including an hex code prefixed by "color:". The color code can be RGB or RGBA and have single or double hex digits. For example the following all generate an identical violet tile: `color:FF00FFFF`, `color:FF00FF`, `color:F0F`, `color:F0FF`.  This only applies to the raster fields; a `color:` value isn't a valid vector tile.
 
 == Error Messages
 

@@ -551,6 +551,98 @@ layers:
 	assert.Equal(t, "no-store", resp.Header.Get("Cache-Control"), "error responses must never be cached, especially with AlwaysOK where the status alone can't signal failure to a CDN")
 }
 
+// Regression test for #768: an error for a layer whose data type is mvt must return the
+// vector-tile error image with a vector Content-Type, not the default PNG.
+func Test_TileHandler_ExecuteErrorImage_Mvt(t *testing.T) {
+	configRaw := `server:
+  port: 12345
+Error:
+  mode: "image"
+authentication:
+  name: none
+layers:
+  - id: vector
+    maxzoom: 5
+    provider:
+      name: compositemvt
+      providers:
+        - name: static
+          image: "embedded:box.mvt"
+`
+
+	cfg, err := config.LoadConfig(configRaw)
+	require.NoError(t, err)
+	lg, auth, err := configToEntities(cfg)
+	require.NoError(t, err)
+	handler, err := newTileHandler(reloadableEntities{config: &cfg, auth: auth, layerGroup: lg})
+	require.NoError(t, err)
+
+	// z8 exceeds the layer's maxzoom of 5, so this hits the bounds error path rather than auth.
+	req1 := httptest.NewRequest(http.MethodGet, "http://localhost:12349/tiles/vector/8/12/32", nil).WithContext(pkg.BackgroundContext())
+	req1.SetPathValue("layer", "vector")
+	req1.SetPathValue("z", "8")
+	req1.SetPathValue("x", "12")
+	req1.SetPathValue("y", "32")
+
+	w1 := httptest.NewRecorder()
+	handler.ServeHTTP(w1, req1)
+	resp := w1.Result()
+	defer func() { require.NoError(t, resp.Body.Close()) }()
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	img, _ := images.GetStaticImage(images.KeyMvtEmpty)
+
+	assert.Equal(t, 400, resp.StatusCode)
+	assert.Equal(t, *img, body)
+	assert.Equal(t, "application/vnd.mapbox-vector-tile", resp.Header.Get("Content-Type"), "error responses for vector-tile layers must not be PNG")
+	assert.Equal(t, "no-store", resp.Header.Get("Cache-Control"))
+}
+
+// Regression test: auth failures must always return the PNG error image, even for an mvt layer,
+// since which image tilegroxy picked would itself leak the layer's data type to a caller who
+// hasn't authenticated yet.
+func Test_TileHandler_ExecuteErrorImage_Mvt_AuthAlwaysPng(t *testing.T) {
+	configRaw := `server:
+  port: 12345
+Error:
+  mode: "image"
+authentication:
+  name: static key
+layers:
+  - id: vector
+    provider:
+      name: compositemvt
+      providers:
+        - name: static
+          image: "embedded:box.mvt"
+`
+
+	cfg, err := config.LoadConfig(configRaw)
+	require.NoError(t, err)
+	lg, auth, err := configToEntities(cfg)
+	require.NoError(t, err)
+	handler, err := newTileHandler(reloadableEntities{config: &cfg, auth: auth, layerGroup: lg})
+	require.NoError(t, err)
+
+	req1 := httptest.NewRequest(http.MethodGet, "http://localhost:12349/tiles/vector/8/12/32", nil).WithContext(pkg.BackgroundContext())
+	req1.SetPathValue("layer", "vector")
+	req1.SetPathValue("z", "8")
+	req1.SetPathValue("x", "12")
+	req1.SetPathValue("y", "32")
+
+	w1 := httptest.NewRecorder()
+	handler.ServeHTTP(w1, req1)
+	resp := w1.Result()
+	defer func() { require.NoError(t, resp.Body.Close()) }()
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	img, _ := images.GetStaticImage(images.KeyImageUnauthorized)
+
+	assert.Equal(t, 401, resp.StatusCode)
+	assert.Equal(t, *img, body)
+	assert.Equal(t, "image/png", resp.Header.Get("Content-Type"))
+}
+
 func Test_TileHandler_ExecuteErrorImageHeader(t *testing.T) {
 	configRaw := `server:
   port: 12345

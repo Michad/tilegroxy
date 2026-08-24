@@ -32,7 +32,7 @@ func (h httpContextHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 	reqContext := pkg.NewRequestContext(req)
 	defer func() {
 		if err := recover(); err != nil {
-			writeErrorMessage(reqContext, w, &h.errCfg, pkg.TypeOfErrorOther, fmt.Sprint(err), "Unexpected Internal Server Error", debug.Stack())
+			writeErrorMessage(reqContext, w, &h.errCfg, pkg.TypeOfErrorOther, fmt.Sprint(err), "Unexpected Internal Server Error", debug.Stack(), config.DataTypeUnknown)
 		}
 	}()
 

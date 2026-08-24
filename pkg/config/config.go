@@ -178,14 +178,19 @@ const (
 	defaultImageError        = "embedded:error.png"
 	defaultImageTransparent  = "embedded:transparent.png"
 	defaultImageUnauthorized = "embedded:unauthorized.png"
+	defaultImageMvtEmpty     = "embedded:empty.mvt"
 )
 
-// Selects what image to return when various errors occur. These should either be an embedded:XXX value reflecting an image in `internal/images` or the path to an image in the runtime filesystem
+// Selects what image to return when various errors occur. These should either be an embedded:XXX value reflecting an image in `internal/images` or the path to an image in the runtime filesystem.
 type ErrorImages struct {
 	OutOfBounds    string // A request for a zoom level or tile coordinate that's invalid for the requested layer
-	Authentication string // Auth failed
+	Authentication string // Auth failed. Always PNG, see above.
 	Provider       string // Provider specific errors
 	Other          string // Catch-all for unexpected system errors
+
+	OutOfBoundsMvt string // Vector-tile equivalent of OutOfBounds, used when the layer's data type is mvt
+	ProviderMvt    string // Vector-tile equivalent of Provider, used when the layer's data type is mvt
+	OtherMvt       string // Vector-tile equivalent of Other, used when the layer's data type is mvt
 }
 
 type ErrorConfig struct {
@@ -393,6 +398,10 @@ func DefaultConfig() Config {
 				Authentication: defaultImageUnauthorized,
 				Provider:       defaultImageError,
 				Other:          defaultImageError,
+
+				OutOfBoundsMvt: defaultImageMvtEmpty,
+				ProviderMvt:    defaultImageMvtEmpty,
+				OtherMvt:       defaultImageMvtEmpty,
 			},
 			AlwaysOK: false,
 		},

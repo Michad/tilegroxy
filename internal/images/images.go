@@ -34,6 +34,9 @@ const numRGB = 3
 const numRGBA = 4
 const defaultImageSize = 512
 
+// MvtContentType is the Content-Type used for vector tile responses, including empty/error MVTs.
+const MvtContentType = "application/vnd.mapbox-vector-tile"
+
 //go:embed error.png
 var imageError []byte
 
