@@ -20,6 +20,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -69,6 +70,7 @@ func Test_ConstructLayer_DataType_MatchingExplicitAndProviderType_Succeeds(t *te
 
 	require.NoError(t, err)
 	require.NotNil(t, l)
+	assert.Equal(t, config.DataTypeRaster, l.DataType)
 }
 
 func Test_ConstructLayer_DataType_ContradictoryExplicitAndProviderType_Fails(t *testing.T) {
@@ -98,6 +100,25 @@ func Test_ConstructLayer_DataType_ProviderUnknownNoExplicitType_Succeeds(t *test
 
 	require.NoError(t, err)
 	require.NotNil(t, l)
+	assert.Equal(t, config.DataTypeUnknown, l.DataType)
+}
+
+// Regression test for #768: the layer's resolved DataType must be exposed on the constructed
+// Layer, inferred from the provider alone, so error responses can pick a vector-tile image
+// instead of always falling back to PNG.
+func Test_ConstructLayer_DataType_InferredFromProvider_IsExposedOnLayer(t *testing.T) {
+	RegisterProvider(fixedTypeTestRegistration{name: "fixed-mvt-inferred-1", dt: config.DataTypeMVT})
+
+	rawConfig := config.LayerConfig{
+		ID:       "l3b",
+		Provider: map[string]any{"name": "fixed-mvt-inferred-1"},
+	}
+
+	l, err := ConstructLayer(rawConfig, config.ClientConfig{}, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil)
+
+	require.NoError(t, err)
+	require.NotNil(t, l)
+	assert.Equal(t, config.DataTypeMVT, l.DataType)
 }
 
 func Test_ConstructLayer_Bounds_WithUnresolvableDataType_Fails(t *testing.T) {

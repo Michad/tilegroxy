@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities"
 	"github.com/Michad/tilegroxy/pkg/entities/analytics"
 	"github.com/Michad/tilegroxy/pkg/static"
@@ -199,12 +200,21 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// Resolved on a best-effort basis so error responses for this layer's requests can pick a
+	// vector-tile error image instead of PNG. Unknown until proven otherwise: a layer that
+	// doesn't match yet, or whose data type can't be determined, keeps the long-standing PNG
+	// behavior.
+	dataType := config.DataTypeUnknown
+	if l := entities.layerGroup.FindLayer(ctx, req.PathValue("layer")); l != nil {
+		dataType = l.DataType
+	}
+
 	if !entities.auth.CheckAuthentication(ctx, req) {
-		writeError(ctx, w, &entities.config.Error, pkg.UnauthorizedError{Message: "CheckAuthentication returned false"})
+		writeError(ctx, w, &entities.config.Error, pkg.UnauthorizedError{Message: "CheckAuthentication returned false"}, dataType)
 		return
 	}
 
-	tileReq, ok := entities.extractAndValidateRequest(ctx, req, span, w)
+	tileReq, ok := entities.extractAndValidateRequest(ctx, req, span, w, dataType)
 	if !ok {
 		return // We already handled the error in the function
 	}
@@ -216,7 +226,7 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Bad Request")
-		writeError(ctx, w, &entities.config.Error, err)
+		writeError(ctx, w, &entities.config.Error, err, dataType)
 		return
 	}
 
@@ -228,14 +238,14 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		h.tileErrorCounter.Add(ctx, 1)
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Rendering error")
-		writeError(ctx, w, &entities.config.Error, err)
+		writeError(ctx, w, &entities.config.Error, err, dataType)
 		return
 	}
 
 	if img == nil {
 		h.tileErrorCounter.Add(ctx, 1)
 		span.SetStatus(codes.Error, "No result")
-		writeErrorMessage(ctx, w, &entities.config.Error, pkg.TypeOfErrorProvider, "Tile rendered as nil but no error returned", entities.config.Error.Messages.ProviderError, nil)
+		writeErrorMessage(ctx, w, &entities.config.Error, pkg.TypeOfErrorProvider, "Tile rendered as nil but no error returned", entities.config.Error.Messages.ProviderError, nil, dataType)
 		return
 	}
 
@@ -322,7 +332,7 @@ func (h *reloadableEntities) writeHeaders(w http.ResponseWriter) {
 	}
 }
 
-func (h *reloadableEntities) extractAndValidateRequest(ctx context.Context, req *http.Request, span trace.Span, w http.ResponseWriter) (pkg.TileRequest, bool) {
+func (h *reloadableEntities) extractAndValidateRequest(ctx context.Context, req *http.Request, span trace.Span, w http.ResponseWriter, dataType config.DataType) (pkg.TileRequest, bool) {
 	layerName := req.PathValue("layer")
 	zStr := req.PathValue("z")
 	xStr := req.PathValue("x")
@@ -333,7 +343,7 @@ func (h *reloadableEntities) extractAndValidateRequest(ctx context.Context, req 
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Bad Request")
-		writeError(ctx, w, &h.config.Error, pkg.InvalidArgumentError{Name: "z", Value: zStr})
+		writeError(ctx, w, &h.config.Error, pkg.InvalidArgumentError{Name: "z", Value: zStr}, dataType)
 		return pkg.TileRequest{}, false
 	}
 
@@ -342,7 +352,7 @@ func (h *reloadableEntities) extractAndValidateRequest(ctx context.Context, req 
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Bad Request")
-		writeError(ctx, w, &h.config.Error, pkg.InvalidArgumentError{Name: "x", Value: xStr})
+		writeError(ctx, w, &h.config.Error, pkg.InvalidArgumentError{Name: "x", Value: xStr}, dataType)
 		return pkg.TileRequest{}, false
 	}
 
@@ -351,7 +361,7 @@ func (h *reloadableEntities) extractAndValidateRequest(ctx context.Context, req 
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Bad Request")
-		writeError(ctx, w, &h.config.Error, pkg.InvalidArgumentError{Name: "y", Value: yStr})
+		writeError(ctx, w, &h.config.Error, pkg.InvalidArgumentError{Name: "y", Value: yStr}, dataType)
 		return pkg.TileRequest{}, false
 	}
 

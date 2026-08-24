@@ -57,7 +57,7 @@ Configuration options:
 | false
 
 | datatype
-| Declares what type of tiles this layer returns. This is inferred from the provider when possible. If this contradicts the provider (for example datatype is raster but the provider always produces vector tiles) startup fails. Required if it can't be inferred and a feature relying on it (such as bounds) is used
+| Declares what type of tiles this layer returns. This is inferred from the provider when possible. If this contradicts the provider (for example datatype is raster but the provider always produces vector tiles) startup fails. Required if it can't be inferred and a feature relying on it (such as bounds) is used. Also determines whether xref:configuration/error.adoc[error responses] for this layer use the raster or vector-tile error images
 | string, one of: raster, mvt
 | No
 | Taken from the provider
