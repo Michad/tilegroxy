@@ -191,6 +191,7 @@ type Layer struct {
 	Provider           Provider
 	Cache              cache.Cache
 	ErrorMessages      config.ErrorMessages
+	DataType           config.DataType // Resolved data type, see resolveDataType. config.DataTypeUnknown if it can't be determined.
 	providerContext    ProviderContext
 	authMutex          sync.Mutex
 	tileAllCounter     metric.Int64Counter
@@ -318,7 +319,7 @@ func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.Cli
 	tileErrorCounter, err3 := meter.Int64Counter("tilegroxy.tiles.layer."+sanitizedID+".error", metric.WithDescription("Number of tile requests that error during generation for "+rawConfig.ID))
 	tileSuccessCounter, err4 := meter.Int64Counter("tilegroxy.tiles.layer."+sanitizedID+".success", metric.WithDescription("Number of tile requests that result in a tile for "+rawConfig.ID))
 
-	return &Layer{rawConfig.ID, segments, validator, rawConfig, provider, nil, errorMessages, ProviderContext{}, sync.Mutex{}, tileAllCounter, tileAuthCounter, tileErrorCounter, tileSuccessCounter}, errors.Join(err1, err2, err3, err4)
+	return &Layer{rawConfig.ID, segments, validator, rawConfig, provider, nil, errorMessages, datatype, ProviderContext{}, sync.Mutex{}, tileAllCounter, tileAuthCounter, tileErrorCounter, tileSuccessCounter}, errors.Join(err1, err2, err3, err4)
 }
 
 // getProviderContext returns a snapshot of the current provider context, re-authenticating

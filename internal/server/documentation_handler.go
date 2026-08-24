@@ -20,6 +20,7 @@ import (
 	"net/http"
 
 	"github.com/Michad/tilegroxy/internal/website"
+	"github.com/Michad/tilegroxy/pkg/config"
 )
 
 type documentationHandler struct {
@@ -41,7 +42,7 @@ func (h documentationHandler) ServeHTTP(w http.ResponseWriter, req *http.Request
 	data, contentType, err := website.ReadDocumentationFile(path)
 
 	if err != nil {
-		writeError(ctx, w, &h.config.Error, err)
+		writeError(ctx, w, &h.config.Error, err, config.DataTypeUnknown)
 		return
 	}
 
