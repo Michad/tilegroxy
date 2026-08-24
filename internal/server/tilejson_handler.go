@@ -232,7 +232,7 @@ func (h *tileJSONHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if !entities.auth.CheckAuthentication(ctx, req) {
-		writeError(ctx, w, &entities.config.Error, pkg.UnauthorizedError{Message: "CheckAuthentication returned false"})
+		writeError(ctx, w, &entities.config.Error, pkg.UnauthorizedError{Message: "CheckAuthentication returned false"}, config.DataTypeUnknown)
 		return
 	}
 
@@ -277,18 +277,18 @@ func serveDocument(ctx context.Context, w http.ResponseWriter, req *http.Request
 	pathValue := req.PathValue("layerjson")
 	name, ok := strings.CutSuffix(pathValue, ".json")
 	if !ok {
-		writeError(ctx, w, &entities.config.Error, pkg.UnauthorizedError{Message: "Layer " + pathValue + " does not exist"})
+		writeError(ctx, w, &entities.config.Error, pkg.UnauthorizedError{Message: "Layer " + pathValue + " does not exist"}, config.DataTypeUnknown)
 		return
 	}
 
 	l, foundName := findTileJSONLayer(entities.layerGroup, name)
 	if l == nil {
-		writeError(ctx, w, &entities.config.Error, pkg.UnauthorizedError{Message: "Layer " + name + " does not exist"})
+		writeError(ctx, w, &entities.config.Error, pkg.UnauthorizedError{Message: "Layer " + name + " does not exist"}, config.DataTypeUnknown)
 		return
 	}
 
 	if limitLayers && !layerNameAllowed(foundName, l.ID, allowed) {
-		writeError(ctx, w, &entities.config.Error, pkg.UnauthorizedError{Message: "Denying access to non-allowed layer"})
+		writeError(ctx, w, &entities.config.Error, pkg.UnauthorizedError{Message: "Denying access to non-allowed layer"}, config.DataTypeUnknown)
 		return
 	}
 
