@@ -2,45 +2,37 @@
 
 A helper command to allow you to prepopulate your cache with prerendered tiles. This is especially useful when adding a new layer to tilegroxy that is slow to render the furthest out zoom levels and you want to avoid your first end-users running into this slowness. This command is roughly equivalent to standing up a server using the `serve` command and then hitting the layer endpoint with `cURL` requests for all the tiles you want.
 
+Tiles are counted before seeding starts and streamed to the workers instead of being held in memory. By default, jobs estimated above one million tiles require `--force`. Use `--max-tiles` to choose a different limit. Provider and cache operations depend on the layer configuration and can exceed the tile count.
+
+Progress is saved in a job-specific file in the current directory and removed after a successful run. Running the same command again resumes from the saved position. The configuration, referenced environment values, layer, bounds, and zooms must all match the saved job. If the default location is not writable, seeding continues without progress tracking and prints a warning. Use `--progress-file` to require another writable location. Remove an old progress file when it is no longer needed. When configuration uses an external secret provider, remove the progress file after changing referenced secret values.
+
+The `--threads` flag controls concurrency. Consider the limits and acceptable use policies of upstream providers before increasing it.
+
 Full, up-to-date usage information can be found with `tilegroxy seed -h`.
 
 ----
-Pre-populates the cache for a given layer for a given area (bounding box)
-for a range of zoom levels.
+Pre-populates the cache for a given layer for a given area (bounding box) for a range of zoom levels.
 
-Be mindful that the higher the zoom level (the more you "zoom in"),
-exponentially more tiles will need to be seeded for a given area. For
-instance, while zoom level 1 only requires 4 tiles to cover the planet,
-zoom level 10 requires over a million tiles.
+Be mindful that the greater the zoom level (the more you "zoom in"), exponentially more tiles will need to be seeded for a given area. For instance, while zoom level 1 only requires 4 tiles to cover the planet, zoom level 10 requires over a million tiles.
 
 Example:
 
-  tilegroxy seed -c test_config.yml -l osm -z 2 -v -t 7 -z 0 -z 1 -z 3 -z 4
+	tilegroxy seed -c test_config.yml -l osm -z 2 -v -t 7 -z 0 -z 1 -z 3 -z 4
 
 Usage:
   tilegroxy seed [flags]
 
 Flags:
-      --force                   Perform the seeding even if it'll produce
-                                an excessive number of tiles. Normally
-                                seeds over 10k tiles will error out.
-                                Warning: Overriding this protection
-                                absolutely can cause an Out-of-Memory error
+      --force                   Perform the seeding even when the estimated upstream and cache work exceeds --max-tiles
   -h, --help                    help for seed
   -l, --layer string            The ID of the layer to seed
-  -n, --max-latitude float32    The maximum latitude to seed. The north
-                                side of the bounding box (default 90)
-  -e, --max-longitude float32   The maximum longitude to seed. The east
-                                side of the bounding box (default 180)
-  -s, --min-latitude float32    The minimum latitude to seed. The south
-                                side of the bounding box (default -90)
-  -w, --min-longitude float32   The minimum longitude to seed. The west
-                                side of the bounding box (default -180)
-  -t, --threads uint16          How many concurrent requests to use to
-                                perform seeding. Be mindful of spamming
-                                upstream providers (default 1)
-  -v, --verbose                 Output verbose information including every
-                                tile being requested and success or error status
-  -z, --zoom uints              The zoom level(s) to seed (default [0,1,2,
-                                3,4,5])
+  -n, --max-latitude float32    The maximum latitude to seed. The north side of the bounding box (default 90)
+  -e, --max-longitude float32   The maximum longitude to seed. The east side of the bounding box (default 180)
+      --max-tiles uint          Maximum estimated tile requests allowed without --force (default 1000000)
+  -s, --min-latitude float32    The minimum latitude to seed. The south side of the bounding box (default -90)
+  -w, --min-longitude float32   The minimum longitude to seed. The west side of the bounding box (default -180)
+      --progress-file string    File used to resume an interrupted seed. Explicit paths must be writable
+  -t, --threads uint16          How many concurrent requests to use to perform seeding. Be mindful of spamming upstream providers (default 1)
+  -v, --verbose                 Output verbose information including every tile being requested and success or error status
+  -z, --zoom uints              The zoom level(s) to seed (default [0,1,2,3,4,5])
 ----

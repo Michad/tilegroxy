@@ -224,3 +224,55 @@ func TestTileToEWKT(t *testing.T) {
 	// test case from result of postgis `SELECT ST_AsEWKT(ST_TileEnvelope(2,1,1))` with precision tweak
 	assert.Equal(t, "SRID=3857;POLYGON((-10018754.1713945 0.0000000,-10018754.1713945 10018754.1713945,0.0000000 10018754.1713945,0.0000000 0.0000000,-10018754.1713945 0.0000000))", b.ToEWKT())
 }
+
+func Test_TileRange_MatchesFindTilesOrder(t *testing.T) {
+	bounds := Bounds{South: -90, North: 90, West: -180, East: 180, SRID: SRIDWGS84}
+	tileRange, err := bounds.TileRange("test", 2)
+	require.NoError(t, err)
+
+	tiles, err := bounds.FindTiles("test", 2, false)
+	require.NoError(t, err)
+	require.Equal(t, uint64(len(*tiles)), tileRange.Count())
+
+	for i, expected := range *tiles {
+		actual, ok := tileRange.At(uint64(i))
+		require.True(t, ok)
+		assert.Equal(t, expected, actual)
+	}
+
+	_, ok := tileRange.At(tileRange.Count())
+	assert.False(t, ok)
+}
+
+func Test_TileRange_CountsLargeJobsWithoutAllocation(t *testing.T) {
+	bounds := Bounds{South: -90, North: 90, West: -180, East: 180, SRID: SRIDWGS84}
+	tileRange, err := bounds.TileRange("test", MaxZoom)
+	require.NoError(t, err)
+
+	n := uint64(1) << uint(MaxZoom)
+	assert.Equal(t, n*(n-2), tileRange.Count())
+	first, ok := tileRange.At(0)
+	require.True(t, ok)
+	assert.Equal(t, TileRequest{LayerName: "test", Z: MaxZoom, X: 0, Y: 1}, first)
+}
+
+func Test_TileRange_RejectsInvertedAndWrappedBounds(t *testing.T) {
+	_, err := (Bounds{South: 10, North: -10, West: -20, East: 20}).TileRange("test", 1)
+	require.ErrorContains(t, err, "south bound")
+
+	_, err = (Bounds{South: -10, North: 10, West: 20, East: -20}).TileRange("test", 1)
+	require.ErrorContains(t, err, "west bound")
+
+	_, err = (Bounds{South: -10, North: 10, West: 170, East: 190}).TileRange("test", 1)
+	require.ErrorContains(t, err, "antimeridian")
+}
+
+func Test_TileRange_RejectsNonFiniteBounds(t *testing.T) {
+	for _, value := range []float64{math.NaN(), math.Inf(1), math.Inf(-1)} {
+		_, err := (Bounds{South: -10, North: 10, West: value, East: 20}).TileRange("test", 1)
+		require.ErrorContains(t, err, "finite")
+	}
+
+	_, err := (Bounds{South: -10, North: 10, West: -math.MaxFloat64, East: math.MaxFloat64}).TileRange("test", 1)
+	require.NoError(t, err)
+}

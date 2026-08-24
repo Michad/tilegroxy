@@ -212,6 +212,15 @@ func (lg *LayerGroup) ListLayerIDs() []string {
 }
 
 func (lg *LayerGroup) RenderTile(ctx context.Context, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+	return lg.renderTileWithCacheMode(ctx, tileRequest, false)
+}
+
+// RenderTileSync renders a tile and waits for any required cache write to finish.
+func (lg *LayerGroup) RenderTileSync(ctx context.Context, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+	return lg.renderTileWithCacheMode(ctx, tileRequest, true)
+}
+
+func (lg *LayerGroup) renderTileWithCacheMode(ctx context.Context, tileRequest pkg.TileRequest, syncCacheWrite bool) (*pkg.Image, error) {
 	var img *pkg.Image
 	var err error
 
@@ -259,14 +268,20 @@ func (lg *LayerGroup) RenderTile(ctx context.Context, tileRequest pkg.TileReques
 	}
 
 	if !img.ForceSkipCache {
-		select {
-		case lg.cacheWriteLimiter <- struct{}{}:
-			go func() {
-				defer func() { <-lg.cacheWriteLimiter }()
-				writeCache(ctx, l.Cache, tileRequest, img)
-			}()
-		default:
-			slog.WarnContext(ctx, "Skipping cache write: too many cache writes already in flight")
+		if syncCacheWrite {
+			if err := l.Cache.Save(ctx, tileRequest, img); err != nil {
+				return nil, fmt.Errorf("cache save error: %w", err)
+			}
+		} else {
+			select {
+			case lg.cacheWriteLimiter <- struct{}{}:
+				go func() {
+					defer func() { <-lg.cacheWriteLimiter }()
+					writeCache(ctx, l.Cache, tileRequest, img)
+				}()
+			default:
+				slog.WarnContext(ctx, "Skipping cache write: too many cache writes already in flight")
+			}
 		}
 	}
 

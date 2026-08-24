@@ -14,6 +14,7 @@
 package pkg
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -143,27 +144,53 @@ func NewBoundsFromGeohash(hashStr string) (Bounds, error) {
 	return Bounds{South: bbox.MinLat, North: bbox.MaxLat, West: bbox.MinLng, East: bbox.MaxLng, SRID: SRIDWGS84}, nil
 }
 
-// Turns a bounding box into a list of the tiles contained in the bounds for an arbitrary zoom level. Limited to 10k tiles unless force is true, then it's limited to 2^32 tiles.
-func (b Bounds) FindTiles(layerName string, zoom uint, force bool) (*[]TileRequest, error) {
+type TileRange struct {
+	layerName string
+	zoom      uint
+	xMin      int
+	xMax      int
+	yMin      int
+	yMax      int
+}
+
+func (r TileRange) Count() uint64 {
+	return uint64(r.xMax-r.xMin) * uint64(r.yMax-r.yMin) // #nosec G115 -- coordinates are non-negative and bounded by MaxZoom
+}
+
+// At returns the tile at index in deterministic row-major order.
+func (r TileRange) At(index uint64) (TileRequest, bool) {
+	if index >= r.Count() {
+		return TileRequest{}, false
+	}
+
+	width := uint64(r.xMax - r.xMin) // #nosec G115 -- xMax is greater than xMin
+	x := r.xMin + int(index%width)   // #nosec G115 -- index is bounded by Count
+	y := r.yMin + int(index/width)   // #nosec G115 -- index is bounded by Count
+
+	return TileRequest{LayerName: r.layerName, Z: int(r.zoom), X: x, Y: y}, true
+}
+
+// TileRange returns an allocation-free, deterministic range of tiles within these bounds.
+func (b Bounds) TileRange(layerName string, zoom uint) (TileRange, error) {
 	if zoom > MaxZoom {
-		return nil, RangeError{"z", 0, MaxZoom}
+		return TileRange{}, RangeError{"z", 0, MaxZoom}
+	}
+	if !boundsAreFinite(b) {
+		return TileRange{}, errors.New("tile bounds must be finite")
+	}
+	if b.South > b.North {
+		return TileRange{}, errors.New("south bound must not exceed north bound")
+	}
+	if b.West > b.East {
+		return TileRange{}, errors.New("west bound must not exceed east bound")
 	}
 
 	z := float64(zoom)
 
-	lonMin := b.West
-	for lonMin > maxLong {
-		lonMin -= maxLong
-	}
-	for lonMin < minLong {
-		lonMin -= minLong
-	}
-	lonMax := b.East
-	for lonMax > maxLong {
-		lonMax -= maxLong
-	}
-	for lonMax < minLong {
-		lonMax -= minLong
+	lonMin := normalizeLongitude(b.West)
+	lonMax := normalizeLongitude(b.East)
+	if lonMin > lonMax {
+		return TileRange{}, errors.New("bounds crossing the antimeridian are not supported")
 	}
 
 	n := math.Exp2(z)
@@ -180,6 +207,13 @@ func (b Bounds) FindTiles(layerName string, zoom uint, force bool) (*[]TileReque
 	xMin := int(math.Min(n, math.Max(0, x1)))
 	xMax := int(math.Min(n, math.Max(0, x2)))
 
+	if xMin > xMax {
+		return TileRange{}, errors.New("bounds crossing the antimeridian are not supported")
+	}
+	if yMin > yMax {
+		return TileRange{}, errors.New("invalid latitude bounds")
+	}
+
 	if xMin == xMax {
 		xMax = xMin + 1
 	}
@@ -187,7 +221,38 @@ func (b Bounds) FindTiles(layerName string, zoom uint, force bool) (*[]TileReque
 		yMax = yMin + 1
 	}
 
-	numTiles := uint64(xMax-xMin) * uint64(yMax-yMin) // #nosec G115 -- int->uint64 can't overflow until 128 bit processors come out
+	return TileRange{layerName: layerName, zoom: zoom, xMin: xMin, xMax: xMax, yMin: yMin, yMax: yMax}, nil
+}
+
+func boundsAreFinite(bounds Bounds) bool {
+	values := [...]float64{bounds.South, bounds.North, bounds.West, bounds.East}
+	for _, value := range values {
+		if math.IsNaN(value) || math.IsInf(value, 0) {
+			return false
+		}
+	}
+	return true
+}
+
+func normalizeLongitude(longitude float64) float64 {
+	normalized := math.Mod(longitude, 360)
+	if normalized > maxLong {
+		normalized -= 360
+	}
+	if normalized < minLong {
+		normalized += 360
+	}
+	return normalized
+}
+
+// Turns a bounding box into a list of the tiles contained in the bounds for an arbitrary zoom level. Limited to 10k tiles unless force is true, then it's limited to 2^32 tiles.
+func (b Bounds) FindTiles(layerName string, zoom uint, force bool) (*[]TileRequest, error) {
+	tileRange, err := b.TileRange(layerName, zoom)
+	if err != nil {
+		return nil, err
+	}
+
+	numTiles := tileRange.Count()
 
 	if numTiles > 10000 && !force {
 		return nil, TooManyTilesError{NumTiles: numTiles}
@@ -197,12 +262,9 @@ func (b Bounds) FindTiles(layerName string, zoom uint, force bool) (*[]TileReque
 		return nil, TooManyTilesError{NumTiles: numTiles}
 	}
 
-	result := make([]TileRequest, int32(numTiles))
-
-	for x := xMin; x < xMax; x++ {
-		for y := yMin; y < yMax; y++ {
-			result[(y-yMin)*(xMax-xMin)+x-xMin] = TileRequest{layerName, int(zoom), x, y}
-		}
+	result := make([]TileRequest, int(numTiles)) // #nosec G115 -- limited to MaxInt32 above
+	for i := range numTiles {
+		result[i], _ = tileRange.At(i)
 	}
 
 	return &result, nil

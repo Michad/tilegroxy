@@ -16,6 +16,7 @@ package layer
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -222,4 +223,39 @@ func Test_WriteCache_RecoversFromPanic(t *testing.T) {
 	require.NotPanics(t, func() {
 		writeCache(context.Background(), panicOnSaveCache{}, pkg.TileRequest{LayerName: "test", Z: 1, X: 0, Y: 0}, &pkg.Image{Content: []byte("x")})
 	})
+}
+
+type errorSaveCache struct{}
+
+func (errorSaveCache) Lookup(_ context.Context, _ pkg.TileRequest) (*pkg.Image, error) {
+	return nil, nil
+}
+
+func (errorSaveCache) Save(_ context.Context, _ pkg.TileRequest, _ *pkg.Image) error {
+	return errors.New("simulated cache save failure")
+}
+
+func Test_LayerGroup_RenderTileSync_ReportsCacheSaveFailure(t *testing.T) {
+	provider := &slowGenerateProvider{delay: 0}
+	cache := errorSaveCache{}
+	l := &Layer{
+		ID:       "test",
+		Pattern:  []layerSegment{{value: "test", placeholder: false}},
+		Provider: provider,
+		Cache:    cache,
+	}
+	l.tileAllCounter = noop.Int64Counter{}
+	l.tileAuthCounter = noop.Int64Counter{}
+	l.tileErrorCounter = noop.Int64Counter{}
+	l.tileSuccessCounter = noop.Int64Counter{}
+
+	lg := &LayerGroup{
+		layers:           []*Layer{l},
+		DefaultCache:     cache,
+		cacheHitCounter:  noop.Int64Counter{},
+		cacheMissCounter: noop.Int64Counter{},
+	}
+
+	_, err := lg.RenderTileSync(context.Background(), pkg.TileRequest{LayerName: "test", Z: 1, X: 0, Y: 0})
+	require.ErrorContains(t, err, "simulated cache save failure")
 }

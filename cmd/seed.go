@@ -46,9 +46,12 @@ func runSeed(cmd *cobra.Command, _ []string) {
 	force, err7 := cmd.Flags().GetBool("force")
 	numThread, err8 := cmd.Flags().GetUint16("threads")
 	verbose, err9 := cmd.Flags().GetBool("verbose")
+	maxTiles, err10 := cmd.Flags().GetUint64("max-tiles")
+	progressFile, err11 := cmd.Flags().GetString("progress-file")
+	progressRequired := cmd.Flags().Changed("progress-file")
 	out := rootCmd.OutOrStdout()
 
-	if err := errors.Join(err1, err2, err3, err4, err5, err6, err7, err8, err9); err != nil {
+	if err := errors.Join(err1, err2, err3, err4, err5, err6, err7, err8, err9, err10, err11); err != nil {
 		fmt.Fprintf(out, "Error: %v", err)
 		exit(1)
 		return
@@ -62,15 +65,30 @@ func runSeed(cmd *cobra.Command, _ []string) {
 	}
 
 	b := pkg.Bounds{South: float64(minLat), West: float64(minLon), North: float64(maxLat), East: float64(maxLon)}
+	seedOptions := tg.SeedOptions{
+		Zoom:      zoom,
+		Bounds:    b,
+		LayerName: layerName,
+		Force:     force,
+		Verbose:   verbose,
+		NumThread: numThread,
+	}
 
-	err = tg.Seed(cfg,
-		tg.SeedOptions{
-			Zoom:      zoom,
-			Bounds:    b,
-			LayerName: layerName,
-			Force:     force,
-			Verbose:   verbose,
-			NumThread: numThread},
+	if progressFile == "" {
+		progressFile, err = tg.DefaultSeedProgressFile(cfg, seedOptions)
+		if err != nil {
+			fmt.Fprintf(out, "Error: %v\n", err)
+			exit(1)
+			return
+		}
+	}
+
+	err = tg.SeedWithOptions(cfg,
+		tg.SeedRunOptions{
+			SeedOptions:      seedOptions,
+			MaxTiles:         maxTiles,
+			ProgressFile:     progressFile,
+			ProgressRequired: progressRequired},
 		out)
 
 	if err != nil {
@@ -94,7 +112,9 @@ func initSeed() {
 	seedCmd.Flags().Float32P("max-latitude", "n", 90, "The maximum latitude to seed. The north side of the bounding box")
 	seedCmd.Flags().Float32P("min-longitude", "w", -180, "The minimum longitude to seed. The west side of the bounding box")
 	seedCmd.Flags().Float32P("max-longitude", "e", 180, "The maximum longitude to seed. The east side of the bounding box")
-	seedCmd.Flags().Bool("force", false, "Perform the seeding even if it'll produce an excessive number of tiles. Without this flag seeds over 10k tiles will error out. \nWarning: Overriding this protection absolutely can cause an Out-of-Memory error")
+	seedCmd.Flags().Bool("force", false, "Perform the seeding even when the estimated upstream and cache work exceeds --max-tiles")
+	seedCmd.Flags().Uint64("max-tiles", tg.DefaultSeedMaxTiles, "Maximum estimated tile requests allowed without --force")
+	seedCmd.Flags().String("progress-file", "", "File used to resume an interrupted seed. Explicit paths must be writable")
 	seedCmd.Flags().Uint16P("threads", "t", 1, "How many concurrent requests to use to perform seeding. Be mindful of spamming upstream providers")
 	// TODO: support some way to support writing just to a specific cache when Multi cache is being used
 
