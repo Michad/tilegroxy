@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
@@ -52,6 +53,10 @@ func (s URLTemplateRegistration) InitializeConfig() any {
 
 func (s URLTemplateRegistration) Name() string {
 	return "url template"
+}
+
+func (s URLTemplateRegistration) DataType(_ any) config.DataType {
+	return config.DataTypeUnknown
 }
 
 func (s URLTemplateRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {

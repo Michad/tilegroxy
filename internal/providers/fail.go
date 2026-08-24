@@ -50,6 +50,10 @@ func (s FailRegistration) Name() string {
 	return "fail"
 }
 
+func (s FailRegistration) DataType(_ any) config.DataType {
+	return config.DataTypeUnknown
+}
+
 func (s FailRegistration) Initialize(cfgAny any, _ layer.ProviderDeps) (layer.Provider, error) {
 	config := cfgAny.(FailConfig)
 	return &Fail{config}, nil

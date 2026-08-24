@@ -49,6 +49,10 @@ func (s docExampleSampleRegistration) Name() string {
 	return "doc-example-sample"
 }
 
+func (s docExampleSampleRegistration) DataType(_ any) config.DataType {
+	return config.DataTypeUnknown
+}
+
 func (s docExampleSampleRegistration) Initialize(cfgAny any, _ ProviderDeps) (Provider, error) {
 	cfg := cfgAny.(docExampleSampleConfig)
 	return &docExampleSample{cfg}, nil

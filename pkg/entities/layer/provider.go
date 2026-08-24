@@ -53,6 +53,11 @@ type ProviderRegistration interface {
 	Name() string
 	Initialize(config any, deps ProviderDeps) (Provider, error)
 	InitializeConfig() any
+	// Declares whether this provider produces raster or vector tiles, or config.DataTypeUnknown if it depends on
+	// upstream data. Given the already-decoded config so nesting providers (fallback, crop) can recurse into
+	// their primary's registration without constructing anything. Checked against a layer's datatype setting
+	// at startup, before any provider is initialized.
+	DataType(config any) config.DataType
 }
 
 var registrationsMu sync.RWMutex
@@ -104,4 +109,29 @@ func ConstructProvider(rawConfig map[string]interface{}, deps ProviderDeps) (Pro
 
 	nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
 	return nil, fmt.Errorf(deps.ErrorMessages.EnumError, "provider.name", nameCoerce, RegisteredProviderNames())
+}
+
+func dataTypeFromRawConfig(rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (config.DataType, error) {
+	name, ok := rawConfig["name"].(string)
+	if !ok {
+		nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
+		return config.DataTypeUnknown, fmt.Errorf(errorMessages.EnumError, "provider.name", nameCoerce, RegisteredProviderNames())
+	}
+
+	reg, ok := RegisteredProvider(name)
+	if !ok {
+		return config.DataTypeUnknown, fmt.Errorf(errorMessages.EnumError, "provider.name", name, RegisteredProviderNames())
+	}
+
+	cfg := reg.InitializeConfig()
+	if err := config.DecodeEntityConfig(rawConfig, &cfg); err != nil {
+		return config.DataTypeUnknown, err
+	}
+
+	return reg.DataType(cfg), nil
+}
+
+func ExtractDataType(rawConfig map[string]interface{}) config.DataType {
+	datatype, _ := dataTypeFromRawConfig(rawConfig, config.ErrorMessages{})
+	return datatype
 }

@@ -49,6 +49,10 @@ func (s ProxyRegistration) Name() string {
 	return "proxy"
 }
 
+func (s ProxyRegistration) DataType(_ any) config.DataType {
+	return config.DataTypeUnknown
+}
+
 func (s ProxyRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(ProxyConfig)
 	if cfg.URL == "" {

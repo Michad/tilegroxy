@@ -27,6 +27,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func Test_DataType_Crop_PassesThroughPrimary(t *testing.T) {
+	layer.RegisterProvider(fixedDataTypeTestRegistration{name: "fixed-raster-crop-test", dt: config.DataTypeRaster})
+
+	dt := CropRegistration{}.DataType(CropConfig{Primary: map[string]interface{}{"name": "fixed-raster-crop-test"}})
+	assert.Equal(t, config.DataTypeRaster, dt)
+}
+
 func makeCropProvidersImages() (map[string]interface{}, map[string]interface{}, map[string]interface{}) {
 	return map[string]interface{}{
 			"name":  "static",

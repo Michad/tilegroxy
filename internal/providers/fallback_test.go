@@ -20,10 +20,55 @@ import (
 
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// fixedDataTypeTestProvider is a minimal layer.Provider used to test nesting providers
+// (Fallback, Crop) that pass through their primary's data type.
+type fixedDataTypeTestProvider struct {
+	dt config.DataType
+}
+
+func (p fixedDataTypeTestProvider) PreAuth(_ context.Context, pc layer.ProviderContext) (layer.ProviderContext, error) {
+	return pc, nil
+}
+
+func (p fixedDataTypeTestProvider) GenerateTile(_ context.Context, _ layer.ProviderContext, _ pkg.TileRequest) (*pkg.Image, error) {
+	return nil, nil
+}
+
+// fixedDataTypeTestRegistration registers fixedDataTypeTestProvider under a config-supplied name,
+// so a raw provider config (e.g. Fallback.Primary) can be pointed at a provider of any data type.
+type fixedDataTypeTestRegistration struct {
+	name string
+	dt   config.DataType
+}
+
+func (r fixedDataTypeTestRegistration) InitializeConfig() any {
+	return struct{}{}
+}
+
+func (r fixedDataTypeTestRegistration) Name() string {
+	return r.name
+}
+
+func (r fixedDataTypeTestRegistration) DataType(_ any) config.DataType {
+	return r.dt
+}
+
+func (r fixedDataTypeTestRegistration) Initialize(_ any, _ layer.ProviderDeps) (layer.Provider, error) {
+	return fixedDataTypeTestProvider{dt: r.dt}, nil
+}
+
+func Test_DataType_Fallback_PassesThroughPrimary(t *testing.T) {
+	layer.RegisterProvider(fixedDataTypeTestRegistration{name: "fixed-mvt-fallback-test", dt: config.DataTypeMVT})
+
+	dt := FallbackRegistration{}.DataType(FallbackConfig{Primary: map[string]interface{}{"name": "fixed-mvt-fallback-test"}})
+	assert.Equal(t, config.DataTypeMVT, dt)
+}
 
 // Fallback holds Primary/Secondary directly, outside any layer, so they're unreachable through
 // LayerGroup.Close unless Fallback forwards to them itself.

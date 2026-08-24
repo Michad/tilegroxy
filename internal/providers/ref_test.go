@@ -26,6 +26,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func Test_DataType_Ref(t *testing.T) {
+	assert.Equal(t, config.DataTypeUnknown, RefRegistration{}.DataType(RefConfig{}))
+}
+
 // Ref refers to another layer by name; it doesn't own that layer's provider. It must not
 // implement Closer, since closing through a ref would either double-close the target layer's
 // provider or close it out from under the layer that actually owns it.

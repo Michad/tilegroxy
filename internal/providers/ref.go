@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -53,6 +54,10 @@ func (s RefRegistration) InitializeConfig() any {
 
 func (s RefRegistration) Name() string {
 	return "ref"
+}
+
+func (s RefRegistration) DataType(_ any) config.DataType {
+	return config.DataTypeUnknown
 }
 
 func (s RefRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {

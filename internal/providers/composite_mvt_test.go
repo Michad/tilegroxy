@@ -20,10 +20,15 @@ import (
 
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func Test_DataType_CompositeMVT(t *testing.T) {
+	assert.Equal(t, config.DataTypeMVT, CompositeMVTRegistration{}.DataType(CompositeMVTConfig{}))
+}
 
 // CompositeMVT holds its children directly, outside any layer, so they're unreachable through
 // LayerGroup.Close unless CompositeMVT forwards to them itself.

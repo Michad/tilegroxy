@@ -19,6 +19,7 @@ import (
 	"log/slog"
 
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/paulmach/orb"
 	"github.com/paulmach/orb/encoding/mvt"
@@ -49,6 +50,10 @@ func (s CropMvtRegistration) InitializeConfig() any {
 
 func (s CropMvtRegistration) Name() string {
 	return "cropmvt"
+}
+
+func (s CropMvtRegistration) DataType(_ any) config.DataType {
+	return config.DataTypeMVT
 }
 
 func (s CropMvtRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {

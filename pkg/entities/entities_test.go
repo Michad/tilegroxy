@@ -51,8 +51,9 @@ var closeCountingProviderClosed bool
 
 type closeCountingRegistration struct{}
 
-func (closeCountingRegistration) InitializeConfig() any { return struct{}{} }
-func (closeCountingRegistration) Name() string          { return "close-counting" }
+func (closeCountingRegistration) InitializeConfig() any          { return struct{}{} }
+func (closeCountingRegistration) Name() string                   { return "close-counting" }
+func (closeCountingRegistration) DataType(_ any) config.DataType { return config.DataTypeUnknown }
 func (closeCountingRegistration) Initialize(_ any, _ layer.ProviderDeps) (layer.Provider, error) {
 	closeCountingProviderClosed = false
 	return closeCountingProvider{closed: &closeCountingProviderClosed}, nil

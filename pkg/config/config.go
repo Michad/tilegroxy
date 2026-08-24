@@ -49,6 +49,21 @@ type HealthConfig struct {
 	Checks  []map[string]any // An array defining the specific checks to perform.
 }
 
+type DataType string
+
+const (
+	DataTypeRaster  DataType = "raster"
+	DataTypeMVT     DataType = "mvt"
+	DataTypeUnknown DataType = "unknown"
+)
+
+type BoundsConfig struct {
+	South float64
+	North float64
+	West  float64
+	East  float64
+}
+
 type ServerConfig struct {
 	Encrypt    *EncryptionConfig // Whether and how to use TLS. Defaults to none AKA no encryption.
 	Health     HealthConfig      // Whether to enable health endpoints on a secondary port.
@@ -221,6 +236,10 @@ type LayerConfig struct {
 	SkipCache      bool              // If true, don't use the cache
 	SkipAnalytics  bool              // If true, successful requests for this layer don't produce analytics events
 	Client         *ClientConfig     // If specified, the default Client is overridden.
+	DataType       DataType          // Optional. Declares this layer's data type. Must not contradict the provider's own DataType(); required if Bounds is set and the provider's type is unknown
+	MinZoom        *int              // Optional. Requests below this zoom are rejected as out of bounds. nil means no lower limit
+	MaxZoom        *int              // Optional. Requests above this zoom are rejected as out of bounds. nil means no upper limit
+	Bounds         BoundsConfig      // Optional. Automatically wraps this layer's provider in crop/cropmvt, restricting it to this geographic area
 }
 
 type Config struct {
@@ -270,6 +289,16 @@ func (c Config) Validate() error {
 
 	if c.Server.DrainDelay >= c.Server.EffectiveShutdownTimeout() {
 		errs = append(errs, fmt.Errorf(c.Error.Messages.InvalidParam, "server.draindelay", strconv.FormatUint(uint64(c.Server.DrainDelay), 10)))
+	}
+
+	for i, l := range c.Layers {
+		if l.MinZoom != nil && l.MaxZoom != nil && *l.MinZoom > *l.MaxZoom {
+			errs = append(errs, fmt.Errorf(c.Error.Messages.InvalidParam, fmt.Sprintf("layers[%d].maxzoom", i), strconv.Itoa(*l.MaxZoom)))
+		}
+
+		if l.Bounds != (BoundsConfig{}) && (l.Bounds.South > l.Bounds.North || l.Bounds.West > l.Bounds.East) {
+			errs = append(errs, fmt.Errorf(c.Error.Messages.InvalidParam, fmt.Sprintf("layers[%d].bounds", i), fmt.Sprintf("%+v", l.Bounds)))
+		}
 	}
 
 	return errors.Join(errs...)

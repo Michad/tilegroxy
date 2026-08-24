@@ -20,6 +20,7 @@ import (
 
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
@@ -46,6 +47,10 @@ func (s StaticRegistration) InitializeConfig() any {
 
 func (s StaticRegistration) Name() string {
 	return "static"
+}
+
+func (s StaticRegistration) DataType(_ any) config.DataType {
+	return config.DataTypeRaster
 }
 
 func (s StaticRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {

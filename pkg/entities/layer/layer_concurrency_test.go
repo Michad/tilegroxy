@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/metric/noop"
 )
@@ -39,6 +40,10 @@ func (p *countingProvider) PreAuth(_ context.Context, providerContext ProviderCo
 
 func (p *countingProvider) GenerateTile(_ context.Context, _ ProviderContext, _ pkg.TileRequest) (*pkg.Image, error) {
 	return &pkg.Image{}, nil
+}
+
+func (p *countingProvider) DataType() config.DataType {
+	return config.DataTypeUnknown
 }
 
 // Many goroutines rendering on a freshly constructed layer all see the zero AuthExpiration at
@@ -98,6 +103,10 @@ func (p *reauthProvider) GenerateTile(_ context.Context, _ ProviderContext, _ pk
 		return nil, pkg.ProviderAuthError{Message: "token expired"}
 	}
 	return &pkg.Image{}, nil
+}
+
+func (p *reauthProvider) DataType() config.DataType {
+	return config.DataTypeUnknown
 }
 
 func Test_Layer_RenderTileNoCache_ReauthsOnProviderAuthError(t *testing.T) {

@@ -199,6 +199,52 @@ type Layer struct {
 	tileSuccessCounter metric.Int64Counter
 }
 
+func resolveDataType(rawConfig config.LayerConfig, errorMessages config.ErrorMessages) (config.DataType, error) {
+	providerDataType, err := dataTypeFromRawConfig(rawConfig.Provider, errorMessages)
+	if err != nil {
+		return config.DataTypeUnknown, err
+	}
+
+	layerDataType := rawConfig.DataType
+
+	// An explicit datatype that disagrees with what the provider actually produces is a config error.
+	if layerDataType != "" && layerDataType != config.DataTypeUnknown &&
+		providerDataType != config.DataTypeUnknown && layerDataType != providerDataType {
+		return config.DataTypeUnknown, fmt.Errorf(errorMessages.InvalidParam, "layer.datatype", string(layerDataType))
+	}
+
+	if layerDataType == "" || layerDataType == config.DataTypeUnknown {
+		return providerDataType, nil
+	}
+
+	return layerDataType, nil
+}
+
+func constructCropWrappedProvider(rawConfig config.LayerConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup, datatype config.DataType, datastores *datastore.DatastoreRegistry) (Provider, error) {
+	wrapperName := "cropmvt"
+	if datatype == config.DataTypeRaster {
+		wrapperName = "crop"
+	}
+
+	wrapperConfig := map[string]interface{}{
+		"name": wrapperName,
+		"bounds": pkg.Bounds{
+			South: rawConfig.Bounds.South,
+			North: rawConfig.Bounds.North,
+			West:  rawConfig.Bounds.West,
+			East:  rawConfig.Bounds.East,
+		},
+		"primary": rawConfig.Provider,
+	}
+
+	return ConstructProvider(wrapperConfig, ProviderDeps{
+		ClientConfig:  *rawConfig.Client,
+		ErrorMessages: errorMessages,
+		LayerGroup:    layerGroup,
+		Datastores:    datastores,
+	})
+}
+
 func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup, secreter secret.Secreter, datastores *datastore.DatastoreRegistry) (*Layer, error) {
 	var err error
 	if rawConfig.Client == nil {
@@ -216,12 +262,29 @@ func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.Cli
 		}
 	}
 
-	provider, err := ConstructProvider(rawConfig.Provider, ProviderDeps{
-		ClientConfig:  *rawConfig.Client,
-		ErrorMessages: errorMessages,
-		LayerGroup:    layerGroup,
-		Datastores:    datastores,
-	})
+	datatype, err := resolveDataType(rawConfig, errorMessages)
+	if err != nil {
+		return nil, err
+	}
+
+	boundsSet := rawConfig.Bounds != (config.BoundsConfig{})
+
+	// Bounds filtering needs a known data type to pick the right crop wrapper.
+	if boundsSet && datatype == config.DataTypeUnknown {
+		return nil, fmt.Errorf(errorMessages.ParamRequired, "layer.datatype")
+	}
+
+	var provider Provider
+	if boundsSet {
+		provider, err = constructCropWrappedProvider(rawConfig, errorMessages, layerGroup, datatype, datastores)
+	} else {
+		provider, err = ConstructProvider(rawConfig.Provider, ProviderDeps{
+			ClientConfig:  *rawConfig.Client,
+			ErrorMessages: errorMessages,
+			LayerGroup:    layerGroup,
+			Datastores:    datastores,
+		})
+	}
 
 	if err != nil {
 		return nil, err
@@ -300,9 +363,32 @@ func (l *Layer) MatchesName(ctx context.Context, layerName string) bool {
 	return false
 }
 
+// CheckZoomBounds rejects a request outside this layer's configured minzoom/maxzoom. Called
+// before the cache lookup so a cached tile can't bypass a zoom limit added after it was cached.
+func (l *Layer) CheckZoomBounds(tileRequest pkg.TileRequest) error {
+	minZoom := 0
+	if l.Config.MinZoom != nil {
+		minZoom = *l.Config.MinZoom
+	}
+	maxZoom := pkg.MaxZoom
+	if l.Config.MaxZoom != nil {
+		maxZoom = *l.Config.MaxZoom
+	}
+
+	if tileRequest.Z < minZoom || tileRequest.Z > maxZoom {
+		return pkg.RangeError{ParamName: "z", MinValue: float64(minZoom), MaxValue: float64(maxZoom)}
+	}
+
+	return nil
+}
+
 func (l *Layer) RenderTileNoCache(ctx context.Context, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	var img *pkg.Image
 	var err error
+
+	if err := l.CheckZoomBounds(tileRequest); err != nil {
+		return nil, err
+	}
 
 	l.tileAllCounter.Add(ctx, 1)
 

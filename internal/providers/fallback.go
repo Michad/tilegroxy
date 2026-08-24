@@ -22,6 +22,7 @@ import (
 	"slices"
 
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
 )
@@ -64,6 +65,11 @@ func (s FallbackRegistration) InitializeConfig() any {
 
 func (s FallbackRegistration) Name() string {
 	return "fallback"
+}
+
+func (s FallbackRegistration) DataType(cfgAny any) config.DataType {
+	cfg := cfgAny.(FallbackConfig)
+	return layer.ExtractDataType(cfg.Primary)
 }
 
 func (s FallbackRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {

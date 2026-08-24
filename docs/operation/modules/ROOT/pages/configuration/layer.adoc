@@ -55,6 +55,30 @@ Configuration options:
 | bool
 | No
 | false
+
+| datatype
+| Declares what type of tiles this layer returns. This is inferred from the provider when possible. If this contradicts the provider (for example datatype is raster but the provider always produces vector tiles) startup fails. Required if it can't be inferred and a feature relying on it (such as bounds) is used
+| string, one of: raster, mvt
+| No
+| Taken from the provider
+
+| minzoom
+| Requests for a zoom level below this are rejected as out of bounds
+| int
+| No
+| No lower limit
+
+| maxzoom
+| Requests for a zoom level above this are rejected as out of bounds
+| int
+| No
+| No upper limit
+
+| bounds
+| Restricts this layer to a geographic area. When set, the layer's provider is automatically cropped (via xref:configuration/provider/crop.adoc[crop] or xref:configuration/provider/cropmvt.adoc[cropmvt]). This requires the layer's data type to be resolvable
+| Object with north, south, east, west
+| No
+| Whole world
 |===
 
 Example:
@@ -69,6 +93,13 @@ layer:
   skipCache: true
   client:
     userAgent: my_app/1.0
+  minzoom: 4
+  maxzoom: 18
+  bounds:
+    south: 51
+    north: 63
+    west: -7
+    east: 0.1
   provider:
     ...
 ----

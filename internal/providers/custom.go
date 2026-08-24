@@ -59,6 +59,10 @@ func (s CustomRegistration) Name() string {
 	return "custom"
 }
 
+func (s CustomRegistration) DataType(_ any) config.DataType {
+	return config.DataTypeUnknown
+}
+
 func (s CustomRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(CustomConfig)
 

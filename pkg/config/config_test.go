@@ -206,6 +206,48 @@ func TestValidate_DefaultConfigIsValid(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestValidate_MinZoomAboveMaxZoomRejected(t *testing.T) {
+	c := DefaultConfig()
+	minZoom, maxZoom := 10, 4
+	c.Layers = []LayerConfig{{ID: "l1", MinZoom: &minZoom, MaxZoom: &maxZoom}}
+
+	err := c.Validate()
+	require.Error(t, err)
+}
+
+func TestValidate_MinZoomBelowMaxZoomAccepted(t *testing.T) {
+	c := DefaultConfig()
+	minZoom, maxZoom := 4, 10
+	c.Layers = []LayerConfig{{ID: "l1", MinZoom: &minZoom, MaxZoom: &maxZoom}}
+
+	err := c.Validate()
+	require.NoError(t, err)
+}
+
+func TestValidate_InvertedBoundsRejected(t *testing.T) {
+	c := DefaultConfig()
+	c.Layers = []LayerConfig{{ID: "l1", Bounds: BoundsConfig{South: 63, North: 51, West: -10, East: 2}}}
+
+	err := c.Validate()
+	require.Error(t, err)
+}
+
+func TestValidate_WellFormedBoundsAccepted(t *testing.T) {
+	c := DefaultConfig()
+	c.Layers = []LayerConfig{{ID: "l1", Bounds: BoundsConfig{South: 51, North: 63, West: -10, East: 2}}}
+
+	err := c.Validate()
+	require.NoError(t, err)
+}
+
+func TestValidate_UnsetBoundsAccepted(t *testing.T) {
+	c := DefaultConfig()
+	c.Layers = []LayerConfig{{ID: "l1"}}
+
+	err := c.Validate()
+	require.NoError(t, err)
+}
+
 func TestAnalyticsYml(t *testing.T) {
 	c, err := LoadConfigFromFile("../../examples/configurations/analytics.yml")
 
@@ -335,4 +377,26 @@ func Test_DrainDelayCannotConsumeWholeBudget(t *testing.T) {
 
 	// A drain delay at or above the budget leaves no time to actually drain or flush.
 	require.Error(t, c.Validate())
+}
+
+func Test_LayerConfig_HasDataTypeZoomBoundsFields(t *testing.T) {
+	minZoom := 4
+	maxZoom := 18
+	cfg := LayerConfig{
+		DataType: DataTypeRaster,
+		MinZoom:  &minZoom,
+		MaxZoom:  &maxZoom,
+		Bounds:   BoundsConfig{South: -10, North: 10, West: -10, East: 10},
+	}
+
+	assert.Equal(t, DataTypeRaster, cfg.DataType)
+	assert.Equal(t, 4, *cfg.MinZoom)
+	assert.Equal(t, 18, *cfg.MaxZoom)
+	assert.InDelta(t, 10.0, cfg.Bounds.North, 0)
+}
+
+func Test_DataType_Constants_Values(t *testing.T) {
+	assert.Equal(t, DataTypeRaster, DataType("raster"))
+	assert.Equal(t, DataTypeMVT, DataType("mvt"))
+	assert.Equal(t, DataTypeUnknown, DataType("unknown"))
 }
