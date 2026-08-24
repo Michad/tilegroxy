@@ -132,6 +132,6 @@ func dataTypeFromRawConfig(rawConfig map[string]interface{}, errorMessages confi
 }
 
 func ExtractDataType(rawConfig map[string]interface{}) config.DataType {
-	effort, _ := dataTypeFromRawConfig(rawConfig, config.ErrorMessages{})
-	return effort
+	datatype, _ := dataTypeFromRawConfig(rawConfig, config.ErrorMessages{})
+	return datatype
 }
