@@ -79,8 +79,8 @@ func (s PostgisMvtRegistration) Name() string {
 	return "postgismvt"
 }
 
-func (s PostgisMvtRegistration) DataType(_ any) pkg.DataType {
-	return pkg.DataTypeMVT
+func (s PostgisMvtRegistration) DataType(_ any) config.DataType {
+	return config.DataTypeMVT
 }
 
 func (s PostgisMvtRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {

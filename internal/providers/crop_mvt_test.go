@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/paulmach/orb"
 	"github.com/paulmach/orb/encoding/mvt"
@@ -26,7 +27,7 @@ import (
 )
 
 func Test_DataType_CropMvt(t *testing.T) {
-	assert.Equal(t, pkg.DataTypeMVT, CropMvtRegistration{}.DataType(CropMvtConfig{}))
+	assert.Equal(t, config.DataTypeMVT, CropMvtRegistration{}.DataType(CropMvtConfig{}))
 }
 
 func makeCropMvtProviderConfig() map[string]interface{} {

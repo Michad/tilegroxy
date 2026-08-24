@@ -39,9 +39,9 @@ func (seedTestPanicProvider) GenerateTile(_ context.Context, _ layer.ProviderCon
 
 type seedTestPanicRegistration struct{}
 
-func (seedTestPanicRegistration) Name() string                { return "seed-test-panic-provider" }
-func (seedTestPanicRegistration) InitializeConfig() any       { return struct{}{} }
-func (seedTestPanicRegistration) DataType(_ any) pkg.DataType { return pkg.DataTypeUnknown }
+func (seedTestPanicRegistration) Name() string                   { return "seed-test-panic-provider" }
+func (seedTestPanicRegistration) InitializeConfig() any          { return struct{}{} }
+func (seedTestPanicRegistration) DataType(_ any) config.DataType { return config.DataTypeUnknown }
 func (seedTestPanicRegistration) Initialize(_ any, _ layer.ProviderDeps) (layer.Provider, error) {
 	return seedTestPanicProvider{}, nil
 }

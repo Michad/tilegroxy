@@ -57,9 +57,8 @@ func (s CropRegistration) Name() string {
 	return "crop"
 }
 
-func (s CropRegistration) DataType(cfgAny any) pkg.DataType {
-	cfg := cfgAny.(CropConfig)
-	return layer.ExtractDataType(cfg.Primary)
+func (s CropRegistration) DataType(_ any) config.DataType {
+	return config.DataTypeRaster
 }
 
 func (s CropRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {

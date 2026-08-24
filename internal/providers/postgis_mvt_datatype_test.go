@@ -17,12 +17,12 @@ package providers
 import (
 	"testing"
 
-	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
 // PostgisMvtRegistration.DataType() needs no database, so it's kept out of postgis_mvt_test.go's
 // !unit build tag and runs as part of the regular unit suite.
 func Test_DataType_PostgisMvt(t *testing.T) {
-	assert.Equal(t, pkg.DataTypeMVT, PostgisMvtRegistration{}.DataType(PostgisMvtConfig{}))
+	assert.Equal(t, config.DataTypeMVT, PostgisMvtRegistration{}.DataType(PostgisMvtConfig{}))
 }

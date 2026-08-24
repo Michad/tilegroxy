@@ -82,8 +82,8 @@ func (s BlendRegistration) Name() string {
 	return "blend"
 }
 
-func (s BlendRegistration) DataType(_ any) pkg.DataType {
-	return pkg.DataTypeRaster
+func (s BlendRegistration) DataType(_ any) config.DataType {
+	return config.DataTypeRaster
 }
 
 func (s BlendRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {

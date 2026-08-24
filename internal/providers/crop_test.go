@@ -28,10 +28,10 @@ import (
 )
 
 func Test_DataType_Crop_PassesThroughPrimary(t *testing.T) {
-	layer.RegisterProvider(fixedDataTypeTestRegistration{name: "fixed-raster-crop-test", dt: pkg.DataTypeRaster})
+	layer.RegisterProvider(fixedDataTypeTestRegistration{name: "fixed-raster-crop-test", dt: config.DataTypeRaster})
 
 	dt := CropRegistration{}.DataType(CropConfig{Primary: map[string]interface{}{"name": "fixed-raster-crop-test"}})
-	assert.Equal(t, pkg.DataTypeRaster, dt)
+	assert.Equal(t, config.DataTypeRaster, dt)
 }
 
 func makeCropProvidersImages() (map[string]interface{}, map[string]interface{}, map[string]interface{}) {

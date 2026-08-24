@@ -17,10 +17,10 @@ package providers
 import (
 	"testing"
 
-	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
 func Test_DataType_Fail(t *testing.T) {
-	assert.Equal(t, pkg.DataTypeUnknown, FailRegistration{}.DataType(FailConfig{}))
+	assert.Equal(t, config.DataTypeUnknown, FailRegistration{}.DataType(FailConfig{}))
 }

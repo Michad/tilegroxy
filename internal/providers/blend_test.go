@@ -20,6 +20,7 @@ import (
 
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -42,12 +43,12 @@ func (p *closableProvider) GenerateTile(_ context.Context, _ layer.ProviderConte
 	return nil, nil
 }
 
-func (p *closableProvider) DataType() pkg.DataType {
-	return pkg.DataTypeUnknown
+func (p *closableProvider) DataType() config.DataType {
+	return config.DataTypeUnknown
 }
 
 func Test_DataType_Blend(t *testing.T) {
-	assert.Equal(t, pkg.DataTypeRaster, BlendRegistration{}.DataType(BlendConfig{}))
+	assert.Equal(t, config.DataTypeRaster, BlendRegistration{}.DataType(BlendConfig{}))
 }
 
 // Blend holds its children directly, outside any layer, so they're unreachable through

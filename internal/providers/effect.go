@@ -25,6 +25,7 @@ import (
 	"slices"
 
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/anthonynsimon/bild/adjust"
 	"github.com/anthonynsimon/bild/blur"
@@ -62,8 +63,8 @@ func (s EffectRegistration) Name() string {
 	return "effect"
 }
 
-func (s EffectRegistration) DataType(_ any) pkg.DataType {
-	return pkg.DataTypeRaster
+func (s EffectRegistration) DataType(_ any) config.DataType {
+	return config.DataTypeRaster
 }
 
 func (s EffectRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {

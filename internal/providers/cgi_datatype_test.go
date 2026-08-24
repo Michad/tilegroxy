@@ -17,12 +17,12 @@ package providers
 import (
 	"testing"
 
-	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
 // CGIRegistration.DataType() needs no external process, so it's kept out of cgi_test.go's !unit
 // build tag and runs as part of the regular unit suite.
 func Test_DataType_CGI(t *testing.T) {
-	assert.Equal(t, pkg.DataTypeUnknown, CGIRegistration{}.DataType(CGIConfig{}))
+	assert.Equal(t, config.DataTypeUnknown, CGIRegistration{}.DataType(CGIConfig{}))
 }

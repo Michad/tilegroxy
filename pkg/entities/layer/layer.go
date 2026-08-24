@@ -208,12 +208,12 @@ func resolveDataType(rawConfig config.LayerConfig, errorMessages config.ErrorMes
 	layerDataType := rawConfig.DataType
 
 	// An explicit datatype that disagrees with what the provider actually produces is a config error.
-	if layerDataType != "" && layerDataType != pkg.DataTypeUnknown &&
-		providerDataType != pkg.DataTypeUnknown && layerDataType != providerDataType {
+	if layerDataType != "" && layerDataType != config.DataTypeUnknown &&
+		providerDataType != config.DataTypeUnknown && layerDataType != providerDataType {
 		return config.DataTypeUnknown, fmt.Errorf(errorMessages.InvalidParam, "layer.datatype", string(layerDataType))
 	}
 
-	if layerDataType == "" || layerDataType == pkg.DataTypeUnknown {
+	if layerDataType == "" || layerDataType == config.DataTypeUnknown {
 		return providerDataType, nil
 	}
 
@@ -222,7 +222,7 @@ func resolveDataType(rawConfig config.LayerConfig, errorMessages config.ErrorMes
 
 func constructCropWrappedProvider(rawConfig config.LayerConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup, datatype config.DataType, datastores *datastore.DatastoreRegistry) (Provider, error) {
 	wrapperName := "cropmvt"
-	if datatype == pkg.DataTypeRaster {
+	if datatype == config.DataTypeRaster {
 		wrapperName = "crop"
 	}
 
@@ -270,7 +270,7 @@ func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.Cli
 	boundsSet := rawConfig.Bounds != (config.BoundsConfig{})
 
 	// Bounds filtering needs a known data type to pick the right crop wrapper.
-	if boundsSet && datatype == pkg.DataTypeUnknown {
+	if boundsSet && datatype == config.DataTypeUnknown {
 		return nil, fmt.Errorf(errorMessages.ParamRequired, "layer.datatype")
 	}
 

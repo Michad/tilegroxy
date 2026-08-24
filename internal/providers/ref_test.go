@@ -27,7 +27,7 @@ import (
 )
 
 func Test_DataType_Ref(t *testing.T) {
-	assert.Equal(t, pkg.DataTypeUnknown, RefRegistration{}.DataType(RefConfig{}))
+	assert.Equal(t, config.DataTypeUnknown, RefRegistration{}.DataType(RefConfig{}))
 }
 
 // Ref refers to another layer by name; it doesn't own that layer's provider. It must not

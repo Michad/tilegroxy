@@ -17,10 +17,10 @@ package providers
 import (
 	"testing"
 
-	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
 func Test_DataType_Static(t *testing.T) {
-	assert.Equal(t, pkg.DataTypeRaster, StaticRegistration{}.DataType(StaticConfig{}))
+	assert.Equal(t, config.DataTypeRaster, StaticRegistration{}.DataType(StaticConfig{}))
 }

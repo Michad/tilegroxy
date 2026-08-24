@@ -19,13 +19,14 @@ import (
 
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func Test_DataType_Effect(t *testing.T) {
-	assert.Equal(t, pkg.DataTypeRaster, EffectRegistration{}.DataType(EffectConfig{}))
+	assert.Equal(t, config.DataTypeRaster, EffectRegistration{}.DataType(EffectConfig{}))
 }
 
 func makeEffectProvider() map[string]interface{} {

@@ -49,8 +49,8 @@ func (s docExampleSampleRegistration) Name() string {
 	return "doc-example-sample"
 }
 
-func (s docExampleSampleRegistration) DataType(_ any) pkg.DataType {
-	return pkg.DataTypeUnknown
+func (s docExampleSampleRegistration) DataType(_ any) config.DataType {
+	return config.DataTypeUnknown
 }
 
 func (s docExampleSampleRegistration) Initialize(cfgAny any, _ ProviderDeps) (Provider, error) {

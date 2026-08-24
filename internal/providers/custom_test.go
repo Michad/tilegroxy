@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -61,7 +62,7 @@ func buildCustomProviderFromScript(t *testing.T, body string) *Custom {
 }
 
 func Test_DataType_Custom(t *testing.T) {
-	assert.Equal(t, pkg.DataTypeUnknown, CustomRegistration{}.DataType(CustomConfig{}))
+	assert.Equal(t, config.DataTypeUnknown, CustomRegistration{}.DataType(CustomConfig{}))
 }
 
 func Test_CustomValidate(t *testing.T) {

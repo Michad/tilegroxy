@@ -24,7 +24,7 @@ import (
 )
 
 type fixedTypeTestProvider struct {
-	dt pkg.DataType
+	dt config.DataType
 }
 
 func (p fixedTypeTestProvider) PreAuth(_ context.Context, pc ProviderContext) (ProviderContext, error) {
@@ -37,7 +37,7 @@ func (p fixedTypeTestProvider) GenerateTile(_ context.Context, _ ProviderContext
 
 type fixedTypeTestRegistration struct {
 	name string
-	dt   pkg.DataType
+	dt   config.DataType
 }
 
 func (r fixedTypeTestRegistration) InitializeConfig() any {
@@ -48,7 +48,7 @@ func (r fixedTypeTestRegistration) Name() string {
 	return r.name
 }
 
-func (r fixedTypeTestRegistration) DataType(_ any) pkg.DataType {
+func (r fixedTypeTestRegistration) DataType(_ any) config.DataType {
 	return r.dt
 }
 
@@ -57,11 +57,11 @@ func (r fixedTypeTestRegistration) Initialize(_ any, _ ProviderDeps) (Provider, 
 }
 
 func Test_ConstructLayer_DataType_MatchingExplicitAndProviderType_Succeeds(t *testing.T) {
-	RegisterProvider(fixedTypeTestRegistration{name: "fixed-raster-1", dt: pkg.DataTypeRaster})
+	RegisterProvider(fixedTypeTestRegistration{name: "fixed-raster-1", dt: config.DataTypeRaster})
 
 	rawConfig := config.LayerConfig{
 		ID:       "l1",
-		DataType: pkg.DataTypeRaster,
+		DataType: config.DataTypeRaster,
 		Provider: map[string]any{"name": "fixed-raster-1"},
 	}
 
@@ -72,11 +72,11 @@ func Test_ConstructLayer_DataType_MatchingExplicitAndProviderType_Succeeds(t *te
 }
 
 func Test_ConstructLayer_DataType_ContradictoryExplicitAndProviderType_Fails(t *testing.T) {
-	RegisterProvider(fixedTypeTestRegistration{name: "fixed-mvt-1", dt: pkg.DataTypeMVT})
+	RegisterProvider(fixedTypeTestRegistration{name: "fixed-mvt-1", dt: config.DataTypeMVT})
 
 	rawConfig := config.LayerConfig{
 		ID:       "l2",
-		DataType: pkg.DataTypeRaster,
+		DataType: config.DataTypeRaster,
 		Provider: map[string]any{"name": "fixed-mvt-1"},
 	}
 
@@ -87,7 +87,7 @@ func Test_ConstructLayer_DataType_ContradictoryExplicitAndProviderType_Fails(t *
 }
 
 func Test_ConstructLayer_DataType_ProviderUnknownNoExplicitType_Succeeds(t *testing.T) {
-	RegisterProvider(fixedTypeTestRegistration{name: "fixed-unknown-1", dt: pkg.DataTypeUnknown})
+	RegisterProvider(fixedTypeTestRegistration{name: "fixed-unknown-1", dt: config.DataTypeUnknown})
 
 	rawConfig := config.LayerConfig{
 		ID:       "l3",
@@ -101,7 +101,7 @@ func Test_ConstructLayer_DataType_ProviderUnknownNoExplicitType_Succeeds(t *test
 }
 
 func Test_ConstructLayer_Bounds_WithUnresolvableDataType_Fails(t *testing.T) {
-	RegisterProvider(fixedTypeTestRegistration{name: "fixed-unknown-2", dt: pkg.DataTypeUnknown})
+	RegisterProvider(fixedTypeTestRegistration{name: "fixed-unknown-2", dt: config.DataTypeUnknown})
 
 	rawConfig := config.LayerConfig{
 		ID:       "l4",
@@ -117,11 +117,11 @@ func Test_ConstructLayer_Bounds_WithUnresolvableDataType_Fails(t *testing.T) {
 
 func Test_ConstructLayer_Bounds_WithExplicitDataType_Succeeds(t *testing.T) {
 	RegisterProvider(wrapMarkerRegistration{name: "crop"})
-	RegisterProvider(fixedTypeTestRegistration{name: "fixed-unknown-3", dt: pkg.DataTypeUnknown})
+	RegisterProvider(fixedTypeTestRegistration{name: "fixed-unknown-3", dt: config.DataTypeUnknown})
 
 	rawConfig := config.LayerConfig{
 		ID:       "l5",
-		DataType: pkg.DataTypeRaster,
+		DataType: config.DataTypeRaster,
 		Bounds:   config.BoundsConfig{South: -10, North: 10, West: -10, East: 10},
 		Provider: map[string]any{"name": "fixed-unknown-3"},
 	}
@@ -134,7 +134,7 @@ func Test_ConstructLayer_Bounds_WithExplicitDataType_Succeeds(t *testing.T) {
 
 func Test_ConstructLayer_Bounds_WithResolvableProviderType_Succeeds(t *testing.T) {
 	RegisterProvider(wrapMarkerRegistration{name: "cropmvt"})
-	RegisterProvider(fixedTypeTestRegistration{name: "fixed-mvt-2", dt: pkg.DataTypeMVT})
+	RegisterProvider(fixedTypeTestRegistration{name: "fixed-mvt-2", dt: config.DataTypeMVT})
 
 	rawConfig := config.LayerConfig{
 		ID:       "l6",
@@ -178,7 +178,7 @@ func (r wrapMarkerRegistration) Name() string {
 	return r.name
 }
 
-func (r wrapMarkerRegistration) DataType(cfgAny any) pkg.DataType {
+func (r wrapMarkerRegistration) DataType(cfgAny any) config.DataType {
 	cfg := cfgAny.(wrapMarkerConfig)
 	return ExtractDataType(cfg.Primary)
 }
@@ -194,7 +194,7 @@ func (r wrapMarkerRegistration) Initialize(cfgAny any, deps ProviderDeps) (Provi
 
 func Test_ConstructLayer_Bounds_Raster_WrapsInCrop(t *testing.T) {
 	RegisterProvider(wrapMarkerRegistration{name: "crop"})
-	RegisterProvider(fixedTypeTestRegistration{name: "fixed-raster-2", dt: pkg.DataTypeRaster})
+	RegisterProvider(fixedTypeTestRegistration{name: "fixed-raster-2", dt: config.DataTypeRaster})
 
 	rawConfig := config.LayerConfig{
 		ID:       "l7",
@@ -213,7 +213,7 @@ func Test_ConstructLayer_Bounds_Raster_WrapsInCrop(t *testing.T) {
 
 func Test_ConstructLayer_Bounds_MVT_WrapsInCropMvt(t *testing.T) {
 	RegisterProvider(wrapMarkerRegistration{name: "cropmvt"})
-	RegisterProvider(fixedTypeTestRegistration{name: "fixed-mvt-3", dt: pkg.DataTypeMVT})
+	RegisterProvider(fixedTypeTestRegistration{name: "fixed-mvt-3", dt: config.DataTypeMVT})
 
 	rawConfig := config.LayerConfig{
 		ID:       "l8",
@@ -231,7 +231,7 @@ func Test_ConstructLayer_Bounds_MVT_WrapsInCropMvt(t *testing.T) {
 }
 
 func Test_ConstructLayer_NoBounds_NoWrapping(t *testing.T) {
-	RegisterProvider(fixedTypeTestRegistration{name: "fixed-raster-3", dt: pkg.DataTypeRaster})
+	RegisterProvider(fixedTypeTestRegistration{name: "fixed-raster-3", dt: config.DataTypeRaster})
 
 	rawConfig := config.LayerConfig{
 		ID:       "l9",
@@ -269,7 +269,7 @@ func (p closableTypedProvider) GenerateTile(_ context.Context, _ ProviderContext
 
 type closableTypedTestRegistration struct {
 	name   string
-	dt     pkg.DataType
+	dt     config.DataType
 	closed *bool
 }
 
@@ -281,7 +281,7 @@ func (r closableTypedTestRegistration) Name() string {
 	return r.name
 }
 
-func (r closableTypedTestRegistration) DataType(_ any) pkg.DataType {
+func (r closableTypedTestRegistration) DataType(_ any) config.DataType {
 	return r.dt
 }
 
@@ -295,7 +295,7 @@ func (r closableTypedTestRegistration) Initialize(_ any, _ ProviderDeps) (Provid
 func Test_ConstructLayer_Bounds_ConstructsProviderOnce(t *testing.T) {
 	RegisterProvider(wrapMarkerRegistration{name: "crop"})
 	closed := false
-	RegisterProvider(closableTypedTestRegistration{name: "closable-raster-1", dt: pkg.DataTypeRaster, closed: &closed})
+	RegisterProvider(closableTypedTestRegistration{name: "closable-raster-1", dt: config.DataTypeRaster, closed: &closed})
 
 	rawConfig := config.LayerConfig{
 		ID:       "l10",

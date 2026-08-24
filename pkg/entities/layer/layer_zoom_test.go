@@ -23,7 +23,7 @@ import (
 )
 
 func Test_RenderTileNoCache_BelowMinZoom_ReturnsRangeError(t *testing.T) {
-	RegisterProvider(fixedTypeTestRegistration{name: "fixed-zoom-1", dt: pkg.DataTypeRaster})
+	RegisterProvider(fixedTypeTestRegistration{name: "fixed-zoom-1", dt: config.DataTypeRaster})
 
 	minZoom := 4
 	rawConfig := config.LayerConfig{
@@ -43,7 +43,7 @@ func Test_RenderTileNoCache_BelowMinZoom_ReturnsRangeError(t *testing.T) {
 }
 
 func Test_RenderTileNoCache_AboveMaxZoom_ReturnsRangeError(t *testing.T) {
-	RegisterProvider(fixedTypeTestRegistration{name: "fixed-zoom-2", dt: pkg.DataTypeRaster})
+	RegisterProvider(fixedTypeTestRegistration{name: "fixed-zoom-2", dt: config.DataTypeRaster})
 
 	maxZoom := 10
 	rawConfig := config.LayerConfig{
@@ -63,7 +63,7 @@ func Test_RenderTileNoCache_AboveMaxZoom_ReturnsRangeError(t *testing.T) {
 }
 
 func Test_RenderTileNoCache_WithinZoomRange_Succeeds(t *testing.T) {
-	RegisterProvider(fixedTypeTestRegistration{name: "fixed-zoom-3", dt: pkg.DataTypeRaster})
+	RegisterProvider(fixedTypeTestRegistration{name: "fixed-zoom-3", dt: config.DataTypeRaster})
 
 	minZoom := 4
 	maxZoom := 10
@@ -83,7 +83,7 @@ func Test_RenderTileNoCache_WithinZoomRange_Succeeds(t *testing.T) {
 }
 
 func Test_RenderTileNoCache_NoZoomLimitsConfigured_Succeeds(t *testing.T) {
-	RegisterProvider(fixedTypeTestRegistration{name: "fixed-zoom-4", dt: pkg.DataTypeRaster})
+	RegisterProvider(fixedTypeTestRegistration{name: "fixed-zoom-4", dt: config.DataTypeRaster})
 
 	rawConfig := config.LayerConfig{
 		ID:       "z4",
