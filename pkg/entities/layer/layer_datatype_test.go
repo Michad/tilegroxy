@@ -35,10 +35,6 @@ func (p fixedTypeTestProvider) GenerateTile(_ context.Context, _ ProviderContext
 	return nil, nil
 }
 
-func (p fixedTypeTestProvider) DataType() pkg.DataType {
-	return p.dt
-}
-
 type fixedTypeTestRegistration struct {
 	name string
 	dt   pkg.DataType
@@ -50,6 +46,10 @@ func (r fixedTypeTestRegistration) InitializeConfig() any {
 
 func (r fixedTypeTestRegistration) Name() string {
 	return r.name
+}
+
+func (r fixedTypeTestRegistration) DataType(_ any) pkg.DataType {
+	return r.dt
 }
 
 func (r fixedTypeTestRegistration) Initialize(_ any, _ ProviderDeps) (Provider, error) {
@@ -161,10 +161,6 @@ func (p wrapMarkerProvider) GenerateTile(ctx context.Context, pc ProviderContext
 	return p.primary.GenerateTile(ctx, pc, tr)
 }
 
-func (p wrapMarkerProvider) DataType() pkg.DataType {
-	return p.primary.DataType()
-}
-
 type wrapMarkerConfig struct {
 	Primary map[string]interface{}
 	Bounds  pkg.Bounds
@@ -180,6 +176,11 @@ func (r wrapMarkerRegistration) InitializeConfig() any {
 
 func (r wrapMarkerRegistration) Name() string {
 	return r.name
+}
+
+func (r wrapMarkerRegistration) DataType(cfgAny any) pkg.DataType {
+	cfg := cfgAny.(wrapMarkerConfig)
+	return ExtractDataType(cfg.Primary)
 }
 
 func (r wrapMarkerRegistration) Initialize(cfgAny any, deps ProviderDeps) (Provider, error) {
@@ -208,7 +209,6 @@ func Test_ConstructLayer_Bounds_Raster_WrapsInCrop(t *testing.T) {
 	wrapper, ok := l.Provider.(ProviderWrapper)
 	require.True(t, ok)
 	require.Equal(t, "crop", wrapper.Name)
-	require.Equal(t, pkg.DataTypeRaster, l.Provider.DataType())
 }
 
 func Test_ConstructLayer_Bounds_MVT_WrapsInCropMvt(t *testing.T) {
@@ -228,7 +228,6 @@ func Test_ConstructLayer_Bounds_MVT_WrapsInCropMvt(t *testing.T) {
 	wrapper, ok := l.Provider.(ProviderWrapper)
 	require.True(t, ok)
 	require.Equal(t, "cropmvt", wrapper.Name)
-	require.Equal(t, pkg.DataTypeMVT, l.Provider.DataType())
 }
 
 func Test_ConstructLayer_NoBounds_NoWrapping(t *testing.T) {
@@ -249,10 +248,9 @@ func Test_ConstructLayer_NoBounds_NoWrapping(t *testing.T) {
 	require.Equal(t, "fixed-raster-3", wrapper.Name)
 }
 
-// closableTypedProvider is like closableProvider (layergroup_test.go) but with a caller-supplied
-// DataType, needed here to be resolvable enough to trigger bounds wrapping.
+// closableTypedProvider is like closableProvider (layergroup_test.go) but registered under a
+// caller-supplied data type, needed here to be resolvable enough to trigger bounds wrapping.
 type closableTypedProvider struct {
-	dt     pkg.DataType
 	closed *bool
 }
 
@@ -269,10 +267,6 @@ func (p closableTypedProvider) GenerateTile(_ context.Context, _ ProviderContext
 	return nil, nil
 }
 
-func (p closableTypedProvider) DataType() pkg.DataType {
-	return p.dt
-}
-
 type closableTypedTestRegistration struct {
 	name   string
 	dt     pkg.DataType
@@ -287,16 +281,18 @@ func (r closableTypedTestRegistration) Name() string {
 	return r.name
 }
 
-func (r closableTypedTestRegistration) Initialize(_ any, _ ProviderDeps) (Provider, error) {
-	return closableTypedProvider{dt: r.dt, closed: r.closed}, nil
+func (r closableTypedTestRegistration) DataType(_ any) pkg.DataType {
+	return r.dt
 }
 
-// When bounds triggers wrapping, resolveProviderWithBounds constructs the primary a second time
-// inside the wrapper (crop/cropmvt only accept raw config, not an already-built Provider). The
-// first instance, built just to read its DataType(), must be closed rather than orphaned - for a
-// real provider like Custom that owns a Yaegi interpreter, an orphaned instance leaks it and skips
-// its close hook.
-func Test_ConstructLayer_Bounds_ClosesDiscardedPreWrapProvider(t *testing.T) {
+func (r closableTypedTestRegistration) Initialize(_ any, _ ProviderDeps) (Provider, error) {
+	return closableTypedProvider{closed: r.closed}, nil
+}
+
+// Data type is resolved from raw config via ProviderRegistration.DataType, without constructing
+// anything, so bounds wrapping must not build a throwaway primary instance just to inspect its
+// type - only the one instance nested inside the crop wrapper should ever exist.
+func Test_ConstructLayer_Bounds_ConstructsProviderOnce(t *testing.T) {
 	RegisterProvider(wrapMarkerRegistration{name: "crop"})
 	closed := false
 	RegisterProvider(closableTypedTestRegistration{name: "closable-raster-1", dt: pkg.DataTypeRaster, closed: &closed})
@@ -311,5 +307,5 @@ func Test_ConstructLayer_Bounds_ClosesDiscardedPreWrapProvider(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotNil(t, l)
-	require.True(t, closed, "the pre-wrap provider instance built solely to resolve DataType() must be closed, not orphaned")
+	require.False(t, closed, "no provider should be closed when exactly one instance is ever constructed")
 }

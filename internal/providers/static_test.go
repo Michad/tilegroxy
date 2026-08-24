@@ -22,5 +22,5 @@ import (
 )
 
 func Test_DataType_Static(t *testing.T) {
-	assert.Equal(t, pkg.DataTypeRaster, Static{}.DataType())
+	assert.Equal(t, pkg.DataTypeRaster, StaticRegistration{}.DataType(StaticConfig{}))
 }

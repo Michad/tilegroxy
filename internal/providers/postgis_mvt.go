@@ -79,6 +79,10 @@ func (s PostgisMvtRegistration) Name() string {
 	return "postgismvt"
 }
 
+func (s PostgisMvtRegistration) DataType(_ any) pkg.DataType {
+	return pkg.DataTypeMVT
+}
+
 func (s PostgisMvtRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(PostgisMvtConfig)
 
@@ -206,8 +210,4 @@ func (t PostgisMvt) GenerateTile(ctx context.Context, _ layer.ProviderContext, r
 	}
 
 	return &pkg.Image{Content: result, ContentType: mvtContentType}, err
-}
-
-func (t PostgisMvt) DataType() pkg.DataType {
-	return pkg.DataTypeMVT
 }

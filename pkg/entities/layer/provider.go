@@ -30,8 +30,6 @@ type Provider interface {
 	// based on the expiration in layergroup.ProviderContext and when an AuthError is returned from GenerateTile
 	PreAuth(ctx context.Context, providerContext ProviderContext) (ProviderContext, error)
 	GenerateTile(ctx context.Context, providerContext ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error)
-	// Declares whether this provider produces raster or vector tiles, or pkg.DataTypeUnknown if it depends on config/upstream. Checked against a layer's datatype setting at startup
-	DataType() pkg.DataType
 }
 
 type ProviderContext struct {
@@ -55,6 +53,11 @@ type ProviderRegistration interface {
 	Name() string
 	Initialize(config any, deps ProviderDeps) (Provider, error)
 	InitializeConfig() any
+	// Declares whether this provider produces raster or vector tiles, or pkg.DataTypeUnknown if it depends on
+	// upstream data. Given the already-decoded config so nesting providers (fallback, crop) can recurse into
+	// their primary's registration without constructing anything. Checked against a layer's datatype setting
+	// at startup, before any provider is initialized.
+	DataType(config any) pkg.DataType
 }
 
 var registrationsMu sync.RWMutex
@@ -106,4 +109,29 @@ func ConstructProvider(rawConfig map[string]interface{}, deps ProviderDeps) (Pro
 
 	nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
 	return nil, fmt.Errorf(deps.ErrorMessages.EnumError, "provider.name", nameCoerce, RegisteredProviderNames())
+}
+
+func dataTypeFromRawConfig(rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (pkg.DataType, error) {
+	name, ok := rawConfig["name"].(string)
+	if !ok {
+		nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
+		return pkg.DataTypeUnknown, fmt.Errorf(errorMessages.EnumError, "provider.name", nameCoerce, RegisteredProviderNames())
+	}
+
+	reg, ok := RegisteredProvider(name)
+	if !ok {
+		return pkg.DataTypeUnknown, fmt.Errorf(errorMessages.EnumError, "provider.name", name, RegisteredProviderNames())
+	}
+
+	cfg := reg.InitializeConfig()
+	if err := config.DecodeEntityConfig(rawConfig, &cfg); err != nil {
+		return pkg.DataTypeUnknown, err
+	}
+
+	return reg.DataType(cfg), nil
+}
+
+func ExtractDataType(rawConfig map[string]interface{}) pkg.DataType {
+	effort, _ := dataTypeFromRawConfig(rawConfig, config.ErrorMessages{})
+	return effort
 }

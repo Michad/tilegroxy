@@ -49,6 +49,10 @@ func (s docExampleSampleRegistration) Name() string {
 	return "doc-example-sample"
 }
 
+func (s docExampleSampleRegistration) DataType(_ any) pkg.DataType {
+	return pkg.DataTypeUnknown
+}
+
 func (s docExampleSampleRegistration) Initialize(cfgAny any, _ ProviderDeps) (Provider, error) {
 	cfg := cfgAny.(docExampleSampleConfig)
 	return &docExampleSample{cfg}, nil
@@ -60,10 +64,6 @@ func (t docExampleSample) PreAuth(_ context.Context, providerContext ProviderCon
 
 func (t docExampleSample) GenerateTile(_ context.Context, _ ProviderContext, _ pkg.TileRequest) (*pkg.Image, error) {
 	return nil, errors.New("not implemented")
-}
-
-func (t docExampleSample) DataType() pkg.DataType {
-	return pkg.DataTypeUnknown
 }
 
 func Test_DocExtensibilityExample_RegistersAndConstructs(t *testing.T) {

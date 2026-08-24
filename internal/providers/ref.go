@@ -55,6 +55,10 @@ func (s RefRegistration) Name() string {
 	return "ref"
 }
 
+func (s RefRegistration) DataType(_ any) pkg.DataType {
+	return pkg.DataTypeUnknown
+}
+
 func (s RefRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(RefConfig)
 	return &Ref{cfg, deps.LayerGroup}, nil
@@ -85,8 +89,4 @@ func (t Ref) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequ
 	newCtx = trace.ContextWithSpan(newCtx, span)
 
 	return t.layerGroup.RenderTile(newCtx, newRequest)
-}
-
-func (t Ref) DataType() pkg.DataType {
-	return pkg.DataTypeUnknown
 }

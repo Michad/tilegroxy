@@ -48,6 +48,10 @@ func (s StaticRegistration) Name() string {
 	return "static"
 }
 
+func (s StaticRegistration) DataType(_ any) pkg.DataType {
+	return pkg.DataTypeRaster
+}
+
 func (s StaticRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(StaticConfig)
 	if cfg.Image == "" {
@@ -73,8 +77,4 @@ func (t Static) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.Provi
 
 func (t Static) GenerateTile(_ context.Context, _ layer.ProviderContext, _ pkg.TileRequest) (*pkg.Image, error) {
 	return t.img, nil
-}
-
-func (t Static) DataType() pkg.DataType {
-	return pkg.DataTypeRaster
 }

@@ -62,6 +62,10 @@ func (s EffectRegistration) Name() string {
 	return "effect"
 }
 
+func (s EffectRegistration) DataType(_ any) pkg.DataType {
+	return pkg.DataTypeRaster
+}
+
 func (s EffectRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	config := cfgAny.(EffectConfig)
 	if !slices.Contains(allEffectModes, config.Mode) {
@@ -154,8 +158,4 @@ func (t Effect) GenerateTile(ctx context.Context, providerContext layer.Provider
 	output := buf.Bytes()
 
 	return &pkg.Image{Content: output, ContentType: mimePng, ForceSkipCache: img.ForceSkipCache}, nil
-}
-
-func (t Effect) DataType() pkg.DataType {
-	return pkg.DataTypeRaster
 }

@@ -26,7 +26,7 @@ import (
 )
 
 func Test_DataType_CropMvt(t *testing.T) {
-	assert.Equal(t, pkg.DataTypeMVT, CropMvt{}.DataType())
+	assert.Equal(t, pkg.DataTypeMVT, CropMvtRegistration{}.DataType(CropMvtConfig{}))
 }
 
 func makeCropMvtProviderConfig() map[string]interface{} {

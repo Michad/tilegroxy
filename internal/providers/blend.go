@@ -82,6 +82,10 @@ func (s BlendRegistration) Name() string {
 	return "blend"
 }
 
+func (s BlendRegistration) DataType(_ any) pkg.DataType {
+	return pkg.DataTypeRaster
+}
+
 func (s BlendRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(BlendConfig)
 	var err error
@@ -275,10 +279,6 @@ func (t Blend) GenerateTile(ctx context.Context, providerContext layer.ProviderC
 	output := buf.Bytes()
 
 	return &pkg.Image{Content: output, ContentType: mimePng, ForceSkipCache: skipWrite.Load()}, nil
-}
-
-func (t Blend) DataType() pkg.DataType {
-	return pkg.DataTypeRaster
 }
 
 // Close releases the child providers. Blend holds them directly rather than through a Layer, so

@@ -25,7 +25,7 @@ import (
 )
 
 func Test_DataType_Effect(t *testing.T) {
-	assert.Equal(t, pkg.DataTypeRaster, Effect{}.DataType())
+	assert.Equal(t, pkg.DataTypeRaster, EffectRegistration{}.DataType(EffectConfig{}))
 }
 
 func makeEffectProvider() map[string]interface{} {

@@ -21,9 +21,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// URLTemplate embeds Proxy, so it inherits DataType() without its own method. It needs no
-// external process, so it's kept out of url_template_test.go's !unit build tag and runs as
-// part of the regular unit suite.
-func Test_DataType_URLTemplate_InheritsFromProxy(t *testing.T) {
-	assert.Equal(t, pkg.DataTypeUnknown, URLTemplate{}.DataType())
+func Test_DataType_URLTemplate(t *testing.T) {
+	assert.Equal(t, pkg.DataTypeUnknown, URLTemplateRegistration{}.DataType(URLTemplateConfig{}))
 }

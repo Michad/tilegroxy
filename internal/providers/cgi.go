@@ -99,6 +99,10 @@ func (s CGIRegistration) Name() string {
 	return "cgi"
 }
 
+func (s CGIRegistration) DataType(_ any) pkg.DataType {
+	return pkg.DataTypeUnknown
+}
+
 func (s CGIRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(CGIConfig)
 	env := make([]string, 0)
@@ -194,8 +198,4 @@ func (t CGI) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequ
 	}
 
 	return &pkg.Image{Content: b, ContentType: contentType}, nil
-}
-
-func (t CGI) DataType() pkg.DataType {
-	return pkg.DataTypeUnknown
 }

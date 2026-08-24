@@ -51,6 +51,10 @@ func (s CropMvtRegistration) Name() string {
 	return "cropmvt"
 }
 
+func (s CropMvtRegistration) DataType(_ any) pkg.DataType {
+	return pkg.DataTypeMVT
+}
+
 func (s CropMvtRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(CropMvtConfig)
 
@@ -117,10 +121,6 @@ func (t CropMvt) GenerateTile(ctx context.Context, providerContext layer.Provide
 	}
 
 	return &pkg.Image{Content: output, ContentType: mvtContentType, ForceSkipCache: img.ForceSkipCache}, nil
-}
-
-func (t CropMvt) DataType() pkg.DataType {
-	return pkg.DataTypeMVT
 }
 
 func boundsToOrbBound(b pkg.Bounds) orb.Bound {

@@ -25,7 +25,7 @@ import (
 )
 
 func Test_DataType_Transform(t *testing.T) {
-	assert.Equal(t, pkg.DataTypeRaster, Transform{}.DataType())
+	assert.Equal(t, pkg.DataTypeRaster, TransformRegistration{}.DataType(TransformConfig{}))
 }
 
 func makeTransformProvider() map[string]interface{} {

@@ -56,10 +56,6 @@ func (t ProviderWrapper) GenerateTile(ctx context.Context, providerContext Provi
 	return img, err
 }
 
-func (t ProviderWrapper) DataType() pkg.DataType {
-	return t.Provider.DataType()
-}
-
 // Close forwards to the wrapped provider. Every constructed provider is wrapped for tracing, so
 // without this a nesting provider like blend or fallback closing its children would never reach
 // the underlying Closer.

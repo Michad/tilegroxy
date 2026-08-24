@@ -22,5 +22,5 @@ import (
 )
 
 func Test_DataType_Fail(t *testing.T) {
-	assert.Equal(t, pkg.DataTypeUnknown, Fail{}.DataType())
+	assert.Equal(t, pkg.DataTypeUnknown, FailRegistration{}.DataType(FailConfig{}))
 }

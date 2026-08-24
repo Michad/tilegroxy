@@ -63,6 +63,10 @@ func (s TransformRegistration) Name() string {
 	return "transform"
 }
 
+func (s TransformRegistration) DataType(_ any) pkg.DataType {
+	return pkg.DataTypeRaster
+}
+
 func (s TransformRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(TransformConfig)
 	var err error
@@ -214,8 +218,4 @@ func (t Transform) GenerateTile(ctx context.Context, providerContext layer.Provi
 	output := buf.Bytes()
 
 	return &pkg.Image{Content: output, ContentType: mimePng, ForceSkipCache: img.ForceSkipCache}, nil
-}
-
-func (t Transform) DataType() pkg.DataType {
-	return pkg.DataTypeRaster
 }

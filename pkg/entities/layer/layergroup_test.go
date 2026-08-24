@@ -41,10 +41,6 @@ func (p *closableProvider) GenerateTile(_ context.Context, _ ProviderContext, _ 
 	return nil, nil
 }
 
-func (p *closableProvider) DataType() pkg.DataType {
-	return pkg.DataTypeUnknown
-}
-
 func Test_LayerGroupClosesProviders(t *testing.T) {
 	prov := &closableProvider{}
 	lg := &LayerGroup{layers: []*Layer{{Provider: prov}}}

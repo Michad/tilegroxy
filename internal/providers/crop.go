@@ -57,6 +57,11 @@ func (s CropRegistration) Name() string {
 	return "crop"
 }
 
+func (s CropRegistration) DataType(cfgAny any) pkg.DataType {
+	cfg := cfgAny.(CropConfig)
+	return layer.ExtractDataType(cfg.Primary)
+}
+
 func (s CropRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(CropConfig)
 
@@ -176,10 +181,6 @@ func (t Crop) GenerateTile(ctx context.Context, providerContext layer.ProviderCo
 	output := buf.Bytes()
 
 	return &pkg.Image{Content: output, ContentType: mimePng, ForceSkipCache: img.ForceSkipCache}, nil
-}
-
-func (t Crop) DataType() pkg.DataType {
-	return t.Primary.DataType()
 }
 
 func resizeImages(ctx context.Context, img image.Image, img2 image.Image) (image.Image, image.Image) {

@@ -61,7 +61,7 @@ func buildCustomProviderFromScript(t *testing.T, body string) *Custom {
 }
 
 func Test_DataType_Custom(t *testing.T) {
-	assert.Equal(t, pkg.DataTypeUnknown, Custom{}.DataType())
+	assert.Equal(t, pkg.DataTypeUnknown, CustomRegistration{}.DataType(CustomConfig{}))
 }
 
 func Test_CustomValidate(t *testing.T) {

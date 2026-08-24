@@ -26,7 +26,7 @@ import (
 )
 
 func Test_DataType_CompositeMVT(t *testing.T) {
-	assert.Equal(t, pkg.DataTypeMVT, CompositeMVT{}.DataType())
+	assert.Equal(t, pkg.DataTypeMVT, CompositeMVTRegistration{}.DataType(CompositeMVTConfig{}))
 }
 
 // CompositeMVT holds its children directly, outside any layer, so they're unreachable through

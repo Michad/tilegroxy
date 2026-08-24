@@ -49,6 +49,10 @@ func (s ProxyRegistration) Name() string {
 	return "proxy"
 }
 
+func (s ProxyRegistration) DataType(_ any) pkg.DataType {
+	return pkg.DataTypeUnknown
+}
+
 func (s ProxyRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(ProxyConfig)
 	if cfg.URL == "" {
@@ -76,8 +80,4 @@ func (t Proxy) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRe
 	}
 
 	return getTile(ctx, t.clientConfig, url, make(map[string]string))
-}
-
-func (t Proxy) DataType() pkg.DataType {
-	return pkg.DataTypeUnknown
 }

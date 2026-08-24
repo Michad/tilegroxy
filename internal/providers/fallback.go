@@ -66,6 +66,11 @@ func (s FallbackRegistration) Name() string {
 	return "fallback"
 }
 
+func (s FallbackRegistration) DataType(cfgAny any) pkg.DataType {
+	cfg := cfgAny.(FallbackConfig)
+	return layer.ExtractDataType(cfg.Primary)
+}
+
 func (s FallbackRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(FallbackConfig)
 	var zoom []int
@@ -156,10 +161,6 @@ func (t Fallback) GenerateTile(ctx context.Context, providerContext layer.Provid
 	}
 
 	return img, err
-}
-
-func (t Fallback) DataType() pkg.DataType {
-	return t.Primary.DataType()
 }
 
 // Close releases both child providers. Fallback holds them directly rather than through a Layer,

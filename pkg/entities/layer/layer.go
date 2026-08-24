@@ -28,7 +28,6 @@ import (
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/Michad/tilegroxy/pkg/entities/datastore"
-	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
 	"github.com/Michad/tilegroxy/pkg/static"
 	"go.opentelemetry.io/otel"
@@ -200,24 +199,28 @@ type Layer struct {
 	tileSuccessCounter metric.Int64Counter
 }
 
-func resolveDataType(rawConfig config.LayerConfig, errorMessages config.ErrorMessages, provider Provider) (*config.DataType, error) {
-	effectiveDataType := rawConfig.DataType
-	providerDataType := provider.DataType()
+func resolveDataType(rawConfig config.LayerConfig, errorMessages config.ErrorMessages) (config.DataType, error) {
+	providerDataType, err := dataTypeFromRawConfig(rawConfig.Provider, errorMessages)
+	if err != nil {
+		return config.DataTypeUnknown, err
+	}
+
+	layerDataType := rawConfig.DataType
 
 	// An explicit datatype that disagrees with what the provider actually produces is a config error.
-	if effectiveDataType != "" && effectiveDataType != pkg.DataTypeUnknown &&
-		providerDataType != pkg.DataTypeUnknown && effectiveDataType != providerDataType {
-		return nil, fmt.Errorf(errorMessages.InvalidParam, "layer.datatype", string(effectiveDataType))
+	if layerDataType != "" && layerDataType != pkg.DataTypeUnknown &&
+		providerDataType != pkg.DataTypeUnknown && layerDataType != providerDataType {
+		return config.DataTypeUnknown, fmt.Errorf(errorMessages.InvalidParam, "layer.datatype", string(layerDataType))
 	}
 
-	if effectiveDataType == "" || effectiveDataType == pkg.DataTypeUnknown {
-		effectiveDataType = providerDataType
+	if layerDataType == "" || layerDataType == pkg.DataTypeUnknown {
+		return providerDataType, nil
 	}
 
-	return &effectiveDataType, nil
+	return layerDataType, nil
 }
 
-func constructCropWrappedProvider(rawConfig config.LayerConfig, errorMessages config.ErrorMessages, provider Provider, layerGroup *LayerGroup, datatype config.DataType, datastores *datastore.DatastoreRegistry) (Provider, error) {
+func constructCropWrappedProvider(rawConfig config.LayerConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup, datatype config.DataType, datastores *datastore.DatastoreRegistry) (Provider, error) {
 	wrapperName := "cropmvt"
 	if datatype == pkg.DataTypeRaster {
 		wrapperName = "crop"
@@ -234,24 +237,12 @@ func constructCropWrappedProvider(rawConfig config.LayerConfig, errorMessages co
 		"primary": rawConfig.Provider,
 	}
 
-	wrapped, err := ConstructProvider(wrapperConfig, ProviderDeps{
+	return ConstructProvider(wrapperConfig, ProviderDeps{
 		ClientConfig:  *rawConfig.Client,
 		ErrorMessages: errorMessages,
 		LayerGroup:    layerGroup,
 		Datastores:    datastores,
 	})
-
-	// The crop/cropmvt wrapper builds its own primary from rawConfig.Provider (ConstructProvider
-	// only accepts raw config, not an already-built Provider), so the instance passed in here
-	// becomes an orphan once wrapping succeeds or fails. Close it so a Custom provider's Yaegi
-	// interpreter (or any other provider with startup side effects) isn't leaked.
-	closeErr := lifecycle.CloseIfCloser(pkg.BackgroundContext(), provider)
-
-	if err != nil {
-		return nil, errors.Join(err, closeErr)
-	}
-
-	return wrapped, closeErr
 }
 
 func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup, secreter secret.Secreter, datastores *datastore.DatastoreRegistry) (*Layer, error) {
@@ -271,18 +262,7 @@ func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.Cli
 		}
 	}
 
-	provider, err := ConstructProvider(rawConfig.Provider, ProviderDeps{
-		ClientConfig:  *rawConfig.Client,
-		ErrorMessages: errorMessages,
-		LayerGroup:    layerGroup,
-		Datastores:    datastores,
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	datatype, err := resolveDataType(rawConfig, errorMessages, provider)
+	datatype, err := resolveDataType(rawConfig, errorMessages)
 	if err != nil {
 		return nil, err
 	}
@@ -290,15 +270,24 @@ func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.Cli
 	boundsSet := rawConfig.Bounds != (config.BoundsConfig{})
 
 	// Bounds filtering needs a known data type to pick the right crop wrapper.
-	if boundsSet && *datatype == pkg.DataTypeUnknown {
+	if boundsSet && datatype == pkg.DataTypeUnknown {
 		return nil, fmt.Errorf(errorMessages.ParamRequired, "layer.datatype")
 	}
 
+	var provider Provider
 	if boundsSet {
-		provider, err = constructCropWrappedProvider(rawConfig, errorMessages, provider, layerGroup, *datatype, datastores)
-		if err != nil {
-			return nil, err
-		}
+		provider, err = constructCropWrappedProvider(rawConfig, errorMessages, layerGroup, datatype, datastores)
+	} else {
+		provider, err = ConstructProvider(rawConfig.Provider, ProviderDeps{
+			ClientConfig:  *rawConfig.Client,
+			ErrorMessages: errorMessages,
+			LayerGroup:    layerGroup,
+			Datastores:    datastores,
+		})
+	}
+
+	if err != nil {
+		return nil, err
 	}
 
 	var segments []layerSegment

@@ -54,6 +54,10 @@ func (s CompositeMVTRegistration) Name() string {
 	return "compositemvt"
 }
 
+func (s CompositeMVTRegistration) DataType(_ any) pkg.DataType {
+	return pkg.DataTypeMVT
+}
+
 func (s CompositeMVTRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(CompositeMVTConfig)
 
@@ -126,10 +130,6 @@ func (t CompositeMVT) GenerateTile(ctx context.Context, providerContext layer.Pr
 	}
 
 	return &resultImg, nil
-}
-
-func (t CompositeMVT) DataType() pkg.DataType {
-	return pkg.DataTypeMVT
 }
 
 func callCompositingProvider(ctx context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest, provider layer.Provider, i int, imgs chan *pkg.Image, errs chan error, wg *sync.WaitGroup) {

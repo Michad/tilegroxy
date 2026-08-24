@@ -22,5 +22,5 @@ import (
 )
 
 func Test_DataType_Proxy(t *testing.T) {
-	assert.Equal(t, pkg.DataTypeUnknown, Proxy{}.DataType())
+	assert.Equal(t, pkg.DataTypeUnknown, ProxyRegistration{}.DataType(ProxyConfig{}))
 }

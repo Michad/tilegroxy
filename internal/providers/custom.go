@@ -59,6 +59,10 @@ func (s CustomRegistration) Name() string {
 	return "custom"
 }
 
+func (s CustomRegistration) DataType(_ any) pkg.DataType {
+	return pkg.DataTypeUnknown
+}
+
 func (s CustomRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(CustomConfig)
 
@@ -139,10 +143,6 @@ func (t Custom) PreAuth(ctx context.Context, providerContext layer.ProviderConte
 
 func (t Custom) GenerateTile(ctx context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	return t.generateTileFunc(ctx, providerContext, tileRequest, t.Params, t.clientConfig, t.errorMessages)
-}
-
-func (t Custom) DataType() pkg.DataType {
-	return pkg.DataTypeUnknown
 }
 
 // Close calls the script's close function when it defines one. The symbol is optional so scripts written
