@@ -125,7 +125,6 @@ func Test_Layer_BuildTileJSON_Defaults(t *testing.T) {
 	assert.Equal(t, []string{"https://example.com/tiles/l1/{z}/{x}/{y}"}, doc.Tiles)
 	assert.Equal(t, 0, doc.MinZoom)
 	assert.Equal(t, pkg.MaxZoom, doc.MaxZoom)
-	assert.Empty(t, doc.DataType)
 	assert.Empty(t, doc.Description)
 	assert.Empty(t, doc.Attribution)
 	require.Len(t, doc.Bounds, 4)
@@ -159,16 +158,7 @@ func Test_Layer_BuildTileJSON_ExplicitFields(t *testing.T) {
 	assert.Equal(t, 16, doc.MaxZoom)
 	assert.Equal(t, "Aerial imagery", doc.Description)
 	assert.Equal(t, "(c) Example", doc.Attribution)
-	assert.Equal(t, "png", doc.DataType)
 	assert.Equal(t, []float64{-7, 51, 0.1, 63}, doc.Bounds)
-}
-
-func Test_Layer_BuildTileJSON_MVTDataType(t *testing.T) {
-	l := &Layer{ID: "l3", Config: config.LayerConfig{ID: "l3"}, DataType: config.DataTypeMVT}
-
-	doc := l.BuildTileJSON("l3", "https://example.com/tiles/l3/{z}/{x}/{y}", nil)
-
-	assert.Equal(t, "pbf", doc.DataType)
 }
 
 func Test_Layer_BuildTileJSON_IntersectsAllowedArea(t *testing.T) {

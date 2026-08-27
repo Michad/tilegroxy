@@ -30,25 +30,9 @@ type TileJSONDocument struct {
 	Bounds      []float64 `json:"bounds"`
 	Description string    `json:"description,omitempty"`
 	Attribution string    `json:"attribution,omitempty"`
-	DataType    string    `json:"datatype,omitempty"`
 }
 
 const tileJSONVersion = "3.0.0"
-
-// datatypeToTileJSON maps a resolved config.DataType to the TileJSON `datatype` value. Returns ""
-// for config.DataTypeUnknown, which callers use to omit the field entirely.
-func datatypeToTileJSON(dt config.DataType) string {
-	switch dt {
-	case config.DataTypeRaster:
-		return "png"
-	case config.DataTypeMVT:
-		return "pbf"
-	case config.DataTypeUnknown:
-		return ""
-	default:
-		return ""
-	}
-}
 
 // TileJSONEligible reports whether this layer can produce at least one TileJSON document: a plain
 // id layer always qualifies, a pattern layer only if it configures Examples.
@@ -109,7 +93,6 @@ func (l *Layer) BuildTileJSON(name string, tilesURL string, allowedArea *pkg.Bou
 		Bounds:      []float64{bounds.West, bounds.South, bounds.East, bounds.North},
 		Description: l.Config.Description,
 		Attribution: l.Config.Attribution,
-		DataType:    datatypeToTileJSON(l.DataType),
 	}
 
 	return doc

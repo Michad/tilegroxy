@@ -140,7 +140,7 @@ func resolvePublicURL(req *http.Request, publicURL string) publicURLParts {
 			}
 			return publicURLParts{scheme: scheme, host: rest, prefix: ""}
 		}
-		return publicURLParts{host: trimmed}
+		return publicURLParts{scheme: "https", host: trimmed}
 	}
 
 	scheme := req.Header.Get("X-Forwarded-Proto")
