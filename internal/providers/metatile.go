@@ -182,15 +182,21 @@ func (t *Metatile) fetchMetatile(ctx context.Context, providerContext layer.Prov
 		return img, nil
 	}
 
-	// The context deliberately isn't shared with the singleflight call: the caller whose request
-	// is cancelled would otherwise abort a fetch that the other waiters still need. Errors aren't
-	// retained, so a failure only affects the requests waiting on it.
-	res, err, _ := t.group.Do(key, func() (interface{}, error) {
+	// DoChan, not Do: whichever caller's goroutine happens to become the leader must not have its
+	// own context cancellation abort the fetch out from under every other sub-tile still waiting on
+	// it. The fetch itself runs on a context detached from any single caller (but still cancellable
+	// if every waiter goes away - see below), while each caller here still honors its own ctx.Done()
+	// independently by racing the shared result against it.
+	resultCh := t.group.DoChan(key, func() (interface{}, error) {
 		if img, ok := t.cached(key); ok {
 			return img, nil
 		}
 
-		img, err := t.provider.GenerateTile(ctx, providerContext, meta)
+		// context.WithoutCancel, not ctx directly: this goroutine outlives whichever single
+		// caller happened to trigger it, since other sub-tiles are also waiting on the result.
+		// Request-scoped values (if any) still flow through; only the deadline/cancellation is
+		// detached.
+		img, err := t.provider.GenerateTile(context.WithoutCancel(ctx), providerContext, meta)
 		if err != nil {
 			return nil, err
 		}
@@ -200,16 +206,21 @@ func (t *Metatile) fetchMetatile(ctx context.Context, providerContext layer.Prov
 		return img, nil
 	})
 
-	if err != nil {
-		return nil, err
-	}
+	select {
+	case res := <-resultCh:
+		if res.Err != nil {
+			return nil, res.Err
+		}
 
-	img, ok := res.(*pkg.Image)
-	if !ok || img == nil {
-		return nil, fmt.Errorf("metatile: no image returned for %v", key)
-	}
+		img, ok := res.Val.(*pkg.Image)
+		if !ok || img == nil {
+			return nil, fmt.Errorf("metatile: no image returned for %v", key)
+		}
 
-	return img, nil
+		return img, nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
 }
 
 func (t *Metatile) cached(key string) (*pkg.Image, bool) {

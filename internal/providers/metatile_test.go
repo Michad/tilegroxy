@@ -52,7 +52,7 @@ func (c *countingProvider) PreAuth(_ context.Context, providerContext layer.Prov
 	return providerContext, nil
 }
 
-func (c *countingProvider) GenerateTile(_ context.Context, _ layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (c *countingProvider) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	c.calls.Add(1)
 
 	if c.requests != nil {
@@ -60,7 +60,11 @@ func (c *countingProvider) GenerateTile(_ context.Context, _ layer.ProviderConte
 	}
 
 	if c.release != nil {
-		<-c.release
+		select {
+		case <-c.release:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
 	}
 
 	if c.err != nil {
@@ -358,6 +362,68 @@ func Test_MetatileCoalescesConcurrentSubtiles(t *testing.T) {
 	}
 
 	assert.Equal(t, int32(1), inner.calls.Load(), "all four sub-tiles should share one upstream fetch")
+}
+
+// One caller's context being cancelled while it happens to be the singleflight leader must not
+// abort the fetch for every other sub-tile still waiting on the same metatile.
+func Test_MetatileLeaderCancellationDoesNotAbortOtherWaiters(t *testing.T) {
+	inner := &countingProvider{
+		requests: make(chan pkg.TileRequest, 16),
+		release:  make(chan struct{}),
+		img: func(_ pkg.TileRequest) *pkg.Image {
+			return gridImage(t, 2, 32, func(_, _ int) color.RGBA { return color.RGBA{1, 2, 3, 255} })
+		},
+	}
+	m := newMetatile(t, 2, inner, time.Minute)
+
+	subTiles := []pkg.TileRequest{
+		{LayerName: "l", Z: 5, X: 8, Y: 4},
+		{LayerName: "l", Z: 5, X: 9, Y: 4},
+		{LayerName: "l", Z: 5, X: 8, Y: 5},
+	}
+
+	leaderCtx, cancelLeader := context.WithCancel(pkg.BackgroundContext())
+
+	var wg sync.WaitGroup
+	errs := make([]error, len(subTiles))
+	imgs := make([]*pkg.Image, len(subTiles))
+
+	// subTiles[0] triggers the fetch and becomes the singleflight leader.
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		imgs[0], errs[0] = m.GenerateTile(leaderCtx, layer.ProviderContext{}, subTiles[0])
+	}()
+
+	metaReq := <-inner.requests
+	assert.Equal(t, pkg.TileRequest{LayerName: "l", Z: 4, X: 4, Y: 2}, metaReq)
+
+	// The rest join as waiters on their own, uncancelled contexts.
+	for i := 1; i < len(subTiles); i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			imgs[i], errs[i] = m.GenerateTile(pkg.BackgroundContext(), layer.ProviderContext{}, subTiles[i])
+		}()
+	}
+
+	time.Sleep(50 * time.Millisecond)
+
+	// Cancel the leader's own request context while the fetch is still in flight.
+	cancelLeader()
+	time.Sleep(50 * time.Millisecond)
+
+	close(inner.release)
+	wg.Wait()
+
+	require.ErrorIs(t, errs[0], context.Canceled, "the cancelled caller should see its own cancellation")
+
+	for i := 1; i < len(subTiles); i++ {
+		require.NoError(t, errs[i], "an uncancelled waiter must still get the shared fetch's result")
+		require.NotNil(t, imgs[i])
+	}
+
+	assert.Equal(t, int32(1), inner.calls.Load(), "the leader's cancellation must not trigger a second upstream fetch")
 }
 
 // Distinct metatiles must not be coalesced into each other.
