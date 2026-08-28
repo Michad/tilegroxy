@@ -121,13 +121,3 @@ layer:
   provider:
     ...
 ----
-
-== Zoom and bounds
-
-`minzoom`, `maxzoom`, and `bounds` restrict which requests a layer serves, independent of whatever restrictions the layer's own provider applies. A request for a zoom level outside `minzoom`/`maxzoom`, or for a tile that doesn't intersect `bounds`, is rejected before the provider is invoked, using the same xref:configuration/error.adoc[OutOfBounds] handling as an equivalent rejection from the xref:configuration/provider/fallback.adoc[fallback] or xref:configuration/provider/crop.adoc[crop] provider.
-
-This is layer-level and separate from any bounds or zoom range configured on a provider such as `fallback`'s `zoom`/`bounds` or `crop`'s `bounds`. Those control when a provider falls back to a secondary source or which pixels get cropped from imagery it already generated; layer-level `minzoom`/`maxzoom`/`bounds` reject the request outright rather than delegating to another provider or partially rendering a tile.
-
-`bounds` requires `datatype` to be resolvable, since tilegroxy needs to know how to enforce a partial-tile boundary. For a raster `datatype`, a tile that only partially intersects `bounds` is cropped the same way the `crop` provider crops imagery, with the area outside `bounds` left transparent. For a vector (`mvt`) `datatype`, tilegroxy cannot yet clip individual feature geometries to `bounds`, so a tile that intersects `bounds` at all is served whole; only a tile with no intersection is rejected. Setting `bounds` without a resolvable `datatype` is rejected at startup, the same as any other invalid configuration, rather than failing on the first matching request.
-
-`minzoom` and `maxzoom` don't require `datatype`, since rejecting a zoom level doesn't depend on the tile's content.
