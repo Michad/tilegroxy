@@ -10,6 +10,7 @@
 *** xref:configuration/provider/custom.adoc[]
 *** xref:configuration/provider/effect.adoc[]
 *** xref:configuration/provider/fallback.adoc[]
+*** xref:configuration/provider/metatile.adoc[]
 *** xref:configuration/provider/ref.adoc[]
 *** xref:configuration/provider/postgismvt.adoc[]
 *** xref:configuration/provider/compositemvt.adoc[]

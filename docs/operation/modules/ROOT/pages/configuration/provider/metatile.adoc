@@ -1,0 +1,54 @@
+= Metatile
+
+Requests a single larger tile from another provider and splits it into the individual tiles being served.
+
+A metatile of size N is the tile N times bigger in each direction that covers the same area, which is the tile N zoom levels lower on the tile grid. Requesting z=5/x=8/y=4 with a size of 2 fetches z=4/x=4/y=2 from the wrapped provider and returns the top left quarter of it. The other three tiles covered by that metatile are served from the same fetch.
+
+This cuts the number of calls made to the wrapped provider by up to N squared. It suits upstreams that charge per request, that only publish imagery at every other zoom level, and vector sources that would otherwise return the same geometry for each of the tiles making up an area. The tradeoff is that each call transfers more data and the first tile of a metatile waits for the whole thing, so a large size costs latency on a cache miss.
+
+Both raster and vector tiles are supported. Raster metatiles are divided by pixel, so the wrapped provider needs to return an image at least N pixels across in each direction, and the result always comes back as PNG. Vector metatiles have their geometry reprojected onto the tile being served and clipped to it, so coordinates and extents come out relative to the served tile rather than the metatile.
+
+Requests below zoom N are passed to the wrapped provider unchanged, since there's no lower zoom level left to fetch a metatile from.
+
+The wrapped provider is called with the coordinates of the metatile, not of the tile being served. A provider that only has data at certain zoom levels needs those levels to line up with the metatile grid rather than with the zoom levels being served.
+
+While a metatile is being fetched, other tiles belonging to it wait on that same call instead of starting their own. A fetched metatile is then held for a short time so the rest of its tiles are served without going back upstream. This is separate from the layer cache, which still stores each served tile on its own.
+
+Name should be "metatile"
+
+Configuration options:
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| provider
+| The provider to request the metatile from
+| Provider
+| Yes
+| None
+
+| size
+| The width and height of the metatile measured in tiles. Must be a power of two between 1 and 32. A size of 1 serves every tile from its own request, which disables the splitting.
+| Int
+| Yes
+| None
+
+| cacheTtlSeconds
+| How long a metatile is held to serve the rest of the tiles it covers. Zero or less holds nothing, so only the tiles requested while a fetch is already running share it.
+| Int
+| No
+| 30
+
+|===
+
+Example:
+
+----
+provider:
+  name: metatile
+  size: 2
+  provider:
+    name: proxy
+    url: https://example.com/tiles/{z}/{x}/{y}.png
+----
