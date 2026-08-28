@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"time"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -44,7 +45,7 @@ type LayerGroup struct {
 	cacheWriteLimiter chan struct{}
 }
 
-func ConstructLayerGroup(cfg config.Config, cache cache.Cache, secreter secret.Secreter, datastores *datastore.DatastoreRegistry) (*LayerGroup, error) {
+func ConstructLayerGroup(cfg config.Config, sharedCache cache.Cache, secreter secret.Secreter, datastores *datastore.DatastoreRegistry) (*LayerGroup, error) {
 	var err, err1, err2 error
 	var layerGroup LayerGroup
 	layerObjects := make([]*Layer, len(cfg.Layers))
@@ -63,7 +64,14 @@ func ConstructLayerGroup(cfg config.Config, cache cache.Cache, secreter secret.S
 			return nil, fmt.Errorf("error constructing layer %v: %w", i, err)
 		}
 
-		layerObjects[i].Cache = cache
+		// A per-layer TTL wraps the shared cache in a decorator that enforces expiration
+		// uniformly, emulating it for backends with no native concept of TTL. Layers without
+		// one share the plain cache unmodified, same as before this existed.
+		if l.CacheTTL != nil {
+			layerObjects[i].Cache = cache.NewTTLCache(sharedCache, time.Duration(*l.CacheTTL)*time.Second)
+		} else {
+			layerObjects[i].Cache = sharedCache
+		}
 	}
 
 	meter := otel.Meter(packageName)
@@ -71,7 +79,7 @@ func ConstructLayerGroup(cfg config.Config, cache cache.Cache, secreter secret.S
 	layerGroup.cacheMissCounter, err2 = meter.Int64Counter("tilegroxy.cache.total.miss", metric.WithDescription("Number of requests that missed the cache (ignoring skips)"))
 
 	layerGroup.layers = layerObjects
-	layerGroup.DefaultCache = cache
+	layerGroup.DefaultCache = sharedCache
 	layerGroup.cacheWriteLimiter = make(chan struct{}, maxConcurrentCacheWrites)
 
 	return &layerGroup, errors.Join(err1, err2)

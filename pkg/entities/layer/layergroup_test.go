@@ -17,9 +17,11 @@ package layer
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -204,4 +206,77 @@ func Test_ValidateRefs_NoRefs(t *testing.T) {
 
 	err := validateRefs(layers)
 	require.NoError(t, err)
+}
+
+// A layer with no CacheTTL keeps sharing the cache instance passed to ConstructLayerGroup
+// directly, matching pre-TTL behavior exactly - no wrapping, no overhead, no behavior change.
+func Test_ConstructLayerGroup_NoCacheTTL_UsesSharedCacheDirectly(t *testing.T) {
+	RegisterProvider(docExampleSampleRegistration{})
+	shared := &alwaysMissCache{}
+
+	layers := []config.LayerConfig{
+		{ID: "plain", Provider: map[string]any{"name": "doc-example-sample"}},
+	}
+
+	lg, err := ConstructLayerGroup(config.Config{Layers: layers}, shared, nil, nil)
+	require.NoError(t, err)
+
+	l := lg.FindLayer(context.Background(), "plain")
+	require.NotNil(t, l)
+	require.Same(t, shared, l.Cache)
+}
+
+// A layer with CacheTTL set gets its own TTLCache wrapping the shared cache, so expiration is
+// enforced uniformly regardless of what the underlying backend natively supports.
+func Test_ConstructLayerGroup_CacheTTL_WrapsSharedCacheInTTLCache(t *testing.T) {
+	RegisterProvider(docExampleSampleRegistration{})
+	shared := &alwaysMissCache{}
+	ttlSeconds := uint32(120)
+
+	layers := []config.LayerConfig{
+		{ID: "ttl", Provider: map[string]any{"name": "doc-example-sample"}, CacheTTL: &ttlSeconds},
+	}
+
+	lg, err := ConstructLayerGroup(config.Config{Layers: layers}, shared, nil, nil)
+	require.NoError(t, err)
+
+	l := lg.FindLayer(context.Background(), "ttl")
+	require.NotNil(t, l)
+
+	wrapped, ok := l.Cache.(*cache.TTLCache)
+	require.True(t, ok, "expected layer cache to be wrapped in *cache.TTLCache")
+	require.Equal(t, 120*time.Second, wrapped.TTL)
+	require.Same(t, shared, wrapped.Cache)
+}
+
+// Two layers sharing one cache backend can each set a different TTL, or no TTL at all, without
+// interfering with each other since the wrapping happens per layer rather than globally.
+func Test_ConstructLayerGroup_CacheTTL_IsIndependentPerLayer(t *testing.T) {
+	RegisterProvider(docExampleSampleRegistration{})
+	shared := &alwaysMissCache{}
+	shortTTL := uint32(30)
+	longTTL := uint32(3600)
+
+	layers := []config.LayerConfig{
+		{ID: "short", Provider: map[string]any{"name": "doc-example-sample"}, CacheTTL: &shortTTL},
+		{ID: "long", Provider: map[string]any{"name": "doc-example-sample"}, CacheTTL: &longTTL},
+		{ID: "none", Provider: map[string]any{"name": "doc-example-sample"}},
+	}
+
+	lg, err := ConstructLayerGroup(config.Config{Layers: layers}, shared, nil, nil)
+	require.NoError(t, err)
+
+	shortLayer := lg.FindLayer(context.Background(), "short")
+	longLayer := lg.FindLayer(context.Background(), "long")
+	noneLayer := lg.FindLayer(context.Background(), "none")
+
+	shortWrapped, ok := shortLayer.Cache.(*cache.TTLCache)
+	require.True(t, ok)
+	require.Equal(t, 30*time.Second, shortWrapped.TTL)
+
+	longWrapped, ok := longLayer.Cache.(*cache.TTLCache)
+	require.True(t, ok)
+	require.Equal(t, 3600*time.Second, longWrapped.TTL)
+
+	require.Same(t, shared, noneLayer.Cache)
 }

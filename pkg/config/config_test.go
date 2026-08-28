@@ -224,6 +224,32 @@ func TestValidate_MinZoomBelowMaxZoomAccepted(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestValidate_ZeroCacheTTLRejected(t *testing.T) {
+	c := DefaultConfig()
+	zero := uint32(0)
+	c.Layers = []LayerConfig{{ID: "l1", CacheTTL: &zero}}
+
+	err := c.Validate()
+	require.Error(t, err)
+}
+
+func TestValidate_PositiveCacheTTLAccepted(t *testing.T) {
+	c := DefaultConfig()
+	ttl := uint32(60)
+	c.Layers = []LayerConfig{{ID: "l1", CacheTTL: &ttl}}
+
+	err := c.Validate()
+	require.NoError(t, err)
+}
+
+func TestValidate_NilCacheTTLAccepted(t *testing.T) {
+	c := DefaultConfig()
+	c.Layers = []LayerConfig{{ID: "l1"}}
+
+	err := c.Validate()
+	require.NoError(t, err)
+}
+
 func TestValidate_InvertedBoundsRejected(t *testing.T) {
 	c := DefaultConfig()
 	c.Layers = []LayerConfig{{ID: "l1", Bounds: BoundsConfig{South: 63, North: 51, West: -10, East: 2}}}

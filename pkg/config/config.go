@@ -247,6 +247,7 @@ type LayerConfig struct {
 	ParamValidator map[string]string // A mapping of regular expressions to use for each value extracted from the pattern. Keys must match the placeholders in pattern. This is external from the pattern itself to keep parsing the pattern simple and less error prone. If a key of "*" is defined it applies to all placeholders
 	Provider       map[string]any    // Raw config parameters for the provider to use. Name determines the specific schema
 	SkipCache      bool              // If true, don't use the cache
+	CacheTTL       *uint32           // Optional. Seconds after which a cached tile for this layer is treated as stale and regenerated. nil means the cache backend's own default/native behavior applies uninterfered with
 	SkipAnalytics  bool              // If true, successful requests for this layer don't produce analytics events
 	Client         *ClientConfig     // If specified, the default Client is overridden.
 	DataType       DataType          // Optional. Declares this layer's data type. Must not contradict the provider's own DataType(); required if Bounds is set and the provider's type is unknown
@@ -314,6 +315,10 @@ func (c Config) Validate() error {
 
 		if l.Bounds != (BoundsConfig{}) && (l.Bounds.South > l.Bounds.North || l.Bounds.West > l.Bounds.East) {
 			errs = append(errs, fmt.Errorf(c.Error.Messages.InvalidParam, fmt.Sprintf("layers[%d].bounds", i), fmt.Sprintf("%+v", l.Bounds)))
+		}
+
+		if l.CacheTTL != nil && *l.CacheTTL == 0 {
+			errs = append(errs, fmt.Errorf(c.Error.Messages.InvalidParam, fmt.Sprintf("layers[%d].cachettl", i), "0"))
 		}
 	}
 

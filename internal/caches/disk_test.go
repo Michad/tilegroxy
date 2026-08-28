@@ -19,6 +19,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -68,4 +69,65 @@ func TestDisk_LayerNamePathTraversalIsContained(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	require.Equal(t, img.Content, result.Content)
+}
+
+// Disk has no native notion of expiry, so uniform per-layer TTL relies entirely on
+// cache.TTLCache emulating it. This exercises that combination end to end against the real
+// backend rather than a stub, covering both a hit inside the window and a miss past it.
+func TestDisk_WrappedInTTLCache_ExpiresEntries(t *testing.T) {
+	dir, err := os.MkdirTemp("", "tilegroxy-test-disk-ttl")
+	defer os.RemoveAll(dir)
+	require.NoError(t, err)
+
+	cAny, err := DiskRegistration{}.Initialize(DiskConfig{Path: dir}, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
+	require.NoError(t, err)
+
+	ttl := cache.NewTTLCache(cAny, time.Hour)
+	req := pkg.TileRequest{LayerName: "ttl", Z: 1, X: 2, Y: 3}
+	img := pkg.Image{Content: []byte("fresh-tile"), ContentType: "image/png"}
+
+	require.NoError(t, ttl.Save(context.Background(), req, &img))
+
+	// Still within the window: a hit with the original content intact.
+	result, err := ttl.Lookup(context.Background(), req)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.Equal(t, img.Content, result.Content)
+	require.Equal(t, img.ContentType, result.ContentType)
+
+	// A separate TTLCache over the same on-disk entry but with a TTL shorter than the time that's
+	// actually elapsed: reported as a miss so the caller regenerates and overwrites it.
+	expiredView := cache.NewTTLCache(cAny, 0)
+	expired, err := expiredView.Lookup(context.Background(), req)
+	require.NoError(t, err)
+	require.Nil(t, expired)
+}
+
+// A tile written directly by Disk.Save before TTL support existed (or by any path that bypasses
+// TTLCache) has no envelope. Reading it through TTLCache must not panic and must still return the
+// stored content rather than erroring out on the whole cache.
+func TestDisk_WrappedInTTLCache_OldFormatEntryIsSafe(t *testing.T) {
+	dir, err := os.MkdirTemp("", "tilegroxy-test-disk-ttl-legacy")
+	defer os.RemoveAll(dir)
+	require.NoError(t, err)
+
+	cAny, err := DiskRegistration{}.Initialize(DiskConfig{Path: dir}, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
+	require.NoError(t, err)
+	disk := cAny.(*Disk)
+
+	req := pkg.TileRequest{LayerName: "legacy", Z: 1, X: 2, Y: 3}
+	legacyImg := pkg.Image{Content: []byte("pre-upgrade-tile"), ContentType: "image/png"}
+
+	// Bypass TTLCache entirely, simulating a file written by a pre-TTL version of tilegroxy.
+	require.NoError(t, disk.Save(context.Background(), req, &legacyImg))
+
+	ttl := cache.NewTTLCache(cAny, time.Second)
+
+	var result *pkg.Image
+	require.NotPanics(t, func() {
+		result, err = ttl.Lookup(context.Background(), req)
+	})
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.Equal(t, legacyImg.Content, result.Content)
 }
