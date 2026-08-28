@@ -152,6 +152,31 @@ func TestBoundsContains(t *testing.T) {
 	assert.False(t, Bounds{0, 1, 0, 1, SRIDWGS84}.Contains(Bounds{-90, 90, -180, 180, SRIDWGS84}))
 }
 
+func TestBoundsIntersectionWith(t *testing.T) {
+	result := Bounds{0, 10, 0, 10, SRIDWGS84}.IntersectionWith(Bounds{5, 15, 5, 15, SRIDWGS84})
+	assert.InDelta(t, 5.0, result.South, 0.00001)
+	assert.InDelta(t, 10.0, result.North, 0.00001)
+	assert.InDelta(t, 5.0, result.West, 0.00001)
+	assert.InDelta(t, 10.0, result.East, 0.00001)
+	assert.Equal(t, uint(SRIDWGS84), result.SRID)
+
+	result = Bounds{0, 10, 0, 10, SRIDWGS84}.IntersectionWith(Bounds{2, 8, 2, 8, SRIDWGS84})
+	assert.InDelta(t, 2.0, result.South, 0.00001)
+	assert.InDelta(t, 8.0, result.North, 0.00001)
+	assert.InDelta(t, 2.0, result.West, 0.00001)
+	assert.InDelta(t, 8.0, result.East, 0.00001)
+}
+
+func TestWorldBounds(t *testing.T) {
+	world := WorldBounds()
+
+	assert.InDelta(t, -85.0511, world.South, 0.0001)
+	assert.InDelta(t, 85.0511, world.North, 0.0001)
+	assert.InDelta(t, -180.0, world.West, 0.0001)
+	assert.InDelta(t, 180.0, world.East, 0.0001)
+	assert.Equal(t, uint(SRIDWGS84), world.SRID)
+}
+
 func TestGeohashToBounds(t *testing.T) {
 	bbox, err := NewBoundsFromGeohash("gbsuv7z")
 

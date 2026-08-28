@@ -157,10 +157,13 @@ func setupHandlers(cfg *config.Config, ent *entities.Entities) (http.Handler, re
 
 	myTileHandler = &handler
 
+	tileJSON := setupTileJSONHandlers(cfg, reloadable)
+
 	reloadFunc := func(cfg2 *config.Config, ent2 *entities.Entities) error {
 		gen := newGeneration(ent2)
 		registry.add(gen)
 		handler.reloadEntities(newReloadableEntities(cfg2, ent2, gen))
+		tileJSON.reloadEntities(cfg2, ent2, gen)
 
 		return nil
 	}
@@ -172,6 +175,8 @@ func setupHandlers(cfg *config.Config, ent *entities.Entities) (http.Handler, re
 		if myDocumentationHandler != nil {
 			myDocumentationHandler = otelhttp.NewHandler(myDocumentationHandler, docsPath, otelhttp.WithMessageEvents(otelhttp.WriteEvents))
 		}
+
+		tileJSON.wrapWithTelemetry()
 	}
 
 	r.Handle(cfg.Server.RootPath, myRootHandler)
@@ -181,6 +186,8 @@ func setupHandlers(cfg *config.Config, ent *entities.Entities) (http.Handler, re
 	if myDocumentationHandler != nil {
 		r.Handle(docsPath, myDocumentationHandler)
 	}
+
+	tileJSON.registerRoutes(&r)
 
 	var rootHandler http.Handler
 

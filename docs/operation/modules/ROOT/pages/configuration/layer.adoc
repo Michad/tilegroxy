@@ -56,6 +56,18 @@ Configuration options:
 | No
 | false
 
+| description
+| Populates the `description` field of this layer's xref:configuration/tilejson.adoc[TileJSON] document. Has no effect unless TileJSON is enabled
+| string
+| No
+| None
+
+| attribution
+| Populates the `attribution` field of this layer's xref:configuration/tilejson.adoc[TileJSON] document. Has no effect unless TileJSON is enabled
+| string
+| No
+| None
+
 | datatype
 | Declares what type of tiles this layer returns. This is inferred from the provider when possible. If this contradicts the provider (for example datatype is raster but the provider always produces vector tiles) startup fails. Required if it can't be inferred and a feature relying on it (such as bounds) is used. Also determines whether xref:configuration/error.adoc[error responses] for this layer use the raster or vector-tile error images
 | string, one of: raster, mvt
@@ -79,6 +91,12 @@ Configuration options:
 | Object with north, south, east, west
 | No
 | Whole world
+
+| examples
+| A list of concrete layer names used to generate xref:configuration/tilejson.adoc[TileJSON] documents for a `pattern` layer. Has no effect on a layer identified by a plain `id`
+| string[]
+| No
+| None
 |===
 
 Example:

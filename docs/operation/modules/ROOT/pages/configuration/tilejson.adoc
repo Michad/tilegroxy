@@ -1,0 +1,119 @@
+= TileJSON
+
+Configuration for serving xref:tilejson.adoc[TileJSON] documents describing configured layers. See that page for a full description of the endpoints, what goes into a document, and how authentication applies, including how a caller's own layer or geographic restrictions carry through to what's returned.
+
+Configuration options:
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| Enabled
+| If true, serve TileJSON documents for eligible layers
+| bool
+| No
+| false
+
+| IndexPath
+| The HTTP path, relative to RootPath, that serves a TileJSON index listing of eligible layer
+| string
+| No
+| tilejson.json
+
+| BaseURLs
+| Controls the base(s) used for the `tiles` field, instead of building it from headers. Useful if URLs are opaquely rewritten before reaching tilegroxy, or if tiles are served through multiple hosts. Each entry can include schema, host, and path prefix, and produces one entry in the `tiles` array.
+| string[]
+| No
+| Built from header inspection
+|===
+
+The following can be supplied as environment variables:
+
+[cols="1,3"]
+|===
+| Configuration Parameter | Environment Variable
+
+| Enabled
+| SERVER_TILEJSON_ENABLED
+
+| IndexPath
+| SERVER_TILEJSON_INDEXPATH
+
+| BaseURLs
+| SERVER_TILEJSON_BASEURLS
+|===
+
+Example:
+
+----
+server:
+  tilejson:
+    enabled: true
+    indexpath: tilejson.json
+    baseurls:
+      - https://tiles-a.example.com/maps
+      - https://tiles-b.example.com/maps
+----
+
+== Layer options
+
+xref:configuration/layer.adoc[Layer] configuration options relevant to TileJSON:
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| description
+| Populates the TileJSON `description` field
+| string
+| No
+| None
+
+| attribution
+| Populates the TileJSON `attribution` field
+| string
+| No
+| None
+
+| examples
+| For a pattern layer only. A list of concrete layer names, each matched against `pattern` the same way an incoming request would be, producing one TileJSON document per name. Ignored on a plain `id` layer
+| string[]
+| No
+| None
+|===
+
+
+Example:
+
+----
+layer:
+  id: my_layer
+  description: Aerial imagery from 2023
+  attribution: "© Example Imagery Co"
+  datatype: raster
+  minzoom: 4
+  maxzoom: 16
+  bounds:
+    south: 51
+    north: 63
+    west: -7
+    east: 0.1
+  provider:
+    ...
+----
+
+Example with a pattern layer:
+
+----
+layer:
+  id: my_layer
+  pattern: my_{name}_{version}
+  paramValidator:
+    "*": "^[a-zA-Z0-9]+$"
+    "version": "v[0-9]{1,3}"
+  examples:
+    - my_foo_v1
+    - my_bar_v2
+  provider:
+    ...
+----

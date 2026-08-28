@@ -203,6 +203,12 @@ func (lg *LayerGroup) FindLayer(ctx context.Context, layerName string) *Layer {
 	return nil
 }
 
+// Layers returns every configured layer, for callers that need to enumerate them rather than
+// look one up by name, such as building the TileJSON index.
+func (lg *LayerGroup) Layers() []*Layer {
+	return lg.layers
+}
+
 func (lg *LayerGroup) ListLayerIDs() []string {
 	r := make([]string, 0, len(lg.layers))
 	for _, l := range lg.layers {

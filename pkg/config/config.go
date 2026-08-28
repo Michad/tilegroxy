@@ -49,6 +49,13 @@ type HealthConfig struct {
 	Checks  []map[string]any // An array defining the specific checks to perform.
 }
 
+// Configuration for serving TileJSON documents describing configured layers
+type TileJSONConfig struct {
+	Enabled   bool     // If true, serve TileJSON documents for eligible layers. Defaults false
+	IndexPath string   // The HTTP path, relative to RootPath, that serves a TileJSON index listing every eligible layer. Defaults to tilejson.json
+	BaseURLs  []string // Overrides the scheme, host, and path prefix used to build the `tiles` URLs in a document, instead of reading it from forwarding headers or the request itself. Each entry produces one URL in the `tiles` array
+}
+
 type DataType string
 
 const (
@@ -67,6 +74,7 @@ type BoundsConfig struct {
 type ServerConfig struct {
 	Encrypt    *EncryptionConfig // Whether and how to use TLS. Defaults to none AKA no encryption.
 	Health     HealthConfig      // Whether to enable health endpoints on a secondary port.
+	TileJSON   TileJSONConfig    // Whether to enable endpoints that describe layers using the TileJSON format
 	BindHost   string            // IP address to bind HTTP server to
 	Port       int               // Port to bind HTTP server to
 	RootPath   string            // Root HTTP Path to apply to all endpoints. Defaults to /
@@ -245,6 +253,9 @@ type LayerConfig struct {
 	MinZoom        *int              // Optional. Requests below this zoom are rejected as out of bounds. nil means no lower limit
 	MaxZoom        *int              // Optional. Requests above this zoom are rejected as out of bounds. nil means no upper limit
 	Bounds         BoundsConfig      // Optional. Automatically wraps this layer's provider in crop/cropmvt, restricting it to this geographic area
+	Description    string            // Optional. Populates the `description` field of this layer's TileJSON document. Has no effect unless TileJSON is enabled
+	Attribution    string            // Optional. Populates the `attribution` field of this layer's TileJSON document. Has no effect unless TileJSON is enabled
+	Examples       []string          // Optional. Concrete layer names used to generate TileJSON documents for a `pattern` layer. Has no effect on a layer identified by a plain id
 }
 
 type Config struct {
@@ -328,6 +339,10 @@ func DefaultConfig() Config {
 				Enabled: false,
 				Port:    3000,
 				Host:    "0.0.0.0",
+			},
+			TileJSON: TileJSONConfig{
+				Enabled:   false,
+				IndexPath: "tilejson.json",
 			},
 		},
 		Telemetry: TelemetryConfig{

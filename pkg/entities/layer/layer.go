@@ -184,14 +184,16 @@ func validateParamMatches(values map[string]string, regexp map[string]*regexp.Re
 }
 
 type Layer struct {
-	ID                 string
-	Pattern            []layerSegment
-	ParamValidator     map[string]*regexp.Regexp
-	Config             config.LayerConfig
-	Provider           Provider
-	Cache              cache.Cache
-	ErrorMessages      config.ErrorMessages
-	DataType           config.DataType // Resolved data type, see resolveDataType. config.DataTypeUnknown if it can't be determined.
+	ID             string
+	Pattern        []layerSegment
+	ParamValidator map[string]*regexp.Regexp
+	Config         config.LayerConfig
+	Provider       Provider
+	Cache          cache.Cache
+	ErrorMessages  config.ErrorMessages
+	// DataType is the layer's resolved data type: Config.DataType when set, otherwise inferred
+	// from the provider tree. config.DataTypeUnknown when neither resolves it.
+	DataType           config.DataType
 	providerContext    ProviderContext
 	authMutex          sync.Mutex
 	tileAllCounter     metric.Int64Counter
@@ -310,6 +312,17 @@ func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.Cli
 		}
 	}
 
+	isPattern := rawConfig.Pattern != "" && rawConfig.Pattern != rawConfig.ID
+	for _, example := range rawConfig.Examples {
+		if !isPattern {
+			return nil, fmt.Errorf(errorMessages.InvalidParam, "layer.examples", example)
+		}
+
+		if doesMatch, matches := match(segments, example); !doesMatch || !validateParamMatches(matches, validator) {
+			return nil, fmt.Errorf(errorMessages.InvalidParam, "layer.examples", example)
+		}
+	}
+
 	meter := otel.Meter(packageName)
 
 	// The layer ID is embedded in the metric name so each layer gets its own counters.
@@ -362,6 +375,12 @@ func (l *Layer) MatchesName(ctx context.Context, layerName string) bool {
 	}
 
 	return false
+}
+
+// IsPattern reports whether this layer was defined with a pattern distinct from its ID, meaning
+// it has no single concrete tile URL and needs Config.Examples to produce TileJSON documents.
+func (l *Layer) IsPattern() bool {
+	return l.Config.Pattern != "" && l.Config.Pattern != l.Config.ID
 }
 
 // CheckZoomBounds rejects a request outside this layer's configured minzoom/maxzoom. Called

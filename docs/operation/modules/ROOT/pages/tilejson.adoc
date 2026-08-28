@@ -1,0 +1,67 @@
+= TileJSON
+
+Tilegroxy can describe its layers using the https://github.com/mapbox/tilejson-spec/tree/master/3.0.0[TileJSON] format. This allows TileJSON-aware clients, such as MapLibre, discover layers.
+
+TileJSON support is disabled by default. Enabling it doesn't change how tiles themselves are served. See xref:configuration/tilejson.adoc[TileJSON configuration] for the configuration reference.
+
+== Endpoints
+
+Two endpoints become available once TileJSON is enabled:
+
+`/tilejson.json` returns the TileJSON document for all (eligible) layers.
+
+`/tiles/\{layer}.json` returns the TileJSON document for a single layer, sitting alongside the existing `/tiles/\{layer}/\{z}/\{x}/\{y}` tile endpoint. 
+
+Both endpoints are subject to the base paths configured in the xref:configuration/server.adoc[server configuration].
+
+For the listing call (the first one), a layer defined with a `pattern` has no specific layer name to use so is omitted by default. You can specify `examples` in the xref:configuration/layer.adoc[layer configuration] to control what entries appear. This obviously doesn't apply for the second endpoint, as that will simply use the layer name you use to retrieve the TileJSON.
+
+== Security
+
+TileJSON endpoints go through the same xref:configuration/authentication/index.adoc[authentication] check as a tile request.
+
+If you have authentication configured with an authorization mechanism for limiting layers (such as a JWT scope), that limitation will also apply to the tilejson listing endpoint. Similarly, the bounds returned will be limited if your authz limits bounds (such as the JWT geohash claim).
+
+== Document fields
+
+Most of a TileJSON document is derived from configuration that already exists for other purposes, rather than duplicated onto the layer:
+
+`name` is always the layer's `id`, or the resolved example string for a layer generated from `examples`.
+
+`tiles` URLs are built based on the path to reach each layer. The protocol/host are built from incoming headers (including `X-Forward-` headers if set). For protection against theoretical attacks, or bad reverse proxies, you can customize the URLs with the `BaseURLs` configuration. Configuring more than one entry populates the `tiles` array with one URL per entry, useful if tiles are reachable at multiple base URLs.
+
+`minzoom`, `maxzoom`, and `bounds` reflect the layer's actual xref:configuration/layer.adoc[zoom and bounds] restrictions. They default to `0`, `21`, and the whole world unless the layer sets them explicitly. 
+
+`description` and `attribution` are only populated when explicitly configured on the layer; they have no derived fallback.
+
+== Example
+
+Given a pattern layer configured with `examples: [my_foo_v1, my_bar_v2]`, requesting `/tiles/my_foo_v1.json` returns something like:
+
+----
+{
+  "tilejson": "3.0.0",
+  "name": "my_foo_v1",
+  "tiles": [
+    "https://example.com/tiles/my_foo_v1/{z}/{x}/{y}"
+  ],
+  "minzoom": 0,
+  "maxzoom": 21,
+  "bounds": [-180, -85.05112878, 180, 85.05112878]
+}
+----
+
+And `/tilejson.json` would list it alongside any other eligible layers:
+
+----
+[
+  {
+    "name": "my_foo_v1",
+    "tilejson": "https://example.com/tiles/my_foo_v1.json"
+  },
+  {
+    "name": "my_bar_v2",
+    "tilejson": "https://example.com/tiles/my_bar_v2.json"
+  }
+]
+----

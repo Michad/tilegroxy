@@ -85,6 +85,12 @@ Configuration options:
 | xref:configuration/health.adoc[Health]
 | No
 | None
+
+| TileJSON
+| Configuration to turn on endpoints that describe layers using the TileJSON format
+| xref:configuration/tilejson.adoc[TileJSON]
+| No
+| None
 |===
 
 The following can be supplied as environment variables:
