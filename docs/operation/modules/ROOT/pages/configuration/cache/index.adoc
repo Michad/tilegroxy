@@ -5,3 +5,5 @@ The cache configuration defines the datastores where tiles should be stored/retr
 There is no universal mechanism for expiring cache entries. Some cache options include built-in mechanisms for applying an TTL and maximum size however some require an external cleanup mechanism if desired. Be mindful of this as some options may incur their own costs if allowed to grow unchecked.
 
 When specifying a cache ensure you include the `name` parameter.
+
+On a cache miss, concurrent requests for the same tile are coalesced into a single provider call within a process; the rest wait on that result instead of each triggering their own fetch. This only applies to a single tilegroxy instance, so a load-balanced deployment still sees one fetch per instance for a popular tile.

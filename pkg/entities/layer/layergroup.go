@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"runtime/debug"
 	"slices"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -30,6 +31,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
+	"golang.org/x/sync/singleflight"
 )
 
 // Bounds the background writeCache goroutines. A slow cache backend plus sustained misses would
@@ -42,6 +44,11 @@ type LayerGroup struct {
 	cacheHitCounter   metric.Int64Counter
 	cacheMissCounter  metric.Int64Counter
 	cacheWriteLimiter chan struct{}
+	// generateGroup coalesces concurrent provider fetches for the same tile on a cache miss, so a
+	// burst of requests for one cold tile results in a single upstream call instead of one per
+	// request. Keyed identically to the cache key (see tileRequest.String()) so it never conflates
+	// genuinely different tiles.
+	generateGroup singleflight.Group
 }
 
 func ConstructLayerGroup(cfg config.Config, cache cache.Cache, secreter secret.Secreter, datastores *datastore.DatastoreRegistry) (*LayerGroup, error) {
@@ -254,7 +261,7 @@ func (lg *LayerGroup) RenderTile(ctx context.Context, tileRequest pkg.TileReques
 		slog.WarnContext(ctx, fmt.Sprintf("Cache read error %v\n", err))
 	}
 
-	img, err = lg.RenderTileNoCache(ctx, tileRequest)
+	img, err = lg.renderTileNoCacheCoalesced(ctx, tileRequest)
 
 	if err != nil {
 		return nil, err
@@ -282,6 +289,75 @@ func (lg *LayerGroup) RenderTile(ctx context.Context, tileRequest pkg.TileReques
 // errNilImage is returned when a provider reports success but hands back no image. composite_mvt
 // and blend already defend against nested providers doing this, so it's reachable in practice.
 var errNilImage = errors.New("provider returned no image and no error")
+
+// singleflightResult bundles what a coalesced generation call produces, so it can travel through
+// singleflight's `any` result value without a type assertion at every call site.
+type singleflightResult struct {
+	img   *pkg.Image
+	err   error
+	panic any // non-nil if the provider call underneath panicked instead of returning
+	stack []byte
+}
+
+// renderTileNoCacheCoalesced deduplicates concurrent provider fetches for the same tile. Only one
+// caller per key actually invokes RenderTileNoCache (the "leader"); the rest ("waiters") block on
+// its result instead of each hitting the provider independently.
+//
+// The key matches the cache key exactly (tileRequest.String(), the same identity every Cache
+// implementation keys on - see internal/caches) so this never serializes requests for genuinely
+// different tiles.
+//
+// singleflight.Group deletes its map entry for a key as soon as the leader's call returns, before
+// the result is delivered to any waiter, so a failed fetch is never "cached" - the very next
+// caller (leader or waiter, whichever asks first afterward) always triggers a fresh attempt rather
+// than replaying a stale error. See golang.org/x/sync/singleflight's Do/doCall.
+//
+// Each waiter selects between the shared result and its own ctx.Done(), so an individual caller's
+// timeout can still fire while the leader keeps fetching for everyone else; it doesn't cancel the
+// leader or any other waiter.
+//
+// A panic from the provider is deliberately recovered inside the shared call and re-thrown here,
+// on the calling goroutine, instead of being left to singleflight's own panic handling. Otherwise
+// every panic - even with just one caller and no real fan-out - would surface via the internal
+// goroutine DoChan spawns to run the call, defeating a caller's own recover() (e.g. seedThread's)
+// which only guards its own goroutine.
+func (lg *LayerGroup) renderTileNoCacheCoalesced(ctx context.Context, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+	key := tileRequest.String()
+
+	// The leader's fetch must outlive any single caller's context, including its own, since
+	// waiters with a longer deadline still need the leader to keep running after the original
+	// caller's context is gone (cancelled by ctx.Done() below, or simply returned already).
+	// context.WithoutCancel keeps every request-scoped value reachable from ctx - user ID, request
+	// headers, layer permission restrictions, span - so a provider's {ctx.*} template placeholders
+	// and similar still resolve correctly; it only detaches the deadline/cancellation, which is what
+	// actually needs to outlive this one caller. A fresh pkg.BackgroundContext() would silently drop
+	// all of that request-scoped data instead.
+	leaderCtx := context.WithoutCancel(ctx)
+
+	resultCh := lg.generateGroup.DoChan(key, func() (result any, _ error) {
+		defer func() {
+			if r := recover(); r != nil {
+				result = singleflightResult{panic: r, stack: debug.Stack()}
+			}
+		}()
+
+		img, err := lg.RenderTileNoCache(leaderCtx, tileRequest)
+		return singleflightResult{img: img, err: err}, nil
+	})
+
+	select {
+	case res := <-resultCh:
+		// fn above never returns a non-nil error itself; res.Err always comes back nil here, and
+		// the real result/error/panic is carried inside singleflightResult.
+		sr, _ := res.Val.(singleflightResult)
+		if sr.panic != nil {
+			panic(fmt.Sprintf("%v\n\n%s", sr.panic, sr.stack))
+		}
+		return sr.img, sr.err
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+}
 
 func writeCache(ctx context.Context, cache cache.Cache, tileRequest pkg.TileRequest, img *pkg.Image) {
 	// We need to make a new context to avoid the request finishing cancelling the ctx sent into the cache
