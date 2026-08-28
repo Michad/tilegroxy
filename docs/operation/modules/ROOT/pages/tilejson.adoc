@@ -10,17 +10,17 @@ Two endpoints become available once TileJSON is enabled:
 
 `/tilejson.json` returns the TileJSON document for all (eligible) layers.
 
-`/tiles/{layer}.json` returns the TileJSON document for a single layer, sitting alongside the existing `/tiles/{layer}/{z}/{x}/{y}` tile endpoint. 
+`/tiles/\{layer}.json` returns the TileJSON document for a single layer, sitting alongside the existing `/tiles/\{layer}/\{z}/\{x}/\{y}` tile endpoint. 
 
 Both endpoints are subject to the base paths configured in the xref:configuration/server.adoc[server configuration].
 
-== Included layers
+For the listing call (the first one), a layer defined with a `pattern` has no specific layer name to use so is omitted by default. You can specify `examples` in the xref:configuration/layer.adoc[layer configuration] to control what entries appear. This obviously doesn't apply for the second endpoint, as that will simply use the layer name you use to retrieve the TileJSON.
 
-A layer defined with a plain `id` (no `pattern` placeholders) is eligible automatically.
+== Security
 
-A layer defined with a `pattern` has no specific layer name to use so is omitted by default. You can specify `examples` in the xref:configuration/layer.adoc[layer configuration] to control what entries appear. 
+TileJSON endpoints go through the same xref:configuration/authentication/index.adoc[authentication] check as a tile request.
 
-If you have authentication configured with an authorization mechanism for limiting layers (such as a JWT scope), that limitation will also apply to the tilejson endpoints. Similarly, the bounds returned will be limited if your authz limits bounds (such as the JWT geohash claim).
+If you have authentication configured with an authorization mechanism for limiting layers (such as a JWT scope), that limitation will also apply to the tilejson listing endpoint. Similarly, the bounds returned will be limited if your authz limits bounds (such as the JWT geohash claim).
 
 == Document fields
 
@@ -28,15 +28,11 @@ Most of a TileJSON document is derived from configuration that already exists fo
 
 `name` is always the layer's `id`, or the resolved example string for a layer generated from `examples`.
 
-`tiles` URLs are built based on the path to reach each layer. The protocol/host are built from incoming headers (including `X-Forward-` headers if set). For protection against theoretical attacks, or bad reverse proxies, you can customize the URLS with the `PublicURL` configuration.
+`tiles` URLs are built based on the path to reach each layer. The protocol/host are built from incoming headers (including `X-Forward-` headers if set). For protection against theoretical attacks, or bad reverse proxies, you can customize the URLs with the `BaseURLs` configuration. Configuring more than one entry populates the `tiles` array with one URL per entry, useful if tiles are reachable at multiple base URLs.
 
 `minzoom`, `maxzoom`, and `bounds` reflect the layer's actual xref:configuration/layer.adoc[zoom and bounds] restrictions. They default to `0`, `21`, and the whole world unless the layer sets them explicitly. 
 
 `description` and `attribution` are only populated when explicitly configured on the layer; they have no derived fallback.
-
-== Security
-
-TileJSON endpoints go through the same xref:configuration/authentication/index.adoc[authentication] check as a tile request.
 
 == Example
 

@@ -118,7 +118,7 @@ func Test_Layer_TileJSONNames(t *testing.T) {
 func Test_Layer_BuildTileJSON_Defaults(t *testing.T) {
 	l := &Layer{ID: "l1", Config: config.LayerConfig{ID: "l1"}, DataType: config.DataTypeUnknown}
 
-	doc := l.BuildTileJSON("l1", "https://example.com/tiles/l1/{z}/{x}/{y}", nil)
+	doc := l.BuildTileJSON("l1", []string{"https://example.com/tiles/l1/{z}/{x}/{y}"}, nil)
 
 	assert.Equal(t, "3.0.0", doc.TileJSON)
 	assert.Equal(t, "l1", doc.Name)
@@ -152,7 +152,7 @@ func Test_Layer_BuildTileJSON_ExplicitFields(t *testing.T) {
 		DataType: config.DataTypeRaster,
 	}
 
-	doc := l.BuildTileJSON("l2", "https://example.com/tiles/l2/{z}/{x}/{y}", nil)
+	doc := l.BuildTileJSON("l2", []string{"https://example.com/tiles/l2/{z}/{x}/{y}"}, nil)
 
 	assert.Equal(t, 4, doc.MinZoom)
 	assert.Equal(t, 16, doc.MaxZoom)
@@ -173,7 +173,7 @@ func Test_Layer_BuildTileJSON_IntersectsAllowedArea(t *testing.T) {
 
 	allowed := pkg.Bounds{South: -5, North: 5, West: -5, East: 20, SRID: pkg.SRIDWGS84}
 
-	doc := l.BuildTileJSON("l4", "https://example.com/tiles/l4/{z}/{x}/{y}", &allowed)
+	doc := l.BuildTileJSON("l4", []string{"https://example.com/tiles/l4/{z}/{x}/{y}"}, &allowed)
 
 	assert.Equal(t, []float64{-5, -5, 10, 5}, doc.Bounds)
 }

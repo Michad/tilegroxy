@@ -53,6 +53,23 @@ layers:
       color: "000000"
 `
 
+const tileJSONBaseURLsConfig = `
+server:
+  port: {{.Port}}
+  production: false
+  drainDelay: 0
+  tilejson:
+    enabled: true
+    baseurls:
+      - https://tiles-a.example.com
+      - https://tiles-b.example.com/maps
+layers:
+  - id: color
+    provider:
+      name: static
+      color: "FFFFFF"
+`
+
 const tileJSONDisabledConfig = `
 server:
   port: {{.Port}}
@@ -169,4 +186,19 @@ func Test_TileJSON_UnknownLayerIsUnauthorized(t *testing.T) {
 	inst := Start(t, Config{Raw: tileJSONConfig})
 
 	inst.Get("/tiles/nosuchlayer.json").ExpectStatus(http.StatusUnauthorized)
+}
+
+func Test_TileJSON_BaseURLsProducesOneEntryPerConfiguredURL(t *testing.T) {
+	inst := Start(t, Config{Raw: tileJSONBaseURLsConfig})
+
+	resp := inst.Get("/tiles/color.json").
+		ExpectStatus(http.StatusOK).
+		ExpectHeader("Content-Type", "application/json")
+
+	var doc tileJSONDocument
+	require.NoError(t, json.Unmarshal(resp.Body, &doc))
+
+	require.Len(t, doc.Tiles, 2)
+	assert.Equal(t, "https://tiles-a.example.com/tiles/color/{z}/{x}/{y}", doc.Tiles[0])
+	assert.Equal(t, "https://tiles-b.example.com/maps/tiles/color/{z}/{x}/{y}", doc.Tiles[1])
 }

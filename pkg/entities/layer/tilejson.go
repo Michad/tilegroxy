@@ -56,9 +56,10 @@ func (l *Layer) TileJSONNames() []string {
 
 // BuildTileJSON constructs the TileJSON document for this layer under the given name (either the
 // layer's own ID or one of its Examples), intersecting the layer's configured bounds with a
-// caller-specific allowedArea when one applies. tilesURL is the fully-formed `{z}/{x}/{y}` tile
-// URL for this specific name, built by the caller from the request's own scheme/host/path.
-func (l *Layer) BuildTileJSON(name string, tilesURL string, allowedArea *pkg.Bounds) TileJSONDocument {
+// caller-specific allowedArea when one applies. tilesURLs are the fully-formed `{z}/{x}/{y}` tile
+// URLs for this specific name, built by the caller from the request's own scheme/host/path or the
+// configured BaseURLs.
+func (l *Layer) BuildTileJSON(name string, tilesURLs []string, allowedArea *pkg.Bounds) TileJSONDocument {
 	minZoom := 0
 	if l.Config.MinZoom != nil {
 		minZoom = *l.Config.MinZoom
@@ -87,7 +88,7 @@ func (l *Layer) BuildTileJSON(name string, tilesURL string, allowedArea *pkg.Bou
 	doc := TileJSONDocument{
 		TileJSON:    tileJSONVersion,
 		Name:        name,
-		Tiles:       []string{tilesURL},
+		Tiles:       tilesURLs,
 		MinZoom:     minZoom,
 		MaxZoom:     maxZoom,
 		Bounds:      []float64{bounds.West, bounds.South, bounds.East, bounds.North},

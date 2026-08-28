@@ -20,9 +20,9 @@ Configuration options:
 | No
 | tilejson.json
 
-| PublicURL
-| Controls the base used for `tiles` URL in a document, instead of building it from headers. Useful if URLs are opaquely rewritten before reaching tilegroxy. Can include schema, host, and path prefix.
-| string
+| BaseURLs
+| Controls the base(s) used for the `tiles` field, instead of building it from headers. Useful if URLs are opaquely rewritten before reaching tilegroxy, or if tiles are served through multiple hosts. Each entry can include schema, host, and path prefix, and produces one entry in the `tiles` array.
+| string[]
 | No
 | Built from header inspection
 |===
@@ -39,8 +39,8 @@ The following can be supplied as environment variables:
 | IndexPath
 | SERVER_TILEJSON_INDEXPATH
 
-| PublicURL
-| SERVER_TILEJSON_PUBLICURL
+| BaseURLs
+| SERVER_TILEJSON_BASEURLS
 |===
 
 Example:
@@ -50,7 +50,9 @@ server:
   tilejson:
     enabled: true
     indexpath: tilejson.json
-    publicurl: https://tiles.example.com/maps
+    baseurls:
+      - https://tiles-a.example.com/maps
+      - https://tiles-b.example.com/maps
 ----
 
 == Layer options

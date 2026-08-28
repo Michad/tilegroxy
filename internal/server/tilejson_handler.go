@@ -126,21 +126,31 @@ type publicURLParts struct {
 	prefix string
 }
 
-// resolvePublicURL determines the scheme/host/path-prefix tiles are reachable at from the
-// caller's perspective. PublicURL, when configured, always wins; otherwise it's read from the
-// standard reverse-proxy forwarding headers, falling back to the request's own scheme and Host.
-func resolvePublicURL(req *http.Request, publicURL string) publicURLParts {
-	if publicURL != "" {
-		trimmed := strings.TrimSuffix(publicURL, "/")
-		if idx := strings.Index(trimmed, "://"); idx >= 0 {
-			scheme := trimmed[:idx]
-			rest := trimmed[idx+3:]
-			if slash := strings.Index(rest, "/"); slash >= 0 {
-				return publicURLParts{scheme: scheme, host: rest[:slash], prefix: rest[slash:]}
-			}
-			return publicURLParts{scheme: scheme, host: rest, prefix: ""}
+// parsePublicURL splits a single configured base URL into its scheme, host, and path prefix.
+func parsePublicURL(baseURL string) publicURLParts {
+	trimmed := strings.TrimSuffix(baseURL, "/")
+	if idx := strings.Index(trimmed, "://"); idx >= 0 {
+		scheme := trimmed[:idx]
+		rest := trimmed[idx+3:]
+		if slash := strings.Index(rest, "/"); slash >= 0 {
+			return publicURLParts{scheme: scheme, host: rest[:slash], prefix: rest[slash:]}
 		}
-		return publicURLParts{scheme: "https", host: trimmed}
+		return publicURLParts{scheme: scheme, host: rest, prefix: ""}
+	}
+	return publicURLParts{scheme: "https", host: trimmed}
+}
+
+// resolvePublicURLs determines the scheme/host/path-prefix(es) tiles are reachable at from the
+// caller's perspective. BaseURLs, when configured, always wins, producing one entry per
+// configured URL; otherwise it's read from the standard reverse-proxy forwarding headers,
+// falling back to the request's own scheme and Host.
+func resolvePublicURLs(req *http.Request, baseURLs []string) []publicURLParts {
+	if len(baseURLs) > 0 {
+		parts := make([]publicURLParts, len(baseURLs))
+		for i, baseURL := range baseURLs {
+			parts[i] = parsePublicURL(baseURL)
+		}
+		return parts
 	}
 
 	scheme := req.Header.Get("X-Forwarded-Proto")
@@ -159,7 +169,7 @@ func resolvePublicURL(req *http.Request, publicURL string) publicURLParts {
 
 	prefix := strings.TrimSuffix(req.Header.Get("X-Forwarded-Prefix"), "/")
 
-	return publicURLParts{scheme: scheme, host: host, prefix: prefix}
+	return []publicURLParts{{scheme: scheme, host: host, prefix: prefix}}
 }
 
 func (p publicURLParts) build(path string) string {
@@ -239,15 +249,15 @@ func (h *tileJSONHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	limitLayers, allowed := layerRestriction(ctx)
 	allowedArea := areaRestriction(ctx)
 
-	publicURL := resolvePublicURL(req, entities.config.Server.TileJSON.PublicURL)
+	publicURLs := resolvePublicURLs(req, entities.config.Server.TileJSON.BaseURLs)
 	tilePathPrefix := entities.config.Server.RootPath + entities.config.Server.TilePath
 
 	if h.index {
-		serveIndex(w, entities, publicURL, tilePathPrefix, limitLayers, allowed)
+		serveIndex(w, entities, publicURLs[0], tilePathPrefix, limitLayers, allowed)
 		return
 	}
 
-	serveDocument(ctx, w, req, entities, publicURL, tilePathPrefix, limitLayers, allowed, allowedArea)
+	serveDocument(ctx, w, req, entities, publicURLs, tilePathPrefix, limitLayers, allowed, allowedArea)
 }
 
 func serveIndex(w http.ResponseWriter, entities reloadableEntities, publicURL publicURLParts, tilePathPrefix string, limitLayers bool, allowed []string) {
@@ -273,7 +283,7 @@ func serveIndex(w http.ResponseWriter, entities reloadableEntities, publicURL pu
 	writeJSON(w, http.StatusOK, entries)
 }
 
-func serveDocument(ctx context.Context, w http.ResponseWriter, req *http.Request, entities reloadableEntities, publicURL publicURLParts, tilePathPrefix string, limitLayers bool, allowed []string, allowedArea *pkg.Bounds) {
+func serveDocument(ctx context.Context, w http.ResponseWriter, req *http.Request, entities reloadableEntities, publicURLs []publicURLParts, tilePathPrefix string, limitLayers bool, allowed []string, allowedArea *pkg.Bounds) {
 	pathValue := req.PathValue("layerjson")
 	name, ok := strings.CutSuffix(pathValue, ".json")
 	if !ok {
@@ -292,8 +302,11 @@ func serveDocument(ctx context.Context, w http.ResponseWriter, req *http.Request
 		return
 	}
 
-	tilesURL := publicURL.build(tilePathPrefix + "/" + foundName + "/{z}/{x}/{y}")
-	doc := l.BuildTileJSON(foundName, tilesURL, allowedArea)
+	tilesURLs := make([]string, len(publicURLs))
+	for i, publicURL := range publicURLs {
+		tilesURLs[i] = publicURL.build(tilePathPrefix + "/" + foundName + "/{z}/{x}/{y}")
+	}
+	doc := l.BuildTileJSON(foundName, tilesURLs, allowedArea)
 
 	writeJSON(w, http.StatusOK, doc)
 }

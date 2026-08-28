@@ -51,9 +51,9 @@ type HealthConfig struct {
 
 // Configuration for serving TileJSON documents describing configured layers
 type TileJSONConfig struct {
-	Enabled   bool   // If true, serve TileJSON documents for eligible layers. Defaults false
-	IndexPath string // The HTTP path, relative to RootPath, that serves a TileJSON index listing every eligible layer. Defaults to tilejson.json
-	PublicURL string // Overrides the scheme, host, and path prefix used to build the `tiles` URL in a document, instead of reading it from forwarding headers or the request itself
+	Enabled   bool     // If true, serve TileJSON documents for eligible layers. Defaults false
+	IndexPath string   // The HTTP path, relative to RootPath, that serves a TileJSON index listing every eligible layer. Defaults to tilejson.json
+	BaseURLs  []string // Overrides the scheme, host, and path prefix used to build the `tiles` URLs in a document, instead of reading it from forwarding headers or the request itself. Each entry produces one URL in the `tiles` array
 }
 
 type DataType string
