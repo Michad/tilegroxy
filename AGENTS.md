@@ -6,9 +6,6 @@ Guidance for AI coding agents working in the tilegroxy repository.
 
 These apply to every change. Follow them without being asked.
 
-1. **Never commit, stage, push, or open a pull request on your own.** Leave changes in the
-   working tree and tell the user what you did. Read-only git commands are always fine. Do
-   these only when explicitly asked, and only for the change being asked about.
 2. **Do not add the current user's name to copyright headers** when a file's changes are
    entirely AI generated. Leave the existing `// Copyright YYYY ...` line alone. Attribution is
    the user's call.
