@@ -93,7 +93,7 @@ Configuration options:
 | Whole world
 
 | examples
-| A list of concrete layer names used to generate xref:configuration/tilejson.adoc[TileJSON] documents for a `pattern` layer. Has no effect on a layer identified by a plain `id`
+| A list of example layer names that fulfill the pattern. Used for xref:configuration/tilejson.adoc[TileJSON] documents and the xref:commands/test.adoc[`tilegroxy test`] command. Has no effect on a layer identified by a plain `id`
 | string[]
 | No
 | None
@@ -105,6 +105,9 @@ Example:
 layer:
   id: my_layer
   pattern: my_{name}_{version}
+  examples:
+    - my_first_v2
+    - my_second_v9
   paramValidator:
     "*": "^[a-zA-Z0-9]+$"
     "version": "v[0-9]{1,3}"

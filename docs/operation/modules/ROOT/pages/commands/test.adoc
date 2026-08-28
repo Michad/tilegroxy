@@ -22,6 +22,10 @@ data. If your cache is configured to prevent overwriting existing items
 you might need to pick a distinct tile each time you run the test or run
 with cache disabled (--no-cache).
 
+A layer using a pattern is tested through its "examples" configurations if
+available. A pattern layer with no examples configured is skipped with a
+warning.
+
 Example:
 
         tilegroxy test -c test_config.yml -l osm -z 10 -x 123 -y 534

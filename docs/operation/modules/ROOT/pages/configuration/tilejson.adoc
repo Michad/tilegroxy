@@ -55,32 +55,6 @@ server:
       - https://tiles-b.example.com/maps
 ----
 
-== Layer options
-
-xref:configuration/layer.adoc[Layer] configuration options relevant to TileJSON:
-
-[cols="1,3,1,1,1"]
-|===
-| Parameter | Description | Type | Required | Default
-
-| description
-| Populates the TileJSON `description` field
-| string
-| No
-| None
-
-| attribution
-| Populates the TileJSON `attribution` field
-| string
-| No
-| None
-
-| examples
-| For a pattern layer only. A list of concrete layer names, each matched against `pattern` the same way an incoming request would be, producing one TileJSON document per name. Ignored on a plain `id` layer
-| string[]
-| No
-| None
-|===
 
 
 Example:

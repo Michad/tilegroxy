@@ -31,6 +31,8 @@ var testCmd = &cobra.Command{
 
 This test uses an arbitrary tile coordinate to test with. The default coordinate might be outside the bounds of your map layer, there is currently no logic to consider the bounds configured for each layer; you will need to specify an applicable tile to use.  It is not recommended to use 0,0,0 due to potential performance issues when dealing with large data. If your cache is configured to prevent overwriting existing items you might need to pick a distinct tile each time you run the test or run with cache disabled (--no-cache).
 
+A layer using a pattern is tested through its "examples" configurations if available. A pattern layer with no examples configured is skipped with a warning.
+
 Example:
 
 	tilegroxy test -c test_config.yml -l osm -z 10 -x 123 -y 534`,

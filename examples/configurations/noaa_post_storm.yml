@@ -30,6 +30,9 @@ layers:
     pattern: noaa_poststorm_{version}
     paramValidator:
       version: "[0-9]{8}[ab]"
+    examples:
+      - noaa_poststorm_20230902a
+      - noaa_poststorm_20230901b
     client:
       contenttypes:
         - binary/octet-stream
