@@ -1,0 +1,21 @@
+= Layer Preview
+
+Tilegroxy can generate a standalone HTML page previewing a single layer on a https://maplibre.org/maplibre-gl-js/docs/[MapLibre] map, so you can visually confirm that a layer works without a separate GIS client.
+
+The preview page is a development aid and is only available when xref:configuration/server.adoc[Server.Production] is `false`. 
+
+== Endpoint
+
+`/preview/\{layer}` returns the preview page for a single layer, relative to the root path configured in xref:configuration/server.adoc[server configuration].
+
+== The Map
+
+The page loads MapLibre GL JS from CDN and points a layer at the `/tiles/\{layer}/\{z}/\{x}/\{y}` endpoint.  If xref:tilejson.adoc[TileJSON] is enabled, it will use the configured `baseURL`. The map is framed to the layer's configured bounds/zoom, falling back to the whole world when bounds aren't set.
+
+A layer configured with `datatype: mvt` is rendered with a plain outline style. We make an effort to guess the layer name (the layer inside the MVT tiles themselves). If it guesses wrong, styling won't apply and you'll see nothing. Add `?name=` to the URL to set the source-layer name explicitly instead.
+
+== Security
+
+The preview won't likely work with authentication enabled as we don't pass along the incoming authentication to subsequent tile requests. This is really just meant as a dev tool before you get to that level.
+
+The preview endpoint itself does go through the same xref:configuration/authentication/index.adoc[authentication] check as a tile request, and respects the same authorization controls as a tile request. So if you do accidentally leave this on, it won't meaningfully expose you.

@@ -126,17 +126,22 @@ func makeCombinedReloadFunc(ctx context.Context, handlerReloadFunc reloadEntitie
 
 // setupHandlers builds the HTTP handlers. The returned accessor yields whichever generation of entities is
 // currently serving, which is what shutdown needs to release after a hot reload has swapped generations
+//
+//nolint:maintidx
 func setupHandlers(cfg *config.Config, ent *entities.Entities) (http.Handler, reloadEntitiesFunc, func() *entities.Entities, *generationRegistry, func() error, error) {
 	r := http.ServeMux{}
 
 	var myRootHandler http.Handler
 	var myTileHandler http.Handler
 	var myDocumentationHandler http.Handler
+	var myPreviewHandler http.Handler
 	registry := newGenerationRegistry()
 	firstGen := newGeneration(ent)
 	registry.add(firstGen)
 	reloadable := newReloadableEntities(cfg, ent, firstGen)
 	myDefaultHandler := defaultHandler{reloadable}
+
+	var preview *previewHandler
 
 	if cfg.Server.Production {
 		myRootHandler = http.HandlerFunc(handleNoContent)
@@ -146,10 +151,14 @@ func setupHandlers(cfg *config.Config, ent *entities.Entities) (http.Handler, re
 		if cfg.Server.DocsPath != "" {
 			myDocumentationHandler = &documentationHandler{myDefaultHandler}
 		}
+
+		preview = newPreviewHandler(reloadable)
+		myPreviewHandler = preview
 	}
 
 	tilePath := cfg.Server.RootPath + cfg.Server.TilePath + "/{layer}/{z}/{x}/{y}"
 	docsPath := cfg.Server.RootPath + cfg.Server.DocsPath + "/{path...}"
+	previewPath := cfg.Server.RootPath + "preview/{layer}"
 	handler, err := newTileHandler(reloadable)
 	if err != nil {
 		return nil, nil, nil, nil, nil, err
@@ -165,6 +174,10 @@ func setupHandlers(cfg *config.Config, ent *entities.Entities) (http.Handler, re
 		handler.reloadEntities(newReloadableEntities(cfg2, ent2, gen))
 		tileJSON.reloadEntities(cfg2, ent2, gen)
 
+		if preview != nil {
+			preview.reloadEntities(newReloadableEntities(cfg2, ent2, gen))
+		}
+
 		return nil
 	}
 
@@ -176,6 +189,10 @@ func setupHandlers(cfg *config.Config, ent *entities.Entities) (http.Handler, re
 			myDocumentationHandler = otelhttp.NewHandler(myDocumentationHandler, docsPath, otelhttp.WithMessageEvents(otelhttp.WriteEvents))
 		}
 
+		if myPreviewHandler != nil {
+			myPreviewHandler = otelhttp.NewHandler(myPreviewHandler, previewPath, otelhttp.WithMessageEvents(otelhttp.WriteEvents))
+		}
+
 		tileJSON.wrapWithTelemetry()
 	}
 
@@ -185,6 +202,10 @@ func setupHandlers(cfg *config.Config, ent *entities.Entities) (http.Handler, re
 
 	if myDocumentationHandler != nil {
 		r.Handle(docsPath, myDocumentationHandler)
+	}
+
+	if myPreviewHandler != nil {
+		r.Handle(previewPath, myPreviewHandler)
 	}
 
 	tileJSON.registerRoutes(&r)
