@@ -54,6 +54,10 @@ func errorVars(cfg *config.ErrorConfig, errorType pkg.TypeOfError, dataType conf
 		level = slog.LevelDebug
 		status = http.StatusBadRequest
 		imgPath, contentType = errorImage(cfg.Images.Other, cfg.Images.OtherMvt, dataType)
+	case pkg.TypeOfErrorTimeout:
+		level = slog.LevelWarn
+		status = http.StatusServiceUnavailable
+		imgPath, contentType = errorImage(cfg.Images.Other, cfg.Images.OtherMvt, dataType)
 	default:
 		level = slog.LevelWarn
 		status = http.StatusInternalServerError

@@ -34,6 +34,8 @@ const (
 	TypeOfErrorBadRequest
 	// Indicates something that doesn't fall into the above categories. This is usually a real problem that the operator needs to be aware of. Generally a 500
 	TypeOfErrorOther
+	// Indicates the request was cancelled because it exceeded the configured server timeout. Generally a 503
+	TypeOfErrorTimeout
 )
 
 // The main interface for errors returned through the application. Indicates the type or category of the error and separates the error message that should be reported externally (with localization using the configurable error messages) from the internal error for logs (which uses the traditional Error() interface)
@@ -223,4 +225,22 @@ func (e InvalidArgumentError) Type() TypeOfError {
 func (e InvalidArgumentError) External(messages config.ErrorMessages) string {
 	// notest
 	return fmt.Sprintf(messages.InvalidParam, e.Name, e.Value)
+}
+
+// Indicates a request was cancelled because it ran longer than the configured server timeout
+type TimeoutError struct{}
+
+func (e TimeoutError) Error() string {
+	// notest
+	return "request exceeded the configured server timeout"
+}
+
+func (e TimeoutError) Type() TypeOfError {
+	// notest
+	return TypeOfErrorTimeout
+}
+
+func (e TimeoutError) External(messages config.ErrorMessages) string {
+	// notest
+	return messages.Timeout
 }

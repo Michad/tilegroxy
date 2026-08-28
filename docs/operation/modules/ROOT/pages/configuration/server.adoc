@@ -51,7 +51,7 @@ Configuration options:
 | false
 
 | Timeout
-| How long (in seconds) a request can be in flight before we cancel it and return an error
+| How long (in seconds) a request can be in flight before we cancel it and return an error. The error returned honors the xref:configuration/error.adoc[Error] mode configuration, using the `Timeout` message template
 | uint
 | No
 | 60
