@@ -1,0 +1,19 @@
+= Layer Preview
+
+Tilegroxy can generate a standalone HTML page showing a single layer on a https://leafletjs.com/[Leaflet] map, so you can visually confirm what a layer renders without a separate GIS client.
+
+The preview page is a development aid and is only available when xref:configuration/server.adoc[Server.Production] is `false`, which is the default. Setting `Production` to `true` disables it, the same as it disables the splash page and built-in documentation.
+
+== Endpoint
+
+`/preview/\{layer}` returns the preview page for a single layer, subject to the base path configured in xref:configuration/server.adoc[server configuration].
+
+The page loads Leaflet from its own CDN and points a tile layer at this same tilegroxy instance's `/tiles/\{layer}/\{z}/\{x}/\{y}` endpoint for the requested layer, using the same host and path resolution as xref:tilejson.adoc[TileJSON]. The map is framed to the layer's configured bounds, falling back to the whole world when bounds aren't set, and its zoom range matches the layer's configured min/max zoom.
+
+A layer configured with `datatype: mvt` returns a page noting that Leaflet can't render vector tiles directly. The tile layer is still added so you can confirm tiles are reachable, even though the map itself will appear blank.
+
+== Security
+
+The preview endpoint goes through the same xref:configuration/authentication/index.adoc[authentication] check as a tile request, and respects the same layer and geographic restrictions as an authenticated caller would have on the tile and xref:tilejson.adoc[TileJSON] endpoints.
+
+An unknown layer name returns the same generic unauthorized response as an unknown layer requested through TileJSON, rather than a distinct not-found response, so an unauthenticated caller can't use it to enumerate configured layer names.

@@ -59,6 +59,7 @@
 * xref:tilejson.adoc[]
 * xref:extensibility.adoc[]
 * xref:migrate-tilestache.adoc[]
+* xref:preview.adoc[]
 * xref:productionizing.adoc[]
 * xref:reloading.adoc[]
 * xref:security.adoc[]
