@@ -40,6 +40,7 @@
 *** xref:configuration/datastores/postgresql.adoc[]
 ** xref:configuration/secret/index.adoc[]
 *** xref:configuration/secret/aws_secrets_manager.adoc[]
+*** xref:configuration/secret/gcp_secret_manager.adoc[]
 ** xref:configuration/server.adoc[]
 *** xref:configuration/encryption.adoc[]
 *** xref:configuration/health.adoc[]

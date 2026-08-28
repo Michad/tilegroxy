@@ -44,6 +44,7 @@ include::configuration/analytics/custom.adoc[leveloffset=2]
 
 include::configuration/secret/index.adoc[leveloffset=1]
 include::configuration/secret/aws_secrets_manager.adoc[leveloffset=2]
+include::configuration/secret/gcp_secret_manager.adoc[leveloffset=2]
 
 include::configuration/server.adoc[leveloffset=1]
 include::configuration/client.adoc[leveloffset=1]
