@@ -40,6 +40,28 @@ type TestOptions struct {
 	NoCache    bool
 }
 
+// the set of layer names tested when none are given. A pattern layer's ID
+// isn't a name, so it contributes its examples instead
+func defaultLayerNames(layerObjects *layer.LayerGroup) []string {
+	names := make([]string, 0, len(layerObjects.Layers()))
+
+	for _, l := range layerObjects.Layers() {
+		if !l.IsPattern() {
+			names = append(names, l.ID)
+			continue
+		}
+
+		if len(l.Config.Examples) == 0 {
+			fmt.Fprintf(os.Stderr, "Warning: skipping layer %v, a pattern layer needs examples to be tested\n", l.ID)
+			continue
+		}
+
+		names = append(names, l.Config.Examples...)
+	}
+
+	return names
+}
+
 func Test(cfg *config.Config, opts TestOptions, out io.Writer) (uint32, error) {
 	ctx := pkg.BackgroundContext()
 
@@ -54,7 +76,7 @@ func Test(cfg *config.Config, opts TestOptions, out io.Writer) (uint32, error) {
 	layerObjects := ent.LayerGroup
 
 	if len(opts.LayerNames) == 0 {
-		opts.LayerNames = layerObjects.ListLayerIDs()
+		opts.LayerNames = defaultLayerNames(layerObjects)
 	}
 
 	// Generate the full list of requests to process
