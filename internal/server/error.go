@@ -54,6 +54,13 @@ func errorVars(cfg *config.ErrorConfig, errorType pkg.TypeOfError, dataType conf
 		level = slog.LevelDebug
 		status = http.StatusBadRequest
 		imgPath, contentType = errorImage(cfg.Images.Other, cfg.Images.OtherMvt, dataType)
+	case pkg.TypeOfErrorNotFound:
+		level = slog.LevelDebug
+		status = http.StatusNotFound
+		// Reuses the Other images: a dedicated image would let a caller distinguish "layer never
+		// existed" from other error categories just from the response, which is the opposite of
+		// what this status is trying to avoid leaking.
+		imgPath, contentType = errorImage(cfg.Images.Other, cfg.Images.OtherMvt, dataType)
 	default:
 		level = slog.LevelWarn
 		status = http.StatusInternalServerError

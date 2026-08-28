@@ -180,12 +180,12 @@ func Test_TileJSON_PatternLayerExampleServedByName(t *testing.T) {
 	assert.Empty(t, doc.Attribution)
 }
 
-// An unknown layer name isn't distinguishable from one that's merely unauthorized for the
-// caller, so it's rejected the same way a tile request for it would be.
-func Test_TileJSON_UnknownLayerIsUnauthorized(t *testing.T) {
+// An unknown layer name isn't distinguishable from one that's merely out of scope for the
+// caller, so both return 404 rather than 401 - see issue #766.
+func Test_TileJSON_UnknownLayerIsNotFound(t *testing.T) {
 	inst := Start(t, Config{Raw: tileJSONConfig})
 
-	inst.Get("/tiles/nosuchlayer.json").ExpectStatus(http.StatusUnauthorized)
+	inst.Get("/tiles/nosuchlayer.json").ExpectStatus(http.StatusNotFound)
 }
 
 func Test_TileJSON_BaseURLsProducesOneEntryPerConfiguredURL(t *testing.T) {

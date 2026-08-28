@@ -287,18 +287,21 @@ func serveDocument(ctx context.Context, w http.ResponseWriter, req *http.Request
 	pathValue := req.PathValue("layerjson")
 	name, ok := strings.CutSuffix(pathValue, ".json")
 	if !ok {
-		writeError(ctx, w, &entities.config.Error, pkg.UnauthorizedError{Message: "Layer " + pathValue + " does not exist"}, config.DataTypeUnknown)
+		writeError(ctx, w, &entities.config.Error, pkg.NotFoundError{Message: "Layer " + pathValue + " does not exist"}, config.DataTypeUnknown)
 		return
 	}
 
 	l, foundName := findTileJSONLayer(entities.layerGroup, name)
 	if l == nil {
-		writeError(ctx, w, &entities.config.Error, pkg.UnauthorizedError{Message: "Layer " + name + " does not exist"}, config.DataTypeUnknown)
+		writeError(ctx, w, &entities.config.Error, pkg.NotFoundError{Message: "Layer " + name + " does not exist"}, config.DataTypeUnknown)
 		return
 	}
 
+	// NotFoundError, not UnauthorizedError: the caller already passed CheckAuthentication above, so
+	// returning 401 here would let an authenticated-but-restricted caller distinguish a real,
+	// out-of-scope layer from one that was never configured. See issue #766.
 	if limitLayers && !layerNameAllowed(foundName, l.ID, allowed) {
-		writeError(ctx, w, &entities.config.Error, pkg.UnauthorizedError{Message: "Denying access to non-allowed layer"}, config.DataTypeUnknown)
+		writeError(ctx, w, &entities.config.Error, pkg.NotFoundError{Message: "Denying access to non-allowed layer"}, config.DataTypeUnknown)
 		return
 	}
 

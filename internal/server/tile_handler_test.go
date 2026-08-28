@@ -77,7 +77,9 @@ func Test_TileHandler_AllowedArea(t *testing.T) {
 
 	r1 := w1.Result()
 	defer func() { require.NoError(t, r1.Body.Close()) }()
-	assert.Equal(t, 401, r1.StatusCode)
+	// Authenticated but the requested tile falls outside the allowed area, so this is a 404 rather
+	// than 401 - see checkPermission in layergroup.go and issue #766.
+	assert.Equal(t, 404, r1.StatusCode)
 
 	req2 := httptest.NewRequest(http.MethodGet, "http://example.com/tiles/main/10/12/12", nil).WithContext(ctx)
 	req2.SetPathValue("layer", "main")
@@ -274,7 +276,9 @@ func Test_TileHandler_ExecuteCustom(t *testing.T) {
 	handler.ServeHTTP(w3, req3)
 	res3 := w3.Result()
 	defer func() { require.NoError(t, res3.Body.Close()) }()
-	assert.Equal(t, 401, res3.StatusCode)
+	// Authenticated (valid token) but "color2" is outside this token's granted scope, so 404 rather
+	// than 401 - see issue #766.
+	assert.Equal(t, 404, res3.StatusCode)
 }
 
 func Test_TileHandler_ExecuteJWT(t *testing.T) {

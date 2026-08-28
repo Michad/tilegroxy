@@ -31,6 +31,8 @@ Despite these protections it's important that operators only utilize trusted ser
 
 == Authentication
 
-Tilegroxy provides a flexible capability for xref:configuration/authentication/index.adoc[auth] but defaults to operating unauthenticated.  The flagship mode is via JWTs provided via HTTP header, which provides a capability for both authentication and authorization by layer and geographic region. 
+Tilegroxy provides a flexible capability for xref:configuration/authentication/index.adoc[auth] but defaults to operating unauthenticated.  The flagship mode is via JWTs provided via HTTP header, which provides a capability for both authentication and authorization by layer and geographic region.
 
 Tilegroxy is primarily intended to be used as a microservice within a broader application ecosystem so implementing the specifics of how authentication should work end-to-end is left up to the operator in conjunction with their needs.
+
+A caller with valid credentials who's restricted from a specific layer or area receives the same 404 Not Found response as a request for a layer that was never configured, rather than a 401. This prevents an authenticated-but-restricted caller from probing layer names and inferring which ones exist in your configuration just from whether they get "forbidden" or "not found". Only a request with missing, invalid, or expired credentials receives a 401.

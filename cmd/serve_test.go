@@ -208,7 +208,8 @@ layers:
 	require.NoError(t, err)
 	resp, err = http.DefaultClient.Do(req)
 	require.NoError(t, err)
-	assert.Equal(t, 401, resp.StatusCode)
+	// "asfas" doesn't exist as a layer, so this is 404 rather than 401 - see issue #766.
+	assert.Equal(t, 404, resp.StatusCode)
 	resp.Body.Close()
 
 	req, err = http.NewRequest(http.MethodGet, "http://localhost:12342/root/tiles/color/800/12/32", nil)
@@ -281,7 +282,8 @@ layers:
 	require.NoError(t, err)
 	resp, err = http.DefaultClient.Do(req)
 	require.NoError(t, err)
-	assert.Equal(t, 401, resp.StatusCode)
+	// "color" no longer exists after the reload, so this is 404 rather than 401 - see issue #766.
+	assert.Equal(t, 404, resp.StatusCode)
 	resp.Body.Close()
 
 	req, err = http.NewRequest(http.MethodGet, "http://localhost:12343/tiles/color2/8/12/32", nil)

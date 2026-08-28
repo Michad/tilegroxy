@@ -23,10 +23,10 @@ The following claims are supported/enforced:
 | Validate it matches a specific value
 
 | scope
-| Validate it contains a specific scope OR ensure a given prefix plus the layer in the current request is contained in scope
+| Validate it contains a specific scope OR ensure a given prefix plus the layer in the current request is contained in scope. A token that fails this check returns 404, not 401, for the excluded layer - see xref:configuration/authentication/index.adoc[Authentication]
 
 | geohash
-| Validate the current tile being requested is partially contained in https://en.wikipedia.org/wiki/Geohash[the geohash]. See the xref:configuration/provider/crop.adoc[crop provider] to limit raster imagery layers to precise areas
+| Validate the current tile being requested is partially contained in https://en.wikipedia.org/wiki/Geohash[the geohash]. See the xref:configuration/provider/crop.adoc[crop provider] to limit raster imagery layers to precise areas. A request outside the geohash also returns 404 rather than 401
 |===
 
 Name should be "jwt"

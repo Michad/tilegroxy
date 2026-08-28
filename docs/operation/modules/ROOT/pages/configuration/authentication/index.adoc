@@ -2,8 +2,8 @@
 
 = Authentication
 
-Implements incoming auth schemes. This is primarily meant for authentication but does include some authorization by limiting access to specific layers via JWT or custom schemes.
+Implements incoming auth schemes. This is primarily meant for authentication but does include some authorization by limiting access to specific layers or a geographic area via JWT or custom schemes.
 
-Requests that do not comply with authentication requirements will receive a 401 Unauthorized HTTP status code.
+A request with missing, invalid, or expired credentials receives a 401 Unauthorized HTTP status code. A request with valid credentials for a layer or area the caller isn't authorized for instead receives a 404 Not Found, the same status returned for a layer name that doesn't exist at all. This is deliberate: it stops an authenticated caller from telling a real layer they're excluded from apart from one that was never configured, by comparing which layer names respond "forbidden" versus "not found".
 
 When supplying authentication ensure you include the `name` parameter.

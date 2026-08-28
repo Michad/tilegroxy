@@ -224,7 +224,7 @@ func (lg *LayerGroup) RenderTile(ctx context.Context, tileRequest pkg.TileReques
 	l := lg.FindLayer(ctx, tileRequest.LayerName)
 
 	if l == nil {
-		return nil, pkg.UnauthorizedError{Message: "Layer " + tileRequest.LayerName + " does not exist"}
+		return nil, pkg.NotFoundError{Message: "Layer " + tileRequest.LayerName + " does not exist"}
 	}
 
 	if err := l.CheckZoomBounds(tileRequest); err != nil {
@@ -328,9 +328,13 @@ func (*LayerGroup) checkPermission(ctx context.Context, l *Layer, tileRequest pk
 	ctxLimitAreaPartial, ok := pkg.LimitAreaPartialFromContext(ctx)
 	limitAreaPartial := ok && ctxLimitAreaPartial != nil && *ctxLimitAreaPartial
 
+	// Both denials below return NotFoundError rather than UnauthorizedError. The caller already
+	// authenticated successfully (CheckAuthentication passed) - if we returned 401 here it'd let an
+	// authenticated-but-restricted caller enumerate real layer names by observing which ones respond
+	// "forbidden" (exists) versus "not found" (doesn't). See issue #766.
 	if limitLayers {
 		if !slices.Contains(allowedLayers, l.ID) {
-			return pkg.UnauthorizedError{Message: "Denying access to non-allowed layer"}
+			return pkg.NotFoundError{Message: "Denying access to non-allowed layer"}
 		}
 	}
 
@@ -338,11 +342,11 @@ func (*LayerGroup) checkPermission(ctx context.Context, l *Layer, tileRequest pk
 		bounds, err := tileRequest.GetBounds()
 		if limitAreaPartial {
 			if err != nil || !allowedArea.Intersects(*bounds) {
-				return pkg.UnauthorizedError{Message: "Denying access to non-allowed area"}
+				return pkg.NotFoundError{Message: "Denying access to non-allowed area"}
 			}
 		} else {
 			if err != nil || !allowedArea.Contains(*bounds) {
-				return pkg.UnauthorizedError{Message: "Denying access to non-allowed area"}
+				return pkg.NotFoundError{Message: "Denying access to non-allowed area"}
 			}
 		}
 	}
@@ -378,7 +382,7 @@ func (lg *LayerGroup) RenderTileNoCache(ctx context.Context, tileRequest pkg.Til
 	l := lg.FindLayer(ctx, tileRequest.LayerName)
 
 	if l == nil {
-		return nil, pkg.UnauthorizedError{Message: "Layer " + tileRequest.LayerName + " does not exist"}
+		return nil, pkg.NotFoundError{Message: "Layer " + tileRequest.LayerName + " does not exist"}
 	}
 
 	err = lg.checkPermission(ctx, l, tileRequest)

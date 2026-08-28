@@ -31,7 +31,7 @@ func Test_ErrorVals_Execute(t *testing.T) {
 
 	cfg.Error.AlwaysOK = false
 
-	for i := pkg.TypeOfErrorBounds; i <= pkg.TypeOfErrorOther; i++ {
+	for i := pkg.TypeOfErrorBounds; i <= pkg.TypeOfErrorNotFound; i++ {
 		cfg.Error.AlwaysOK = false
 		status, level, imgPath, contentType := errorVars(&cfg.Error, pkg.TypeOfError(i), config.DataTypeUnknown)
 		assert.Greater(t, status, 300)
@@ -49,7 +49,7 @@ func Test_ErrorVals_Execute(t *testing.T) {
 func Test_ErrorVals_Mvt(t *testing.T) {
 	cfg := config.DefaultConfig()
 
-	for i := pkg.TypeOfErrorBounds; i <= pkg.TypeOfErrorOther; i++ {
+	for i := pkg.TypeOfErrorBounds; i <= pkg.TypeOfErrorNotFound; i++ {
 		if pkg.TypeOfError(i) == pkg.TypeOfErrorAuth {
 			continue // Auth always stays PNG, see Test_ErrorVals_Mvt_AuthAlwaysPng
 		}
@@ -67,6 +67,15 @@ func Test_ErrorVals_Mvt_AuthAlwaysPng(t *testing.T) {
 	_, _, imgPath, contentType := errorVars(&cfg.Error, pkg.TypeOfErrorAuth, config.DataTypeMVT)
 	assert.Equal(t, cfg.Error.Images.Authentication, imgPath)
 	assert.Equal(t, "image/png", contentType)
+}
+
+// A missing layer and an authenticated-but-out-of-scope layer both use TypeOfErrorNotFound, and
+// must map to 404 - see issue #766.
+func Test_ErrorVals_NotFound_Returns404(t *testing.T) {
+	cfg := config.DefaultConfig()
+
+	status, _, _, _ := errorVars(&cfg.Error, pkg.TypeOfErrorNotFound, config.DataTypeUnknown)
+	assert.Equal(t, http.StatusNotFound, status)
 }
 
 func Test_WriteErrorMessage_Execute(t *testing.T) {

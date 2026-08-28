@@ -34,6 +34,11 @@ const (
 	TypeOfErrorBadRequest
 	// Indicates something that doesn't fall into the above categories. This is usually a real problem that the operator needs to be aware of. Generally a 500
 	TypeOfErrorOther
+	// Indicates the requested layer doesn't exist, or the caller is authenticated but not authorized for
+	// it (out of JWT LayerScope, area restriction, etc). Both cases return this rather than
+	// TypeOfErrorAuth so an authenticated-but-restricted caller can't enumerate real layer names by
+	// distinguishing "forbidden" from "never configured". Generally a 404
+	TypeOfErrorNotFound
 )
 
 // The main interface for errors returned through the application. Indicates the type or category of the error and separates the error message that should be reported externally (with localization using the configurable error messages) from the internal error for logs (which uses the traditional Error() interface)
@@ -44,6 +49,9 @@ type TypedError interface {
 }
 
 // General error for incoming auth issues. Avoids returning specifics through the API so as not to help attackers.
+// This is only for a caller who isn't authenticated at all (missing/invalid/expired credentials). A caller who
+// authenticated successfully but isn't authorized for the specific layer requested should use NotFoundError instead,
+// so the two cases can't be told apart by an authenticated-but-restricted caller probing layer names.
 type UnauthorizedError struct {
 	Message string
 }
@@ -61,6 +69,28 @@ func (e UnauthorizedError) Type() TypeOfError {
 func (e UnauthorizedError) External(messages config.ErrorMessages) string {
 	// notest
 	return messages.NotAuthorized
+}
+
+// Used both for a layer name that doesn't match any configured layer and for a layer that exists but the
+// authenticated caller isn't authorized for (JWT LayerScope, area restriction, etc). Returning the same
+// error/status for both prevents an authenticated-but-restricted caller from enumerating real layer names.
+type NotFoundError struct {
+	Message string
+}
+
+func (e NotFoundError) Error() string {
+	// notest
+	return fmt.Sprintf("Not Found - %v", e.Message)
+}
+
+func (e NotFoundError) Type() TypeOfError {
+	// notest
+	return TypeOfErrorNotFound
+}
+
+func (e NotFoundError) External(messages config.ErrorMessages) string {
+	// notest
+	return messages.NotFound
 }
 
 // The error used when a provider has an auth error. This special error is used by the application to indicate that a re-auth needs to occur. If the same error is passed back on that re-auth then it's treated as a normal error and returned back through API - therefore this is a provider error type, not an auth one

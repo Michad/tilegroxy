@@ -189,7 +189,7 @@ func Test_TileJSONHandler_Document_PlainLayer(t *testing.T) {
 	assert.Equal(t, "http://example.com/tiles/main/{z}/{x}/{y}", doc.Tiles[0])
 }
 
-func Test_TileJSONHandler_Document_UnknownLayer_Returns401(t *testing.T) {
+func Test_TileJSONHandler_Document_UnknownLayer_Returns404(t *testing.T) {
 	cfg := config.DefaultConfig()
 	cfg.Server.TileJSON.Enabled = true
 	cfg.Layers = []config.LayerConfig{staticLayerConfig("main")}
@@ -205,7 +205,7 @@ func Test_TileJSONHandler_Document_UnknownLayer_Returns401(t *testing.T) {
 
 	res := w.Result()
 	defer func() { require.NoError(t, res.Body.Close()) }()
-	assert.Equal(t, http.StatusUnauthorized, res.StatusCode)
+	assert.Equal(t, http.StatusNotFound, res.StatusCode)
 }
 
 func Test_TileJSONHandler_Document_PatternLayerWithoutExamples_NotEligible(t *testing.T) {
@@ -226,7 +226,7 @@ func Test_TileJSONHandler_Document_PatternLayerWithoutExamples_NotEligible(t *te
 
 	res := w.Result()
 	defer func() { require.NoError(t, res.Body.Close()) }()
-	assert.Equal(t, http.StatusUnauthorized, res.StatusCode)
+	assert.Equal(t, http.StatusNotFound, res.StatusCode)
 }
 
 func Test_TileJSONHandler_LayerScope_RestrictsIndexAndDocument(t *testing.T) {
@@ -256,14 +256,16 @@ func Test_TileJSONHandler_LayerScope_RestrictsIndexAndDocument(t *testing.T) {
 	require.Len(t, entries, 1)
 	assert.Equal(t, "main", entries[0].Name)
 
-	// Requesting the disallowed layer's document directly returns 401
+	// Requesting the disallowed layer's document directly returns 404, not 401: the caller is
+	// authenticated, just out of scope for this layer, and the scoped-out layer shouldn't be
+	// distinguishable from one that was never configured. See issue #766.
 	req2 := httptest.NewRequest(http.MethodGet, "http://example.com/tiles/other.json", nil).WithContext(ctx)
 	req2.SetPathValue("layerjson", "other.json")
 	w2 := httptest.NewRecorder()
 	docHandler.ServeHTTP(w2, req2)
 	res2 := w2.Result()
 	defer func() { require.NoError(t, res2.Body.Close()) }()
-	assert.Equal(t, http.StatusUnauthorized, res2.StatusCode)
+	assert.Equal(t, http.StatusNotFound, res2.StatusCode)
 
 	// Requesting the allowed layer's document succeeds
 	req3 := httptest.NewRequest(http.MethodGet, "http://example.com/tiles/main.json", nil).WithContext(ctx)

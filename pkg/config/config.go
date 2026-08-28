@@ -158,6 +158,7 @@ const (
 // replaced with fully static constants later if it does turn out nobody ever sees value in it
 type ErrorMessages struct {
 	NotAuthorized           string
+	NotFound                string
 	ParamRequired           string
 	InvalidParam            string
 	RangeError              string
@@ -380,6 +381,7 @@ func DefaultConfig() Config {
 			Mode: ModeErrorImage,
 			Messages: ErrorMessages{
 				NotAuthorized:           "Not authorized",
+				NotFound:                "Not found",
 				InvalidParam:            "Invalid value supplied for parameter %v: %v",
 				RangeError:              "%v must be between %v and %v",
 				ServerError:             "Unexpected server error: %v",

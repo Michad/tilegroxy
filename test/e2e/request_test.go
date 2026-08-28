@@ -34,5 +34,6 @@ func Test_Request_BadCoordinatesAreRejected(t *testing.T) {
 
 	inst.Get("/tiles/color/8/ghj/32").ExpectStatus(http.StatusBadRequest)
 	inst.Get("/tiles/color/hgkgh/12/32").ExpectStatus(http.StatusBadRequest)
-	inst.Get("/tiles/nosuchlayer/8/12/32").ExpectStatus(http.StatusUnauthorized)
+	// A nonexistent layer returns 404 rather than 401 - see issue #766.
+	inst.Get("/tiles/nosuchlayer/8/12/32").ExpectStatus(http.StatusNotFound)
 }
