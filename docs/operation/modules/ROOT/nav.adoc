@@ -53,6 +53,7 @@
 ** xref:commands/config_create.adoc[]
 ** xref:commands/config_check.adoc[]
 ** xref:commands/seed.adoc[]
+** xref:commands/cache_purge.adoc[]
 ** xref:commands/test.adoc[]
 * xref:analytics.adoc[]
 * xref:content-type.adoc[]

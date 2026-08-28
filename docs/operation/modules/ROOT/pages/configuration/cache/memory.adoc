@@ -4,6 +4,8 @@ A local in-memory cache. This stores the tiles in the memory of the tilegroxy da
 
 *This is not recommended for production use.* It is meant for development and testing use-cases only. Setting this cache too high can cause stability issues for the service and this cache is not distributed so can cause inconsistent performance when deploying in a high-availability production environment.
 
+This is currently the only cache that supports xref:commands/cache_purge.adoc[`cache purge`].
+
 Name should be "memory"
 
 Configuration options:

@@ -16,6 +16,7 @@ package caches
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -89,5 +90,18 @@ func (c Memory) Lookup(_ context.Context, t pkg.TileRequest) (*pkg.Image, error)
 
 func (c Memory) Save(_ context.Context, t pkg.TileRequest, img *pkg.Image) error {
 	c.Cache.Set(t.String(), *img)
+	return nil
+}
+
+// Purge implements cache.Purgeable. It's cheap here because otter already holds every key
+// in-process; other backends (e.g. memcache) can't enumerate their own keys at all, which is why
+// this is an optional capability rather than part of the Cache interface.
+func (c Memory) Purge(_ context.Context, layerName string) error {
+	prefix := layerName + "/"
+
+	c.Cache.DeleteByFunc(func(key string, _ pkg.Image) bool {
+		return strings.HasPrefix(key, prefix)
+	})
+
 	return nil
 }

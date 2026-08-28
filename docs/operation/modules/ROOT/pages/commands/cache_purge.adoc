@@ -1,0 +1,27 @@
+= Cache Purge
+
+Deletes every cache entry belonging to a single layer. This is meant for tidying up a cache that's grown unbounded, for instance after removing or renaming a layer, without waiting on a TTL.
+
+This only works for cache backends that implement purging. Currently that's only the xref:configuration/cache/memory.adoc[memory cache], since it's the only backend that can cheaply enumerate its own keys. Other backends, such as Redis, S3, disk, or memcache, don't support this: the command reports that plainly and exits successfully rather than treating it as an error. This is a deliberate, narrow capability rather than a general cache-management feature; tilegroxy otherwise leaves cache lifecycle to the backend (TTLs, lifecycle rules, and so on).
+
+Full, up-to-date usage information can be found with `tilegroxy cache purge -h`.
+
+----
+Deletes every cache entry belonging to a single layer.
+
+This only works for cache backends that support it. Currently that's
+just the memory cache; other backends report that they don't support
+this rather than erroring, since most cache backends can't enumerate
+or bulk-delete their own keys.
+
+Example:
+
+  tilegroxy cache purge -c test_config.yml -l osm
+
+Usage:
+  tilegroxy cache purge [flags]
+
+Flags:
+  -h, --help           help for purge
+  -l, --layer string   The ID of the layer to purge from the cache
+----

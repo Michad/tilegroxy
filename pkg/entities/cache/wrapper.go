@@ -23,6 +23,11 @@ import (
 )
 
 // A struct that wraps all other caches in order to add in instrumentation, specifically child spans for tracing the requests to caches. This is used even when telemetry is disabled but OTEL handles no-op'ing in that case so performance impact is minimal
+//
+// CacheWrapper deliberately does not implement Purgeable, unlike lifecycle.Closer which it forwards
+// unconditionally: every constructed cache is wrapped here regardless of backend, so a Purge method
+// on the wrapper itself would always satisfy Purgeable and hide whether the wrapped cache actually
+// supports it. Callers that need to know must check the Cache field with PurgeIfPurgeable instead.
 type CacheWrapper struct {
 	Name  string
 	Cache Cache
