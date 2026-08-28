@@ -59,6 +59,42 @@ func Test_PreviewHandler_ValidLayer_ReturnsHTMLWithTileURL(t *testing.T) {
 	assert.Contains(t, string(body), "leaflet")
 }
 
+// A pattern layer's ParamValidator is operator-configured but can be as permissive as ".*", so the
+// matched layer name reaching this handler can contain attacker-chosen characters. This verifies
+// the tile URL - built from that name - can't break out of the JS string literal it's placed in.
+func Test_PreviewHandler_PatternLayerWithHostileName_EscapesIntoTemplate(t *testing.T) {
+	cfg := config.DefaultConfig()
+	cfg.Layers = []config.LayerConfig{
+		{
+			ID:             "main",
+			Pattern:        "{name}",
+			ParamValidator: map[string]string{"name": ".*"},
+			Provider:       map[string]interface{}{"name": "static", "color": "FFF"},
+		},
+	}
+
+	ent := buildTileJSONTestEntities(t, cfg)
+	h := newPreviewHandler(ent)
+
+	hostileName := `x"});</script><script>alert(1)</script>{L.tileLayer("x`
+	req := httptest.NewRequest(http.MethodGet, "http://internal-host/preview/"+hostileName, nil).WithContext(pkg.BackgroundContext())
+	req.SetPathValue("layer", hostileName)
+	w := httptest.NewRecorder()
+
+	h.ServeHTTP(w, req)
+
+	res := w.Result()
+	defer func() { require.NoError(t, res.Body.Close()) }()
+
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+
+	body, err := io.ReadAll(res.Body)
+	require.NoError(t, err)
+
+	assert.NotContains(t, string(body), "<script>alert(1)</script>")
+	assert.NotContains(t, string(body), `x"});</script>`)
+}
+
 func Test_PreviewHandler_UnknownLayer_Returns401(t *testing.T) {
 	cfg := config.DefaultConfig()
 	cfg.Layers = []config.LayerConfig{staticLayerConfig("main")}

@@ -52,7 +52,7 @@ func (h *previewHandler) reloadEntities(newEntities reloadableEntities) {
 // html/template requires it; this type isn't used outside this file.
 type previewTemplateData struct {
 	LayerName   string
-	TileURL     template.JS
+	TileURL     string
 	HasBounds   bool
 	South       float64
 	North       float64
@@ -198,7 +198,11 @@ func (h *previewHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	data := previewTemplateData{
 		LayerName:   name,
-		TileURL:     template.JS(tileURL), //nolint:gosec // tileURL is built from configured/forwarded host parts, not raw user input, and is placed inside a JS string literal for L.tileLayer
+		// tileURL includes the requested layer name, which can be attacker-influenced for a
+		// pattern layer with a permissive ParamValidator. Left as a plain string (not
+		// template.JS) so html/template's contextual auto-escaping still JS-escapes it inside
+		// the quoted string literal below, rather than trusting it as pre-sanitized JS.
+		TileURL:     tileURL,
 		HasBounds:   hasBounds,
 		South:       bounds.South,
 		North:       bounds.North,
