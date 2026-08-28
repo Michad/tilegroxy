@@ -2,16 +2,24 @@
 
 A helper command to allow you to prepopulate your cache with prerendered tiles. This is especially useful when adding a new layer to tilegroxy that is slow to render the furthest out zoom levels and you want to avoid your first end-users running into this slowness. This command is roughly equivalent to standing up a server using the `serve` command and then hitting the layer endpoint with `cURL` requests for all the tiles you want.
 
+Tiles are worked out one at a time as they're requested rather than all being listed up front, so the amount of memory the command uses doesn't grow with the size of the area you're seeding. A seed covering a whole continent at zoom 12 uses the same memory as one covering a city block.
+
 Full, up-to-date usage information can be found with `tilegroxy seed -h`.
 
 ----
 Pre-populates the cache for a given layer for a given area (bounding box)
 for a range of zoom levels.
 
-Be mindful that the higher the zoom level (the more you "zoom in"),
+Be mindful that the greater the zoom level (the more you "zoom in"),
 exponentially more tiles will need to be seeded for a given area. For
 instance, while zoom level 1 only requires 4 tiles to cover the planet,
 zoom level 10 requires over a million tiles.
+
+Tiles are requested one at a time rather than all being worked out up
+front, so the size of the area doesn't affect how much memory the seed
+uses. How far the seed got is recorded to a progress file as it goes; if
+it's interrupted, rerunning the same command with --resume continues from
+that point instead of starting over.
 
 Example:
 
@@ -21,11 +29,11 @@ Usage:
   tilegroxy seed [flags]
 
 Flags:
-      --force                   Perform the seeding even if it'll produce
-                                an excessive number of tiles. Normally
-                                seeds over 10k tiles will error out.
-                                Warning: Overriding this protection
-                                absolutely can cause an Out-of-Memory error
+      --force                   Perform the seeding even if it covers an
+                                excessive number of tiles. Without this
+                                flag seeds over 100k tiles will error out.
+                                Warning: A seed that large can spend hours
+                                making requests against an upstream provider
   -h, --help                    help for seed
   -l, --layer string            The ID of the layer to seed
   -n, --max-latitude float32    The maximum latitude to seed. The north
@@ -36,6 +44,15 @@ Flags:
                                 side of the bounding box (default -90)
   -w, --min-longitude float32   The minimum longitude to seed. The west
                                 side of the bounding box (default -180)
+      --no-progress             Don't record progress to disk. The seed
+                                can't be resumed if it's interrupted
+      --progress-file string    Where to record how far the seed got, for
+                                use with --resume. Defaults to a file
+                                named for the layer alongside the
+                                configuration file
+      --resume                  Continue an interrupted seed from where
+                                its progress file left off rather than
+                                starting over
   -t, --threads uint16          How many concurrent requests to use to
                                 perform seeding. Be mindful of spamming
                                 upstream providers (default 1)
@@ -44,3 +61,27 @@ Flags:
   -z, --zoom uints              The zoom level(s) to seed (default [0,1,2,
                                 3,4,5])
 ----
+
+== Size confirmation
+
+Before it starts, the command works out how many tiles the area and zoom levels cover. That calculation comes from the bounding box, it doesn't involve listing the tiles, so it's the same cost for a run of a thousand tiles as for a run of ten million.
+
+A run covering more than 100,000 tiles stops with an error reporting the tile count and a rough estimate of how long it will take. Pass `--force` to run it anyway. The threshold isn't about memory, it's there because a run that size can spend hours making requests against an upstream provider, so it's worth being sure that's what you meant. Use `--threads` to control how hard the provider gets hit; the time estimate accounts for it.
+
+== Resuming an interrupted seed
+
+Large seeds take a long time and don't always survive to the end. As the seed runs it records how far it got to a progress file, by default a file named for the layer alongside your configuration file. Pass `--progress-file` to put it somewhere else, or `--no-progress` to skip recording it entirely.
+
+If a seed is interrupted, rerun the same command with `--resume` and it continues from the tile it got to rather than starting over:
+
+----
+tilegroxy seed -c tilegroxy.yml -l osm -z 10 --force
+# interrupted partway through
+tilegroxy seed -c tilegroxy.yml -l osm -z 10 --force --resume
+----
+
+Position in the progress file refers to a place in the sequence of tiles the arguments produce, and that sequence is fixed: ascending zoom level, then ascending x, then ascending y. Resuming therefore only makes sense against the same layer, area and zoom levels. If the progress file describes a different run, the command errors out rather than seeding the wrong tiles. Delete the file or rerun with the arguments it records.
+
+Rerunning without `--resume` starts from the beginning and overwrites the progress file. It warns you first if the file it's about to overwrite records unfinished work.
+
+Progress is written periodically rather than after every tile, so a seed that's killed may repeat a small number of tiles when it resumes. Tiles already in the cache are cheap to redo.

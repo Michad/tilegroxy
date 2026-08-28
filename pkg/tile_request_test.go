@@ -249,3 +249,35 @@ func TestTileToEWKT(t *testing.T) {
 	// test case from result of postgis `SELECT ST_AsEWKT(ST_TileEnvelope(2,1,1))` with precision tweak
 	assert.Equal(t, "SRID=3857;POLYGON((-10018754.1713945 0.0000000,-10018754.1713945 10018754.1713945,0.0000000 10018754.1713945,0.0000000 0.0000000,-10018754.1713945 0.0000000))", b.ToEWKT())
 }
+
+// FindTileRange is what lets a seed work out how many tiles it covers without materializing them,
+// so its grid has to agree with what FindTiles produces.
+func TestFindTileRangeMatchesFindTiles(t *testing.T) {
+	for _, b := range []Bounds{
+		{-90, 90, -180, 180, SRIDWGS84},
+		{51, 51.6, 5.7, 7.0, SRIDWGS84},
+	} {
+		for z := range uint(6) {
+			r, err := b.FindTileRange(z)
+			require.NoError(t, err)
+
+			tiles, err := b.FindTiles("test", z, false)
+			require.NoError(t, err)
+
+			assert.Equal(t, z, r.Z)
+			assert.Equal(t, uint64(len(*tiles)), r.Count())
+
+			for _, tile := range *tiles {
+				assert.GreaterOrEqual(t, tile.X, r.XMin)
+				assert.Less(t, tile.X, r.XMax)
+				assert.GreaterOrEqual(t, tile.Y, r.YMin)
+				assert.Less(t, tile.Y, r.YMax)
+			}
+		}
+	}
+}
+
+func TestFindTileRangeInvalidZoom(t *testing.T) {
+	_, err := Bounds{-90, 90, -180, 180, SRIDWGS84}.FindTileRange(MaxZoom + 1)
+	require.Error(t, err)
+}

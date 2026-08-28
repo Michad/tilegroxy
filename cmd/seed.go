@@ -30,6 +30,8 @@ var seedCmd = &cobra.Command{
 	
 Be mindful that the greater the zoom level (the more you "zoom in"), exponentially more tiles will need to be seeded for a given area. For instance, while zoom level 1 only requires 4 tiles to cover the planet, zoom level 10 requires over a million tiles.
 
+Tiles are requested one at a time rather than all being worked out up front, so the size of the area doesn't affect how much memory the seed uses. How far the seed got is recorded to a progress file as it goes; if it's interrupted, rerunning the same command with --resume continues from that point instead of starting over.
+
 Example:
 
 	tilegroxy seed -c test_config.yml -l osm -z 2 -v -t 7 -z 0 -z 1 -z 3 -z 4`,
@@ -46,9 +48,13 @@ func runSeed(cmd *cobra.Command, _ []string) {
 	force, err7 := cmd.Flags().GetBool("force")
 	numThread, err8 := cmd.Flags().GetUint16("threads")
 	verbose, err9 := cmd.Flags().GetBool("verbose")
+	resume, err10 := cmd.Flags().GetBool("resume")
+	progressFile, err11 := cmd.Flags().GetString("progress-file")
+	noProgress, err12 := cmd.Flags().GetBool("no-progress")
+	configPath, err13 := cmd.Flags().GetString("config")
 	out := rootCmd.OutOrStdout()
 
-	if err := errors.Join(err1, err2, err3, err4, err5, err6, err7, err8, err9); err != nil {
+	if err := errors.Join(err1, err2, err3, err4, err5, err6, err7, err8, err9, err10, err11, err12, err13); err != nil {
 		fmt.Fprintf(out, "Error: %v", err)
 		exit(1)
 		return
@@ -61,16 +67,25 @@ func runSeed(cmd *cobra.Command, _ []string) {
 		return
 	}
 
+	switch {
+	case noProgress:
+		progressFile = ""
+	case progressFile == "":
+		progressFile = tg.DefaultProgressPath(configPath, layerName)
+	}
+
 	b := pkg.Bounds{South: float64(minLat), West: float64(minLon), North: float64(maxLat), East: float64(maxLon)}
 
 	err = tg.Seed(cfg,
 		tg.SeedOptions{
-			Zoom:      zoom,
-			Bounds:    b,
-			LayerName: layerName,
-			Force:     force,
-			Verbose:   verbose,
-			NumThread: numThread},
+			Zoom:         zoom,
+			Bounds:       b,
+			LayerName:    layerName,
+			Force:        force,
+			Verbose:      verbose,
+			NumThread:    numThread,
+			Resume:       resume,
+			ProgressFile: progressFile},
 		out)
 
 	if err != nil {
@@ -94,8 +109,13 @@ func initSeed() {
 	seedCmd.Flags().Float32P("max-latitude", "n", 90, "The maximum latitude to seed. The north side of the bounding box")
 	seedCmd.Flags().Float32P("min-longitude", "w", -180, "The minimum longitude to seed. The west side of the bounding box")
 	seedCmd.Flags().Float32P("max-longitude", "e", 180, "The maximum longitude to seed. The east side of the bounding box")
-	seedCmd.Flags().Bool("force", false, "Perform the seeding even if it'll produce an excessive number of tiles. Without this flag seeds over 10k tiles will error out. \nWarning: Overriding this protection absolutely can cause an Out-of-Memory error")
+	seedCmd.Flags().Bool("force", false, "Perform the seeding even if it covers an excessive number of tiles. Without this flag seeds over 100k tiles will error out. \nWarning: A seed that large can spend hours making requests against an upstream provider")
 	seedCmd.Flags().Uint16P("threads", "t", 1, "How many concurrent requests to use to perform seeding. Be mindful of spamming upstream providers")
+	seedCmd.Flags().Bool("resume", false, "Continue an interrupted seed from where its progress file left off rather than starting over")
+	seedCmd.Flags().String("progress-file", "", "Where to record how far the seed got, for use with --resume. Defaults to a file named for the layer alongside the configuration file")
+	seedCmd.Flags().Bool("no-progress", false, "Don't record progress to disk. The seed can't be resumed if it's interrupted")
+	seedCmd.MarkFlagsMutuallyExclusive("progress-file", "no-progress")
+	seedCmd.MarkFlagsMutuallyExclusive("resume", "no-progress")
 	// TODO: support some way to support writing just to a specific cache when Multi cache is being used
 
 	if err != nil {

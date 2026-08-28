@@ -155,10 +155,23 @@ func NewBoundsFromGeohash(hashStr string) (Bounds, error) {
 	return Bounds{South: bbox.MinLat, North: bbox.MaxLat, West: bbox.MinLng, East: bbox.MaxLng, SRID: SRIDWGS84}, nil
 }
 
-// Turns a bounding box into a list of the tiles contained in the bounds for an arbitrary zoom level. Limited to 10k tiles unless force is true, then it's limited to 2^32 tiles.
-func (b Bounds) FindTiles(layerName string, zoom uint, force bool) (*[]TileRequest, error) {
+// TileRange is the half-open grid of tile coordinates a bounding box covers at one zoom level.
+// X runs from XMin up to but not including XMax, likewise for Y.
+type TileRange struct {
+	Z                      uint
+	XMin, XMax, YMin, YMax int
+}
+
+// Count is how many tiles the range covers.
+func (r TileRange) Count() uint64 {
+	return uint64(r.XMax-r.XMin) * uint64(r.YMax-r.YMin) // #nosec G115 -- int->uint64 can't overflow until 128 bit processors come out
+}
+
+// FindTileRange calculates which tiles a bounding box covers at a zoom level without materializing
+// them. Callers that need the tiles themselves can iterate the range.
+func (b Bounds) FindTileRange(zoom uint) (TileRange, error) {
 	if zoom > MaxZoom {
-		return nil, RangeError{"z", 0, MaxZoom}
+		return TileRange{}, RangeError{"z", 0, MaxZoom}
 	}
 
 	z := float64(zoom)
@@ -199,7 +212,18 @@ func (b Bounds) FindTiles(layerName string, zoom uint, force bool) (*[]TileReque
 		yMax = yMin + 1
 	}
 
-	numTiles := uint64(xMax-xMin) * uint64(yMax-yMin) // #nosec G115 -- int->uint64 can't overflow until 128 bit processors come out
+	return TileRange{Z: zoom, XMin: xMin, XMax: xMax, YMin: yMin, YMax: yMax}, nil
+}
+
+// Turns a bounding box into a list of the tiles contained in the bounds for an arbitrary zoom level. Limited to 10k tiles unless force is true, then it's limited to 2^32 tiles.
+func (b Bounds) FindTiles(layerName string, zoom uint, force bool) (*[]TileRequest, error) {
+	r, err := b.FindTileRange(zoom)
+	if err != nil {
+		return nil, err
+	}
+
+	xMin, xMax, yMin, yMax := r.XMin, r.XMax, r.YMin, r.YMax
+	numTiles := r.Count()
 
 	if numTiles > 10000 && !force {
 		return nil, TooManyTilesError{NumTiles: numTiles}
