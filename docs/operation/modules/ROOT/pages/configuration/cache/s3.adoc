@@ -65,6 +65,12 @@ Configuration options:
 | string
 | No
 | AWS Auto
+
+| usepathstyle
+| Use path-style addressing (`https://endpoint/bucket/key`) instead of virtual-hosted-style (`https://bucket.endpoint/key`). Needed for some S3-compatible services
+| boolean
+| No
+| false
 |===
 
 Example:
@@ -78,4 +84,30 @@ cache:
   storageclass: EXPRESS_ONEZONE
   region: us-east-1
   profile: tilegroxy_s3_user
+----
+
+== Cloudflare R2
+
+This cache works against Cloudflare R2 without any code changes since R2 implements the S3 API. The following is based on reading Cloudflare's published S3-compatibility documentation and the AWS SDK's endpoint handling, not a live test against an R2 account:
+
+* `endpoint` is your account's R2 S3 API endpoint, in the form `https://<account-id>.r2.cloudflarestorage.com`
+* `region` should be set to `auto`. R2 doesn't have AWS-style regions, and `auto` is the value Cloudflare documents for the S3 API
+* `usepathstyle` should be `true`. R2 buckets aren't resolvable as a subdomain of the account endpoint, so virtual-hosted-style addressing won't work
+* `access` and `secret` come from an R2 API token (Cloudflare dashboard: R2 -> Manage API Tokens), not your normal Cloudflare or AWS credentials
+* Leave `storageclass` unset. R2 doesn't support AWS storage classes, and this cache only sends one when `storageclass` is explicitly configured
+
+Tiles are almost always well under the 16MB threshold where this cache switches to multipart upload, but it's worth noting R2 does support the S3 multipart upload API if a layer ever produces a larger tile.
+
+Example:
+
+[,yaml]
+----
+cache:
+  name: s3
+  bucket: my-tilegroxy-cache
+  endpoint: "https://<account-id>.r2.cloudflarestorage.com"
+  region: auto
+  usepathstyle: true
+  access: "<R2 access key id>"
+  secret: "<R2 secret access key>"
 ----
