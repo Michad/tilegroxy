@@ -383,6 +383,22 @@ func (l *Layer) IsPattern() bool {
 	return l.Config.Pattern != "" && l.Config.Pattern != l.Config.ID
 }
 
+// EffectiveNonBlockingRead resolves whether this layer should race the cache read against tile
+// generation. The layer's own setting wins when set; otherwise it inherits the cache's configured
+// default. A cache that isn't a cache.CacheWrapper (only possible via direct library use, since
+// ConstructCache always returns one) is treated as blocking, matching today's behavior.
+func (l *Layer) EffectiveNonBlockingRead() bool {
+	if l.Config.NonBlockingRead != nil {
+		return *l.Config.NonBlockingRead
+	}
+
+	if wrapper, ok := l.Cache.(cache.CacheWrapper); ok {
+		return wrapper.NonBlockingRead
+	}
+
+	return false
+}
+
 // CheckZoomBounds rejects a request outside this layer's configured minzoom/maxzoom. Called
 // before the cache lookup so a cached tile can't bypass a zoom limit added after it was cached.
 func (l *Layer) CheckZoomBounds(tileRequest pkg.TileRequest) error {

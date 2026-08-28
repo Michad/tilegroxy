@@ -240,7 +240,28 @@ func (lg *LayerGroup) RenderTile(ctx context.Context, tileRequest pkg.TileReques
 		return nil, err
 	}
 
-	img, err = l.Cache.Lookup(ctx, tileRequest)
+	if l.EffectiveNonBlockingRead() {
+		img, err = lg.renderTileRacingCache(ctx, l, tileRequest)
+	} else {
+		img, err = lg.renderTileBlockingCache(ctx, l, tileRequest)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	if img == nil {
+		return nil, errNilImage
+	}
+
+	lg.scheduleCacheWrite(ctx, l, tileRequest, img)
+
+	return img, nil
+}
+
+// renderTileBlockingCache is today's default: wait on the cache before ever starting generation.
+func (lg *LayerGroup) renderTileBlockingCache(ctx context.Context, l *Layer, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+	img, err := l.Cache.Lookup(ctx, tileRequest)
 
 	if img != nil {
 		slog.DebugContext(ctx, "Cache hit")
@@ -254,34 +275,111 @@ func (lg *LayerGroup) RenderTile(ctx context.Context, tileRequest pkg.TileReques
 		slog.WarnContext(ctx, fmt.Sprintf("Cache read error %v\n", err))
 	}
 
-	img, err = lg.RenderTileNoCache(ctx, tileRequest)
+	return lg.RenderTileNoCache(ctx, tileRequest)
+}
 
-	if err != nil {
-		return nil, err
+// cacheLookupResult carries a completed Cache.Lookup back to the goroutine racing it against
+// generation.
+type cacheLookupResult struct {
+	img *pkg.Image
+	err error
+}
+
+// renderTileRacingCache starts the cache lookup and tile generation concurrently and returns
+// whichever finishes first with a usable result. A cache hit that arrives first wins outright. If
+// generation finishes first (or wins the race), the cache lookup is left to finish in the
+// background - its result no longer matters since generation already produced a tile - bounded by
+// ctx same as the winning path, so it can't outlive the request. If generation errors while the
+// cache lookup is still outstanding, we wait for the cache lookup instead of failing immediately:
+// a slow cache that was about to return a hit can still save the request.
+func (lg *LayerGroup) renderTileRacingCache(ctx context.Context, l *Layer, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+	cacheResultCh := make(chan cacheLookupResult, 1)
+
+	go func() {
+		img, err := l.Cache.Lookup(ctx, tileRequest)
+		cacheResultCh <- cacheLookupResult{img, err}
+	}()
+
+	type genResult struct {
+		img *pkg.Image
+		err error
 	}
+	genResultCh := make(chan genResult, 1)
 
-	if img == nil {
-		return nil, errNilImage
-	}
+	go func() {
+		img, err := lg.RenderTileNoCache(ctx, tileRequest)
+		genResultCh <- genResult{img, err}
+	}()
 
-	if !img.ForceSkipCache {
-		select {
-		case lg.cacheWriteLimiter <- struct{}{}:
-			go func() {
-				defer func() { <-lg.cacheWriteLimiter }()
-				writeCache(ctx, l.Cache, tileRequest, img)
-			}()
-		default:
-			slog.WarnContext(ctx, "Skipping cache write: too many cache writes already in flight")
+	// cacheSettled tracks whether cacheResultCh has already been drained, so the fallback below
+	// never blocks re-reading a channel nothing will ever send to again.
+	cacheSettled := false
+
+	var genOutcome genResult
+
+	select {
+	case cacheRes := <-cacheResultCh:
+		cacheSettled = true
+
+		if cacheRes.img != nil {
+			slog.DebugContext(ctx, "Cache hit")
+			lg.cacheHitCounter.Add(ctx, 1)
+			return cacheRes.img, cacheRes.err
 		}
+
+		lg.cacheMissCounter.Add(ctx, 1)
+		if cacheRes.err != nil {
+			slog.WarnContext(ctx, fmt.Sprintf("Cache read error %v\n", cacheRes.err))
+		}
+
+		// Cache missed (or errored) first, so the outcome is whatever generation produces.
+		genOutcome = <-genResultCh
+	case genOutcome = <-genResultCh:
 	}
 
-	return img, nil
+	if genOutcome.err != nil && !cacheSettled {
+		// Generation lost the race with an error while the cache lookup was still outstanding.
+		// A cache hit could still save the request, so wait for it instead of failing immediately.
+		cacheRes := <-cacheResultCh
+		if cacheRes.img != nil {
+			slog.DebugContext(ctx, "Cache hit")
+			lg.cacheHitCounter.Add(ctx, 1)
+			return cacheRes.img, cacheRes.err
+		}
+
+		lg.cacheMissCounter.Add(ctx, 1)
+		if cacheRes.err != nil {
+			slog.WarnContext(ctx, fmt.Sprintf("Cache read error %v\n", cacheRes.err))
+		}
+
+		return nil, genOutcome.err
+	}
+
+	return genOutcome.img, genOutcome.err
 }
 
 // errNilImage is returned when a provider reports success but hands back no image. composite_mvt
 // and blend already defend against nested providers doing this, so it's reachable in practice.
 var errNilImage = errors.New("provider returned no image and no error")
+
+// scheduleCacheWrite writes a freshly generated tile back to cache in the background, same as the
+// blocking path always has. Used by both the blocking and racing cache-read paths so a generated
+// tile is written through to cache exactly once regardless of which one produced it.
+func (lg *LayerGroup) scheduleCacheWrite(ctx context.Context, l *Layer, tileRequest pkg.TileRequest, img *pkg.Image) {
+	if img.ForceSkipCache {
+		return
+	}
+
+	select {
+	case lg.cacheWriteLimiter <- struct{}{}:
+		go func() {
+			defer func() { <-lg.cacheWriteLimiter }()
+			writeCache(ctx, l.Cache, tileRequest, img)
+		}()
+	default:
+		slog.WarnContext(ctx, "Skipping cache write: too many cache writes already in flight")
+	}
+}
 
 func writeCache(ctx context.Context, cache cache.Cache, tileRequest pkg.TileRequest, img *pkg.Image) {
 	// We need to make a new context to avoid the request finishing cancelling the ctx sent into the cache

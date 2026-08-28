@@ -17,6 +17,7 @@ package cache
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -68,6 +69,11 @@ func RegisteredCacheNames() []string {
 	return names
 }
 
+// nonBlockingReadKey is the config key that turns on racing cache reads against tile generation.
+// It's handled here rather than in each cache's own Config struct since it applies uniformly to
+// every cache implementation, the same way "name" does.
+const nonBlockingReadKey = "nonblockingread"
+
 func ConstructCache(rawConfig map[string]interface{}, deps CacheDeps) (Cache, error) {
 	name, ok := rawConfig["name"].(string)
 
@@ -81,16 +87,50 @@ func ConstructCache(rawConfig map[string]interface{}, deps CacheDeps) (Cache, er
 
 		reg, ok := RegisteredCache(name)
 		if ok {
+			nonBlockingRead, err := extractNonBlockingRead(rawConfig, deps.ErrorMessages)
+			if err != nil {
+				return nil, err
+			}
+
 			cfg := reg.InitializeConfig()
-			err := config.DecodeEntityConfig(rawConfig, &cfg)
+			err = config.DecodeEntityConfig(withoutNonBlockingRead(rawConfig), &cfg)
 			if err != nil {
 				return nil, err
 			}
 			a, err := reg.Initialize(cfg, deps)
-			return CacheWrapper{Name: name, Cache: a}, err
+			return CacheWrapper{Name: name, Cache: a, NonBlockingRead: nonBlockingRead}, err
 		}
 	}
 
 	nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
 	return nil, fmt.Errorf(deps.ErrorMessages.EnumError, "cache.name", nameCoerce, RegisteredCacheNames())
+}
+
+// extractNonBlockingRead reads the shared nonblockingread flag out of a cache's raw config. Defaults
+// to false (today's sequential cache-then-generate behavior) when absent.
+func extractNonBlockingRead(rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (bool, error) {
+	raw, ok := rawConfig[nonBlockingReadKey]
+	if !ok {
+		return false, nil
+	}
+
+	b, ok := raw.(bool)
+	if !ok {
+		return false, fmt.Errorf(errorMessages.InvalidParam, "cache.nonblockingread", fmt.Sprintf("%v", raw))
+	}
+
+	return b, nil
+}
+
+// withoutNonBlockingRead strips the shared key before decoding into a cache-specific Config struct,
+// same reasoning as why DecodeEntityConfig strips "name": no cache declares this field itself.
+func withoutNonBlockingRead(rawConfig map[string]interface{}) map[string]interface{} {
+	stripped := make(map[string]interface{}, len(rawConfig))
+	for k, v := range rawConfig {
+		if strings.EqualFold(k, nonBlockingReadKey) {
+			continue
+		}
+		stripped[k] = v
+	}
+	return stripped
 }

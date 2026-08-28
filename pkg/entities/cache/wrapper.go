@@ -26,6 +26,10 @@ import (
 type CacheWrapper struct {
 	Name  string
 	Cache Cache
+	// NonBlockingRead is this cache's configured default for racing cache reads against tile
+	// generation instead of waiting on the cache first. A layer can override it; see
+	// layer.LayerGroup.RenderTile.
+	NonBlockingRead bool
 }
 
 func (w CacheWrapper) Lookup(ctx context.Context, t pkg.TileRequest) (*pkg.Image, error) {

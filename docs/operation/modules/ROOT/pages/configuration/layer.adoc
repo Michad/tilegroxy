@@ -50,6 +50,12 @@ Configuration options:
 | No
 | false
 
+| nonblockingread
+| Overrides the cache's own xref:configuration/cache/index.adoc[nonblockingread] setting for this layer specifically
+| bool
+| No
+| Inherited from the cache
+
 | skipanalytics
 | If true, skip recording xref:configuration/analytics/index.adoc[analytics] events for this layer. Useful for internal or debugging layers you don't want cluttering usage data
 | bool
