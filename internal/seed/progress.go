@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -94,7 +95,7 @@ func (p *Progress) Matches(layerName string, e *SeedJob) bool {
 
 // Save writes the progress file. The write goes to a temporary file first so a seed killed mid-write
 // leaves the previous position behind rather than a truncated file.
-func (p *Progress) Save(path string) error {
+func (p *Progress) Save(path string, out io.Writer, verbose bool) error {
 	raw, err := json.Marshal(p)
 	if err != nil {
 		return err
@@ -111,14 +112,29 @@ func (p *Progress) Save(path string) error {
 		tmp.Close()        //nolint:errcheck,gosec // Already failing, the remove below is what matters
 		os.Remove(tmpName) //nolint:errcheck,gosec // Nothing actionable if the temp file can't be cleaned up
 
+		fmt.Fprintf(out, "Error writing progress file: %s", err)
+
 		return err
 	}
 
 	if err = tmp.Close(); err != nil {
 		os.Remove(tmpName) //nolint:errcheck,gosec // Nothing actionable if the temp file can't be cleaned up
 
+		fmt.Fprintf(out, "Error closing progress file after writing: %s", err)
+
 		return err
 	}
 
+	if verbose {
+		fmt.Fprint(out, "Saved progress file\n")
+	}
+
 	return os.Rename(tmpName, path)
+}
+
+func (p *Progress) Finish(path string, out io.Writer, verbose bool) error {
+	if verbose {
+		fmt.Fprint(out, "Removing progress file\n")
+	}
+	return os.Remove(path)
 }

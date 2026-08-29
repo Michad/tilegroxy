@@ -98,7 +98,7 @@ func initSeed() {
 	seedCmd.Flags().Float32P("max-latitude", "n", 90, "The maximum latitude to seed. The north side of the bounding box")
 	seedCmd.Flags().Float32P("min-longitude", "w", -180, "The minimum longitude to seed. The west side of the bounding box")
 	seedCmd.Flags().Float32P("max-longitude", "e", 180, "The maximum longitude to seed. The east side of the bounding box")
-	seedCmd.Flags().Bool("force", false, "Perform the seeding even if it covers an excessive number of tiles. Without this flag seeds over 100k tiles will error out. \nWarning: A seed that large can spend hours making requests against an upstream provider")
+	seedCmd.Flags().Bool("force", false, "Perform the seeding even if it covers an excessive number of tiles. Without this flag seeds over 10k tiles will error out. \nWarning: A seed that large can spend hours making requests against an upstream provider")
 	seedCmd.Flags().Uint16P("threads", "t", 1, "How many concurrent requests to use to perform seeding. Be mindful of spamming upstream providers")
 	seedCmd.Flags().StringP("progress", "p", "", "A file to use to record how far the seed got. If the file already exists the seed resumes from its recorded position instead of starting over.")
 	// TODO: support some way to support writing just to a specific cache when Multi cache is being used

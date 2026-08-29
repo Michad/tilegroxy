@@ -313,7 +313,7 @@ func Test_Seed_ResumesFromRecordedPosition(t *testing.T) {
 
 	partial := seed.NewProgress("counts", e)
 	partial.Position = 5
-	require.NoError(t, partial.Save(path))
+	require.NoError(t, partial.Save(path, os.Stdout, true))
 
 	var out bytes.Buffer
 	require.NoError(t, Seed(&cfg, SeedOptions{
@@ -345,7 +345,7 @@ func Test_Seed_ResumeFromCompletedRun(t *testing.T) {
 
 	finished := seed.NewProgress("counts", e)
 	finished.Position = e.Count()
-	require.NoError(t, finished.Save(path))
+	require.NoError(t, finished.Save(path, os.Stdout, false))
 
 	var out bytes.Buffer
 	require.NoError(t, Seed(&cfg, SeedOptions{
@@ -371,7 +371,7 @@ func Test_Seed_RefusesMismatchedProgressFile(t *testing.T) {
 
 	other := seed.NewProgress("counts", e)
 	other.Position = 3
-	require.NoError(t, other.Save(path))
+	require.NoError(t, other.Save(path, os.Stdout, false))
 
 	var out bytes.Buffer
 	err = Seed(&cfg, SeedOptions{

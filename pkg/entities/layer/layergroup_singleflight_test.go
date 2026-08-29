@@ -94,18 +94,21 @@ func Test_LayerGroup_RenderTile_DoesNotCoalesceDifferentKeys(t *testing.T) {
 	const n = 10
 	var wg sync.WaitGroup
 	wg.Add(n)
+	errs := make([]error, n)
 
 	start := time.Now()
 	for i := range n {
 		go func(i int) {
 			defer wg.Done()
-			_, err := lg.RenderTile(context.Background(), pkg.TileRequest{LayerName: "test", Z: 5, X: i, Y: 0})
-			require.NoError(t, err)
+			_, errs[i] = lg.RenderTile(context.Background(), pkg.TileRequest{LayerName: "test", Z: 5, X: i, Y: 0})
 		}(i)
 	}
 	wg.Wait()
 	elapsed := time.Since(start)
 
+	for i := range n {
+		require.NoError(t, errs[i])
+	}
 	require.Equal(t, int32(n), provider.generateCalls.Load(), "distinct tile keys must each invoke the provider independently")
 	// If distinct keys were serialized against each other this would take roughly n*delay. Allow
 	// generous headroom above a single delay to keep this robust under sandbox scheduling jitter.

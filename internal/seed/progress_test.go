@@ -32,7 +32,7 @@ func Test_Progress_RoundTrip(t *testing.T) {
 
 	p := NewProgress("osm", e)
 	p.Position = 7
-	require.NoError(t, p.Save(path))
+	require.NoError(t, p.Save(path, os.Stdout, false))
 
 	loaded, err := LoadProgress(path)
 	require.NoError(t, err)
@@ -106,7 +106,7 @@ func Test_Progress_SaveOverwritesCleanly(t *testing.T) {
 
 	for i := range uint64(3) {
 		p.Position = i
-		require.NoError(t, p.Save(path))
+		require.NoError(t, p.Save(path, os.Stdout, false))
 	}
 
 	entries, err := os.ReadDir(dir)
@@ -122,6 +122,6 @@ func Test_Progress_SaveToUnwritableLocation(t *testing.T) {
 	e, err := NewSeedJob("osm", world(), []uint{1})
 	require.NoError(t, err)
 
-	err = NewProgress("osm", e).Save(filepath.Join(t.TempDir(), "no-such-dir", "progress.json"))
+	err = NewProgress("osm", e).Save(filepath.Join(t.TempDir(), "no-such-dir", "progress.json"), os.Stdout, false)
 	require.Error(t, err)
 }

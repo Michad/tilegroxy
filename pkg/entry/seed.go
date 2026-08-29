@@ -93,7 +93,7 @@ func Seed(cfg *config.Config, opts SeedOptions, out io.Writer) error {
 	}
 
 	if progress != nil {
-		if err = progress.Save(opts.ProgressFile); err != nil {
+		if err = progress.Finish(opts.ProgressFile, out, opts.Verbose); err != nil {
 			return err
 		}
 	}
@@ -181,7 +181,7 @@ func seedTiles(seedJob *seed.SeedJob, opts SeedOptions, out io.Writer, layerGrou
 	go func() {
 		defer trackerWg.Done()
 
-		trackErr = trackProgress(opts, progress, start, done)
+		trackErr = trackProgress(opts, progress, start, done, out)
 	}()
 
 feed:
@@ -221,7 +221,7 @@ type indexedTile struct {
 	index   uint64
 }
 
-func trackProgress(opts SeedOptions, progress *seed.Progress, start uint64, done <-chan uint64) error {
+func trackProgress(opts SeedOptions, progress *seed.Progress, start uint64, done <-chan uint64, out io.Writer) error {
 	next := start
 	pending := make(map[uint64]struct{})
 	sinceSave := 0
@@ -254,7 +254,7 @@ func trackProgress(opts SeedOptions, progress *seed.Progress, start uint64, done
 			progress.Position = next
 			sinceSave = 0
 
-			saveErr = progress.Save(opts.ProgressFile)
+			saveErr = progress.Save(opts.ProgressFile, out, opts.Verbose)
 		}
 	}
 
