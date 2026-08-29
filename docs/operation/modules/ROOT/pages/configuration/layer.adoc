@@ -56,6 +56,13 @@ Configuration options:
 | No
 | false
 
+| allowcoalesce
+| Whether to allow concurrent requests for the same tile to be combined into one tile generation call. This includes requests triggered by different users. Helps avoid your upstream provider being spammed if, for whatever reason, your clients spam a single tile. However, if your tiles are customized per user, you will want to set this false.
+| bool
+| No
+| Auto (based on whether caching is enabled)
+
+
 | description
 | Populates the `description` field of this layer's xref:configuration/tilejson.adoc[TileJSON] document. Has no effect unless TileJSON is enabled
 | string

@@ -257,6 +257,7 @@ type LayerConfig struct {
 	Attribution    string            // Optional. Populates the `attribution` field of this layer's TileJSON document. Has no effect unless TileJSON is enabled
 	Examples       []string          // Optional. Concrete layer names used to generate TileJSON documents for a `pattern` layer. Has no effect on a layer identified by a plain id
 	CacheVersion   string            // Optional. Allows invalidating cache entries when changed. Prefixed into cache keys but not he actual layer name
+	AllowCoalesce  *bool             // Optional. Whether two requests that come in at the same time for the same tile should be combined. Defaults to auto, which is determined by whether caching is enabled
 }
 
 type Config struct {

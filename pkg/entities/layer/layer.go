@@ -184,18 +184,17 @@ func validateParamMatches(values map[string]string, regexp map[string]*regexp.Re
 }
 
 type Layer struct {
-	ID             string
-	Pattern        []layerSegment
-	ParamValidator map[string]*regexp.Regexp
-	Config         config.LayerConfig
-	Provider       Provider
-	Cache          cache.Cache
-	ErrorMessages  config.ErrorMessages
-	// DataType is the layer's resolved data type: Config.DataType when set, otherwise inferred
-	// from the provider tree. config.DataTypeUnknown when neither resolves it.
-	DataType           config.DataType
+	ID                 string
+	Pattern            []layerSegment
+	ParamValidator     map[string]*regexp.Regexp
+	Config             config.LayerConfig
+	Provider           Provider
+	Cache              cache.Cache
+	ErrorMessages      config.ErrorMessages
+	DataType           config.DataType // The version from the config with auto-resolution applied
 	providerContext    ProviderContext
 	authMutex          sync.Mutex
+	allowCoalesce      bool // The version from config with auto-resolution applied
 	tileAllCounter     metric.Int64Counter
 	tileAuthCounter    metric.Int64Counter
 	tileErrorCounter   metric.Int64Counter
@@ -248,7 +247,7 @@ func constructCropWrappedProvider(rawConfig config.LayerConfig, errorMessages co
 	})
 }
 
-func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup, secreter secret.Secreter, datastores *datastore.DatastoreRegistry) (*Layer, error) {
+func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.ClientConfig, cacheIsNoop bool, errorMessages config.ErrorMessages, layerGroup *LayerGroup, secreter secret.Secreter, datastores *datastore.DatastoreRegistry) (*Layer, error) {
 	var err error
 	if rawConfig.Client == nil {
 		rawConfig.Client = &defaultClientConfig
@@ -287,6 +286,18 @@ func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.Cli
 			LayerGroup:    layerGroup,
 			Datastores:    datastores,
 		})
+	}
+
+	var allowCoalesce bool
+	if rawConfig.AllowCoalesce != nil {
+		allowCoalesce = *rawConfig.AllowCoalesce
+	} else {
+		// Default automatic decision based on cache enablement
+		if rawConfig.SkipCache {
+			allowCoalesce = false
+		} else {
+			allowCoalesce = !cacheIsNoop
+		}
 	}
 
 	if err != nil {
@@ -332,7 +343,7 @@ func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.Cli
 	tileErrorCounter, err3 := meter.Int64Counter("tilegroxy.tiles.layer."+sanitizedID+".error", metric.WithDescription("Number of tile requests that error during generation for "+rawConfig.ID))
 	tileSuccessCounter, err4 := meter.Int64Counter("tilegroxy.tiles.layer."+sanitizedID+".success", metric.WithDescription("Number of tile requests that result in a tile for "+rawConfig.ID))
 
-	return &Layer{rawConfig.ID, segments, validator, rawConfig, provider, nil, errorMessages, datatype, ProviderContext{}, sync.Mutex{}, tileAllCounter, tileAuthCounter, tileErrorCounter, tileSuccessCounter}, errors.Join(err1, err2, err3, err4)
+	return &Layer{rawConfig.ID, segments, validator, rawConfig, provider, nil, errorMessages, datatype, ProviderContext{}, sync.Mutex{}, allowCoalesce, tileAllCounter, tileAuthCounter, tileErrorCounter, tileSuccessCounter}, errors.Join(err1, err2, err3, err4)
 }
 
 // getProviderContext returns a snapshot of the current provider context, re-authenticating
