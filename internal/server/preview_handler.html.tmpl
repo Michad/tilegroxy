@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tilegroxy preview - {{.LayerName}}</title>
+<link href='https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css' rel='stylesheet' />
+<style>
+  html, body, #map { height: 100%; margin: 0; }
+  #vector-notice {
+    position: absolute; z-index: 1; top: 10px; left: 50px;
+    background: white; padding: 6px 10px; border-radius: 4px;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.4); font: 12px sans-serif; max-width: 60%;
+  }
+</style>
+</head>
+<body>
+{{if .IsVector}}
+<div id="vector-notice">This is a vector tile layer. Styling using layer name "{{.VectorSourceLayer}}". If nothing is drawn, the layer name might be wrong. Override with ?name= to set it manually.</div>
+{{end}}
+<div id="map"></div>
+<script  type='module'>
+  import * as maplibregl from 'https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.mjs';
+  var bounds = {{if .HasBounds}}[[{{.West}}, {{.South}}], [{{.East}}, {{.North}}]]{{else}}null{{end}};
+  var tileURL = "{{.TileURL}}";
+  var minZoom = {{.MinZoom}};
+  var guessedSourceLayer = {{if .IsVector}}"{{.VectorSourceLayer}}"{{else}}null{{end}};
+  var sourceLayerForced = {{.SourceLayerForced}};
+
+  var map = new maplibregl.Map({
+    container: 'map',
+    style: {
+      version: 8,
+      sources: {
+        tiles: {
+          type: {{if .IsVector}}"vector"{{else}}"raster"{{end}},
+          tiles: [tileURL],
+          {{if not .IsVector}}tileSize: 256,{{end}}
+          minzoom: minZoom,
+          maxzoom: {{.MaxZoom}},
+          attribution: {{.Attribution}}
+        }
+      },
+      layers: [
+        {{if .IsVector}}
+        {
+          id: "tiles-line",
+          type: "line",
+          source: "tiles",
+          "source-layer": guessedSourceLayer,
+          paint: { "line-color": "#3388ff", "line-width": 1 }
+        },
+        {
+          id: "tiles-fill",
+          type: "fill",
+          source: "tiles",
+          "source-layer": guessedSourceLayer,
+          paint: { "fill-color": "#3388ff", "fill-opacity": 0.2 }
+        }
+        {{else}}
+        {
+          id: "tiles-raster",
+          type: "raster",
+          source: "tiles"
+        }
+        {{end}}
+      ]
+    },
+    bounds: bounds,
+    center: bounds ? undefined : [0, 0],
+    zoom: bounds ? undefined : minZoom
+  });
+
+  map.addControl(new maplibregl.NavigationControl());
+
+  {{if .IsVector}}
+  // Best-effort: fetch one sample tile directly and scan its raw protobuf bytes for the layer
+  function readVarint(bytes, pos) {
+    var result = 0, shift = 0, b;
+    do {
+      b = bytes[pos.i++];
+      result |= (b & 0x7f) << shift;
+      shift += 7;
+    } while (b & 0x80);
+    return result >>> 0;
+  }
+
+  function mvtLayerNames(bytes) {
+    var names = [];
+    var pos = { i: 0 };
+    while (pos.i < bytes.length) {
+      var tag = readVarint(bytes, pos);
+      var field = tag >>> 3;
+      var wireType = tag & 0x7;
+
+      if (wireType === 2) {
+        var len = readVarint(bytes, pos);
+        var start = pos.i;
+        pos.i += len;
+
+        if (field === 3) {
+          var layerBytes = bytes.subarray(start, start + len);
+          var layerPos = { i: 0 };
+          while (layerPos.i < layerBytes.length) {
+            var layerTag = readVarint(layerBytes, layerPos);
+            var layerField = layerTag >>> 3;
+            var layerWireType = layerTag & 0x7;
+
+            if (layerWireType === 2) {
+              var layerLen = readVarint(layerBytes, layerPos);
+              var layerStart = layerPos.i;
+              layerPos.i += layerLen;
+
+              if (layerField === 1) {
+                names.push(new TextDecoder().decode(layerBytes.subarray(layerStart, layerStart + layerLen)));
+              }
+            } else if (layerWireType === 0) {
+              readVarint(layerBytes, layerPos);
+            } else {
+              break;
+            }
+          }
+        }
+      } else if (wireType === 0) {
+        readVarint(bytes, pos);
+      } else {
+        break;
+      }
+    }
+    return names;
+  }
+
+  function lonLatToTile(lon, lat, z) {
+    var n = Math.pow(2, z);
+    var x = Math.floor((lon + 180) / 360 * n);
+    var latRad = lat * Math.PI / 180;
+    var y = Math.floor((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n);
+    return [x, y];
+  }
+
+  async function decodeSampleTileLayers() {
+    var center = bounds
+      ? [(bounds[0][0] + bounds[1][0]) / 2, (bounds[0][1] + bounds[1][1]) / 2]
+      : [0, 0];
+    var [x, y] = lonLatToTile(center[0], center[1], minZoom);
+    var sampleURL = tileURL
+      .replace("{z}", minZoom).replace("{x}", x).replace("{y}", y);
+
+    var res = await fetch(sampleURL);
+    if (!res.ok) return null;
+
+    var buf = new Uint8Array(await res.arrayBuffer());
+    if (buf.length >= 2 && buf[0] === 0x1f && buf[1] === 0x8b) {
+      var ds = new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream("gzip")));
+      buf = new Uint8Array(await ds.arrayBuffer());
+    }
+
+    return mvtLayerNames(buf);
+  }
+
+  if (!sourceLayerForced) decodeSampleTileLayers().then(function (names) {
+    if (!names || names.length === 0 || names.includes(guessedSourceLayer)) return;
+
+    var actual = names[0];
+    map.getStyle().layers.forEach(function (layer) {
+      if (layer.source === "tiles" && layer["source-layer"] === guessedSourceLayer) {
+        map.setLayoutProperty(layer.id, "visibility", "none");
+        var replacement = Object.assign({}, layer, { id: layer.id + "-actual", "source-layer": actual });
+        delete replacement.metadata;
+        map.addLayer(replacement);
+      }
+    });
+
+    var notice = document.getElementById("vector-notice");
+    if (notice) {
+          notice.textContent = 'This is a vector tile layer. Styling using layer name "' + actual + '". If nothing is drawn, the layer name might be wrong.Override with ?name= to set it manually.';
+    }
+  }).catch(function () {
+    // Best-effort probe; leave the guessed source-layer and default notice in place on failure.
+  });
+  {{end}}
+</script>
+</body>
+</html>
