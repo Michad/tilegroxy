@@ -18,6 +18,8 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -170,5 +172,58 @@ func Test_SeedCommand_ExcessTiles(t *testing.T) {
 	fmt.Println(string(out))
 
 	assert.NotEmpty(t, out)
+	assert.Equal(t, 1, exitStatus)
+}
+
+// The progress file is what makes an interrupted seed resumable, so the command has to produce one
+// by default and pick it back up when asked.
+func Test_SeedCommand_ProgressFileAndResume(t *testing.T) {
+	exitStatus = -1
+	rootCmd.ResetFlags()
+	seedCmd.ResetFlags()
+	initRoot()
+	initSeed()
+
+	progressPath := filepath.Join(t.TempDir(), "progress.json")
+
+	b := bytes.NewBufferString("")
+	rootCmd.SetOut(b)
+	rootCmd.SetErr(b)
+	rootCmd.SetArgs([]string{"seed", "--verbose", "--progress", progressPath, "-c", "../examples/configurations/simple.json", "-l", "osm", "-z", "1"})
+	require.NoError(t, rootCmd.Execute())
+	assert.Equal(t, -1, exitStatus)
+
+	raw, err := os.ReadFile(progressPath)
+	require.NoError(t, err)
+	assert.Contains(t, string(raw), `"position":4`)
+
+	rootCmd.SetArgs([]string{"seed", "--verbose", "--progress", progressPath, "-c", "../examples/configurations/simple.json", "-l", "osm", "-z", "1"})
+	require.NoError(t, rootCmd.Execute())
+	assert.Equal(t, -1, exitStatus)
+}
+
+// A progress file recorded for a different area indexes into a different sequence of tiles.
+func Test_SeedCommand_MismatchedProgressFile(t *testing.T) {
+	exitStatus = -1
+	rootCmd.ResetFlags()
+	seedCmd.ResetFlags()
+	initRoot()
+	initSeed()
+
+	progressPath := filepath.Join(t.TempDir(), "progress.json")
+
+	b := bytes.NewBufferString("")
+	rootCmd.SetOut(b)
+	rootCmd.SetErr(b)
+	rootCmd.SetArgs([]string{"seed", "--progress", progressPath, "-c", "../examples/configurations/simple.json", "-l", "osm", "-z", "1"})
+	require.NoError(t, rootCmd.Execute())
+	require.Equal(t, -1, exitStatus)
+
+	rootCmd.SetArgs([]string{"seed", "--progress", progressPath, "-c", "../examples/configurations/simple.json", "-l", "osm", "-z", "2"})
+	require.NoError(t, rootCmd.Execute())
+
+	out, err := io.ReadAll(b)
+	require.NoError(t, err)
+	assert.Contains(t, string(out), "different seed run")
 	assert.Equal(t, 1, exitStatus)
 }

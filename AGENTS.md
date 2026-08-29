@@ -23,7 +23,7 @@ These apply to every change. Follow them without being asked.
 6. **Always run `make lint` and apply everything it reports**, advisory suggestions included.
    Fix findings rather than suppressing them with `//nolint`.
 7. **Avoid breaking backwards compatibility.** See the contract below. When a break looks
-   unavoidable, explain what breaks and let the user decide.
+   unavoidable, explain what breaks and let the user decide. This doesn't apply to uncommitted or unreleased changes.
 8. **Keep comments short.** Explain the why as simply as possible. Anything longer than a
    sentence, or that affects more than one place in the code, belongs in the development
    documentation instead.
