@@ -14,7 +14,9 @@
 package pkg
 
 import (
+	"bytes"
 	"context"
+	"encoding/gob"
 	"math/rand/v2"
 	"net/http"
 	"net/http/httptest"
@@ -281,7 +283,7 @@ func Fuzz_EncodeDecodeImage(f *testing.F) {
 		f.Add(b, c)
 	}
 	f.Fuzz(func(t *testing.T, b []byte, c string) {
-		img1 := Image{Content: b, ContentType: c}
+		img1 := Image{Content: b, ContentType: c, CreatedAt: 1234567890}
 
 		b, err := img1.Encode()
 		require.NoError(t, err)
@@ -290,6 +292,7 @@ func Fuzz_EncodeDecodeImage(f *testing.F) {
 
 		assert.Equal(t, img1.ContentType, img2.ContentType)
 		assert.Equal(t, img1.Content, img2.Content)
+		assert.Equal(t, img1.CreatedAt, img2.CreatedAt)
 
 		// Test backwards compatibility
 		img3, err := DecodeImage(img1.Content)
@@ -297,4 +300,21 @@ func Fuzz_EncodeDecodeImage(f *testing.F) {
 		assert.Equal(t, img3.Content, img2.Content)
 		assert.Empty(t, img3.ContentType)
 	})
+}
+
+// v1 payloads (Content + ContentType, no CreatedAt) must still decode after v2 was introduced.
+func Test_DecodeImage_V1(t *testing.T) {
+	b := bytes.Buffer{}
+	e := gob.NewEncoder(&b)
+
+	require.NoError(t, e.Encode("v1"))
+	require.NoError(t, e.Encode([]byte("tiledata")))
+	require.NoError(t, e.Encode("image/png"))
+
+	img, err := DecodeImage(b.Bytes())
+	require.NoError(t, err)
+	require.NotNil(t, img)
+	assert.Equal(t, []byte("tiledata"), img.Content)
+	assert.Equal(t, "image/png", img.ContentType)
+	assert.Zero(t, img.CreatedAt)
 }
