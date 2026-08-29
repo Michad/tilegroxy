@@ -201,3 +201,4 @@ The following are currently supported:
  ParamsBothOrNeither
  ParamsMutuallyExclusive
  EnumError
+ Timeout

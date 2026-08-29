@@ -202,7 +202,7 @@ func setupHandlers(cfg *config.Config, ent *entities.Entities) (http.Handler, re
 	}
 
 	rootHandler = httpContextHandler{rootHandler, cfg.Error}
-	rootHandler = http.TimeoutHandler(rootHandler, time.Duration(cfg.Server.Timeout)*time.Second, cfg.Error.Messages.Timeout) // #nosec G115
+	rootHandler = newTimeoutHandler(rootHandler, time.Duration(cfg.Server.Timeout)*time.Second, &cfg.Error) // #nosec G115
 	var closeAccessLog func() error
 	rootHandler, closeAccessLog, err = configureAccessLogging(cfg.Logging.Access, cfg.Error.Messages, rootHandler)
 
@@ -279,8 +279,8 @@ func ListenAndServe(config *config.Config, ent *entities.Entities, reloadPtr *fu
 	}
 
 	// Requests hang off the un-signalled root. Deriving them from the signal context instead would
-	// cancel every in-flight request the moment SIGTERM lands, which TimeoutHandler turns into an
-	// empty 503, defeating both the drain delay and the server's own graceful shutdown
+	// cancel every in-flight request the moment SIGTERM lands, which timeoutHandler turns into a
+	// 503, defeating both the drain delay and the server's own graceful shutdown
 	rootCtx := pkg.BackgroundContext()
 
 	ctx, stop := signal.NotifyContext(rootCtx, InterruptFlags...)
