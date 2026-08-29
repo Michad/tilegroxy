@@ -240,7 +240,12 @@ func (lg *LayerGroup) RenderTile(ctx context.Context, tileRequest pkg.TileReques
 		return nil, err
 	}
 
-	img, err = l.Cache.Lookup(ctx, tileRequest)
+	cacheTileRequest := tileRequest
+	if l.Config.CacheVersion != "" {
+		cacheTileRequest = pkg.TileRequest{LayerName: l.Config.CacheVersion + tileRequest.LayerName, X: tileRequest.X, Y: tileRequest.Y, Z: tileRequest.Z}
+	}
+
+	img, err = l.Cache.Lookup(ctx, cacheTileRequest)
 
 	if img != nil {
 		slog.DebugContext(ctx, "Cache hit")
@@ -269,7 +274,7 @@ func (lg *LayerGroup) RenderTile(ctx context.Context, tileRequest pkg.TileReques
 		case lg.cacheWriteLimiter <- struct{}{}:
 			go func() {
 				defer func() { <-lg.cacheWriteLimiter }()
-				writeCache(ctx, l.Cache, tileRequest, img)
+				writeCache(ctx, l.Cache, cacheTileRequest, img)
 			}()
 		default:
 			slog.WarnContext(ctx, "Skipping cache write: too many cache writes already in flight")
