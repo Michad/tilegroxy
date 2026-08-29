@@ -97,6 +97,12 @@ Configuration options:
 | string[]
 | No
 | None
+
+| cacheversion
+| A version identifier used to invalidate cache entries (does not delete the cache entries). Cache entries are prefixed with this identifier, so when this changes no pre-existing cache entries ever match. It's recommended to treat this as a serial version number.  
+| string
+| No
+| None
 |===
 
 Example:
