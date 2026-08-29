@@ -1,14 +1,12 @@
 = S3
 
-Cache tiles as objects in an AWS S3 bucket.
+Cache tiles as objects in an AWS S3 bucket, or some other S3 compatible object storage.
+
+== AWS Specific Notes
 
 Ensure the user you're using has proper permissions for reading and writing objects in the bucket.  The permissions required are the minimal set you'd expect: GetObject and PutObject.  It's highly recommended to also grant ListBucket permissions, otherwise the log will contain misleading 403 error messages for every cache miss.  Also ensure the user has access to the KMS key if using bucket encryption.
 
-If you're using a Directory Bucket AKA Express One Zone there's a few things to configure:
-
-* Ensure `storageclass` is set to "EXPRESS_ONEZONE"
-* The bucket contains the full name including suffix. For example: `+my-tilegroxy-cache--use1-az6--x-s3+`
-
+== 
 
 Name should be "s3"
 
@@ -65,9 +63,15 @@ Configuration options:
 | string
 | No
 | AWS Auto
+
+| usepathstyle
+| Use path-style addressing (`https://endpoint/bucket/key`) instead of virtual-hosted-style (`https://bucket.endpoint/key`). Needed for some S3-compatible services
+| boolean
+| No
+| false
 |===
 
-Example:
+S3 Example:
 
 [,yaml]
 ----
@@ -78,4 +82,18 @@ cache:
   storageclass: EXPRESS_ONEZONE
   region: us-east-1
   profile: tilegroxy_s3_user
+----
+
+R2 Example:
+
+[,yaml]
+----
+cache:
+  name: s3
+  bucket: my-tilegroxy-cache
+  endpoint: "https://<account-id>.r2.cloudflarestorage.com"
+  region: auto
+  usepathstyle: true
+  access: "<R2 access key id>"
+  secret: "<R2 secret access key>"
 ----
