@@ -34,7 +34,7 @@ func Test_ConstructLayer_Examples_OnPlainIDLayer_Fails(t *testing.T) {
 		Provider: map[string]any{"name": "fixed-tj-1"},
 	}
 
-	l, err := ConstructLayer(rawConfig, config.ClientConfig{}, tileJSONErrorMessages, nil, nil, nil)
+	l, err := ConstructLayer(rawConfig, config.ClientConfig{}, true, tileJSONErrorMessages, nil, nil, nil)
 	require.Error(t, err)
 	require.Nil(t, l)
 }
@@ -49,7 +49,7 @@ func Test_ConstructLayer_Examples_MatchingPattern_Succeeds(t *testing.T) {
 		Provider: map[string]any{"name": "fixed-tj-2"},
 	}
 
-	l, err := ConstructLayer(rawConfig, config.ClientConfig{}, tileJSONErrorMessages, nil, nil, nil)
+	l, err := ConstructLayer(rawConfig, config.ClientConfig{}, true, tileJSONErrorMessages, nil, nil, nil)
 	require.NoError(t, err)
 	require.NotNil(t, l)
 }
@@ -64,7 +64,7 @@ func Test_ConstructLayer_Examples_NotMatchingPattern_Fails(t *testing.T) {
 		Provider: map[string]any{"name": "fixed-tj-3"},
 	}
 
-	l, err := ConstructLayer(rawConfig, config.ClientConfig{}, tileJSONErrorMessages, nil, nil, nil)
+	l, err := ConstructLayer(rawConfig, config.ClientConfig{}, true, tileJSONErrorMessages, nil, nil, nil)
 	require.Error(t, err)
 	require.Nil(t, l)
 }
@@ -80,7 +80,7 @@ func Test_ConstructLayer_Examples_FailingParamValidator_Fails(t *testing.T) {
 		Provider:       map[string]any{"name": "fixed-tj-4"},
 	}
 
-	l, err := ConstructLayer(rawConfig, config.ClientConfig{}, tileJSONErrorMessages, nil, nil, nil)
+	l, err := ConstructLayer(rawConfig, config.ClientConfig{}, true, tileJSONErrorMessages, nil, nil, nil)
 	require.Error(t, err)
 	require.Nil(t, l)
 }
