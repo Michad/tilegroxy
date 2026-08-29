@@ -4,7 +4,7 @@ When running tilegroxy by default it runs in a non-hardened mode most fit for de
 
 [%interactive]
 * [ ] Deploy tilegroxy in a high-availability manner (that is to say N+1 Load Balanced) 
-* [ ] Configure Server.Production=true to disable X-Powered-By header and developer documentation
+* [ ] Ensure Server.Production=true to disable X-Powered-By header and developer documentation
 * [ ] Configure Server.Header with any static headers you want returned such as CORS headers. A good reference of headers to consider is available link:https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html[here]
 * [ ] Configure Client.UserAgent with a agent that reflects your organization rather than tilegroxy itself
 * [ ] Configure logging to output at warning or error levels to avoid a bad signal to noise ratio
