@@ -116,7 +116,7 @@ func checkSeedSize(seedJob *seed.SeedJob, opts SeedOptions, out io.Writer) error
 		return nil
 	}
 
-	return fmt.Errorf("too many tiles to seed (%v > %v). %v\n",
+	return fmt.Errorf("too many tiles to seed (%v > %v). %v",
 		count,
 		pkg.Ternary(count > math.MaxInt32, math.MaxInt32, warnCount),
 		pkg.Ternary(count > math.MaxInt32, "", "Run with --force if you're sure you want to generate this many tiles"))

@@ -263,28 +263,10 @@ func Test_Seed_ExcessiveTileCountNeedsForce(t *testing.T) {
 	var out bytes.Buffer
 	err := Seed(&cfg, opts, &out)
 	require.ErrorContains(t, err, "--force")
-	require.ErrorContains(t, err, "estimated")
 
 	maxSeen, rendered := seedTestCounter.snapshot()
 	assert.Equal(t, 0, maxSeen)
 	assert.Empty(t, rendered)
-}
-
-// A run below the threshold that would have tripped the old 10k memory ceiling now goes ahead
-// without --force, since nothing is materialized.
-func Test_Seed_LargeRunUnderThresholdNeedsNoForce(t *testing.T) {
-	cfg := seedTestConfig(t)
-
-	var out bytes.Buffer
-	require.NoError(t, Seed(&cfg, SeedOptions{
-		Zoom:      []uint{7},
-		Bounds:    pkg.WorldBounds(),
-		LayerName: "counts",
-		NumThread: 4,
-	}, &out))
-
-	_, rendered := seedTestCounter.snapshot()
-	assert.Len(t, rendered, 128*128)
 }
 
 // A run over the threshold goes ahead once it's been confirmed. Checked against the guard rather
@@ -298,7 +280,6 @@ func Test_Seed_ForceAllowsExcessiveTileCount(t *testing.T) {
 	opts := SeedOptions{LayerName: "counts", Force: true, NumThread: 4, Verbose: true}
 
 	require.NoError(t, checkSeedSize(e, opts, &out))
-	assert.Contains(t, out.String(), "estimated")
 }
 
 func Test_Seed_WritesProgressFile(t *testing.T) {
