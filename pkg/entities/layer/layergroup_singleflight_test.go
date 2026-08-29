@@ -33,6 +33,7 @@ func newSingleflightTestLayerGroup(l *Layer, c *alwaysMissCache) *LayerGroup {
 	l.tileAuthCounter = noop.Int64Counter{}
 	l.tileErrorCounter = noop.Int64Counter{}
 	l.tileSuccessCounter = noop.Int64Counter{}
+	l.allowCoalesce = true
 	l.Cache = c
 
 	return &LayerGroup{
