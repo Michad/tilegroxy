@@ -24,6 +24,7 @@
 *** xref:configuration/cache/memory.adoc[]
 *** xref:configuration/cache/redis.adoc[]
 *** xref:configuration/cache/s3.adoc[]
+*** xref:configuration/cache/ttl.adoc[]
 ** xref:configuration/authentication/index.adoc[]
 *** xref:configuration/authentication/none.adoc[]
 *** xref:configuration/authentication/static_key.adoc[]
