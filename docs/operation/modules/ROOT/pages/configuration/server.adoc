@@ -47,7 +47,7 @@ Configuration options:
 | Production
 | Hardens operation for usage in production. For instance, controls serving splash page, documentation, the xref:preview.adoc[layer preview] page, x-powered-by header.
 | bool
-| No
+| Yes
 | false
 
 | Timeout
