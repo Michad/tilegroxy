@@ -21,6 +21,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 )
 
 type Cache interface {
@@ -32,6 +33,7 @@ type Cache interface {
 // the Initialize signature stays stable
 type CacheDeps struct {
 	ErrorMessages config.ErrorMessages
+	Datastores    *datastore.DatastoreRegistry
 }
 
 type CacheRegistration interface {

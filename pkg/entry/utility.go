@@ -51,7 +51,7 @@ func configToEntities(cfg config.Config) (*entities.Entities, error) {
 		return nil, err
 	}
 
-	cacheObj, err := cache.ConstructCache(cfg.Cache, cache.CacheDeps{ErrorMessages: cfg.Error.Messages})
+	cacheObj, err := cache.ConstructCache(cfg.Cache, cache.CacheDeps{ErrorMessages: cfg.Error.Messages, Datastores: datastores})
 	if err != nil {
 		return nil, fmt.Errorf("error constructing cache: %w", err)
 	}

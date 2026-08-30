@@ -23,8 +23,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Michad/tilegroxy/internal/datastores"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
+	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -127,7 +129,7 @@ func TestRedisWithContainerRing(t *testing.T) {
 	require.NoError(t, err)
 
 	cfg := RedisConfig{
-		Mode:    ModeRing,
+		Mode:    datastores.RedisModeRing,
 		Servers: []HostAndPort{extractHostAndPort(t, endpoint), extractHostAndPort(t, endpoint2)},
 	}
 
@@ -197,4 +199,45 @@ func TestRedisWithContainerDiffDb(t *testing.T) {
 	require.NoError(t, err)
 	validateSaveAndLookup(t, r)
 	validateSaveAndLookup(t, r2)
+}
+
+func TestRedisWithContainerUsingDatastore(t *testing.T) {
+	ctx := context.Background()
+	redisC, cleanupF := setupRedisContainer(ctx, t)
+	if !assert.NotNil(t, redisC) {
+		return
+	}
+
+	defer cleanupF(t)
+
+	endpoint, err := redisC.Endpoint(ctx, "")
+	require.NoError(t, err)
+
+	hostAndPort := extractHostAndPort(t, endpoint)
+
+	dsCfg := []map[string]interface{}{
+		{
+			"name": "redis",
+			"id":   "myredis",
+			"host": hostAndPort.Host,
+			"port": hostAndPort.Port,
+		},
+	}
+
+	reg, err := datastore.ConstructDatastoreRegistry(dsCfg, nil, config.ErrorMessages{})
+	require.NoError(t, err)
+	defer func() { require.NoError(t, reg.Close(ctx)) }()
+
+	cfg := RedisConfig{Datastore: "myredis"}
+
+	r, err := RedisRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}, Datastores: reg})
+	require.NoError(t, err)
+
+	validateSaveAndLookup(t, r)
+
+	// Closing the cache must not close the shared datastore connection out from under other consumers.
+	require.NoError(t, r.(interface {
+		Close(ctx context.Context) error
+	}).Close(ctx))
+	validateSaveAndLookup(t, r)
 }

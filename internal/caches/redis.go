@@ -19,48 +19,41 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"slices"
-	"strconv"
 	"time"
 
+	"github.com/Michad/tilegroxy/internal/datastores"
 	"github.com/Michad/tilegroxy/pkg"
 
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
+	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	rediscache "github.com/go-redis/cache/v9"
 	"github.com/redis/go-redis/v9"
 )
 
-const (
-	ModeStandalone = "standalone"
-	ModeCluster    = "cluster"
-	ModeRing       = "ring"
-)
-
-var AllModes = []string{ModeStandalone, ModeCluster, ModeRing}
-
+// Note: inline connection info is intentionally undocumented, just left functional for compatibility
 type RedisConfig struct {
 	HostAndPort `mapstructure:",squash"` // Host and Port for a single server. A convenience equivalent to supplying Servers with a single entry
 	DB          int                      // Database number, defaults to 0
 	KeyPrefix   string                   // Prefix to keynames stored in cache
 	Username    string                   // Username to use to authenticate
 	Password    string                   // Password to use to authenticate
-	Mode        string                   // Controls operating mode. One of AllModes. Defaults to standalone
+	Mode        string                   // Controls operating mode. One of datastores.AllRedisModes. Defaults to standalone
 	TTL         uint32                   // Cache expiration in seconds. Max of 1 year. Default to 1 day
 	Servers     []HostAndPort            // The list of servers to use.
+	Datastore   string                   // ID of a redis datastore to reuse instead of connecting directly. Mutually exclusive with the connection parameters above
 }
 
 const (
-	redisDefaultHost = "127.0.0.1"
-	redisDefaultPort = 6379
-	redisDefaultTTL  = 60 * 60 * 24
-	redisMaxTTL      = 60 * 60 * 24 * 365
+	redisDefaultTTL = 60 * 60 * 24
+	redisMaxTTL     = 60 * 60 * 24 * 365
 )
 
 type Redis struct {
 	RedisConfig
 	cache *rediscache.Cache
 	// The underlying client, retained solely so it can be shut down. rediscache.Cache doesn't
-	// expose what it wraps, so we have to hold onto it ourselves.
+	// expose what it wraps, so we have to hold onto it ourselves. Left nil when the client comes
+	// from a shared datastore, since the datastore registry owns closing it in that case.
 	client io.Closer
 }
 
@@ -82,98 +75,77 @@ func (s RedisRegistration) Name() string {
 func (s RedisRegistration) Initialize(configAny any, deps cache.CacheDeps) (cache.Cache, error) {
 	config := configAny.(RedisConfig)
 
-	var tileCache *rediscache.Cache
+	config.TTL = clampRedisTTL(config.TTL)
 
-	if config.Mode == "" {
-		config.Mode = ModeStandalone
+	if config.Datastore != "" {
+		return initializeRedisFromDatastore(config, deps)
 	}
 
-	if !slices.Contains(AllModes, config.Mode) {
-		return nil, fmt.Errorf(deps.ErrorMessages.EnumError, "cache.redis.mode", config.Mode, AllModes)
+	return initializeRedisDirect(config, deps)
+}
+
+func clampRedisTTL(ttl uint32) uint32 {
+	if ttl == 0 {
+		return redisDefaultTTL
+	}
+	if ttl > redisMaxTTL {
+		return redisMaxTTL
 	}
 
-	if len(config.Servers) == 0 {
-		if config.Host == "" {
-			config.Host = redisDefaultHost
-		}
-		if config.Port == 0 {
-			config.Port = redisDefaultPort
-		}
+	return ttl
+}
 
-		config.Servers = []HostAndPort{{config.Host, config.Port}}
-	} else if config.Host != "" {
-		return nil, fmt.Errorf(deps.ErrorMessages.ParamsMutuallyExclusive, "config.redis.host", "config.redis.servers")
+func initializeRedisFromDatastore(config RedisConfig, deps cache.CacheDeps) (cache.Cache, error) {
+	if config.Host != "" || len(config.Servers) > 0 || config.Username != "" || config.Password != "" || config.Mode != "" || config.DB != 0 {
+		return nil, fmt.Errorf(deps.ErrorMessages.ParamsMutuallyExclusive, "cache.redis.datastore", "cache.redis connection parameters")
 	}
 
-	if config.TTL == 0 {
-		config.TTL = redisDefaultTTL
-	}
-	if config.TTL > redisMaxTTL {
-		config.TTL = redisMaxTTL
+	ds, ok := deps.Datastores.Get(config.Datastore)
+	if !ok {
+		return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "cache.redis.datastore", config.Datastore)
 	}
 
-	var tileClient io.Closer
-
-	switch config.Mode {
-	case ModeCluster:
-		if config.DB != 0 {
-			return nil, fmt.Errorf(deps.ErrorMessages.ParamsMutuallyExclusive, "cache.redis.db", "cache.redis.cluster")
-		}
-
-		addrs := HostAndPortArrayToStringArray(config.Servers)
-
-		client := redis.NewClusterClient(&redis.ClusterOptions{
-			Addrs:    addrs,
-			Username: config.Username,
-			Password: config.Password,
-		})
-
-		tileClient = client
-
-		tileCache = rediscache.New(&rediscache.Options{
-			Redis: client,
-		})
-	case ModeRing:
-		if len(config.Servers) < 2 {
-			// Not the best error message but the typical user of this should be able to figure it out
-			return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "length(cache.redis.servers)", len(config.Servers))
-		}
-
-		addrMap := make(map[string]string)
-		for _, addr := range config.Servers {
-			addrMap[addr.Host] = ":" + strconv.Itoa(int(addr.Port))
-		}
-
-		client := redis.NewRing(&redis.RingOptions{
-			Addrs:    addrMap,
-			Username: config.Username,
-			Password: config.Password,
-			DB:       config.DB,
-		})
-
-		tileClient = client
-
-		tileCache = rediscache.New(&rediscache.Options{
-			Redis: client,
-		})
-	default:
-		client := redis.NewClient(&redis.Options{
-			Addr:     config.Servers[0].Host + ":" + strconv.Itoa(int(config.Servers[0].Port)),
-			Username: config.Username,
-			Password: config.Password,
-			DB:       config.DB,
-		})
-
-		tileClient = client
-
-		tileCache = rediscache.New(&rediscache.Options{
-			Redis: client,
-		})
+	client, ok := ds.Native().(redis.UniversalClient)
+	if !ok {
+		return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "cache.redis.datastore", config.Datastore)
 	}
 
-	r := Redis{RedisConfig: config, cache: tileCache, client: tileClient}
+	return &Redis{RedisConfig: config, cache: newRedisTileCache(client), client: nil}, nil
+}
 
-	return &r, nil
+// initializeRedisDirect builds a redis connection from the cache's own inline connection fields
+// by constructing a private, unregistered redis datastore. This reuses the datastore's
+// connection-building logic instead of duplicating it here.
+func initializeRedisDirect(config RedisConfig, deps cache.CacheDeps) (cache.Cache, error) {
+	servers := make([]datastores.RedisHostAndPort, len(config.Servers))
+	for i, s := range config.Servers {
+		servers[i] = datastores.RedisHostAndPort{Host: s.Host, Port: s.Port}
+	}
+
+	dsConfig := datastores.RedisWrapperConfig{
+		Host:     config.Host,
+		Port:     config.Port,
+		DB:       config.DB,
+		Username: config.Username,
+		Password: config.Password,
+		Mode:     config.Mode,
+		Servers:  servers,
+	}
+
+	ds, err := datastores.RedisWrapperRegistration{}.Initialize(dsConfig, datastore.DatastoreDeps{ErrorMessages: deps.ErrorMessages})
+	if err != nil {
+		return nil, err
+	}
+
+	client := ds.Native().(redis.UniversalClient)
+
+	return &Redis{RedisConfig: config, cache: newRedisTileCache(client), client: client}, nil
+}
+
+func newRedisTileCache(client redis.UniversalClient) *rediscache.Cache {
+	return rediscache.New(&rediscache.Options{
+		Redis: client,
+	})
 }
 
 // Close shuts down the underlying redis client, releasing its connection pool.
