@@ -282,6 +282,8 @@ func Test_Seed_ForceAllowsExcessiveTileCount(t *testing.T) {
 	require.NoError(t, checkSeedSize(e, opts, &out))
 }
 
+// A completed run cleans up its progress file rather than leaving it behind, since there's
+// nothing left to resume.
 func Test_Seed_WritesProgressFile(t *testing.T) {
 	cfg := seedTestConfig(t)
 	path := filepath.Join(t.TempDir(), "progress.json")
@@ -295,11 +297,8 @@ func Test_Seed_WritesProgressFile(t *testing.T) {
 		ProgressFile: path,
 	}, &out))
 
-	progress, err := seed.LoadProgress(path)
-	require.NoError(t, err)
-	require.NotNil(t, progress)
-	assert.Equal(t, uint64(1+4+16), progress.Position)
-	assert.Equal(t, progress.Total, progress.Position)
+	_, err := os.Stat(path)
+	assert.True(t, os.IsNotExist(err))
 }
 
 // Resuming has to pick up at exactly the recorded position, seeding the rest of the sequence and
@@ -330,9 +329,9 @@ func Test_Seed_ResumesFromRecordedPosition(t *testing.T) {
 	assert.Equal(t, pkg.TileRequest{LayerName: "counts", Z: 2, X: 0, Y: 0}, rendered[0])
 	assert.Contains(t, out.String(), "Resuming from tile 5")
 
-	progress, err := seed.LoadProgress(path)
-	require.NoError(t, err)
-	assert.Equal(t, e.Count(), progress.Position)
+	// The run completed, so the progress file should be cleaned up rather than left behind.
+	_, err = os.Stat(path)
+	assert.True(t, os.IsNotExist(err))
 }
 
 // Resuming a completed run has nothing left to do rather than seeding the whole thing again.
@@ -403,12 +402,14 @@ func Test_Seed_CorruptProgressFile(t *testing.T) {
 	}, &out))
 }
 
+// A run has to be big enough to cross a save interval, otherwise the unwritable path never gets
+// exercised and the run just completes.
 func Test_Seed_UnwritableProgressFile(t *testing.T) {
 	cfg := seedTestConfig(t)
 
 	var out bytes.Buffer
 	require.Error(t, Seed(&cfg, SeedOptions{
-		Zoom:         []uint{0},
+		Zoom:         []uint{0, 1, 2, 3, 4},
 		Bounds:       pkg.WorldBounds(),
 		LayerName:    "counts",
 		NumThread:    1,
@@ -419,6 +420,34 @@ func Test_Seed_UnwritableProgressFile(t *testing.T) {
 // Progress is saved periodically during a run, so a seed killed partway through leaves usable state
 // rather than nothing at all.
 func Test_Seed_SavesProgressDuringRun(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "progress.json")
+
+	e, err := seed.NewSeedJob("counts", pkg.WorldBounds(), []uint{0, 1, 2, 3, 4})
+	require.NoError(t, err)
+
+	progress := seed.NewProgress("counts", e)
+
+	done := make(chan uint64, e.Count())
+	for i := range e.Count() {
+		done <- i
+	}
+	close(done)
+
+	var out bytes.Buffer
+	opts := SeedOptions{ProgressFile: path}
+	require.NoError(t, trackProgress(opts, progress, 0, done, &out))
+
+	// trackProgress only saves at the periodic interval, so the file on disk should reflect the
+	// last interval crossed rather than the final position tracked in memory.
+	saved, err := seed.LoadProgress(path)
+	require.NoError(t, err)
+	assert.Equal(t, e.Count()/progressInterval*progressInterval, saved.Position)
+	assert.Equal(t, e.Count(), progress.Position)
+}
+
+// A completed run cleans the progress file up at the end regardless of how many periodic saves
+// happened along the way.
+func Test_Seed_CleansUpProgressFileOnCompletion(t *testing.T) {
 	cfg := seedTestConfig(t)
 	path := filepath.Join(t.TempDir(), "progress.json")
 
@@ -431,7 +460,6 @@ func Test_Seed_SavesProgressDuringRun(t *testing.T) {
 		ProgressFile: path,
 	}, &out))
 
-	progress, err := seed.LoadProgress(path)
-	require.NoError(t, err)
-	assert.Equal(t, uint64(1+4+16+64+256), progress.Position)
+	_, err := os.Stat(path)
+	assert.True(t, os.IsNotExist(err))
 }

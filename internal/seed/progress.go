@@ -136,5 +136,10 @@ func (p *Progress) Finish(path string, out io.Writer, verbose bool) error {
 	if verbose {
 		fmt.Fprint(out, "Removing progress file\n")
 	}
-	return os.Remove(path)
+
+	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+
+	return nil
 }

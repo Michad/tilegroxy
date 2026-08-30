@@ -125,3 +125,29 @@ func Test_Progress_SaveToUnwritableLocation(t *testing.T) {
 	err = NewProgress("osm", e).Save(filepath.Join(t.TempDir(), "no-such-dir", "progress.json"), os.Stdout, false)
 	require.Error(t, err)
 }
+
+func Test_Progress_FinishRemovesFile(t *testing.T) {
+	e, err := NewSeedJob("osm", world(), []uint{1})
+	require.NoError(t, err)
+
+	path := filepath.Join(t.TempDir(), "progress.json")
+	p := NewProgress("osm", e)
+	require.NoError(t, p.Save(path, os.Stdout, false))
+
+	require.NoError(t, p.Finish(path, os.Stdout, false))
+
+	_, err = os.Stat(path)
+	assert.True(t, os.IsNotExist(err))
+}
+
+// A run short enough that it never crossed a save interval never wrote a file, so there's nothing
+// to remove. That isn't a failure.
+func Test_Progress_FinishToleratesMissingFile(t *testing.T) {
+	e, err := NewSeedJob("osm", world(), []uint{1})
+	require.NoError(t, err)
+
+	path := filepath.Join(t.TempDir(), "progress.json")
+	p := NewProgress("osm", e)
+
+	require.NoError(t, p.Finish(path, os.Stdout, false))
+}
