@@ -94,5 +94,4 @@ func initTest() {
 	testCmd.Flags().IntP("y-coordinate", "y", 534, "The y coordinate to use to test") //nolint:mnd
 	testCmd.Flags().Bool("no-cache", false, "Don't write to the cache. The Cache configuration must still be syntactically valid")
 	testCmd.Flags().Uint16P("threads", "t", 1, "How many layers to test at once. Be mindful of spamming upstream providers")
-	//TODO: output in custom format or write to file
 }

@@ -268,10 +268,6 @@ func TestBadJwtClaims(t *testing.T) {
 
 	req.Header["Authorization"] = []string{"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdWJqZWN0IiwiYXVkIjoiYXVkaWVuY2UiLCJpc3MiOiJub2JvZHkgd2lsbCBldmVyIHJlYWQgdGhpcyIsInNjb3BlIjoic29tZXRoaW5nIHRpbGUgb3RoZXIiLCJuYW1lIjoiSm9obiBEb2UiLCJpYXQiOjE1MTYyMzkwMjIsImV4cCI6NDI5NDk2NzI5NX0.IeaRecjpT4pQm6AUpJUoCUQskyGkcGXXab-Bccc2q3I"} // Invalid iss
 	assert.False(t, jwt.CheckAuthentication(pkg.BackgroundContext(), req))
-
-	//TODO: when implemented
-	// req.Header["Authorization"] = []string{"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdWJqZWN0IiwiYXVkIjoiYXVkaWVuY2UiLCJpc3MiOiJpc3N1ZXIiLCJzY29wZSI6InNvbWV0aGluZyBvdGhlciIsIm5hbWUiOiJKb2huIERvZSIsImlhdCI6MTUxNjIzOTAyMiwiZXhwIjo0Mjk0OTY3Mjk1fQ.yt4Ga01Mn5wIUglH67gPr4NEt4g9AlwEFiTy8YNN-8g"} // Invalid scope
-	// assert.False(t, jwt.Preauth(req))
 }
 
 func TestGoodJwtClaimsRS256(t *testing.T) {

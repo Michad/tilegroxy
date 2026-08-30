@@ -54,7 +54,6 @@ type SLogWriter struct {
 	level slog.Level
 }
 
-// TODO: look into some ways to buffer and decrease num of calls to slog
 func (w SLogWriter) Write(p []byte) (int, error) {
 	slog.Log(w.ctx, w.level, string(p))
 

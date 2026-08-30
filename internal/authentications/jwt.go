@@ -35,7 +35,6 @@ const defaultExpiration = 24 * 60 * 60
 const defaultLeeway = 5 * time.Second
 
 type JWTConfig struct {
-	//TODO: Performance profile if the cache is actually worthwhile
 	CacheSize        uint16      // Configures the size of the cache of already verified JWTs to avoid re-verifying keys for every token. Expiration still applies. Set to 0 to disable. Defaults to 0
 	Key              string      // The key for verifying the signature. The public key if using asymmetric signing. Required unless JWKS is supplied
 	Algorithm        string      // Deprecated: use Algorithms. Retained so existing configurations keep working

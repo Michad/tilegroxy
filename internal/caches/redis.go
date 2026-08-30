@@ -130,7 +130,6 @@ func (s RedisRegistration) Initialize(configAny any, deps cache.CacheDeps) (cach
 
 		tileClient = client
 
-		//TODO: Open bug with go-redis about `rediser` type being private so the below isn't needlessly repeated
 		tileCache = rediscache.New(&rediscache.Options{
 			Redis: client,
 		})
@@ -154,7 +153,6 @@ func (s RedisRegistration) Initialize(configAny any, deps cache.CacheDeps) (cach
 
 		tileClient = client
 
-		//TODO: Open bug with go-redis about `rediser` type being private so the below isn't needlessly repeated
 		tileCache = rediscache.New(&rediscache.Options{
 			Redis: client,
 		})
@@ -168,7 +166,6 @@ func (s RedisRegistration) Initialize(configAny any, deps cache.CacheDeps) (cach
 
 		tileClient = client
 
-		//TODO: Open bug with go-redis about `rediser` type being private so the below isn't needlessly repeated
 		tileCache = rediscache.New(&rediscache.Options{
 			Redis: client,
 		})
