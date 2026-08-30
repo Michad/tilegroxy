@@ -23,7 +23,7 @@ These apply to every change. Follow them without being asked.
 6. **Always run `make lint` and apply everything it reports**, advisory suggestions included.
    Fix findings rather than suppressing them with `//nolint`.
 7. **Avoid breaking backwards compatibility.** See the contract below. When a break looks
-   unavoidable, explain what breaks and let the user decide.
+   unavoidable, explain what breaks and let the user decide. This doesn't apply to uncommitted or unreleased changes.
 8. **Keep comments short.** Explain the why as simply as possible. Anything longer than a
    sentence, or that affects more than one place in the code, belongs in the development
    documentation instead.
@@ -83,17 +83,16 @@ which side each value is on.
 
 ## Commands
 
-Everything goes through the Makefile. Do not hand-roll `go build` or `go test`, the build tag
-and ldflags matter.
+Everything goes through the Makefile. Never ever run `go build` or `go test` 
 
 ```
-make            # clean, test, docs, build, version (the full check)
-make test       # go test with -tags viper_bind_struct
-make unit       # unit only, excludes testcontainer integration tests
-make e2e        # end-to-end tests against the compiled binary, builds docs and binary first
-make lint       # golangci-lint with --fix
-make cover      # coverage via Courtney, writes coveragef.out
-make docs       # Antora build, required before `make build` works
+make            # clean, test, docs, build, version (the full check - prefer this whenever possible)
+make test       # run unit and integration tests
+make unit       # run unit test only - only run this if system doesn't have docker or podman configured. 
+make e2e        # run end-to-end tests 
+make lint       # runs lints
+make cover      # generates coverage, writes coveragef.out
+make docs       # builds documentation
 make readme     # regenerates README.adoc, never edit that file directly
 ```
 
@@ -102,7 +101,7 @@ make readme     # regenerates README.adoc, never edit that file directly
 if it does rather than skipping it silently.
 
 Every `.go` file needs the Apache 2.0 header from `.preamble.txt`; the `goheader` linter
-enforces it. Copy it from a neighboring file.
+enforces it. Copy it from a neighboring file but make sure the year is the current year.
 
 ## Read the docs for details
 

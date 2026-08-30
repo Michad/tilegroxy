@@ -155,10 +155,19 @@ func NewBoundsFromGeohash(hashStr string) (Bounds, error) {
 	return Bounds{South: bbox.MinLat, North: bbox.MaxLat, West: bbox.MinLng, East: bbox.MaxLng, SRID: SRIDWGS84}, nil
 }
 
-// Turns a bounding box into a list of the tiles contained in the bounds for an arbitrary zoom level. Limited to 10k tiles unless force is true, then it's limited to 2^32 tiles.
-func (b Bounds) FindTiles(layerName string, zoom uint, force bool) (*[]TileRequest, error) {
+// A range of tiles within a single zoom level
+type SingleZoomRange struct {
+	Z                      uint
+	XMin, XMax, YMin, YMax int
+}
+
+func (r SingleZoomRange) Count() uint64 {
+	return uint64(r.XMax-r.XMin) * uint64(r.YMax-r.YMin) // #nosec G115 -- int->uint64 can't overflow until 128 bit processors come out
+}
+
+func (b Bounds) ConstructSingleZoomRange(zoom uint) (SingleZoomRange, error) {
 	if zoom > MaxZoom {
-		return nil, RangeError{"z", 0, MaxZoom}
+		return SingleZoomRange{}, RangeError{"z", 0, MaxZoom}
 	}
 
 	z := float64(zoom)
@@ -199,25 +208,7 @@ func (b Bounds) FindTiles(layerName string, zoom uint, force bool) (*[]TileReque
 		yMax = yMin + 1
 	}
 
-	numTiles := uint64(xMax-xMin) * uint64(yMax-yMin) // #nosec G115 -- int->uint64 can't overflow until 128 bit processors come out
-
-	if numTiles > 10000 && !force {
-		return nil, TooManyTilesError{NumTiles: numTiles}
-	}
-
-	if numTiles > math.MaxInt32 {
-		return nil, TooManyTilesError{NumTiles: numTiles}
-	}
-
-	result := make([]TileRequest, int32(numTiles))
-
-	for x := xMin; x < xMax; x++ {
-		for y := yMin; y < yMax; y++ {
-			result[(y-yMin)*(xMax-xMin)+x-xMin] = TileRequest{layerName, int(zoom), x, y}
-		}
-	}
-
-	return &result, nil
+	return SingleZoomRange{Z: zoom, XMin: xMin, XMax: xMax, YMin: yMin, YMax: yMax}, nil
 }
 
 // This bounds just has the default values (all coords are 0)
