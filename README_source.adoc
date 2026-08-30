@@ -16,7 +16,9 @@ include::docs/operation/modules/ROOT/pages/index.adoc[leveloffset=1]
 
 **Prebuilt Documentation for the most recent release is available link:https://tilegroxy.com[here]. **
 
-Documentation is served by tilegroxy at `/docs` (disable this behaviour by setting `Server.Production=true`). Documentation is powered by link:https://antora.org[Antora] with raw AsciiDoc located in link:./docs[docs] 
+Documentation is served by tilegroxy at `/docs` (disable this behaviour by setting `Server.Production=true`). Documentation is powered by link:https://antora.org[Antora] with raw AsciiDoc located in link:./docs[docs]
+
+A link:https://tilegroxy.com/operation/configuration/index.html#_generating_configuration_with_ai_agents[Skill] is available to help you get started with generating your configuration. However, do make sure you understand what it produces before you run it.
 
 
 include::docs/operation/modules/ROOT/pages/get-it.adoc[leveloffset=1]

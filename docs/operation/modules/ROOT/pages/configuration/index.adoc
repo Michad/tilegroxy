@@ -4,6 +4,18 @@ Tilegroxy is a configuration driven application. This documentation describes th
 
 link:https://github.com/Michad/tilegroxy/tree/main/examples/configurations[Complete examples are available here.]
 
+== Lazy Button
+
+A link:/docs/skills/generating-tilegroxy-config/SKILL.md[Skill] is available to help AI coding agents write and troubleshoot tilegroxy configuration. 
+
+How to install it depends on your agent:
+
+* *Claude Code*: Copy the skill file into `.claude/skills/generating-tilegroxy-config` in your project (or `~/.claude/skills/` to make it available everywhere).
+* https://docs.openclaw.ai/tools/skills[*OpenClaw*]: Run `openclaw skills install git:Michad/tilegroxy@main --as generating-tilegroxy-config` (add `--global` to make it available to all agents), or install to a workspace/project skills directory as documented.
+* *ChatGPT*: Go to Skills, select Create, then Upload from your computer, and upload the skill's directory (or a `.zip` containing it as a single top-level folder).
+* *Other agents supporting the https://agentskills.io/specification[agent skills specification]*: Copy the skill's directory wherever your agent looks for skills; consult your agent's documentation for the exact location.
+* *Agents without skill support*: Paste the contents of `SKILL.md` into your prompt or system instructions, or point the agent at its raw URL.
+
 == Conventions
 
 Parameter names (configuration keys) are case-insensitive unless indicated otherwise.
