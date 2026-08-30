@@ -96,7 +96,6 @@ func extractToken(ctx context.Context, req *http.Request, tokenExtract map[strin
 		if err != nil {
 			slog.DebugContext(ctx, "Custom auth cookie error: "+err.Error())
 		} else if cookie != nil {
-			//TODO: Do we want to enforce restrictions on flags? E.g. ignore cookies without HttpOnly set
 			return cookie.Value, true
 		}
 	}

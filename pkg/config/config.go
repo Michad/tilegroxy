@@ -116,7 +116,6 @@ type TelemetryConfig struct {
 	Enabled bool
 }
 
-// TODO: handle this better. Not foolproof in detecting default values and very manual. Probably need to do a mapstructure method for this
 func (c *ClientConfig) MergeDefaultsFrom(o ClientConfig) {
 	if c.UserAgent == "" {
 		c.UserAgent = o.UserAgent

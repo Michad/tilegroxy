@@ -147,7 +147,6 @@ func makeImg(seed int) pkg.Image {
 }
 
 func validateSaveAndLookup(t *testing.T, c cache.Cache) {
-	//TODO: reconsider use of rand
 	tile := makeReq(rand.Intn(10000))
 	img := makeImg(rand.Intn(100))
 

@@ -67,8 +67,6 @@ func runCreate(cmd *cobra.Command, _ []string) {
 		} // Check for extension being yaml isn't needed because we default to yaml
 	}
 
-	//TODO: populate example config here
-
 	var file *os.File
 
 	if writePath != "" {
@@ -116,7 +114,7 @@ func init() {
 func initCreate() {
 	configCmd.AddCommand(createCmd)
 
-	createCmd.Flags().BoolP("default", "d", true, "Include all default configuration. TODO: make this non-mandatory")
+	createCmd.Flags().BoolP("default", "d", true, "Include all default configuration.")
 
 	createCmd.Flags().Bool("json", false, "Output the configuration in JSON")
 	createCmd.Flags().Bool("yaml", false, "Output the configuration in YAML")

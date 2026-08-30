@@ -330,7 +330,7 @@ layers:
 	assert.Equal(t, http.StatusOK, resp2.StatusCode)
 }
 
-// Just make sure it starts up and rejects unauth for now. TODO: figure out how to get the key from logs
+// Just make sure it starts up and rejects unauth for now.
 func Test_TileHandler_ExecuteStaticRandomKey(t *testing.T) {
 
 	configRaw := `server:

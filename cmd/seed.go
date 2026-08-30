@@ -101,7 +101,6 @@ func initSeed() {
 	seedCmd.Flags().Bool("force", false, "Perform the seeding even if it covers an excessive number of tiles. Without this flag seeds over 10k tiles will error out. \nWarning: A seed that large can spend hours making requests against an upstream provider")
 	seedCmd.Flags().Uint16P("threads", "t", 1, "How many concurrent requests to use to perform seeding. Be mindful of spamming upstream providers")
 	seedCmd.Flags().StringP("progress", "p", "", "A file to use to record how far the seed got. If the file already exists the seed resumes from its recorded position instead of starting over.")
-	// TODO: support some way to support writing just to a specific cache when Multi cache is being used
 
 	if err != nil {
 		panic(err)
