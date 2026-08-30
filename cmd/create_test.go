@@ -129,7 +129,7 @@ func Test_CreateCommand_ExecuteYmlFile(t *testing.T) {
 	b := bytes.NewBufferString("")
 	rootCmd.SetOut(b)
 	rootCmd.SetErr(b)
-	rootCmd.SetArgs([]string{"config", "create", "--default", "--yaml", "-o", fil.Name()})
+	rootCmd.SetArgs([]string{"config", "create", "--yaml", "-o", fil.Name()})
 	require.NoError(t, rootCmd.Execute())
 	_, err = io.ReadAll(b)
 	if err != nil {
