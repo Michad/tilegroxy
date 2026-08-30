@@ -308,21 +308,31 @@ type singleflightResult struct {
 	stack []byte
 }
 
+func (lg *LayerGroup) renderTileRecovered(ctx context.Context, tileRequest pkg.TileRequest) singleflightResult {
+	resultPtr := new(singleflightResult)
+
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				*resultPtr = singleflightResult{panic: r, stack: debug.Stack()}
+			}
+		}()
+
+		img, err := lg.RenderTileNoCache(ctx, tileRequest)
+		*resultPtr = singleflightResult{img: img, err: err}
+	}()
+
+	return *resultPtr
+}
+
 // renderTileCoalesced deduplicates concurrent provider fetches for the same tile.
 func (lg *LayerGroup) renderTileCoalesced(ctx context.Context, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	key := tileRequest.String()
 
 	leaderCtx := context.WithoutCancel(ctx)
 
-	resultCh := lg.generateGroup.DoChan(key, func() (result any, _ error) {
-		defer func() {
-			if r := recover(); r != nil {
-				result = singleflightResult{panic: r, stack: debug.Stack()}
-			}
-		}()
-
-		img, err := lg.RenderTileNoCache(leaderCtx, tileRequest)
-		return singleflightResult{img: img, err: err}, nil
+	resultCh := lg.generateGroup.DoChan(key, func() (any, error) {
+		return lg.renderTileRecovered(leaderCtx, tileRequest), nil
 	})
 
 	select {
