@@ -332,7 +332,7 @@ func DefaultConfig() Config {
 			TilePath:   "tiles",
 			DocsPath:   "docs",
 			Headers:    map[string]string{},
-			Production: false,
+			Production: true,
 			Timeout:    60,
 			Gzip:       false,
 			DrainDelay: 5,
