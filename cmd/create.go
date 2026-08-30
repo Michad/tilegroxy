@@ -28,20 +28,19 @@ import (
 
 var createCmd = &cobra.Command{
 	Use:   "create",
-	Short: "Creates a bare-bones configuration",
-	Long: `Creates either a JSON or YAML configuration with a skeleton you can use as a starting point for creating your configuration. 
+	Short: "Outputs the default configuration",
+	Long: `Creates either a JSON or YAML configuration with a skeleton containing all default values. 
 	
 Defaults to outputting to standard out, specify --output/-o to write to a file. Does not utilize --config/-c to avoid accidentally overwriting a configuration. If a file is specified this defaults to auto-detecting the format to use based on the file extension and ultimately defaults to YAML.
 	
 Example:
-	tilegroxy config create --default --json -o tilegroxy.json`,
+	tilegroxy config create --json -o tilegroxy.json`,
 	Run: runCreate,
 }
 
 func runCreate(cmd *cobra.Command, _ []string) {
 	var err error
 
-	includeDefault, _ := cmd.Flags().GetBool("default")
 	noPretty, _ := cmd.Flags().GetBool("no-pretty")
 	forceJSON, _ := cmd.Flags().GetBool("json")
 	forceYML, _ := cmd.Flags().GetBool("yaml")
@@ -50,13 +49,10 @@ func runCreate(cmd *cobra.Command, _ []string) {
 	out := cmd.OutOrStdout()
 
 	cfg := make(map[string]interface{})
+	err = mapstructure.Decode(config.DefaultConfig(), &cfg)
 
-	if includeDefault {
-		err = mapstructure.Decode(config.DefaultConfig(), &cfg)
-
-		if err != nil {
-			panic(err)
-		}
+	if err != nil {
+		panic(err)
 	}
 
 	if writePath != "" && !forceJSON && !forceYML {
@@ -113,8 +109,6 @@ func init() {
 
 func initCreate() {
 	configCmd.AddCommand(createCmd)
-
-	createCmd.Flags().BoolP("default", "d", true, "Include all default configuration.")
 
 	createCmd.Flags().Bool("json", false, "Output the configuration in JSON")
 	createCmd.Flags().Bool("yaml", false, "Output the configuration in YAML")

@@ -1,26 +1,21 @@
 = Config Create
 
-Helps create an initial configuration file. Still a work in progress.
+Outputs a valid configuration value containing all default values. Provided as a maybe-useful helper, not necessarily a good starting point. Consider using the xref:configuration/index.adoc[Skill] to help get started if you're struggling with following the docs.
 
 Full, up-to-date usage information can be found with `tilegroxy config create -h`.
 
 ----
-Creates either a JSON or YAML configuration with a skeleton you can use as
-a starting point for creating your configuration.
-
-Defaults to outputting to standard out, specify --output/-o to write to a
-file. Does not utilize --config/-c to avoid accidentally overwriting a
-configuration. If a file is specified this defaults to auto-detecting the
-format to use based on the file extension and ultimately defaults to YAML.
+Creates either a JSON or YAML configuration with a skeleton containing all default values. 
+	
+Defaults to outputting to standard out, specify --output/-o to write to a file. Does not utilize --config/-c to avoid accidentally overwriting a configuration. If a file is specified this defaults to auto-detecting the format to use based on the file extension and ultimately defaults to YAML.
 
 Example:
-        tilegroxy config create --default --json -o tilegroxy.json
+        tilegroxy config create --json -o tilegroxy.json
 
 Usage:
   tilegroxy config create [flags]
 
 Flags:
-  -d, --default         Include all default configuration.
   -h, --help            help for create
       --json            Output the configuration in JSON
       --no-pretty       Disable pretty printing JSON
