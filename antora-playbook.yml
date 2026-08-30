@@ -1,6 +1,6 @@
 site:
   title: tilegroxy Docs
-  # url: https://tilegroxy.michael.davis.name
+  # url: https://tilegroxy.com
   start_page: operation::index.adoc
 content:
   sources:

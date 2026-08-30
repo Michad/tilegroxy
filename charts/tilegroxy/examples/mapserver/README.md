@@ -1,7 +1,7 @@
 # MapServer via the CGI provider
 
 Renders tiles with [MapServer](https://www.mapserver.org) instead of proxying them, using
-tilegroxy's [cgi provider](https://tilegroxy.michael.davis.name/operation/configuration/provider/cgi.html).
+tilegroxy's [cgi provider](https://tilegroxy.com/operation/configuration/provider/cgi.html).
 Tilegroxy takes the role Apache httpd traditionally plays, invoking the `mapserv` CGI executable
 once per tile request.
 
