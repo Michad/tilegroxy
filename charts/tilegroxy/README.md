@@ -33,7 +33,7 @@ config:
         url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
 ```
 
-Anything in the [configuration reference](https://tilegroxy.michael.davis.name/operation/configuration/index.html)
+Anything in the [configuration reference](https://tilegroxy.com/operation/configuration/index.html)
 is valid there. The chart itself only reads `server.port`, `server.health` and `server.encrypt`
 to wire up container ports, the Service and the probes.
 
@@ -68,7 +68,7 @@ existingSecretKeys:
 
 Both forms are injected into the server and any seed Jobs. Cloud credentials for the S3 cache
 (`AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`) work the same way, as does
-[an external secret store](https://tilegroxy.michael.davis.name/operation/configuration/secret/index.html)
+[an external secret store](https://tilegroxy.com/operation/configuration/secret/index.html)
 if you'd rather have tilegroxy fetch secrets itself.
 
 ### AWS
@@ -117,7 +117,7 @@ config:
 ```
 
 The health port is never added to the Service, per the
-[health documentation](https://tilegroxy.michael.davis.name/operation/configuration/health.html)'s
+[health documentation](https://tilegroxy.com/operation/configuration/health.html)'s
 recommendation that it not be exposed.
 
 A `config check` init container runs before the server starts (`configCheck.enabled`, on by
@@ -174,7 +174,7 @@ upstream providers.
 authentication and datastores without a restart. It's off by default: core sections such as
 `server` still require a restart, so `restartOnConfigChange` (which stamps a config checksum on
 the pod template and triggers a normal rollout) is the more predictable path. See the
-[reloading documentation](https://tilegroxy.michael.davis.name/operation/reloading.html) for the
+[reloading documentation](https://tilegroxy.com/operation/reloading.html) for the
 caveats, particularly on NFS and other filesystems without change notification.
 
 ## Values

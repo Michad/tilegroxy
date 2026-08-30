@@ -18,7 +18,7 @@ replicaCount: 2
 
 # -- The tilegroxy configuration, rendered verbatim into a ConfigMap as
 # tilegroxy.yml. Every option documented at
-# https://tilegroxy.michael.davis.name/operation/configuration/index.html is
+# https://tilegroxy.com/operation/configuration/index.html is
 # valid here; the chart only reads server.port, server.health and
 # server.encrypt.httpport to wire up ports and probes.
 #
@@ -62,7 +62,7 @@ configPath: /tilegroxy/config/tilegroxy.yml
 # Off by default: ConfigMap updates land as an atomic symlink swap that fsnotify
 # does report, but core sections (server, telemetry) still need a restart, so a
 # rollout is the predictable path. See
-# https://tilegroxy.michael.davis.name/operation/reloading.html
+# https://tilegroxy.com/operation/reloading.html
 hotReload: false
 
 # Restart pods when the rendered config changes. Only meaningful when the chart

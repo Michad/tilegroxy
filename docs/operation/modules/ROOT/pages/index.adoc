@@ -5,40 +5,40 @@ Tilegroxy shines when you consume maps from multiple sources.  It isn't tied to 
 == Features
 
 +++<ul><li>+++
-link:https://tilegroxy.michael.davis.name/operation/configuration/provider/proxy.html[Proxy] to ZXY, WMS, TMS, WMTS, or other protocol map layers
+link:https://tilegroxy.com/operation/configuration/provider/proxy.html[Proxy] to ZXY, WMS, TMS, WMTS, or other protocol map layers
 +++</li><li>+++
-Cache tiles in link:https://tilegroxy.michael.davis.name/operation/configuration/cache/disk.html[disk], link:https://tilegroxy.michael.davis.name/operation/configuration/cache/memory.html[memory], link:https://tilegroxy.michael.davis.name/operation/configuration/cache/s3.html[s3], link:https://tilegroxy.michael.davis.name/operation/configuration/cache/redis.html[redis], and/or link:https://tilegroxy.michael.davis.name/operation/configuration/cache/memcache.html[memcached]
+Cache tiles in link:https://tilegroxy.com/operation/configuration/cache/disk.html[disk], link:https://tilegroxy.com/operation/configuration/cache/memory.html[memory], link:https://tilegroxy.com/operation/configuration/cache/s3.html[s3], link:https://tilegroxy.com/operation/configuration/cache/redis.html[redis], and/or link:https://tilegroxy.com/operation/configuration/cache/memcache.html[memcached]
 +++</li><li>+++
-Require authentication using link:https://tilegroxy.michael.davis.name/operation/configuration/authentication/static_key.html[static key], link:https://tilegroxy.michael.davis.name/operation/configuration/authentication/jwt.html[JWT], or link:https://tilegroxy.michael.davis.name/operation/configuration/authentication/custom.html[custom] logic
+Require authentication using link:https://tilegroxy.com/operation/configuration/authentication/static_key.html[static key], link:https://tilegroxy.com/operation/configuration/authentication/jwt.html[JWT], or link:https://tilegroxy.com/operation/configuration/authentication/custom.html[custom] logic
 +++</li><li>+++
-link:https://tilegroxy.michael.davis.name/operation/configuration/authentication/jwt.html[Restrict access] to a given layer and/or geographic region based on auth token
+link:https://tilegroxy.com/operation/configuration/authentication/jwt.html[Restrict access] to a given layer and/or geographic region based on auth token
 +++</li><li>+++
-Create your own link:https://tilegroxy.michael.davis.name/operation/extensibility.html[custom provider] to pull in non-standard and proprietary imagery sources
+Create your own link:https://tilegroxy.com/operation/extensibility.html[custom provider] to pull in non-standard and proprietary imagery sources
 +++</li><li>+++
 Support for both raster and vector format tiles
 +++</li><li>+++
-Tweak your raster layers with link:https://tilegroxy.michael.davis.name/operation/configuration/provider/effect.html[18 standard effects] or by providing your own link:https://tilegroxy.michael.davis.name/operation/configuration/provider/transform.html[pixel-level logic]
+Tweak your raster layers with link:https://tilegroxy.com/operation/configuration/provider/effect.html[18 standard effects] or by providing your own link:https://tilegroxy.com/operation/configuration/provider/transform.html[pixel-level logic]
 +++</li><li>+++
-Combine link:https://tilegroxy.michael.davis.name/operation/configuration/provider/blend.html[raster] or link:https://tilegroxy.michael.davis.name/operation/configuration/provider/compositemvt.html[vector tile] layers
+Combine link:https://tilegroxy.com/operation/configuration/provider/blend.html[raster] or link:https://tilegroxy.com/operation/configuration/provider/compositemvt.html[vector tile] layers
 +++</li><li>+++
-link:https://tilegroxy.michael.davis.name/operation/configuration/provider/cgi.html[Act as an HTTP server] for https://www.mapserver.org[MapServer] and any other CGI application that generates tiles
+link:https://tilegroxy.com/operation/configuration/provider/cgi.html[Act as an HTTP server] for https://www.mapserver.org[MapServer] and any other CGI application that generates tiles
 +++</li><li>+++
-Commands for link:https://tilegroxy.michael.davis.name/operation/commands/seed.html[seeding] and link:https://tilegroxy.michael.davis.name/operation/commands/test.html[testing] your layers
+Commands for link:https://tilegroxy.com/operation/commands/seed.html[seeding] and link:https://tilegroxy.com/operation/commands/test.html[testing] your layers
 +++</li><li>+++
-Run as link:https://tilegroxy.michael.davis.name/operation/configuration/encryption.html[HTTPS] including Let's Encrypt (ACME) support
+Run as link:https://tilegroxy.com/operation/configuration/encryption.html[HTTPS] including Let's Encrypt (ACME) support
 +++</li><li>+++
-Configurable via file or etcd with link:https://tilegroxy.michael.davis.name/operation/configuration/index.html[environment variable] override, 
-link:https://tilegroxy.michael.davis.name/operation/configuration/secret/index.html[externalizable secrets], and link:https://tilegroxy.michael.davis.name/operation/reloading.html[zero-downtime reload]
+Configurable via file or etcd with link:https://tilegroxy.com/operation/configuration/index.html[environment variable] override, 
+link:https://tilegroxy.com/operation/configuration/secret/index.html[externalizable secrets], and link:https://tilegroxy.com/operation/reloading.html[zero-downtime reload]
 +++</li><li>+++
 link:#docker[Container deployment]
 +++</li><li>+++
 Minimal HTTP footprint to decrease security exposure
 +++</li><li>+++
-Traces, metrics, and logs available via link:https://tilegroxy.michael.davis.name/operation/configuration/telemetry.html[OpenTelemetry]
+Traces, metrics, and logs available via link:https://tilegroxy.com/operation/configuration/telemetry.html[OpenTelemetry]
 +++</li><li>+++
-Per-layer usage link:https://tilegroxy.michael.davis.name/operation/configuration/analytics/index.html[analytics] recorded to ClickHouse, PostgreSQL, or a custom destination
+Per-layer usage link:https://tilegroxy.com/operation/configuration/analytics/index.html[analytics] recorded to ClickHouse, PostgreSQL, or a custom destination
 +++</li><li>+++
-Usable as an application or a link:https://tilegroxy.michael.davis.name/operation/extensibility.html[library]
+Usable as an application or a link:https://tilegroxy.com/operation/extensibility.html[library]
 +++</li><li>+++
-Supports link:https://tilegroxy.michael.davis.name/operation/tilejson.html[TileJSON]
+Supports link:https://tilegroxy.com/operation/tilejson.html[TileJSON]
 +++</li></ul>+++
