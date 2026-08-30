@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"runtime/debug"
 	"slices"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -30,6 +31,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
+	"golang.org/x/sync/singleflight"
 )
 
 // Bounds the background writeCache goroutines. A slow cache backend plus sustained misses would
@@ -42,6 +44,11 @@ type LayerGroup struct {
 	cacheHitCounter   metric.Int64Counter
 	cacheMissCounter  metric.Int64Counter
 	cacheWriteLimiter chan struct{}
+	// generateGroup coalesces concurrent provider fetches for the same tile on a cache miss, so a
+	// burst of requests for one cold tile results in a single upstream call instead of one per
+	// request. Keyed identically to the cache key (see tileRequest.String()) so it never conflates
+	// genuinely different tiles.
+	generateGroup singleflight.Group
 }
 
 func ConstructLayerGroup(cfg config.Config, cache cache.Cache, secreter secret.Secreter, datastores *datastore.DatastoreRegistry) (*LayerGroup, error) {
@@ -58,7 +65,7 @@ func ConstructLayerGroup(cfg config.Config, cache cache.Cache, secreter secret.S
 	}
 
 	for i, l := range cfg.Layers {
-		layerObjects[i], err = ConstructLayer(l, cfg.Client, cfg.Error.Messages, &layerGroup, secreter, datastores)
+		layerObjects[i], err = ConstructLayer(l, cfg.Client, true, cfg.Error.Messages, &layerGroup, secreter, datastores)
 		if err != nil {
 			return nil, fmt.Errorf("error constructing layer %v: %w", i, err)
 		}
@@ -240,7 +247,12 @@ func (lg *LayerGroup) RenderTile(ctx context.Context, tileRequest pkg.TileReques
 		return nil, err
 	}
 
-	img, err = l.Cache.Lookup(ctx, tileRequest)
+	cacheTileRequest := tileRequest
+	if l.Config.CacheVersion != "" {
+		cacheTileRequest = pkg.TileRequest{LayerName: l.Config.CacheVersion + tileRequest.LayerName, X: tileRequest.X, Y: tileRequest.Y, Z: tileRequest.Z}
+	}
+
+	img, err = l.Cache.Lookup(ctx, cacheTileRequest)
 
 	if img != nil {
 		slog.DebugContext(ctx, "Cache hit")
@@ -254,7 +266,11 @@ func (lg *LayerGroup) RenderTile(ctx context.Context, tileRequest pkg.TileReques
 		slog.WarnContext(ctx, fmt.Sprintf("Cache read error %v\n", err))
 	}
 
-	img, err = lg.RenderTileNoCache(ctx, tileRequest)
+	if l.allowCoalesce {
+		img, err = lg.renderTileCoalesced(ctx, tileRequest)
+	} else {
+		img, err = lg.RenderTileNoCache(ctx, tileRequest)
+	}
 
 	if err != nil {
 		return nil, err
@@ -269,7 +285,7 @@ func (lg *LayerGroup) RenderTile(ctx context.Context, tileRequest pkg.TileReques
 		case lg.cacheWriteLimiter <- struct{}{}:
 			go func() {
 				defer func() { <-lg.cacheWriteLimiter }()
-				writeCache(ctx, l.Cache, tileRequest, img)
+				writeCache(ctx, l.Cache, cacheTileRequest, img)
 			}()
 		default:
 			slog.WarnContext(ctx, "Skipping cache write: too many cache writes already in flight")
@@ -282,6 +298,54 @@ func (lg *LayerGroup) RenderTile(ctx context.Context, tileRequest pkg.TileReques
 // errNilImage is returned when a provider reports success but hands back no image. composite_mvt
 // and blend already defend against nested providers doing this, so it's reachable in practice.
 var errNilImage = errors.New("provider returned no image and no error")
+
+// singleflightResult bundles what a coalesced generation call produces, so it can travel through
+// singleflight's `any` result value without a type assertion at every call site.
+type singleflightResult struct {
+	img   *pkg.Image
+	err   error
+	panic any // non-nil if the provider call underneath panicked instead of returning
+	stack []byte
+}
+
+func (lg *LayerGroup) renderTileRecovered(ctx context.Context, tileRequest pkg.TileRequest) singleflightResult {
+	resultPtr := new(singleflightResult)
+
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				*resultPtr = singleflightResult{panic: r, stack: debug.Stack()}
+			}
+		}()
+
+		img, err := lg.RenderTileNoCache(ctx, tileRequest)
+		*resultPtr = singleflightResult{img: img, err: err}
+	}()
+
+	return *resultPtr
+}
+
+// renderTileCoalesced deduplicates concurrent provider fetches for the same tile.
+func (lg *LayerGroup) renderTileCoalesced(ctx context.Context, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+	key := tileRequest.String()
+
+	leaderCtx := context.WithoutCancel(ctx)
+
+	resultCh := lg.generateGroup.DoChan(key, func() (any, error) {
+		return lg.renderTileRecovered(leaderCtx, tileRequest), nil
+	})
+
+	select {
+	case res := <-resultCh:
+		sr, _ := res.Val.(singleflightResult)
+		if sr.panic != nil {
+			panic(fmt.Sprintf("%v\n\n%s", sr.panic, sr.stack))
+		}
+		return sr.img, sr.err
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+}
 
 func writeCache(ctx context.Context, cache cache.Cache, tileRequest pkg.TileRequest, img *pkg.Image) {
 	// We need to make a new context to avoid the request finishing cancelling the ctx sent into the cache

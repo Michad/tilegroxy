@@ -186,26 +186,6 @@ func (e RangeError) External(messages config.ErrorMessages) string {
 	return fmt.Sprintf(messages.RangeError, e.ParamName, e.MinValue, e.MaxValue)
 }
 
-// Indicates too many tiles will be returned for a given request than the system can safely handle
-type TooManyTilesError struct {
-	NumTiles uint64
-}
-
-func (e TooManyTilesError) Error() string {
-	// notest
-	return fmt.Sprintf("too many tiles to return (%v > 10000)", e.NumTiles)
-}
-
-func (e TooManyTilesError) Type() TypeOfError {
-	// notest
-	return TypeOfErrorBadRequest
-}
-
-func (e TooManyTilesError) External(messages config.ErrorMessages) string {
-	// notest
-	return fmt.Sprintf(messages.RangeError, "tile count", 1, e.NumTiles)
-}
-
 // Indicates generally a bad input from the user
 type InvalidArgumentError struct {
 	Name  string

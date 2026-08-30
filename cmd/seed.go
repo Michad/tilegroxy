@@ -30,9 +30,11 @@ var seedCmd = &cobra.Command{
 	
 Be mindful that the greater the zoom level (the more you "zoom in"), exponentially more tiles will need to be seeded for a given area. For instance, while zoom level 1 only requires 4 tiles to cover the planet, zoom level 10 requires over a million tiles.
 
+Seed jobs can be resumed automatically by specifying a file with the --progress flag. Job progress will be written to that file as we go. Interrupting the command and then running the exact same command again, will start off more-or-less from where things left off. The file will be overwritten with progress and should get deleted once done. 
+
 Example:
 
-	tilegroxy seed -c test_config.yml -l osm -z 2 -v -t 7 -z 0 -z 1 -z 3 -z 4`,
+	tilegroxy seed -c test_config.yml -l osm -z 2 -v -t 7 -z 0 -z 1 -z 3 -z 4 --progress seed_job.json`,
 	Run: runSeed,
 }
 
@@ -46,9 +48,10 @@ func runSeed(cmd *cobra.Command, _ []string) {
 	force, err7 := cmd.Flags().GetBool("force")
 	numThread, err8 := cmd.Flags().GetUint16("threads")
 	verbose, err9 := cmd.Flags().GetBool("verbose")
+	progressFile, err10 := cmd.Flags().GetString("progress")
 	out := rootCmd.OutOrStdout()
 
-	if err := errors.Join(err1, err2, err3, err4, err5, err6, err7, err8, err9); err != nil {
+	if err := errors.Join(err1, err2, err3, err4, err5, err6, err7, err8, err9, err10); err != nil {
 		fmt.Fprintf(out, "Error: %v", err)
 		exit(1)
 		return
@@ -65,12 +68,13 @@ func runSeed(cmd *cobra.Command, _ []string) {
 
 	err = tg.Seed(cfg,
 		tg.SeedOptions{
-			Zoom:      zoom,
-			Bounds:    b,
-			LayerName: layerName,
-			Force:     force,
-			Verbose:   verbose,
-			NumThread: numThread},
+			Zoom:         zoom,
+			Bounds:       b,
+			LayerName:    layerName,
+			Force:        force,
+			Verbose:      verbose,
+			NumThread:    numThread,
+			ProgressFile: progressFile},
 		out)
 
 	if err != nil {
@@ -94,9 +98,9 @@ func initSeed() {
 	seedCmd.Flags().Float32P("max-latitude", "n", 90, "The maximum latitude to seed. The north side of the bounding box")
 	seedCmd.Flags().Float32P("min-longitude", "w", -180, "The minimum longitude to seed. The west side of the bounding box")
 	seedCmd.Flags().Float32P("max-longitude", "e", 180, "The maximum longitude to seed. The east side of the bounding box")
-	seedCmd.Flags().Bool("force", false, "Perform the seeding even if it'll produce an excessive number of tiles. Without this flag seeds over 10k tiles will error out. \nWarning: Overriding this protection absolutely can cause an Out-of-Memory error")
+	seedCmd.Flags().Bool("force", false, "Perform the seeding even if it covers an excessive number of tiles. Without this flag seeds over 10k tiles will error out. \nWarning: A seed that large can spend hours making requests against an upstream provider")
 	seedCmd.Flags().Uint16P("threads", "t", 1, "How many concurrent requests to use to perform seeding. Be mindful of spamming upstream providers")
-	// TODO: support some way to support writing just to a specific cache when Multi cache is being used
+	seedCmd.Flags().StringP("progress", "p", "", "A file to use to record how far the seed got. If the file already exists the seed resumes from its recorded position instead of starting over.")
 
 	if err != nil {
 		panic(err)

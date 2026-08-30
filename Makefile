@@ -35,7 +35,7 @@ libyears:
 
 lint:
 	@go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
-	@golangci-lint run --fix -E asciicheck,bidichk,bodyclose,canonicalheader,dogsled,dupl,exhaustive,gocheckcompilerdirectives,gocritic,durationcheck,errname,errorlint,goheader,inamedparam,interfacebloat,intrange,maintidx,makezero,mirror,misspell,mnd,noctx,nonamedreturns,perfsprint,prealloc,predeclared,revive,staticcheck,testifylint,usestdlibvars,unconvert,wastedassign
+	@golangci-lint run --fix -E asciicheck,bidichk,bodyclose,canonicalheader,dogsled,dupl,exhaustive,gocheckcompilerdirectives,gocritic,godox,durationcheck,errname,errorlint,goheader,inamedparam,interfacebloat,intrange,maintidx,makezero,mirror,misspell,mnd,noctx,nonamedreturns,perfsprint,prealloc,predeclared,revive,staticcheck,testifylint,usestdlibvars,unconvert,wastedassign
 
 docs:
 	@npm i 

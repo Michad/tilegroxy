@@ -14,55 +14,11 @@
 package pkg
 
 import (
-	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func TestBoundsToTileZoom0(t *testing.T) {
-	b := Bounds{-90, 90, -180, 180, SRIDWGS84}
-
-	tilesArr, _ := b.FindTiles("test", 0, false)
-	tiles := *tilesArr
-
-	assert.Len(t, tiles, 1)
-	assert.Equal(t, "test", tiles[0].LayerName)
-	assert.Equal(t, 0, tiles[0].X)
-	assert.Equal(t, 0, tiles[0].Y)
-	assert.Equal(t, 0, tiles[0].Z)
-}
-func TestBoundsToTileZoom1(t *testing.T) {
-	b := Bounds{-90, 90, -180, 180, SRIDWGS84}
-
-	tilesArr, _ := b.FindTiles("test", 1, false)
-	tiles := *tilesArr
-
-	assert.Len(t, tiles, 4)
-	assert.Equal(t, "test", tiles[0].LayerName)
-	assert.Equal(t, 1, tiles[0].Z)
-
-	for _, tile := range tiles {
-		assert.LessOrEqual(t, 0, tile.X)
-		assert.LessOrEqual(t, 0, tile.Y)
-		assert.GreaterOrEqual(t, 1, tile.X)
-		assert.GreaterOrEqual(t, 1, tile.Y)
-	}
-}
-
-func TestBoundsToTileZoom8(t *testing.T) {
-	b := Bounds{51, 51.6, 5.7, 7.0, SRIDWGS84}
-
-	tilesArr, _ := b.FindTiles("test", 8, false)
-	tiles := *tilesArr
-
-	assert.Len(t, tiles, 1)
-	assert.Equal(t, "test", tiles[0].LayerName)
-	assert.Equal(t, 132, tiles[0].X)
-	assert.Equal(t, 85, tiles[0].Y)
-	assert.Equal(t, 8, tiles[0].Z)
-}
 
 func TestTileToBoundsZoom0(t *testing.T) {
 	r := TileRequest{"layer", 0, 0, 0}
@@ -197,31 +153,6 @@ func TestGeohashToBounds(t *testing.T) {
 	bbox, err = NewBoundsFromGeohash("some nonsense")
 	require.Error(t, err)
 	assert.True(t, bbox.IsNullIsland())
-}
-
-// Test converting a tile to bounds and back is an identity function within reason
-func FuzzToBoundsAndBack(f *testing.F) {
-
-	for z := 1; z < 21; z++ {
-		f.Add(z, int(math.Exp2(float64(z))/2), int(math.Exp2(float64(z))/2))
-	}
-	f.Fuzz(func(t *testing.T, z int, x int, y int) {
-		orig := TileRequest{"layer", z, x, y}
-		b, err := orig.GetBounds()
-		require.NoError(t, err)
-
-		// Small delta to avoid floating point rounding errors causing an extra tile
-		b.West += delta
-		b.South += delta
-		b.East -= delta
-		b.North -= delta
-
-		newTiles, err := b.FindTiles(orig.LayerName, uint(orig.Z), false)
-
-		require.NoError(t, err, "Error getting tiles for %v at %v", b, orig.Z)
-		require.Len(t, *newTiles, 1)
-		assert.Equal(t, orig, (*newTiles)[0])
-	})
 }
 
 func FuzzBoundsBufferRelative(f *testing.F) {

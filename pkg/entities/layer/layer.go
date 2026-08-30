@@ -184,18 +184,17 @@ func validateParamMatches(values map[string]string, regexp map[string]*regexp.Re
 }
 
 type Layer struct {
-	ID             string
-	Pattern        []layerSegment
-	ParamValidator map[string]*regexp.Regexp
-	Config         config.LayerConfig
-	Provider       Provider
-	Cache          cache.Cache
-	ErrorMessages  config.ErrorMessages
-	// DataType is the layer's resolved data type: Config.DataType when set, otherwise inferred
-	// from the provider tree. config.DataTypeUnknown when neither resolves it.
-	DataType           config.DataType
+	ID                 string
+	Pattern            []layerSegment
+	ParamValidator     map[string]*regexp.Regexp
+	Config             config.LayerConfig
+	Provider           Provider
+	Cache              cache.Cache
+	ErrorMessages      config.ErrorMessages
+	DataType           config.DataType // The version from the config with auto-resolution applied
 	providerContext    ProviderContext
 	authMutex          sync.Mutex
+	allowCoalesce      bool // The version from config with auto-resolution applied
 	tileAllCounter     metric.Int64Counter
 	tileAuthCounter    metric.Int64Counter
 	tileErrorCounter   metric.Int64Counter
@@ -248,7 +247,66 @@ func constructCropWrappedProvider(rawConfig config.LayerConfig, errorMessages co
 	})
 }
 
-func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.ClientConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup, secreter secret.Secreter, datastores *datastore.DatastoreRegistry) (*Layer, error) {
+func resolveAllowCoalesce(rawConfig config.LayerConfig, cacheIsNoop bool) bool {
+	if rawConfig.AllowCoalesce != nil {
+		return *rawConfig.AllowCoalesce
+	}
+
+	if rawConfig.SkipCache {
+		return false
+	}
+
+	return !cacheIsNoop
+}
+
+func resolvePatternAndValidator(rawConfig config.LayerConfig, errorMessages config.ErrorMessages) ([]layerSegment, map[string]*regexp.Regexp, error) {
+	isPattern := rawConfig.Pattern != "" && rawConfig.Pattern != rawConfig.ID
+
+	var segments []layerSegment
+	var err error
+	if isPattern {
+		segments, err = parsePattern(rawConfig.Pattern)
+		if err != nil {
+			return nil, nil, fmt.Errorf(errorMessages.InvalidParam, "layer.pattern", rawConfig.Pattern)
+		}
+	} else {
+		segments = []layerSegment{{value: rawConfig.ID, placeholder: false}}
+	}
+
+	var validator map[string]*regexp.Regexp
+	if isPattern && rawConfig.ParamValidator != nil {
+		validator, err = constructValidation(rawConfig.ParamValidator)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	for _, example := range rawConfig.Examples {
+		if !isPattern {
+			return nil, nil, fmt.Errorf(errorMessages.InvalidParam, "layer.examples", example)
+		}
+
+		if doesMatch, matches := match(segments, example); !doesMatch || !validateParamMatches(matches, validator) {
+			return nil, nil, fmt.Errorf(errorMessages.InvalidParam, "layer.examples", example)
+		}
+	}
+
+	return segments, validator, nil
+}
+
+func constructLayerCounters(layerID string) (metric.Int64Counter, metric.Int64Counter, metric.Int64Counter, metric.Int64Counter, error) {
+	meter := otel.Meter(packageName)
+	sanitizedID := sanitizeMetricName(layerID)
+
+	tileAllCounter, err1 := meter.Int64Counter("tilegroxy.tiles.layer."+sanitizedID+".request", metric.WithDescription("Number of tile requests for "+layerID))
+	tileAuthCounter, err2 := meter.Int64Counter("tilegroxy.tiles.layer."+sanitizedID+".auth", metric.WithDescription("Number of outgoing authentication checks for "+layerID))
+	tileErrorCounter, err3 := meter.Int64Counter("tilegroxy.tiles.layer."+sanitizedID+".error", metric.WithDescription("Number of tile requests that error during generation for "+layerID))
+	tileSuccessCounter, err4 := meter.Int64Counter("tilegroxy.tiles.layer."+sanitizedID+".success", metric.WithDescription("Number of tile requests that result in a tile for "+layerID))
+
+	return tileAllCounter, tileAuthCounter, tileErrorCounter, tileSuccessCounter, errors.Join(err1, err2, err3, err4)
+}
+
+func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.ClientConfig, cacheIsNoop bool, errorMessages config.ErrorMessages, layerGroup *LayerGroup, secreter secret.Secreter, datastores *datastore.DatastoreRegistry) (*Layer, error) {
 	var err error
 	if rawConfig.Client == nil {
 		rawConfig.Client = &defaultClientConfig
@@ -288,51 +346,20 @@ func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.Cli
 			Datastores:    datastores,
 		})
 	}
-
 	if err != nil {
 		return nil, err
 	}
 
-	var segments []layerSegment
-	if rawConfig.Pattern != "" && rawConfig.Pattern != rawConfig.ID {
-		segments, err = parsePattern(rawConfig.Pattern)
-		if err != nil {
-			return nil, fmt.Errorf(errorMessages.InvalidParam, "layer.pattern", rawConfig.Pattern)
-		}
-	} else {
-		segments = []layerSegment{{value: rawConfig.ID, placeholder: false}}
+	allowCoalesce := resolveAllowCoalesce(rawConfig, cacheIsNoop)
+
+	segments, validator, err := resolvePatternAndValidator(rawConfig, errorMessages)
+	if err != nil {
+		return nil, err
 	}
 
-	var validator map[string]*regexp.Regexp
+	tileAllCounter, tileAuthCounter, tileErrorCounter, tileSuccessCounter, err := constructLayerCounters(rawConfig.ID)
 
-	if rawConfig.Pattern != "" && rawConfig.ParamValidator != nil {
-		validator, err = constructValidation(rawConfig.ParamValidator)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	isPattern := rawConfig.Pattern != "" && rawConfig.Pattern != rawConfig.ID
-	for _, example := range rawConfig.Examples {
-		if !isPattern {
-			return nil, fmt.Errorf(errorMessages.InvalidParam, "layer.examples", example)
-		}
-
-		if doesMatch, matches := match(segments, example); !doesMatch || !validateParamMatches(matches, validator) {
-			return nil, fmt.Errorf(errorMessages.InvalidParam, "layer.examples", example)
-		}
-	}
-
-	meter := otel.Meter(packageName)
-
-	// The layer ID is embedded in the metric name so each layer gets its own counters.
-	sanitizedID := sanitizeMetricName(rawConfig.ID)
-	tileAllCounter, err1 := meter.Int64Counter("tilegroxy.tiles.layer."+sanitizedID+".request", metric.WithDescription("Number of tile requests for "+rawConfig.ID))
-	tileAuthCounter, err2 := meter.Int64Counter("tilegroxy.tiles.layer."+sanitizedID+".auth", metric.WithDescription("Number of outgoing authentication checks for "+rawConfig.ID))
-	tileErrorCounter, err3 := meter.Int64Counter("tilegroxy.tiles.layer."+sanitizedID+".error", metric.WithDescription("Number of tile requests that error during generation for "+rawConfig.ID))
-	tileSuccessCounter, err4 := meter.Int64Counter("tilegroxy.tiles.layer."+sanitizedID+".success", metric.WithDescription("Number of tile requests that result in a tile for "+rawConfig.ID))
-
-	return &Layer{rawConfig.ID, segments, validator, rawConfig, provider, nil, errorMessages, datatype, ProviderContext{}, sync.Mutex{}, tileAllCounter, tileAuthCounter, tileErrorCounter, tileSuccessCounter}, errors.Join(err1, err2, err3, err4)
+	return &Layer{rawConfig.ID, segments, validator, rawConfig, provider, nil, errorMessages, datatype, ProviderContext{}, sync.Mutex{}, allowCoalesce, tileAllCounter, tileAuthCounter, tileErrorCounter, tileSuccessCounter}, err
 }
 
 // getProviderContext returns a snapshot of the current provider context, re-authenticating

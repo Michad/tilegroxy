@@ -32,7 +32,7 @@ func Test_RenderTileNoCache_BelowMinZoom_ReturnsRangeError(t *testing.T) {
 		Provider: map[string]any{"name": "fixed-zoom-1"},
 	}
 
-	l, err := ConstructLayer(rawConfig, config.ClientConfig{}, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil)
+	l, err := ConstructLayer(rawConfig, config.ClientConfig{}, true, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil)
 	require.NoError(t, err)
 
 	_, err = l.RenderTileNoCache(pkg.BackgroundContext(), pkg.TileRequest{LayerName: "z1", Z: 2, X: 0, Y: 0})
@@ -52,7 +52,7 @@ func Test_RenderTileNoCache_AboveMaxZoom_ReturnsRangeError(t *testing.T) {
 		Provider: map[string]any{"name": "fixed-zoom-2"},
 	}
 
-	l, err := ConstructLayer(rawConfig, config.ClientConfig{}, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil)
+	l, err := ConstructLayer(rawConfig, config.ClientConfig{}, true, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil)
 	require.NoError(t, err)
 
 	_, err = l.RenderTileNoCache(pkg.BackgroundContext(), pkg.TileRequest{LayerName: "z2", Z: 15, X: 0, Y: 0})
@@ -74,7 +74,7 @@ func Test_RenderTileNoCache_WithinZoomRange_Succeeds(t *testing.T) {
 		Provider: map[string]any{"name": "fixed-zoom-3"},
 	}
 
-	l, err := ConstructLayer(rawConfig, config.ClientConfig{}, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil)
+	l, err := ConstructLayer(rawConfig, config.ClientConfig{}, true, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil)
 	require.NoError(t, err)
 
 	_, err = l.RenderTileNoCache(pkg.BackgroundContext(), pkg.TileRequest{LayerName: "z3", Z: 7, X: 0, Y: 0})
@@ -90,7 +90,7 @@ func Test_RenderTileNoCache_NoZoomLimitsConfigured_Succeeds(t *testing.T) {
 		Provider: map[string]any{"name": "fixed-zoom-4"},
 	}
 
-	l, err := ConstructLayer(rawConfig, config.ClientConfig{}, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil)
+	l, err := ConstructLayer(rawConfig, config.ClientConfig{}, true, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil)
 	require.NoError(t, err)
 
 	_, err = l.RenderTileNoCache(pkg.BackgroundContext(), pkg.TileRequest{LayerName: "z4", Z: 20, X: 0, Y: 0})

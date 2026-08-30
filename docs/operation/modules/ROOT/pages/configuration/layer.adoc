@@ -56,6 +56,13 @@ Configuration options:
 | No
 | false
 
+| allowcoalesce
+| Whether to allow concurrent requests for the same tile to be combined into one tile generation call. This includes requests triggered by different users. Helps avoid your upstream provider being spammed if, for whatever reason, your clients spam a single tile. However, if your tiles are customized per user, you will want to set this false.
+| bool
+| No
+| Auto (based on whether caching is enabled)
+
+
 | description
 | Populates the `description` field of this layer's xref:configuration/tilejson.adoc[TileJSON] document. Has no effect unless TileJSON is enabled
 | string
@@ -95,6 +102,12 @@ Configuration options:
 | examples
 | A list of example layer names that fulfill the pattern. Used for xref:configuration/tilejson.adoc[TileJSON] documents and the xref:commands/test.adoc[`tilegroxy test`] command. Has no effect on a layer identified by a plain `id`
 | string[]
+| No
+| None
+
+| cacheversion
+| A version identifier used to invalidate cache entries (does not delete the cache entries). Cache entries are prefixed with this identifier, so when this changes no pre-existing cache entries ever match. It's recommended to treat this as a serial version number.  
+| string
 | No
 | None
 |===

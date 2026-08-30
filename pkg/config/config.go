@@ -116,7 +116,6 @@ type TelemetryConfig struct {
 	Enabled bool
 }
 
-// TODO: handle this better. Not foolproof in detecting default values and very manual. Probably need to do a mapstructure method for this
 func (c *ClientConfig) MergeDefaultsFrom(o ClientConfig) {
 	if c.UserAgent == "" {
 		c.UserAgent = o.UserAgent
@@ -256,6 +255,8 @@ type LayerConfig struct {
 	Description    string            // Optional. Populates the `description` field of this layer's TileJSON document. Has no effect unless TileJSON is enabled
 	Attribution    string            // Optional. Populates the `attribution` field of this layer's TileJSON document. Has no effect unless TileJSON is enabled
 	Examples       []string          // Optional. Concrete layer names used to generate TileJSON documents for a `pattern` layer. Has no effect on a layer identified by a plain id
+	CacheVersion   string            // Optional. Allows invalidating cache entries when changed. Prefixed into cache keys but not he actual layer name
+	AllowCoalesce  *bool             // Optional. Whether two requests that come in at the same time for the same tile should be combined. Defaults to auto, which is determined by whether caching is enabled
 }
 
 type Config struct {

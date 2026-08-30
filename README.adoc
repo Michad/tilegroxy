@@ -53,6 +53,8 @@ Traces, metrics, and logs available via link:https://tilegroxy.michael.davis.nam
 Per-layer usage link:https://tilegroxy.michael.davis.name/operation/configuration/analytics/index.html[analytics] recorded to ClickHouse, PostgreSQL, or a custom destination
 +++</li><li>+++
 Usable as an application or a link:https://tilegroxy.michael.davis.name/operation/extensibility.html[library]
++++</li><li>+++
+Supports link:https://tilegroxy.michael.davis.name/operation/tilejson.html[TileJSON]
 +++</li></ul>+++
 
 :leveloffset!:
