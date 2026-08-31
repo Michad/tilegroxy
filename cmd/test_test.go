@@ -21,15 +21,33 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
 
+	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
+
+func tileTestServer(t *testing.T) *httptest.Server {
+	t.Helper()
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		b, err := images.GetStaticImage("color:FFF")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "image/png")
+		_, _ = w.Write(*b)
+	}))
+	t.Cleanup(ts.Close)
+	return ts
+}
 
 func init() {
 	// This is a hack to help with vscode test execution. Put a .env in repo root w/ anything you need for test containers
@@ -102,6 +120,8 @@ func Test_ExecuteTestWithMultiCache(t *testing.T) {
 	defer os.RemoveAll(dir)
 	require.NoError(t, err)
 
+	ts := tileTestServer(t)
+
 	cfg := fmt.Sprintf(
 		`cache:
   name: multi
@@ -115,8 +135,8 @@ layers:
   - id: osm
     provider:
         name: proxy
-        url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
-`, dir)
+        url: %v/{z}/{x}/{y}.png
+`, dir, ts.URL)
 
 	cmd := rootCmd
 	b := bytes.NewBufferString("")
@@ -167,6 +187,8 @@ func Test_ExecuteTestWithRedisCache(t *testing.T) {
 	require.NoError(t, err)
 	endSplit := strings.Split(endpoint, ":")
 
+	ts := tileTestServer(t)
+
 	cfg := fmt.Sprintf(
 		`cache:
   name: redis
@@ -176,8 +198,8 @@ layers:
   - id: osm
     provider:
         name: proxy
-        url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
-`, endSplit[0], endSplit[1])
+        url: %v/{z}/{x}/{y}.png
+`, endSplit[0], endSplit[1], ts.URL)
 	fmt.Println(cfg)
 
 	cmd := rootCmd
