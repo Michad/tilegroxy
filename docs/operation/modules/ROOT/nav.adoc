@@ -39,6 +39,8 @@
 ** xref:configuration/datastores/index.adoc[]
 *** xref:configuration/datastores/clickhouse.adoc[]
 *** xref:configuration/datastores/postgresql.adoc[]
+*** xref:configuration/datastores/redis.adoc[]
+*** xref:configuration/datastores/memcache.adoc[]
 ** xref:configuration/secret/index.adoc[]
 *** xref:configuration/secret/aws_secrets_manager.adoc[]
 ** xref:configuration/server.adoc[]

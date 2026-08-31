@@ -31,16 +31,21 @@ const (
 	memcacheMaxTTL      = 30 * 60 * 60 * 24
 )
 
+// Note: inline connection info is intentionally undocumented, just left functional for compatibility
 type MemcacheConfig struct {
 	HostAndPort `mapstructure:",squash"`
 	Servers     []HostAndPort // The list of servers to use.
 	KeyPrefix   string        // Prefix to keynames stored in cache
 	TTL         uint          // Cache expiration in seconds. Max of 30 days. Default to 1 day
+	Datastore   string        // ID of a memcache datastore to reuse instead of connecting directly. Mutually exclusive with the connection parameters above
 }
 
 type Memcache struct {
 	MemcacheConfig
 	client *memcache.Client
+	// Whether client was created for this cache alone, and therefore should be closed with it.
+	// False when client came from a shared datastore, since the datastore registry owns closing it.
+	ownsClient bool
 }
 
 func init() {
@@ -61,6 +66,31 @@ func (s MemcacheRegistration) Name() string {
 func (s MemcacheRegistration) Initialize(configAny any, deps cache.CacheDeps) (cache.Cache, error) {
 	config := configAny.(MemcacheConfig)
 
+	if config.TTL == 0 {
+		config.TTL = memcacheDefaultTTL
+	}
+	if config.TTL > memcacheMaxTTL {
+		config.TTL = memcacheMaxTTL
+	}
+
+	if config.Datastore != "" {
+		if config.Host != "" || len(config.Servers) > 0 {
+			return nil, fmt.Errorf(deps.ErrorMessages.ParamsMutuallyExclusive, "cache.memcache.datastore", "cache.memcache connection parameters")
+		}
+
+		ds, ok := deps.Datastores.Get(config.Datastore)
+		if !ok {
+			return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "cache.memcache.datastore", config.Datastore)
+		}
+
+		client, ok := ds.Native().(*memcache.Client)
+		if !ok {
+			return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "cache.memcache.datastore", config.Datastore)
+		}
+
+		return &Memcache{config, client, false}, nil
+	}
+
 	if len(config.Servers) == 0 {
 		if config.Host == "" {
 			config.Host = memcacheDefaultHost
@@ -74,19 +104,12 @@ func (s MemcacheRegistration) Initialize(configAny any, deps cache.CacheDeps) (c
 		return nil, fmt.Errorf(deps.ErrorMessages.ParamsMutuallyExclusive, "config.memcache.host", "config.memcache.servers")
 	}
 
-	if config.TTL == 0 {
-		config.TTL = memcacheDefaultTTL
-	}
-	if config.TTL > memcacheMaxTTL {
-		config.TTL = memcacheMaxTTL
-	}
-
 	addrs := HostAndPortArrayToStringArray(config.Servers)
 	mc := memcache.New(addrs...)
 
 	err := mc.Ping()
 
-	return &Memcache{config, mc}, err
+	return &Memcache{config, mc, true}, err
 
 }
 
@@ -98,9 +121,10 @@ func memcacheKey(prefix string, t pkg.TileRequest) string {
 	return safeMemcacheKey(prefix, safe.String())
 }
 
-// Close shuts down the memcache client, releasing its connection pool.
+// Close shuts down the memcache client, releasing its connection pool. Left alone when the client
+// came from a shared datastore, since the datastore registry owns closing it in that case.
 func (c Memcache) Close(_ context.Context) error {
-	if c.client == nil {
+	if c.client == nil || !c.ownsClient {
 		return nil
 	}
 

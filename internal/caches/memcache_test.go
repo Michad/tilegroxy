@@ -23,8 +23,10 @@ import (
 	"strings"
 	"testing"
 
+	_ "github.com/Michad/tilegroxy/internal/datastores"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
+	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -162,4 +164,45 @@ func TestMemcacheWithContainerMissIsNotAnError(t *testing.T) {
 	require.NoError(t, err)
 
 	validateNoLookup(t, r, makeReq(1))
+}
+
+func TestMemcacheWithContainerUsingDatastore(t *testing.T) {
+	ctx := context.Background()
+	memcacheC, cleanupF := setupMemcacheContainer(ctx, t)
+	if !assert.NotNil(t, memcacheC) {
+		return
+	}
+
+	defer cleanupF(t)
+
+	endpoint, err := memcacheC.Endpoint(ctx, "")
+	require.NoError(t, err)
+
+	hostAndPort := extractHostAndPort(t, endpoint)
+
+	dsCfg := []map[string]interface{}{
+		{
+			"name": "memcache",
+			"id":   "mymemcache",
+			"host": hostAndPort.Host,
+			"port": hostAndPort.Port,
+		},
+	}
+
+	reg, err := datastore.ConstructDatastoreRegistry(dsCfg, nil, config.ErrorMessages{})
+	require.NoError(t, err)
+	defer func() { require.NoError(t, reg.Close(ctx)) }()
+
+	cfg := MemcacheConfig{Datastore: "mymemcache"}
+
+	r, err := MemcacheRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}, Datastores: reg})
+	require.NoError(t, err)
+
+	validateSaveAndLookup(t, r)
+
+	// Closing the cache must not close the shared datastore connection out from under other consumers.
+	require.NoError(t, r.(interface {
+		Close(ctx context.Context) error
+	}).Close(ctx))
+	validateSaveAndLookup(t, r)
 }
