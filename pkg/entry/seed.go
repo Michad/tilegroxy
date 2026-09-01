@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"strings"
 	"sync"
 
 	"github.com/Michad/tilegroxy/internal/seed"
@@ -41,6 +42,7 @@ type SeedOptions struct {
 	Verbose      bool
 	NumThread    uint16
 	ProgressFile string
+	CacheName    string
 }
 
 func Seed(cfg *config.Config, opts SeedOptions, out io.Writer) error {
@@ -64,7 +66,16 @@ func Seed(cfg *config.Config, opts SeedOptions, out io.Writer) error {
 		return err
 	}
 
-	ent, err := configToEntities(*cfg)
+	entityConfig := *cfg
+
+	if opts.CacheName != "" {
+		entityConfig.Cache, err = restrictToCacheTier(entityConfig.Cache, opts.CacheName)
+		if err != nil {
+			return err
+		}
+	}
+
+	ent, err := configToEntities(entityConfig)
 	if err != nil {
 		return err
 	}
@@ -103,6 +114,44 @@ func Seed(cfg *config.Config, opts SeedOptions, out io.Writer) error {
 	}
 
 	return nil
+}
+
+// rewrites raw cache config so only the named tier of a "multi" cache gets constructed
+func restrictToCacheTier(rawConfig map[string]interface{}, name string) (map[string]interface{}, error) {
+	cacheName, _ := rawConfig["name"].(string)
+	if !strings.EqualFold(cacheName, "multi") {
+		return nil, fmt.Errorf("cache %q not found: layer's cache is not multi-tiered", name)
+	}
+
+	var matched map[string]interface{}
+
+	switch rawTiers := rawConfig["tiers"].(type) {
+	case []map[string]interface{}:
+		for _, tier := range rawTiers {
+			if tierName, _ := tier["name"].(string); strings.EqualFold(tierName, name) {
+				matched = tier
+				break
+			}
+		}
+	case []interface{}:
+		for _, rawTier := range rawTiers {
+			tier, ok := rawTier.(map[string]interface{})
+			if !ok {
+				continue
+			}
+
+			if tierName, _ := tier["name"].(string); strings.EqualFold(tierName, name) {
+				matched = tier
+				break
+			}
+		}
+	}
+
+	if matched == nil {
+		return nil, fmt.Errorf("cache %q not found: no matching tier in the multi cache", name)
+	}
+
+	return matched, nil
 }
 
 func checkSeedSize(seedJob *seed.SeedJob, opts SeedOptions, out io.Writer) error {
@@ -278,8 +327,10 @@ func seedThread(wg *sync.WaitGroup, opts SeedOptions, out io.Writer, layerGroup 
 		fmt.Fprintf(out, "Created thread %v\n", t)
 	}
 
+	ctx := pkg.BackgroundContext()
+
 	for tile := range tiles {
-		_, tileErr := layerGroup.RenderTile(pkg.BackgroundContext(), tile.request)
+		_, tileErr := layerGroup.RenderTile(ctx, tile.request)
 
 		if opts.Verbose {
 			var status string

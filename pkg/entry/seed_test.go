@@ -249,6 +249,94 @@ func Test_Seed_InvalidLayer(t *testing.T) {
 	}, &out), "invalid layer")
 }
 
+// A layer with a plain (non-multi) cache has no tiers to target, so an unknown --cache value has
+// to fail loudly rather than silently seeding the whole cache anyway.
+func Test_Seed_InvalidCacheName(t *testing.T) {
+	cfg := seedTestConfig(t)
+
+	var out bytes.Buffer
+	err := Seed(&cfg, SeedOptions{
+		Zoom:      []uint{0},
+		Bounds:    pkg.WorldBounds(),
+		LayerName: "counts",
+		NumThread: 1,
+		CacheName: "disk",
+	}, &out)
+
+	require.ErrorContains(t, err, "disk")
+
+	_, rendered := seedTestCounter.snapshot()
+	assert.Empty(t, rendered)
+}
+
+// Config loaded from YAML/JSON decodes tiers as []interface{} rather than the []map[string]interface{}
+// shape used when a config is built directly in Go, so both need to resolve the same tier.
+func Test_RestrictToCacheTier_DecodedConfig(t *testing.T) {
+	cfg, err := config.LoadConfig(`
+cache:
+  name: multi
+  tiers:
+    - name: memory
+    - name: disk
+      path: "./disk_tile_cache"
+layers:
+  - id: osm
+    provider:
+      name: proxy
+      url: "http://example.com/{z}/{x}/{y}.png"
+`)
+	require.NoError(t, err)
+
+	tier, err := restrictToCacheTier(cfg.Cache, "disk")
+	require.NoError(t, err)
+	assert.Equal(t, "disk", tier["name"])
+	assert.Equal(t, "./disk_tile_cache", tier["path"])
+}
+
+func Test_RestrictToCacheTier_NotMulti(t *testing.T) {
+	_, err := restrictToCacheTier(map[string]interface{}{"name": "memory"}, "disk")
+	require.ErrorContains(t, err, "disk")
+}
+
+func Test_RestrictToCacheTier_NoMatch(t *testing.T) {
+	_, err := restrictToCacheTier(map[string]interface{}{
+		"name":  "multi",
+		"tiers": []map[string]interface{}{{"name": "memory"}},
+	}, "disk")
+	require.ErrorContains(t, err, "disk")
+}
+
+// --cache restricts a seed run to a single tier of a multi cache, so only that tier ends up
+// populated.
+func Test_Seed_CacheNameTargetsOneTier(t *testing.T) {
+	layer.RegisterProvider(seedTestCountingRegistration{})
+	seedTestCounter.reset()
+
+	cfg := config.DefaultConfig()
+	cfg.Cache = map[string]interface{}{
+		"name": "multi",
+		"tiers": []map[string]interface{}{
+			{"name": "memory"},
+			{"name": "memory"},
+		},
+	}
+	cfg.Layers = []config.LayerConfig{
+		{ID: "multi-tiered", Provider: map[string]interface{}{"name": "seed-test-counting-provider"}},
+	}
+
+	var out bytes.Buffer
+	require.NoError(t, Seed(&cfg, SeedOptions{
+		Zoom:      []uint{0},
+		Bounds:    pkg.WorldBounds(),
+		LayerName: "multi-tiered",
+		NumThread: 1,
+		CacheName: "memory",
+	}, &out))
+
+	_, rendered := seedTestCounter.snapshot()
+	assert.Len(t, rendered, 1)
+}
+
 // The guard is now a count of how many tiles the run covers, not a memory ceiling, and --force is
 // still the way to say you meant it.
 func Test_Seed_ExcessiveTileCountNeedsForce(t *testing.T) {
