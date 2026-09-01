@@ -52,12 +52,20 @@ type CGI struct {
 type SLogWriter struct {
 	ctx   context.Context
 	level slog.Level
+	buf   bytes.Buffer
 }
 
-func (w SLogWriter) Write(p []byte) (int, error) {
-	slog.Log(w.ctx, w.level, string(p))
+func (w *SLogWriter) Write(p []byte) (int, error) {
+	return w.buf.Write(p)
+}
 
-	return len(p), nil
+func (w *SLogWriter) Flush() {
+	if w.buf.Len() == 0 {
+		return
+	}
+
+	slog.Log(w.ctx, w.level, strings.TrimRight(w.buf.String(), "\n"))
+	w.buf.Reset()
 }
 
 type response struct {
@@ -149,8 +157,9 @@ func (t CGI) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequ
 
 	h := t.handler
 
-	h.Stderr = SLogWriter{ctx, slog.LevelError.Level()}
-	h.Logger = log.New(h.Stderr, "", 0)
+	stderr := &SLogWriter{ctx: ctx, level: slog.LevelError.Level()}
+	h.Stderr = stderr
+	h.Logger = log.New(stderr, "", 0)
 
 	uri := t.URI
 	if uri[0] != '/' {
@@ -175,6 +184,7 @@ func (t CGI) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequ
 	rw := response{&buf, 0, make(map[string][]string)}
 
 	h.ServeHTTP(&rw, req)
+	stderr.Flush()
 	b := buf.Bytes()
 
 	var contentType string
