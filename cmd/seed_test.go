@@ -85,6 +85,29 @@ func Test_SeedCommand_InvalidLayer(t *testing.T) {
 	assert.Equal(t, 1, exitStatus)
 }
 
+func Test_SeedCommand_InvalidCache(t *testing.T) {
+	exitStatus = -1
+	rootCmd.ResetFlags()
+	seedCmd.ResetFlags()
+	initRoot()
+	initSeed()
+
+	b := bytes.NewBufferString("")
+	rootCmd.SetOut(b)
+	rootCmd.SetErr(b)
+	rootCmd.SetArgs([]string{"seed", "--verbose", "-c", "../examples/configurations/simple.json", "-l", "osm", "-z", "1", "--cache", "disk"})
+	require.NoError(t, rootCmd.Execute())
+	out, err := io.ReadAll(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Println(string(out))
+
+	assert.Contains(t, string(out), "disk")
+	assert.Equal(t, 1, exitStatus)
+}
+
 func Test_SeedCommand_InvalidThread(t *testing.T) {
 	exitStatus = -1
 	rootCmd.ResetFlags()
