@@ -25,6 +25,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -66,26 +67,47 @@ func coreServeTest(t *testing.T, cfg string, port int, url string) (*http.Respon
 	}
 
 	// This isn't proper goroutine practice but done this way since we only care about errors that happen at startup of the server
+	var mu sync.Mutex
 	var bindErr error
 	exited := false
+	done := make(chan struct{})
 
 	go func() {
-		bindErr = rootCmd.Execute()
+		defer close(done)
+		err := rootCmd.Execute()
+		mu.Lock()
+		bindErr = err
 		exited = true
+		mu.Unlock()
 	}()
 
-	if bindErr != nil {
-		return nil, nil, bindErr
+	// waitForExit blocks until the server goroutine finishes so shared package state
+	// (rootCmd, exitStatus) isn't left racing against whatever test runs next.
+	waitForExit := func() {
+		syscall.Kill(syscall.Getpid(), syscall.SIGUSR1) //nolint:errcheck
+		<-done
+	}
+
+	getState := func() (error, bool) {
+		mu.Lock()
+		defer mu.Unlock()
+		return bindErr, exited
+	}
+
+	if err, _ := getState(); err != nil {
+		<-done
+		return nil, nil, err
 	}
 
 	time.Sleep(time.Second)
 
 	ok := false
 	for i := 1; i < 10; i++ {
-		if bindErr != nil {
-			return nil, nil, bindErr
-		}
-		if exited {
+		if err, exited := getState(); err != nil {
+			<-done
+			return nil, nil, err
+		} else if exited {
+			<-done
 			return nil, nil, errors.New("unexpected server exit")
 		}
 
@@ -103,6 +125,7 @@ func coreServeTest(t *testing.T, cfg string, port int, url string) (*http.Respon
 	}
 
 	if !ok {
+		waitForExit()
 		return nil, nil, errors.New("unable to connect to server")
 	}
 
@@ -113,6 +136,7 @@ func coreServeTest(t *testing.T, cfg string, port int, url string) (*http.Respon
 		var req *http.Request
 		req, err = http.NewRequest(http.MethodGet, url, nil)
 		if err != nil {
+			waitForExit()
 			return nil, nil, err
 		}
 
@@ -120,12 +144,14 @@ func coreServeTest(t *testing.T, cfg string, port int, url string) (*http.Respon
 	}
 
 	return resp, func() {
-		err = syscall.Kill(syscall.Getpid(), syscall.SIGUSR1)
-		require.NoError(t, err)
+		killErr := syscall.Kill(syscall.Getpid(), syscall.SIGUSR1)
+		require.NoError(t, killErr)
 
 		if resp != nil {
 			resp.Body.Close()
 		}
+
+		<-done
 	}, err
 }
 
@@ -469,7 +495,12 @@ layers:
 
 	rootCmd.SetArgs([]string{"serve", "--remote-provider", "etcd3", "--remote-path", "sample_key", "--remote-endpoint", "http://" + endpoint})
 
-	go func() { assert.NoError(t, rootCmd.Execute()) }()
+	var execErr error
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		execErr = rootCmd.Execute()
+	}()
 
 	time.Sleep(1 * time.Second)
 
@@ -483,6 +514,8 @@ layers:
 		if resp != nil {
 			resp.Body.Close()
 		}
+		<-done
+		assert.NoError(t, execErr)
 	}()
 
 	require.NoError(t, err)

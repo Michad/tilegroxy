@@ -552,12 +552,14 @@ func LoadAndWatchConfigFromFile(filename string, onReload func(Config, error)) (
 				// fsnotify can send events before file has finished writing - give it a second to settle... this might need to be extended to a retry-with-exp-backoff in the future - https://github.com/spf13/viper/issues/1085
 				time.Sleep(time.Second)
 
-				err := viper.ReadInConfig()
+				reloaded := initViper()
+				reloaded.SetConfigFile(filename)
+				err := reloaded.ReadInConfig()
 
 				if err != nil {
 					onReload(Config{}, err)
 				} else {
-					onReload(unmarshal(viper))
+					onReload(unmarshal(reloaded))
 				}
 			}()
 		})
