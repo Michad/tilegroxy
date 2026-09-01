@@ -1,7 +1,7 @@
 cache:
   name: multi
   tiers:
-    - name: memcache
+    - name: memcached
       ttl: 1000
     - name: s3
       bucket: tilegroxy-demo-cache

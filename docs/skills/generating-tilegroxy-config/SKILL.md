@@ -103,7 +103,7 @@ doc page to read:
 - Does this need to combine or fall back between multiple sources for a layer? (drives
   whether `blend`/`fallback`/`crop` are needed)
 - Where should tiles be cached, if at all - none, local disk/memory, or a shared store
-  like Redis/S3/Memcache? Any expiration requirements?
+  like Redis/S3/Memcached? Any expiration requirements?
 - Does the server need to authenticate incoming requests, and if so how (open
   internally, a static bearer token, or JWT/OIDC)?
 - Is this for local development/testing or a production deployment? (affects
@@ -117,7 +117,7 @@ materially changes which entity or page to read next.
 
 ## Building a config, in order
 
-1. **Pick a cache.** `none` for no caching, `memory` for local dev, `disk`/`redis`/`s3`/`memcache`
+1. **Pick a cache.** `none` for no caching, `memory` for local dev, `disk`/`redis`/`s3`/`memcached`
    for real deployments, `multi` to tier a fast cache in front of a slow one, `ttl` to wrap
    any cache with expiration.
 2. **Define layers.** Each layer needs `id` and `provider`. Start with one provider per

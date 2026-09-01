@@ -1,8 +1,8 @@
-= Memcache
+= Memcached
 
-Cache tiles using memcache.
+Cache tiles using memcached.
 
-Name should be "memcache"
+Name should be "memcached"
 
 Configuration options:
 
@@ -11,7 +11,7 @@ Configuration options:
 | Parameter | Description | Type | Required | Default
 
 | keyprefix
-| A prefix to use for keys stored in cache. Helps avoid collisions when multiple applications use the same memcache
+| A prefix to use for keys stored in cache. Helps avoid collisions when multiple applications use the same memcached
 | string
 | No
 | None
@@ -23,7 +23,7 @@ Configuration options:
 | 1 day
 
 | datastore
-| The ID of a xref:configuration/datastores/memcache.adoc[memcache datastore] to use.
+| The ID of a xref:configuration/datastores/memcached.adoc[memcached datastore] to use.
 | string
 | Yes
 | None
@@ -34,12 +34,12 @@ Example:
 [,yaml]
 ----
 datastores:
-  - name: memcache
-    id: memcache-0
+  - name: memcached
+    id: memcached-0
     host: 127.0.0.1
     port: 11211
 
 cache:
-  name: memcache
-  datastore: memcache-0
+  name: memcached
+  datastore: memcached-0
 ----

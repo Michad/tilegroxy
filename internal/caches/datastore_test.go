@@ -18,10 +18,12 @@ import (
 	"context"
 	"testing"
 
+	"github.com/Michad/tilegroxy/internal/datastores"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/bradfitz/gomemcache/memcache"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -89,44 +91,66 @@ func TestRedisDatastoreWrongType(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestMemcacheDatastoreAndHostMutuallyExclusive(t *testing.T) {
-	cfg := MemcacheConfig{
+func TestMemcachedDatastoreAndHostMutuallyExclusive(t *testing.T) {
+	cfg := MemcachedConfig{
 		Datastore:   "mymemcache",
 		HostAndPort: HostAndPort{Host: "127.0.0.1"},
 	}
 
-	_, err := MemcacheRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: errorMessages})
+	_, err := MemcachedRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: errorMessages})
 	require.Error(t, err)
 }
 
-func TestMemcacheDatastoreNotFound(t *testing.T) {
+func TestMemcachedDatastoreNotFound(t *testing.T) {
 	reg := buildDatastoreRegistry(t, "other", "stub-memcache-notfound", nil)
 
-	cfg := MemcacheConfig{Datastore: "mymemcache"}
+	cfg := MemcachedConfig{Datastore: "mymemcache"}
 
-	_, err := MemcacheRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: errorMessages, Datastores: reg})
+	_, err := MemcachedRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: errorMessages, Datastores: reg})
 	require.Error(t, err)
 }
 
-func TestMemcacheDatastoreWrongType(t *testing.T) {
+func TestMemcachedDatastoreWrongType(t *testing.T) {
 	reg := buildDatastoreRegistry(t, "mymemcache", "stub-memcache-wrongtype", "not-a-memcache-client")
 
-	cfg := MemcacheConfig{Datastore: "mymemcache"}
+	cfg := MemcachedConfig{Datastore: "mymemcache"}
 
-	_, err := MemcacheRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: errorMessages, Datastores: reg})
+	_, err := MemcachedRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: errorMessages, Datastores: reg})
 	require.Error(t, err)
 }
 
 // Close must not close the datastore's shared client, since the registry owns its lifecycle.
-func TestMemcacheDatastoreCloseDoesNotCloseSharedClient(t *testing.T) {
+func TestMemcachedDatastoreCloseDoesNotCloseSharedClient(t *testing.T) {
 	client := memcache.New("127.0.0.1:11211")
 	reg := buildDatastoreRegistry(t, "mymemcache", "stub-memcache-close", client)
 
-	cfg := MemcacheConfig{Datastore: "mymemcache"}
+	cfg := MemcachedConfig{Datastore: "mymemcache"}
 
-	c, err := MemcacheRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: errorMessages, Datastores: reg})
+	c, err := MemcachedRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: errorMessages, Datastores: reg})
 	require.NoError(t, err)
 
-	require.False(t, c.(*Memcache).ownsClient)
-	require.NoError(t, c.(*Memcache).Close(context.Background()))
+	require.False(t, c.(*Memcached).ownsClient)
+	require.NoError(t, c.(*Memcached).Close(context.Background()))
+}
+
+func TestMemcachedNames(t *testing.T) {
+	assert.Equal(t, "memcached", MemcachedRegistration{}.Name())
+	assert.Equal(t, "memcache", MemcachedLegacyRegistration{}.Name())
+
+	for _, name := range []string{"memcached", "memcache"} {
+		reg, ok := cache.RegisteredCache(name)
+		require.True(t, ok, name)
+		assert.IsType(t, MemcachedConfig{}, reg.InitializeConfig())
+	}
+}
+
+func TestMemcachedWrapperNames(t *testing.T) {
+	assert.Equal(t, "memcached", datastores.MemcachedWrapperRegistration{}.Name())
+	assert.Equal(t, "memcache", datastores.MemcachedWrapperLegacyRegistration{}.Name())
+
+	for _, name := range []string{"memcached", "memcache"} {
+		reg, ok := datastore.RegisteredDatastoreWrapper(name)
+		require.True(t, ok, name)
+		assert.IsType(t, datastores.MemcachedWrapperConfig{}, reg.InitializeConfig())
+	}
 }
