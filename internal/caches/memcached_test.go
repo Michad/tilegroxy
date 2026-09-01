@@ -46,7 +46,7 @@ func init() {
 	}
 }
 
-func setupMemcacheContainer(ctx context.Context, t *testing.T) (testcontainers.Container, func(t *testing.T)) {
+func setupMemcachedContainer(ctx context.Context, t *testing.T) (testcontainers.Container, func(t *testing.T)) {
 	t.Log("setup container")
 
 	req := testcontainers.ContainerRequest{
@@ -54,88 +54,88 @@ func setupMemcacheContainer(ctx context.Context, t *testing.T) (testcontainers.C
 		ExposedPorts: []string{"11211/tcp"},
 		WaitingFor:   wait.ForExposedPort(),
 	}
-	memcacheC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+	memcachedC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: req,
 		Started:          true,
 	})
 	require.NoError(t, err)
 
-	return memcacheC, func(t *testing.T) {
+	return memcachedC, func(t *testing.T) {
 		t.Log("teardown container")
 
-		err := memcacheC.Terminate(ctx)
+		err := memcachedC.Terminate(ctx)
 		require.NoError(t, err)
 	}
 }
 
-func TestMemcacheWithContainerHostAndPort(t *testing.T) {
+func TestMemcachedWithContainerHostAndPort(t *testing.T) {
 	ctx := context.Background()
-	memcacheC, cleanupF := setupMemcacheContainer(ctx, t)
-	if !assert.NotNil(t, memcacheC) {
+	memcachedC, cleanupF := setupMemcachedContainer(ctx, t)
+	if !assert.NotNil(t, memcachedC) {
 		return
 	}
 
 	defer cleanupF(t)
 
-	endpoint, err := memcacheC.Endpoint(ctx, "")
+	endpoint, err := memcachedC.Endpoint(ctx, "")
 	require.NoError(t, err)
 
-	cfg := MemcacheConfig{
+	cfg := MemcachedConfig{
 		HostAndPort: extractHostAndPort(t, endpoint),
 	}
 
-	r, err := MemcacheRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
+	r, err := MemcachedRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 	validateSaveAndLookup(t, r)
 }
 
-func TestMemcacheWithContainerSingleServersArr(t *testing.T) {
+func TestMemcachedWithContainerSingleServersArr(t *testing.T) {
 	ctx := context.Background()
-	memcacheC, cleanupF := setupMemcacheContainer(ctx, t)
-	if !assert.NotNil(t, memcacheC) {
+	memcachedC, cleanupF := setupMemcachedContainer(ctx, t)
+	if !assert.NotNil(t, memcachedC) {
 		return
 	}
 
 	defer cleanupF(t)
 
-	endpoint, err := memcacheC.Endpoint(ctx, "")
+	endpoint, err := memcachedC.Endpoint(ctx, "")
 	require.NoError(t, err)
 
-	cfg := MemcacheConfig{
+	cfg := MemcachedConfig{
 		Servers: []HostAndPort{extractHostAndPort(t, endpoint)},
 	}
 
-	r, err := MemcacheRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
+	r, err := MemcachedRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 	validateSaveAndLookup(t, r)
 }
 
-func TestMemcacheWithContainerDiffPrefix(t *testing.T) {
+func TestMemcachedWithContainerDiffPrefix(t *testing.T) {
 	ctx := context.Background()
-	memcacheC, cleanupF := setupMemcacheContainer(ctx, t)
-	if !assert.NotNil(t, memcacheC) {
+	memcachedC, cleanupF := setupMemcachedContainer(ctx, t)
+	if !assert.NotNil(t, memcachedC) {
 		return
 	}
 
 	defer cleanupF(t)
 
-	endpoint, err := memcacheC.Endpoint(ctx, "")
+	endpoint, err := memcachedC.Endpoint(ctx, "")
 	require.NoError(t, err)
 
-	cfg := MemcacheConfig{
+	cfg := MemcachedConfig{
 		HostAndPort: extractHostAndPort(t, endpoint),
 		KeyPrefix:   "first_",
 	}
 
-	r, err := MemcacheRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
+	r, err := MemcachedRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 
-	config2 := MemcacheConfig{
+	config2 := MemcachedConfig{
 		HostAndPort: extractHostAndPort(t, endpoint),
 		KeyPrefix:   "second_",
 	}
 
-	r2, err := MemcacheRegistration{}.Initialize(config2, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
+	r2, err := MemcachedRegistration{}.Initialize(config2, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 	validateSaveAndLookup(t, r)
 	validateSaveAndLookup(t, r2)
@@ -144,38 +144,81 @@ func TestMemcacheWithContainerDiffPrefix(t *testing.T) {
 // memcache.Get reports a miss as ErrCacheMiss. Surfacing that as a Lookup error logs a warning on
 // every miss and buries real cache failures, so a miss must be "no result, no error" as it is for
 // redis.
-func TestMemcacheWithContainerMissIsNotAnError(t *testing.T) {
+func TestMemcachedWithContainerMissIsNotAnError(t *testing.T) {
 	ctx := context.Background()
-	memcacheC, cleanupF := setupMemcacheContainer(ctx, t)
-	if !assert.NotNil(t, memcacheC) {
+	memcachedC, cleanupF := setupMemcachedContainer(ctx, t)
+	if !assert.NotNil(t, memcachedC) {
 		return
 	}
 
 	defer cleanupF(t)
 
-	endpoint, err := memcacheC.Endpoint(ctx, "")
+	endpoint, err := memcachedC.Endpoint(ctx, "")
 	require.NoError(t, err)
 
-	cfg := MemcacheConfig{
+	cfg := MemcachedConfig{
 		HostAndPort: extractHostAndPort(t, endpoint),
 	}
 
-	r, err := MemcacheRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
+	r, err := MemcachedRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 
 	validateNoLookup(t, r, makeReq(1))
 }
 
-func TestMemcacheWithContainerUsingDatastore(t *testing.T) {
+func TestMemcachedWithContainerUsingDatastore(t *testing.T) {
 	ctx := context.Background()
-	memcacheC, cleanupF := setupMemcacheContainer(ctx, t)
-	if !assert.NotNil(t, memcacheC) {
+	memcachedC, cleanupF := setupMemcachedContainer(ctx, t)
+	if !assert.NotNil(t, memcachedC) {
 		return
 	}
 
 	defer cleanupF(t)
 
-	endpoint, err := memcacheC.Endpoint(ctx, "")
+	endpoint, err := memcachedC.Endpoint(ctx, "")
+	require.NoError(t, err)
+
+	hostAndPort := extractHostAndPort(t, endpoint)
+
+	dsCfg := []map[string]interface{}{
+		{
+			"name": "memcached",
+			"id":   "mymemcache",
+			"host": hostAndPort.Host,
+			"port": hostAndPort.Port,
+		},
+	}
+
+	reg, err := datastore.ConstructDatastoreRegistry(dsCfg, nil, config.ErrorMessages{})
+	require.NoError(t, err)
+	defer func() { require.NoError(t, reg.Close(ctx)) }()
+
+	cfg := MemcachedConfig{Datastore: "mymemcache"}
+
+	r, err := MemcachedRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}, Datastores: reg})
+	require.NoError(t, err)
+
+	validateSaveAndLookup(t, r)
+
+	// Closing the cache must not close the shared datastore connection out from under other consumers.
+	require.NoError(t, r.(interface {
+		Close(ctx context.Context) error
+	}).Close(ctx))
+	validateSaveAndLookup(t, r)
+}
+
+// The "memcache" name is kept working as an alias for "memcached" for backwards compatibility,
+// both for the cache itself and the datastore it can share a connection with.
+func TestMemcachedWithContainerLegacyMemcacheNameAlias(t *testing.T) {
+	ctx := context.Background()
+	memcachedC, cleanupF := setupMemcachedContainer(ctx, t)
+	if !assert.NotNil(t, memcachedC) {
+		return
+	}
+
+	defer cleanupF(t)
+
+	endpoint, err := memcachedC.Endpoint(ctx, "")
 	require.NoError(t, err)
 
 	hostAndPort := extractHostAndPort(t, endpoint)
@@ -193,16 +236,8 @@ func TestMemcacheWithContainerUsingDatastore(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { require.NoError(t, reg.Close(ctx)) }()
 
-	cfg := MemcacheConfig{Datastore: "mymemcache"}
-
-	r, err := MemcacheRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}, Datastores: reg})
+	c, err := cache.ConstructCache(map[string]interface{}{"name": "memcache", "datastore": "mymemcache"}, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}, Datastores: reg})
 	require.NoError(t, err)
 
-	validateSaveAndLookup(t, r)
-
-	// Closing the cache must not close the shared datastore connection out from under other consumers.
-	require.NoError(t, r.(interface {
-		Close(ctx context.Context) error
-	}).Close(ctx))
-	validateSaveAndLookup(t, r)
+	validateSaveAndLookup(t, c)
 }

@@ -144,7 +144,7 @@ filesystem, so anything tilegroxy writes must live on this volume (or under `/tm
 default `extraVolumes` provides).
 
 A disk cache on a `ReadWriteOnce` volume is per-pod. For multiple replicas use `ReadWriteMany`, or
-better, a redis, memcache or s3 cache.
+better, a redis, memcached or s3 cache.
 
 ## Seeding
 

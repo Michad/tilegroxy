@@ -7,7 +7,7 @@ Tilegroxy shines when you consume maps from multiple sources.  It isn't tied to 
 +++<ul><li>+++
 link:https://tilegroxy.com/operation/configuration/provider/proxy.html[Proxy] to ZXY, WMS, TMS, WMTS, or other protocol map layers
 +++</li><li>+++
-Cache tiles in link:https://tilegroxy.com/operation/configuration/cache/disk.html[disk], link:https://tilegroxy.com/operation/configuration/cache/memory.html[memory], link:https://tilegroxy.com/operation/configuration/cache/s3.html[s3], link:https://tilegroxy.com/operation/configuration/cache/redis.html[redis], and/or link:https://tilegroxy.com/operation/configuration/cache/memcache.html[memcached]
+Cache tiles in link:https://tilegroxy.com/operation/configuration/cache/disk.html[disk], link:https://tilegroxy.com/operation/configuration/cache/memory.html[memory], link:https://tilegroxy.com/operation/configuration/cache/s3.html[s3], link:https://tilegroxy.com/operation/configuration/cache/redis.html[redis], and/or link:https://tilegroxy.com/operation/configuration/cache/memcached.html[memcached]
 +++</li><li>+++
 Require authentication using link:https://tilegroxy.com/operation/configuration/authentication/static_key.html[static key], link:https://tilegroxy.com/operation/configuration/authentication/jwt.html[JWT], or link:https://tilegroxy.com/operation/configuration/authentication/custom.html[custom] logic
 +++</li><li>+++

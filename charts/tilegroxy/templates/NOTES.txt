@@ -63,5 +63,5 @@ connections. Raise terminationGracePeriodSeconds above {{ add $budget $preStopSl
 
 WARNING: {{ .Values.replicaCount }} replicas are configured with a "{{ dig "cache" "name" "none" $config }}" cache, which is not
 shared between pods, so each replica separately fetches every tile from
-upstream. Consider redis, memcache or s3 for a multi-replica deployment.
+upstream. Consider redis, memcached or s3 for a multi-replica deployment.
 {{- end }}

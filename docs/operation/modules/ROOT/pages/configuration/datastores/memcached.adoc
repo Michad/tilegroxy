@@ -1,10 +1,10 @@
-= Memcache
+= Memcached
 
-Defines a connection to link:https://memcached.org/[memcache]. Utilizes link:https://github.com/bradfitz/gomemcache[gomemcache] under the hood.
+Defines a connection to link:https://memcached.org/[memcached]. Utilizes link:https://github.com/bradfitz/gomemcache[gomemcache] under the hood.
 
-Currently used by the xref:configuration/cache/memcache.adoc[memcache cache].
+Currently used by the xref:configuration/cache/memcached.adoc[memcached cache].
 
-Name should be "memcache"
+Name should be "memcached"
 
 Configuration options:
 
@@ -19,13 +19,13 @@ Configuration options:
 | None
 
 | Host
-| The host of the memcache server. A convenience equivalent to supplying `servers` with a single entry. Do not supply both this and `servers`
+| The host of the memcached server. A convenience equivalent to supplying `servers` with a single entry. Do not supply both this and `servers`
 | string
 | No
 | 127.0.0.1
 
 | Port
-| The port of the memcache server. A convenience equivalent to supplying `servers` with a single entry. Do not supply both this and `servers`
+| The port of the memcached server. A convenience equivalent to supplying `servers` with a single entry. Do not supply both this and `servers`
 | int
 | No
 | 11211
@@ -42,8 +42,8 @@ Example:
 [,yaml]
 ----
 datastores:
-  - name: memcache
-    id: memcache-0
+  - name: memcached
+    id: memcached-0
     host: 127.0.0.1
     port: 11211
 ----

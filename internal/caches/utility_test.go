@@ -40,7 +40,7 @@ func TestHostAndPortToStringArr(t *testing.T) {
 	assert.Equal(t, []string{"127.0.0.1:1234", "10.0.0.1:5678"}, HostAndPortArrayToStringArray([]HostAndPort{hp, hp2}))
 }
 
-/*** safeLayerName / safeMemcacheKey ***/
+/*** safeLayerName / safeMemcachedKey ***/
 
 func TestSafeLayerName_OrdinaryNamesPassThroughUnchanged(t *testing.T) {
 	for _, name := range []string{"osm", "my-layer", "layer.v2", "Layer123", "a-b.c"} {
@@ -90,39 +90,39 @@ func TestSafeLayerName_CollisionsAreExpectedForDistinctUnsafeNames(t *testing.T)
 	assert.Equal(t, safeLayerName("a/b"), safeLayerName("a b"))
 }
 
-func TestSafeMemcacheKey_ShortKeyIsUnchanged(t *testing.T) {
-	key := safeMemcacheKey("prefix_", "osm/20/1/1")
+func TestSafeMemcachedKey_ShortKeyIsUnchanged(t *testing.T) {
+	key := safeMemcachedKey("prefix_", "osm/20/1/1")
 	assert.Equal(t, "prefix_osm/20/1/1", key)
 }
 
-func TestSafeMemcacheKey_LongKeyIsShortenedAndStaysWithinLimit(t *testing.T) {
+func TestSafeMemcachedKey_LongKeyIsShortenedAndStaysWithinLimit(t *testing.T) {
 	prefix := "p_"
 	longBody := strings.Repeat("a", 400) + "/20/1/1"
 
-	key := safeMemcacheKey(prefix, longBody)
+	key := safeMemcachedKey(prefix, longBody)
 
-	assert.LessOrEqual(t, len(key), memcacheMaxKeyLength)
+	assert.LessOrEqual(t, len(key), memcachedMaxKeyLength)
 	assert.Contains(t, key, "_", "expected hash suffix to be appended")
 }
 
-func TestSafeMemcacheKey_LongKeysWithDifferentBodiesStayDistinct(t *testing.T) {
+func TestSafeMemcachedKey_LongKeysWithDifferentBodiesStayDistinct(t *testing.T) {
 	prefix := "p_"
 	body1 := strings.Repeat("a", 400) + "/20/1/1"
 	body2 := strings.Repeat("a", 400) + "/20/1/2"
 
-	key1 := safeMemcacheKey(prefix, body1)
-	key2 := safeMemcacheKey(prefix, body2)
+	key1 := safeMemcachedKey(prefix, body1)
+	key2 := safeMemcachedKey(prefix, body2)
 
-	assert.LessOrEqual(t, len(key1), memcacheMaxKeyLength)
-	assert.LessOrEqual(t, len(key2), memcacheMaxKeyLength)
+	assert.LessOrEqual(t, len(key1), memcachedMaxKeyLength)
+	assert.LessOrEqual(t, len(key2), memcachedMaxKeyLength)
 	assert.NotEqual(t, key1, key2, "distinct long keys should not collide after truncation")
 }
 
-func TestSafeMemcacheKey_PrefixCountsTowardLimit(t *testing.T) {
+func TestSafeMemcachedKey_PrefixCountsTowardLimit(t *testing.T) {
 	longPrefix := strings.Repeat("p", 245)
-	key := safeMemcacheKey(longPrefix, "osm/20/1/1")
+	key := safeMemcachedKey(longPrefix, "osm/20/1/1")
 
-	assert.LessOrEqual(t, len(key), memcacheMaxKeyLength)
+	assert.LessOrEqual(t, len(key), memcachedMaxKeyLength)
 }
 
 /*** Utility methods used in most other cache tests ***/

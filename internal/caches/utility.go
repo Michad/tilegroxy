@@ -66,18 +66,18 @@ func safeLayerName(name string) string {
 	return replaced
 }
 
-// memcache's hard key length limit, in bytes.
-const memcacheMaxKeyLength = 250
+// memcached's hard key length limit, in bytes.
+const memcachedMaxKeyLength = 250
 
 const hashSuffixLength = 16
 
-// safeMemcacheKey builds a memcache key from a prefix and an already-sanitized body. A long but
+// safeMemcachedKey builds a memcached key from a prefix and an already-sanitized body. A long but
 // otherwise safe layer name can still overflow the length limit, so an oversized key is truncated
 // with a hash suffix appended to keep it unique.
-func safeMemcacheKey(prefix, body string) string {
+func safeMemcachedKey(prefix, body string) string {
 	key := prefix + body
 
-	if len(key) <= memcacheMaxKeyLength {
+	if len(key) <= memcachedMaxKeyLength {
 		return key
 	}
 
@@ -86,15 +86,15 @@ func safeMemcacheKey(prefix, body string) string {
 
 	// An operator could set a prefix long enough that prefix+suffix alone exceeds the limit.
 	maxPrefixLen := len(prefix)
-	if maxPrefixLen > memcacheMaxKeyLength-len(suffix) {
-		maxPrefixLen = memcacheMaxKeyLength - len(suffix)
+	if maxPrefixLen > memcachedMaxKeyLength-len(suffix) {
+		maxPrefixLen = memcachedMaxKeyLength - len(suffix)
 	}
 	if maxPrefixLen < 0 {
 		maxPrefixLen = 0
 	}
 	truncatedPrefix := prefix[:maxPrefixLen]
 
-	maxBodyLen := memcacheMaxKeyLength - len(truncatedPrefix) - len(suffix)
+	maxBodyLen := memcachedMaxKeyLength - len(truncatedPrefix) - len(suffix)
 	if maxBodyLen < 0 {
 		maxBodyLen = 0
 	}

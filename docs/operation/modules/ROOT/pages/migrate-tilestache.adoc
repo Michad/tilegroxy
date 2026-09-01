@@ -79,7 +79,7 @@ The following are the known incompatibilities with tilestache configurations:
 +++</li><li>+++
   The `path` parameter must be supplied as a file path, not a URI
 +++</li></ul><li>+++
- Memcache cache:
+ Memcached cache:
 +++</li><ul style="margin-bottom:0"><li>+++
   No `revision` parameter - Put the revision inside the key prefix
 +++</li><li>+++
