@@ -19,6 +19,7 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -220,6 +221,87 @@ layers:
 
 	assert.Greater(t, len(outStr), 69)
 	assert.Less(t, exitStatus, 1)
+}
+
+func Test_ExecuteTestCommand_JSONOutput(t *testing.T) {
+	exitStatus = -1
+	rootCmd.ResetFlags()
+	testCmd.ResetFlags()
+	initRoot()
+	initTest()
+
+	ts := tileTestServer(t)
+
+	cfg := fmt.Sprintf(
+		`cache:
+  name: none
+layers:
+  - id: osm
+    provider:
+        name: proxy
+        url: %v/{z}/{x}/{y}.png
+`, ts.URL)
+
+	cmd := rootCmd
+	b := bytes.NewBufferString("")
+	cmd.SetOut(b)
+	cmd.SetErr(b)
+	cmd.SetArgs([]string{"test", "--raw-config", cfg, "--no-cache", "--json"})
+	require.NoError(t, cmd.Execute())
+	out, err := io.ReadAll(b)
+	require.NoError(t, err)
+
+	var summary struct {
+		Failures []struct {
+			LayerName string `json:"layer"`
+			Error     string `json:"error"`
+		} `json:"failures"`
+		Tested int `json:"tested"`
+		Failed int `json:"failed"`
+	}
+	require.NoError(t, json.Unmarshal(out, &summary))
+	assert.Equal(t, 1, summary.Tested)
+	assert.Equal(t, 0, summary.Failed)
+	assert.Less(t, exitStatus, 1)
+}
+
+func Test_ExecuteTestCommand_FileOutput(t *testing.T) {
+	exitStatus = -1
+	rootCmd.ResetFlags()
+	testCmd.ResetFlags()
+	initRoot()
+	initTest()
+
+	ts := tileTestServer(t)
+
+	dir := t.TempDir()
+	summaryPath := dir + "/summary.txt"
+
+	cfg := fmt.Sprintf(
+		`cache:
+  name: none
+layers:
+  - id: osm
+    provider:
+        name: proxy
+        url: %v/{z}/{x}/{y}.png
+`, ts.URL)
+
+	cmd := rootCmd
+	b := bytes.NewBufferString("")
+	cmd.SetOut(b)
+	cmd.SetErr(b)
+	cmd.SetArgs([]string{"test", "--raw-config", cfg, "--no-cache", "--file", summaryPath})
+	require.NoError(t, cmd.Execute())
+	out, err := io.ReadAll(b)
+	require.NoError(t, err)
+
+	assert.Contains(t, string(out), "osm")
+	assert.Less(t, exitStatus, 1)
+
+	content, err := os.ReadFile(summaryPath) //nolint:gosec
+	require.NoError(t, err)
+	assert.Contains(t, string(content), "Tested 1 layers, 0 failures")
 }
 
 func Test_TestCommand_InvalidConfig(t *testing.T) {
