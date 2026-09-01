@@ -48,6 +48,16 @@ func (i *Instance) Get(path string) *Response {
 	return i.doGet(i.BaseURL() + path)
 }
 
+// GetWithHeader behaves like Get but sets a single request header, which is what auth schemes
+// that read from headers (e.g. static key's "Authorization: Bearer ...") need to be exercised.
+func (i *Instance) GetWithHeader(path, header, value string) *Response {
+	i.t.Helper()
+
+	return i.doGetWith(i.BaseURL()+path, nil, func(req *http.Request) {
+		req.Header.Set(header, value)
+	})
+}
+
 func (i *Instance) GetHealth() *Response {
 	i.t.Helper()
 
@@ -62,7 +72,7 @@ func (i *Instance) GetNoRedirect(path string) *Response {
 
 	return i.doGetWith(i.BaseURL()+path, func(*http.Request, []*http.Request) error {
 		return http.ErrUseLastResponse
-	})
+	}, nil)
 }
 
 // doGet reports the child's captured output when a request fails, since a transport error usually
@@ -70,10 +80,10 @@ func (i *Instance) GetNoRedirect(path string) *Response {
 func (i *Instance) doGet(url string) *Response {
 	i.t.Helper()
 
-	return i.doGetWith(url, nil)
+	return i.doGetWith(url, nil, nil)
 }
 
-func (i *Instance) doGetWith(url string, checkRedirect func(*http.Request, []*http.Request) error) *Response {
+func (i *Instance) doGetWith(url string, checkRedirect func(*http.Request, []*http.Request) error, mutate func(*http.Request)) *Response {
 	i.t.Helper()
 
 	client := &http.Client{Timeout: Scale(requestTimeout), CheckRedirect: checkRedirect}
@@ -81,6 +91,10 @@ func (i *Instance) doGetWith(url string, checkRedirect func(*http.Request, []*ht
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
 	if err != nil {
 		i.t.Fatalf("cannot build request for %v: %v", url, err)
+	}
+
+	if mutate != nil {
+		mutate(req)
 	}
 
 	resp, err := client.Do(req)
