@@ -15,6 +15,8 @@
 package tg
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -32,12 +34,62 @@ import (
 )
 
 type TestOptions struct {
-	LayerNames []string
-	Z          int
-	X          int
-	Y          int
-	NumThread  uint16
-	NoCache    bool
+	LayerNames     []string
+	Z              int
+	X              int
+	Y              int
+	CoordinatesSet bool
+	NumThread      uint16
+	NoCache        bool
+	JSON           bool
+	FilePath       string
+}
+
+// the default tile used when a layer has no configured bounds/zoom to derive one from.
+const (
+	defaultZ = 10
+	defaultX = 123
+	defaultY = 534
+)
+
+func pickTile(l *layer.Layer, layerName string) pkg.TileRequest {
+	hasBounds := l.Config.Bounds != (config.BoundsConfig{})
+	hasZoom := l.Config.MinZoom != nil || l.Config.MaxZoom != nil
+
+	if !hasBounds && !hasZoom {
+		return pkg.TileRequest{LayerName: layerName, Z: defaultZ, X: defaultX, Y: defaultY}
+	}
+
+	minZoom := 0
+	if l.Config.MinZoom != nil {
+		minZoom = *l.Config.MinZoom
+	}
+	maxZoom := pkg.MaxZoom
+	if l.Config.MaxZoom != nil {
+		maxZoom = *l.Config.MaxZoom
+	}
+
+	z := uint((minZoom + maxZoom) / 2) //nolint:gosec // min/maxZoom are bounded well within int range
+
+	bounds := pkg.WorldBounds()
+	if hasBounds {
+		bounds = pkg.Bounds{
+			South: l.Config.Bounds.South,
+			North: l.Config.Bounds.North,
+			West:  l.Config.Bounds.West,
+			East:  l.Config.Bounds.East,
+		}
+	}
+
+	zoomRange, err := bounds.ConstructSingleZoomRange(z)
+	if err != nil {
+		return pkg.TileRequest{LayerName: layerName, Z: defaultZ, X: defaultX, Y: defaultY}
+	}
+
+	x := (zoomRange.XMin + zoomRange.XMax - 1) / 2 //nolint:mnd // Midpoint of an exclusive-max range
+	y := (zoomRange.YMin + zoomRange.YMax - 1) / 2 //nolint:mnd // Midpoint of an exclusive-max range
+
+	return pkg.TileRequest{LayerName: layerName, Z: int(z), X: x, Y: y}
 }
 
 // the set of layer names tested when none are given. A pattern layer's ID
@@ -62,6 +114,64 @@ func defaultLayerNames(layerObjects *layer.LayerGroup) []string {
 	return names
 }
 
+type TestSummary struct {
+	Failures []TestFailure `json:"failures"`
+	Tested   int           `json:"tested"`
+	Failed   int           `json:"failed"`
+}
+
+type TestFailure struct {
+	LayerName string `json:"layer"`
+	Error     string `json:"error"`
+}
+
+func buildTileRequests(ctx context.Context, layerObjects *layer.LayerGroup, opts TestOptions) ([]pkg.TileRequest, error) {
+	tileRequests := make([]pkg.TileRequest, 0, len(opts.LayerNames))
+
+	for _, layerName := range opts.LayerNames {
+		l := layerObjects.FindLayer(ctx, layerName)
+
+		if l == nil {
+			return nil, fmt.Errorf("invalid layer name: %v", layerName)
+		}
+
+		var req pkg.TileRequest
+		if opts.CoordinatesSet {
+			req = pkg.TileRequest{LayerName: layerName, Z: opts.Z, X: opts.X, Y: opts.Y}
+		} else {
+			req = pickTile(l, layerName)
+		}
+
+		if _, err := req.GetBounds(); err != nil {
+			return nil, err
+		}
+
+		tileRequests = append(tileRequests, req)
+	}
+
+	return tileRequests, nil
+}
+
+func splitForThreads(tileRequests []pkg.TileRequest, numThread uint16) [][]pkg.TileRequest {
+	numReq := len(tileRequests)
+	numReqPerThread := int(math.Floor(float64(numReq) / float64(numThread)))
+	reqSplit := make([][]pkg.TileRequest, 0, int(numThread))
+
+	for i := range int(numThread) {
+		chunkStart := i * numReqPerThread
+		var chunkEnd uint
+		if i == int(numThread)-1 {
+			chunkEnd = uint(numReq)
+		} else {
+			chunkEnd = uint(math.Min(float64(chunkStart+numReqPerThread), float64(numReq)))
+		}
+
+		reqSplit = append(reqSplit, tileRequests[chunkStart:chunkEnd])
+	}
+
+	return reqSplit
+}
+
 func Test(cfg *config.Config, opts TestOptions, out io.Writer) (uint32, error) {
 	ctx := pkg.BackgroundContext()
 
@@ -79,24 +189,9 @@ func Test(cfg *config.Config, opts TestOptions, out io.Writer) (uint32, error) {
 		opts.LayerNames = defaultLayerNames(layerObjects)
 	}
 
-	// Generate the full list of requests to process
-	tileRequests := make([]pkg.TileRequest, 0)
-
-	for _, layerName := range opts.LayerNames {
-		req := pkg.TileRequest{LayerName: layerName, Z: opts.Z, X: opts.X, Y: opts.Y}
-		_, err := req.GetBounds()
-
-		if err != nil {
-			return 0, err
-		}
-
-		layer := layerObjects.FindLayer(ctx, layerName)
-
-		if layer == nil {
-			return 0, fmt.Errorf("invalid layer name: %v", layerName)
-		}
-
-		tileRequests = append(tileRequests, req)
+	tileRequests, err := buildTileRequests(ctx, layerObjects, opts)
+	if err != nil {
+		return 0, err
 	}
 
 	numReq := len(tileRequests)
@@ -110,42 +205,84 @@ func Test(cfg *config.Config, opts TestOptions, out io.Writer) (uint32, error) {
 		opts.NumThread = uint16(numReq)
 	}
 
-	// Split up all the requests for N threads
-	numReqPerThread := int(math.Floor(float64(numReq) / float64(opts.NumThread)))
-	reqSplit := make([][]pkg.TileRequest, 0, int(opts.NumThread))
+	reqSplit := splitForThreads(tileRequests, opts.NumThread)
 
-	for i := range int(opts.NumThread) {
-		chunkStart := i * numReqPerThread
-		var chunkEnd uint
-		if i == int(opts.NumThread)-1 {
-			chunkEnd = uint(numReq)
-		} else {
-			chunkEnd = uint(math.Min(float64(chunkStart+numReqPerThread), float64(numReq)))
-		}
-
-		reqSplit = append(reqSplit, tileRequests[chunkStart:chunkEnd])
+	// The live per-tile text table is written to stdout unless we're in JSON mode with no file to
+	// separately stream to - in that case stdout is reserved for the JSON summary alone.
+	tableOut := out
+	if opts.JSON && opts.FilePath == "" {
+		tableOut = io.Discard
 	}
 
 	// Start processing all the tile requests over N threads
 	var wg sync.WaitGroup
 	errCount := uint32(0)
+	var failuresMu sync.Mutex
+	failures := make([]TestFailure, 0)
 
-	writer := tabwriter.NewWriter(out, 1, 4, 4, ' ', tabwriter.StripEscape) //nolint:mnd
+	writer := tabwriter.NewWriter(tableOut, 1, 4, 4, ' ', tabwriter.StripEscape) //nolint:mnd
 	fmt.Fprintln(writer, "Thread\tLayer\tGenerated\tCache Write\tCache Read\tError\t")
 
 	for t := range reqSplit {
 		wg.Add(1)
-		go testTileRequests(layerObjects, opts, &errCount, writer, &wg, t, reqSplit[t])
+		go testTileRequests(layerObjects, opts, &errCount, &failuresMu, &failures, writer, &wg, t, reqSplit[t])
 	}
 
 	wg.Wait()
 
-	err = writer.Flush()
+	if err := writer.Flush(); err != nil {
+		return errCount, err
+	}
 
-	return errCount, err
+	summary := TestSummary{Tested: numReq, Failed: int(errCount), Failures: failures}
+
+	if err := writeSummary(out, opts, summary); err != nil {
+		return errCount, err
+	}
+
+	return errCount, nil
 }
 
-func testTileRequests(layerObjects *layer.LayerGroup, opts TestOptions, errCount *uint32, writer *tabwriter.Writer, wg *sync.WaitGroup, t int, myReqs []pkg.TileRequest) {
+// writeSummary emits the run summary to --file (if set) and, when in JSON mode with no --file, to
+// out as well since that's the only output stdout gets in that case.
+func writeSummary(out io.Writer, opts TestOptions, summary TestSummary) error {
+	if opts.FilePath != "" {
+		file, err := os.Create(opts.FilePath) //nolint:gosec // Operator-supplied path from the CLI, not user input
+		if err != nil {
+			return err
+		}
+		defer file.Close() //nolint:errcheck // Best effort close after the summary is written
+
+		if err := writeSummaryTo(file, opts.JSON, summary); err != nil {
+			return err
+		}
+	}
+
+	if opts.JSON && opts.FilePath == "" {
+		return writeSummaryTo(out, true, summary)
+	}
+
+	return nil
+}
+
+func writeSummaryTo(w io.Writer, asJSON bool, summary TestSummary) error {
+	if asJSON {
+		enc := json.NewEncoder(w)
+		enc.SetIndent("", "  ")
+
+		return enc.Encode(summary)
+	}
+
+	fmt.Fprintf(w, "Tested %v layers, %v failures\n", summary.Tested, summary.Failed)
+
+	for _, f := range summary.Failures {
+		fmt.Fprintf(w, "  %v: %v\n", f.LayerName, f.Error)
+	}
+
+	return nil
+}
+
+func testTileRequests(layerObjects *layer.LayerGroup, opts TestOptions, errCount *uint32, failuresMu *sync.Mutex, failures *[]TestFailure, writer *tabwriter.Writer, wg *sync.WaitGroup, t int, myReqs []pkg.TileRequest) {
 	ctx := pkg.BackgroundContext()
 
 	for _, req := range myReqs {
@@ -169,8 +306,20 @@ func testTileRequests(layerObjects *layer.LayerGroup, opts TestOptions, errCount
 			}
 		}
 
-		if layerErr != nil || cacheWriteError != nil || cacheReadError != nil {
+		layerFailure := layerErr
+		if layerFailure == nil {
+			layerFailure = cacheWriteError
+		}
+		if layerFailure == nil {
+			layerFailure = cacheReadError
+		}
+
+		if layerFailure != nil {
 			atomic.AddUint32(errCount, 1)
+
+			failuresMu.Lock()
+			*failures = append(*failures, TestFailure{LayerName: req.LayerName, Error: layerFailure.Error()})
+			failuresMu.Unlock()
 		}
 
 		// Output the result into the table

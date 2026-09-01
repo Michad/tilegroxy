@@ -5,26 +5,13 @@ Tests your layers and cache are correctly configured and working by performing e
 Full, up-to-date usage information can be found with `tilegroxy test -h`.
 
 ----
-Tests that everything is working end-to-end for all or some layers
-including caching. This goes further than 'config check' and instead of
-just validating the configuration can be parsed it actually makes sample
-request(s) and populates the result in the cache. This is similar to
-running 'seed' for a single tile or standing up the server and making a
-cURL request for each layer. The output will list each layer and the
-status, with any error encountered if applicable.
+Tests that everything is working end-to-end for all or some layers including caching. This goes further than 'config check' and instead of just validating the configuration can be parsed it actually makes sample request(s) and populates the result in the cache. This is similar to running 'seed' for a single tile or standing up the server and making a cURL request for each layer. The output will list each layer and the status, with any error encountered if applicable.
 
-This test uses an arbitrary tile coordinate to test with. The default
-coordinate might be outside the bounds of your map layer, there is
-currently no logic to consider the bounds configured for each layer; you
-will need to specify an applicable tile to use.  It is not recommended to
-use 0,0,0 due to potential performance issues when dealing with large
-data. If your cache is configured to prevent overwriting existing items
-you might need to pick a distinct tile each time you run the test or run
-with cache disabled (--no-cache).
+If you don't specify a tile coordinate with -z/-x/-y, one is picked automatically for each layer from its configured bounds and minzoom/maxzoom. A layer with neither bounds nor a zoom range configured falls back to a fixed default tile that might be outside the area your layer actually serves
 
-A layer using a pattern is tested through its "examples" configurations if
-available. A pattern layer with no examples configured is skipped with a
-warning.
+A layer using a pattern is tested through its "examples" configurations if available. A pattern layer with no examples configured is skipped with a warning.
+
+Use --file to write a summary to a file. The standard output will still render in stdout, use a bash redirect if you want that in a file. If using both --file and --json, only the file output will be in JSON
 
 Example:
 
@@ -44,4 +31,8 @@ Flags:
   -x, --x-coordinate uint   The x coordinate to use to test (default 123)
   -y, --y-coordinate uint   The y coordinate to use to test (default 534)
   -z, --z-coordinate uint   The z coordinate to use to test (default 10)
+  -f, --file path           Write a run summary to this file.The file is JSON 
+                            if --json is set, otherwise plain text
+      --json                Output in JSON. If used with --file this only 
+                            outputs the written file, not standard out
 ----
