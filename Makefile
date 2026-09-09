@@ -5,6 +5,7 @@ REF := $(shell git rev-parse --short HEAD)
 DATE := $(shell date -Iseconds --u)
 
 all: clean test docs build version
+lint: golangci sec
 
 build:
 	go build -v -o ${OUT} -ldflags="-X \"${PKG}/pkg/static.tilegroxyVersion=${VERSION}\" -X \"${PKG}/pkg/static.tilegroxyBuildRef=${REF}\" -X \"${PKG}/pkg/static.tilegroxyBuildDate=${DATE}\"" -tags viper_bind_struct
@@ -33,7 +34,7 @@ libyears:
 	@go install github.com/nieomylnieja/go-libyear/cmd/go-libyear@v0.4.6
 	@go-libyear --json go.mod < /dev/null
 
-lint:
+golangci:
 	@go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
 	@golangci-lint run --fix -E asciicheck,bidichk,bodyclose,canonicalheader,dogsled,dupl,exhaustive,gocheckcompilerdirectives,gocritic,godox,durationcheck,errname,errorlint,goheader,inamedparam,interfacebloat,intrange,maintidx,makezero,mirror,misspell,mnd,noctx,nonamedreturns,perfsprint,prealloc,predeclared,revive,staticcheck,testifylint,usestdlibvars,unconvert,wastedassign
 
@@ -49,6 +50,9 @@ readme:
 	@asciidoctor-reducer -v >/dev/null 2>&1 || gem install asciidoctor-reducer
 	@asciidoctor-reducer -o README.adoc README_source.adoc
 	@echo Updated README.adoc
+
+sec:
+	@gosec -no-fail -exclude=G504 -exclude-dir=.superpowers -terse ./pkg/... ./internal/... | grep -v Autofix
 
 version:
 	@./${OUT} version --json
