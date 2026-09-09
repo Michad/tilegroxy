@@ -161,9 +161,9 @@ func (c *Clickhouse) flush(ctx context.Context, events []analytics.Event) error 
 		err = batch.Append(
 			e.Time,
 			e.LayerID,
-			uint8(e.Z),  //nolint:gosec // Zoom is bounds checked long before reaching analytics
-			uint32(e.X), //nolint:gosec // Coordinates are validated against the zoom level upstream
-			uint32(e.Y), //nolint:gosec // Coordinates are validated against the zoom level upstream
+			uint8(e.Z),  // #nosec G115 -- zoom is bounds checked long before reaching analytics
+			uint32(e.X), // #nosec G115 -- coordinates are validated against the zoom level upstream
+			uint32(e.Y), // #nosec G115 -- coordinates are validated against the zoom level upstream
 			e.UserID,
 			stringifyFields(e.Fields),
 		)

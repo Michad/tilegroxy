@@ -210,7 +210,7 @@ func Test_Test_PicksTileWithinLayerBoundsAndZoom(t *testing.T) {
 	require.LessOrEqual(t, lastRecordedTileRequest.Z, maxZoom)
 
 	bounds := config.BoundsConfig{South: 40, North: 41, West: -74, East: -73}
-	zoneRange, err := (pkg.Bounds{South: bounds.South, North: bounds.North, West: bounds.West, East: bounds.East}).ConstructSingleZoomRange(uint(lastRecordedTileRequest.Z)) //nolint:gosec
+	zoneRange, err := (pkg.Bounds{South: bounds.South, North: bounds.North, West: bounds.West, East: bounds.East}).ConstructSingleZoomRange(uint(lastRecordedTileRequest.Z)) // #nosec G115 -- Z comes from a zoom range bounded well within int range
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, lastRecordedTileRequest.X, zoneRange.XMin)
 	require.Less(t, lastRecordedTileRequest.X, zoneRange.XMax)
@@ -310,7 +310,7 @@ func Test_Test_FileOutputPlainText(t *testing.T) {
 	require.Equal(t, uint32(0), errCount)
 	require.Contains(t, out.String(), "plain_layer")
 
-	content, err := os.ReadFile(filePath) //nolint:gosec
+	content, err := os.ReadFile(filePath) // #nosec G304 -- test-controlled temp path
 	require.NoError(t, err)
 	require.Contains(t, string(content), "Tested 1 layers, 0 failures")
 }
@@ -334,7 +334,7 @@ func Test_Test_FileOutputJSON(t *testing.T) {
 	require.Equal(t, uint32(0), errCount)
 	require.Contains(t, out.String(), "plain_layer")
 
-	content, err := os.ReadFile(filePath) //nolint:gosec
+	content, err := os.ReadFile(filePath) // #nosec G304 -- test-controlled temp path
 	require.NoError(t, err)
 
 	var summary TestSummary

@@ -60,7 +60,7 @@ func newKeySet(ctx context.Context, cfg JWKSConfig, algorithms []string, errorMe
 		cfg.RequestTimeout = defaultRequestTimeout
 	}
 
-	httpClient := &http.Client{Timeout: time.Duration(cfg.RequestTimeout) * time.Second}
+	httpClient := &http.Client{Timeout: time.Duration(cfg.RequestTimeout) * time.Second} // #nosec G115 -- operator-supplied timeout in seconds, far below int64 overflow range
 	cache, err := jwk.NewCache(ctx, httprc.NewClient(httprc.WithHTTPClient(httpClient)))
 	if err != nil {
 		return nil, err
@@ -71,10 +71,10 @@ func newKeySet(ctx context.Context, cfg JWKSConfig, algorithms []string, errorMe
 	// Register performs the first fetch and blocks on it, so it gets an explicit deadline on top
 	// of the client timeout. Refresh needs no such bound because the resource is already
 	// registered, so it returns promptly on failure rather than retrying.
-	registerCtx, cancel := context.WithTimeout(ctx, time.Duration(cfg.RequestTimeout)*time.Second)
+	registerCtx, cancel := context.WithTimeout(ctx, time.Duration(cfg.RequestTimeout)*time.Second) // #nosec G115 -- operator-supplied timeout in seconds, far below int64 overflow range
 	err = cache.Register(registerCtx, cfg.URL,
-		jwk.WithMinInterval(time.Duration(cfg.RefreshMinInterval)*time.Second),
-		jwk.WithConstantInterval(time.Duration(cfg.RefreshInterval)*time.Second),
+		jwk.WithMinInterval(time.Duration(cfg.RefreshMinInterval)*time.Second),   // #nosec G115 -- operator-supplied interval in seconds, far below int64 overflow range
+		jwk.WithConstantInterval(time.Duration(cfg.RefreshInterval)*time.Second), // #nosec G115 -- operator-supplied interval in seconds, far below int64 overflow range
 	)
 	cancel()
 	if err != nil {

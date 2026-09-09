@@ -69,7 +69,7 @@ func pickTile(l *layer.Layer, layerName string) pkg.TileRequest {
 		maxZoom = *l.Config.MaxZoom
 	}
 
-	z := uint((minZoom + maxZoom) / 2) //nolint:gosec // min/maxZoom are bounded well within int range
+	z := uint((minZoom + maxZoom) / 2) // #nosec G115 -- min/maxZoom are bounded well within int range
 
 	bounds := pkg.WorldBounds()
 	if hasBounds {
@@ -89,7 +89,7 @@ func pickTile(l *layer.Layer, layerName string) pkg.TileRequest {
 	x := (zoomRange.XMin + zoomRange.XMax - 1) / 2 //nolint:mnd // Midpoint of an exclusive-max range
 	y := (zoomRange.YMin + zoomRange.YMax - 1) / 2 //nolint:mnd // Midpoint of an exclusive-max range
 
-	return pkg.TileRequest{LayerName: layerName, Z: int(z), X: x, Y: y}
+	return pkg.TileRequest{LayerName: layerName, Z: int(z), X: x, Y: y} // #nosec G115 -- z is the midpoint of minZoom/maxZoom, bounded well within int range
 }
 
 // the set of layer names tested when none are given. A pattern layer's ID
@@ -247,7 +247,7 @@ func Test(cfg *config.Config, opts TestOptions, out io.Writer) (uint32, error) {
 // out as well since that's the only output stdout gets in that case.
 func writeSummary(out io.Writer, opts TestOptions, summary TestSummary) error {
 	if opts.FilePath != "" {
-		file, err := os.Create(opts.FilePath) //nolint:gosec // Operator-supplied path from the CLI, not user input
+		file, err := os.Create(opts.FilePath) // #nosec G304 -- operator-supplied path from the CLI, not user input
 		if err != nil {
 			return err
 		}

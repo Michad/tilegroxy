@@ -85,10 +85,12 @@ func (e *SeedJob) From(start uint64) iter.Seq2[uint64, pkg.TileRequest] {
 				continue
 			}
 
+			z := int(r.Z) // #nosec G115 -- zoom is validated against MaxZoom
+
 			for x := r.XMin; x < r.XMax; x++ {
 				for y := r.YMin; y < r.YMax; y++ {
 					if i >= start {
-						if !yield(i, pkg.TileRequest{LayerName: e.layerName, Z: int(r.Z), X: x, Y: y}) { // #nosec G115 -- zoom is validated against MaxZoom
+						if !yield(i, pkg.TileRequest{LayerName: e.layerName, Z: z, X: x, Y: y}) {
 							return
 						}
 					}

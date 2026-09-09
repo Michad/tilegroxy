@@ -33,8 +33,8 @@ type shutdownBudget struct {
 
 func newShutdownBudget(cfg *config.Config) shutdownBudget {
 	return shutdownBudget{
-		total:      time.Duration(cfg.Server.EffectiveShutdownTimeout()) * time.Second,
-		drainDelay: time.Duration(cfg.Server.DrainDelay) * time.Second,
+		total:      time.Duration(cfg.Server.EffectiveShutdownTimeout()) * time.Second, // #nosec G115 -- operator-supplied timeout in seconds, far below int64 overflow range
+		drainDelay: time.Duration(cfg.Server.DrainDelay) * time.Second,                 // #nosec G115 -- operator-supplied delay in seconds, far below int64 overflow range
 	}
 }
 

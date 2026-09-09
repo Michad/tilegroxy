@@ -109,8 +109,10 @@ func (p *Progress) Save(path string, out io.Writer, verbose bool) error {
 	tmpName := tmp.Name()
 
 	if _, err = tmp.Write(raw); err != nil {
-		tmp.Close()        //nolint:errcheck,gosec // Already failing, the remove below is what matters
-		os.Remove(tmpName) //nolint:errcheck,gosec // Nothing actionable if the temp file can't be cleaned up
+		//#nosec G104 -- Already failing, the remove below is what matters
+		tmp.Close() //nolint:errcheck // Already failing, the remove below is what matters
+		//#nosec G104 -- Nothing actionable if the temp file can't be cleaned up
+		os.Remove(tmpName) //nolint:errcheck // Nothing actionable if the temp file can't be cleaned up
 
 		fmt.Fprintf(out, "Error writing progress file: %s", err)
 
@@ -118,7 +120,8 @@ func (p *Progress) Save(path string, out io.Writer, verbose bool) error {
 	}
 
 	if err = tmp.Close(); err != nil {
-		os.Remove(tmpName) //nolint:errcheck,gosec // Nothing actionable if the temp file can't be cleaned up
+		//#nosec G104 -- Nothing actionable if the temp file can't be cleaned up
+		os.Remove(tmpName) //nolint:errcheck // Nothing actionable if the temp file can't be cleaned up
 
 		fmt.Fprintf(out, "Error closing progress file after writing: %s", err)
 

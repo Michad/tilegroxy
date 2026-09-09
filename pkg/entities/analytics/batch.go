@@ -201,7 +201,7 @@ func (b *Batcher) work() {
 
 	buf := make([]Event, 0, b.cfg.MaxSize)
 
-	interval := time.Duration(b.cfg.MaxAge) * time.Second / batchTickDivisor
+	interval := time.Duration(b.cfg.MaxAge) * time.Second / batchTickDivisor // #nosec G115 -- operator-supplied max age in seconds, far below int64 overflow range
 	if interval <= 0 {
 		interval = time.Second
 	}
@@ -210,7 +210,7 @@ func (b *Batcher) work() {
 	defer ticker.Stop()
 
 	oldest := time.Time{}
-	maxAge := time.Duration(b.cfg.MaxAge) * time.Second
+	maxAge := time.Duration(b.cfg.MaxAge) * time.Second // #nosec G115 -- operator-supplied max age in seconds, far below int64 overflow range
 
 	for {
 		select {
