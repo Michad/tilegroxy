@@ -80,7 +80,9 @@ func makeImage() (pkg.Image, error) {
 		col = strings.Repeat("0", numColorDigits-len(col)) + col
 	}
 
-	img, err := images.GetStaticImage("color:" + col)
+	// Rendered rather than fetched: each tick uses a new random color, which GetStaticImage would
+	// cache permanently.
+	img, err := images.RenderColorImage(images.KeyPrefixColor + col)
 
 	if err != nil {
 		return pkg.Image{}, err

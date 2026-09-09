@@ -28,6 +28,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
 const numRGB = 3
@@ -69,8 +70,39 @@ const KeyMvtBox = "embedded:box.mvt"
 
 const KeyPrefixColor = "color:"
 
+// Guards dynamicImages and failedImages, which are read and written from request goroutines.
+var imageCacheLock sync.RWMutex
 var dynamicImages = make(map[string]*[]byte, 0)
 var failedImages = make(map[string]error, 0)
+
+func lookupCachedImage(path string) (*[]byte, error, bool) {
+	imageCacheLock.RLock()
+	defer imageCacheLock.RUnlock()
+
+	if img := dynamicImages[path]; img != nil {
+		return img, nil, true
+	}
+
+	if err := failedImages[path]; err != nil {
+		//#nosec G404
+		if rand.Float32()*100 > 1 {
+			return nil, err, true
+		}
+	}
+
+	return nil, nil, false
+}
+
+func storeCachedImage(path string, img *[]byte, err error) {
+	imageCacheLock.Lock()
+	defer imageCacheLock.Unlock()
+
+	if img != nil {
+		dynamicImages[path] = img
+	} else {
+		failedImages[path] = err
+	}
+}
 
 func parseColor(fullStr string) (color.Color, error) {
 	col := fullStr[len(KeyPrefixColor):]
@@ -134,15 +166,8 @@ func GetStaticImage(path string) (*[]byte, error) {
 		return &mvtBox, nil
 	}
 
-	if dynamicImages[path] != nil {
-		return dynamicImages[path], nil
-	}
-
-	if failedImages[path] != nil {
-		//#nosec G404
-		if rand.Float32()*100 > 1 {
-			return nil, failedImages[path]
-		}
+	if img, err, ok := lookupCachedImage(path); ok {
+		return img, err
 	}
 
 	if strings.Index(path, KeyPrefixColor) == 0 {
@@ -152,12 +177,12 @@ func GetStaticImage(path string) (*[]byte, error) {
 	img, err := os.ReadFile(filepath.Clean(path))
 
 	if img != nil {
-		dynamicImages[path] = &img
+		storeCachedImage(path, &img, nil)
 		return &img, nil
 	}
 
 	if err != nil {
-		failedImages[path] = err
+		storeCachedImage(path, nil, err)
 		return nil, err
 	}
 
@@ -165,6 +190,19 @@ func GetStaticImage(path string) (*[]byte, error) {
 }
 
 func getColorImage(path string) (*[]byte, error) {
+	output, err := RenderColorImage(path)
+
+	if err != nil {
+		return nil, err
+	}
+
+	storeCachedImage(path, output, nil)
+	return output, nil
+}
+
+// RenderColorImage draws a solid color image without caching it. Use this for one-off colors, such
+// as a health check probe, that would otherwise grow the permanent image cache without bound.
+func RenderColorImage(path string) (*[]byte, error) {
 	colObj, err := parseColor(path)
 
 	if err != nil {
@@ -191,6 +229,5 @@ func getColorImage(path string) (*[]byte, error) {
 
 	output := buf.Bytes()
 
-	dynamicImages[path] = &output
 	return &output, nil
 }
