@@ -299,7 +299,7 @@ layers:
 	assert.Contains(t, string(out), "osm")
 	assert.Less(t, exitStatus, 1)
 
-	content, err := os.ReadFile(summaryPath) //nolint:gosec
+	content, err := os.ReadFile(summaryPath) // #nosec G304 -- test-controlled temp path
 	require.NoError(t, err)
 	assert.Contains(t, string(content), "Tested 1 layers, 0 failures")
 }

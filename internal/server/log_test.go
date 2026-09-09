@@ -37,7 +37,7 @@ func Test_LogFileWriterReturnsCloser(t *testing.T) {
 
 	require.NoError(t, closeLog())
 
-	content, err := os.ReadFile(path) //nolint:gosec // test-controlled temp path
+	content, err := os.ReadFile(path) // #nosec G304 -- test-controlled temp path
 	require.NoError(t, err)
 	assert.Contains(t, string(content), "entry")
 }

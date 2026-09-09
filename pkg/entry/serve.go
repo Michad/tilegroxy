@@ -62,7 +62,7 @@ func newReloadCallback(nextReloadPtr *func(*config.Config, *entities.Entities) e
 		}
 
 		if err := (*nextReloadPtr)(newCfg, ent2); err != nil {
-			closeCtx, cancel := context.WithTimeout(context.Background(), time.Duration(newCfg.Server.EffectiveShutdownTimeout())*time.Second)
+			closeCtx, cancel := context.WithTimeout(context.Background(), time.Duration(newCfg.Server.EffectiveShutdownTimeout())*time.Second) // #nosec G115 -- operator-supplied timeout in seconds, far below int64 overflow range
 			defer cancel()
 
 			if closeErr := ent2.Close(closeCtx); closeErr != nil {

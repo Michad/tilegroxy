@@ -128,7 +128,7 @@ func (s GoogleAnalyticsRegistration) Initialize(cfgAny any, deps analytics.Analy
 	g := &GoogleAnalytics{
 		GoogleAnalyticsConfig: cfg,
 		url:                   endpoint.String(),
-		client:                &http.Client{Timeout: time.Duration(cfg.Timeout) * time.Second},
+		client:                &http.Client{Timeout: time.Duration(cfg.Timeout) * time.Second}, // #nosec G115 -- operator-supplied timeout in seconds, far below int64 overflow range
 	}
 
 	batcher, err := analytics.NewBatcher(id, batchCfg, g.flush)
