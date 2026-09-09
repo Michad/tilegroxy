@@ -15,6 +15,8 @@ package images
 
 import (
 	"image/color"
+	"path/filepath"
+	"sync"
 	"testing"
 
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -102,4 +104,43 @@ func TestDefaultConfigImageKeysMatchEmbeddedKeys(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, img)
 	}
+}
+
+func TestConcurrentImageLoad(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "does-not-exist.png")
+
+	var wg sync.WaitGroup
+
+	for range 50 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			_, err := GetStaticImage(missing)
+			assert.Error(t, err)
+
+			img, err := GetStaticImage(KeyPrefixColor + "00FF00")
+			assert.NoError(t, err)
+			assert.NotNil(t, img)
+		}()
+	}
+
+	wg.Wait()
+}
+
+func TestRenderColorImageDoesntCache(t *testing.T) {
+	path := KeyPrefixColor + "123456"
+
+	img, err := RenderColorImage(path)
+	require.NoError(t, err)
+	assert.NotNil(t, img)
+
+	imageCacheLock.RLock()
+	_, cached := dynamicImages[path]
+	imageCacheLock.RUnlock()
+
+	assert.False(t, cached)
+
+	_, err = RenderColorImage(KeyPrefixColor + "nope")
+	require.Error(t, err)
 }
