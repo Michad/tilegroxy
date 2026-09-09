@@ -21,6 +21,7 @@ import (
 	"math"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/Michad/tilegroxy/internal/seed"
 	"github.com/Michad/tilegroxy/pkg"
@@ -34,6 +35,8 @@ const warnCount = 10000
 // how often progress is written to disk
 const progressInterval = 100
 
+var ErrTooManyFailures = errors.New("too many tiles failed to seed")
+
 type SeedOptions struct {
 	Zoom         []uint
 	Bounds       pkg.Bounds
@@ -43,6 +46,7 @@ type SeedOptions struct {
 	NumThread    uint16
 	ProgressFile string
 	CacheName    string
+	MaxFailures uint64
 }
 
 func Seed(cfg *config.Config, opts SeedOptions, out io.Writer) error {
@@ -99,7 +103,13 @@ func Seed(cfg *config.Config, opts SeedOptions, out io.Writer) error {
 		numThread = uint16(remaining) // #nosec G115 -- guarded by the comparison above
 	}
 
-	if err = seedTiles(seedJob, opts, out, layerGroup, numThread, progress, start); err != nil {
+	// A resumed run only renders what's left, so the default tracks the remaining tiles.
+	maxFailures := opts.MaxFailures
+	if maxFailures == 0 {
+		maxFailures = seedJob.Count() - start
+	}
+
+	if err = seedTiles(seedJob, opts, out, layerGroup, numThread, progress, start, maxFailures); err != nil {
 		return err
 	}
 
@@ -196,7 +206,7 @@ func resolveProgress(currentSeedJob *seed.SeedJob, opts SeedOptions, out io.Writ
 	return existing, existing.Position, nil
 }
 
-func seedTiles(seedJob *seed.SeedJob, opts SeedOptions, out io.Writer, layerGroup *layer.LayerGroup, numThread uint16, progress *seed.Progress, start uint64) error {
+func seedTiles(seedJob *seed.SeedJob, opts SeedOptions, out io.Writer, layerGroup *layer.LayerGroup, numThread uint16, progress *seed.Progress, start uint64, maxFailures uint64) error {
 	tiles := make(chan indexedTile)
 	done := make(chan uint64, numThread)
 
@@ -209,10 +219,21 @@ func seedTiles(seedJob *seed.SeedJob, opts SeedOptions, out io.Writer, layerGrou
 	// tiles when the threads have all panicked and nothing is left to render them.
 	abandoned := make(chan struct{})
 
+	var giveUpOnce sync.Once
+
+	giveUp := make(chan struct{})
+	failures := &atomic.Uint64{}
+
+	onFailure := func() {
+		if failures.Add(1) >= maxFailures {
+			giveUpOnce.Do(func() { close(giveUp) })
+		}
+	}
+
 	for t := range int(numThread) {
 		wg.Add(1)
 
-		go seedThread(&wg, opts, out, layerGroup, t, tiles, done, errs)
+		go seedThread(&wg, opts, out, layerGroup, t, tiles, done, errs, onFailure)
 	}
 
 	go func() {
@@ -239,6 +260,8 @@ feed:
 		case tiles <- indexedTile{index: i, request: req}:
 		case <-abandoned:
 			break feed
+		case <-giveUp:
+			break feed
 		}
 	}
 
@@ -256,6 +279,10 @@ feed:
 
 	if trackErr != nil {
 		threadErrs = append(threadErrs, trackErr)
+	}
+
+	if failed := failures.Load(); failed > 0 && failed >= maxFailures {
+		threadErrs = append(threadErrs, fmt.Errorf("%w: %v of %v tiles failed to render", ErrTooManyFailures, failed, seedJob.Count()-start))
 	}
 
 	if len(threadErrs) > 0 {
@@ -314,7 +341,7 @@ func trackProgress(opts SeedOptions, progress *seed.Progress, start uint64, done
 	return saveErr
 }
 
-func seedThread(wg *sync.WaitGroup, opts SeedOptions, out io.Writer, layerGroup *layer.LayerGroup, t int, tiles <-chan indexedTile, done chan<- uint64, errs chan<- error) {
+func seedThread(wg *sync.WaitGroup, opts SeedOptions, out io.Writer, layerGroup *layer.LayerGroup, t int, tiles <-chan indexedTile, done chan<- uint64, errs chan<- error, onFailure func()) {
 	defer wg.Done()
 	defer func() {
 		if r := recover(); r != nil {
@@ -331,6 +358,10 @@ func seedThread(wg *sync.WaitGroup, opts SeedOptions, out io.Writer, layerGroup 
 
 	for tile := range tiles {
 		_, tileErr := layerGroup.RenderTile(ctx, tile.request)
+
+		if tileErr != nil {
+			onFailure()
+		}
 
 		if opts.Verbose {
 			var status string

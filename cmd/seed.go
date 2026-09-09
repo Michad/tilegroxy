@@ -50,9 +50,10 @@ func runSeed(cmd *cobra.Command, _ []string) {
 	verbose, err9 := cmd.Flags().GetBool("verbose")
 	progressFile, err10 := cmd.Flags().GetString("progress")
 	cacheName, err11 := cmd.Flags().GetString("cache")
+	maxFailures, err12 := cmd.Flags().GetUint64("max-failures")
 	out := rootCmd.OutOrStdout()
 
-	if err := errors.Join(err1, err2, err3, err4, err5, err6, err7, err8, err9, err10, err11); err != nil {
+	if err := errors.Join(err1, err2, err3, err4, err5, err6, err7, err8, err9, err10, err11, err12); err != nil {
 		fmt.Fprintf(out, "Error: %v", err)
 		exit(1)
 		return
@@ -76,7 +77,8 @@ func runSeed(cmd *cobra.Command, _ []string) {
 			Verbose:      verbose,
 			NumThread:    numThread,
 			ProgressFile: progressFile,
-			CacheName:    cacheName},
+			CacheName:    cacheName,
+			MaxFailures:  maxFailures},
 		out)
 
 	if err != nil {
@@ -103,6 +105,7 @@ func initSeed() {
 	seedCmd.Flags().Bool("force", false, "Perform the seeding even if it covers an excessive number of tiles. Without this flag seeds over 10k tiles will error out. \nWarning: A seed that large can spend hours making requests against an upstream provider")
 	seedCmd.Flags().Uint16P("threads", "t", 1, "How many concurrent requests to use to perform seeding. Be mindful of spamming upstream providers")
 	seedCmd.Flags().StringP("progress", "p", "", "A file to use to record how far the seed got. If the file already exists the seed resumes from its recorded position instead of starting over.")
+	seedCmd.Flags().Uint64("max-failures", 0, "How many tiles can fail to render before the seed gives up and exits with a failure status. \nDefaults to the number of tiles being seeded, meaning the seed only fails if every tile does")
 	seedCmd.Flags().String("cache", "", "For a layer using a multi-tiered cache, restrict seeding to the tier of this type (e.g. \"disk\"). By default every tier is seeded.")
 
 	if err != nil {

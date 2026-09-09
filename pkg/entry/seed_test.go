@@ -17,6 +17,7 @@ package tg
 import (
 	"bytes"
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"slices"
@@ -75,7 +76,7 @@ func Test_SeedThread_RecoversFromPanic(t *testing.T) {
 	close(tiles)
 
 	require.NotPanics(t, func() {
-		seedThread(&wg, SeedOptions{Verbose: true}, &out, lg, 0, tiles, done, errs)
+		seedThread(&wg, SeedOptions{Verbose: true}, &out, lg, 0, tiles, done, errs, func() {})
 	})
 
 	wg.Wait()
@@ -550,4 +551,126 @@ func Test_Seed_CleansUpProgressFileOnCompletion(t *testing.T) {
 
 	_, err := os.Stat(path)
 	assert.True(t, os.IsNotExist(err))
+}
+
+// seedTestFailingProvider fails the first failCount tiles it is asked to render and succeeds for
+// the rest, so a partial failure can be told apart from a total one.
+type seedTestFailingProvider struct {
+	mutex     sync.Mutex
+	failCount int
+	attempts  int
+}
+
+var seedTestFailer = &seedTestFailingProvider{}
+
+func (p *seedTestFailingProvider) PreAuth(_ context.Context, pc layer.ProviderContext) (layer.ProviderContext, error) {
+	pc.AuthBypass = true
+	return pc, nil
+}
+
+func (p *seedTestFailingProvider) GenerateTile(_ context.Context, _ layer.ProviderContext, _ pkg.TileRequest) (*pkg.Image, error) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	p.attempts++
+	if p.attempts <= p.failCount {
+		return nil, errors.New("simulated upstream failure")
+	}
+
+	img := pkg.Image{}
+
+	return &img, nil
+}
+
+func (p *seedTestFailingProvider) reset(failCount int) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+	p.failCount = failCount
+	p.attempts = 0
+}
+
+type seedTestFailingRegistration struct{}
+
+func (seedTestFailingRegistration) Name() string                   { return "seed-test-failing-provider" }
+func (seedTestFailingRegistration) InitializeConfig() any          { return struct{}{} }
+func (seedTestFailingRegistration) DataType(_ any) config.DataType { return config.DataTypeUnknown }
+func (seedTestFailingRegistration) Initialize(_ any, _ layer.ProviderDeps) (layer.Provider, error) {
+	return seedTestFailer, nil
+}
+
+func seedTestFailingConfig(t *testing.T, failCount int) config.Config {
+	t.Helper()
+	layer.RegisterProvider(seedTestFailingRegistration{})
+	seedTestFailer.reset(failCount)
+
+	cfg := config.DefaultConfig()
+	cfg.Layers = []config.LayerConfig{
+		{ID: "fails", Provider: map[string]interface{}{"name": "seed-test-failing-provider"}},
+	}
+
+	return cfg
+}
+
+// Per-tile render errors used to be discarded, so a run where every tile failed still exited 0 and
+// a silent failure in CI looked like a successful seed.
+func Test_Seed_ReturnsErrorWhenEveryTileFails(t *testing.T) {
+	cfg := seedTestFailingConfig(t, 4)
+
+	var out bytes.Buffer
+	err := Seed(&cfg, SeedOptions{
+		Zoom:      []uint{1},
+		Bounds:    pkg.WorldBounds(),
+		LayerName: "fails",
+		NumThread: 1,
+	}, &out)
+
+	require.Error(t, err)
+	require.ErrorIs(t, err, ErrTooManyFailures)
+}
+
+// The default only trips when every tile fails, so a mostly successful seed still succeeds.
+func Test_Seed_SucceedsWhenSomeTilesFail(t *testing.T) {
+	cfg := seedTestFailingConfig(t, 3)
+
+	var out bytes.Buffer
+	require.NoError(t, Seed(&cfg, SeedOptions{
+		Zoom:      []uint{1},
+		Bounds:    pkg.WorldBounds(),
+		LayerName: "fails",
+		NumThread: 1,
+	}, &out))
+}
+
+func Test_Seed_MaxFailuresGivesUpEarly(t *testing.T) {
+	cfg := seedTestFailingConfig(t, 100)
+
+	var out bytes.Buffer
+	err := Seed(&cfg, SeedOptions{
+		Zoom:        []uint{0, 1, 2, 3},
+		Bounds:      pkg.WorldBounds(),
+		LayerName:   "fails",
+		NumThread:   1,
+		MaxFailures: 2,
+	}, &out)
+
+	require.ErrorIs(t, err, ErrTooManyFailures)
+
+	// Giving up means the run stops handing out tiles rather than working through all 85 of them.
+	seedTestFailer.mutex.Lock()
+	defer seedTestFailer.mutex.Unlock()
+	assert.Less(t, seedTestFailer.attempts, 85)
+}
+
+// A limit above what the run can reach leaves the seed reporting success.
+func Test_Seed_MaxFailuresAboveTileCount(t *testing.T) {
+	cfg := seedTestFailingConfig(t, 4)
+
+	var out bytes.Buffer
+	require.NoError(t, Seed(&cfg, SeedOptions{
+		Zoom:        []uint{1},
+		Bounds:      pkg.WorldBounds(),
+		LayerName:   "fails",
+		NumThread:   1,
+		MaxFailures: 5,
+	}, &out))
 }
