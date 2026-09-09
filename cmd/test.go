@@ -44,8 +44,8 @@ Example:
 func runTest(cmd *cobra.Command, _ []string) {
 	layerNames, err1 := cmd.Flags().GetStringSlice("layer")
 	z, err2 := cmd.Flags().GetInt("z-coordinate")
-	x, err3 := cmd.Flags().GetInt("y-coordinate")
-	y, err4 := cmd.Flags().GetInt("x-coordinate")
+	x, err3 := cmd.Flags().GetInt("x-coordinate")
+	y, err4 := cmd.Flags().GetInt("y-coordinate")
 	noCache, err5 := cmd.Flags().GetBool("no-cache")
 	numThread, err6 := cmd.Flags().GetUint16("threads")
 	jsonOut, err7 := cmd.Flags().GetBool("json")
