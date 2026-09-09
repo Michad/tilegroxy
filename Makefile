@@ -15,7 +15,7 @@ test:
 	@go test ./internal/... ./pkg/... ./cmd/... -count=1 -tags viper_bind_struct
 
 unit:
-	@go test ./internal/... $PKGPKGS ./cmd/... -v -count=1 -tags "unit,viper_bind_struct"
+	@go test ./internal/... ${PKGPKGS} ./cmd/... -v -count=1 -tags "unit,viper_bind_struct"
 
 e2e: docs build
 	@go test ./test/... -count=1 -tags "e2e,viper_bind_struct"
@@ -53,7 +53,7 @@ readme:
 	@echo Updated README.adoc
 
 sec:
-	@gosec -no-fail -exclude=G504 -exclude-dir=.superpowers -terse ./pkg/... ./internal/... ./cmd/... | grep -v Autofix
+	@gosec -no-fail -exclude=G504 -exclude-dir=.superpowers -terse ./pkg/... ./internal/... | grep -v Autofix
 
 version:
 	@./${OUT} version --json
