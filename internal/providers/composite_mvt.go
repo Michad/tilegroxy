@@ -98,21 +98,21 @@ func (t CompositeMVT) GenerateTile(ctx context.Context, providerContext layer.Pr
 	slog.DebugContext(ctx, fmt.Sprintf("Compositing %v providers", len(t.providers)))
 
 	wg := sync.WaitGroup{}
-	errs := make(chan error, len(t.providers))
-	imgs := make(chan *pkg.Image, len(t.providers))
+	results := make(chan compositeResult, len(t.providers))
 
 	for i, p := range t.providers {
 		wg.Add(1)
-		go callCompositingProvider(ctx, providerContext, tileRequest, p, i, imgs, errs, &wg)
+		go callCompositingProvider(ctx, providerContext, tileRequest, p, i, results, &wg)
 	}
 
 	wg.Wait()
 
 	imgSlice := make([]*pkg.Image, len(t.providers))
 	errSlice := make([]error, len(t.providers))
-	for i := range t.providers {
-		errSlice[i] = <-errs
-		imgSlice[i] = <-imgs
+	for range t.providers {
+		r := <-results
+		errSlice[r.i] = r.err
+		imgSlice[r.i] = r.img
 	}
 
 	joinError := errors.Join(errSlice...)
@@ -132,10 +132,24 @@ func (t CompositeMVT) GenerateTile(ctx context.Context, providerContext layer.Pr
 	return &resultImg, nil
 }
 
-func callCompositingProvider(ctx context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest, provider layer.Provider, i int, imgs chan *pkg.Image, errs chan error, wg *sync.WaitGroup) {
+type compositeResult struct {
+	i   int
+	img *pkg.Image
+	err error
+}
+
+func callCompositingProvider(ctx context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest, provider layer.Provider, i int, results chan compositeResult, wg *sync.WaitGroup) {
+	sent := false
+	send := func(img *pkg.Image, err error) {
+		if !sent {
+			sent = true
+			results <- compositeResult{i, img, err}
+		}
+	}
+
 	defer func() {
 		if r := recover(); r != nil {
-			errs <- fmt.Errorf("unexpected composite error %v", r)
+			send(nil, fmt.Errorf("unexpected composite error %v", r))
 		}
 		wg.Done()
 	}()
@@ -152,12 +166,10 @@ func callCompositingProvider(ctx context.Context, providerContext layer.Provider
 		img, err = provider.GenerateTile(ctx, layer.ProviderContext{}, tileRequest)
 	}
 
-	if img != nil {
-		imgs <- img
-	} else if err == nil {
+	if img == nil && err == nil {
 		// img and err are both nil -- that's not right
 		err = errors.New("no image returned to compositor")
 	}
 
-	errs <- err
+	send(img, err)
 }

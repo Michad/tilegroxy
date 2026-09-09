@@ -17,6 +17,7 @@ package providers
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/Michad/tilegroxy/pkg"
@@ -69,4 +70,58 @@ func Test_Composite_ExecuteStatic(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Len(t, img.Content, len(*imgExp)*2)
+}
+
+// panicProvider models a child that misbehaves badly enough to unwind through the compositor.
+type panicProvider struct{}
+
+func (p panicProvider) PreAuth(_ context.Context, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
+	return providerContext, nil
+}
+
+func (p panicProvider) GenerateTile(_ context.Context, _ layer.ProviderContext, _ pkg.TileRequest) (*pkg.Image, error) {
+	panic("boom")
+}
+
+// A child returning (nil, err) used to leave the collection loop waiting on an image that was
+// never sent, leaking the goroutine and poisoning the tile forever.
+func Test_Composite_ChildErrorDoesNotHang(t *testing.T) {
+	cases := map[string]layer.Provider{
+		"error": &Fail{FailConfig{Message: "child blew up"}},
+		"panic": panicProvider{},
+	}
+
+	for name, bad := range cases {
+		t.Run(name, func(t *testing.T) {
+			good, err := StaticRegistration{}.Initialize(StaticConfig{Image: "embedded:box.mvt"}, layer.ProviderDeps{ClientConfig: testClientConfig, ErrorMessages: testErrMessages})
+			require.NoError(t, err)
+
+			c := &CompositeMVT{providers: []layer.Provider{bad, good}, errorMessages: testErrMessages}
+
+			done := make(chan error, 1)
+			go func() {
+				_, genErr := c.GenerateTile(pkg.BackgroundContext(), layer.ProviderContext{}, pkg.TileRequest{LayerName: "l", Z: 9, X: 23, Y: 32})
+				done <- genErr
+			}()
+
+			select {
+			case genErr := <-done:
+				require.Error(t, genErr)
+			case <-time.After(10 * time.Second):
+				assert.Fail(t, "GenerateTile blocked on a starved channel")
+			}
+		})
+	}
+}
+
+// Both children failing means both errors need to make it back to the caller.
+func Test_Composite_AllChildrenFailJoinsErrors(t *testing.T) {
+	c := &CompositeMVT{providers: []layer.Provider{&Fail{FailConfig{Message: "first"}}, &Fail{FailConfig{Message: "second"}}}, errorMessages: testErrMessages}
+
+	img, err := c.GenerateTile(pkg.BackgroundContext(), layer.ProviderContext{}, pkg.TileRequest{LayerName: "l", Z: 9, X: 23, Y: 32})
+
+	assert.Nil(t, img)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "first")
+	assert.Contains(t, err.Error(), "second")
 }
