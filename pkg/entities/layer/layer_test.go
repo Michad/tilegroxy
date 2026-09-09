@@ -17,9 +17,12 @@ package layer
 import (
 	"testing"
 
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+var testErrorMessages = config.ErrorMessages{InvalidParam: "invalid %v: %v"}
 
 func Test_ParsePattern(t *testing.T) {
 	segments, err := parsePattern("hello")
@@ -139,54 +142,63 @@ func Test_ValidateMatches(t *testing.T) {
 
 	rules["*"] = "[a-zA-Z0-9]*"
 
-	regex, err := constructValidation(rules)
+	regex, err := constructValidation(rules, testErrorMessages)
 	require.NoError(t, err)
 	assert.True(t, validateParamMatches(matches, regex))
 
 	rules["*"] = "^[a-zA-Z0-9]*$"
 
-	regex, err = constructValidation(rules)
+	regex, err = constructValidation(rules, testErrorMessages)
 	require.NoError(t, err)
 	assert.True(t, validateParamMatches(matches, regex))
 
 	rules["*"] = "[a-zA-Z]*"
-	regex, err = constructValidation(rules)
+	regex, err = constructValidation(rules, testErrorMessages)
 	require.NoError(t, err)
 	assert.False(t, validateParamMatches(matches, regex))
 
 	delete(rules, "*")
-	regex, err = constructValidation(rules)
+	regex, err = constructValidation(rules, testErrorMessages)
 	require.NoError(t, err)
 	assert.True(t, validateParamMatches(matches, regex))
 
-	regex, err = constructValidation(nil)
+	regex, err = constructValidation(nil, testErrorMessages)
 	require.NoError(t, err)
 	assert.True(t, validateParamMatches(matches, regex))
 
 	rules["test1"] = "[a-zA-Z]*"
-	regex, err = constructValidation(rules)
+	regex, err = constructValidation(rules, testErrorMessages)
 	require.NoError(t, err)
 	assert.True(t, validateParamMatches(matches, regex))
 
 	rules["test1"] = "a"
-	regex, err = constructValidation(rules)
+	regex, err = constructValidation(rules, testErrorMessages)
 	require.NoError(t, err)
 	assert.False(t, validateParamMatches(matches, regex))
 
 	rules["test1"] = "[a-zA-Z]*"
 	rules["test2"] = "[a-zA-Z0-9]*"
-	regex, err = constructValidation(rules)
+	regex, err = constructValidation(rules, testErrorMessages)
 	require.NoError(t, err)
 	assert.True(t, validateParamMatches(matches, regex))
 
 	rules["*"] = "aaa"
-	regex, err = constructValidation(rules)
+	regex, err = constructValidation(rules, testErrorMessages)
 	require.NoError(t, err)
 	assert.False(t, validateParamMatches(matches, regex))
 
 	delete(rules, "*")
 	rules["test3"] = ".+"
-	regex, err = constructValidation(rules)
+	regex, err = constructValidation(rules, testErrorMessages)
 	require.NoError(t, err)
 	assert.False(t, validateParamMatches(matches, regex))
+}
+
+func Test_ConstructValidation_EmptyExpression(t *testing.T) {
+	require.NotPanics(t, func() {
+		regex, err := constructValidation(map[string]string{"name": ""}, testErrorMessages)
+		require.Error(t, err)
+		assert.Nil(t, regex)
+		assert.Contains(t, err.Error(), "layer.paramValidator.name")
+	})
 }

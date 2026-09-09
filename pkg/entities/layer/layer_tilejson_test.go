@@ -177,3 +177,21 @@ func Test_Layer_BuildTileJSON_IntersectsAllowedArea(t *testing.T) {
 
 	assert.Equal(t, []float64{-5, -5, 10, 5}, doc.Bounds)
 }
+
+func Test_ConstructLayer_EmptyParamValidator_ErrorsNotPanics(t *testing.T) {
+	RegisterProvider(fixedTypeTestRegistration{name: "fixed-tj-empty", dt: config.DataTypeRaster})
+
+	rawConfig := config.LayerConfig{
+		ID:             "tj-empty",
+		Pattern:        "tile_{name}",
+		ParamValidator: map[string]string{"name": ""},
+		Provider:       map[string]any{"name": "fixed-tj-empty"},
+	}
+
+	require.NotPanics(t, func() {
+		l, err := ConstructLayer(rawConfig, config.ClientConfig{}, true, tileJSONErrorMessages, nil, nil, nil)
+		require.Error(t, err)
+		require.Nil(t, l)
+		assert.Contains(t, err.Error(), "layer.paramValidator.name")
+	})
+}

@@ -136,7 +136,7 @@ func match(segments []layerSegment, str string) (bool, map[string]string) {
 	return true, matches
 }
 
-func constructValidation(raw map[string]string) (map[string]*regexp.Regexp, error) {
+func constructValidation(raw map[string]string, errorMessages config.ErrorMessages) (map[string]*regexp.Regexp, error) {
 	if raw == nil {
 		return nil, nil
 	}
@@ -146,6 +146,12 @@ func constructValidation(raw map[string]string) (map[string]*regexp.Regexp, erro
 
 	for k, v := range raw {
 		var err error
+
+		if v == "" {
+			errs = append(errs, fmt.Errorf(errorMessages.InvalidParam, "layer.paramValidator."+k, v))
+			continue
+		}
+
 		if v[0] != '^' {
 			v = "^" + v
 		}
@@ -160,7 +166,11 @@ func constructValidation(raw map[string]string) (map[string]*regexp.Regexp, erro
 		}
 	}
 
-	return res, errors.Join(errs...)
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func validateParamMatches(values map[string]string, regexp map[string]*regexp.Regexp) bool {
@@ -275,7 +285,7 @@ func resolvePatternAndValidator(rawConfig config.LayerConfig, errorMessages conf
 
 	var validator map[string]*regexp.Regexp
 	if isPattern && rawConfig.ParamValidator != nil {
-		validator, err = constructValidation(rawConfig.ParamValidator)
+		validator, err = constructValidation(rawConfig.ParamValidator, errorMessages)
 		if err != nil {
 			return nil, nil, err
 		}
