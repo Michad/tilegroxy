@@ -104,7 +104,7 @@ func healthReloader(ctx context.Context, cfg *config.Config, ent *entities.Entit
 	}
 
 	if err != nil {
-		slog.ErrorContext(ctx, fmt.Sprintf("Failed to rebuild health subsystem on reload, health endpoint is DOWN until config is fixed and reloaded again: %v", err))
+		slog.ErrorContext(ctx, fmt.Sprintf("Failed to rebuild health subsystem on reload, reload aborted: %v", err))
 		return err
 	}
 
@@ -116,11 +116,11 @@ func healthReloader(ctx context.Context, cfg *config.Config, ent *entities.Entit
 // same generation so health checks aren't left pinned to the LayerGroup from startup.
 func makeCombinedReloadFunc(ctx context.Context, handlerReloadFunc reloadEntitiesFunc, healthMutex *sync.Mutex, healthShutdown *func(context.Context) error, healthDrain *func(), draining *bool) reloadEntitiesFunc {
 	return func(cfg2 *config.Config, ent2 *entities.Entities) error {
-		if err := handlerReloadFunc(cfg2, ent2); err != nil {
+		if err := healthReloader(ctx, cfg2, ent2, healthMutex, healthShutdown, healthDrain, draining); err != nil {
 			return err
 		}
 
-		return healthReloader(ctx, cfg2, ent2, healthMutex, healthShutdown, healthDrain, draining)
+		return handlerReloadFunc(cfg2, ent2)
 	}
 }
 
