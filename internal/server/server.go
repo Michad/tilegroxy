@@ -111,7 +111,7 @@ func healthReloader(ctx context.Context, cfg *config.Config, ent *entities.Entit
 	return nil
 }
 
-// makeCombinedReloadFunc builds the reload callback ListenAndServe hands back to its caller: it
+// build the reload callback ListenAndServe hands back to its caller: it
 // swaps the tile handlers to the new entities, then rebuilds the health subsystem against that
 // same generation so health checks aren't left pinned to the LayerGroup from startup.
 func makeCombinedReloadFunc(ctx context.Context, handlerReloadFunc reloadEntitiesFunc, healthMutex *sync.Mutex, healthShutdown *func(context.Context) error, healthDrain *func(), draining *bool) reloadEntitiesFunc {
@@ -124,7 +124,7 @@ func makeCombinedReloadFunc(ctx context.Context, handlerReloadFunc reloadEntitie
 	}
 }
 
-// setupHandlers builds the HTTP handlers. The returned accessor yields whichever generation of entities is
+// build the HTTP handlers. The returned accessor yields whichever generation of entities is
 // currently serving, which is what shutdown needs to release after a hot reload has swapped generations
 //
 //nolint:maintidx
