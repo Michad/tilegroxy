@@ -3,6 +3,7 @@ PKG := github.com/Michad/tilegroxy
 VERSION := $(shell git describe --tag --abbrev=0 --dirty)
 REF := $(shell git rev-parse --short HEAD)
 DATE := $(shell date -Iseconds --u)
+PKGPKGS := $(shell go list ./pkg/... | grep -v mod)
 
 all: clean test docs build version
 lint: golangci sec
@@ -14,7 +15,7 @@ test:
 	@go test ./internal/... ./pkg/... ./cmd/... -count=1 -tags viper_bind_struct
 
 unit:
-	@go test ./internal/... $(go list ./pkg/... | grep -v mod) ./cmd/... -v -count=1 -tags "unit,viper_bind_struct"
+	@go test ./internal/... ${PKGPKGS} ./cmd/... -v -count=1 -tags "unit,viper_bind_struct"
 
 e2e: docs build
 	@go test ./test/... -count=1 -tags "e2e,viper_bind_struct"

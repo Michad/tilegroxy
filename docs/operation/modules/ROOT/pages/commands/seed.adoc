@@ -33,6 +33,12 @@ Flags:
                                 making requests against an upstream provider
   -h, --help                    help for seed
   -l, --layer string            The ID of the layer to seed
+      --max-failures uint       How many tiles can fail to render before
+                                the seed gives up and exits with a failure
+                                status.
+                                Defaults to the number of tiles being
+                                seeded, meaning the seed only fails if
+                                every tile does
   -n, --max-latitude float32    The maximum latitude to seed. The north
                                 side of the bounding box (default 90)
   -e, --max-longitude float32   The maximum longitude to seed. The east
