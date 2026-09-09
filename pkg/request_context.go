@@ -133,3 +133,25 @@ func BackgroundContext() context.Context {
 	req, _ := http.NewRequestWithContext(context.Background(), "", "", nil)
 	return NewRequestContext(req)
 }
+
+func CopyAuthRestrictions(from, to context.Context) {
+	copyPtr(from, to, LimitLayersFromContext)
+	copyPtr(from, to, AllowedLayersFromContext)
+	copyPtr(from, to, LimitAreaPartialFromContext)
+	copyPtr(from, to, AllowedAreaFromContext)
+	copyPtr(from, to, UserIDFromContext)
+}
+
+func copyPtr[A any](from, to context.Context, get func(context.Context) (*A, bool)) {
+	src, ok := get(from)
+	if !ok || src == nil {
+		return
+	}
+
+	dst, ok := get(to)
+	if !ok || dst == nil {
+		return
+	}
+
+	*dst = *src
+}

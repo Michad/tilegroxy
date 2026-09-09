@@ -81,6 +81,8 @@ func (t Ref) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequ
 	req, _ := pkg.ReqFromContext(ctx)
 	newCtx := pkg.NewRequestContext(req)
 
+	pkg.CopyAuthRestrictions(ctx, newCtx)
+
 	if newDepth, ok := pkg.RefDepthFromContext(newCtx); ok && newDepth != nil && depth != nil {
 		*newDepth = *depth + 1
 	}

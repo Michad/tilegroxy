@@ -101,3 +101,41 @@ func Test_Ref_DepthLimit_MatchesDocumentedHopCount(t *testing.T) {
 	require.Error(t, err, "maxRefDepth+1 ref hops should be rejected")
 	require.Contains(t, err.Error(), fmt.Sprintf("maximum reference depth (%d) exceeded", maxRefDepth))
 }
+
+// Ref rebuilds the context to reset layer pattern placeholders, but the auth restrictions written
+// by authentication have to survive that. crop with boundsFromAuth is the control that redacts
+// out-of-bounds pixels for a partial-area grant, so dropping allowedArea behind a ref fails open.
+func Test_Ref_PropagatesAuthRestrictions(t *testing.T) {
+	cfg := config.DefaultConfig()
+	cfg.Layers = []config.LayerConfig{
+		{ID: "outer", Provider: map[string]any{"name": "ref", "layer": "inner"}, Client: &cfg.Client, SkipCache: true},
+		{ID: "inner", Client: &cfg.Client, SkipCache: true, Provider: map[string]any{
+			"name":           "crop",
+			"boundsFromAuth": true,
+			"primary":        map[string]any{"name": "static", "color": "FF0000FF"},
+		}},
+	}
+
+	lg, err := layer.ConstructLayerGroup(cfg, nil, nil, nil)
+	require.NoError(t, err)
+
+	ctx := pkg.BackgroundContext()
+
+	// A grant covering only a sliver of tile 1/0/0 (the northwest quadrant), mimicking what jwt
+	// geohash auth installs
+	area, ok := pkg.AllowedAreaFromContext(ctx)
+	require.True(t, ok)
+	*area = pkg.Bounds{South: 10, North: 20, West: -20, East: -10}
+	partial, ok := pkg.LimitAreaPartialFromContext(ctx)
+	require.True(t, ok)
+	*partial = true
+
+	img, err := lg.RenderTile(ctx, pkg.TileRequest{LayerName: "outer", Z: 1, X: 0, Y: 0})
+	require.NoError(t, err)
+	require.NotNil(t, img)
+
+	direct, err := lg.RenderTile(ctx, pkg.TileRequest{LayerName: "inner", Z: 1, X: 0, Y: 0})
+	require.NoError(t, err)
+
+	assert.Equal(t, direct.Content, img.Content, "tile behind a ref must be cropped to the same auth bounds as one requested directly")
+}
