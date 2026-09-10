@@ -257,6 +257,9 @@ func (lg *LayerGroup) RenderTile(ctx context.Context, tileRequest pkg.TileReques
 	if img != nil {
 		slog.DebugContext(ctx, "Cache hit")
 		lg.cacheHitCounter.Add(ctx, 1)
+		if cached, ok := pkg.CachedFromContext(ctx); ok && cached != nil {
+			*cached = true
+		}
 		return img, err
 	}
 

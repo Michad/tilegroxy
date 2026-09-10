@@ -74,6 +74,37 @@ func Test_FieldResolver_AcceptsAllKnownFields(t *testing.T) {
 	assert.Equal(t, "test-agent", out[FieldUserAgent])
 	assert.Equal(t, "http://example.com/map", out[FieldReferer])
 	assert.Equal(t, http.MethodGet, out[FieldMethod])
+	assert.Equal(t, false, out[FieldCached])
+}
+
+func Test_FieldResolver_Cached(t *testing.T) {
+	msgs := config.DefaultConfig().Error.Messages
+
+	r, err := newFieldResolver(map[string]interface{}{"fields": []string{"cached"}}, msgs)
+	require.NoError(t, err)
+
+	ctx := testRequestContext(t)
+	out := r.Resolve(ctx, FieldSource{})
+	assert.Equal(t, false, out[FieldCached], "a fresh request context defaults to not-cached")
+
+	cached, ok := pkg.CachedFromContext(ctx)
+	require.True(t, ok)
+	*cached = true
+
+	out = r.Resolve(ctx, FieldSource{})
+	assert.Equal(t, true, out[FieldCached])
+}
+
+func Test_FieldResolver_Cached_MissingFromContext(t *testing.T) {
+	msgs := config.DefaultConfig().Error.Messages
+
+	r, err := newFieldResolver(map[string]interface{}{"fields": []string{"cached"}}, msgs)
+	require.NoError(t, err)
+
+	// A context not built by pkg.NewRequestContext (e.g. a plain stdlib context) has no cached
+	// pointer to read, so the field should be omitted rather than panicking.
+	out := r.Resolve(context.Background(), FieldSource{})
+	assert.NotContains(t, out, FieldCached)
 }
 
 func Test_FieldResolver_TenantIDDefaultsToEmptyString(t *testing.T) {

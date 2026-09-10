@@ -16,6 +16,8 @@ package layer
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -204,6 +206,114 @@ func Test_LayerGroup_RenderTile_RejectsOutOfZoomRangeEvenOnCacheHit(t *testing.T
 	var rangeErr pkg.RangeError
 	require.ErrorAs(t, err, &rangeErr)
 	require.Equal(t, int32(0), provider.generateCalls.Load())
+}
+
+// A cache hit must be reflected in the request context so analytics can report `cached: true`.
+func Test_LayerGroup_RenderTile_CacheHitSetsContextFlag(t *testing.T) {
+	provider := &slowGenerateProvider{delay: 0}
+	c := alwaysHitCache{}
+
+	l := &Layer{
+		ID:       "test",
+		Pattern:  []layerSegment{{value: "test", placeholder: false}},
+		Provider: provider,
+		Cache:    c,
+	}
+	l.tileAllCounter = noop.Int64Counter{}
+	l.tileAuthCounter = noop.Int64Counter{}
+	l.tileErrorCounter = noop.Int64Counter{}
+	l.tileSuccessCounter = noop.Int64Counter{}
+
+	lg := &LayerGroup{
+		layers:           []*Layer{l},
+		DefaultCache:     c,
+		cacheHitCounter:  noop.Int64Counter{},
+		cacheMissCounter: noop.Int64Counter{},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/tiles/test/1/0/0", nil)
+	ctx := pkg.NewRequestContext(req)
+
+	img, err := lg.RenderTile(ctx, pkg.TileRequest{LayerName: "test", Z: 1, X: 0, Y: 0})
+	require.NoError(t, err)
+	require.NotNil(t, img)
+
+	cached, ok := pkg.CachedFromContext(ctx)
+	require.True(t, ok)
+	require.True(t, *cached)
+}
+
+// A cache miss, whether rendered directly or via the coalesced/singleflight path, must leave the
+// context flag false so analytics reports `cached: false`.
+func Test_LayerGroup_RenderTile_CacheMissLeavesContextFlagFalse(t *testing.T) {
+	provider := &slowGenerateProvider{delay: 0}
+	c := &alwaysMissCache{}
+
+	l := &Layer{
+		ID:       "test",
+		Pattern:  []layerSegment{{value: "test", placeholder: false}},
+		Provider: provider,
+		Cache:    c,
+	}
+	l.tileAllCounter = noop.Int64Counter{}
+	l.tileAuthCounter = noop.Int64Counter{}
+	l.tileErrorCounter = noop.Int64Counter{}
+	l.tileSuccessCounter = noop.Int64Counter{}
+
+	lg := &LayerGroup{
+		layers:            []*Layer{l},
+		DefaultCache:      c,
+		cacheHitCounter:   noop.Int64Counter{},
+		cacheMissCounter:  noop.Int64Counter{},
+		cacheWriteLimiter: make(chan struct{}, maxConcurrentCacheWrites),
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/tiles/test/1/0/0", nil)
+	ctx := pkg.NewRequestContext(req)
+
+	img, err := lg.RenderTile(ctx, pkg.TileRequest{LayerName: "test", Z: 1, X: 0, Y: 0})
+	require.NoError(t, err)
+	require.NotNil(t, img)
+
+	cached, ok := pkg.CachedFromContext(ctx)
+	require.True(t, ok)
+	require.False(t, *cached)
+}
+
+// A skipCache layer never touches the cache at all, so it must always report a miss.
+func Test_LayerGroup_RenderTile_SkipCacheLeavesContextFlagFalse(t *testing.T) {
+	provider := &slowGenerateProvider{delay: 0}
+	c := alwaysHitCache{}
+
+	l := &Layer{
+		ID:       "test",
+		Pattern:  []layerSegment{{value: "test", placeholder: false}},
+		Provider: provider,
+		Cache:    c,
+		Config:   config.LayerConfig{SkipCache: true},
+	}
+	l.tileAllCounter = noop.Int64Counter{}
+	l.tileAuthCounter = noop.Int64Counter{}
+	l.tileErrorCounter = noop.Int64Counter{}
+	l.tileSuccessCounter = noop.Int64Counter{}
+
+	lg := &LayerGroup{
+		layers:           []*Layer{l},
+		DefaultCache:     c,
+		cacheHitCounter:  noop.Int64Counter{},
+		cacheMissCounter: noop.Int64Counter{},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/tiles/test/1/0/0", nil)
+	ctx := pkg.NewRequestContext(req)
+
+	img, err := lg.RenderTile(ctx, pkg.TileRequest{LayerName: "test", Z: 1, X: 0, Y: 0})
+	require.NoError(t, err)
+	require.NotNil(t, img)
+
+	cached, ok := pkg.CachedFromContext(ctx)
+	require.True(t, ok)
+	require.False(t, *cached)
 }
 
 type panicOnSaveCache struct{}

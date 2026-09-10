@@ -78,6 +78,9 @@ The following can be included via `fields`:
 
 | contenttype
 | The MIME type of the served tile
+
+| cached
+| Whether the tile was served from cache rather than freshly rendered
 |===
 
 == Custom Attributes
