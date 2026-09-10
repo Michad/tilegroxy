@@ -42,6 +42,7 @@ const (
 	FieldDuration    = "duration"
 	FieldBytes       = "bytes"
 	FieldContentType = "contenttype"
+	FieldCached      = "cached"
 )
 
 // AllFields is the full set of names accepted by the `fields` parameter, used for validation and to render
@@ -60,6 +61,7 @@ var AllFields = []string{
 	FieldDuration,
 	FieldBytes,
 	FieldContentType,
+	FieldCached,
 }
 
 // Prefixes recognized in `extraFields` values. Note `env.` and `secret.` are absent since those are already
@@ -178,6 +180,12 @@ func resolveNamedField(ctx context.Context, name string, src FieldSource) (any, 
 			return nil, false
 		}
 		return time.Since(start).Milliseconds(), true
+	case FieldCached:
+		cached, ok := pkg.CachedFromContext(ctx)
+		if !ok || cached == nil {
+			return nil, false
+		}
+		return *cached, true
 	case FieldUserAgent:
 		return contextString(ctx, "User-Agent")
 	case FieldReferer:

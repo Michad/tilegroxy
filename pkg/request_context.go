@@ -37,6 +37,7 @@ const userIDKey = "user"
 const tenantIDKey = "tenant"
 const layerPatternMatchesKey = "layerPatternMatches"
 const refDepthKey = "refDepth"
+const cachedKey = "cached"
 
 func p[A any](val A) *A {
 	return &val
@@ -56,6 +57,7 @@ func NewRequestContext(req *http.Request) context.Context {
 	ctx = context.WithValue(ctx, tenantIDKey, p(""))
 	ctx = context.WithValue(ctx, layerPatternMatchesKey, &map[string]string{})
 	ctx = context.WithValue(ctx, refDepthKey, p(0))
+	ctx = context.WithValue(ctx, cachedKey, p(false))
 
 	ctx = context.WithValue(ctx, "uri", req.RequestURI)
 	ctx = context.WithValue(ctx, "path", req.URL.Path)
@@ -134,6 +136,12 @@ func LayerPatternMatchesFromContext(ctx context.Context) (*map[string]string, bo
 // Tracks how many times a request has been forwarded internally via the ref provider, to guard against cycles
 func RefDepthFromContext(ctx context.Context) (*int, bool) {
 	u, ok := ctx.Value(refDepthKey).(*int)
+	return u, ok
+}
+
+// Whether the tile ultimately served for this request came from the layer's cache
+func CachedFromContext(ctx context.Context) (*bool, bool) {
+	u, ok := ctx.Value(cachedKey).(*bool)
 	return u, ok
 }
 
