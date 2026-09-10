@@ -15,6 +15,7 @@
 package authentications
 
 import (
+	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
@@ -29,8 +30,8 @@ import (
 // existingRequiredFuncs supplies the minimum validate a custom auth script needs to initialize, so
 // close-specific tests don't have to restate it.
 const existingRequiredFuncs = `
-func validate(token string) (bool, time.Time, string, []string) {
-	return true, time.Now().Add(time.Hour), "user", nil
+func validate(token string) tilegroxy.ValidationResult {
+	return tilegroxy.ValidationResult{Pass: true, Expiration: time.Now().Add(time.Hour), UserID: "user"}
 }
 `
 
@@ -41,6 +42,8 @@ import (
 	"context"
 	"os"
 	"time"
+
+	"tilegroxy/tilegroxy"
 )
 `
 
@@ -92,6 +95,64 @@ func Test_CustomAuthCloseWrongSignatureFailsAtInitialize(t *testing.T) {
 func close() {}
 ` + existingRequiredFuncs
 
+	msgs := config.DefaultConfig().Error.Messages
+
+	a, err := CustomRegistration{}.Initialize(testCustomAuthConfig(script), authentication.AuthenticationDeps{ErrorMessages: msgs})
+
+	assert.Nil(t, a)
+	require.Error(t, err)
+}
+
+func Test_CustomAuthValidate_PopulatesUserAndTenant(t *testing.T) {
+	script := `
+func validate(token string) tilegroxy.ValidationResult {
+	return tilegroxy.ValidationResult{Pass: true, Expiration: time.Now().Add(time.Hour), UserID: "user-1", TenantID: "tenant-1"}
+}
+`
+	a := buildCustomAuthFromScript(t, script)
+
+	req, err := http.NewRequest(http.MethodGet, "http://127.0.0.1/tiles/layer/0/0/0", nil)
+	require.NoError(t, err)
+	req.Header["Authorization"] = []string{"sometoken"}
+
+	ctx := pkg.BackgroundContext()
+	require.True(t, a.CheckAuthentication(ctx, req))
+
+	userID, _ := pkg.UserIDFromContext(ctx)
+	tenantID, _ := pkg.TenantIDFromContext(ctx)
+	assert.Equal(t, "user-1", *userID)
+	assert.Equal(t, "tenant-1", *tenantID)
+}
+
+func Test_CustomAuthValidate_TenantOptional(t *testing.T) {
+	// A script that never sets TenantID must leave the context's tenant at its default, not panic
+	// or write a zero-value placeholder that reads as "authenticated but tenantless" incorrectly.
+	script := `
+func validate(token string) tilegroxy.ValidationResult {
+	return tilegroxy.ValidationResult{Pass: true, Expiration: time.Now().Add(time.Hour), UserID: "user-1"}
+}
+`
+	a := buildCustomAuthFromScript(t, script)
+
+	req, err := http.NewRequest(http.MethodGet, "http://127.0.0.1/tiles/layer/0/0/0", nil)
+	require.NoError(t, err)
+	req.Header["Authorization"] = []string{"sometoken"}
+
+	ctx := pkg.BackgroundContext()
+	require.True(t, a.CheckAuthentication(ctx, req))
+
+	tenantID, _ := pkg.TenantIDFromContext(ctx)
+	assert.Empty(t, *tenantID)
+}
+
+func Test_CustomAuthValidate_WrongSignatureFailsAtInitialize(t *testing.T) {
+	// The old tuple-return signature is no longer accepted; it must fail at startup with a clear
+	// error rather than silently miscompiling or panicking at request time.
+	script := `
+func validate(token string) (bool, time.Time, string, []string) {
+	return true, time.Now().Add(time.Hour), "user", nil
+}
+`
 	msgs := config.DefaultConfig().Error.Messages
 
 	a, err := CustomRegistration{}.Initialize(testCustomAuthConfig(script), authentication.AuthenticationDeps{ErrorMessages: msgs})

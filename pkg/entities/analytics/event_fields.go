@@ -31,6 +31,7 @@ import (
 const (
 	FieldLayerName   = "layername"
 	FieldLayerParams = "layerparams"
+	FieldTenantID    = "tenantid"
 	FieldIP          = "ip"
 	FieldUserAgent   = "useragent"
 	FieldReferer     = "referer"
@@ -48,6 +49,7 @@ const (
 var AllFields = []string{
 	FieldLayerName,
 	FieldLayerParams,
+	FieldTenantID,
 	FieldIP,
 	FieldUserAgent,
 	FieldReferer,
@@ -164,6 +166,12 @@ func resolveNamedField(ctx context.Context, name string, src FieldSource) (any, 
 			return nil, false
 		}
 		return *matches, true
+	case FieldTenantID:
+		tenant, ok := pkg.TenantIDFromContext(ctx)
+		if !ok || tenant == nil {
+			return nil, false
+		}
+		return *tenant, true
 	case FieldDuration:
 		start, ok := pkg.StartTimeFromContext(ctx)
 		if !ok {

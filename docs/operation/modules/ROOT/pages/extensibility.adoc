@@ -76,10 +76,10 @@ The following types are available for custom providers:
 
 === Custom Authentication
 
-A custom authentication works much the same way as a custom provider.  The code you need to supply only has access to the standard library.  The package must be "custom" and you must include the following function:
+A custom authentication works much the same way as a custom provider.  The code you need to supply only has access to the standard library plus the `tilegroxy/tilegroxy` package.  The package must be "custom" and you must include the following function:
 
 ----
-func validate(string) (bool, time.Time, string, []string)
+func validate(string) tilegroxy.ValidationResult
 ----
 
 You can optionally also define a `close` function:
@@ -88,14 +88,15 @@ You can optionally also define a `close` function:
 func close(context.Context) error
 ----
 
-The `validate` method will be supplied with a single token.  The function should then return (in order):
+The `validate` method will be supplied with a single token and returns a `ValidationResult` with the following fields:
 
-* pass (bool): Whether the token is valid and should allow the request to proceed
-* expiration (time.Time): When the authentication status of the token expires and the validate method should be called again. `validate` should return pass=false for already expired tokens
-* user identifier (string): An identifier for the user being authenticated. By default this is only used for logging.
-* allowed layers ([]string): The specific layer IDs to allow access to with this specific token. Return an empty array to allow access to all of them.
+* Pass (bool): Whether the token is valid and should allow the request to proceed
+* Expiration (time.Time): When the authentication status of the token expires and the validate method should be called again. `validate` should return Pass=false for already expired tokens
+* UserID (string): An identifier for the user being authenticated. By default this is only used for logging.
+* TenantID (string): An identifier for the tenant/realm/organization/site/group the user belongs to. Omit if not applicable
+* AllowedLayers ([]string): The specific layer IDs to allow access to with this specific token. Leave empty to allow access to all of them.
 
-The method how tokens are extracted from the request is configurable. The following modes are available and if multiple are specified the first one (given the order indicated) in the request is utilized:
+The method by which tokens are extracted is configurable. The following modes are available; if multiple are specified they're tried in the order here:
 
 |===
 | Order | Key | Value
@@ -116,9 +117,6 @@ The method how tokens are extracted from the request is configurable. The follow
 | path
 | None (set as empty string)
 |===
-
-No custom types or methods are available.
-
 
 Close should release any resources your authentication scheme holds.
 

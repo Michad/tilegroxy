@@ -49,6 +49,7 @@ type JWTConfig struct {
 	LayerScope       bool        // If specified, the "scope" grant is used to limit access to layer
 	ScopePrefix      string      // If LayerScope is true, this prefix indicates scopes to use
 	UserID           string      // Use the specified grant as the user identifier. Defaults to sub
+	TenantID         string      // Use the specified grant as the tenant identifier. Defaults to tid
 }
 
 // cachedAuthResult holds everything CheckAuthentication derives from a validated token. A cache
@@ -61,6 +62,7 @@ type cachedAuthResult struct {
 	limitAreaPartial bool
 	allowedArea      pkg.Bounds
 	userID           string
+	tenantID         string
 }
 
 type JWT struct {
@@ -146,6 +148,10 @@ func (s JWTRegistration) Initialize(configAny any, deps authentication.Authentic
 
 	if config.UserID == "" {
 		config.UserID = "sub"
+	}
+
+	if config.TenantID == "" {
+		config.TenantID = "tid"
 	}
 
 	if config.CacheSize == 0 {
@@ -257,6 +263,11 @@ func (r cachedAuthResult) apply(ctx context.Context) {
 			*ctxUserID = r.userID
 		}
 	}
+	if r.tenantID != "" {
+		if ctxTenantID, ok := pkg.TenantIDFromContext(ctx); ok {
+			*ctxTenantID = r.tenantID
+		}
+	}
 }
 
 func (c JWT) extractToken(req *http.Request) (string, bool) {
@@ -339,6 +350,12 @@ func (c JWT) checkAuthenticationWithoutCache(ctx context.Context, tokenStr strin
 			ctxUserID, _ := pkg.UserIDFromContext(ctx)
 			*ctxUserID, _ = rawUID.(string)
 		}
+
+		rawTID := rawClaim[c.TenantID]
+		if rawTID != nil {
+			ctxTenantID, _ := pkg.TenantIDFromContext(ctx)
+			*ctxTenantID, _ = rawTID.(string)
+		}
 	} else {
 		return logInvalidClaimsType(ctx, tokenJwt)
 	}
@@ -358,6 +375,9 @@ func (c JWT) checkAuthenticationWithoutCache(ctx context.Context, tokenStr strin
 	}
 	if ctxUserID, ok := pkg.UserIDFromContext(ctx); ok {
 		result.userID = *ctxUserID
+	}
+	if ctxTenantID, ok := pkg.TenantIDFromContext(ctx); ok {
+		result.tenantID = *ctxTenantID
 	}
 
 	return &result, true

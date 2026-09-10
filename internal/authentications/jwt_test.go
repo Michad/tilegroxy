@@ -206,6 +206,7 @@ func TestGoodJwtScopeLimit_CacheHitPreservesAuthorization(t *testing.T) {
 		LayerScope:    true,
 		ScopePrefix:   "tile/",
 		UserID:        "name",
+		TenantID:      "tid",
 		CacheSize:     100,
 	}
 	jwtAny, err := JWTRegistration{}.Initialize(jwtConfig, authentication.AuthenticationDeps{ErrorMessages: config.ErrorMessages{}})
@@ -214,7 +215,7 @@ func TestGoodJwtScopeLimit_CacheHitPreservesAuthorization(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, "http://127.0.0.1/tiles/layer/0/0/0", nil)
 	require.NoError(t, err)
-	req.Header["Authorization"] = []string{"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdWJqZWN0IiwiYXVkIjoiYXVkaWVuY2UiLCJpc3MiOiJpc3N1ZXIiLCJzY29wZSI6InRpbGUvdGVzdCIsIm5hbWUiOiJKb2huIERvZSIsImlhdCI6MTUxNjIzOTAyMiwiZXhwIjo0Mjk0OTY3Mjk1fQ.j_-4ERnaVdkscbfjMKavieAtVH7GhZIBr5kwnKNHEAI"} // Valid JWT with scope=tile/test
+	req.Header["Authorization"] = []string{"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhdWRpZW5jZSIsImV4cCI6NDI5NDk2NzI5NSwiaWF0IjoxNTE2MjM5MDIyLCJpc3MiOiJpc3N1ZXIiLCJuYW1lIjoiSm9obiBEb2UiLCJzY29wZSI6InRpbGUvdGVzdCIsInN1YiI6InN1YmplY3QiLCJ0aWQiOiJhY21lLWNvcnAifQ.p2yraK0p8aMnikjWJJ1Ljv_dwxD7YvdOW5KLC-sxCUQ"} // Valid JWT with scope=tile/test and tid=acme-corp
 
 	// Request 1: cache miss, does the full validation.
 	ctx1 := pkg.BackgroundContext()
@@ -226,6 +227,8 @@ func TestGoodJwtScopeLimit_CacheHitPreservesAuthorization(t *testing.T) {
 	require.True(t, *limitLayers1)
 	require.Equal(t, []string{"test"}, *allowedLayers1)
 	require.Equal(t, "John Doe", *userID1)
+	tenantID1, _ := pkg.TenantIDFromContext(ctx1)
+	require.Equal(t, "acme-corp", *tenantID1)
 
 	// Request 2: same token, now served from cache. Must produce the identical restrictions.
 	ctx2 := pkg.BackgroundContext()
@@ -238,6 +241,56 @@ func TestGoodJwtScopeLimit_CacheHitPreservesAuthorization(t *testing.T) {
 	assert.True(t, *limitLayers2, "cache hit must not drop limitLayers back to false")
 	assert.Equal(t, []string{"test"}, *allowedLayers2, "cache hit must not drop the allowed layers")
 	assert.Equal(t, "John Doe", *userID2, "cache hit must not drop the user ID")
+	tenantID2, _ := pkg.TenantIDFromContext(ctx2)
+	assert.Equal(t, "acme-corp", *tenantID2, "cache hit must not drop the tenant ID")
+}
+
+func TestGoodJwtTenantId(t *testing.T) {
+	jwtConfig := JWTConfig{
+		Algorithm:     "HS256",
+		Key:           "hunter2",
+		MaxExpiration: 4294967295, // 136 years from now
+		UserID:        "name",
+		TenantID:      "tid",
+	}
+	jwt, err := JWTRegistration{}.Initialize(jwtConfig, authentication.AuthenticationDeps{ErrorMessages: config.ErrorMessages{}})
+
+	require.NoError(t, err)
+	require.NotNil(t, jwt)
+
+	req, err := http.NewRequest(http.MethodGet, "http://127.0.0.1/tiles/layer/0/0/0", nil)
+	require.NoError(t, err)
+	require.NotNil(t, req)
+
+	ctx := pkg.BackgroundContext()
+
+	req.Header["Authorization"] = []string{"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhdWRpZW5jZSIsImV4cCI6NDI5NDk2NzI5NSwiaWF0IjoxNTE2MjM5MDIyLCJpc3MiOiJpc3N1ZXIiLCJuYW1lIjoiSm9obiBEb2UiLCJzY29wZSI6InRpbGUvdGVzdCIsInN1YiI6InN1YmplY3QiLCJ0aWQiOiJhY21lLWNvcnAifQ.p2yraK0p8aMnikjWJJ1Ljv_dwxD7YvdOW5KLC-sxCUQ"}
+	assert.True(t, jwt.CheckAuthentication(ctx, req))
+
+	ctxUserID, _ := pkg.UserIDFromContext(ctx)
+	ctxTenantID, _ := pkg.TenantIDFromContext(ctx)
+	assert.Equal(t, "John Doe", *ctxUserID)
+	assert.Equal(t, "acme-corp", *ctxTenantID)
+}
+
+func TestGoodJwtTenantId_DefaultClaimName(t *testing.T) {
+	jwtConfig := JWTConfig{
+		Algorithm:     "HS256",
+		Key:           "hunter2",
+		MaxExpiration: 4294967295, // 136 years from now
+	}
+	jwt, err := JWTRegistration{}.Initialize(jwtConfig, authentication.AuthenticationDeps{ErrorMessages: config.ErrorMessages{}})
+	require.NoError(t, err)
+
+	ctx := pkg.BackgroundContext()
+	req, err := http.NewRequest(http.MethodGet, "http://127.0.0.1/tiles/layer/0/0/0", nil)
+	require.NoError(t, err)
+	req.Header["Authorization"] = []string{"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhdWRpZW5jZSIsImV4cCI6NDI5NDk2NzI5NSwiaWF0IjoxNTE2MjM5MDIyLCJpc3MiOiJpc3N1ZXIiLCJuYW1lIjoiSm9obiBEb2UiLCJzY29wZSI6InRpbGUvdGVzdCIsInN1YiI6InN1YmplY3QiLCJ0aWQiOiJhY21lLWNvcnAifQ.p2yraK0p8aMnikjWJJ1Ljv_dwxD7YvdOW5KLC-sxCUQ"}
+
+	assert.True(t, jwt.CheckAuthentication(ctx, req))
+
+	ctxTenantID, _ := pkg.TenantIDFromContext(ctx)
+	assert.Equal(t, "acme-corp", *ctxTenantID, "TenantID should default to reading the 'tid' claim")
 }
 
 func TestBadJwtClaims(t *testing.T) {

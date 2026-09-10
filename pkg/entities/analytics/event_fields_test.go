@@ -35,7 +35,12 @@ func testRequestContext(t *testing.T) context.Context {
 	req.Header.Set("Referer", "http://example.com/map")
 	req.Header.Set("X-Tenant-Id", "acme")
 
-	return pkg.NewRequestContext(req)
+	ctx := pkg.NewRequestContext(req)
+
+	tenant, _ := pkg.TenantIDFromContext(ctx)
+	*tenant = "tenant-from-auth"
+
+	return ctx
 }
 
 func Test_FieldResolver_RejectsUnknownField(t *testing.T) {
@@ -64,10 +69,27 @@ func Test_FieldResolver_AcceptsAllKnownFields(t *testing.T) {
 	assert.Equal(t, "main", out[FieldLayerName])
 	assert.Equal(t, 42, out[FieldBytes])
 	assert.Equal(t, "image/png", out[FieldContentType])
+	assert.Equal(t, "tenant-from-auth", out[FieldTenantID])
 	assert.Equal(t, "10.1.2.3", out[FieldIP])
 	assert.Equal(t, "test-agent", out[FieldUserAgent])
 	assert.Equal(t, "http://example.com/map", out[FieldReferer])
 	assert.Equal(t, http.MethodGet, out[FieldMethod])
+}
+
+func Test_FieldResolver_TenantIDDefaultsToEmptyString(t *testing.T) {
+	msgs := config.DefaultConfig().Error.Messages
+
+	r, err := newFieldResolver(map[string]interface{}{"fields": []string{"tenantid"}}, msgs)
+	require.NoError(t, err)
+
+	// A request that never went through tenant-aware auth still has a context-provided empty
+	// string, not an absent field - matches how UserID/TenantID behave elsewhere.
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/tiles/main/1/2/3", nil)
+	ctx := pkg.NewRequestContext(req)
+
+	out := r.Resolve(ctx, FieldSource{})
+
+	assert.Empty(t, out[FieldTenantID])
 }
 
 func Test_FieldResolver_CaseInsensitiveFieldNames(t *testing.T) {

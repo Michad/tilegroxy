@@ -41,6 +41,9 @@ func Test_CopyAuthRestrictions(t *testing.T) {
 	user, ok := pkg.UserIDFromContext(from)
 	require.True(t, ok)
 	*user = "someone"
+	tenant, ok := pkg.TenantIDFromContext(from)
+	require.True(t, ok)
+	*tenant = "acme-corp"
 
 	pkg.CopyAuthRestrictions(from, to)
 
@@ -54,6 +57,8 @@ func Test_CopyAuthRestrictions(t *testing.T) {
 	assert.Equal(t, pkg.Bounds{South: 1, North: 2, West: 3, East: 4}, *newArea)
 	newUser, _ := pkg.UserIDFromContext(to)
 	assert.Equal(t, "someone", *newUser)
+	newTenant, _ := pkg.TenantIDFromContext(to)
+	assert.Equal(t, "acme-corp", *newTenant)
 }
 
 // Copying must not alias, so a later change to one context can't reach the other.
@@ -77,4 +82,14 @@ func Test_CopyAuthRestrictions_MissingValues(t *testing.T) {
 
 	assert.NotPanics(t, func() { pkg.CopyAuthRestrictions(t.Context(), to) })
 	assert.NotPanics(t, func() { pkg.CopyAuthRestrictions(to, t.Context()) })
+}
+
+// A freshly built request context has an empty, non-nil tenant ID, mirroring UserIDFromContext's
+// default so field resolvers can treat "unset" and "empty string" the same way.
+func Test_TenantIDFromContext_DefaultsToEmptyString(t *testing.T) {
+	ctx := pkg.BackgroundContext()
+
+	tenant, ok := pkg.TenantIDFromContext(ctx)
+	require.True(t, ok)
+	assert.Empty(t, *tenant)
 }

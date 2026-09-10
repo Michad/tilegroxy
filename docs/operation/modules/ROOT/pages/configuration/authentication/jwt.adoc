@@ -68,31 +68,31 @@ Configuration options:
 | 1 day
 
 | ExpectedAudience
-| Require the "aud" grant to be this string
+| Require the "aud" claim to be this string
 | string
 | No
 | None
 
 | ExpectedSubject
-| Require the "sub" grant to be this string
+| Require the "sub" claim to be this string
 | string
 | No
 | None
 
 | ExpectedIssuer
-| Require the "iss" grant to be this string
+| Require the "iss" claim to be this string
 | string
 | No
 | None
 
 | ExpectedScope
-| Require the "scope" grant to contain this string
+| Require the "scope" claim to contain this string
 | string
 | No
 | None
 
 | LayerScope
-| If true the "scope" grant is used to whitelist access to layers
+| If true the "scope" claim is used to whitelist access to layers
 | bool
 | No
 | false
@@ -104,10 +104,16 @@ Configuration options:
 | Empty string
 
 | UserId
-| Use the specified grant as the user identifier. This is just used for logging by default but it's made available to custom providers
+| Use the specified claim as the user identifier. By default this primarily allows identifying who made a request in logs/analytics, however custom providers can use this for more bespoke use cases.
 | string
 | No
 | sub
+
+| TenantId
+| Use the specified claim as the tenant identifier. This is optional and generally only makes sense if you also use User ID. Useful if you have users grouped into some form of account system. It's possible to set this to the same claim as UserID.
+| string
+| No
+| tid
 |===
 
 Example:
