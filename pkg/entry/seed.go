@@ -46,7 +46,7 @@ type SeedOptions struct {
 	NumThread    uint16
 	ProgressFile string
 	CacheName    string
-	MaxFailures uint64
+	MaxFailures  uint64
 }
 
 func Seed(cfg *config.Config, opts SeedOptions, out io.Writer) error {

@@ -34,6 +34,7 @@ const allowedLayersKey = "allowedLayers"
 const limitAreaPartialKey = "limitAreaPartial"
 const allowedAreaKey = "allowedArea"
 const userIDKey = "user"
+const tenantIDKey = "tenant"
 const layerPatternMatchesKey = "layerPatternMatches"
 const refDepthKey = "refDepth"
 
@@ -52,6 +53,7 @@ func NewRequestContext(req *http.Request) context.Context {
 	ctx = context.WithValue(ctx, limitAreaPartialKey, p(false))
 	ctx = context.WithValue(ctx, allowedAreaKey, &Bounds{})
 	ctx = context.WithValue(ctx, userIDKey, p(""))
+	ctx = context.WithValue(ctx, tenantIDKey, p(""))
 	ctx = context.WithValue(ctx, layerPatternMatchesKey, &map[string]string{})
 	ctx = context.WithValue(ctx, refDepthKey, p(0))
 
@@ -117,6 +119,12 @@ func UserIDFromContext(ctx context.Context) (*string, bool) {
 	return u, ok
 }
 
+// If auth specifies a way to retrieve a tenant identifier, it's contained here
+func TenantIDFromContext(ctx context.Context) (*string, bool) {
+	u, ok := ctx.Value(tenantIDKey).(*string)
+	return u, ok
+}
+
 // Maps any parameters in the layer name from their key defined in config to the value from the real URL
 func LayerPatternMatchesFromContext(ctx context.Context) (*map[string]string, bool) {
 	u, ok := ctx.Value(layerPatternMatchesKey).(*map[string]string)
@@ -140,6 +148,7 @@ func CopyAuthRestrictions(from, to context.Context) {
 	copyPtr(from, to, LimitAreaPartialFromContext)
 	copyPtr(from, to, AllowedAreaFromContext)
 	copyPtr(from, to, UserIDFromContext)
+	copyPtr(from, to, TenantIDFromContext)
 }
 
 func copyPtr[A any](from, to context.Context, get func(context.Context) (*A, bool)) {

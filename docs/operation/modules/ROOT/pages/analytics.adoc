@@ -46,6 +46,9 @@ The following can be included via `fields`:
 | layerparams
 | The placeholder values extracted from a patterned layer name, as a map
 
+| tenantid
+| The tenant identifier established during authentication, if any
+
 | ip
 | The client IP address
 

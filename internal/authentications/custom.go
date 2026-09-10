@@ -20,6 +20,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"reflect"
 	"strings"
 	"time"
 
@@ -48,34 +49,19 @@ type CustomConfig struct {
 
 type Custom struct {
 	CustomConfig
-	cache *otter.Cache[string, ValidationResult]
+	cache *otter.Cache[string, authentication.ValidationResult]
 	// Only used when cache is used to avoid multiple calls to the validation func for the same token at once
 	locks          keymutex.KeyMutex
-	validationFunc func(string) (bool, time.Time, string, []string)
+	validationFunc func(string) authentication.ValidationResult
 	closeFunc      func(context.Context) error
 }
 
-type ValidationResult struct {
-	pass       bool
-	expiration time.Time
-	uid        string
-	layers     []string
-}
-
-func toResult(pass bool, exp time.Time, uid string, layers []string) ValidationResult {
-	return ValidationResult{pass, exp, uid, layers}
-}
-
-func (v ValidationResult) isGood() bool {
-	if !v.pass {
+func checkValidationResult(v authentication.ValidationResult) bool {
+	if !v.Pass {
 		return false
 	}
 
-	if v.expiration.Before(time.Now()) {
-		return false
-	}
-
-	return true
+	return !v.Expiration.Before(time.Now())
 }
 
 func extractToken(ctx context.Context, req *http.Request, tokenExtract map[string]string) (string, bool) {
@@ -151,6 +137,15 @@ func (s CustomRegistration) Initialize(cfgAny any, deps authentication.Authentic
 		return nil, err
 	}
 
+	err = i.Use(interp.Exports{
+		"tilegroxy/tilegroxy": map[string]reflect.Value{
+			"ValidationResult": reflect.ValueOf((*authentication.ValidationResult)(nil)),
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	var script string
 
 	if cfg.File != "" {
@@ -176,7 +171,7 @@ func (s CustomRegistration) Initialize(cfgAny any, deps authentication.Authentic
 		return nil, fmt.Errorf(deps.ErrorMessages.ScriptError, "auth.custom", "nil")
 	}
 
-	validationFunc, ok := validationVal.Interface().(func(string) (bool, time.Time, string, []string))
+	validationFunc, ok := validationVal.Interface().(func(string) authentication.ValidationResult)
 
 	if !ok {
 		return nil, fmt.Errorf(deps.ErrorMessages.ScriptError, "auth.custom", validationVal)
@@ -202,7 +197,7 @@ func (s CustomRegistration) Initialize(cfgAny any, deps authentication.Authentic
 
 	lock := keymutex.NewHashed(-1)
 
-	cache, err := otter.MustBuilder[string, ValidationResult](cfg.CacheSize).Build()
+	cache, err := otter.MustBuilder[string, authentication.ValidationResult](cfg.CacheSize).Build()
 	if err != nil {
 		return nil, err
 	}
@@ -214,7 +209,7 @@ func (c Custom) CheckAuthentication(ctx context.Context, req *http.Request) bool
 	slog.Log(ctx, config.LevelTrace, "Performing custom auth check")
 	tok, ok := extractToken(ctx, req, c.Token)
 	if ok {
-		var valResult ValidationResult
+		var valResult authentication.ValidationResult
 		var inCache bool
 
 		if c.cache != nil {
@@ -233,24 +228,27 @@ func (c Custom) CheckAuthentication(ctx context.Context, req *http.Request) bool
 		}
 
 		if !inCache {
-			valResult = toResult(c.validationFunc(tok))
-			slog.DebugContext(ctx, fmt.Sprintf("Custom auth check returned %v", valResult.pass))
+			valResult = c.validationFunc(tok)
+			slog.DebugContext(ctx, fmt.Sprintf("Custom auth check returned %v", valResult.Pass))
 
 			if c.cache != nil {
 				c.cache.Set(tok, valResult)
 			}
 		}
 
-		if valResult.isGood() {
+		if checkValidationResult(valResult) {
 			uid, _ := pkg.UserIDFromContext(ctx)
-			*uid = valResult.uid
+			*uid = valResult.UserID
 
-			if len(valResult.layers) > 0 {
+			tid, _ := pkg.TenantIDFromContext(ctx)
+			*tid = valResult.TenantID
+
+			if len(valResult.AllowedLayers) > 0 {
 				limitLayers, _ := pkg.LimitLayersFromContext(ctx)
 				*limitLayers = true
 
 				allowedLayers, _ := pkg.AllowedLayersFromContext(ctx)
-				*allowedLayers = valResult.layers
+				*allowedLayers = valResult.AllowedLayers
 			}
 			slog.Log(ctx, config.LevelTrace, "Custom auth passed", "result", valResult)
 
