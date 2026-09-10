@@ -1,0 +1,31 @@
+= Tenant
+
+Wraps another cache to namespace keys by the tenant ID associated with the incoming request. This is useful for a multi-tenant deployment where a custom provider varies its output per tenant (e.g. different imagery or authorization per organization) and a shared cache would otherwise leak one tenant's tiles to another.
+
+The tenant ID is populated by xref:configuration/authentication/index.adoc[authentication]. A request with no tenant ID falls back to the same cache key it would use without this wrapper, so single-tenant deployments are unaffected.
+
+Name should be "tenant"
+
+Configuration options:
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| cache
+| The wrapped Cache configuration
+| Cache
+| Yes
+| None
+|===
+
+Example:
+
+[,yaml]
+----
+cache:
+  name: tenant
+  cache:
+    name: disk
+    path: "./disk_tile_cache"
+----
