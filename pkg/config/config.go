@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"path/filepath"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -541,18 +543,79 @@ func LoadAndWatchConfigFromFile(filename string, onReload func(Config, error)) (
 	}
 
 	if onReload != nil {
-		lastConfigLoad := time.Now()
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					onReload(Config{}, fmt.Errorf("config watcher panic: %v\n%s", r, debug.Stack()))
+				}
+			}()
 
-		viper.OnConfigChange(func(_ fsnotify.Event) {
-			// Avoid duplicate file change events https://github.com/spf13/viper/issues/609
-			if time.Since(lastConfigLoad) < time.Second {
+			watchConfigFile(filename, onReload)
+		}()
+	}
+
+	return unmarshal(viper)
+}
+
+func watchConfigFile(filename string, onReload func(Config, error)) {
+	configFile, err := filepath.Abs(filename)
+	if err != nil {
+		onReload(Config{}, err)
+		return
+	}
+	configDir := filepath.Dir(configFile)
+
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		onReload(Config{}, err)
+		return
+	}
+	defer watcher.Close()
+
+	if err := watcher.Add(configDir); err != nil {
+		onReload(Config{}, err)
+		return
+	}
+
+	var lastConfigLoad time.Time
+
+	for {
+		select {
+		case event, ok := <-watcher.Events:
+			if !ok {
 				return
 			}
 
+			if filepath.Clean(event.Name) != configFile {
+				continue
+			}
+
+			// A remove/rename means the watch descriptor for this file is gone even though the
+			// directory watch survives. Re-adding is a no-op if the file already exists again and
+			// otherwise ensures we notice the recreate as soon as it happens.
+			if event.Has(fsnotify.Remove) || event.Has(fsnotify.Rename) {
+				_ = watcher.Add(configDir)
+				continue
+			}
+
+			if !event.Has(fsnotify.Write) && !event.Has(fsnotify.Create) {
+				continue
+			}
+
+			// Avoid duplicate file change events https://github.com/spf13/viper/issues/609
+			if time.Since(lastConfigLoad) < time.Second {
+				continue
+			}
 			lastConfigLoad = time.Now()
 
 			// Do the reload in a separate thread than the main notify thread to avoid the delay below interfering with the dedupe logic above
 			go func() {
+				defer func() {
+					if r := recover(); r != nil {
+						onReload(Config{}, fmt.Errorf("config reload panic: %v\n%s", r, debug.Stack()))
+					}
+				}()
+
 				// fsnotify can send events before file has finished writing - give it a second to settle... this might need to be extended to a retry-with-exp-backoff in the future - https://github.com/spf13/viper/issues/1085
 				time.Sleep(time.Second)
 
@@ -566,11 +629,12 @@ func LoadAndWatchConfigFromFile(filename string, onReload func(Config, error)) (
 					onReload(unmarshal(reloaded))
 				}
 			}()
-		})
-		viper.WatchConfig()
+		case _, ok := <-watcher.Errors:
+			if !ok {
+				return
+			}
+		}
 	}
-
-	return unmarshal(viper)
 }
 
 func LoadConfigFromFile(filename string) (Config, error) {
