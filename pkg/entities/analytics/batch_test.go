@@ -277,6 +277,39 @@ func Test_Batcher_FlushErrorIsContained(t *testing.T) {
 	require.NoError(t, b.Close(ctx))
 }
 
+func Test_Batcher_FlushPanicIsContained(t *testing.T) {
+	rec := &recorder{}
+	panicker := func(ctx context.Context, events []Event) error {
+		if rec.batchCount() == 0 {
+			rec.mutex.Lock()
+			rec.batches = append(rec.batches, nil)
+			rec.mutex.Unlock()
+
+			panic("simulated flush panic")
+		}
+
+		return rec.flush(ctx, events)
+	}
+
+	cfg := testBatchConfig()
+	cfg.MaxSize = 1
+	cfg.MaxAge = 600
+
+	b, err := NewBatcher("test", cfg, panicker)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	// The first event triggers a flush that panics. The worker must survive it and keep processing.
+	require.NoError(t, b.Add(ctx, Event{LayerID: "first"}))
+	require.Eventually(t, func() bool { return rec.batchCount() == 1 }, 5*time.Second, 10*time.Millisecond)
+
+	require.NoError(t, b.Add(ctx, Event{LayerID: "second"}))
+	require.Eventually(t, func() bool { return rec.batchCount() == 2 }, 5*time.Second, 10*time.Millisecond)
+
+	require.NoError(t, b.Close(ctx))
+}
+
 func Test_Batcher_ConcurrentAdd(t *testing.T) {
 	rec := &recorder{}
 

@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -269,7 +270,7 @@ func (b *Batcher) doFlush(events []Event) {
 	batch := make([]Event, len(events))
 	copy(batch, events)
 
-	err := b.flush(ctx, batch)
+	err := b.runFlush(ctx, batch)
 
 	if err != nil {
 		b.errorCounter.Add(ctx, int64(len(batch)))
@@ -278,6 +279,19 @@ func (b *Batcher) doFlush(events []Event) {
 	}
 
 	b.recordCounter.Add(ctx, int64(len(batch)))
+}
+
+// runFlush calls the module's FlushFunc, recovering a panic so a broken destination integration degrades to
+// a failed batch instead of taking down the worker goroutine and, with it, the process
+func (b *Batcher) runFlush(ctx context.Context, batch []Event) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			slog.ErrorContext(ctx, fmt.Sprintf("Analytics module %v panicked while flushing a batch of %v events", b.id, len(batch)), "panic", r, "stack", string(debug.Stack()))
+			err = fmt.Errorf("panic during flush: %v", r)
+		}
+	}()
+
+	return b.flush(ctx, batch)
 }
 
 // Close stops accepting events, drains the queue and performs a final flush. Returns once all workers have
