@@ -70,6 +70,16 @@ func TestColors(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, color.RGBA{0xaa, 0xaa, 0xaa, 0xaa}, col)
 
+	col, err = parseColor(KeyPrefixColor + "#FFFFFF")
+
+	require.NoError(t, err)
+	assert.Equal(t, color.RGBA{255, 255, 255, 255}, col)
+
+	col, err = parseColor(KeyPrefixColor + "#f01")
+
+	require.NoError(t, err)
+	assert.Equal(t, color.RGBA{255, 0, 17, 255}, col)
+
 	_, err = parseColor(KeyPrefixColor + "hello")
 	require.Error(t, err)
 

@@ -107,7 +107,7 @@ func storeCachedImage(path string, img *[]byte, err error) {
 func parseColor(fullStr string) (color.Color, error) {
 	col := fullStr[len(KeyPrefixColor):]
 
-	if col[0:0] == "#" {
+	if strings.HasPrefix(col, "#") {
 		col = col[1:]
 	}
 
