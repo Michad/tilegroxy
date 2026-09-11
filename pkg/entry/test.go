@@ -175,6 +175,10 @@ func splitForThreads(tileRequests []pkg.TileRequest, numThread uint16) [][]pkg.T
 func Test(cfg *config.Config, opts TestOptions, out io.Writer) (uint32, error) {
 	ctx := pkg.BackgroundContext()
 
+	if opts.NumThread == 0 {
+		return 0, errors.New("threads must be above 0")
+	}
+
 	ent, err := configToEntities(*cfg)
 
 	if err != nil {
