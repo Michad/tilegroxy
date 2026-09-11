@@ -71,7 +71,7 @@ func (s TransformRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (
 	cfg := cfgAny.(TransformConfig)
 	var err error
 
-	if cfg.Threads == 0 {
+	if cfg.Threads <= 0 {
 		cfg.Threads = 1
 	}
 
