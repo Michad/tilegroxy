@@ -20,6 +20,7 @@ import (
 	"crypto/rsa"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
@@ -210,6 +211,25 @@ func Test_KeyFor_UnknownKeyID(t *testing.T) {
 
 	require.Error(t, err)
 	assert.Nil(t, pub)
+}
+
+func Test_KeyFor_UnknownKeyIDRateLimitsRefresh(t *testing.T) {
+	_, doc := rsaJWKS(t, "key-1", "RS256")
+	server := newJWKSServer(t, doc)
+
+	ks, err := testKeySet(t, JWKSConfig{URL: server.URL, RefreshMinInterval: 60}, []string{"RS256"})
+	require.NoError(t, err)
+
+	requestsAfterStartup := server.requestCount()
+
+	// A flood of distinct bogus key IDs must collapse into at most one real outbound fetch,
+	// since RefreshMinInterval hasn't elapsed between them.
+	for i := range 20 {
+		_, err = ks.keyFor(context.Background(), fmt.Sprintf("bogus-%d", i))
+		require.Error(t, err)
+	}
+
+	assert.LessOrEqual(t, server.requestCount(), requestsAfterStartup+1)
 }
 
 func Test_KeyFor_RotationRefetches(t *testing.T) {
