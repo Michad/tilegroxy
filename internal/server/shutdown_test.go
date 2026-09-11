@@ -56,28 +56,35 @@ func Test_ShutdownBudgetExplicitOverridesTimeout(t *testing.T) {
 }
 
 func Test_ShutdownBudgetReservesFlushSlice(t *testing.T) {
+	// A ShutdownTimeout well above flushReserveFloor*flushReserveFraction keeps the fraction, rather
+	// than the floor, driving the reserve, so the test stays valid if either constant changes.
+	totalSeconds := uint(flushReserveFloor/time.Second)*flushReserveFraction*2 + 1 //nolint:gosec // small test constant, no overflow risk
+
 	cfg := config.DefaultConfig()
-	cfg.Server.ShutdownTimeout = 20
+	cfg.Server.ShutdownTimeout = totalSeconds
 	cfg.Server.DrainDelay = 0
 
 	budget := newShutdownBudget(&cfg)
 
-	// A quarter of a 20s budget is 5s, above the floor, so the fraction applies as-is.
-	assert.Equal(t, 5*time.Second, budget.flushReserve)
+	total := time.Duration(totalSeconds) * time.Second
+	wantReserve := total / flushReserveFraction
+	require.Greater(t, wantReserve, flushReserveFloor, "test setup must keep the fraction above the floor")
+
+	assert.Equal(t, wantReserve, budget.flushReserve)
 
 	preFlushCtx, preFlushCancel := budget.preFlushContext(context.Background())
 	defer preFlushCancel()
 
 	deadline, ok := preFlushCtx.Deadline()
 	require.True(t, ok)
-	assert.WithinDuration(t, time.Now().Add(15*time.Second), deadline, time.Second)
+	assert.WithinDuration(t, time.Now().Add(total-wantReserve), deadline, time.Second)
 
 	flushCtx, flushCancel := budget.flushContext(context.Background())
 	defer flushCancel()
 
 	deadline, ok = flushCtx.Deadline()
 	require.True(t, ok)
-	assert.WithinDuration(t, time.Now().Add(5*time.Second), deadline, time.Second)
+	assert.WithinDuration(t, time.Now().Add(wantReserve), deadline, time.Second)
 }
 
 func Test_ShutdownBudgetReserveFloorNeverExceedsTotal(t *testing.T) {
@@ -87,7 +94,7 @@ func Test_ShutdownBudgetReserveFloorNeverExceedsTotal(t *testing.T) {
 
 	budget := newShutdownBudget(&cfg)
 
-	// The 2s floor would exceed a 1s total, so the reserve is capped to the total instead of pushing
+	// A 1s total is below flushReserveFloor, so the reserve is capped to the total instead of pushing
 	// preFlushContext's deadline negative.
 	assert.Equal(t, 1*time.Second, budget.flushReserve)
 
