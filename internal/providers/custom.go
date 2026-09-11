@@ -107,22 +107,28 @@ func (s CustomRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (lay
 
 	_, err = i.Eval(script)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(deps.ErrorMessages.ScriptError, "provider.custom", err)
 	}
 
 	preAuthVal, err := i.Eval("custom.preAuth")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(deps.ErrorMessages.ScriptError, "provider.custom", err)
 	}
 
 	generateTileVal, err := i.Eval("custom.generateTile")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(deps.ErrorMessages.ScriptError, "provider.custom", err)
 	}
 
-	preAuthFunc := preAuthVal.Interface().(func(context.Context, layer.ProviderContext, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (layer.ProviderContext, error))
+	preAuthFunc, ok := preAuthVal.Interface().(func(context.Context, layer.ProviderContext, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (layer.ProviderContext, error))
+	if !ok {
+		return nil, fmt.Errorf(deps.ErrorMessages.ScriptError, "provider.custom", "preAuth function has the wrong signature")
+	}
 
-	generateTileFunc := generateTileVal.Interface().(func(context.Context, layer.ProviderContext, pkg.TileRequest, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (*pkg.Image, error))
+	generateTileFunc, ok := generateTileVal.Interface().(func(context.Context, layer.ProviderContext, pkg.TileRequest, map[string]interface{}, config.ClientConfig, config.ErrorMessages) (*pkg.Image, error))
+	if !ok {
+		return nil, fmt.Errorf(deps.ErrorMessages.ScriptError, "provider.custom", "generateTile function has the wrong signature")
+	}
 
 	// close is optional so scripts written before it existed keep working unchanged.
 	var closeFunc func(context.Context) error

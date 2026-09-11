@@ -152,3 +152,34 @@ func close() {}
 	assert.Nil(t, c)
 	require.Error(t, err)
 }
+
+func Test_CustomProviderPreAuthWrongSignatureFailsAtInitialize(t *testing.T) {
+	script := customScriptHeader + `
+func preAuth() {}
+
+func generateTile(ctx tilegroxy.Context, providerContext tilegroxy.ProviderContext, tileRequest tilegroxy.TileRequest, params map[string]interface{}, clientConfig tilegroxy.ClientConfig, errorMessages tilegroxy.ErrorMessages ) (*tilegroxy.Image, error ) {
+	return &tilegroxy.Image{Content:[]byte{0x01,0x02}}, nil
+}
+`
+
+	c, err := CustomRegistration{}.Initialize(CustomConfig{Script: script}, layer.ProviderDeps{ClientConfig: testClientConfig, ErrorMessages: testErrMessages})
+
+	assert.Nil(t, c)
+	require.Error(t, err)
+}
+
+func Test_CustomProviderGenerateTileWrongSignatureFailsAtInitialize(t *testing.T) {
+	script := customScriptHeader + `
+func preAuth(ctx tilegroxy.Context, providerContext tilegroxy.ProviderContext, params map[string]interface{}, cientConfig tilegroxy.ClientConfig, errorMessages tilegroxy.ErrorMessages,
+)  (tilegroxy.ProviderContext, error) {
+	return tilegroxy.ProviderContext{AuthBypass: true}, nil
+}
+
+func generateTile() {}
+`
+
+	c, err := CustomRegistration{}.Initialize(CustomConfig{Script: script}, layer.ProviderDeps{ClientConfig: testClientConfig, ErrorMessages: testErrMessages})
+
+	assert.Nil(t, c)
+	require.Error(t, err)
+}
