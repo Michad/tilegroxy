@@ -44,7 +44,7 @@ func (h MultiHandler) Handle(c context.Context, r slog.Record) error {
 
 	for _, handle := range h.handlers {
 		if handle.Enabled(c, r.Level) {
-			err = errors.Join(handle.Handle(c, r))
+			err = errors.Join(err, handle.Handle(c, r))
 		}
 	}
 
