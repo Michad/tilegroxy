@@ -282,26 +282,30 @@ func (c Config) Validate() error {
 	switch c.Error.Mode {
 	case ModeErrorPlainText, ModeErrorNoError, ModeErrorImage, ModeErrorImageHeader:
 	default:
-		errs = append(errs, fmt.Errorf("invalid error.mode %q", c.Error.Mode))
+		errs = append(errs, fmt.Errorf(c.Error.Messages.InvalidParam, "error.mode %q", c.Error.Mode))
 	}
 
 	if _, ok := CustomLogLevel[strings.ToLower(c.Logging.Main.Level)]; !ok {
 		var level slog.Level
 		if err := level.UnmarshalText([]byte(c.Logging.Main.Level)); err != nil {
-			errs = append(errs, fmt.Errorf("invalid logging.main.level %q", c.Logging.Main.Level))
+			errs = append(errs, fmt.Errorf(c.Error.Messages.InvalidParam, "logging.main.level %q", c.Logging.Main.Level))
 		}
 	}
 
 	switch c.Logging.Main.Format {
 	case MainFormatPlain, MainFormatJSON:
 	default:
-		errs = append(errs, fmt.Errorf("invalid logging.main.format %q", c.Logging.Main.Format))
+		errs = append(errs, fmt.Errorf(c.Error.Messages.InvalidParam, "logging.main.format %q", c.Logging.Main.Format))
 	}
 
 	switch c.Logging.Access.Format {
 	case AccessFormatCommon, AccessFormatCombined:
 	default:
-		errs = append(errs, fmt.Errorf("invalid logging.access.format %q", c.Logging.Access.Format))
+		errs = append(errs, fmt.Errorf(c.Error.Messages.InvalidParam, "logging.access.format %q", c.Logging.Access.Format))
+	}
+
+	if c.Server.Timeout == 0 {
+		errs = append(errs, fmt.Errorf(c.Error.Messages.InvalidParam, "server.timeout", "0"))
 	}
 
 	if c.Server.DrainDelay >= c.Server.EffectiveShutdownTimeout() {
