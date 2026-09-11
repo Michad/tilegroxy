@@ -15,6 +15,7 @@
 package tg
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -34,6 +35,8 @@ func configToEntities(cfg config.Config) (*entities.Entities, error) {
 		return nil, err
 	}
 
+	built := &entities.Entities{}
+
 	cfg.Secret = pkg.ReplaceEnv(cfg.Secret)
 	secreter, err := secret.ConstructSecreter(cfg.Secret, secret.SecreterDeps{ErrorMessages: cfg.Error.Messages})
 	if err != nil {
@@ -44,53 +47,62 @@ func configToEntities(cfg config.Config) (*entities.Entities, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error constructing datastores: %w", err)
 	}
+	built.Datastores = datastores
 
 	cfg.Cache = pkg.ReplaceEnv(cfg.Cache)
 	cfg.Cache, err = pkg.ReplaceConfigValues(cfg.Cache, "secret", secreter.Lookup)
 	if err != nil {
-		return nil, err
+		return nil, closeAndReturn(built, err)
 	}
 
 	cacheObj, err := cache.ConstructCache(cfg.Cache, cache.CacheDeps{ErrorMessages: cfg.Error.Messages, Datastores: datastores})
 	if err != nil {
-		return nil, fmt.Errorf("error constructing cache: %w", err)
+		return nil, closeAndReturn(built, fmt.Errorf("error constructing cache: %w", err))
 	}
+	built.Cache = cacheObj
 
 	cfg.Authentication = pkg.ReplaceEnv(cfg.Authentication)
 	cfg.Authentication, err = pkg.ReplaceConfigValues(cfg.Authentication, "secret", secreter.Lookup)
 	if err != nil {
-		return nil, err
+		return nil, closeAndReturn(built, err)
 	}
 
 	auth, err := authentication.ConstructAuth(cfg.Authentication, authentication.AuthenticationDeps{ErrorMessages: cfg.Error.Messages})
 	if err != nil {
-		return nil, fmt.Errorf("error constructing auth: %w", err)
+		return nil, closeAndReturn(built, fmt.Errorf("error constructing auth: %w", err))
 	}
+	built.Auth = auth
 
 	analyticsObj, err := analytics.ConstructAnalytics(cfg.Analytics, secreter, analytics.AnalyticsDeps{Datastores: datastores, ErrorMessages: cfg.Error.Messages})
 	if err != nil {
-		return nil, fmt.Errorf("error constructing analytics: %w", err)
+		return nil, closeAndReturn(built, fmt.Errorf("error constructing analytics: %w", err))
 	}
+	built.Analytics = analyticsObj
 
 	layerGroup, err := layer.ConstructLayerGroup(cfg, cacheObj, secreter, datastores)
 	if err != nil {
-		return nil, fmt.Errorf("error constructing layers: %w", err)
+		return nil, closeAndReturn(built, fmt.Errorf("error constructing layers: %w", err))
 	}
+	built.LayerGroup = layerGroup
 
 	// Constructed only to validate their config, then discarded; serve builds its own. Otherwise a
 	// bad check name would first surface when serve binds the health port, after `config check`
 	// already called the config Valid.
 	for _, checkCfg := range cfg.Server.Health.Checks {
 		if _, err := health.ConstructHealthCheck(checkCfg, layerGroup, &cfg); err != nil {
-			return nil, fmt.Errorf("error constructing health check: %w", err)
+			return nil, closeAndReturn(built, fmt.Errorf("error constructing health check: %w", err))
 		}
 	}
 
-	return &entities.Entities{
-		LayerGroup: layerGroup,
-		Auth:       auth,
-		Analytics:  analyticsObj,
-		Cache:      cacheObj,
-		Datastores: datastores,
-	}, nil
+	return built, nil
+}
+
+// closeAndReturn releases every entity built before a construction failure and folds any error from
+// doing so into the one that's already failing the build.
+func closeAndReturn(built *entities.Entities, err error) error {
+	if closeErr := built.Close(context.Background()); closeErr != nil {
+		return fmt.Errorf("%w (additionally failed to release already-constructed entities: %w)", err, closeErr)
+	}
+
+	return err
 }

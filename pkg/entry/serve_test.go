@@ -104,8 +104,8 @@ func Test_ReloadDoesNotCloseGenerationWhenSwapSucceeds(t *testing.T) {
 	assert.Equal(t, int32(0), closes.Load(), "a generation that is now serving must not be closed")
 }
 
-// configToEntities failing means nothing was built, so there is nothing to close and swap must
-// not run at all.
+// configToEntities failing on config validation happens before anything is constructed, so there
+// is nothing to close and swap must not run at all.
 func Test_ReloadDoesNotCloseWhenBuildFails(t *testing.T) {
 	cfg := config.DefaultConfig()
 	cfg.Error.Mode = "not-a-real-mode"
@@ -122,6 +122,28 @@ func Test_ReloadDoesNotCloseWhenBuildFails(t *testing.T) {
 
 	require.Error(t, err)
 	assert.False(t, swapCalled, "swap must not run when the generation never got built")
+}
+
+// configToEntities failing after the cache was already constructed - because a later entity like
+// auth has an invalid config - must close the cache it already built rather than leaking it, since
+// nothing else will ever get a chance to release it.
+func Test_ReloadClosesAlreadyBuiltEntitiesWhenBuildFailsPartway(t *testing.T) {
+	cfg, closes := spyCacheConfig(t)
+	cfg.Authentication = map[string]interface{}{"name": "not-a-real-auth-provider"}
+
+	swapCalled := false
+	var nextReload = func(_ *config.Config, _ *entities.Entities) error {
+		swapCalled = true
+		return nil
+	}
+
+	callback := newReloadCallback(&nextReload)
+
+	err := callback(&cfg)
+
+	require.Error(t, err)
+	assert.False(t, swapCalled, "swap must not run when the generation never finished building")
+	assert.Equal(t, int32(1), closes.Load(), "the cache built before the later failure must still be closed")
 }
 
 // Before the server publishes a reload target, *nextReloadPtr is nil and the callback must be a

@@ -43,13 +43,6 @@ func Serve(cfg *config.Config, _ ServeOptions, _ io.Writer, reloadPtr *func(*con
 	return err
 }
 
-// newReloadCallback builds the callback Serve hands to config's change-watcher. It builds a fresh
-// generation and hands it to whatever swap function *nextReloadPtr points at when the reload
-// fires. If configToEntities fails nothing was built, so there is nothing to close. If swap fails
-// after a successful build, the new generation never reaches a handler that could release it, so
-// it's closed here instead - otherwise its connection pools would stay open for the life of the
-// process while the old generation keeps serving. The close is bounded by the same shutdown
-// timeout used elsewhere so a stuck pool can't hang a reload indefinitely.
 func newReloadCallback(nextReloadPtr *func(*config.Config, *entities.Entities) error) func(*config.Config) error {
 	return func(newCfg *config.Config) error {
 		if *nextReloadPtr == nil {
