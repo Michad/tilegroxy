@@ -157,7 +157,7 @@ func (t Fallback) GenerateTile(ctx context.Context, providerContext layer.Provid
 	if !ok {
 		img, err = t.Secondary.GenerateTile(ctx, providerContext, tileRequest)
 	}
-	if skipCacheSave {
+	if skipCacheSave && img != nil {
 		img.ForceSkipCache = skipCacheSave
 	}
 
