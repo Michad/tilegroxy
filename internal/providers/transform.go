@@ -100,15 +100,18 @@ func (s TransformRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (
 
 	_, err = i.Eval(script)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(deps.ErrorMessages.ScriptError, "provider.transform", err)
 	}
 
 	transformVal, err := i.Eval("transform")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(deps.ErrorMessages.ScriptError, "provider.transform", err)
 	}
 
-	transformFunc := transformVal.Interface().(func(uint8, uint8, uint8, uint8) (uint8, uint8, uint8, uint8))
+	transformFunc, ok := transformVal.Interface().(func(uint8, uint8, uint8, uint8) (uint8, uint8, uint8, uint8))
+	if !ok {
+		return nil, fmt.Errorf(deps.ErrorMessages.ScriptError, "provider.transform", "transform function has the wrong signature")
+	}
 
 	return &Transform{cfg, provider, transformFunc}, nil
 }

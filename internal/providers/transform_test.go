@@ -48,6 +48,14 @@ func Test_Transform_Validate(t *testing.T) {
 	require.Error(t, err)
 }
 
+func Test_Transform_WrongSignatureFailsAtInitialize(t *testing.T) {
+	p := makeTransformProvider()
+	tr, err := TransformRegistration{}.Initialize(TransformConfig{Provider: p, Formula: `func transform(r, g, b, a uint8) uint8 { return r }`}, layer.ProviderDeps{ClientConfig: testClientConfig, ErrorMessages: testErrMessages})
+
+	assert.Nil(t, tr)
+	require.Error(t, err)
+}
+
 func Test_Transform_Execute(t *testing.T) {
 	p := makeTransformProvider()
 	tr, err := TransformRegistration{}.Initialize(TransformConfig{Provider: p, Formula: `func transform(r, g, b, a uint8) (uint8, uint8, uint8, uint8) { return g,b,r,a }`}, layer.ProviderDeps{ClientConfig: testClientConfig, ErrorMessages: testErrMessages})
