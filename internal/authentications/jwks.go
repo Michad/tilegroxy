@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"sync"
 	"time"
 
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -47,6 +48,9 @@ type keySet struct {
 	algorithms    []string
 	cache         *jwk.Cache
 	errorMessages config.ErrorMessages
+
+	forcedRefreshMu   sync.Mutex
+	lastForcedRefresh time.Time
 }
 
 func newKeySet(ctx context.Context, cfg JWKSConfig, algorithms []string, errorMessages config.ErrorMessages) (*keySet, error) {
@@ -112,10 +116,11 @@ func (k *keySet) keyFor(ctx context.Context, kid string) (crypto.PublicKey, erro
 	key, found := k.lookup(set, kid)
 
 	// An unknown key ID usually means the issuer rotated, so force one refresh before rejecting.
-	// The cache rate limits this to RefreshMinInterval, which stops a flood of bogus key IDs
-	// from turning into a flood of outbound requests.
+	// jwk.Cache.Refresh ignores RefreshMinInterval entirely (that only paces the background poll),
+	// so tryForceRefresh applies our own rate limit to stop a flood of bogus key IDs from turning
+	// into a flood of outbound requests to the issuer.
 	if !found {
-		refreshed, refreshErr := k.cache.Refresh(ctx, k.cfg.URL)
+		refreshed, refreshErr := k.tryForceRefresh(ctx, set)
 		if refreshErr != nil {
 			return nil, refreshErr
 		}
@@ -142,6 +147,26 @@ func (k *keySet) keyFor(ctx context.Context, kid string) (crypto.PublicKey, erro
 	}
 
 	return pub, nil
+}
+
+// tryForceRefresh performs the forced refresh triggered by an unknown key ID, but only if RefreshMinInterval has elapsed since the last one. Avoids attackers making us spam jwks server
+func (k *keySet) tryForceRefresh(ctx context.Context, cached jwk.Set) (jwk.Set, error) {
+	k.forcedRefreshMu.Lock()
+	defer k.forcedRefreshMu.Unlock()
+
+	minInterval := time.Duration(k.cfg.RefreshMinInterval) * time.Second // #nosec G115 -- operator-supplied interval in seconds, far below int64 overflow range
+	if time.Since(k.lastForcedRefresh) < minInterval {
+		return cached, nil
+	}
+
+	refreshed, err := k.cache.Refresh(ctx, k.cfg.URL)
+	if err != nil {
+		return nil, err
+	}
+
+	k.lastForcedRefresh = time.Now()
+
+	return refreshed, nil
 }
 
 // lookup finds the key by ID, or the only key in the set when the token carries no kid. More
