@@ -15,7 +15,10 @@
 package config
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -399,4 +402,81 @@ func Test_DataType_Constants_Values(t *testing.T) {
 	assert.Equal(t, DataTypeRaster, DataType("raster"))
 	assert.Equal(t, DataTypeMVT, DataType("mvt"))
 	assert.Equal(t, DataTypeUnknown, DataType("unknown"))
+}
+
+func TestLoadAndWatchConfigFromFile_ReloadsOnWrite(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "tilegroxy.yml")
+	require.NoError(t, os.WriteFile(path, []byte("server:\n  port: 8080\n"), 0o600))
+
+	reloads := make(chan Config, 1)
+	_, err := LoadAndWatchConfigFromFile(path, func(c Config, err error) {
+		require.NoError(t, err)
+		reloads <- c
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, os.WriteFile(path, []byte("server:\n  port: 8081\n"), 0o600))
+
+	select {
+	case c := <-reloads:
+		assert.Equal(t, 8081, c.Server.Port)
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for reload after write")
+	}
+}
+
+// Regression test for a bug where deleting and recreating the config file (the atomic-save
+// pattern used by many editors, `mv`, and Kubernetes ConfigMap symlink swaps) permanently and
+// silently killed hot-reload: the underlying fsnotify watch died on the Remove event and was
+// never re-armed, so every subsequent save was ignored with no error surfaced anywhere.
+func TestLoadAndWatchConfigFromFile_SurvivesDeleteAndRecreate(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "tilegroxy.yml")
+	require.NoError(t, os.WriteFile(path, []byte("server:\n  port: 8080\n"), 0o600))
+
+	reloads := make(chan Config, 1)
+	_, err := LoadAndWatchConfigFromFile(path, func(c Config, err error) {
+		require.NoError(t, err)
+		reloads <- c
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, os.Remove(path))
+	require.NoError(t, os.WriteFile(path, []byte("server:\n  port: 8082\n"), 0o600))
+
+	select {
+	case c := <-reloads:
+		assert.Equal(t, 8082, c.Server.Port)
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for reload after delete+recreate: hot-reload appears to have died silently")
+	}
+}
+
+// A panic anywhere in the watch or reload goroutines (including inside a caller-supplied
+// onReload) must be recovered and reported through onReload rather than crashing the process,
+// since these goroutines have no other supervisor.
+func TestLoadAndWatchConfigFromFile_PanicInOnReloadDoesNotCrash(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "tilegroxy.yml")
+	require.NoError(t, os.WriteFile(path, []byte("server:\n  port: 8080\n"), 0o600))
+
+	errs := make(chan error, 1)
+	_, err := LoadAndWatchConfigFromFile(path, func(_ Config, err error) {
+		if err != nil {
+			errs <- err
+			return
+		}
+		panic("boom")
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, os.WriteFile(path, []byte("server:\n  port: 8081\n"), 0o600))
+
+	select {
+	case err := <-errs:
+		require.ErrorContains(t, err, "boom")
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for panic to be reported via onReload")
+	}
 }
