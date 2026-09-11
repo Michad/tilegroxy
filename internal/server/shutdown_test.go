@@ -55,6 +55,55 @@ func Test_ShutdownBudgetExplicitOverridesTimeout(t *testing.T) {
 	assert.Equal(t, 20*time.Second, budget.effective())
 }
 
+func Test_ShutdownBudgetReservesFlushSlice(t *testing.T) {
+	// A ShutdownTimeout well above flushReserveFloor*flushReserveFraction keeps the fraction, rather
+	// than the floor, driving the reserve, so the test stays valid if either constant changes.
+	totalSeconds := uint(flushReserveFloor/time.Second)*flushReserveFraction*2 + 1 //nolint:gosec // small test constant, no overflow risk
+
+	cfg := config.DefaultConfig()
+	cfg.Server.ShutdownTimeout = totalSeconds
+	cfg.Server.DrainDelay = 0
+
+	budget := newShutdownBudget(&cfg)
+
+	total := time.Duration(totalSeconds) * time.Second
+	wantReserve := total / flushReserveFraction
+	require.Greater(t, wantReserve, flushReserveFloor, "test setup must keep the fraction above the floor")
+
+	assert.Equal(t, wantReserve, budget.flushReserve)
+
+	preFlushCtx, preFlushCancel := budget.preFlushContext(context.Background())
+	defer preFlushCancel()
+
+	deadline, ok := preFlushCtx.Deadline()
+	require.True(t, ok)
+	assert.WithinDuration(t, time.Now().Add(total-wantReserve), deadline, time.Second)
+
+	flushCtx, flushCancel := budget.flushContext(context.Background())
+	defer flushCancel()
+
+	deadline, ok = flushCtx.Deadline()
+	require.True(t, ok)
+	assert.WithinDuration(t, time.Now().Add(wantReserve), deadline, time.Second)
+}
+
+func Test_ShutdownBudgetReserveFloorNeverExceedsTotal(t *testing.T) {
+	cfg := config.DefaultConfig()
+	cfg.Server.ShutdownTimeout = 1
+	cfg.Server.DrainDelay = 0
+
+	budget := newShutdownBudget(&cfg)
+
+	// A 1s total is below flushReserveFloor, so the reserve is capped to the total instead of pushing
+	// preFlushContext's deadline negative.
+	assert.Equal(t, 1*time.Second, budget.flushReserve)
+
+	preFlushCtx, preFlushCancel := budget.preFlushContext(context.Background())
+	defer preFlushCancel()
+
+	assert.Error(t, preFlushCtx.Err(), "an exhausted reserve leaves nothing for the phases ahead of generations")
+}
+
 func Test_ShutdownRunsPhasesInOrder(t *testing.T) {
 	var order []string
 	var mu sync.Mutex
@@ -160,7 +209,8 @@ func Test_ShutdownStopsWhenBudgetExpires(t *testing.T) {
 	cfg.Server.ShutdownTimeout = 1
 	cfg.Server.DrainDelay = 0
 
-	reached := false
+	healthReached := false
+	otelReached := false
 
 	phases := shutdownPhases{
 		drain: func() {},
@@ -168,9 +218,9 @@ func Test_ShutdownStopsWhenBudgetExpires(t *testing.T) {
 			<-ctx.Done() // a hung upstream that never drains
 			return ctx.Err()
 		},
-		generations: func(context.Context) error { reached = true; return nil },
-		health:      func(context.Context) error { return nil },
-		otel:        func(context.Context) error { return nil },
+		generations: func(context.Context) error { return nil },
+		health:      func(context.Context) error { healthReached = true; return nil },
+		otel:        func(context.Context) error { otelReached = true; return nil },
 		logs:        func() {},
 	}
 
@@ -179,7 +229,36 @@ func Test_ShutdownStopsWhenBudgetExpires(t *testing.T) {
 
 	require.Error(t, err, "an expired budget must surface, not be swallowed")
 	assert.Less(t, time.Since(start), 5*time.Second, "shutdown must not outlive its budget")
-	assert.False(t, reached, "phases after the expired one are skipped")
+	assert.False(t, healthReached, "phases between the expired one and generations are skipped")
+	assert.False(t, otelReached, "phases after generations are skipped when an earlier phase failed")
+}
+
+// Test_ShutdownStillFlushesAnalyticsWhenServerHangs models issue 885: a hung in-flight request can
+// exhaust the pre-flush deadline, but generations (which flushes batched analytics) must still get a
+// chance to run instead of being skipped along with every other phase after the expired one.
+func Test_ShutdownStillFlushesAnalyticsWhenServerHangs(t *testing.T) {
+	cfg := config.DefaultConfig()
+	cfg.Server.ShutdownTimeout = 4
+	cfg.Server.DrainDelay = 0
+
+	generationsReached := false
+
+	phases := shutdownPhases{
+		drain: func() {},
+		server: func(ctx context.Context) error {
+			<-ctx.Done() // a hung upstream that never drains
+			return ctx.Err()
+		},
+		generations: func(context.Context) error { generationsReached = true; return nil },
+		health:      func(context.Context) error { return nil },
+		otel:        func(context.Context) error { return nil },
+		logs:        func() {},
+	}
+
+	err := runShutdown(context.Background(), newShutdownBudget(&cfg), phases)
+
+	require.Error(t, err, "the expired pre-flush deadline must still surface")
+	assert.True(t, generationsReached, "generations must run even though server exhausted its deadline")
 }
 
 func Test_ShutdownAlwaysClosesLogs(t *testing.T) {
