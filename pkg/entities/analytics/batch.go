@@ -302,6 +302,7 @@ func (b *Batcher) Close(ctx context.Context) error {
 	select {
 	case <-sealed:
 	case <-ctx.Done():
+		slog.ErrorContext(ctx, fmt.Sprintf("Dropped %v queued analytics events due to shutdown deadline expiration. Consider increasing shutdown timeouts or decreasing batch sizes to avoid further losses", len(b.queue)))
 		return fmt.Errorf("analytics module %v did not stop accepting events before shutdown deadline: %w", b.id, ctx.Err())
 	}
 
@@ -319,6 +320,7 @@ func (b *Batcher) Close(ctx context.Context) error {
 		}
 		return nil
 	case <-ctx.Done():
+		slog.WarnContext(ctx, fmt.Sprintf("Dropped %v queued analytics events due to shutdown deadline expiration. Consider increasing shutdown timeouts or decreasing batch sizes to avoid further losses", len(b.queue)))
 		return fmt.Errorf("analytics module %v did not finish flushing before shutdown deadline: %w", b.id, ctx.Err())
 	}
 }
