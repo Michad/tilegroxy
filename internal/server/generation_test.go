@@ -133,6 +133,29 @@ func Test_GenerationConcurrentAcquireRelease(t *testing.T) {
 	assert.Equal(t, 1, g.closeCount())
 }
 
+// panickingAnalytics is an analytics.Analytics whose Close panics, so tests can verify that a
+// panicking close hook is contained rather than crashing the process.
+type panickingAnalytics struct{}
+
+func (p panickingAnalytics) Record(_ context.Context, _ analytics.Event) error {
+	return nil
+}
+
+func (p panickingAnalytics) Close(_ context.Context) error {
+	panic("boom")
+}
+
+func Test_MarkClosingRecoversFromPanicInClose(t *testing.T) {
+	g := newGeneration(entitiesWithAnalytics(panickingAnalytics{}))
+
+	// The floor goroutine runs detached from any request; a panic in the underlying Close must
+	// not be allowed to escape it and take down the whole process.
+	require.NotPanics(t, func() {
+		g.markClosing(context.Background(), time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
+	})
+}
+
 func Test_RegistryClosesEveryLiveGeneration(t *testing.T) {
 	reg := newGenerationRegistry()
 

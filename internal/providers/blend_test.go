@@ -17,6 +17,7 @@ package providers
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/Michad/tilegroxy/pkg"
@@ -74,6 +75,48 @@ func makeBlendProviders() []map[string]interface{} {
 		"name":  "static",
 		"color": "0F0",
 	},
+	}
+}
+
+type panickingProvider struct{}
+
+func (p *panickingProvider) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.ProviderContext, error) {
+	panic("boom")
+}
+
+func (p *panickingProvider) GenerateTile(_ context.Context, _ layer.ProviderContext, _ pkg.TileRequest) (*pkg.Image, error) {
+	panic("boom")
+}
+
+func (p *panickingProvider) DataType() config.DataType {
+	return config.DataTypeUnknown
+}
+
+// A panic inside one child's PreAuth used to skip the acResults send but not the errs send,
+// which permanently wedged the caller since the consumer loop reads one value from each channel
+// per provider regardless of errors. See https://github.com/Michad/tilegroxy/issues/882.
+func Test_BlendPreAuthPanicDoesNotDeadlock(t *testing.T) {
+	b := &Blend{providers: []layer.Provider{&panickingProvider{}, &closableProvider{}}}
+
+	done := make(chan struct {
+		layer.ProviderContext
+		error
+	}, 1)
+
+	go func() {
+		ctx, err := b.PreAuth(context.Background(), layer.ProviderContext{})
+		done <- struct {
+			layer.ProviderContext
+			error
+		}{ctx, err}
+	}()
+
+	select {
+	case result := <-done:
+		require.Error(t, result.error)
+		assert.Contains(t, result.Error(), "unexpected blend error")
+	case <-time.After(5 * time.Second):
+		t.Fatal("PreAuth deadlocked when a child provider panicked")
 	}
 }
 

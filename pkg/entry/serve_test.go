@@ -161,6 +161,26 @@ func Test_ReloadCallback_NoopBeforeReloadTargetPublished(t *testing.T) {
 	assert.NoError(t, callback(&cfg))
 }
 
+// The callback returned by newReloadCallback is the public hot-reload entrypoint handed back
+// through Serve's reloadPtr, so it can be invoked from a goroutine this package doesn't control
+// (a caller-supplied watch mechanism rather than the built-in file watcher, which recovers on its
+// own). A panic anywhere in the reload - here simulated in the swap step - must come back as an
+// error instead of crashing an otherwise-healthy server.
+func Test_ReloadCallback_RecoversPanic(t *testing.T) {
+	cfg := config.DefaultConfig()
+
+	var nextReload = func(_ *config.Config, _ *entities.Entities) error {
+		panic("simulated panic from a buggy reload target")
+	}
+
+	callback := newReloadCallback(&nextReload)
+
+	err := callback(&cfg)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "simulated panic from a buggy reload target")
+}
+
 func Test_ReloadAuditsSuccess(t *testing.T) {
 	var buf bytes.Buffer
 	audit.SetAuditLoggerOnStartup(slog.New(slog.NewJSONHandler(&buf, nil)))

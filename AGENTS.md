@@ -24,9 +24,7 @@ These apply to every change. Follow them without being asked.
    Fix findings rather than suppressing them with `//nolint`.
 7. **Avoid breaking backwards compatibility.** See the contract below. When a break looks
    unavoidable, explain what breaks and let the user decide. This doesn't apply to uncommitted or unreleased changes.
-8. **Keep comments short.** Explain the why as simply as possible. Anything longer than a
-   sentence, or that affects more than one place in the code, belongs in the development
-   documentation instead.
+8. **Practice Comment Minimalism.** Most changes don't need comments if the code is readable. When something is non-obvious, explain the why only (never the what) as simply as possible. Write for a future developer, not for the current task. A bug fix for one detail of a function should never become the function's comment. Never exceed 20 word comments. Never say what function the comment is for
 9. **Update the comments and docs your change impacts.** A stale comment is worse than none.
 10. **Do not generate ADRs** ADRs are for humans making decisions, never generate one as an AI Agent.
 11. Do not use `//nolint:gosec` - instead use `//nosec ID -- brief explanation` - gosec is used directly in CI builds 

@@ -155,28 +155,31 @@ func (t Blend) PreAuth(ctx context.Context, providerContext layer.ProviderContex
 
 		wg.Add(1)
 		go func(acObj interface{}, index int, p layer.Provider) {
+			ac := layer.ProviderContext{}
+			var err error
+
 			defer func() {
 				if r := recover(); r != nil {
-					errs <- fmt.Errorf("unexpected blend error %v", r)
+					err = fmt.Errorf("unexpected blend error %v", r)
 				}
+
+				acResults <- struct {
+					int
+					layer.ProviderContext
+				}{index, ac}
+
+				errs <- err
+
 				wg.Done()
 			}()
 
-			var err error
-			ac, ok := acObj.(layer.ProviderContext)
+			acParam, ok := acObj.(layer.ProviderContext)
 
 			if ok {
-				ac, err = p.PreAuth(ctx, ac)
+				ac, err = p.PreAuth(ctx, acParam)
 			} else {
 				ac, err = p.PreAuth(ctx, layer.ProviderContext{})
 			}
-
-			acResults <- struct {
-				int
-				layer.ProviderContext
-			}{index, ac}
-
-			errs <- err
 		}(thisPc, i, p)
 	}
 

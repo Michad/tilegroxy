@@ -18,6 +18,7 @@ package secrets
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -135,6 +136,10 @@ func (s AWSSecretsManager) Lookup(key string) (string, error) {
 		result, err := s.client.GetSecretValue(ctx, input)
 		if err != nil {
 			return "", err
+		}
+
+		if result.SecretString == nil {
+			return "", fmt.Errorf("aws secret %s has no string value, binary secrets are not supported", secretName)
 		}
 
 		secretString = *result.SecretString
