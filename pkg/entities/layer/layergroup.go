@@ -328,13 +328,23 @@ func (lg *LayerGroup) renderTileRecovered(ctx context.Context, tileRequest pkg.T
 	return *resultPtr
 }
 
+// disconnect from cancellation but leave deadline in place so downstream doesn't hang forever but we avoid a connection hiccup on request A preventing request B getting a result
+func leaderContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	leaderCtx := context.WithoutCancel(ctx)
+	if deadline, ok := ctx.Deadline(); ok {
+		return context.WithDeadline(leaderCtx, deadline)
+	}
+	return leaderCtx, func() {}
+}
+
 // renderTileCoalesced deduplicates concurrent provider fetches for the same tile.
 func (lg *LayerGroup) renderTileCoalesced(ctx context.Context, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	key := tileRequest.String()
 
-	leaderCtx := context.WithoutCancel(ctx)
+	leaderCtx, cancel := leaderContext(ctx)
 
 	resultCh := lg.generateGroup.DoChan(key, func() (any, error) {
+		defer cancel()
 		return lg.renderTileRecovered(leaderCtx, tileRequest), nil
 	})
 
