@@ -17,6 +17,7 @@ package analytics
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 
@@ -203,4 +204,44 @@ func Test_RegisteredAnalyticsNames(t *testing.T) {
 
 	_, ok = RegisteredAnalytics("nope")
 	assert.False(t, ok)
+}
+
+// namedFakeRegistration lets the concurrency test register distinct names, unlike fakeRegistration
+// which always registers as "testfake".
+type namedFakeRegistration struct {
+	name string
+}
+
+func (s namedFakeRegistration) Name() string          { return s.name }
+func (s namedFakeRegistration) InitializeConfig() any { return fakeConfig{} }
+func (s namedFakeRegistration) Initialize(_ any, _ AnalyticsDeps) (Analytics, error) {
+	return &fake{}, nil
+}
+
+func Test_AnalyticsRegistry_ConcurrentRegistrationIsRaceFree(t *testing.T) {
+	var wg sync.WaitGroup
+	const n = 50
+
+	for i := range n {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			RegisterAnalytics(namedFakeRegistration{name: fmt.Sprintf("stub-concurrent-%d", i)})
+		}(i)
+	}
+
+	for range n {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_ = RegisteredAnalyticsNames()
+		}()
+	}
+
+	wg.Wait()
+
+	for i := range n {
+		_, ok := RegisteredAnalytics(fmt.Sprintf("stub-concurrent-%d", i))
+		assert.True(t, ok)
+	}
 }
