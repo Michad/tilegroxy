@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"runtime/debug"
 	"time"
 
 	"github.com/Michad/tilegroxy/internal/server"
@@ -44,7 +45,13 @@ func Serve(cfg *config.Config, _ ServeOptions, _ io.Writer, reloadPtr *func(*con
 }
 
 func newReloadCallback(nextReloadPtr *func(*config.Config, *entities.Entities) error) func(*config.Config) error {
-	return func(newCfg *config.Config) error {
+	return func(newCfg *config.Config) (err error) {
+		defer func() {
+			if r := recover(); r != nil {
+				err = fmt.Errorf("config reload panic: %v\n%s", r, debug.Stack())
+			}
+		}()
+
 		if *nextReloadPtr == nil {
 			return nil
 		}
