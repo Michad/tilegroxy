@@ -48,6 +48,20 @@ func (w CacheWrapper) Close(ctx context.Context) error {
 	return lifecycle.CloseIfCloser(ctx, w.Cache)
 }
 
+func (w CacheWrapper) Remove(ctx context.Context, t pkg.TileRequest) (bool, error) {
+	newCtx, span := pkg.MakeChildSpan(ctx, &t, "Cache", w.Name, "Remove")
+	defer span.End()
+
+	removed, err := w.Cache.Remove(newCtx, t)
+
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Error from "+w.Name)
+	}
+
+	return removed, err
+}
+
 func (w CacheWrapper) Save(ctx context.Context, t pkg.TileRequest, img *pkg.Image) error {
 	newCtx, span := pkg.MakeChildSpan(ctx, &t, "Cache", w.Name, "Save")
 	defer span.End()

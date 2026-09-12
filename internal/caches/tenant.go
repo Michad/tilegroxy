@@ -88,6 +88,10 @@ func (c *TenantCache) Save(ctx context.Context, t pkg.TileRequest, img *pkg.Imag
 	return c.Cache.Save(ctx, namespace(ctx, t), img)
 }
 
+func (c *TenantCache) Remove(ctx context.Context, t pkg.TileRequest) (bool, error) {
+	return c.Cache.Remove(ctx, namespace(ctx, t))
+}
+
 func (c *TenantCache) Close(ctx context.Context) error {
 	return lifecycle.CloseIfCloser(ctx, c.Cache)
 }

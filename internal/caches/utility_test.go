@@ -156,6 +156,25 @@ func validateSaveAndLookup(t *testing.T, c cache.Cache) {
 	validateLookup(t, c, tile, &img)
 }
 
+// validateRemove covers the whole contract: a removed tile is gone, and removing one that was
+// never cached is not an error.
+func validateRemove(t *testing.T, c cache.Cache) {
+	tile := makeReq(rand.Intn(10000))
+	img := makeImg(rand.Intn(100))
+
+	require.NoError(t, c.Save(context.Background(), tile, &img))
+	validateLookup(t, c, tile, &img)
+
+	removed, err := c.Remove(context.Background(), tile)
+	require.NoError(t, err, "Cache remove returned an error")
+	require.True(t, removed, "Cache remove didn't report removing a cached tile")
+	validateNoLookup(t, c, tile)
+
+	removed, err = c.Remove(context.Background(), tile)
+	require.NoError(t, err, "Removing an uncached tile returned an error")
+	require.False(t, removed, "Cache remove reported removing a tile that wasn't cached")
+}
+
 func validateLookup(t *testing.T, c cache.Cache, tile pkg.TileRequest, expected *pkg.Image) {
 	img2, err := c.Lookup(context.Background(), tile)
 	require.NoError(t, err, "Cache lookup returned an error")

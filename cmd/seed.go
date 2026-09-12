@@ -28,13 +28,16 @@ var seedCmd = &cobra.Command{
 	Short: "Pre-populate (seed) the cache",
 	Long: `Pre-populates the cache for a given layer for a given area (bounding box) for a range of zoom levels. 
 	
-Be mindful that the greater the zoom level (the more you "zoom in"), exponentially more tiles will need to be seeded for a given area. For instance, while zoom level 1 only requires 4 tiles to cover the planet, zoom level 10 requires over a million tiles.
+Be mindful that the greater the zoom level (the more you "zoom in"), exponentially more tiles will need to be seeded for a given area. For instance, while zoom level 1 only requires 4 tiles to cover the planet, zoom level 10 requires over a million tiles. As a safety precaution, a limit of 10k tiles is applied unless you specify --force.
+
+Pass --purge to delete the tiles covering the same area instead of populating them. Purging makes no requests against upstream providers, so it isn't subject to the --force tile limit.
 
 Seed jobs can be resumed automatically by specifying a file with the --progress flag. Job progress will be written to that file as we go. Interrupting the command and then running the exact same command again, will start off more-or-less from where things left off. The file will be overwritten with progress and should get deleted once done. 
 
 Example:
 
-	tilegroxy seed -c test_config.yml -l osm -z 2 -v -t 7 -z 0 -z 1 -z 3 -z 4 --progress seed_job.json`,
+	tilegroxy seed -c test_config.yml -l osm -z 2 -v -t 7 -z 0 -z 1 -z 3 -z 4 --progress seed_job.json
+	tilegroxy seed -c test_config.yml -l osm -z 5 --purge`,
 	Run: runSeed,
 }
 
@@ -51,9 +54,10 @@ func runSeed(cmd *cobra.Command, _ []string) {
 	progressFile, err10 := cmd.Flags().GetString("progress")
 	cacheName, err11 := cmd.Flags().GetString("cache")
 	maxFailures, err12 := cmd.Flags().GetUint64("max-failures")
+	purge, err13 := cmd.Flags().GetBool("purge")
 	out := rootCmd.OutOrStdout()
 
-	if err := errors.Join(err1, err2, err3, err4, err5, err6, err7, err8, err9, err10, err11, err12); err != nil {
+	if err := errors.Join(err1, err2, err3, err4, err5, err6, err7, err8, err9, err10, err11, err12, err13); err != nil {
 		fmt.Fprintf(out, "Error: %v", err)
 		exit(1)
 		return
@@ -78,7 +82,8 @@ func runSeed(cmd *cobra.Command, _ []string) {
 			NumThread:    numThread,
 			ProgressFile: progressFile,
 			CacheName:    cacheName,
-			MaxFailures:  maxFailures},
+			MaxFailures:  maxFailures,
+			Purge:        purge},
 		out)
 
 	if err != nil {
@@ -106,7 +111,9 @@ func initSeed() {
 	seedCmd.Flags().Uint16P("threads", "t", 1, "How many concurrent requests to use to perform seeding. Be mindful of spamming upstream providers")
 	seedCmd.Flags().StringP("progress", "p", "", "A file to use to record how far the seed got. If the file already exists the seed resumes from its recorded position instead of starting over.")
 	seedCmd.Flags().Uint64("max-failures", 0, "How many tiles can fail to render before the seed gives up and exits with a failure status. \nDefaults to the number of tiles being seeded, meaning the seed only fails if every tile does")
+	seedCmd.Flags().Bool("purge", false, "Delete the cached tiles covering the given area and zoom levels instead of populating them.")
 	seedCmd.Flags().String("cache", "", "For a layer using a multi-tiered cache, restrict seeding to the tier of this type (e.g. \"disk\"). By default every tier is seeded.")
+	seedCmd.MarkFlagsMutuallyExclusive("force", "purge")
 
 	if err != nil {
 		panic(err)

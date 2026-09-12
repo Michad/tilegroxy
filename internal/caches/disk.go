@@ -102,3 +102,18 @@ func (c Disk) Save(_ context.Context, t pkg.TileRequest, img *pkg.Image) error {
 
 	return os.WriteFile(filepath.Clean(filepath.Join(c.Path, filename)), b, fs.FileMode(c.FileMode))
 }
+
+func (c Disk) Remove(_ context.Context, t pkg.TileRequest) (bool, error) {
+	filename := requestToFilename(t)
+
+	err := os.Remove(filepath.Clean(filepath.Join(c.Path, filename)))
+
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}

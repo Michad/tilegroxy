@@ -163,3 +163,16 @@ func (c Memcached) Save(_ context.Context, t pkg.TileRequest, img *pkg.Image) er
 
 	return c.client.Set(&memcache.Item{Key: memcachedKey(c.KeyPrefix, t), Value: val, Expiration: int32(c.TTL)}) // #nosec G115 -- max value applied in Initialize
 }
+
+func (c Memcached) Remove(_ context.Context, t pkg.TileRequest) (bool, error) {
+	err := c.client.Delete(memcachedKey(c.KeyPrefix, t))
+
+	if errors.Is(err, memcache.ErrCacheMiss) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}

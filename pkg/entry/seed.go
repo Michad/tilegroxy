@@ -47,6 +47,7 @@ type SeedOptions struct {
 	ProgressFile string
 	CacheName    string
 	MaxFailures  uint64
+	Purge        bool
 }
 
 func Seed(cfg *config.Config, opts SeedOptions, out io.Writer) error {
@@ -109,7 +110,8 @@ func Seed(cfg *config.Config, opts SeedOptions, out io.Writer) error {
 		maxFailures = seedJob.Count() - start
 	}
 
-	if err = seedTiles(seedJob, opts, out, layerGroup, numThread, progress, start, maxFailures); err != nil {
+	purged, err := seedTiles(seedJob, opts, out, layerGroup, numThread, progress, start, maxFailures)
+	if err != nil {
 		return err
 	}
 
@@ -119,8 +121,12 @@ func Seed(cfg *config.Config, opts SeedOptions, out io.Writer) error {
 		}
 	}
 
+	if opts.Purge {
+		fmt.Fprintf(out, "Removed %v of %v tiles\n", purged, seedJob.Count()-start)
+	}
+
 	if opts.Verbose {
-		fmt.Fprintf(out, "Completed seeding")
+		fmt.Fprintf(out, "Completed %v", pkg.Ternary(opts.Purge, "purging", "seeding"))
 	}
 
 	return nil
@@ -167,6 +173,15 @@ func restrictToCacheTier(rawConfig map[string]interface{}, name string) (map[str
 func checkSeedSize(seedJob *seed.SeedJob, opts SeedOptions, out io.Writer) error {
 	count := seedJob.Count()
 
+	// A purge makes no upstream requests, so the tile count only needs to stay addressable.
+	if opts.Purge {
+		if count >= math.MaxInt32 {
+			return fmt.Errorf("too many tiles to purge (%v > %v)", count, math.MaxInt32)
+		}
+
+		return nil
+	}
+
 	if count <= warnCount || opts.Force && count < math.MaxInt32 {
 		if opts.Verbose && count > warnCount {
 			fmt.Fprintf(out, "Seeding %v tiles\n", count)
@@ -206,7 +221,7 @@ func resolveProgress(currentSeedJob *seed.SeedJob, opts SeedOptions, out io.Writ
 	return existing, existing.Position, nil
 }
 
-func seedTiles(seedJob *seed.SeedJob, opts SeedOptions, out io.Writer, layerGroup *layer.LayerGroup, numThread uint16, progress *seed.Progress, start uint64, maxFailures uint64) error {
+func seedTiles(seedJob *seed.SeedJob, opts SeedOptions, out io.Writer, layerGroup *layer.LayerGroup, numThread uint16, progress *seed.Progress, start uint64, maxFailures uint64) (uint64, error) {
 	tiles := make(chan indexedTile)
 	done := make(chan uint64, numThread)
 
@@ -223,6 +238,7 @@ func seedTiles(seedJob *seed.SeedJob, opts SeedOptions, out io.Writer, layerGrou
 
 	giveUp := make(chan struct{})
 	failures := &atomic.Uint64{}
+	purged := &atomic.Uint64{}
 
 	onFailure := func() {
 		if failures.Add(1) >= maxFailures {
@@ -233,7 +249,7 @@ func seedTiles(seedJob *seed.SeedJob, opts SeedOptions, out io.Writer, layerGrou
 	for t := range int(numThread) {
 		wg.Add(1)
 
-		go seedThread(&wg, opts, out, layerGroup, t, tiles, done, errs, onFailure)
+		go seedThread(&wg, opts, out, layerGroup, t, tiles, done, errs, onFailure, purged)
 	}
 
 	go func() {
@@ -282,14 +298,14 @@ feed:
 	}
 
 	if failed := failures.Load(); failed > 0 && failed >= maxFailures {
-		threadErrs = append(threadErrs, fmt.Errorf("%w: %v of %v tiles failed to render", ErrTooManyFailures, failed, seedJob.Count()-start))
+		threadErrs = append(threadErrs, fmt.Errorf("%w: %v of %v tiles failed to %v", ErrTooManyFailures, failed, seedJob.Count()-start, pkg.Ternary(opts.Purge, "purge", "render")))
 	}
 
 	if len(threadErrs) > 0 {
-		return errors.Join(threadErrs...)
+		return purged.Load(), errors.Join(threadErrs...)
 	}
 
-	return nil
+	return purged.Load(), nil
 }
 
 type indexedTile struct {
@@ -341,7 +357,7 @@ func trackProgress(opts SeedOptions, progress *seed.Progress, start uint64, done
 	return saveErr
 }
 
-func seedThread(wg *sync.WaitGroup, opts SeedOptions, out io.Writer, layerGroup *layer.LayerGroup, t int, tiles <-chan indexedTile, done chan<- uint64, errs chan<- error, onFailure func()) {
+func seedThread(wg *sync.WaitGroup, opts SeedOptions, out io.Writer, layerGroup *layer.LayerGroup, t int, tiles <-chan indexedTile, done chan<- uint64, errs chan<- error, onFailure func(), purged *atomic.Uint64) {
 	defer wg.Done()
 	defer func() {
 		if r := recover(); r != nil {
@@ -357,7 +373,18 @@ func seedThread(wg *sync.WaitGroup, opts SeedOptions, out io.Writer, layerGroup 
 	ctx := pkg.BackgroundContext()
 
 	for tile := range tiles {
-		_, tileErr := layerGroup.RenderTile(ctx, tile.request)
+		var tileErr error
+
+		removed := false
+
+		if opts.Purge {
+			removed, tileErr = layerGroup.PurgeTile(ctx, tile.request)
+			if removed {
+				purged.Add(1)
+			}
+		} else {
+			_, tileErr = layerGroup.RenderTile(ctx, tile.request)
+		}
 
 		if tileErr != nil {
 			onFailure()
@@ -365,10 +392,14 @@ func seedThread(wg *sync.WaitGroup, opts SeedOptions, out io.Writer, layerGroup 
 
 		if opts.Verbose {
 			var status string
-			if tileErr == nil {
-				status = "OK"
-			} else {
+
+			switch {
+			case tileErr != nil:
 				status = tileErr.Error()
+			case opts.Purge && !removed:
+				status = "Not cached"
+			default:
+				status = "OK"
 			}
 
 			fmt.Fprintf(out, "Thread %v - %v = %v\n", t, tile.request, status)

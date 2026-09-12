@@ -100,6 +100,11 @@ func (c *TTLCache) Save(ctx context.Context, t pkg.TileRequest, img *pkg.Image) 
 	return c.Cache.Save(ctx, t, img)
 }
 
+// An entry past its TTL still occupies space, so it's removed rather than treated as already gone.
+func (c *TTLCache) Remove(ctx context.Context, t pkg.TileRequest) (bool, error) {
+	return c.Cache.Remove(ctx, t)
+}
+
 func (c *TTLCache) Close(ctx context.Context) error {
 	return lifecycle.CloseIfCloser(ctx, c.Cache)
 }

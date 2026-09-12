@@ -115,6 +115,7 @@ func Test_S3Execute(t *testing.T) {
 	require.NoError(t, err)
 
 	validateSaveAndLookup(t, s3)
+	validateRemove(t, s3)
 	img, err := s3.Lookup(context.Background(), pkg.TileRequest{LayerName: "layer", Z: 93, X: 53, Y: 12345})
 	assert.Nil(t, img)
 	require.NoError(t, err)

@@ -41,6 +41,7 @@ type spyCache struct {
 
 func (spyCache) Lookup(_ context.Context, _ pkg.TileRequest) (*pkg.Image, error) { return nil, nil }
 func (spyCache) Save(_ context.Context, _ pkg.TileRequest, _ *pkg.Image) error   { return nil }
+func (spyCache) Remove(_ context.Context, _ pkg.TileRequest) (bool, error)       { return false, nil }
 func (c spyCache) Close(_ context.Context) error {
 	c.closes.Add(1)
 	return nil

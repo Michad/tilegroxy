@@ -28,6 +28,7 @@ type stubCache struct{}
 
 func (stubCache) Lookup(_ context.Context, _ pkg.TileRequest) (*pkg.Image, error) { return nil, nil }
 func (stubCache) Save(_ context.Context, _ pkg.TileRequest, _ *pkg.Image) error   { return nil }
+func (stubCache) Remove(_ context.Context, _ pkg.TileRequest) (bool, error)       { return false, nil }
 
 type stubCacheRegistration struct {
 	name string

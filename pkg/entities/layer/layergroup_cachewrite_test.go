@@ -63,6 +63,10 @@ func (c *alwaysMissCache) Save(_ context.Context, _ pkg.TileRequest, _ *pkg.Imag
 	return nil
 }
 
+func (c *alwaysMissCache) Remove(_ context.Context, _ pkg.TileRequest) (bool, error) {
+	return false, nil
+}
+
 // RenderTile is exported API, so a library consumer can call it with a plain stdlib context
 // rather than one from pkg.NewRequestContext. A context carrying no restriction info has to be
 // treated as unrestricted instead of dereferencing the nil pointers that come back.
@@ -122,6 +126,10 @@ func (c *blockingCache) Save(_ context.Context, _ pkg.TileRequest, _ *pkg.Image)
 	return nil
 }
 
+func (c *blockingCache) Remove(_ context.Context, _ pkg.TileRequest) (bool, error) {
+	return false, nil
+}
+
 // Without a bound, a slow cache backend plus sustained misses accumulates goroutines and the
 // images they pin. The tiles are distinct so singleflight doesn't collapse the misses.
 func Test_LayerGroup_RenderTile_BoundsConcurrentCacheWrites(t *testing.T) {
@@ -171,6 +179,10 @@ func (alwaysHitCache) Lookup(_ context.Context, _ pkg.TileRequest) (*pkg.Image, 
 
 func (alwaysHitCache) Save(_ context.Context, _ pkg.TileRequest, _ *pkg.Image) error {
 	return nil
+}
+
+func (alwaysHitCache) Remove(_ context.Context, _ pkg.TileRequest) (bool, error) {
+	return false, nil
 }
 
 // A zoom limit added after a tile was cached (or a tile seeded outside the layer's configured
@@ -324,6 +336,10 @@ func (panicOnSaveCache) Lookup(_ context.Context, _ pkg.TileRequest) (*pkg.Image
 
 func (panicOnSaveCache) Save(_ context.Context, _ pkg.TileRequest, _ *pkg.Image) error {
 	panic("simulated panic from a buggy Cache.Save implementation")
+}
+
+func (panicOnSaveCache) Remove(_ context.Context, _ pkg.TileRequest) (bool, error) {
+	return false, nil
 }
 
 // writeCache runs on its own goroutine after a cache miss, so an unrecovered panic from a

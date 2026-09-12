@@ -187,3 +187,35 @@ func (c S3) Save(ctx context.Context, t pkg.TileRequest, img *pkg.Image) error {
 	_, err = c.transfer.UploadObject(ctx, uploadConfig)
 	return err
 }
+
+func (c S3) Remove(ctx context.Context, t pkg.TileRequest) (bool, error) {
+	key := calcKey(&c, &t)
+
+	// DeleteObject succeeds identically whether or not the key was there, so reporting what was
+	// actually removed costs a HEAD first.
+	_, err := c.client.HeadObject(ctx, &s3.HeadObjectInput{
+		Bucket: aws.String(c.Bucket),
+		Key:    aws.String(key),
+	})
+
+	if err != nil {
+		var notFound *types.NotFound
+		var noSuchKey *types.NoSuchKey
+		if errors.As(err, &notFound) || errors.As(err, &noSuchKey) {
+			return false, nil
+		}
+
+		return false, err
+	}
+
+	_, err = c.client.DeleteObject(ctx, &s3.DeleteObjectInput{
+		Bucket: aws.String(c.Bucket),
+		Key:    aws.String(key),
+	})
+
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}

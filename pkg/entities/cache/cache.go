@@ -27,6 +27,8 @@ import (
 type Cache interface {
 	Lookup(ctx context.Context, t pkg.TileRequest) (*pkg.Image, error)
 	Save(ctx context.Context, t pkg.TileRequest, img *pkg.Image) error
+	// The bool reports whether an entry was actually there; a miss is not an error.
+	Remove(ctx context.Context, t pkg.TileRequest) (bool, error)
 }
 
 // CacheDeps carries everything a cache is given at construction. New dependencies are added as fields so
