@@ -180,6 +180,7 @@ func Test_AuditLoggingOmitsRequestAttributesWithoutARequest(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotContains(t, string(content), `"uri":""`)
 	assert.NotContains(t, string(content), `"ip":""`)
+	assert.NotContains(t, string(content), `"method"`)
 }
 
 func Test_AuditLoggingRejectsInvalidFormat(t *testing.T) {
