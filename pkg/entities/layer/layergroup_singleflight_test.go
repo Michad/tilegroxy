@@ -190,6 +190,64 @@ func Test_LayerGroup_RenderTile_WaiterContextExpiresIndependentlyOfLeader(t *tes
 	require.Equal(t, int32(1), provider.generateCalls.Load())
 }
 
+// ctxAwareProvider blocks in GenerateTile until its context is cancelled, and reports whether
+// that happened along with the context's error - so a test can prove the leader's fetch is
+// actually bounded by a deadline rather than running forever.
+type ctxAwareProvider struct {
+	generateCalls atomic.Int32
+	started       chan struct{}
+	ctxDone       chan error
+}
+
+func (p *ctxAwareProvider) PreAuth(_ context.Context, providerContext ProviderContext) (ProviderContext, error) {
+	providerContext.AuthBypass = true
+	return providerContext, nil
+}
+
+func (p *ctxAwareProvider) GenerateTile(ctx context.Context, _ ProviderContext, _ pkg.TileRequest) (*pkg.Image, error) {
+	p.generateCalls.Add(1)
+	close(p.started)
+	<-ctx.Done()
+	p.ctxDone <- ctx.Err()
+	return nil, ctx.Err()
+}
+
+func (p *ctxAwareProvider) DataType() config.DataType {
+	return config.DataTypeUnknown
+}
+
+// Regression test for #893: a coalesced leader's context must keep the original caller's
+// deadline even though it's detached from cancellation, so a hung underlying fetch (e.g. a slow
+// PostGIS query) is still bounded and its goroutine/connection reclaimed instead of pinned
+// forever once the triggering request's deadline passes.
+func Test_LayerGroup_RenderTile_LeaderContextKeepsDeadlineAfterCancellation(t *testing.T) {
+	provider := &ctxAwareProvider{started: make(chan struct{}), ctxDone: make(chan error, 1)}
+	c := &alwaysMissCache{}
+	l := &Layer{
+		ID:       "test",
+		Pattern:  []layerSegment{{value: "test", placeholder: false}},
+		Provider: provider,
+	}
+	lg := newSingleflightTestLayerGroup(l, c)
+	lg.cacheWriteLimiter = make(chan struct{}, maxConcurrentCacheWrites)
+
+	tileRequest := pkg.TileRequest{LayerName: "test", Z: 5, X: 3, Y: 3}
+
+	leaderCtx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
+	defer cancel()
+
+	_, err := lg.RenderTile(leaderCtx, tileRequest)
+	require.Error(t, err)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+
+	select {
+	case providerCtxErr := <-provider.ctxDone:
+		require.ErrorIs(t, providerCtxErr, context.DeadlineExceeded, "the provider's context should have been cancelled by the original deadline, not left to run forever")
+	case <-time.After(time.Second):
+		t.Fatal("provider never observed its context being cancelled - the leader's deadline was lost")
+	}
+}
+
 // failNTimesProvider fails its first N calls then succeeds, so a test can verify an error result
 // isn't permanently cached/replayed by the dedup mechanism.
 type failNTimesProvider struct {
