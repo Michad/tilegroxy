@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -87,6 +88,12 @@ func (g *generation) markClosing(ctx context.Context, floor time.Duration) {
 	g.mu.Unlock()
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				slog.ErrorContext(ctx, "Unexpected panic while closing a superseded configuration!", "panic", r, "stack", string(debug.Stack()))
+			}
+		}()
+
 		time.Sleep(floor)
 
 		g.mu.Lock()
