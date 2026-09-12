@@ -1,0 +1,37 @@
+= Config Diff
+
+Compares two configurations and reports what changed between them.
+
+Full, up-to-date usage information can be found with `tilegroxy config diff -h`.
+
+----
+Compares your current configuration against a new configuration, 
+outputting what changed and whether serve --hot-reload can apply 
+it without a restart.  Outputs everything that gets added, removed, 
+or modified.  The output isn't a simple line-by-line diff, instead 
+it's contextually aware of the tilegroxy config format, so a new 
+layer gets recorded as one addition.  
+
+The default output is a readable, colored text mode. Consider using 
+json or yaml for scripted use cases. The presence of a top-level 
+'restart' key indicates whether a restart is needed for CICD purposes.
+
+Exits with a status code of 0 if the configurations match and 1 if 
+they differ. 
+
+Example:
+	tilegroxy config diff -c current.yml candidate.yml
+
+Usage:
+  tilegroxy config diff FILE [flags]
+
+Flags:
+  -h, --help       help for diff
+      --json       Output the differences in JSON
+      --markdown   Output the differences as a markdown table with 
+      one row per change
+      --no-color   Turn off the colorization of the default output
+      --table      Output the differences as a table with one row 
+      per change
+      --yaml       Output the differences in YAML
+----
