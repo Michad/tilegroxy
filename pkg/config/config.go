@@ -543,6 +543,21 @@ func LoadAndWatchConfigFromFile(filename string, onReload func(Config, error)) (
 	}
 
 	if onReload != nil {
+		configFile, err := filepath.Abs(filename)
+		if err != nil {
+			return Config{}, err
+		}
+
+		watcher, err := fsnotify.NewWatcher()
+		if err != nil {
+			return Config{}, err
+		}
+
+		if err := watcher.Add(filepath.Dir(configFile)); err != nil {
+			_ = watcher.Close()
+			return Config{}, err
+		}
+
 		go func() {
 			defer func() {
 				if r := recover(); r != nil {
@@ -550,32 +565,17 @@ func LoadAndWatchConfigFromFile(filename string, onReload func(Config, error)) (
 				}
 			}()
 
-			watchConfigFile(filename, onReload)
+			watchConfigFile(filename, configFile, watcher, onReload)
 		}()
 	}
 
 	return unmarshal(viper)
 }
 
-func watchConfigFile(filename string, onReload func(Config, error)) {
-	configFile, err := filepath.Abs(filename)
-	if err != nil {
-		onReload(Config{}, err)
-		return
-	}
+func watchConfigFile(filename, configFile string, watcher *fsnotify.Watcher, onReload func(Config, error)) {
 	configDir := filepath.Dir(configFile)
 
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		onReload(Config{}, err)
-		return
-	}
 	defer watcher.Close()
-
-	if err := watcher.Add(configDir); err != nil {
-		onReload(Config{}, err)
-		return
-	}
 
 	var lastConfigLoad time.Time
 
