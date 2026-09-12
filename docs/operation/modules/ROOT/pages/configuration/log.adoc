@@ -2,7 +2,7 @@
 
 Configures how the application should log during operation.
 
-The `Logging` section supports two keys: `main` and `access` which are objects described respectively below.
+The `Logging` section supports three keys: `main`, `access` and `audit` which are objects described respectively below.
 
 Example:
 
@@ -14,6 +14,10 @@ logging:
   main:
     level: debug
     format: json
+  audit:
+    enabled: true
+    console: false
+    path: audit.log
 ----
 
 == Main Logs
@@ -144,4 +148,72 @@ The following can be supplied as environment variables:
 
 | Format
 | LOGGING_ACCESS_FORMAT
+|===
+
+== Audit Logs
+
+Configures a log containing only security relevant events. Auditing is off by default.
+
+Two kinds of event are emitted, each identified by an `event` attribute:
+
+* *auth_failure*: A request was rejected for an authentication or authorization reason. This covers a failed check by the configured xref:configuration/authentication/index.adoc[authentication], a request for a layer the caller isn't allowed, and a request for a tile outside the caller's allowed geographic area. The `reason` attribute names which of these occurred. Standard request fields are always included (URI, path, protocol, IP, method, host, and user agent) and, when possible, `user` and `tenant` are included as well.
+* *config_reload*: The configuration was reloaded, which only happens when xref:reloading.adoc[hot reloading] is enabled. The `outcome` attribute is either `success` or `failure`, and a failure carries the `error` that stopped it.
+
+Configuration options:
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| Enabled
+| Whether to emit audit events at all
+| bool
+| No
+| false
+
+| Console
+| Whether to write audit events to standard out
+| bool
+| No
+| true
+
+| Path
+| The file location to write audit events to. Log rotation is not built-in, use an external tool to avoid excessive growth. Required if Console is false.
+| string
+| No
+| None
+
+| Format
+| The format to output audit events in. Applies to both standard out and file out. Possible values: plain, json
+| string
+| No
+| json
+
+| Headers
+| Headers to include as attributes on audit events. Attribute key will be in all lowercase.
+| string[]
+| No
+| None
+|===
+
+The following can be supplied as environment variables:
+
+[cols="1,3"]
+|===
+| Configuration Parameter | Environment Variable
+
+| Enabled
+| LOGGING_AUDIT_ENABLED
+
+| Console
+| LOGGING_AUDIT_CONSOLE
+
+| Path
+| LOGGING_AUDIT_PATH
+
+| Format
+| LOGGING_AUDIT_FORMAT
+
+| Headers
+| LOGGING_AUDIT_HEADERS
 |===

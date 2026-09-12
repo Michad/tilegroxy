@@ -147,6 +147,11 @@ func CachedFromContext(ctx context.Context) (*bool, bool) {
 
 func BackgroundContext() context.Context {
 	req, _ := http.NewRequestWithContext(context.Background(), "", "", nil)
+
+	// Override Go's default of setting these to default strings to avoid logging confusion.  Perhaps we shouldn't be setting the HTTP fields for background context at all
+	req.Method = ""
+	req.Proto = ""
+
 	return NewRequestContext(req)
 }
 

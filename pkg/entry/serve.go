@@ -22,7 +22,9 @@ import (
 	"runtime/debug"
 	"time"
 
+	"github.com/Michad/tilegroxy/internal/audit"
 	"github.com/Michad/tilegroxy/internal/server"
+	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities"
 )
@@ -46,9 +48,12 @@ func Serve(cfg *config.Config, _ ServeOptions, _ io.Writer, reloadPtr *func(*con
 
 func newReloadCallback(nextReloadPtr *func(*config.Config, *entities.Entities) error) func(*config.Config) error {
 	return func(newCfg *config.Config) (err error) {
+		auditCtx := pkg.BackgroundContext()
+
 		defer func() {
 			if r := recover(); r != nil {
 				err = fmt.Errorf("config reload panic: %v\n%s", r, debug.Stack())
+				audit.ConfigReload(auditCtx, err)
 			}
 		}()
 
@@ -58,10 +63,13 @@ func newReloadCallback(nextReloadPtr *func(*config.Config, *entities.Entities) e
 
 		ent2, err := configToEntities(*newCfg)
 		if err != nil {
+			audit.ConfigReload(auditCtx, err)
 			return err
 		}
 
 		if err := (*nextReloadPtr)(newCfg, ent2); err != nil {
+			audit.ConfigReload(auditCtx, err)
+
 			closeCtx, cancel := context.WithTimeout(context.Background(), time.Duration(newCfg.Server.EffectiveShutdownTimeout())*time.Second) // #nosec G115 -- operator-supplied timeout in seconds, far below int64 overflow range
 			defer cancel()
 
@@ -71,6 +79,8 @@ func newReloadCallback(nextReloadPtr *func(*config.Config, *entities.Entities) e
 
 			return err
 		}
+
+		audit.ConfigReload(auditCtx, nil)
 
 		return nil
 	}

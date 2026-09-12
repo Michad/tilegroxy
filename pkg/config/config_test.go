@@ -202,6 +202,14 @@ func TestValidate_InvalidAccessLogFormat(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestValidate_InvalidAuditLogFormat(t *testing.T) {
+	c := DefaultConfig()
+	c.Logging.Audit.Format = "not-a-real-format"
+
+	err := c.Validate()
+	require.Error(t, err)
+}
+
 func TestValidate_DefaultConfigIsValid(t *testing.T) {
 	c := DefaultConfig()
 

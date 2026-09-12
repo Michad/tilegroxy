@@ -15,11 +15,14 @@
 package server
 
 import (
+	"bytes"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Michad/tilegroxy/internal/audit"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/stretchr/testify/assert"
@@ -105,4 +108,34 @@ func Test_WriteErrorMessage_Mvt(t *testing.T) {
 	r := rw.Result()
 	defer func() { require.NoError(t, r.Body.Close()) }()
 	assert.Equal(t, "application/vnd.mapbox-vector-tile", r.Header.Get("Content-Type"))
+}
+
+func Test_WriteErrorAuditsAuthFailures(t *testing.T) {
+	var buf bytes.Buffer
+	audit.SetAuditLoggerOnStartup(slog.New(slog.NewJSONHandler(&buf, nil)))
+	t.Cleanup(func() { audit.SetAuditLoggerOnStartup(nil) })
+
+	cfg := config.DefaultConfig()
+	req := httptest.NewRequest(http.MethodGet, "/tiles/osm/1/2/3", nil)
+	ctx := pkg.NewRequestContext(req)
+
+	writeError(ctx, httptest.NewRecorder(), &cfg.Error, pkg.UnauthorizedError{Message: "Denying access to non-allowed area"}, config.DataTypeUnknown)
+
+	out := buf.String()
+	assert.Contains(t, out, audit.EventAuthFailure)
+	assert.Contains(t, out, "Denying access to non-allowed area")
+}
+
+func Test_WriteErrorDoesNotAuditNonAuthFailures(t *testing.T) {
+	var buf bytes.Buffer
+	audit.SetAuditLoggerOnStartup(slog.New(slog.NewJSONHandler(&buf, nil)))
+	t.Cleanup(func() { audit.SetAuditLoggerOnStartup(nil) })
+
+	cfg := config.DefaultConfig()
+	req := httptest.NewRequest(http.MethodGet, "/tiles/osm/1/2/3", nil)
+	ctx := pkg.NewRequestContext(req)
+
+	writeError(ctx, httptest.NewRecorder(), &cfg.Error, pkg.InvalidArgumentError{Name: "z", Value: "abc"}, config.DataTypeUnknown)
+
+	assert.Empty(t, buf.String())
 }

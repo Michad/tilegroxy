@@ -19,6 +19,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/Michad/tilegroxy/internal/audit"
+	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	tg "github.com/Michad/tilegroxy/pkg/entry"
 )
@@ -41,6 +43,7 @@ func runServe(cmd *cobra.Command, _ []string) {
 
 	cfg, err := extractConfigFromCommand(cmd, func(c config.Config, err error) {
 		if err != nil {
+			audit.ConfigReload(pkg.BackgroundContext(), err)
 			fmt.Fprintf(out, "Error: %v\n", err.Error())
 		} else if reloadPtr != nil {
 			err := reloadPtr(&c)
