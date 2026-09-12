@@ -150,6 +150,7 @@ func Test_AuditLoggingIncludesRequestAttributes(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "/tiles/osm/1/2/3", nil)
 	req.Header.Set("X-Correlation-Id", "abc123")
+	req.Header.Set("User-Agent", "mozilla/5.0")
 	audit.AuthFailure(pkg.NewRequestContext(req), "CheckAuthentication returned false")
 
 	require.NoError(t, closeLog())
@@ -158,6 +159,7 @@ func Test_AuditLoggingIncludesRequestAttributes(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(content), "/tiles/osm/1/2/3")
 	assert.Contains(t, string(content), "abc123")
+	assert.Contains(t, string(content), "mozilla/5.0")
 }
 
 // A config reload has no request behind it, so the request attributes must be left off rather than

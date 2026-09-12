@@ -64,7 +64,7 @@ func (s CustomRegistration) Initialize(cfgAny any, deps analytics.AnalyticsDeps)
 	cfg := cfgAny.(CustomConfig)
 
 	if cfg.File == "" && cfg.Script == "" {
-		return nil, fmt.Errorf(deps.ErrorMessages.OneOfRequired, []string{"analytics.custom.file, analytics.custom.script"})
+		return nil, fmt.Errorf(deps.ErrorMessages.OneOfRequired, []string{"analytics.custom.file", "analytics.custom.script"})
 	}
 
 	if cfg.File != "" && cfg.Script != "" {

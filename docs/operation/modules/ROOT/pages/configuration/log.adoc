@@ -156,7 +156,7 @@ Configures a log containing only security relevant events. Auditing is off by de
 
 Two kinds of event are emitted, each identified by an `event` attribute:
 
-* *auth_failure*: A request was rejected for an authentication or authorization reason. This covers a failed check by the configured xref:configuration/authentication/index.adoc[authentication], a request for a layer the caller isn't allowed, and a request for a tile outside the caller's allowed geographic area. The `reason` attribute names which of these occurred. When authentication got far enough to identify the caller, `user` and `tenant` are included as well.
+* *auth_failure*: A request was rejected for an authentication or authorization reason. This covers a failed check by the configured xref:configuration/authentication/index.adoc[authentication], a request for a layer the caller isn't allowed, and a request for a tile outside the caller's allowed geographic area. The `reason` attribute names which of these occurred. Standard request fields are always included (URI, path, protocol, IP, method, host, and user agent) and, when possible, `user` and `tenant` are included as well.
 * *config_reload*: The configuration was reloaded, which only happens when xref:reloading.adoc[hot reloading] is enabled. The `outcome` attribute is either `success` or `failure`, and a failure carries the `error` that stopped it.
 
 Configuration options:

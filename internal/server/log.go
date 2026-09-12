@@ -217,8 +217,8 @@ func configureAuditLogging(cfg config.AuditConfig, errorMessages config.ErrorMes
 		logHandler = slog.NewJSONHandler(out, &opt)
 	}
 
-	// Request attributes are always included: an auth failure without the caller's IP and path isn't much of an audit trail.
-	attr := slices.Concat([]string{"uri", "path", "proto", "ip", "method", "host"}, cfg.Headers)
+	// Request attributes are always included
+	attr := slices.Concat([]string{"uri", "path", "proto", "ip", "method", "host", "User-Agent"}, cfg.Headers)
 
 	logHandler = slogSkipEmptyContextHandler{logHandler, attr}
 

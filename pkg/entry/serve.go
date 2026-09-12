@@ -48,17 +48,18 @@ func Serve(cfg *config.Config, _ ServeOptions, _ io.Writer, reloadPtr *func(*con
 
 func newReloadCallback(nextReloadPtr *func(*config.Config, *entities.Entities) error) func(*config.Config) error {
 	return func(newCfg *config.Config) (err error) {
+		auditCtx := pkg.BackgroundContext()
+
 		defer func() {
 			if r := recover(); r != nil {
 				err = fmt.Errorf("config reload panic: %v\n%s", r, debug.Stack())
+				audit.ConfigReload(auditCtx, err)
 			}
 		}()
 
 		if *nextReloadPtr == nil {
 			return nil
 		}
-
-		auditCtx := pkg.BackgroundContext()
 
 		ent2, err := configToEntities(*newCfg)
 		if err != nil {
