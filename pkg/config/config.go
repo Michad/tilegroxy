@@ -311,6 +311,12 @@ func (c Config) Validate() error {
 		}
 	}
 
+	if c.Logging.Audit.Enabled {
+		if !c.Logging.Audit.Console && c.Logging.Audit.Path == "" {
+			errs = append(errs, fmt.Errorf(c.Error.Messages.OneOfRequired, []string{"logging.audit.console", "logging.audit.path"}))
+		}
+	}
+
 	switch c.Logging.Main.Format {
 	case MainFormatPlain, MainFormatJSON:
 	default:
