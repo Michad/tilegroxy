@@ -31,6 +31,7 @@ func TestMemory(t *testing.T) {
 	require.NoError(t, err)
 
 	validateSaveAndLookup(t, r)
+	validateRemove(t, r)
 }
 
 func TestTtl(t *testing.T) {

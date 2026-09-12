@@ -103,3 +103,18 @@ func (c Multi) Save(ctx context.Context, t pkg.TileRequest, img *pkg.Image) erro
 
 	return allErrors
 }
+
+// Every tier is covered because a hit in any one of them would otherwise resurrect the tile.
+func (c Multi) Remove(ctx context.Context, t pkg.TileRequest) (bool, error) {
+	var allErrors error
+
+	anyRemoved := false
+
+	for _, cache := range c.Tiers {
+		removed, err := cache.Remove(ctx, t)
+		anyRemoved = anyRemoved || removed
+		allErrors = errors.Join(allErrors, err)
+	}
+
+	return anyRemoved, allErrors
+}

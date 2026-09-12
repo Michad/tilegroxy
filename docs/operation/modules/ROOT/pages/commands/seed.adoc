@@ -2,6 +2,8 @@
 
 A helper command to allow you to prepopulate your cache with prerendered tiles. This is especially useful when adding a new layer to tilegroxy that is slow to render the furthest out zoom levels and you want to avoid your first end-users running into this slowness. This command is roughly equivalent to standing up a server using the `serve` command and then hitting the layer endpoint with `cURL` requests for all the tiles you want.
 
+The same command can also remove cached tiles with the `--purge` flag. A purge walks the same layer, bounding box and zoom levels a seed would but deletes the matching cache entries instead of populating them.
+
 Full, up-to-date usage information can be found with `tilegroxy seed -h`.
 
 ----
@@ -11,13 +13,19 @@ for a range of zoom levels.
 Be mindful that the greater the zoom level (the more you "zoom in"),
 exponentially more tiles will need to be seeded for a given area. For
 instance, while zoom level 1 only requires 4 tiles to cover the planet,
-zoom level 10 requires over a million tiles.
+zoom level 10 requires over a million tiles. As a safety precaution, a
+limit of 10k tiles is applied unless you specify --force.
+
+Pass --purge to delete the tiles covering the same area instead of
+populating them. Purging makes no requests against upstream providers,
+so it isn't subject to the --force tile limit.
 
 Seed jobs can be resumed automatically by specifying a file with the --progress flag. Job progress will be written to that file as we go. Interrupting the command and then running the exact same command again, will start off more-or-less from where things left off. The file will be overwritten with progress and should get deleted once done. 
 
 Example:
 
 	tilegroxy seed -c test_config.yml -l osm -z 2 -v -t 7 -z 0 -z 1 -z 3 -z 4 --progress seed_job.json
+	tilegroxy seed -c test_config.yml -l osm -z 5 --purge
 
 Usage:
   tilegroxy seed [flags]
@@ -49,6 +57,9 @@ Flags:
                                 side of the bounding box (default -180)
   -p, --progress string         A file to use to record how far the seed 
                                 got. If the file already exists the seed resumes from its recorded position instead of starting over.
+      --purge                   Delete the cached tiles covering the
+                                given area and zoom levels instead of
+                                populating them.
   -t, --threads uint16          How many concurrent requests to use to
                                 perform seeding. Be mindful of spamming
                                 upstream providers (default 1)

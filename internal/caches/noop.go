@@ -55,3 +55,7 @@ func (c Noop) Lookup(_ context.Context, _ pkg.TileRequest) (*pkg.Image, error) {
 func (c Noop) Save(_ context.Context, _ pkg.TileRequest, _ *pkg.Image) error {
 	return nil
 }
+
+func (c Noop) Remove(_ context.Context, _ pkg.TileRequest) (bool, error) {
+	return false, nil
+}

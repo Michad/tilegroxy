@@ -88,6 +88,7 @@ func TestRedisWithContainerHostAndPort(t *testing.T) {
 	require.NoError(t, err)
 
 	validateSaveAndLookup(t, r)
+	validateRemove(t, r)
 }
 
 func TestRedisWithContainerSingleServersArr(t *testing.T) {

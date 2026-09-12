@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"slices"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -76,7 +77,7 @@ func Test_SeedThread_RecoversFromPanic(t *testing.T) {
 	close(tiles)
 
 	require.NotPanics(t, func() {
-		seedThread(&wg, SeedOptions{Verbose: true}, &out, lg, 0, tiles, done, errs, func() {})
+		seedThread(&wg, SeedOptions{Verbose: true}, &out, lg, 0, tiles, done, errs, func() {}, &atomic.Uint64{})
 	})
 
 	wg.Wait()
@@ -673,4 +674,165 @@ func Test_Seed_MaxFailuresAboveTileCount(t *testing.T) {
 		NumThread:   1,
 		MaxFailures: 5,
 	}, &out))
+}
+
+// A purge deletes what a seed wrote, over the same layer/bounds/zoom parameters.
+func Test_Seed_PurgeRemovesCachedTiles(t *testing.T) {
+	cfg := seedTestConfig(t)
+	dir := t.TempDir()
+	cfg.Cache = map[string]interface{}{"name": "disk", "path": dir}
+
+	opts := SeedOptions{
+		Zoom:      []uint{0, 1},
+		Bounds:    pkg.WorldBounds(),
+		LayerName: "counts",
+		NumThread: 1,
+	}
+
+	var out bytes.Buffer
+	require.NoError(t, Seed(&cfg, opts, &out))
+
+	entries, err := os.ReadDir(dir)
+	require.NoError(t, err)
+	require.NotEmpty(t, entries, "seed wrote nothing to purge")
+
+	purgeOpts := opts
+	purgeOpts.Purge = true
+
+	out.Reset()
+	require.NoError(t, Seed(&cfg, purgeOpts, &out))
+
+	entries, err = os.ReadDir(dir)
+	require.NoError(t, err)
+	require.Empty(t, entries)
+
+	// Zoom 0 and 1 over the whole world is 1 + 4 tiles, all of them seeded above.
+	assert.Contains(t, out.String(), "Removed 5 of 5 tiles")
+}
+
+// The reported count is what tells an operator whether a purge actually found anything, so tiles
+// that were never cached must not be counted.
+func Test_Seed_PurgeReportsOnlyTilesThatWereCached(t *testing.T) {
+	cfg := seedTestConfig(t)
+	cfg.Cache = map[string]interface{}{"name": "disk", "path": t.TempDir()}
+
+	var out bytes.Buffer
+	require.NoError(t, Seed(&cfg, SeedOptions{
+		Zoom:      []uint{0, 1},
+		Bounds:    pkg.WorldBounds(),
+		LayerName: "counts",
+		NumThread: 1,
+		Purge:     true,
+	}, &out))
+
+	assert.Contains(t, out.String(), "Removed 0 of 5 tiles")
+}
+
+// A purge covering more than was seeded reports only what it found, not the whole range.
+func Test_Seed_PurgeReportsPartialCount(t *testing.T) {
+	cfg := seedTestConfig(t)
+	dir := t.TempDir()
+	cfg.Cache = map[string]interface{}{"name": "disk", "path": dir}
+
+	var out bytes.Buffer
+	require.NoError(t, Seed(&cfg, SeedOptions{
+		Zoom:      []uint{0},
+		Bounds:    pkg.WorldBounds(),
+		LayerName: "counts",
+		NumThread: 1,
+	}, &out))
+
+	out.Reset()
+	require.NoError(t, Seed(&cfg, SeedOptions{
+		Zoom:      []uint{0, 1},
+		Bounds:    pkg.WorldBounds(),
+		LayerName: "counts",
+		NumThread: 1,
+		Purge:     true,
+	}, &out))
+
+	assert.Contains(t, out.String(), "Removed 1 of 5 tiles")
+}
+
+// The point of a purge is to reclaim space, so it must not repopulate what it deletes.
+func Test_Seed_PurgeDoesNotCallProvider(t *testing.T) {
+	cfg := seedTestConfig(t)
+	cfg.Cache = map[string]interface{}{"name": "disk", "path": t.TempDir()}
+
+	var out bytes.Buffer
+	require.NoError(t, Seed(&cfg, SeedOptions{
+		Zoom:      []uint{0, 1},
+		Bounds:    pkg.WorldBounds(),
+		LayerName: "counts",
+		NumThread: 1,
+		Purge:     true,
+	}, &out))
+
+	_, rendered := seedTestCounter.snapshot()
+	assert.Empty(t, rendered)
+}
+
+// --force guards against hammering an upstream provider, which a purge never does.
+func Test_Seed_PurgeSkipsForceThreshold(t *testing.T) {
+	e, err := seed.NewSeedJob("counts", pkg.WorldBounds(), []uint{10})
+	require.NoError(t, err)
+	require.Greater(t, e.Count(), uint64(warnCount))
+
+	var out bytes.Buffer
+
+	require.NoError(t, checkSeedSize(e, SeedOptions{LayerName: "counts", Purge: true}, &out))
+	require.ErrorContains(t, checkSeedSize(e, SeedOptions{LayerName: "counts"}, &out), "--force")
+}
+
+// A purge restricted to one tier leaves the others alone, the same way seeding does.
+func Test_Seed_PurgeCacheNameTargetsOneTier(t *testing.T) {
+	cfg := seedTestConfig(t)
+	purged := t.TempDir()
+	kept := t.TempDir()
+	cfg.Cache = map[string]interface{}{
+		"name": "multi",
+		"tiers": []map[string]interface{}{
+			{"name": "disk", "path": purged},
+			{"name": "disk", "path": kept},
+		},
+	}
+
+	opts := SeedOptions{
+		Zoom:      []uint{0},
+		Bounds:    pkg.WorldBounds(),
+		LayerName: "counts",
+		NumThread: 1,
+	}
+
+	var out bytes.Buffer
+	require.NoError(t, Seed(&cfg, opts, &out))
+
+	purgeOpts := opts
+	purgeOpts.Purge = true
+	purgeOpts.CacheName = "disk"
+
+	require.NoError(t, Seed(&cfg, purgeOpts, &out))
+
+	purgedEntries, err := os.ReadDir(purged)
+	require.NoError(t, err)
+	require.Empty(t, purgedEntries)
+
+	keptEntries, err := os.ReadDir(kept)
+	require.NoError(t, err)
+	require.NotEmpty(t, keptEntries)
+}
+
+func Test_Seed_PurgeInvalidLayer(t *testing.T) {
+	cfg := seedTestConfig(t)
+
+	var out bytes.Buffer
+	err := Seed(&cfg, SeedOptions{
+		Zoom:      []uint{0},
+		Bounds:    pkg.WorldBounds(),
+		LayerName: "nope",
+		NumThread: 1,
+		Purge:     true,
+	}, &out)
+
+	require.ErrorContains(t, err, "invalid layer")
 }

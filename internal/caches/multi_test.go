@@ -84,3 +84,47 @@ func TestMultiIn2(t *testing.T) {
 
 	validateLookup(t, multi, tile, &img)
 }
+
+func TestMultiRemove(t *testing.T) {
+	mem1, err := MemoryRegistration{}.Initialize(MemoryConfig{}, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
+	require.NoError(t, err)
+
+	mem2, err := MemoryRegistration{}.Initialize(MemoryConfig{}, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
+	require.NoError(t, err)
+
+	multi := Multi{Tiers: []cache.Cache{mem1, mem2}}
+
+	tile := makeReq(53)
+	img := makeImg(24)
+	require.NoError(t, multi.Save(context.Background(), tile, &img))
+
+	removed, err := multi.Remove(context.Background(), tile)
+	require.NoError(t, err)
+	require.True(t, removed)
+
+	validateNoLookup(t, multi, tile)
+	validateNoLookup(t, mem1, tile)
+	validateNoLookup(t, mem2, tile)
+}
+
+// A tile left behind in any single tier would be served again on the next lookup.
+func TestMultiRemoveClearsTierWithOnlyCopy(t *testing.T) {
+	mem1, err := MemoryRegistration{}.Initialize(MemoryConfig{}, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
+	require.NoError(t, err)
+
+	mem2, err := MemoryRegistration{}.Initialize(MemoryConfig{}, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
+	require.NoError(t, err)
+
+	multi := Multi{Tiers: []cache.Cache{mem1, mem2}}
+
+	tile := makeReq(71)
+	img := makeImg(24)
+	require.NoError(t, mem2.Save(context.Background(), tile, &img))
+
+	// Only one tier held the tile, but the tile itself was still removed.
+	removed, err := multi.Remove(context.Background(), tile)
+	require.NoError(t, err)
+	require.True(t, removed)
+
+	validateNoLookup(t, multi, tile)
+}

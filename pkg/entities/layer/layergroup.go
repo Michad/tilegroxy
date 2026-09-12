@@ -449,6 +449,30 @@ func (lg *LayerGroup) Close(ctx context.Context) error {
 	return errors.Join(errs...)
 }
 
+// Resolves the layer and cacheversion like RenderTile so it removes the entry a render would read.
+func (lg *LayerGroup) PurgeTile(ctx context.Context, tileRequest pkg.TileRequest) (bool, error) {
+	l := lg.FindLayer(ctx, tileRequest.LayerName)
+
+	if l == nil {
+		return false, pkg.UnauthorizedError{Message: "Layer " + tileRequest.LayerName + " does not exist"}
+	}
+
+	if err := l.CheckZoomBounds(tileRequest); err != nil {
+		return false, err
+	}
+
+	if l.Config.SkipCache {
+		return false, nil
+	}
+
+	cacheTileRequest := tileRequest
+	if l.Config.CacheVersion != "" {
+		cacheTileRequest = pkg.TileRequest{LayerName: l.Config.CacheVersion + tileRequest.LayerName, X: tileRequest.X, Y: tileRequest.Y, Z: tileRequest.Z}
+	}
+
+	return l.Cache.Remove(ctx, cacheTileRequest)
+}
+
 func (lg *LayerGroup) RenderTileNoCache(ctx context.Context, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	var err error
 

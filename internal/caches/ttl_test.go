@@ -50,6 +50,13 @@ func (m *memCache) Save(_ context.Context, t pkg.TileRequest, img *pkg.Image) er
 	return nil
 }
 
+func (m *memCache) Remove(_ context.Context, t pkg.TileRequest) (bool, error) {
+	_, ok := m.entries[t.String()]
+	delete(m.entries, t.String())
+
+	return ok, nil
+}
+
 func testTileRequest() pkg.TileRequest {
 	return pkg.TileRequest{LayerName: "layer", Z: 1, X: 2, Y: 3}
 }
@@ -127,6 +134,9 @@ func (erroringCache) Lookup(_ context.Context, _ pkg.TileRequest) (*pkg.Image, e
 func (erroringCache) Save(_ context.Context, _ pkg.TileRequest, _ *pkg.Image) error {
 	return errIntentional
 }
+func (erroringCache) Remove(_ context.Context, _ pkg.TileRequest) (bool, error) {
+	return false, errIntentional
+}
 
 var errIntentional = errors.New("intentional test error")
 
@@ -154,6 +164,7 @@ type closerCache struct {
 
 func (closerCache) Lookup(_ context.Context, _ pkg.TileRequest) (*pkg.Image, error) { return nil, nil }
 func (closerCache) Save(_ context.Context, _ pkg.TileRequest, _ *pkg.Image) error   { return nil }
+func (closerCache) Remove(_ context.Context, _ pkg.TileRequest) (bool, error)       { return false, nil }
 func (c closerCache) Close(_ context.Context) error {
 	c.closeFn()
 	return nil
@@ -200,4 +211,19 @@ func Test_TTLRegistration_RegisteredUnderName(t *testing.T) {
 	reg, ok := cache.RegisteredCache("ttl")
 	require.True(t, ok)
 	require.Equal(t, "ttl", reg.Name())
+}
+
+func Test_TTLCache_RemoveForwardsToInner(t *testing.T) {
+	inner := newMemCache()
+	c := NewTTLCache(inner, time.Hour)
+	req := testTileRequest()
+
+	require.NoError(t, c.Save(context.Background(), req, &pkg.Image{Content: []byte("x")}))
+	removed, err := c.Remove(context.Background(), req)
+	require.NoError(t, err)
+	require.True(t, removed)
+
+	img, err := c.Lookup(context.Background(), req)
+	require.NoError(t, err)
+	require.Nil(t, img)
 }

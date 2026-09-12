@@ -55,6 +55,9 @@ type Redis struct {
 	// expose what it wraps, so we have to hold onto it ourselves. Left nil when the client comes
 	// from a shared datastore, since the datastore registry owns closing it in that case.
 	client io.Closer
+	// The same client, held separately because Remove needs DEL's reply count, which
+	// rediscache.Cache discards. Always set, unlike client.
+	redis redis.UniversalClient
 }
 
 func init() {
@@ -110,7 +113,7 @@ func initializeRedisFromDatastore(config RedisConfig, deps cache.CacheDeps) (cac
 		return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "cache.redis.datastore", config.Datastore)
 	}
 
-	return &Redis{RedisConfig: config, cache: newRedisTileCache(client), client: nil}, nil
+	return &Redis{RedisConfig: config, cache: newRedisTileCache(client), client: nil, redis: client}, nil
 }
 
 // initializeRedisDirect builds a redis connection from the cache's own inline connection fields
@@ -139,7 +142,7 @@ func initializeRedisDirect(config RedisConfig, deps cache.CacheDeps) (cache.Cach
 
 	client := ds.Native().(redis.UniversalClient)
 
-	return &Redis{RedisConfig: config, cache: newRedisTileCache(client), client: client}, nil
+	return &Redis{RedisConfig: config, cache: newRedisTileCache(client), client: client, redis: client}, nil
 }
 
 func newRedisTileCache(client redis.UniversalClient) *rediscache.Cache {
@@ -190,4 +193,21 @@ func (c Redis) Save(ctx context.Context, t pkg.TileRequest, img *pkg.Image) erro
 	})
 
 	return err
+}
+
+// DEL replies with how many keys it actually removed, which rediscache.Cache discards, so this
+// goes to the client directly.
+func (c Redis) Remove(ctx context.Context, t pkg.TileRequest) (bool, error) {
+	key := c.KeyPrefix + t.String()
+
+	deleted, err := c.redis.Del(ctx, key).Result()
+
+	if errors.Is(err, rediscache.ErrCacheMiss) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+
+	return deleted > 0, nil
 }

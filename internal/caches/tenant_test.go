@@ -175,3 +175,28 @@ func Test_TenantRegistration_RegisteredUnderName(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, "tenant", reg.Name())
 }
+
+func Test_TenantCache_RemoveOnlyAffectsOwnTenant(t *testing.T) {
+	inner := newMemCache()
+	c := NewTenantCache(inner)
+	req := testTileRequest()
+
+	ctxA := contextWithTenant(t, "tenant-a")
+	ctxB := contextWithTenant(t, "tenant-b")
+
+	require.NoError(t, c.Save(ctxA, req, &pkg.Image{Content: []byte("a-data")}))
+	require.NoError(t, c.Save(ctxB, req, &pkg.Image{Content: []byte("b-data")}))
+
+	removed, err := c.Remove(ctxA, req)
+	require.NoError(t, err)
+	require.True(t, removed)
+
+	imgA, err := c.Lookup(ctxA, req)
+	require.NoError(t, err)
+	require.Nil(t, imgA)
+
+	imgB, err := c.Lookup(ctxB, req)
+	require.NoError(t, err)
+	require.NotNil(t, imgB)
+	require.Equal(t, []byte("b-data"), imgB.Content)
+}

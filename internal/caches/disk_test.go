@@ -36,6 +36,7 @@ func TestDisk(t *testing.T) {
 	c, err := DiskRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 	validateSaveAndLookup(t, c)
+	validateRemove(t, c)
 }
 
 // LayerName is User input for pattern layers, so a traversal sequence in it must not let

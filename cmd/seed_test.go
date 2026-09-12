@@ -266,3 +266,50 @@ func Test_SeedCommand_MismatchedProgressFile(t *testing.T) {
 	assert.Contains(t, string(out), "different seed run")
 	assert.Equal(t, 1, exitStatus)
 }
+
+func Test_SeedCommand_Purge(t *testing.T) {
+	exitStatus = -1
+	rootCmd.ResetFlags()
+	seedCmd.ResetFlags()
+	initRoot()
+	initSeed()
+
+	b := bytes.NewBufferString("")
+	rootCmd.SetOut(b)
+	rootCmd.SetErr(b)
+	rootCmd.SetArgs([]string{"seed", "--verbose", "-c", "../examples/configurations/simple.json", "-l", "osm", "-z", "0", "--purge"})
+	require.NoError(t, rootCmd.Execute())
+	out, err := io.ReadAll(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Println(string(out))
+
+	// The cache is "none", so nothing is there to remove, but the count still gets reported.
+	assert.Contains(t, string(out), "Removed 0 of 1 tiles")
+	assert.Contains(t, string(out), "Completed purging")
+	assert.Equal(t, -1, exitStatus)
+}
+
+// A purge makes no upstream requests, so the --force tile limit doesn't apply to it.
+func Test_SeedCommand_PurgeIgnoresTileLimit(t *testing.T) {
+	exitStatus = -1
+	rootCmd.ResetFlags()
+	seedCmd.ResetFlags()
+	initRoot()
+	initSeed()
+
+	b := bytes.NewBufferString("")
+	rootCmd.SetOut(b)
+	rootCmd.SetErr(b)
+	rootCmd.SetArgs([]string{"seed", "-c", "../examples/configurations/simple.json", "-l", "osm", "-z", "8", "-n", "1", "-s", "0", "-w", "0", "-e", "1", "--purge"})
+	require.NoError(t, rootCmd.Execute())
+	out, err := io.ReadAll(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.NotContains(t, string(out), "--force")
+	assert.Equal(t, -1, exitStatus)
+}

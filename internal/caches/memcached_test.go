@@ -87,6 +87,7 @@ func TestMemcachedWithContainerHostAndPort(t *testing.T) {
 	r, err := MemcachedRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 	validateSaveAndLookup(t, r)
+	validateRemove(t, r)
 }
 
 func TestMemcachedWithContainerSingleServersArr(t *testing.T) {

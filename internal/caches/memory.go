@@ -91,3 +91,13 @@ func (c Memory) Save(_ context.Context, t pkg.TileRequest, img *pkg.Image) error
 	c.Cache.Set(t.String(), *img)
 	return nil
 }
+
+func (c Memory) Remove(_ context.Context, t pkg.TileRequest) (bool, error) {
+	key := t.String()
+
+	// otter's Delete reports nothing, so presence has to be checked separately.
+	present := c.Cache.Has(key)
+	c.Cache.Delete(key)
+
+	return present, nil
+}
