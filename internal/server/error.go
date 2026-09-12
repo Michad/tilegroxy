@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"runtime/debug"
 
+	"github.com/Michad/tilegroxy/internal/audit"
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -98,6 +99,10 @@ func writeErrorMessage(ctx context.Context, w http.ResponseWriter, cfg *config.E
 	status, level, imgPath, contentType := errorVars(cfg, errorType, dataType)
 
 	slog.Log(ctx, level, internalMessage, "stack", string(stack))
+
+	if errorType == pkg.TypeOfErrorAuth {
+		audit.AuthFailure(ctx, internalMessage)
+	}
 
 	// Nothing else marks an error response as uncacheable - with AlwaysOK the status is even 200 -
 	// so a CDN in front of tilegroxy would hold onto "tile unavailable" long after the upstream

@@ -236,9 +236,26 @@ type MainConfig struct {
 	Headers []string // Headers to include in the logs. Useful for a transaction/request/trace/correlation ID or user identifiers
 }
 
+// Formats for outputting the audit log
+const (
+	AuditFormatPlain = "plain"
+	AuditFormatJSON  = "json"
+)
+
+// Configures the audit log: a stream of security relevant events (authentication and authorization
+// failures, configuration reloads)
+type AuditConfig struct {
+	Enabled bool     // If true, emit audit events. Defaults to false
+	Console bool     // If true, write audit events to standard out. Defaults to true
+	Path    string   // The file location to write audit events to. Log rotation is not built-in, use an external tool to avoid excessive growth. Defaults to none
+	Format  string   // The format to output audit events in. Applies to both standard out and file out. Possible values: plain, json. Defaults to json
+	Headers []string // Headers to include as attributes on audit events. Useful for a transaction/request/trace/correlation ID
+}
+
 type LogConfig struct {
 	Access AccessConfig
 	Main   MainConfig
+	Audit  AuditConfig
 }
 
 // Defines a layer to be served up by the application
@@ -304,6 +321,12 @@ func (c Config) Validate() error {
 	case AccessFormatCommon, AccessFormatCombined:
 	default:
 		errs = append(errs, fmt.Errorf(c.Error.Messages.InvalidParam, "logging.access.format %q", c.Logging.Access.Format))
+	}
+
+	switch c.Logging.Audit.Format {
+	case AuditFormatPlain, AuditFormatJSON:
+	default:
+		errs = append(errs, fmt.Errorf(c.Error.Messages.InvalidParam, "logging.audit.format %q", c.Logging.Audit.Format))
 	}
 
 	if c.Server.Timeout == 0 {
@@ -381,6 +404,13 @@ func DefaultConfig() Config {
 				Console: true,
 				Path:    "",
 				Format:  AccessFormatCombined,
+			},
+			Audit: AuditConfig{
+				Enabled: false,
+				Console: true,
+				Path:    "",
+				Format:  AuditFormatJSON,
+				Headers: []string{},
 			},
 		},
 		Error: ErrorConfig{

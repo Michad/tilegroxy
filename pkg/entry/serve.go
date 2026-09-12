@@ -21,7 +21,9 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/Michad/tilegroxy/internal/audit"
 	"github.com/Michad/tilegroxy/internal/server"
+	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities"
 )
@@ -49,12 +51,17 @@ func newReloadCallback(nextReloadPtr *func(*config.Config, *entities.Entities) e
 			return nil
 		}
 
+		auditCtx := pkg.BackgroundContext()
+
 		ent2, err := configToEntities(*newCfg)
 		if err != nil {
+			audit.ConfigReload(auditCtx, err)
 			return err
 		}
 
 		if err := (*nextReloadPtr)(newCfg, ent2); err != nil {
+			audit.ConfigReload(auditCtx, err)
+
 			closeCtx, cancel := context.WithTimeout(context.Background(), time.Duration(newCfg.Server.EffectiveShutdownTimeout())*time.Second) // #nosec G115 -- operator-supplied timeout in seconds, far below int64 overflow range
 			defer cancel()
 
@@ -64,6 +71,8 @@ func newReloadCallback(nextReloadPtr *func(*config.Config, *entities.Entities) e
 
 			return err
 		}
+
+		audit.ConfigReload(auditCtx, nil)
 
 		return nil
 	}

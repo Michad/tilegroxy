@@ -15,11 +15,14 @@
 package tg
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log/slog"
 	"sync/atomic"
 	"testing"
 
+	"github.com/Michad/tilegroxy/internal/audit"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities"
@@ -156,4 +159,57 @@ func Test_ReloadCallback_NoopBeforeReloadTargetPublished(t *testing.T) {
 	callback := newReloadCallback(&nextReload)
 
 	assert.NoError(t, callback(&cfg))
+}
+
+func Test_ReloadAuditsSuccess(t *testing.T) {
+	var buf bytes.Buffer
+	audit.SetAuditLoggerOnStartup(slog.New(slog.NewJSONHandler(&buf, nil)))
+	t.Cleanup(func() { audit.SetAuditLoggerOnStartup(nil) })
+
+	cfg, _ := spyCacheConfig(t)
+
+	var nextReload = func(_ *config.Config, _ *entities.Entities) error { return nil }
+
+	require.NoError(t, newReloadCallback(&nextReload)(&cfg))
+
+	out := buf.String()
+	assert.Contains(t, out, audit.EventConfigReload)
+	assert.Contains(t, out, audit.OutcomeSuccess)
+}
+
+// A reload that never gets built and one that fails to swap both have to leave a trail, otherwise
+// the audit log would imply the new config took effect.
+func Test_ReloadAuditsBuildFailure(t *testing.T) {
+	var buf bytes.Buffer
+	audit.SetAuditLoggerOnStartup(slog.New(slog.NewJSONHandler(&buf, nil)))
+	t.Cleanup(func() { audit.SetAuditLoggerOnStartup(nil) })
+
+	cfg := config.DefaultConfig()
+	cfg.Error.Mode = "not-a-real-mode"
+
+	var nextReload = func(_ *config.Config, _ *entities.Entities) error { return nil }
+
+	require.Error(t, newReloadCallback(&nextReload)(&cfg))
+
+	out := buf.String()
+	assert.Contains(t, out, audit.EventConfigReload)
+	assert.Contains(t, out, audit.OutcomeFailure)
+}
+
+func Test_ReloadAuditsSwapFailure(t *testing.T) {
+	var buf bytes.Buffer
+	audit.SetAuditLoggerOnStartup(slog.New(slog.NewJSONHandler(&buf, nil)))
+	t.Cleanup(func() { audit.SetAuditLoggerOnStartup(nil) })
+
+	cfg, _ := spyCacheConfig(t)
+
+	swapErr := errors.New("swap failed")
+	var nextReload = func(_ *config.Config, _ *entities.Entities) error { return swapErr }
+
+	require.ErrorIs(t, newReloadCallback(&nextReload)(&cfg), swapErr)
+
+	out := buf.String()
+	assert.Contains(t, out, audit.EventConfigReload)
+	assert.Contains(t, out, audit.OutcomeFailure)
+	assert.Contains(t, out, "swap failed")
 }

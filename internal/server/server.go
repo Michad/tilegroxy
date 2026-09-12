@@ -16,6 +16,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"math"
@@ -282,6 +283,23 @@ func listenAndServeTLS(config *config.Config, srvErr chan error, srv *http.Serve
 	}
 }
 
+// configureLogging brings up the two log streams ListenAndServe owns, returning their closers in the order shutdown needs them. The access log is already set up by setupHandlers
+func configureLogging(cfg *config.Config) (func() error, func() error, error) {
+	closeMainLog, err := configureMainLogging(cfg)
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	closeAuditLog, err := configureAuditLogging(cfg.Logging.Audit, cfg.Error.Messages)
+
+	if err != nil {
+		return nil, nil, errors.Join(err, closeMainLog())
+	}
+
+	return closeMainLog, closeAuditLog, nil
+}
+
 func ListenAndServe(config *config.Config, ent *entities.Entities, reloadPtr *func(*config.Config, *entities.Entities) error) error {
 	if config.Server.Encrypt != nil && config.Server.Encrypt.Domain == "" {
 		return fmt.Errorf(config.Error.Messages.ParamRequired, "server.encrypt.domain")
@@ -293,7 +311,7 @@ func ListenAndServe(config *config.Config, ent *entities.Entities, reloadPtr *fu
 		return err
 	}
 
-	closeMainLog, err := configureMainLogging(config)
+	closeMainLog, closeAuditLog, err := configureLogging(config)
 
 	if err != nil {
 		return err
@@ -383,6 +401,7 @@ func ListenAndServe(config *config.Config, ent *entities.Entities, reloadPtr *fu
 		otelShutdown:   otelShutdown,
 		closeAccessLog: closeAccessLog,
 		closeMainLog:   closeMainLog,
+		closeAuditLog:  closeAuditLog,
 	}))
 }
 
@@ -398,6 +417,7 @@ type shutdownDeps struct {
 	otelShutdown   func(context.Context) error
 	closeAccessLog func() error
 	closeMainLog   func() error
+	closeAuditLog  func() error
 }
 
 func buildShutdownPhases(d shutdownDeps) shutdownPhases {
@@ -443,6 +463,11 @@ func buildShutdownPhases(d shutdownDeps) shutdownPhases {
 
 			if err := d.closeMainLog(); err != nil {
 				slog.WarnContext(context.Background(), fmt.Sprintf("Error closing main log: %v", err))
+			}
+
+			// Audit closes last so events from the phases above still land in it
+			if err := d.closeAuditLog(); err != nil {
+				slog.WarnContext(context.Background(), fmt.Sprintf("Error closing audit log: %v", err))
 			}
 		},
 	}

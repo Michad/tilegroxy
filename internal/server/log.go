@@ -25,6 +25,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/Michad/tilegroxy/internal/audit"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/static"
 	"github.com/gorilla/handlers"
@@ -39,6 +40,25 @@ type slogContextHandler struct {
 func (h slogContextHandler) Handle(ctx context.Context, r slog.Record) error {
 	for _, k := range h.keys {
 		r.AddAttrs(slog.Attr{Key: strings.ToLower(k), Value: slog.AnyValue(ctx.Value(k))})
+	}
+
+	return h.Handler.Handle(ctx, r)
+}
+
+// slogSkipEmptyContextHandler is slogContextHandler for records that may not have a request behind
+type slogSkipEmptyContextHandler struct {
+	slog.Handler
+	keys []string
+}
+
+func (h slogSkipEmptyContextHandler) Handle(ctx context.Context, r slog.Record) error {
+	for _, k := range h.keys {
+		v := ctx.Value(k)
+		if v == nil || v == "" {
+			continue
+		}
+
+		r.AddAttrs(slog.Attr{Key: strings.ToLower(k), Value: slog.AnyValue(v)})
 	}
 
 	return h.Handler.Handle(ctx, r)
@@ -152,6 +172,57 @@ func configureMainLogging(cfg *config.Config) (func() error, error) {
 	}
 
 	slog.SetDefault(slog.New(logHandler))
+
+	return closeLog, nil
+}
+
+func configureAuditLogging(cfg config.AuditConfig, errorMessages config.ErrorMessages) (func() error, error) {
+	noopClose := func() error { return nil }
+
+	if !cfg.Enabled {
+		audit.SetAuditLoggerOnStartup(nil)
+		return noopClose, nil
+	}
+
+	// Validate the format before opening files to avoid leaks on validation errors.
+	switch cfg.Format {
+	case config.AuditFormatPlain, config.AuditFormatJSON:
+	default:
+		return noopClose, fmt.Errorf(errorMessages.InvalidParam, "logging.audit.format", cfg.Format)
+	}
+
+	var out io.Writer
+	var err error
+	closeLog := noopClose
+
+	switch {
+	case len(cfg.Path) > 0:
+		out, closeLog, err = makeLogFileWriter(cfg.Path, cfg.Console)
+		if err != nil {
+			return noopClose, err
+		}
+	case cfg.Console:
+		out = os.Stdout
+	default:
+		return noopClose, fmt.Errorf(errorMessages.ParamRequired, "logging.audit.path")
+	}
+
+	opt := slog.HandlerOptions{Level: slog.LevelInfo}
+
+	var logHandler slog.Handler
+
+	if cfg.Format == config.AuditFormatPlain {
+		logHandler = slog.NewTextHandler(out, &opt)
+	} else {
+		logHandler = slog.NewJSONHandler(out, &opt)
+	}
+
+	// Request attributes are always included: an auth failure without the caller's IP and path isn't much of an audit trail.
+	attr := slices.Concat([]string{"uri", "path", "proto", "ip", "method", "host"}, cfg.Headers)
+
+	logHandler = slogSkipEmptyContextHandler{logHandler, attr}
+
+	audit.SetAuditLoggerOnStartup(slog.New(logHandler))
 
 	return closeLog, nil
 }

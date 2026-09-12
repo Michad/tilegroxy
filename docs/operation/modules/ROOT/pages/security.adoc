@@ -34,3 +34,9 @@ Despite these protections it's important that operators only utilize trusted ser
 Tilegroxy provides a flexible capability for xref:configuration/authentication/index.adoc[auth] but defaults to operating unauthenticated.  The flagship mode is via JWTs provided via HTTP header, which provides a capability for both authentication and authorization by layer and geographic region. 
 
 Tilegroxy is primarily intended to be used as a microservice within a broader application ecosystem so implementing the specifics of how authentication should work end-to-end is left up to the operator in conjunction with their needs.
+
+== Logging
+
+Tilegroxy has a few separately configurable log streams available. Consider ingesting each of these into your SIEM or log aggregator if your system is security-sensitive. 
+
+Most notably from a security side, rejected requests and configuration reloads can be recorded to a dedicated xref:configuration/log.adoc[audit log]. 
