@@ -33,7 +33,7 @@ The following sections can be partially reloaded:
 * xref:configuration/error.adoc[error]
 ** Overall error handling mode will not be changed but most error messages can be hot reloaded
 
-Changes to unsupported sections will be ignored.
+Changes to unsupported sections will be ignored. To check whether a pending configuration change can be reloaded, use xref:commands/config_diff.adoc[config diff].
 
 
 == Shutdown

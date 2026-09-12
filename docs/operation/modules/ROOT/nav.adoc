@@ -56,6 +56,7 @@
 ** xref:commands/serve.adoc[]
 ** xref:commands/config_create.adoc[]
 ** xref:commands/config_check.adoc[]
+** xref:commands/config_diff.adoc[]
 ** xref:commands/seed.adoc[]
 ** xref:commands/test.adoc[]
 * xref:analytics.adoc[]
