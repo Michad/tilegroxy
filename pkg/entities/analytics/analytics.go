@@ -20,6 +20,7 @@ package analytics
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -82,18 +83,25 @@ type CommonConfig struct {
 	Batch BatchConfig
 }
 
+var registrationsMu sync.RWMutex
 var registrations = make(map[string]AnalyticsRegistration)
 
 func RegisterAnalytics(reg AnalyticsRegistration) {
+	registrationsMu.Lock()
+	defer registrationsMu.Unlock()
 	registrations[reg.Name()] = reg
 }
 
 func RegisteredAnalytics(name string) (AnalyticsRegistration, bool) {
+	registrationsMu.RLock()
+	defer registrationsMu.RUnlock()
 	o, ok := registrations[name]
 	return o, ok
 }
 
 func RegisteredAnalyticsNames() []string {
+	registrationsMu.RLock()
+	defer registrationsMu.RUnlock()
 	names := make([]string, 0, len(registrations))
 	for n := range registrations {
 		names = append(names, n)
