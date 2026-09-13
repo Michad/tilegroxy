@@ -20,6 +20,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -204,4 +205,99 @@ func Test_ValidateRefs_NoRefs(t *testing.T) {
 
 	err := validateRefs(layers)
 	require.NoError(t, err)
+}
+
+type namedStubCache struct {
+	name string
+}
+
+func (namedStubCache) Lookup(_ context.Context, _ pkg.TileRequest) (*pkg.Image, error) {
+	return nil, nil
+}
+func (namedStubCache) Save(_ context.Context, _ pkg.TileRequest, _ *pkg.Image) error { return nil }
+func (namedStubCache) Remove(_ context.Context, _ pkg.TileRequest) (bool, error) {
+	return false, nil
+}
+
+func twoCacheRegistry(t *testing.T) *cache.CacheRegistry {
+	t.Helper()
+
+	cache.RegisterCache(namedStubCacheRegistration{name: "stub-layer-a"})
+	cache.RegisterCache(namedStubCacheRegistration{name: "stub-layer-b"})
+
+	reg, err := cache.ConstructCacheRegistry([]map[string]interface{}{
+		{"id": "main", "name": "stub-layer-a"},
+		{"id": "special", "name": "stub-layer-b"},
+	}, "", nil, cache.CacheDeps{ErrorMessages: config.DefaultConfig().Error.Messages})
+	require.NoError(t, err)
+
+	return reg
+}
+
+type namedStubCacheRegistration struct {
+	name string
+}
+
+func (s namedStubCacheRegistration) Name() string          { return s.name }
+func (s namedStubCacheRegistration) InitializeConfig() any { return struct{}{} }
+func (s namedStubCacheRegistration) Initialize(_ any, _ cache.CacheDeps) (cache.Cache, error) {
+	return namedStubCache(s), nil
+}
+
+func cacheName(t *testing.T, c cache.Cache) string {
+	t.Helper()
+
+	wrapper, ok := c.(cache.CacheWrapper)
+	require.True(t, ok)
+
+	return wrapper.Name
+}
+
+func Test_ConstructLayerGroup_LayerUsesOverriddenCache(t *testing.T) {
+	cfg := config.Config{Layers: []config.LayerConfig{
+		{ID: "plain", Provider: map[string]any{"name": "doc-example-sample"}},
+		{ID: "overridden", Provider: map[string]any{"name": "doc-example-sample"}, Cache: "special"},
+	}}
+
+	lg, err := ConstructLayerGroup(cfg, twoCacheRegistry(t), nil, nil)
+	require.NoError(t, err)
+
+	assert.Equal(t, "stub-layer-a", cacheName(t, lg.layers[0].Cache))
+	assert.Equal(t, "stub-layer-b", cacheName(t, lg.layers[1].Cache))
+}
+
+func Test_ConstructLayerGroup_UnknownLayerCacheErrors(t *testing.T) {
+	cfg := config.Config{Layers: []config.LayerConfig{
+		{ID: "bad", Provider: map[string]any{"name": "doc-example-sample"}, Cache: "nonexistent"},
+	}}
+
+	_, err := ConstructLayerGroup(cfg, twoCacheRegistry(t), nil, nil)
+	require.ErrorContains(t, err, "nonexistent")
+}
+
+// Coalescing defaults to on only when the layer actually caches. A layer overriding a noop default
+// with a real cache has to pick that up from its own cache, not the group's.
+func Test_ConstructLayerGroup_CoalesceFollowsLayerCache(t *testing.T) {
+	cache.RegisterCache(namedStubCacheRegistration{name: "stub-layer-real"})
+
+	// The real noop lives in internal/caches, which this package can't import, so a stub stands in
+	// under the same name. Coalescing keys off the wrapper name, which is what matters here.
+	cache.RegisterCache(namedStubCacheRegistration{name: "none"})
+
+	reg, err := cache.ConstructCacheRegistry([]map[string]interface{}{
+		{"id": "off", "name": "none"},
+		{"id": "on", "name": "stub-layer-real"},
+	}, "", nil, cache.CacheDeps{ErrorMessages: config.DefaultConfig().Error.Messages})
+	require.NoError(t, err)
+
+	cfg := config.Config{Layers: []config.LayerConfig{
+		{ID: "uncached", Provider: map[string]any{"name": "doc-example-sample"}},
+		{ID: "cached", Provider: map[string]any{"name": "doc-example-sample"}, Cache: "on"},
+	}}
+
+	lg, err := ConstructLayerGroup(cfg, reg, nil, nil)
+	require.NoError(t, err)
+
+	assert.False(t, lg.layers[0].allowCoalesce)
+	assert.True(t, lg.layers[1].allowCoalesce)
 }

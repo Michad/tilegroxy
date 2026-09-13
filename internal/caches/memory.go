@@ -16,26 +16,27 @@ package caches
 
 import (
 	"context"
-	"time"
+	"fmt"
 
+	"github.com/Michad/tilegroxy/internal/datastores"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 
 	"github.com/maypok86/otter"
 )
 
-const defaultMaxSize = 100
-const minMaxSize = 10
-const defaultTTL = 3600
-
 type MemoryConfig struct {
-	MaxSize uint16 // Maximum number of tiles to hold in the cache. Defaults to 100
-	TTL     uint32 // Maximum time to live of a tile in seconds. Defaults to 3600 (1 hour)
+	MaxSize   uint16 // Maximum number of tiles to hold in the cache. Defaults to 100
+	TTL       uint32 // Maximum time to live of a tile in seconds. Defaults to 3600 (1 hour)
+	Datastore string // ID of a memory datastore to share instead of holding a private store. Mutually exclusive with the parameters above
 }
 
 type Memory struct {
 	MemoryConfig
 	Cache otter.Cache[string, pkg.Image]
+	// Held only so it can be shut down. Nil when the store comes from a shared datastore, since the
+	// datastore registry owns closing it in that case.
+	owned *datastores.MemoryWrapper
 }
 
 func init() {
@@ -53,28 +54,50 @@ func (s MemoryRegistration) Name() string {
 	return "memory"
 }
 
-func (s MemoryRegistration) Initialize(configAny any, _ cache.CacheDeps) (cache.Cache, error) {
+func (s MemoryRegistration) Initialize(configAny any, deps cache.CacheDeps) (cache.Cache, error) {
 	config := configAny.(MemoryConfig)
 
-	if config.MaxSize < 1 {
-		config.MaxSize = defaultMaxSize
-	}
-	if config.MaxSize < minMaxSize {
-		config.MaxSize = minMaxSize
+	if config.Datastore != "" {
+		return initializeMemoryFromDatastore(config, deps)
 	}
 
-	if config.TTL < 1 {
-		config.TTL = defaultTTL
-	}
-
-	cache, err := otter.MustBuilder[string, pkg.Image](int(config.MaxSize)).
-		WithTTL(time.Duration(config.TTL) * time.Second).
-		Build()
+	// A private store, so two memory caches don't unexpectedly share tiles. Operators who do want
+	// them shared point both at one datastore.
+	owned, err := datastores.NewMemoryWrapper(datastores.MemoryWrapperConfig{MaxSize: config.MaxSize, TTL: config.TTL})
 	if err != nil {
 		return nil, err
 	}
 
-	return &Memory{config, cache}, nil
+	store, _ := owned.Native().(otter.Cache[string, pkg.Image])
+
+	return &Memory{config, store, owned}, nil
+}
+
+func initializeMemoryFromDatastore(config MemoryConfig, deps cache.CacheDeps) (cache.Cache, error) {
+	if config.MaxSize != 0 || config.TTL != 0 {
+		return nil, fmt.Errorf(deps.ErrorMessages.ParamsMutuallyExclusive, "cache.memory.datastore", "cache.memory.maxsize and cache.memory.ttl")
+	}
+
+	ds, ok := deps.Datastores.Get(config.Datastore)
+	if !ok {
+		return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "cache.memory.datastore", config.Datastore)
+	}
+
+	store, ok := ds.Native().(otter.Cache[string, pkg.Image])
+	if !ok {
+		return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "cache.memory.datastore", config.Datastore)
+	}
+
+	return &Memory{config, store, nil}, nil
+}
+
+// Close releases a private store. A shared one belongs to the datastore registry.
+func (c Memory) Close(ctx context.Context) error {
+	if c.owned == nil {
+		return nil
+	}
+
+	return c.owned.Close(ctx)
 }
 
 func (c Memory) Lookup(_ context.Context, t pkg.TileRequest) (*pkg.Image, error) {

@@ -414,6 +414,21 @@ func (l *Layer) MatchesName(ctx context.Context, layerName string) bool {
 	return false
 }
 
+// ConfigMatchesName reports whether a layer config would answer to the given name, including when
+// the layer is defined by a pattern. For callers working from raw config before the layers
+// themselves are built, so it resolves the pattern the same way construction does. A config whose
+// pattern doesn't parse matches nothing; construction reports that error.
+func ConfigMatchesName(rawConfig config.LayerConfig, errorMessages config.ErrorMessages, layerName string) bool {
+	segments, validator, err := resolvePatternAndValidator(rawConfig, errorMessages)
+	if err != nil {
+		return false
+	}
+
+	doesMatch, matches := match(segments, layerName)
+
+	return doesMatch && validateParamMatches(matches, validator)
+}
+
 // IsPattern reports whether this layer was defined with a pattern distinct from its ID, meaning
 // it has no single concrete tile URL and needs Config.Examples to produce TileJSON documents.
 func (l *Layer) IsPattern() bool {

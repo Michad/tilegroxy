@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -74,7 +73,7 @@ func Seed(cfg *config.Config, opts SeedOptions, out io.Writer) error {
 	entityConfig := *cfg
 
 	if opts.CacheName != "" {
-		entityConfig.Cache, err = restrictToCacheTier(entityConfig.Cache, opts.CacheName)
+		entityConfig.Layers, err = overrideLayerCache(entityConfig, opts.LayerName, opts.CacheName)
 		if err != nil {
 			return err
 		}
@@ -132,42 +131,23 @@ func Seed(cfg *config.Config, opts SeedOptions, out io.Writer) error {
 	return nil
 }
 
-// rewrites raw cache config so only the named tier of a "multi" cache gets constructed
-func restrictToCacheTier(rawConfig map[string]interface{}, name string) (map[string]interface{}, error) {
-	cacheName, _ := rawConfig["name"].(string)
-	if !strings.EqualFold(cacheName, "multi") {
-		return nil, fmt.Errorf("cache %q not found: layer's cache is not multi-tiered", name)
-	}
+// overrideLayerCache points the layer being seeded at a different cache, so a run can target one
+// specific cache by id. Any configured cache works, including one nested inside another, since
+// nested caches are registered under their own ids. Other layers are left alone; they aren't
+// being seeded.
+func overrideLayerCache(cfg config.Config, layerName, cacheID string) ([]config.LayerConfig, error) {
+	layers := make([]config.LayerConfig, len(cfg.Layers))
+	copy(layers, cfg.Layers)
 
-	var matched map[string]interface{}
-
-	switch rawTiers := rawConfig["tiers"].(type) {
-	case []map[string]interface{}:
-		for _, tier := range rawTiers {
-			if tierName, _ := tier["name"].(string); strings.EqualFold(tierName, name) {
-				matched = tier
-				break
-			}
-		}
-	case []interface{}:
-		for _, rawTier := range rawTiers {
-			tier, ok := rawTier.(map[string]interface{})
-			if !ok {
-				continue
-			}
-
-			if tierName, _ := tier["name"].(string); strings.EqualFold(tierName, name) {
-				matched = tier
-				break
-			}
+	// Matched the way a request is, so a pattern layer is seeded by a concrete name
+	for i, l := range layers {
+		if layer.ConfigMatchesName(l, cfg.Error.Messages, layerName) {
+			layers[i].Cache = cacheID
+			return layers, nil
 		}
 	}
 
-	if matched == nil {
-		return nil, fmt.Errorf("cache %q not found: no matching tier in the multi cache", name)
-	}
-
-	return matched, nil
+	return nil, fmt.Errorf("invalid layer %q", layerName)
 }
 
 func checkSeedSize(seedJob *seed.SeedJob, opts SeedOptions, out io.Writer) error {

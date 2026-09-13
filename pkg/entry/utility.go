@@ -49,17 +49,11 @@ func configToEntities(cfg config.Config) (*entities.Entities, error) {
 	}
 	built.Datastores = datastores
 
-	cfg.Cache = pkg.ReplaceEnv(cfg.Cache)
-	cfg.Cache, err = pkg.ReplaceConfigValues(cfg.Cache, "secret", secreter.Lookup)
-	if err != nil {
-		return nil, closeAndReturn(built, err)
-	}
-
-	cacheObj, err := cache.ConstructCache(cfg.Cache, cache.CacheDeps{ErrorMessages: cfg.Error.Messages, Datastores: datastores})
+	caches, err := cache.ConstructCacheRegistry(cfg.Cache, cfg.DefaultCache, secreter, cache.CacheDeps{ErrorMessages: cfg.Error.Messages, Datastores: datastores})
 	if err != nil {
 		return nil, closeAndReturn(built, fmt.Errorf("error constructing cache: %w", err))
 	}
-	built.Cache = cacheObj
+	built.Caches = caches
 
 	cfg.Authentication = pkg.ReplaceEnv(cfg.Authentication)
 	cfg.Authentication, err = pkg.ReplaceConfigValues(cfg.Authentication, "secret", secreter.Lookup)
@@ -79,7 +73,7 @@ func configToEntities(cfg config.Config) (*entities.Entities, error) {
 	}
 	built.Analytics = analyticsObj
 
-	layerGroup, err := layer.ConstructLayerGroup(cfg, cacheObj, secreter, datastores)
+	layerGroup, err := layer.ConstructLayerGroup(cfg, caches, secreter, datastores)
 	if err != nil {
 		return nil, closeAndReturn(built, fmt.Errorf("error constructing layers: %w", err))
 	}

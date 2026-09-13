@@ -36,9 +36,9 @@ import (
 )
 
 func configToEntities(cfg config.Config) (*layer.LayerGroup, authentication.Authentication, error) {
-	cache, err1 := cache.ConstructCache(cfg.Cache, cache.CacheDeps{ErrorMessages: cfg.Error.Messages})
+	caches, err1 := cache.ConstructCacheRegistry(cfg.Cache, cfg.DefaultCache, nil, cache.CacheDeps{ErrorMessages: cfg.Error.Messages})
 	auth, err2 := authentication.ConstructAuth(cfg.Authentication, authentication.AuthenticationDeps{ErrorMessages: cfg.Error.Messages})
-	layerGroup, err3 := layer.ConstructLayerGroup(cfg, cache, nil, nil)
+	layerGroup, err3 := layer.ConstructLayerGroup(cfg, caches, nil, nil)
 
 	return layerGroup, auth, errors.Join(err1, err2, err3)
 }
@@ -50,10 +50,10 @@ func Test_TileHandler_AllowedArea(t *testing.T) {
 	mainProvider["color"] = "FFF"
 	cfg.Layers = append(cfg.Layers, config.LayerConfig{ID: "main", Provider: mainProvider})
 	var auth authentication.Authentication
-	var cache cache.Cache
+	var tileCache cache.Cache
 	auth = authentications.Noop{}
-	cache = caches.Noop{}
-	lg, err := layer.ConstructLayerGroup(cfg, cache, nil, nil)
+	tileCache = caches.Noop{}
+	lg, err := layer.ConstructLayerGroup(cfg, cache.NewSingleCacheRegistry(tileCache), nil, nil)
 	require.NoError(t, err)
 
 	handler, err := newTileHandler(reloadableEntities{config: &cfg, auth: auth, layerGroup: lg})
@@ -114,10 +114,10 @@ func Test_TileHandler_Proxy(t *testing.T) {
 	mainProvider["url"] = ts.URL + "?a={layer.a}&b={ctx.user}&t={env.TEST}&z={z}&y={y}&x={x}"
 	cfg.Layers = append(cfg.Layers, config.LayerConfig{ID: "main", Pattern: "main_{a}", Provider: mainProvider, Client: &cfg.Client})
 	var auth authentication.Authentication
-	var cache cache.Cache
+	var tileCache cache.Cache
 	auth = authentications.Noop{}
-	cache = caches.Noop{}
-	lg, err := layer.ConstructLayerGroup(cfg, cache, nil, nil)
+	tileCache = caches.Noop{}
+	lg, err := layer.ConstructLayerGroup(cfg, cache.NewSingleCacheRegistry(tileCache), nil, nil)
 	require.NoError(t, err)
 
 	handler, err := newTileHandler(reloadableEntities{config: &cfg, auth: auth, layerGroup: lg})
@@ -155,10 +155,10 @@ func Test_TileHandler_RefToStatic(t *testing.T) {
 	cfg.Layers = append(cfg.Layers, config.LayerConfig{ID: "main", Pattern: "main_{something}", Provider: mainProvider})
 	cfg.Layers = append(cfg.Layers, config.LayerConfig{ID: "ref", Pattern: "test", Provider: refProvider})
 	var auth authentication.Authentication
-	var cache cache.Cache
+	var tileCache cache.Cache
 	auth = authentications.Noop{}
-	cache = caches.Noop{}
-	lg, err := layer.ConstructLayerGroup(cfg, cache, nil, nil)
+	tileCache = caches.Noop{}
+	lg, err := layer.ConstructLayerGroup(cfg, cache.NewSingleCacheRegistry(tileCache), nil, nil)
 	require.NoError(t, err)
 
 	handler, err := newTileHandler(reloadableEntities{config: &cfg, auth: auth, layerGroup: lg})
@@ -230,8 +230,8 @@ func Test_TileHandler_ExecuteCustom(t *testing.T) {
     	return tilegroxy.ValidationResult{Pass: false, Expiration: time.Now().Add(1000 * time.Hour)}
     }`
 
-	cache := caches.Noop{}
-	lg, err := layer.ConstructLayerGroup(cfg, cache, nil, nil)
+	tileCache := caches.Noop{}
+	lg, err := layer.ConstructLayerGroup(cfg, cache.NewSingleCacheRegistry(tileCache), nil, nil)
 	require.NoError(t, err)
 
 	authO, err := authentication.ConstructAuth(auth, authentication.AuthenticationDeps{ErrorMessages: cfg.Error.Messages})

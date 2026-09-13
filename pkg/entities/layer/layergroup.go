@@ -51,8 +51,8 @@ type LayerGroup struct {
 	generateGroup singleflight.Group
 }
 
-func ConstructLayerGroup(cfg config.Config, cache cache.Cache, secreter secret.Secreter, datastores *datastore.DatastoreRegistry) (*LayerGroup, error) {
-	var err, err1, err2 error
+func ConstructLayerGroup(cfg config.Config, caches *cache.CacheRegistry, secreter secret.Secreter, datastores *datastore.DatastoreRegistry) (*LayerGroup, error) {
+	var err1, err2 error
 	var layerGroup LayerGroup
 	layerObjects := make([]*Layer, len(cfg.Layers))
 
@@ -65,12 +65,17 @@ func ConstructLayerGroup(cfg config.Config, cache cache.Cache, secreter secret.S
 	}
 
 	for i, l := range cfg.Layers {
-		layerObjects[i], err = ConstructLayer(l, cfg.Client, true, cfg.Error.Messages, &layerGroup, secreter, datastores)
+		layerCache, err := resolveLayerCache(l, caches, cfg.Error.Messages)
 		if err != nil {
 			return nil, fmt.Errorf("error constructing layer %v: %w", i, err)
 		}
 
-		layerObjects[i].Cache = cache
+		layerObjects[i], err = ConstructLayer(l, cfg.Client, isNoopCache(layerCache), cfg.Error.Messages, &layerGroup, secreter, datastores)
+		if err != nil {
+			return nil, fmt.Errorf("error constructing layer %v: %w", i, err)
+		}
+
+		layerObjects[i].Cache = layerCache
 	}
 
 	meter := otel.Meter(packageName)
@@ -78,10 +83,30 @@ func ConstructLayerGroup(cfg config.Config, cache cache.Cache, secreter secret.S
 	layerGroup.cacheMissCounter, err2 = meter.Int64Counter("tilegroxy.cache.total.miss", metric.WithDescription("Number of requests that missed the cache (ignoring skips)"))
 
 	layerGroup.layers = layerObjects
-	layerGroup.DefaultCache = cache
+	layerGroup.DefaultCache = caches.Default()
 	layerGroup.cacheWriteLimiter = make(chan struct{}, maxConcurrentCacheWrites)
 
 	return &layerGroup, errors.Join(err1, err2)
+}
+
+func resolveLayerCache(l config.LayerConfig, caches *cache.CacheRegistry, errorMessages config.ErrorMessages) (cache.Cache, error) {
+	if l.Cache == "" {
+		return caches.Default(), nil
+	}
+
+	layerCache, ok := caches.Get(l.Cache)
+	if !ok {
+		return nil, cache.NewUnknownCacheError(errorMessages, "layer.cache", l.Cache, caches.IDs())
+	}
+
+	return layerCache, nil
+}
+
+// isNoopCache reports whether a layer's cache discards everything, which is what decides whether
+// coalescing concurrent requests is worth doing by default.
+func isNoopCache(c cache.Cache) bool {
+	wrapper, ok := c.(cache.CacheWrapper)
+	return ok && wrapper.Name == "none"
 }
 
 // findRefTargets recursively walks a raw provider config collecting the layer names that `ref`

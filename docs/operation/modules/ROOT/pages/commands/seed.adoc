@@ -31,9 +31,8 @@ Usage:
   tilegroxy seed [flags]
 
 Flags:
-      --cache string            For a layer using a multi-tiered cache,
-                                restrict seeding to the tier of this type
-                                (e.g. "disk"). By default every tier is seeded.
+      --cache string            Seed into the cache with this ID instead of
+                                the one the layer normally uses. 
       --force                   Perform the seeding even if it covers an
                                 excessive number of tiles. Without this
                                 flag seeds over 10k tiles will error out.

@@ -112,7 +112,7 @@ func initSeed() {
 	seedCmd.Flags().StringP("progress", "p", "", "A file to use to record how far the seed got. If the file already exists the seed resumes from its recorded position instead of starting over.")
 	seedCmd.Flags().Uint64("max-failures", 0, "How many tiles can fail to render before the seed gives up and exits with a failure status. \nDefaults to the number of tiles being seeded, meaning the seed only fails if every tile does")
 	seedCmd.Flags().Bool("purge", false, "Delete the cached tiles covering the given area and zoom levels instead of populating them.")
-	seedCmd.Flags().String("cache", "", "For a layer using a multi-tiered cache, restrict seeding to the tier of this type (e.g. \"disk\"). By default every tier is seeded.")
+	seedCmd.Flags().String("cache", "", "Seed into the cache with this ID instead of the one the layer normally uses.")
 	seedCmd.MarkFlagsMutuallyExclusive("force", "purge")
 
 	if err != nil {

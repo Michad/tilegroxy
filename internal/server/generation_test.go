@@ -327,10 +327,10 @@ func Test_ServeHTTPReleasesGenerationRef(t *testing.T) {
 	var auth authentication.Authentication = authentications.Noop{}
 	var c cache.Cache = caches.Noop{}
 
-	lg, err := layer.ConstructLayerGroup(cfg, c, nil, nil)
+	lg, err := layer.ConstructLayerGroup(cfg, cache.NewSingleCacheRegistry(c), nil, nil)
 	require.NoError(t, err)
 
-	gen := newGeneration(&entities.Entities{LayerGroup: lg, Auth: auth, Cache: c})
+	gen := newGeneration(&entities.Entities{LayerGroup: lg, Auth: auth, Caches: cache.NewSingleCacheRegistry(c)})
 
 	handler, err := newTileHandler(newReloadableEntities(&cfg, gen.all, gen))
 	require.NoError(t, err)

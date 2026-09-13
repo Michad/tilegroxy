@@ -36,7 +36,7 @@ type Entities struct {
 	LayerGroup *layer.LayerGroup
 	Auth       authentication.Authentication
 	Analytics  *analytics.AnalyticsWrapper
-	Cache      cache.Cache
+	Caches     *cache.CacheRegistry
 	Datastores *datastore.DatastoreRegistry
 }
 
@@ -65,12 +65,12 @@ func (e *Entities) Close(ctx context.Context) error {
 
 	if analyticsErr != nil {
 		slog.WarnContext(ctx, "Leaving datastore connections open because analytics did not finish flushing: "+analyticsErr.Error())
-		return errors.Join(preFlushErr, analyticsErr, lifecycle.CloseIfCloser(ctx, e.Cache))
+		return errors.Join(preFlushErr, analyticsErr, e.Caches.Close(ctx))
 	}
 
 	return errors.Join(
 		preFlushErr,
-		lifecycle.CloseIfCloser(ctx, e.Cache),
+		e.Caches.Close(ctx),
 		e.Datastores.Close(ctx),
 	)
 }
