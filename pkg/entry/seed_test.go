@@ -365,8 +365,8 @@ layers:
 	require.ErrorContains(t, err, "nope")
 }
 
-// --cache restricts a seed run to a single tier of a multi cache, so only that tier ends up
-// populated.
+// --cache points the seeded layer at one cache by id. Same-kind tiers without explicit ids
+// collide, so only the first is addressable.
 func Test_Seed_CacheNameTargetsOneTier(t *testing.T) {
 	layer.RegisterProvider(seedTestCountingRegistration{})
 	seedTestCounter.reset()
@@ -841,7 +841,7 @@ func Test_Seed_PurgeSkipsForceThreshold(t *testing.T) {
 	require.ErrorContains(t, checkSeedSize(e, SeedOptions{LayerName: "counts"}, &out), "--force")
 }
 
-// A purge restricted to one tier leaves the others alone, the same way seeding does.
+// A purge aimed at one cache id leaves the others alone, the same way seeding does.
 func Test_Seed_PurgeCacheNameTargetsOneTier(t *testing.T) {
 	cfg := seedTestConfig(t)
 	purged := t.TempDir()

@@ -8,7 +8,7 @@ When specifying a cache ensure you include the `name` parameter.
 
 == Overridable caches
 
-Layer configurations have the ability to specify a `cache` parameter that overrides the default cache configuration.  The top-level `cache` definition can be an array for specifying multiple distinct cache's.  This is different from the `multi` cache mentioned above. The `multi` cache allows combining multiple physical cache's into a single cache config, but specifying an array under `cache` directly specifies multiple distinct cache configs.
+Layer configurations have the ability to specify a `cache` parameter that overrides the default cache configuration.  The top-level `cache` definition can be an array for specifying multiple distinct caches.  This is different from the `multi` cache mentioned above. The `multi` cache allows combining multiple physical caches into a single cache config, but specifying an array under `cache` directly specifies multiple distinct cache configs.
 
 Cache configurations are referred to by their `id` parameter, which defaults to the cache's `name`. If you have multiple caches of the same kind, then `id` is required.
 
@@ -51,10 +51,11 @@ layers:
     provider:
       name: proxy
       url: https://example.com/live/{z}/{x}/{y}.png
+datastores: ...
 ----
 
 In this example, the `public` layer (and all layers by default) will use a `multi` cache that caches in-memory first and then falls back on an S3 bucket. 
 
 The `per-user` layer overrides the cache to use the `tenanted` cache, which means it will still use that same cache methodology, but the entries in the cache will be segregated by tenant.
 
-The `uncached` layer meanwhile won't be cached as it will use the no-op `none` cache.  Note, alternatively you could use the `skipcache` paramter to avoid needing to explicitly define a `none` cache at the top level.
+The `uncached` layer meanwhile won't be cached as it will use the no-op `none` cache.  Note, alternatively you could use the `skipcache` parameter to avoid needing to explicitly define a `none` cache at the top level.

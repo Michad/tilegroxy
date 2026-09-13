@@ -296,11 +296,10 @@ type Config struct {
 	Secret         map[string]interface{}
 	Datastores     []map[string]interface{}
 	Authentication map[string]interface{}
-	// Either a single cache or an array of caches. An array requires an `id` on every entry, which layers reference by name
-	Cache        interface{}
-	DefaultCache string // The id of the cache layers use when they don't specify one. Defaults to the first entry
-	Analytics    map[string]interface{}
-	Layers       []LayerConfig
+	Cache          interface{} // Either a single cache or an array of caches.
+	DefaultCache   string      // The id of the cache layers use when they don't specify one. Defaults to the first entry
+	Analytics      map[string]interface{}
+	Layers         []LayerConfig
 }
 
 // Validate covers the fields entity construction doesn't touch: error.mode, logging levels, and

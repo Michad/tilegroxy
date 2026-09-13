@@ -247,13 +247,15 @@ func ConstructCacheRegistry(rawConfig interface{}, defaultID string, secreter se
 		if secreter != nil {
 			cfg, err = pkg.ReplaceConfigValues(cfg, "secret", secreter.Lookup)
 			if err != nil {
-				return nil, err
+				closeErr := reg.Close(context.Background())
+				return nil, errors.Join(err, closeErr)
 			}
 		}
 
 		built, err := ConstructCache(cfg, deps)
 		if err != nil {
-			return nil, err
+			closeErr := reg.Close(context.Background())
+			return nil, errors.Join(err, closeErr)
 		}
 
 		reg.caches[entry.ID] = built
