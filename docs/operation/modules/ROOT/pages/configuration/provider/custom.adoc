@@ -1,6 +1,6 @@
 = Custom
 
-Custom providers implement your own custom logic for providing imagery from whatever source you can imagine.  They require a custom Go script file interpreted using https://github.com/traefik/yaegi[Yaegi].  The main README has more detailed information on implementing custom providers and link:../examples/providers/[examples are available].
+Custom providers implement your own custom logic for providing imagery from whatever source you can imagine.  They require a custom Go script file interpreted using https://github.com/traefik/yaegi[Yaegi].  The main README has more detailed information on implementing custom providers and link:/examples/providers/custom_proxy.go[an example is available].
 
 Name should be "custom"
 

@@ -6,7 +6,7 @@ link:https://github.com/Michad/tilegroxy/tree/main/examples/configurations[Compl
 
 == Lazy Button
 
-A link:/docs/skills/generating-tilegroxy-config/SKILL.md[Skill] is available to help AI coding agents write and troubleshoot tilegroxy configuration. 
+A link:/skills/generating-tilegroxy-config/SKILL.md[Skill] is available to help AI coding agents write and troubleshoot tilegroxy configuration. 
 
 How to install it depends on your agent:
 

@@ -42,8 +42,8 @@ golangci:
 docs:
 	@npm i 
 	@node_modules/antora/bin/antora antora-playbook.yml
-	@mkdir -p build/site/examples/configurations/
-	@cp -r examples/configurations/* build/site/examples/configurations/
+	@mkdir -p build/site/examples/
+	@cp -r examples/* build/site/examples/
 	@cp -r docs/skills build/site/
 	@cp -r build/site/* internal/website/resources/
 
