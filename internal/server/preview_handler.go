@@ -20,31 +20,17 @@ import (
 	"html/template"
 	"log/slog"
 	"net/http"
-	"sync"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
 )
 
 type previewHandler struct {
-	entities    reloadableEntities
-	entityMutex sync.RWMutex
+	generationHolder
 }
 
-func newPreviewHandler(handler reloadableEntities) *previewHandler {
-	return &previewHandler{entities: handler}
-}
-
-func (h *previewHandler) reloadEntities(cfg *config.Config, ent *entities.Entities, gen *generation) {
-	h.entityMutex.Lock()
-	oldEntities := h.entities
-	h.entities = oldEntities.reloadedFrom(cfg, ent, gen)
-	h.entityMutex.Unlock()
-
-	if oldEntities.gen != nil {
-		oldEntities.gen.markClosing(pkg.BackgroundContext(), generationCloseFloor)
-	}
+func newPreviewHandler(gen *generation) *previewHandler {
+	return &previewHandler{generationHolder{current: gen}}
 }
 
 // previewTemplateData is what previewPageTemplate renders. Fields are exported only because html/template requires it
@@ -109,17 +95,10 @@ func (h *previewHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	slog.DebugContext(ctx, "server: preview handler started")
 	defer slog.DebugContext(ctx, "server: preview handler ended")
 
-	// Copy the entities and take a hold on their generation in the same critical section as the
-	// pointer read, so a concurrent reload either sees this request or hands us the new generation
-	h.entityMutex.RLock()
-	entities := h.entities
-	if entities.gen != nil {
-		entities.gen.acquire()
-		defer entities.gen.release()
-	}
-	h.entityMutex.RUnlock()
+	cur, release := h.acquire()
+	defer release()
 
-	entities.writeHeaders(w)
+	cur.writeHeaders(w)
 
 	if req.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusNoContent)
@@ -131,27 +110,27 @@ func (h *previewHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if !entities.auth.CheckAuthentication(ctx, req) {
-		writeError(ctx, w, &entities.errCfg, pkg.UnauthorizedError{Message: "CheckAuthentication returned false"}, config.DataTypeUnknown)
+	if !cur.auth().CheckAuthentication(ctx, req) {
+		writeError(ctx, w, &cur.errCfg, pkg.UnauthorizedError{Message: "CheckAuthentication returned false"}, config.DataTypeUnknown)
 		return
 	}
 
 	name := req.PathValue("layer")
 
-	l := entities.layerGroup.FindLayer(ctx, name)
+	l := cur.layerGroup().FindLayer(ctx, name)
 	if l == nil {
-		writeError(ctx, w, &entities.errCfg, pkg.UnauthorizedError{Message: "Layer " + name + " does not exist"}, config.DataTypeUnknown)
+		writeError(ctx, w, &cur.errCfg, pkg.UnauthorizedError{Message: "Layer " + name + " does not exist"}, config.DataTypeUnknown)
 		return
 	}
 
 	limitLayers, allowed := layerRestriction(ctx)
 	if limitLayers && !layerNameAllowed(name, l.ID, allowed) {
-		writeError(ctx, w, &entities.errCfg, pkg.UnauthorizedError{Message: "Denying access to non-allowed layer"}, config.DataTypeUnknown)
+		writeError(ctx, w, &cur.errCfg, pkg.UnauthorizedError{Message: "Denying access to non-allowed layer"}, config.DataTypeUnknown)
 		return
 	}
 
-	publicURL := resolvePublicURLs(req, entities.serverCfg.TileJSON.BaseURLs)[0]
-	tilePathPrefix := entities.tilePathPrefix()
+	publicURL := resolvePublicURLs(req, cur.serverCfg.TileJSON.BaseURLs)[0]
+	tilePathPrefix := cur.tilePathPrefix()
 	tileURL := publicURL.build(tilePathPrefix + "/" + name + "/{z}/{x}/{y}")
 
 	minZoom, maxZoom := previewZoomRange(l.Config)

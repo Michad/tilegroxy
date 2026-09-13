@@ -24,12 +24,10 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
 	"github.com/Michad/tilegroxy/pkg/entities/analytics"
 	"github.com/Michad/tilegroxy/pkg/static"
 
@@ -51,8 +49,7 @@ var packageName = static.GetPackage()
 var version, ref, buildDate = static.GetVersionInformation()
 
 type tileHandler struct {
-	entities           reloadableEntities
-	entityMutex        sync.RWMutex // Access to the entities struct above should happen inside this mutex to enable requests to be able to complete without disruption when hot reloading occurs
+	generationHolder
 	tracer             trace.Tracer
 	meter              metric.Meter
 	tileAllCounter     metric.Int64Counter
@@ -61,7 +58,7 @@ type tileHandler struct {
 	tileSuccessCounter metric.Int64Counter
 }
 
-func newTileHandler(handler reloadableEntities) (tileHandler, error) {
+func newTileHandler(gen *generation) (tileHandler, error) {
 	meter := otel.Meter(packageName)
 
 	tileAllCounter, err1 := meter.Int64Counter("tilegroxy.tiles.total.request", metric.WithDescription("Number of total tile requests"))
@@ -70,8 +67,7 @@ func newTileHandler(handler reloadableEntities) (tileHandler, error) {
 	tileSuccessCounter, err4 := meter.Int64Counter("tilegroxy.tiles.total.success", metric.WithDescription("Number of tile requests that result in a tile"))
 
 	return tileHandler{
-		handler,
-		sync.RWMutex{},
+		generationHolder{current: gen},
 		otel.Tracer(packageName),
 		meter,
 		tileAllCounter,
@@ -81,29 +77,10 @@ func newTileHandler(handler reloadableEntities) (tileHandler, error) {
 	}, errors.Join(err1, err2, err3, err4)
 }
 
-func (h *tileHandler) reloadEntities(cfg *config.Config, ent *entities.Entities, gen *generation) {
+func (h *tileHandler) reload(gen *generation) {
 	slog.WarnContext(pkg.BackgroundContext(), "Requesting to refresh entities from configuration")
-
-	h.entityMutex.Lock()
-	oldEntities := h.entities
-	h.entities = oldEntities.reloadedFrom(cfg, ent, gen)
-	h.entityMutex.Unlock()
+	h.generationHolder.reload(gen)
 	slog.WarnContext(pkg.BackgroundContext(), "Completed refreshing entities from configuration")
-
-	// Retire the previous generation. It releases as soon as its in-flight requests finish rather
-	// than after a fixed wait, so rapid reloads no longer pin several sets of connections at once
-	if oldEntities.gen != nil {
-		oldEntities.gen.markClosing(pkg.BackgroundContext(), generationCloseFloor)
-	}
-}
-
-// currentEntities returns the generation currently serving requests. Shutdown closes this rather than the
-// generation the server was originally handed, which a reload may already have released
-func (h *tileHandler) currentEntities() *entities.Entities {
-	h.entityMutex.RLock()
-	defer h.entityMutex.RUnlock()
-
-	return h.entities.all
 }
 
 func setServiceSpanAttributes(span trace.Span) {
@@ -176,15 +153,8 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	span := trace.SpanFromContext(ctx)
 
-	// Copy the entities and take a hold on their generation in the same critical section as the
-	// pointer read, so a concurrent reload either sees this request or hands us the new generation
-	h.entityMutex.RLock()
-	entities := h.entities
-	if entities.gen != nil {
-		entities.gen.acquire()
-		defer entities.gen.release()
-	}
-	h.entityMutex.RUnlock()
+	cur, release := h.acquire()
+	defer release()
 
 	h.tileAllCounter.Add(ctx, 1)
 
@@ -193,7 +163,7 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	slog.DebugContext(ctx, "server: tile handler started")
 	defer slog.DebugContext(ctx, "server: tile handler ended")
 
-	entities.writeHeaders(w)
+	cur.writeHeaders(w)
 
 	if req.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusNoContent)
@@ -205,16 +175,16 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// doesn't match yet, or whose data type can't be determined, keeps the long-standing PNG
 	// behavior.
 	dataType := config.DataTypeUnknown
-	if l := entities.layerGroup.FindLayer(ctx, req.PathValue("layer")); l != nil {
+	if l := cur.layerGroup().FindLayer(ctx, req.PathValue("layer")); l != nil {
 		dataType = l.DataType
 	}
 
-	if !entities.auth.CheckAuthentication(ctx, req) {
-		writeError(ctx, w, &entities.errCfg, pkg.UnauthorizedError{Message: "CheckAuthentication returned false"}, dataType)
+	if !cur.auth().CheckAuthentication(ctx, req) {
+		writeError(ctx, w, &cur.errCfg, pkg.UnauthorizedError{Message: "CheckAuthentication returned false"}, dataType)
 		return
 	}
 
-	tileReq, ok := entities.extractAndValidateRequest(ctx, req, span, w, dataType)
+	tileReq, ok := cur.extractAndValidateRequest(ctx, req, span, w, dataType)
 	if !ok {
 		return // We already handled the error in the function
 	}
@@ -226,26 +196,26 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Bad Request")
-		writeError(ctx, w, &entities.errCfg, err, dataType)
+		writeError(ctx, w, &cur.errCfg, err, dataType)
 		return
 	}
 
 	h.tileValidCounter.Add(ctx, 1)
 
-	img, err := entities.layerGroup.RenderTile(ctx, tileReq)
+	img, err := cur.layerGroup().RenderTile(ctx, tileReq)
 
 	if err != nil {
 		h.tileErrorCounter.Add(ctx, 1)
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Rendering error")
-		writeError(ctx, w, &entities.errCfg, err, dataType)
+		writeError(ctx, w, &cur.errCfg, err, dataType)
 		return
 	}
 
 	if img == nil {
 		h.tileErrorCounter.Add(ctx, 1)
 		span.SetStatus(codes.Error, "No result")
-		writeErrorMessage(ctx, w, &entities.errCfg, pkg.TypeOfErrorProvider, "Tile rendered as nil but no error returned", entities.errCfg.Messages.ProviderError, nil, dataType)
+		writeErrorMessage(ctx, w, &cur.errCfg, pkg.TypeOfErrorProvider, "Tile rendered as nil but no error returned", cur.errCfg.Messages.ProviderError, nil, dataType)
 		return
 	}
 
@@ -257,18 +227,18 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// Recorded after the response is written so analytics never sits on the latency path. Like the
 	// success counter above, a failed write still counts as usage: the tile was produced and, for
 	// operators tracking consumption of a paid upstream, the cost was incurred.
-	entities.recordAnalytics(ctx, tileReq, img)
+	cur.recordAnalytics(ctx, tileReq, img)
 }
 
 // recordAnalytics emits a usage event for a successfully served tile. It resolves the layer a
 // second time to get its configured ID and skip flag; FindLayer is a cheap in-memory match and
 // keeps this off RenderTile, which also runs for seeding, health checks and ref providers.
-func (h *reloadableEntities) recordAnalytics(ctx context.Context, tileReq pkg.TileRequest, img *pkg.Image) {
-	if h.analytics.Empty() {
+func (s *generation) recordAnalytics(ctx context.Context, tileReq pkg.TileRequest, img *pkg.Image) {
+	if s.analytics().Empty() {
 		return
 	}
 
-	l := h.layerGroup.FindLayer(ctx, tileReq.LayerName)
+	l := s.layerGroup().FindLayer(ctx, tileReq.LayerName)
 
 	if l == nil || l.Config.SkipAnalytics {
 		return
@@ -289,7 +259,7 @@ func (h *reloadableEntities) recordAnalytics(ctx context.Context, tileReq pkg.Ti
 		UserID:    userID,
 	}
 
-	h.analytics.RecordEvent(ctx, event, analytics.FieldSource{
+	s.analytics().RecordEvent(ctx, event, analytics.FieldSource{
 		LayerName:   tileReq.LayerName,
 		Bytes:       len(img.Content),
 		ContentType: img.ContentType,
@@ -322,17 +292,7 @@ func requestETagMatches(ifNoneMatch string, etag string) bool {
 	return false
 }
 
-func (h *reloadableEntities) writeHeaders(w http.ResponseWriter) {
-	for h, v := range h.serverCfg.Headers {
-		w.Header().Add(h, v)
-	}
-
-	if !h.serverCfg.Production {
-		w.Header().Add("X-Powered-By", "tilegroxy "+version)
-	}
-}
-
-func (h *reloadableEntities) extractAndValidateRequest(ctx context.Context, req *http.Request, span trace.Span, w http.ResponseWriter, dataType config.DataType) (pkg.TileRequest, bool) {
+func (s *generation) extractAndValidateRequest(ctx context.Context, req *http.Request, span trace.Span, w http.ResponseWriter, dataType config.DataType) (pkg.TileRequest, bool) {
 	layerName := req.PathValue("layer")
 	zStr := req.PathValue("z")
 	xStr := req.PathValue("x")
@@ -343,7 +303,7 @@ func (h *reloadableEntities) extractAndValidateRequest(ctx context.Context, req 
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Bad Request")
-		writeError(ctx, w, &h.errCfg, pkg.InvalidArgumentError{Name: "z", Value: zStr}, dataType)
+		writeError(ctx, w, &s.errCfg, pkg.InvalidArgumentError{Name: "z", Value: zStr}, dataType)
 		return pkg.TileRequest{}, false
 	}
 
@@ -352,7 +312,7 @@ func (h *reloadableEntities) extractAndValidateRequest(ctx context.Context, req 
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Bad Request")
-		writeError(ctx, w, &h.errCfg, pkg.InvalidArgumentError{Name: "x", Value: xStr}, dataType)
+		writeError(ctx, w, &s.errCfg, pkg.InvalidArgumentError{Name: "x", Value: xStr}, dataType)
 		return pkg.TileRequest{}, false
 	}
 
@@ -361,7 +321,7 @@ func (h *reloadableEntities) extractAndValidateRequest(ctx context.Context, req 
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Bad Request")
-		writeError(ctx, w, &h.errCfg, pkg.InvalidArgumentError{Name: "y", Value: yStr}, dataType)
+		writeError(ctx, w, &s.errCfg, pkg.InvalidArgumentError{Name: "y", Value: yStr}, dataType)
 		return pkg.TileRequest{}, false
 	}
 

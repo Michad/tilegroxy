@@ -189,8 +189,8 @@ func Test_DiffConfig_DatastoreMatchesOnID(t *testing.T) {
 	require.Equal(t, "redis.internal", stores["r1"].(map[string]any)["host"])
 }
 
-// error mixes the two impacts: mode is fixed once handlers are built, messages are read per request
-func Test_DiffConfig_ErrorSectionSplitsByKey(t *testing.T) {
+// every key under error needs a restart, messages included
+func Test_DiffConfig_ErrorSectionNeedsRestart(t *testing.T) {
 	oldCfg := diffBaseConfig()
 	newCfg := diffBaseConfig()
 	newCfg.Error.Mode = config.ModeErrorPlainText
@@ -198,12 +198,11 @@ func Test_DiffConfig_ErrorSectionSplitsByKey(t *testing.T) {
 
 	res := diffAsMap(t, oldCfg, newCfg)
 
-	reloaded := res["reload"].(map[string]any)["modified"].(map[string]any)["error"].(map[string]any)
-	require.Contains(t, reloaded, "messages")
-	require.NotContains(t, reloaded, "mode")
+	require.NotContains(t, res, "reload")
 
 	restarted := res["restart"].(map[string]any)["modified"].(map[string]any)["error"].(map[string]any)
 	require.Contains(t, restarted, "mode")
+	require.Contains(t, restarted, "messages")
 }
 
 // server.health is rebuilt on reload even though the rest of server isn't

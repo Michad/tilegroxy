@@ -137,10 +137,9 @@ func setupHandlers(cfg *config.Config, ent *entities.Entities) (http.Handler, re
 	var myDocumentationHandler http.Handler
 	var myPreviewHandler http.Handler
 	registry := newGenerationRegistry()
-	firstGen := newGeneration(ent)
+	firstGen := newGeneration(cfg, ent)
 	registry.add(firstGen)
-	reloadable := newReloadableEntities(cfg, ent, firstGen)
-	myDefaultHandler := defaultHandler{reloadable}
+	myDefaultHandler := defaultHandler{firstGen}
 
 	var preview *previewHandler
 
@@ -153,32 +152,35 @@ func setupHandlers(cfg *config.Config, ent *entities.Entities) (http.Handler, re
 			myDocumentationHandler = &documentationHandler{myDefaultHandler}
 		}
 
-		preview = newPreviewHandler(reloadable)
+		preview = newPreviewHandler(firstGen)
 		myPreviewHandler = preview
 	}
 
-	// Derived from the same projection the handlers serve from, so a route and the URL advertised
-	// for it cannot drift apart
-	tilePath := reloadable.tilePathPrefix() + "/{layer}/{z}/{x}/{y}"
+	// Derived from the same generation the handlers use, so a route and the URL advertised for it
+	// cannot drift apart
+	tilePath := firstGen.tilePathPrefix() + "/{layer}/{z}/{x}/{y}"
 	docsPath := cfg.Server.RootPath + cfg.Server.DocsPath + "/{path...}"
 	previewPath := cfg.Server.RootPath + "preview/{layer}"
-	handler, err := newTileHandler(reloadable)
+	handler, err := newTileHandler(firstGen)
 	if err != nil {
 		return nil, nil, nil, nil, nil, err
 	}
 
 	myTileHandler = &handler
 
-	tileJSON := setupTileJSONHandlers(cfg, reloadable)
+	tileJSON := setupTileJSONHandlers(cfg, firstGen)
 
-	reloadFunc := func(cfg2 *config.Config, ent2 *entities.Entities) error {
-		gen := newGeneration(ent2)
+	// The new config is deliberately ignored: every handler-visible section is non-reloadable, so a
+	// reload installs only the new entities. Each successor descends from the startup generation,
+	// which is where that non-reloadable config lives. See generation.
+	reloadFunc := func(_ *config.Config, ent2 *entities.Entities) error {
+		gen := firstGen.succeededBy(ent2)
 		registry.add(gen)
-		handler.reloadEntities(cfg2, ent2, gen)
-		tileJSON.reloadEntities(cfg2, ent2, gen)
+		handler.reload(gen)
+		tileJSON.reload(gen)
 
 		if preview != nil {
-			preview.reloadEntities(cfg2, ent2, gen)
+			preview.reload(gen)
 		}
 
 		return nil

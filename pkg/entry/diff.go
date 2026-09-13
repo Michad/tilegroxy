@@ -68,11 +68,6 @@ var reloadableSections = map[string]bool{
 	"layers":         true,
 }
 
-var reloadableErrorKeys = map[string]bool{
-	"messages": true,
-	"images":   true,
-}
-
 var reloadableServerKeys = map[string]bool{
 	"health": true,
 }
@@ -232,8 +227,8 @@ func diffSection(section string, oldVal, newVal any) []diffEntry {
 		return []diffEntry{{impact: sectionImpact(section, ""), kind: diffKindModified, section: section, value: changes}}
 	}
 
-	// error and server mix reloadable and restart-only keys, so each of their top level keys is
-	// attributed separately
+	// server mixes reloadable and restart-only keys, so each of its top level keys is attributed
+	// separately
 	entries := make([]diffEntry, 0, len(changeMap))
 	for _, key := range sortedKeys(changeMap) {
 		entries = append(entries, diffEntry{
@@ -249,10 +244,6 @@ func diffSection(section string, oldVal, newVal any) []diffEntry {
 
 func sectionImpact(section, key string) string {
 	if reloadableSections[section] {
-		return diffImpactReload
-	}
-
-	if section == "error" && reloadableErrorKeys[key] {
 		return diffImpactReload
 	}
 

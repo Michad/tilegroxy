@@ -19,21 +19,37 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"runtime/debug"
 	"sync"
 	"time"
 
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/analytics"
+	"github.com/Michad/tilegroxy/pkg/entities/authentication"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
 // How long a generation waits before trusting its refcount. The handler increments under the same
 // lock that guards the pointer read, so this only covers the window between those two operations
 const generationCloseFloor = 2 * time.Second
 
-// generation is one constructed set of entities plus the count of requests still using it. A reload
-// swaps the pointer and marks the outgoing generation closing; it releases once the last request returns
+// generation is what a handler serves one request from: the non-reloadable configuration captured
+// at startup, one constructed set of entities, and the count of requests still using them. A reload
+// builds a successor carrying the same configuration forward, swaps the pointer and marks the
+// outgoing generation closing; it releases once the last request returns.
 type generation struct {
+	// The server section is not reloadable, so this is the configuration the process started with,
+	// carried across every reload. Held by value: the handlers have no path back to the live
+	// *config.Config, so a reload cannot reach what they serve.
+	serverCfg config.ServerConfig
+	// The error section is not reloadable either, so this is likewise the startup configuration.
+	errCfg config.ErrorConfig
+
+	// Sole owner of the entities: requests hold the generation for their duration so a reload
+	// cannot release them out from under an in-flight request.
 	all *entities.Entities
 
 	mu       sync.Mutex
@@ -52,8 +68,122 @@ type generation struct {
 	done chan struct{}
 }
 
-func newGeneration(ent *entities.Entities) *generation {
-	return &generation{all: ent, done: make(chan struct{})}
+// newGeneration pairs the non-reloadable configuration with a set of entities. Only valid at
+// startup: a reload must go through succeededBy so those values carry forward.
+func newGeneration(cfg *config.Config, ent *entities.Entities) *generation {
+	g := &generation{all: ent, done: make(chan struct{})}
+
+	if cfg != nil {
+		g.serverCfg = cfg.Server
+		g.errCfg = cfg.Error
+	}
+
+	return g
+}
+
+// succeededBy builds what a reload swaps in. The non-reloadable config is taken from the current
+// generation rather than the new config, so handlers keep serving what the startup routes describe.
+func (g *generation) succeededBy(ent *entities.Entities) *generation {
+	next := newGeneration(nil, ent)
+	next.serverCfg = g.serverCfg
+	next.errCfg = g.errCfg
+
+	return next
+}
+
+// entities returns the set this generation owns, nil when there is no generation installed.
+func (g *generation) entities() *entities.Entities {
+	if g == nil {
+		return nil
+	}
+
+	return g.all
+}
+
+func (g *generation) layerGroup() *layer.LayerGroup {
+	if all := g.entities(); all != nil {
+		return all.LayerGroup
+	}
+
+	return nil
+}
+
+func (g *generation) auth() authentication.Authentication {
+	if all := g.entities(); all != nil {
+		return all.Auth
+	}
+
+	return nil
+}
+
+func (g *generation) analytics() *analytics.AnalyticsWrapper {
+	if all := g.entities(); all != nil {
+		return all.Analytics
+	}
+
+	return nil
+}
+
+// tilePathPrefix is the path tiles are advertised under, matching the route setupHandlers
+// registered at startup.
+func (g *generation) tilePathPrefix() string {
+	return g.serverCfg.RootPath + g.serverCfg.TilePath
+}
+
+func (g *generation) writeHeaders(w http.ResponseWriter) {
+	for name, v := range g.serverCfg.Headers {
+		w.Header().Add(name, v)
+	}
+
+	if !g.serverCfg.Production {
+		w.Header().Add("X-Powered-By", "tilegroxy "+version)
+	}
+}
+
+// generationHolder is the swappable slot each reloadable handler keeps its current generation in.
+// Its mutex guards which generation is installed; the generation's own mutex guards that
+// generation's refcount. Lock order is always this one first, never the reverse.
+type generationHolder struct {
+	current *generation
+	mu      sync.RWMutex
+}
+
+// reload installs a new generation and retires the previous one, which releases as soon as its
+// in-flight requests finish rather than after a fixed wait.
+func (h *generationHolder) reload(gen *generation) {
+	h.mu.Lock()
+	old := h.current
+	h.current = gen
+	h.mu.Unlock()
+
+	old.markClosing(pkg.BackgroundContext(), generationCloseFloor)
+}
+
+// acquire returns what is currently serving plus the release to defer for the rest of the request.
+// The refcount is incremented inside the same critical section as the read, so a concurrent reload
+// either hands over the new generation or sees this request and defers retiring the old one.
+func (h *generationHolder) acquire() (*generation, func()) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	cur := h.current
+
+	if cur == nil {
+		return cur, func() {}
+	}
+
+	cur.acquire()
+
+	return cur, cur.release
+}
+
+// currentEntities returns the entities currently serving requests. Shutdown closes these rather
+// than the generation the server was originally handed, which a reload may already have released
+func (h *generationHolder) currentEntities() *entities.Entities {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	return h.current.entities()
 }
 
 func (g *generation) acquire() {
@@ -82,6 +212,10 @@ func (g *generation) release() {
 // markClosing retires the generation. It closes immediately once idle, or when the last in-flight
 // request returns. The floor covers the gap between a handler reading the pointer and incrementing
 func (g *generation) markClosing(ctx context.Context, floor time.Duration) {
+	if g == nil {
+		return
+	}
+
 	g.mu.Lock()
 	g.closing = true
 	g.closeCtx = ctx

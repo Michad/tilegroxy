@@ -21,87 +21,81 @@ import (
 	"testing"
 
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities"
 	"github.com/Michad/tilegroxy/pkg/entities/analytics"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
 )
 
-// testEntities builds the handler projection the way startup does, without the entity set a
-// generation would carry.
-func testEntities(cfg *config.Config, auth authentication.Authentication, lg *layer.LayerGroup) reloadableEntities {
-	r := newReloadableEntities(cfg, nil, nil)
-	r.auth = auth
-	r.layerGroup = lg
-
-	return r
+// testServing builds what a handler serves the way startup does, wrapping the entities in a
+// generation so the handlers reach them by the same path they do in production.
+func testServing(cfg *config.Config, auth authentication.Authentication, lg *layer.LayerGroup) *generation {
+	return testServingWithAnalytics(cfg, auth, lg, nil)
 }
 
-func testEntitiesWithAnalytics(cfg *config.Config, auth authentication.Authentication, lg *layer.LayerGroup, a *analytics.AnalyticsWrapper) reloadableEntities {
-	r := testEntities(cfg, auth, lg)
-	r.analytics = a
-
-	return r
+func testServingWithAnalytics(cfg *config.Config, auth authentication.Authentication, lg *layer.LayerGroup, a *analytics.AnalyticsWrapper) *generation {
+	return newGeneration(cfg, &entities.Entities{LayerGroup: lg, Auth: auth, Analytics: a})
 }
 
-// nonReloadableConfig returns a config whose every non-reloadable handler-visible value differs
-// from the default, so a reload onto it would show up in any value that leaked through.
-func nonReloadableConfig() *config.Config {
-	cfg := config.DefaultConfig()
-	cfg.Server.RootPath = "/new/"
-	cfg.Server.TilePath = "maps"
-	cfg.Server.DocsPath = "manual"
-	cfg.Server.Headers = map[string]string{"X-New": "yes"}
-	cfg.Server.Production = true
-	cfg.Server.TileJSON.BaseURLs = []string{"https://new.example.com"}
-	cfg.Error.Mode = config.ModeErrorPlainText
-	cfg.Error.AlwaysOK = true
-
-	return &cfg
-}
-
-func Test_ReloadedFrom_KeepsNonReloadableValues(t *testing.T) {
+func Test_SucceededBy_KeepsNonReloadableValues(t *testing.T) {
 	startCfg := config.DefaultConfig()
-	start := newReloadableEntities(&startCfg, nil, nil)
+	startCfg.Server.RootPath = "/start/"
+	startCfg.Server.TilePath = "tiles"
+	startCfg.Error.Mode = config.ModeErrorImageHeader
+	start := newGeneration(&startCfg, nil)
 
-	next := start.reloadedFrom(nonReloadableConfig(), nil, nil)
+	next := start.succeededBy(&entities.Entities{})
 
 	assert.Equal(t, start.serverCfg, next.serverCfg, "server is not reloadable")
-	assert.Equal(t, start.errCfg.Mode, next.errCfg.Mode, "error.mode is not reloadable")
-	assert.Equal(t, start.errCfg.AlwaysOK, next.errCfg.AlwaysOK, "error.alwaysok is not reloadable")
+	assert.Equal(t, start.errCfg, next.errCfg, "error is not reloadable")
+	assert.Equal(t, "/start/tiles", next.tilePathPrefix(), "the advertised tile path must match the route registered at startup")
 }
 
-func Test_ReloadedFrom_AppliesReloadableValues(t *testing.T) {
+func Test_SucceededBy_AppliesNewEntities(t *testing.T) {
 	startCfg := config.DefaultConfig()
-	start := newReloadableEntities(&startCfg, nil, nil)
+	start := newGeneration(&startCfg, nil)
 
-	newCfg := nonReloadableConfig()
-	newCfg.Error.Messages.NotAuthorized = "nope"
-	newCfg.Error.Images.Other = "other.png"
+	lg := &layer.LayerGroup{}
+	next := start.succeededBy(&entities.Entities{LayerGroup: lg})
 
-	next := start.reloadedFrom(newCfg, nil, nil)
-
-	assert.Equal(t, "nope", next.errCfg.Messages.NotAuthorized)
-	assert.Equal(t, "other.png", next.errCfg.Images.Other)
+	assert.Same(t, lg, next.layerGroup())
 }
 
 // The handlers must not be able to reach the live config, since anything reachable from a
 // request is something a reload can change. The pinned sections are held by value for that
 // reason; a pointer to any of them would alias whatever the reload built.
-func Test_ReloadableEntities_HoldsNoConfigPointer(t *testing.T) {
+func Test_Generation_HoldsNoConfigPointer(t *testing.T) {
 	banned := []reflect.Type{
 		reflect.TypeOf(&config.Config{}),
 		reflect.TypeOf(&config.ServerConfig{}),
 		reflect.TypeOf(&config.ErrorConfig{}),
 	}
 
-	structType := reflect.TypeOf(reloadableEntities{})
+	structType := reflect.TypeOf(generation{})
 
 	for i := range structType.NumField() {
 		field := structType.Field(i)
 
 		assert.NotContains(t, banned, field.Type,
-			"reloadableEntities."+field.Name+" points into a config a reload can replace, which makes non-reloadable values reloadable")
+			"generation."+field.Name+" points into a config a reload can replace, which makes non-reloadable values reloadable")
+	}
+}
+
+// The Entities set is the sole owner of the entities. A generation field caching one of them
+// alongside it could go stale against the set a request is actually reading through.
+func Test_Generation_CachesNoEntity(t *testing.T) {
+	structType := reflect.TypeOf(generation{})
+
+	entityFields := reflect.TypeOf(entities.Entities{})
+
+	for i := range structType.NumField() {
+		field := structType.Field(i)
+
+		for j := range entityFields.NumField() {
+			assert.NotEqual(t, entityFields.Field(j).Type, field.Type,
+				"generation."+field.Name+" duplicates an entity the entity set already owns; read it through that instead")
+		}
 	}
 }
 
@@ -110,8 +104,8 @@ func Test_DefaultHandler_RedirectUsesStartupPaths(t *testing.T) {
 	startCfg.Server.RootPath = "/"
 	startCfg.Server.DocsPath = "docs"
 
-	h := defaultHandler{newReloadableEntities(&startCfg, nil, nil)}
-	h.reloadableEntities = h.reloadedFrom(nonReloadableConfig(), nil, nil)
+	h := defaultHandler{newGeneration(&startCfg, nil)}
+	h.generation = h.succeededBy(nil)
 
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "http://localhost/", nil))
@@ -127,19 +121,39 @@ func Test_WriteHeaders_UsesStartupServerConfig(t *testing.T) {
 	startCfg.Server.Headers = map[string]string{"X-Old": "yes"}
 	startCfg.Server.Production = false
 
-	ent := newReloadableEntities(&startCfg, nil, nil)
-	ent = ent.reloadedFrom(nonReloadableConfig(), nil, nil)
+	ent := newGeneration(&startCfg, nil)
+	ent = ent.succeededBy(&entities.Entities{})
 
 	w := httptest.NewRecorder()
 	ent.writeHeaders(w)
 
 	assert.Equal(t, "yes", w.Header().Get("X-Old"))
-	assert.Empty(t, w.Header().Get("X-New"))
 	assert.NotEmpty(t, w.Header().Get("X-Powered-By"), "production is not reloadable")
 }
 
-func Test_NewReloadableEntities_NilConfig(t *testing.T) {
-	r := newReloadableEntities(nil, nil, nil)
+// No generation installed must read as empty rather than panicking, since the accessors run
+// before startup finishes wiring one in.
+func Test_Generation_Nil(t *testing.T) {
+	var r *generation
+
+	assert.Nil(t, r.entities())
+	assert.Nil(t, r.layerGroup())
+	assert.Nil(t, r.auth())
+	assert.Nil(t, r.analytics())
+}
+
+// A generation holding no entities is likewise empty rather than a panic.
+func Test_Generation_WithoutEntities(t *testing.T) {
+	r := newGeneration(nil, nil)
+
+	assert.Nil(t, r.entities())
+	assert.Nil(t, r.layerGroup())
+	assert.Nil(t, r.auth())
+	assert.Nil(t, r.analytics())
+}
+
+func Test_NewGeneration_NilConfig(t *testing.T) {
+	r := newGeneration(nil, nil)
 
 	assert.Equal(t, config.ServerConfig{}, r.serverCfg)
 	assert.Equal(t, config.ErrorConfig{}, r.errCfg)
