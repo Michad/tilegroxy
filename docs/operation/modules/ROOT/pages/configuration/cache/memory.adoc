@@ -23,6 +23,12 @@ Configuration options:
 | uint32
 | No
 | 3600
+
+| datastore
+| The ID of a xref:configuration/datastores/memory.adoc[memory datastore] to store tiles in instead of holding a private store. Use this when several memory caches need to hold the same tiles. Do not supply this at the same time as `maxsize` or `ttl`, those belong on the datastore
+| string
+| No
+| None
 |===
 
 Example:

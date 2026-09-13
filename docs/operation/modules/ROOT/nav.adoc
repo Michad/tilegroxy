@@ -42,6 +42,7 @@
 *** xref:configuration/datastores/postgresql.adoc[]
 *** xref:configuration/datastores/redis.adoc[]
 *** xref:configuration/datastores/memcached.adoc[]
+*** xref:configuration/datastores/memory.adoc[]
 ** xref:configuration/secret/index.adoc[]
 *** xref:configuration/secret/aws_secrets_manager.adoc[]
 ** xref:configuration/server.adoc[]

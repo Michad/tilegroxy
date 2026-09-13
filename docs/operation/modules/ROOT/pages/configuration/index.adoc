@@ -47,6 +47,7 @@ xref:configuration/error.adoc[error]:  ... +
 xref:configuration/secret/index.adoc[secret]: ... +
 xref:configuration/authentication/index.adoc[authentication]:  ... +
 xref:configuration/cache/index.adoc[cache]:  ... +
+xref:configuration/cache/index.adoc[defaultcache]:  "some-id"
 xref:configuration/datastores/index.adoc[datastores]: +
    - ... +
 xref:configuration/analytics/index.adoc[analytics]: ... +
