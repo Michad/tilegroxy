@@ -41,7 +41,7 @@ func buildTileJSONTestEntities(t *testing.T, cfg config.Config) reloadableEntiti
 	lg, err := layer.ConstructLayerGroup(cfg, c, nil, nil)
 	require.NoError(t, err)
 
-	return reloadableEntities{config: &cfg, auth: auth, layerGroup: lg}
+	return testEntities(&cfg, auth, lg)
 }
 
 func staticLayerConfig(id string) config.LayerConfig {
@@ -62,7 +62,7 @@ func Test_TileJSONHandler_ReloadEntities_SwapsGenerationAndReleasesOld(t *testin
 	h.entityMutex.RUnlock()
 	assert.Same(t, oldGen, before.gen)
 
-	h.reloadEntities(newReloadableEntities(&cfg, newGen.all, newGen))
+	h.reloadEntities(&cfg, newGen.all, newGen)
 
 	h.entityMutex.RLock()
 	after := h.entities
@@ -451,4 +451,36 @@ func Test_SetupHandlers_TileJSON_Disabled_RoutesNotRegistered(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { require.NoError(t, res.Body.Close()) }()
 	assert.NotEqual(t, http.StatusOK, res.StatusCode, "TileJSON index should not be served when disabled")
+}
+
+// The failure from issue 920: the tile route is registered once at startup, so advertising a
+// reloaded server.tilepath would hand every consumer URLs that 404.
+func Test_TileJSONHandler_Document_IgnoresReloadedServerConfig(t *testing.T) {
+	cfg := config.DefaultConfig()
+	cfg.Server.TileJSON.Enabled = true
+	cfg.Layers = []config.LayerConfig{staticLayerConfig("main")}
+
+	ent := buildTileJSONTestEntities(t, cfg)
+	h := newTileJSONHandler(ent, false)
+
+	newCfg := cfg
+	newCfg.Server.RootPath = "/new/"
+	newCfg.Server.TilePath = "maps"
+	newCfg.Server.TileJSON.BaseURLs = []string{"https://new.example.com"}
+	h.reloadEntities(&newCfg, &entities.Entities{LayerGroup: ent.layerGroup, Auth: ent.auth}, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/tiles/main.json", nil).WithContext(pkg.BackgroundContext())
+	req.SetPathValue("layerjson", "main.json")
+	w := httptest.NewRecorder()
+
+	h.ServeHTTP(w, req)
+
+	res := w.Result()
+	defer func() { require.NoError(t, res.Body.Close()) }()
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+
+	var doc layer.TileJSONDocument
+	require.NoError(t, json.NewDecoder(res.Body).Decode(&doc))
+	require.Len(t, doc.Tiles, 1)
+	assert.Equal(t, "http://example.com/tiles/main/{z}/{x}/{y}", doc.Tiles[0])
 }

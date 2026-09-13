@@ -81,12 +81,12 @@ func newTileHandler(handler reloadableEntities) (tileHandler, error) {
 	}, errors.Join(err1, err2, err3, err4)
 }
 
-func (h *tileHandler) reloadEntities(newEntities reloadableEntities) {
+func (h *tileHandler) reloadEntities(cfg *config.Config, ent *entities.Entities, gen *generation) {
 	slog.WarnContext(pkg.BackgroundContext(), "Requesting to refresh entities from configuration")
 
 	h.entityMutex.Lock()
 	oldEntities := h.entities
-	h.entities = newEntities
+	h.entities = oldEntities.reloadedFrom(cfg, ent, gen)
 	h.entityMutex.Unlock()
 	slog.WarnContext(pkg.BackgroundContext(), "Completed refreshing entities from configuration")
 
@@ -210,7 +210,7 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if !entities.auth.CheckAuthentication(ctx, req) {
-		writeError(ctx, w, &entities.config.Error, pkg.UnauthorizedError{Message: "CheckAuthentication returned false"}, dataType)
+		writeError(ctx, w, &entities.errCfg, pkg.UnauthorizedError{Message: "CheckAuthentication returned false"}, dataType)
 		return
 	}
 
@@ -226,7 +226,7 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Bad Request")
-		writeError(ctx, w, &entities.config.Error, err, dataType)
+		writeError(ctx, w, &entities.errCfg, err, dataType)
 		return
 	}
 
@@ -238,14 +238,14 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		h.tileErrorCounter.Add(ctx, 1)
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Rendering error")
-		writeError(ctx, w, &entities.config.Error, err, dataType)
+		writeError(ctx, w, &entities.errCfg, err, dataType)
 		return
 	}
 
 	if img == nil {
 		h.tileErrorCounter.Add(ctx, 1)
 		span.SetStatus(codes.Error, "No result")
-		writeErrorMessage(ctx, w, &entities.config.Error, pkg.TypeOfErrorProvider, "Tile rendered as nil but no error returned", entities.config.Error.Messages.ProviderError, nil, dataType)
+		writeErrorMessage(ctx, w, &entities.errCfg, pkg.TypeOfErrorProvider, "Tile rendered as nil but no error returned", entities.errCfg.Messages.ProviderError, nil, dataType)
 		return
 	}
 
@@ -323,11 +323,11 @@ func requestETagMatches(ifNoneMatch string, etag string) bool {
 }
 
 func (h *reloadableEntities) writeHeaders(w http.ResponseWriter) {
-	for h, v := range h.config.Server.Headers {
+	for h, v := range h.serverCfg.Headers {
 		w.Header().Add(h, v)
 	}
 
-	if !h.config.Server.Production {
+	if !h.serverCfg.Production {
 		w.Header().Add("X-Powered-By", "tilegroxy "+version)
 	}
 }
@@ -343,7 +343,7 @@ func (h *reloadableEntities) extractAndValidateRequest(ctx context.Context, req 
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Bad Request")
-		writeError(ctx, w, &h.config.Error, pkg.InvalidArgumentError{Name: "z", Value: zStr}, dataType)
+		writeError(ctx, w, &h.errCfg, pkg.InvalidArgumentError{Name: "z", Value: zStr}, dataType)
 		return pkg.TileRequest{}, false
 	}
 
@@ -352,7 +352,7 @@ func (h *reloadableEntities) extractAndValidateRequest(ctx context.Context, req 
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Bad Request")
-		writeError(ctx, w, &h.config.Error, pkg.InvalidArgumentError{Name: "x", Value: xStr}, dataType)
+		writeError(ctx, w, &h.errCfg, pkg.InvalidArgumentError{Name: "x", Value: xStr}, dataType)
 		return pkg.TileRequest{}, false
 	}
 
@@ -361,7 +361,7 @@ func (h *reloadableEntities) extractAndValidateRequest(ctx context.Context, req 
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Bad Request")
-		writeError(ctx, w, &h.config.Error, pkg.InvalidArgumentError{Name: "y", Value: yStr}, dataType)
+		writeError(ctx, w, &h.errCfg, pkg.InvalidArgumentError{Name: "y", Value: yStr}, dataType)
 		return pkg.TileRequest{}, false
 	}
 

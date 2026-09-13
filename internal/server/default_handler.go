@@ -26,7 +26,13 @@ import (
 )
 
 type reloadableEntities struct {
-	config     *config.Config
+	// The server section is not reloadable, so this is the configuration the process started with,
+	// carried across every reload. Held by value: the handlers have no path back to the live
+	// *config.Config, so a reload cannot reach what they serve.
+	serverCfg config.ServerConfig
+	// Only error.messages and error.images are reloadable, so a reload keeps the startup mode and
+	// alwaysok rather than applying halves of a section documented as needing a restart.
+	errCfg     config.ErrorConfig
 	layerGroup *layer.LayerGroup
 	auth       authentication.Authentication
 	analytics  *analytics.AnalyticsWrapper
@@ -39,8 +45,15 @@ type reloadableEntities struct {
 }
 
 // newReloadableEntities projects a constructed set of entities into the subset the handlers use.
+// Only valid at startup: a reload must go through reloadedFrom so the non-reloadable values carry
+// forward.
 func newReloadableEntities(cfg *config.Config, ent *entities.Entities, gen *generation) reloadableEntities {
-	r := reloadableEntities{config: cfg, all: ent, gen: gen}
+	r := reloadableEntities{all: ent, gen: gen}
+
+	if cfg != nil {
+		r.serverCfg = cfg.Server
+		r.errCfg = cfg.Error
+	}
 
 	if ent != nil {
 		r.layerGroup = ent.LayerGroup
@@ -49,6 +62,24 @@ func newReloadableEntities(cfg *config.Config, ent *entities.Entities, gen *gene
 	}
 
 	return r
+}
+
+// reloadedFrom builds the projection a reload swaps in. Everything non-reloadable is taken from
+// the current projection rather than the new config, so the handlers keep serving what the routes
+// registered at startup describe.
+func (h reloadableEntities) reloadedFrom(cfg *config.Config, ent *entities.Entities, gen *generation) reloadableEntities {
+	next := newReloadableEntities(cfg, ent, gen)
+	next.serverCfg = h.serverCfg
+	next.errCfg.Mode = h.errCfg.Mode
+	next.errCfg.AlwaysOK = h.errCfg.AlwaysOK
+
+	return next
+}
+
+// tilePathPrefix is the path tiles are advertised under, matching the route setupHandlers
+// registered at startup.
+func (h reloadableEntities) tilePathPrefix() string {
+	return h.serverCfg.RootPath + h.serverCfg.TilePath
 }
 
 type defaultHandler struct {
@@ -61,8 +92,8 @@ func (h *defaultHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	slog.DebugContext(ctx, "server: default handler started")
 	defer slog.DebugContext(ctx, "server: default handler ended")
 
-	if h.config.Server.DocsPath != "" {
-		w.Header().Add("Location", h.config.Server.RootPath+h.config.Server.DocsPath)
+	if h.serverCfg.DocsPath != "" {
+		w.Header().Add("Location", h.serverCfg.RootPath+h.serverCfg.DocsPath)
 		w.WriteHeader(http.StatusTemporaryRedirect)
 	} else {
 		w.WriteHeader(http.StatusNoContent)

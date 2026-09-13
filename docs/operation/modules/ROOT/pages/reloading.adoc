@@ -32,6 +32,8 @@ The following sections can be partially reloaded:
 
 * xref:configuration/error.adoc[error]
 ** Overall error handling mode will not be changed but most error messages can be hot reloaded
+* xref:configuration/server.adoc[server]
+** Only health checks are reloaded. Every other value under `server`, including paths, headers and production mode, is fixed when the server binds and will not be changed
 
 Changes to unsupported sections will be ignored. To check whether a pending configuration change can be reloaded, use xref:commands/config_diff.adoc[config diff].
 

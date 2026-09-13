@@ -42,7 +42,7 @@ func (h documentationHandler) ServeHTTP(w http.ResponseWriter, req *http.Request
 	data, contentType, err := website.ReadDocumentationFile(path)
 
 	if err != nil {
-		writeError(ctx, w, &h.config.Error, err, config.DataTypeUnknown)
+		writeError(ctx, w, &h.errCfg, err, config.DataTypeUnknown)
 		return
 	}
 

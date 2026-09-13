@@ -97,7 +97,7 @@ func setupAnalyticsHandler(t *testing.T, layers []config.LayerConfig, fields []s
 	a, err := analytics.ConstructAnalytics(moduleCfg, nil, analytics.AnalyticsDeps{ErrorMessages: cfg.Error.Messages})
 	require.NoError(t, err)
 
-	handler, err := newTileHandler(reloadableEntities{config: &cfg, auth: auth, layerGroup: lg, analytics: a})
+	handler, err := newTileHandler(testEntitiesWithAnalytics(&cfg, auth, lg, a))
 	require.NoError(t, err)
 
 	return &handler, rec
@@ -232,7 +232,7 @@ func Test_TileHandler_Analytics_NoModulesConfigured(t *testing.T) {
 	lg, err := layer.ConstructLayerGroup(cfg, c, nil, nil)
 	require.NoError(t, err)
 
-	handler, err := newTileHandler(reloadableEntities{config: &cfg, auth: auth, layerGroup: lg})
+	handler, err := newTileHandler(testEntities(&cfg, auth, lg))
 	require.NoError(t, err)
 
 	status := doTileRequest(t, &handler, "main", "8", "12", "32")
@@ -307,7 +307,7 @@ func Test_TileHandler_ReloadReleasesOldGenerationOnce(t *testing.T) {
 	newGen := newGeneration(newEnt)
 	registry.add(newGen)
 
-	handler.reloadEntities(newReloadableEntities(newCfg, newEnt, newGen))
+	handler.reloadEntities(newCfg, newEnt, newGen)
 
 	// No in-flight requests hold the old generation, so it releases once markClosing's floor elapses.
 	assert.Eventually(t, func() bool {

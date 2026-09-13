@@ -50,10 +50,10 @@ func newTileJSONHandler(handler reloadableEntities, index bool) *tileJSONHandler
 	return &tileJSONHandler{entities: handler, index: index}
 }
 
-func (h *tileJSONHandler) reloadEntities(newEntities reloadableEntities) {
+func (h *tileJSONHandler) reloadEntities(cfg *config.Config, ent *entities.Entities, gen *generation) {
 	h.entityMutex.Lock()
 	oldEntities := h.entities
-	h.entities = newEntities
+	h.entities = oldEntities.reloadedFrom(cfg, ent, gen)
 	h.entityMutex.Unlock()
 
 	if oldEntities.gen != nil {
@@ -88,7 +88,7 @@ func setupTileJSONHandlers(cfg *config.Config, reloadable reloadableEntities) *t
 		indexHTTP:    index,
 		documentHTTP: document,
 		indexPath:    cfg.Server.RootPath + cfg.Server.TileJSON.IndexPath,
-		documentPath: cfg.Server.RootPath + cfg.Server.TilePath + "/{layerjson}",
+		documentPath: reloadable.tilePathPrefix() + "/{layerjson}",
 	}
 }
 
@@ -97,8 +97,8 @@ func (t *tileJSONHandlers) reloadEntities(cfg *config.Config, ent *entities.Enti
 		return
 	}
 
-	t.index.reloadEntities(newReloadableEntities(cfg, ent, gen))
-	t.document.reloadEntities(newReloadableEntities(cfg, ent, gen))
+	t.index.reloadEntities(cfg, ent, gen)
+	t.document.reloadEntities(cfg, ent, gen)
 }
 
 func (t *tileJSONHandlers) wrapWithTelemetry() {
@@ -242,15 +242,15 @@ func (h *tileJSONHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if !entities.auth.CheckAuthentication(ctx, req) {
-		writeError(ctx, w, &entities.config.Error, pkg.UnauthorizedError{Message: "CheckAuthentication returned false"}, config.DataTypeUnknown)
+		writeError(ctx, w, &entities.errCfg, pkg.UnauthorizedError{Message: "CheckAuthentication returned false"}, config.DataTypeUnknown)
 		return
 	}
 
 	limitLayers, allowed := layerRestriction(ctx)
 	allowedArea := areaRestriction(ctx)
 
-	publicURLs := resolvePublicURLs(req, entities.config.Server.TileJSON.BaseURLs)
-	tilePathPrefix := entities.config.Server.RootPath + entities.config.Server.TilePath
+	publicURLs := resolvePublicURLs(req, entities.serverCfg.TileJSON.BaseURLs)
+	tilePathPrefix := entities.tilePathPrefix()
 
 	if h.index {
 		serveIndex(w, entities, publicURLs[0], tilePathPrefix, limitLayers, allowed)
@@ -287,18 +287,18 @@ func serveDocument(ctx context.Context, w http.ResponseWriter, req *http.Request
 	pathValue := req.PathValue("layerjson")
 	name, ok := strings.CutSuffix(pathValue, ".json")
 	if !ok {
-		writeError(ctx, w, &entities.config.Error, pkg.UnauthorizedError{Message: "Layer " + pathValue + " does not exist"}, config.DataTypeUnknown)
+		writeError(ctx, w, &entities.errCfg, pkg.UnauthorizedError{Message: "Layer " + pathValue + " does not exist"}, config.DataTypeUnknown)
 		return
 	}
 
 	l, foundName := findTileJSONLayer(entities.layerGroup, name)
 	if l == nil {
-		writeError(ctx, w, &entities.config.Error, pkg.UnauthorizedError{Message: "Layer " + name + " does not exist"}, config.DataTypeUnknown)
+		writeError(ctx, w, &entities.errCfg, pkg.UnauthorizedError{Message: "Layer " + name + " does not exist"}, config.DataTypeUnknown)
 		return
 	}
 
 	if limitLayers && !layerNameAllowed(foundName, l.ID, allowed) {
-		writeError(ctx, w, &entities.config.Error, pkg.UnauthorizedError{Message: "Denying access to non-allowed layer"}, config.DataTypeUnknown)
+		writeError(ctx, w, &entities.errCfg, pkg.UnauthorizedError{Message: "Denying access to non-allowed layer"}, config.DataTypeUnknown)
 		return
 	}
 

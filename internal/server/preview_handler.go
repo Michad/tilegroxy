@@ -24,6 +24,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities"
 )
 
 type previewHandler struct {
@@ -35,10 +36,10 @@ func newPreviewHandler(handler reloadableEntities) *previewHandler {
 	return &previewHandler{entities: handler}
 }
 
-func (h *previewHandler) reloadEntities(newEntities reloadableEntities) {
+func (h *previewHandler) reloadEntities(cfg *config.Config, ent *entities.Entities, gen *generation) {
 	h.entityMutex.Lock()
 	oldEntities := h.entities
-	h.entities = newEntities
+	h.entities = oldEntities.reloadedFrom(cfg, ent, gen)
 	h.entityMutex.Unlock()
 
 	if oldEntities.gen != nil {
@@ -131,7 +132,7 @@ func (h *previewHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if !entities.auth.CheckAuthentication(ctx, req) {
-		writeError(ctx, w, &entities.config.Error, pkg.UnauthorizedError{Message: "CheckAuthentication returned false"}, config.DataTypeUnknown)
+		writeError(ctx, w, &entities.errCfg, pkg.UnauthorizedError{Message: "CheckAuthentication returned false"}, config.DataTypeUnknown)
 		return
 	}
 
@@ -139,18 +140,18 @@ func (h *previewHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	l := entities.layerGroup.FindLayer(ctx, name)
 	if l == nil {
-		writeError(ctx, w, &entities.config.Error, pkg.UnauthorizedError{Message: "Layer " + name + " does not exist"}, config.DataTypeUnknown)
+		writeError(ctx, w, &entities.errCfg, pkg.UnauthorizedError{Message: "Layer " + name + " does not exist"}, config.DataTypeUnknown)
 		return
 	}
 
 	limitLayers, allowed := layerRestriction(ctx)
 	if limitLayers && !layerNameAllowed(name, l.ID, allowed) {
-		writeError(ctx, w, &entities.config.Error, pkg.UnauthorizedError{Message: "Denying access to non-allowed layer"}, config.DataTypeUnknown)
+		writeError(ctx, w, &entities.errCfg, pkg.UnauthorizedError{Message: "Denying access to non-allowed layer"}, config.DataTypeUnknown)
 		return
 	}
 
-	publicURL := resolvePublicURLs(req, entities.config.Server.TileJSON.BaseURLs)[0]
-	tilePathPrefix := entities.config.Server.RootPath + entities.config.Server.TilePath
+	publicURL := resolvePublicURLs(req, entities.serverCfg.TileJSON.BaseURLs)[0]
+	tilePathPrefix := entities.tilePathPrefix()
 	tileURL := publicURL.build(tilePathPrefix + "/" + name + "/{z}/{x}/{y}")
 
 	minZoom, maxZoom := previewZoomRange(l.Config)

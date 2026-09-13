@@ -234,7 +234,7 @@ func Test_PreviewHandler_ReloadEntities_SwapsGenerationAndReleasesOld(t *testing
 	assert.Equal(t, oldGen, h.entities.gen)
 	h.entityMutex.RUnlock()
 
-	h.reloadEntities(newReloadableEntities(&cfg, newGen.all, newGen))
+	h.reloadEntities(&cfg, newGen.all, newGen)
 
 	h.entityMutex.RLock()
 	assert.Equal(t, newGen, h.entities.gen)
@@ -357,4 +357,32 @@ func Test_SetupHandlers_Preview_NotRegisteredWhenProduction(t *testing.T) {
 	defer func() { require.NoError(t, res.Body.Close()) }()
 
 	assert.NotEqual(t, http.StatusOK, res.StatusCode, "preview should not be served when Production is set")
+}
+
+func Test_PreviewHandler_IgnoresReloadedServerConfig(t *testing.T) {
+	cfg := config.DefaultConfig()
+	cfg.Layers = []config.LayerConfig{staticLayerConfig("main")}
+
+	ent := buildTileJSONTestEntities(t, cfg)
+	h := newPreviewHandler(ent)
+
+	newCfg := cfg
+	newCfg.Server.RootPath = "/new/"
+	newCfg.Server.TilePath = "maps"
+	h.reloadEntities(&newCfg, &entities.Entities{LayerGroup: ent.layerGroup, Auth: ent.auth}, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/preview/main", nil).WithContext(pkg.BackgroundContext())
+	req.SetPathValue("layer", "main")
+	w := httptest.NewRecorder()
+
+	h.ServeHTTP(w, req)
+
+	res := w.Result()
+	defer func() { require.NoError(t, res.Body.Close()) }()
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+
+	body, err := io.ReadAll(res.Body)
+	require.NoError(t, err)
+	assert.Contains(t, string(body), `http:\/\/example.com\/tiles\/main\/{z}\/{x}\/{y}`)
+	assert.NotContains(t, string(body), "maps")
 }

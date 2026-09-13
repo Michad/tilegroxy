@@ -56,7 +56,7 @@ func Test_TileHandler_AllowedArea(t *testing.T) {
 	lg, err := layer.ConstructLayerGroup(cfg, cache, nil, nil)
 	require.NoError(t, err)
 
-	handler, err := newTileHandler(reloadableEntities{config: &cfg, auth: auth, layerGroup: lg})
+	handler, err := newTileHandler(testEntities(&cfg, auth, lg))
 	require.NoError(t, err)
 
 	ctx := pkg.BackgroundContext()
@@ -120,7 +120,7 @@ func Test_TileHandler_Proxy(t *testing.T) {
 	lg, err := layer.ConstructLayerGroup(cfg, cache, nil, nil)
 	require.NoError(t, err)
 
-	handler, err := newTileHandler(reloadableEntities{config: &cfg, auth: auth, layerGroup: lg})
+	handler, err := newTileHandler(testEntities(&cfg, auth, lg))
 	require.NoError(t, err)
 
 	ctx := pkg.BackgroundContext()
@@ -161,7 +161,7 @@ func Test_TileHandler_RefToStatic(t *testing.T) {
 	lg, err := layer.ConstructLayerGroup(cfg, cache, nil, nil)
 	require.NoError(t, err)
 
-	handler, err := newTileHandler(reloadableEntities{config: &cfg, auth: auth, layerGroup: lg})
+	handler, err := newTileHandler(testEntities(&cfg, auth, lg))
 	require.NoError(t, err)
 
 	req1 := httptest.NewRequest(http.MethodGet, "http://example.com/tiles/test/10/10/10", nil).WithContext(pkg.BackgroundContext())
@@ -237,7 +237,7 @@ func Test_TileHandler_ExecuteCustom(t *testing.T) {
 	authO, err := authentication.ConstructAuth(auth, authentication.AuthenticationDeps{ErrorMessages: cfg.Error.Messages})
 	require.NoError(t, err)
 
-	handler, err := newTileHandler(reloadableEntities{config: &cfg, auth: authO, layerGroup: lg})
+	handler, err := newTileHandler(testEntities(&cfg, authO, lg))
 	require.NoError(t, err)
 
 	req1 := httptest.NewRequest(http.MethodGet, "http://localhost:12341/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
@@ -301,7 +301,7 @@ layers:
 	require.NoError(t, err)
 	lg, auth, err := configToEntities(cfg)
 	require.NoError(t, err)
-	handler, err := newTileHandler(reloadableEntities{config: &cfg, auth: auth, layerGroup: lg})
+	handler, err := newTileHandler(testEntities(&cfg, auth, lg))
 	require.NoError(t, err)
 
 	req1 := httptest.NewRequest(http.MethodGet, "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
@@ -350,7 +350,7 @@ layers:
 	require.NoError(t, err)
 	lg, auth, err := configToEntities(cfg)
 	require.NoError(t, err)
-	handler, err := newTileHandler(reloadableEntities{config: &cfg, auth: auth, layerGroup: lg})
+	handler, err := newTileHandler(testEntities(&cfg, auth, lg))
 	require.NoError(t, err)
 
 	req1 := httptest.NewRequest(http.MethodGet, "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
@@ -385,7 +385,7 @@ layers:
 	require.NoError(t, err)
 	lg, auth, err := configToEntities(cfg)
 	require.NoError(t, err)
-	handler, err := newTileHandler(reloadableEntities{config: &cfg, auth: auth, layerGroup: lg})
+	handler, err := newTileHandler(testEntities(&cfg, auth, lg))
 	require.NoError(t, err)
 
 	req1 := httptest.NewRequest(http.MethodGet, "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
@@ -432,7 +432,7 @@ layers:
 	require.NoError(t, err)
 	lg, auth, err := configToEntities(cfg)
 	require.NoError(t, err)
-	handler, err := newTileHandler(reloadableEntities{config: &cfg, auth: auth, layerGroup: lg})
+	handler, err := newTileHandler(testEntities(&cfg, auth, lg))
 	require.NoError(t, err)
 
 	req1 := httptest.NewRequest(http.MethodGet, "http://localhost:12348/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
@@ -486,7 +486,7 @@ layers:
 	require.NoError(t, err)
 	lg, auth, err := configToEntities(cfg)
 	require.NoError(t, err)
-	handler, err := newTileHandler(reloadableEntities{config: &cfg, auth: auth, layerGroup: lg})
+	handler, err := newTileHandler(testEntities(&cfg, auth, lg))
 	require.NoError(t, err)
 
 	req1 := httptest.NewRequest(http.MethodGet, "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
@@ -528,7 +528,7 @@ layers:
 	require.NoError(t, err)
 	lg, auth, err := configToEntities(cfg)
 	require.NoError(t, err)
-	handler, err := newTileHandler(reloadableEntities{config: &cfg, auth: auth, layerGroup: lg})
+	handler, err := newTileHandler(testEntities(&cfg, auth, lg))
 	require.NoError(t, err)
 
 	req1 := httptest.NewRequest(http.MethodGet, "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())
@@ -576,7 +576,7 @@ layers:
 	require.NoError(t, err)
 	lg, auth, err := configToEntities(cfg)
 	require.NoError(t, err)
-	handler, err := newTileHandler(reloadableEntities{config: &cfg, auth: auth, layerGroup: lg})
+	handler, err := newTileHandler(testEntities(&cfg, auth, lg))
 	require.NoError(t, err)
 
 	// z8 exceeds the layer's maxzoom of 5, so this hits the bounds error path rather than auth.
@@ -623,7 +623,7 @@ layers:
 	require.NoError(t, err)
 	lg, auth, err := configToEntities(cfg)
 	require.NoError(t, err)
-	handler, err := newTileHandler(reloadableEntities{config: &cfg, auth: auth, layerGroup: lg})
+	handler, err := newTileHandler(testEntities(&cfg, auth, lg))
 	require.NoError(t, err)
 
 	req1 := httptest.NewRequest(http.MethodGet, "http://localhost:12349/tiles/vector/8/12/32", nil).WithContext(pkg.BackgroundContext())
@@ -663,7 +663,7 @@ layers:
 	require.NoError(t, err)
 	lg, auth, err := configToEntities(cfg)
 	require.NoError(t, err)
-	handler, err := newTileHandler(reloadableEntities{config: &cfg, auth: auth, layerGroup: lg})
+	handler, err := newTileHandler(testEntities(&cfg, auth, lg))
 	require.NoError(t, err)
 
 	req1 := httptest.NewRequest(http.MethodGet, "http://localhost:12349/tiles/color/8/12/32", nil).WithContext(pkg.BackgroundContext())

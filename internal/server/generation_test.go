@@ -305,7 +305,7 @@ func Test_ReloadKeepsGenerationAliveForInFlightRequest(t *testing.T) {
 
 	newGen := newGeneration(&entities.Entities{})
 	reg.add(newGen)
-	handler.reloadEntities(newReloadableEntities(&cfg, newGen.all, newGen))
+	handler.reloadEntities(&cfg, newGen.all, newGen)
 
 	time.Sleep(50 * time.Millisecond)
 	assert.False(t, oldGen.isClosed(), "the old generation must outlive the request holding it")
@@ -361,7 +361,7 @@ func Test_CurrentEntitiesFollowsReload(t *testing.T) {
 	require.NoError(t, err)
 
 	reg.add(newGen)
-	handler.reloadEntities(newReloadableEntities(&cfg, newGen.all, newGen))
+	handler.reloadEntities(&cfg, newGen.all, newGen)
 
 	// Shutdown closes whatever this returns, so it must track the swap.
 	assert.Same(t, newGen.all, handler.currentEntities())

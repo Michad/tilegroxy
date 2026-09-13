@@ -157,7 +157,9 @@ func setupHandlers(cfg *config.Config, ent *entities.Entities) (http.Handler, re
 		myPreviewHandler = preview
 	}
 
-	tilePath := cfg.Server.RootPath + cfg.Server.TilePath + "/{layer}/{z}/{x}/{y}"
+	// Derived from the same projection the handlers serve from, so a route and the URL advertised
+	// for it cannot drift apart
+	tilePath := reloadable.tilePathPrefix() + "/{layer}/{z}/{x}/{y}"
 	docsPath := cfg.Server.RootPath + cfg.Server.DocsPath + "/{path...}"
 	previewPath := cfg.Server.RootPath + "preview/{layer}"
 	handler, err := newTileHandler(reloadable)
@@ -172,11 +174,11 @@ func setupHandlers(cfg *config.Config, ent *entities.Entities) (http.Handler, re
 	reloadFunc := func(cfg2 *config.Config, ent2 *entities.Entities) error {
 		gen := newGeneration(ent2)
 		registry.add(gen)
-		handler.reloadEntities(newReloadableEntities(cfg2, ent2, gen))
+		handler.reloadEntities(cfg2, ent2, gen)
 		tileJSON.reloadEntities(cfg2, ent2, gen)
 
 		if preview != nil {
-			preview.reloadEntities(newReloadableEntities(cfg2, ent2, gen))
+			preview.reloadEntities(cfg2, ent2, gen)
 		}
 
 		return nil
