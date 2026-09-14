@@ -36,20 +36,17 @@ import (
 // lock that guards the pointer read, so this only covers the window between those two operations
 const generationCloseFloor = 2 * time.Second
 
-// generation is what a handler serves one request from: the non-reloadable configuration captured
-// at startup, one constructed set of entities, and the count of requests still using them. A reload
-// builds a successor carrying the same configuration forward, swaps the pointer and marks the
-// outgoing generation closing; it releases once the last request returns.
+// What a handler serves one request from. A reload swaps the pointer and marks the outgoing
+// generation closing; it releases once the last request returns
 type generation struct {
-	// The server section is not reloadable, so this is the configuration the process started with,
-	// carried across every reload. Held by value: the handlers have no path back to the live
-	// *config.Config, so a reload cannot reach what they serve.
+	// Non-reloadable, so startup config carried across every reload. By value, so handlers have no
+	// path back to the live *config.Config a reload replaces
 	serverCfg config.ServerConfig
-	// The error section is not reloadable either, so this is likewise the startup configuration.
+	// Likewise non-reloadable
 	errCfg config.ErrorConfig
 
-	// Sole owner of the entities: requests hold the generation for their duration so a reload
-	// cannot release them out from under an in-flight request.
+	// Sole owner: requests hold the generation for their duration, so a reload cannot release
+	// entities out from under one in flight
 	all *entities.Entities
 
 	mu       sync.Mutex
@@ -68,8 +65,6 @@ type generation struct {
 	done chan struct{}
 }
 
-// newGeneration pairs the non-reloadable configuration with a set of entities. Only valid at
-// startup: a reload must go through succeededBy so those values carry forward.
 func newGeneration(cfg *config.Config, ent *entities.Entities) *generation {
 	g := &generation{all: ent, done: make(chan struct{})}
 
@@ -81,8 +76,6 @@ func newGeneration(cfg *config.Config, ent *entities.Entities) *generation {
 	return g
 }
 
-// succeededBy builds what a reload swaps in. The non-reloadable config is taken from the current
-// generation rather than the new config, so handlers keep serving what the startup routes describe.
 func (g *generation) succeededBy(ent *entities.Entities) *generation {
 	next := newGeneration(nil, ent)
 	next.serverCfg = g.serverCfg
@@ -91,7 +84,6 @@ func (g *generation) succeededBy(ent *entities.Entities) *generation {
 	return next
 }
 
-// entities returns the set this generation owns, nil when there is no generation installed.
 func (g *generation) entities() *entities.Entities {
 	if g == nil {
 		return nil
@@ -124,8 +116,6 @@ func (g *generation) analytics() *analytics.AnalyticsWrapper {
 	return nil
 }
 
-// tilePathPrefix is the path tiles are advertised under, matching the route setupHandlers
-// registered at startup.
 func (g *generation) tilePathPrefix() string {
 	return g.serverCfg.RootPath + g.serverCfg.TilePath
 }
@@ -140,16 +130,13 @@ func (g *generation) writeHeaders(w http.ResponseWriter) {
 	}
 }
 
-// generationHolder is the swappable slot each reloadable handler keeps its current generation in.
-// Its mutex guards which generation is installed; the generation's own mutex guards that
-// generation's refcount. Lock order is always this one first, never the reverse.
+// This mutex guards which generation is installed, the generation's own guards its refcount.
+// Lock order is always this one first
 type generationHolder struct {
 	current *generation
 	mu      sync.RWMutex
 }
 
-// reload installs a new generation and retires the previous one, which releases as soon as its
-// in-flight requests finish rather than after a fixed wait.
 func (h *generationHolder) reload(gen *generation) {
 	h.mu.Lock()
 	old := h.current
@@ -159,9 +146,8 @@ func (h *generationHolder) reload(gen *generation) {
 	old.markClosing(pkg.BackgroundContext(), generationCloseFloor)
 }
 
-// acquire returns what is currently serving plus the release to defer for the rest of the request.
-// The refcount is incremented inside the same critical section as the read, so a concurrent reload
-// either hands over the new generation or sees this request and defers retiring the old one.
+// Refcount is incremented in the same critical section as the read, so a concurrent reload either
+// hands over the new generation or sees this request and defers retiring the old one
 func (h *generationHolder) acquire() (*generation, func()) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -177,8 +163,6 @@ func (h *generationHolder) acquire() (*generation, func()) {
 	return cur, cur.release
 }
 
-// currentEntities returns the entities currently serving requests. Shutdown closes these rather
-// than the generation the server was originally handed, which a reload may already have released
 func (h *generationHolder) currentEntities() *entities.Entities {
 	h.mu.RLock()
 	defer h.mu.RUnlock()

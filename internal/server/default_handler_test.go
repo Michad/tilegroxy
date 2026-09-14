@@ -28,8 +28,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// testServing builds what a handler serves the way startup does, wrapping the entities in a
-// generation so the handlers reach them by the same path they do in production.
 func testServing(cfg *config.Config, auth authentication.Authentication, lg *layer.LayerGroup) *generation {
 	return testServingWithAnalytics(cfg, auth, lg, nil)
 }
@@ -62,9 +60,7 @@ func Test_SucceededBy_AppliesNewEntities(t *testing.T) {
 	assert.Same(t, lg, next.layerGroup())
 }
 
-// The handlers must not be able to reach the live config, since anything reachable from a
-// request is something a reload can change. The pinned sections are held by value for that
-// reason; a pointer to any of them would alias whatever the reload built.
+// Handlers must not reach the live config; a pointer would alias whatever a reload built.
 func Test_Generation_HoldsNoConfigPointer(t *testing.T) {
 	banned := []reflect.Type{
 		reflect.TypeOf(&config.Config{}),
@@ -82,8 +78,6 @@ func Test_Generation_HoldsNoConfigPointer(t *testing.T) {
 	}
 }
 
-// The Entities set is the sole owner of the entities. A generation field caching one of them
-// alongside it could go stale against the set a request is actually reading through.
 func Test_Generation_CachesNoEntity(t *testing.T) {
 	structType := reflect.TypeOf(generation{})
 
@@ -131,8 +125,6 @@ func Test_WriteHeaders_UsesStartupServerConfig(t *testing.T) {
 	assert.NotEmpty(t, w.Header().Get("X-Powered-By"), "production is not reloadable")
 }
 
-// No generation installed must read as empty rather than panicking, since the accessors run
-// before startup finishes wiring one in.
 func Test_Generation_Nil(t *testing.T) {
 	var r *generation
 
@@ -142,7 +134,6 @@ func Test_Generation_Nil(t *testing.T) {
 	assert.Nil(t, r.analytics())
 }
 
-// A generation holding no entities is likewise empty rather than a panic.
 func Test_Generation_WithoutEntities(t *testing.T) {
 	r := newGeneration(nil, nil)
 

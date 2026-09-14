@@ -84,7 +84,6 @@ func Test_DiffConfig_NilConfigIsTreatedAsEmpty(t *testing.T) {
 	require.Contains(t, buf.String(), "main")
 }
 
-// No key under server is reloadable, so a change to any of them reports restart
 func Test_DiffConfig_ServerChangeNeedsRestart(t *testing.T) {
 	oldCfg := diffBaseConfig()
 	newCfg := diffBaseConfig()
@@ -192,7 +191,6 @@ func Test_DiffConfig_DatastoreMatchesOnID(t *testing.T) {
 	require.Equal(t, "redis.internal", stores["r1"].(map[string]any)["host"])
 }
 
-// every key under error needs a restart, messages included
 func Test_DiffConfig_ErrorSectionNeedsRestart(t *testing.T) {
 	oldCfg := diffBaseConfig()
 	newCfg := diffBaseConfig()
@@ -208,7 +206,7 @@ func Test_DiffConfig_ErrorSectionNeedsRestart(t *testing.T) {
 	require.Contains(t, restarted, "messages")
 }
 
-// health is rebuilt on reload, unlike server which is entirely restart-only
+// server.health is rebuilt on reload even though the rest of server isn't
 func Test_DiffConfig_HealthChangeCanReload(t *testing.T) {
 	oldCfg := diffBaseConfig()
 	newCfg := diffBaseConfig()

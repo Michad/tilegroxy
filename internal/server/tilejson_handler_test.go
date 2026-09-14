@@ -453,8 +453,8 @@ func Test_SetupHandlers_TileJSON_Disabled_RoutesNotRegistered(t *testing.T) {
 	assert.NotEqual(t, http.StatusOK, res.StatusCode, "TileJSON index should not be served when disabled")
 }
 
-// The failure from issue 920: the tile route is registered once at startup, so advertising a
-// reloaded server.tilepath would hand every consumer URLs that 404.
+// Regression test for issue 920: the tile route is registered once at startup, so advertising a
+// reloaded tilepath would hand consumers URLs that 404
 func Test_TileJSONHandler_Document_IgnoresReloadedServerConfig(t *testing.T) {
 	cfg := config.DefaultConfig()
 	cfg.Server.TileJSON.Enabled = true
@@ -463,8 +463,6 @@ func Test_TileJSONHandler_Document_IgnoresReloadedServerConfig(t *testing.T) {
 	ent := buildTileJSONTestServing(t, cfg)
 	h := newTileJSONHandler(ent, false)
 
-	// A reload only ever installs a new generation of entities; the non-reloadable server config
-	// the startup generation pins is not reachable from it.
 	h.reload(ent.succeededBy(&entities.Entities{LayerGroup: ent.layerGroup(), Auth: ent.auth()}))
 
 	req := httptest.NewRequest(http.MethodGet, "http://example.com/tiles/main.json", nil).WithContext(pkg.BackgroundContext())

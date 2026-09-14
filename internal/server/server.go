@@ -82,8 +82,7 @@ func healthReloader(ctx context.Context, cfg *config.Config, ent *entities.Entit
 		}
 	}
 
-	// Disabling health means the teardown above is the whole job; leaving the pointers nil keeps
-	// the final shutdown from calling into the generation that just went away.
+	// Nil pointers keep the final shutdown from calling into the generation just torn down
 	if !cfg.Health.Enabled {
 		return nil
 	}
@@ -158,8 +157,6 @@ func setupHandlers(cfg *config.Config, ent *entities.Entities) (http.Handler, re
 		myPreviewHandler = preview
 	}
 
-	// Derived from the same generation the handlers use, so a route and the URL advertised for it
-	// cannot drift apart
 	tilePath := firstGen.tilePathPrefix() + "/{layer}/{z}/{x}/{y}"
 	docsPath := cfg.Server.RootPath + cfg.Server.DocsPath + "/{path...}"
 	previewPath := cfg.Server.RootPath + "preview/{layer}"
@@ -172,9 +169,7 @@ func setupHandlers(cfg *config.Config, ent *entities.Entities) (http.Handler, re
 
 	tileJSON := setupTileJSONHandlers(cfg, firstGen)
 
-	// The new config is deliberately ignored: every handler-visible section is non-reloadable, so a
-	// reload installs only the new entities. Each successor descends from the startup generation,
-	// which is where that non-reloadable config lives. See generation.
+	// The new config is deliberately ignored: every handler-visible section is non-reloadable
 	reloadFunc := func(_ *config.Config, ent2 *entities.Entities) error {
 		gen := firstGen.succeededBy(ent2)
 		registry.add(gen)

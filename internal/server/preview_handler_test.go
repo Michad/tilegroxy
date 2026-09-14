@@ -366,8 +366,6 @@ func Test_PreviewHandler_IgnoresReloadedServerConfig(t *testing.T) {
 	ent := buildTileJSONTestServing(t, cfg)
 	h := newPreviewHandler(ent)
 
-	// A reload only ever installs a new generation of entities; the non-reloadable server config
-	// the startup generation pins is not reachable from it.
 	h.reload(ent.succeededBy(&entities.Entities{LayerGroup: ent.layerGroup(), Auth: ent.auth()}))
 
 	req := httptest.NewRequest(http.MethodGet, "http://example.com/preview/main", nil).WithContext(pkg.BackgroundContext())

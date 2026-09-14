@@ -367,8 +367,6 @@ func waitForPortClosed(t *testing.T, port int) {
 		"port %v still accepting connections", port)
 }
 
-// Health is a reloadable section, so turning it off has to actually release the listener. Without
-// the teardown the old generation keeps serving on its port for the rest of the process.
 func Test_ListenAndServe_HealthDisabledOnReloadStopsServing(t *testing.T) {
 	cfg, healthPort := healthTestConfig(t)
 
@@ -390,7 +388,6 @@ func Test_ListenAndServe_HealthDisabledOnReloadStopsServing(t *testing.T) {
 
 	waitForPortClosed(t, healthPort)
 
-	// And a later reload that turns it back on has to bring the endpoint back.
 	onLg, err := layer.ConstructLayerGroup(cfg, nil, nil, nil)
 	require.NoError(t, err)
 
@@ -400,8 +397,6 @@ func Test_ListenAndServe_HealthDisabledOnReloadStopsServing(t *testing.T) {
 	waitForHealthStatus(t, healthPort, "ok")
 }
 
-// Disabling health must clear the shutdown and drain pointers, not leave them pointing at the
-// generation that was just torn down, which the final shutdown would then call again.
 func Test_healthReloader_DisablingClearsPointers(t *testing.T) {
 	cfg, _ := healthTestConfig(t)
 
