@@ -19,7 +19,7 @@ replicaCount: 2
 # -- The tilegroxy configuration, rendered verbatim into a ConfigMap as
 # tilegroxy.yml. Every option documented at
 # https://tilegroxy.com/operation/configuration/index.html is
-# valid here; the chart only reads server.port, server.health and
+# valid here; the chart only reads server.port, health and
 # server.encrypt.httpport to wire up ports and probes.
 #
 # Values that shouldn't live in a ConfigMap (API keys, database passwords) are
@@ -31,12 +31,12 @@ config:
     # Recommended for any real deployment: disables the splash page, bundled
     # documentation and the X-Powered-By header.
     production: true
-    health:
-      enabled: true
-      port: 3000
-      checks:
-        - name: cache
-          delay: 60
+  health:
+    enabled: true
+    port: 3000
+    checks:
+      - name: cache
+        delay: 60
   logging:
     main:
       level: info
@@ -214,7 +214,7 @@ livenessProbe:
   failureThreshold: 3
 
 # Backed by /health, which runs the checks configured under
-# config.server.health.checks. With a tile check configured this takes the pod
+# config.health.checks. With a tile check configured this takes the pod
 # out of the Service when an upstream provider is failing.
 readinessProbe:
   initialDelaySeconds: 5
@@ -238,7 +238,7 @@ podDisruptionBudget:
 terminationGracePeriodSeconds: 75
 
 # Runs before Kubernetes sends SIGTERM, covering the window where endpoints have not yet been
-# withdrawn. Needed because config.server.health.enabled defaults to false, so many deployments
+# withdrawn. Needed because config.health.enabled defaults to false, so many deployments
 # have no readiness signal to fall back on. When enabled, the chart also sets
 # config.server.draindelay to 0 so the in-process drain wait isn't paid twice. Any
 # config.server.draindelay you set yourself is overridden while this is enabled.

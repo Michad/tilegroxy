@@ -66,10 +66,7 @@ var reloadableSections = map[string]bool{
 	"datastores":     true,
 	"analytics":      true,
 	"layers":         true,
-}
-
-var reloadableServerKeys = map[string]bool{
-	"health": true,
+	"health":         true,
 }
 
 func DiffConfig(oldCfg, newCfg *config.Config, opts DiffOptions, out io.Writer) (bool, error) {
@@ -222,32 +219,11 @@ func diffSection(section string, oldVal, newVal any) []diffEntry {
 		return nil
 	}
 
-	changeMap, ok := changes.(map[string]any)
-	if !ok {
-		return []diffEntry{{impact: sectionImpact(section, ""), kind: diffKindModified, section: section, value: changes}}
-	}
-
-	// server mixes reloadable and restart-only keys, so each of its top level keys is attributed
-	// separately
-	entries := make([]diffEntry, 0, len(changeMap))
-	for _, key := range sortedKeys(changeMap) {
-		entries = append(entries, diffEntry{
-			impact:  sectionImpact(section, key),
-			kind:    diffKindModified,
-			section: section,
-			value:   map[string]any{key: changeMap[key]},
-		})
-	}
-
-	return entries
+	return []diffEntry{{impact: sectionImpact(section), kind: diffKindModified, section: section, value: changes}}
 }
 
-func sectionImpact(section, key string) string {
+func sectionImpact(section string) string {
 	if reloadableSections[section] {
-		return diffImpactReload
-	}
-
-	if section == "server" && reloadableServerKeys[key] {
 		return diffImpactReload
 	}
 
@@ -257,7 +233,7 @@ func sectionImpact(section, key string) string {
 func diffKeyedList(section string, oldVal, newVal any) []diffEntry {
 	oldEntries := entriesByID(oldVal)
 	newEntries := entriesByID(newVal)
-	impact := sectionImpact(section, "")
+	impact := sectionImpact(section)
 
 	var entries []diffEntry
 

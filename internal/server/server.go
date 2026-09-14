@@ -67,7 +67,7 @@ type reloadEntitiesFunc = func(*config.Config, *entities.Entities) error
 // pkg/config dispatches each config-change event on its own goroutine, so two concurrent reloads
 // would otherwise both tear down the same generation and race to bind the health port.
 func healthReloader(ctx context.Context, cfg *config.Config, ent *entities.Entities, healthMutex *sync.Mutex, healthShutdown *func(context.Context) error, healthDrain *func(), draining *bool) error {
-	if !cfg.Server.Health.Enabled {
+	if !cfg.Health.Enabled {
 		return nil
 	}
 
@@ -337,7 +337,7 @@ func ListenAndServe(config *config.Config, ent *entities.Entities, reloadPtr *fu
 	// already draining, instead of reopening the readiness window shutdown just closed.
 	var draining bool
 
-	if config.Server.Health.Enabled {
+	if config.Health.Enabled {
 		healthShutdown, healthDrain, err = SetupHealth(ctx, config, ent.LayerGroup)
 
 		if err != nil {

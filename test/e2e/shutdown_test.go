@@ -55,9 +55,9 @@ server:
   port: {{.Port}}
   production: false
   drainDelay: 5
-  health:
-    enabled: true
-    port: {{.HealthPort}}
+health:
+  enabled: true
+  port: {{.HealthPort}}
 layers:
   - id: color
     provider:
@@ -73,9 +73,9 @@ server:
   production: false
   drainDelay: 1
   timeout: 30
-  health:
-    enabled: true
-    port: {{.HealthPort}}
+health:
+  enabled: true
+  port: {{.HealthPort}}
 layers:
   - id: color
     provider:
@@ -222,9 +222,9 @@ func Test_Shutdown_ZeroDrainDelayIsFasterThanFive(t *testing.T) {
 server:
   port: {{.Port}}
   drainDelay: 0
-  health:
-    enabled: true
-    port: {{.HealthPort}}
+health:
+  enabled: true
+  port: {{.HealthPort}}
 layers:
   - id: color
     provider:

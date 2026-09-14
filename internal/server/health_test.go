@@ -57,9 +57,9 @@ func initialize(t *testing.T, fail bool) (config.Config, *layer.LayerGroup) {
 		}
 	}
 
-	cfgAll.Server.Health.Enabled = true
-	cfgAll.Server.Health.Port = port
-	cfgAll.Server.Health.Checks = []map[string]any{
+	cfgAll.Health.Enabled = true
+	cfgAll.Health.Port = port
+	cfgAll.Health.Checks = []map[string]any{
 		{
 			"name":  "tile",
 			"layer": "test",

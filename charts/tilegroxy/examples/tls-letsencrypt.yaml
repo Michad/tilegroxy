@@ -16,12 +16,12 @@ config:
       domain: tiles.example.com
       httpport: 8080
       cache: /tilegroxy/data/certs
-    health:
-      enabled: true
-      port: 3000
-      checks:
-        - name: cache
-          delay: 60
+  health:
+    enabled: true
+    port: 3000
+    checks:
+      - name: cache
+        delay: 60
   cache:
     name: s3
     bucket: my-tile-cache

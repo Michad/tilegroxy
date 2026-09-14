@@ -113,10 +113,10 @@ func healthTestConfig(t *testing.T) (config.Config, int) {
 
 	cfg := config.DefaultConfig()
 	cfg.Server.Port = freePort(t)
-	cfg.Server.Health.Enabled = true
-	cfg.Server.Health.Port = healthPort
-	cfg.Server.Health.Host = "127.0.0.1"
-	cfg.Server.Health.Checks = []map[string]any{
+	cfg.Health.Enabled = true
+	cfg.Health.Port = healthPort
+	cfg.Health.Host = "127.0.0.1"
+	cfg.Health.Checks = []map[string]any{
 		{"name": "tile", "layer": "test", "delay": 1},
 	}
 	cfg.Layers = []config.LayerConfig{
@@ -271,7 +271,7 @@ func Test_ListenAndServe_FailedHealthRebuildRecovers(t *testing.T) {
 
 	// Reload with a check name that doesn't resolve to any registered health check.
 	badCfg := cfg
-	badCfg.Server.Health.Checks = []map[string]any{
+	badCfg.Health.Checks = []map[string]any{
 		{"name": "this-check-does-not-exist", "delay": 1},
 	}
 
@@ -346,7 +346,7 @@ func Test_healthReloader_FailedRebuildDoesNotRetainStalePointer(t *testing.T) {
 	draining := false
 
 	badCfg := cfg
-	badCfg.Server.Health.Checks = []map[string]any{
+	badCfg.Health.Checks = []map[string]any{
 		{"name": "this-check-does-not-exist", "delay": 1},
 	}
 

@@ -94,9 +94,9 @@ server:
   port: {{.Port}}
   production: false
   drainDelay: 0
-  health:
-    enabled: true
-    port: %s
+health:
+  enabled: true
+  port: %s
 cache:
   name: none
 analytics:

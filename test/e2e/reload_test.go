@@ -206,9 +206,9 @@ func Test_Reload_HealthChecksRebuildWithoutReadinessBlip(t *testing.T) {
 server:
   port: {{.Port}}
   drainDelay: 0
-  health:
-    enabled: true
-    port: {{.HealthPort}}
+health:
+  enabled: true
+  port: {{.HealthPort}}
 layers:
   - id: color
     provider:
@@ -219,15 +219,15 @@ layers:
 server:
   port: {{.Port}}
   drainDelay: 0
-  health:
-    enabled: true
-    port: {{.HealthPort}}
-    checks:
-      - name: tile
-        layer: color
-        z: 8
-        x: 12
-        y: 32
+health:
+  enabled: true
+  port: {{.HealthPort}}
+  checks:
+    - name: tile
+      layer: color
+      z: 8
+      x: 12
+      y: 32
 layers:
   - id: color
     provider:

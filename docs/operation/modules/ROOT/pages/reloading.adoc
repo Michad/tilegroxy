@@ -27,13 +27,9 @@ The following sections of the configuration can be reloaded:
 * xref:configuration/datastores/index.adoc[datastores]
 * xref:configuration/analytics/index.adoc[analytics]
 * xref:configuration/layer.adoc[layers]
+* xref:configuration/health.adoc[health]
 
-The following sections can be partially reloaded:
-
-* xref:configuration/server.adoc[server]
-** Only health checks are reloaded. Every other value under `server`, including paths, headers and production mode, is fixed when the server binds and will not be changed
-
-Changes to unsupported sections will be ignored. To check whether a pending configuration change can be reloaded, use xref:commands/config_diff.adoc[config diff].
+Every other section, including xref:configuration/server.adoc[server], is fixed when the process starts. Changes to unsupported sections will be ignored. To check whether a pending configuration change can be reloaded, use xref:commands/config_diff.adoc[config diff].
 
 
 == Shutdown

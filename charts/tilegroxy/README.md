@@ -34,7 +34,7 @@ config:
 ```
 
 Anything in the [configuration reference](https://tilegroxy.com/operation/configuration/index.html)
-is valid there. The chart itself only reads `server.port`, `server.health` and `server.encrypt`
+is valid there. The chart itself only reads `server.port`, `health` and `server.encrypt`
 to wire up container ports, the Service and the probes.
 
 Everything outside `config` is ordinary Kubernetes deployment concerns: replicas, resources,
@@ -96,7 +96,7 @@ required.
 
 ## Health checks and probes
 
-Probes are only created when `config.server.health.enabled` is true, since they hit the health
+Probes are only created when `config.health.enabled` is true, since they hit the health
 port. `/` backs the liveness probe and `/health` backs readiness, so the configured checks decide
 whether a pod receives traffic. Adding a `tile` check takes a pod out of the Service when an
 upstream provider is failing:

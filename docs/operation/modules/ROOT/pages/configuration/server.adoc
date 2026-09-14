@@ -80,12 +80,6 @@ Configuration options:
 | No
 | None
 
-| Health
-| Configuration to turn on endpoints for validating the health of the server on a secondary port
-| xref:configuration/health.adoc[Health]
-| No
-| None
-
 | TileJSON
 | Configuration to turn on endpoints that describe layers using the TileJSON format
 | xref:configuration/tilejson.adoc[TileJSON]
