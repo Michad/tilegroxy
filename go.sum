@@ -33,8 +33,8 @@ github.com/anthonynsimon/bild v0.17.0 h1:kmPJOZpUgvrM2uoS7KMesbDU5+QTvZ92zIBjHM/
 github.com/anthonynsimon/bild v0.17.0/go.mod h1:ULwssBwK+8dLFObGrI3fIydKYQ2l454Y0eo+mqPclto=
 github.com/armon/go-metrics v0.4.1 h1:hR91U9KYmb6bLBYLQjyM+3j+rcd/UhE+G78SFnF8gJA=
 github.com/armon/go-metrics v0.4.1/go.mod h1:E6amYzXo6aW1tqzoZGT755KkbgrJsSdpwZ+3JqfkOG4=
-github.com/aws/aws-sdk-go-v2 v1.45.1 h1:iIoG3NaLhV6UZpPXyPXlDj2I9oS8tV/nMcMnITCC6Ks=
-github.com/aws/aws-sdk-go-v2 v1.45.1/go.mod h1:bttEH6JqnUL8LepvDVfdrds/fZ5bCIxzpe3abyUrhDU=
+github.com/aws/aws-sdk-go-v2 v1.47.0 h1:0jsHallhJCeaU0Ko48c/3FK1ctOQ7NpzggxriJOQ8MQ=
+github.com/aws/aws-sdk-go-v2 v1.47.0/go.mod h1:bttEH6JqnUL8LepvDVfdrds/fZ5bCIxzpe3abyUrhDU=
 github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.18 h1:LAfOuhAH331fmOjTQpAaOlH+Ftn7RzSDJ2VFwjdMMy4=
 github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.18/go.mod h1:4e5xhuXHx1e4U9EthvbPP1r/DIMp5c2823OL8karzcM=
 github.com/aws/aws-sdk-go-v2/config v1.32.38 h1:n4yPHBjtQ3BrIIUyk0/LAqf/BL2iv0Tw6XZcMRzM0ps=
