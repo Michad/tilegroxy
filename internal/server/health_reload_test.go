@@ -359,3 +359,71 @@ func Test_healthReloader_FailedRebuildDoesNotRetainStalePointer(t *testing.T) {
 		require.Equal(t, 1, oldCalls, "the retained shutdown func must not be the stale previous generation's")
 	}
 }
+
+func waitForPortClosed(t *testing.T, port int) {
+	t.Helper()
+
+	require.Eventually(t, func() bool { return !dialPort(port) }, 15*time.Second, 100*time.Millisecond,
+		"port %v still accepting connections", port)
+}
+
+// Health is a reloadable section, so turning it off has to actually release the listener. Without
+// the teardown the old generation keeps serving on its port for the rest of the process.
+func Test_ListenAndServe_HealthDisabledOnReloadStopsServing(t *testing.T) {
+	cfg, healthPort := healthTestConfig(t)
+
+	lg, err := layer.ConstructLayerGroup(cfg, nil, nil, nil)
+	require.NoError(t, err)
+
+	reloadFn := startServer(t, &cfg, lg)
+
+	waitForPort(t, healthPort)
+	waitForHealthStatus(t, healthPort, "ok")
+
+	offCfg := cfg
+	offCfg.Health.Enabled = false
+
+	offLg, err := layer.ConstructLayerGroup(offCfg, nil, nil, nil)
+	require.NoError(t, err)
+
+	require.NoError(t, reloadFn(&offCfg, entitiesFor(offLg)))
+
+	waitForPortClosed(t, healthPort)
+
+	// And a later reload that turns it back on has to bring the endpoint back.
+	onLg, err := layer.ConstructLayerGroup(cfg, nil, nil, nil)
+	require.NoError(t, err)
+
+	require.NoError(t, reloadFn(&cfg, entitiesFor(onLg)))
+
+	waitForPort(t, healthPort)
+	waitForHealthStatus(t, healthPort, "ok")
+}
+
+// Disabling health must clear the shutdown and drain pointers, not leave them pointing at the
+// generation that was just torn down, which the final shutdown would then call again.
+func Test_healthReloader_DisablingClearsPointers(t *testing.T) {
+	cfg, _ := healthTestConfig(t)
+
+	lg, err := layer.ConstructLayerGroup(cfg, nil, nil, nil)
+	require.NoError(t, err)
+
+	var healthMutex sync.Mutex
+
+	oldCalls := 0
+	healthShutdown := func(context.Context) error {
+		oldCalls++
+		return nil
+	}
+	healthDrain := func() {}
+	draining := false
+
+	offCfg := cfg
+	offCfg.Health.Enabled = false
+
+	require.NoError(t, healthReloader(context.Background(), &offCfg, entitiesFor(lg), &healthMutex, &healthShutdown, &healthDrain, &draining))
+
+	require.Equal(t, 1, oldCalls, "the previous generation should have been shut down exactly once")
+	require.Nil(t, healthShutdown)
+	require.Nil(t, healthDrain)
+}

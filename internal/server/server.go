@@ -67,10 +67,6 @@ type reloadEntitiesFunc = func(*config.Config, *entities.Entities) error
 // pkg/config dispatches each config-change event on its own goroutine, so two concurrent reloads
 // would otherwise both tear down the same generation and race to bind the health port.
 func healthReloader(ctx context.Context, cfg *config.Config, ent *entities.Entities, healthMutex *sync.Mutex, healthShutdown *func(context.Context) error, healthDrain *func(), draining *bool) error {
-	if !cfg.Health.Enabled {
-		return nil
-	}
-
 	healthMutex.Lock()
 	defer healthMutex.Unlock()
 
@@ -84,6 +80,12 @@ func healthReloader(ctx context.Context, cfg *config.Config, ent *entities.Entit
 		if err := oldHealthShutdown(context.Background()); err != nil {
 			slog.WarnContext(ctx, fmt.Sprintf("Error shutting down previous health generation: %v", err))
 		}
+	}
+
+	// Disabling health means the teardown above is the whole job; leaving the pointers nil keeps
+	// the final shutdown from calling into the generation that just went away.
+	if !cfg.Health.Enabled {
+		return nil
 	}
 
 	newHealthShutdown, newHealthDrain, err := SetupHealth(ctx, cfg, ent.LayerGroup)
