@@ -19,10 +19,10 @@ config:
   server:
     port: 8080
     production: true
-    health:
-      enabled: true
-      checks:
-        - name: cache
+  health:
+    enabled: true
+    checks:
+      - name: cache
   cache:
     name: redis
     host: redis.example.svc.cluster.local
@@ -103,17 +103,16 @@ upstream provider is failing:
 
 ```yaml
 config:
-  server:
-    health:
-      enabled: true
-      port: 3000
-      checks:
-        - name: cache
-          delay: 60
-        - name: tile
-          layer: osm
-          validation: success
-          delay: 60
+  health:
+    enabled: true
+    port: 3000
+    checks:
+      - name: cache
+        delay: 60
+      - name: tile
+        layer: osm
+        validation: success
+        delay: 60
 ```
 
 The health port is never added to the Service, per the
