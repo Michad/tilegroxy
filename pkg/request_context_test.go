@@ -15,6 +15,7 @@
 package pkg_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -92,4 +93,25 @@ func Test_TenantIDFromContext_DefaultsToEmptyString(t *testing.T) {
 	tenant, ok := pkg.TenantIDFromContext(ctx)
 	require.True(t, ok)
 	assert.Empty(t, *tenant)
+}
+
+func Test_SetIdentity(t *testing.T) {
+	ctx := pkg.BackgroundContext()
+
+	pkg.SetIdentity(ctx, "someone", "acme-corp")
+
+	user, ok := pkg.UserIDFromContext(ctx)
+	require.True(t, ok)
+	require.Equal(t, "someone", *user)
+
+	tenant, ok := pkg.TenantIDFromContext(ctx)
+	require.True(t, ok)
+	require.Equal(t, "acme-corp", *tenant)
+}
+
+// A library consumer can pass a plain stdlib context, which carries none of the identity pointers.
+func Test_SetIdentity_PlainContext(t *testing.T) {
+	require.NotPanics(t, func() {
+		pkg.SetIdentity(context.Background(), "someone", "acme-corp")
+	})
 }

@@ -43,6 +43,8 @@ type TestOptions struct {
 	NoCache        bool
 	JSON           bool
 	FilePath       string
+	UserID         string
+	TenantID       string
 }
 
 // the default tile used when a layer has no configured bounds/zoom to derive one from.
@@ -174,6 +176,7 @@ func splitForThreads(tileRequests []pkg.TileRequest, numThread uint16) [][]pkg.T
 
 func Test(cfg *config.Config, opts TestOptions, out io.Writer) (uint32, error) {
 	ctx := pkg.BackgroundContext()
+	pkg.SetIdentity(ctx, opts.UserID, opts.TenantID)
 
 	if opts.NumThread == 0 {
 		return 0, errors.New("threads must be above 0")
@@ -288,6 +291,7 @@ func writeSummaryTo(w io.Writer, asJSON bool, summary TestSummary) error {
 
 func testTileRequests(layerObjects *layer.LayerGroup, opts TestOptions, errCount *uint32, failuresMu *sync.Mutex, failures *[]TestFailure, writer *tabwriter.Writer, wg *sync.WaitGroup, t int, myReqs []pkg.TileRequest) {
 	ctx := pkg.BackgroundContext()
+	pkg.SetIdentity(ctx, opts.UserID, opts.TenantID)
 
 	for _, req := range myReqs {
 		layer := layerObjects.FindLayer(ctx, req.LayerName)
