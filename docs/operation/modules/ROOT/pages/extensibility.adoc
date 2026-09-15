@@ -18,7 +18,7 @@ Custom caches are not currently possible. This is because it's most likely you w
 
 For cases where the built-in providers don't suffice, you can write your own custom providers.
 
-Example custom providers can be found within link:../examples/providers/[examples/providers].
+Example custom providers can be found within link:/examples/providers/custom_proxy.go[examples/providers/custom_proxy.go].
 
 Custom providers must be within the `custom` package and must import the `tilegroxy/tilegroxy` package for mandatory datatypes. 
 

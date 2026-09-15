@@ -42,3 +42,5 @@ authentication:
   token:
     header: X-Token
 ----
+
+A complete working script is available in link:/examples/auth/custom_from_file.go[examples/auth/custom_from_file.go].

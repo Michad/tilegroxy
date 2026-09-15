@@ -2,7 +2,7 @@
 
 A layer represents a distinct mapping layer as would be displayed in a typical web map application.  Each layer can be accessed independently from other map layers. The main thing that needs to be configured for a layer is the provider described below.
 
-The URLs of incoming requests follow a format like: `+/tiles/{layerName}/{z}/{x}/{y}+` the layer name can be one of two things: 1) the ID of the layer or 2) A string that matches a pattern.  A pattern should include non-subsequent placeholder values wrapped in curly braces. Those placeholder values can be used in certain providers, such as the Proxy provider where they can be forwarded along to the upstream map layer. To understand how you can utilize patterns, see the link:../examples/configurations/noaa_post_storm.yml[NOAA Post-Storm example]
+The URLs of incoming requests follow a format like: `+/tiles/{layerName}/{z}/{x}/{y}+` the layer name can be one of two things: 1) the ID of the layer or 2) A string that matches a pattern.  A pattern should include non-subsequent placeholder values wrapped in curly braces. Those placeholder values can be used in certain providers, such as the Proxy provider where they can be forwarded along to the upstream map layer. To understand how you can utilize patterns, see the link:/examples/configurations/noaa_post_storm.yml[NOAA Post-Storm example]
 
 When using a pattern you can include https://regex101.com/[Regular Expressions] to validate the values that match against the placeholder.
 
