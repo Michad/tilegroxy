@@ -206,7 +206,7 @@ func Test_DiffConfig_ErrorSectionNeedsRestart(t *testing.T) {
 	require.Contains(t, restarted, "messages")
 }
 
-// server.health is rebuilt on reload even though the rest of server isn't
+// Health reloads in place, unlike the server and error sections it sits beside
 func Test_DiffConfig_HealthChangeCanReload(t *testing.T) {
 	oldCfg := diffBaseConfig()
 	newCfg := diffBaseConfig()
