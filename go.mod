@@ -19,7 +19,7 @@ require (
 	github.com/gorilla/handlers v1.5.2
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/lestrrat-go/httprc/v3 v3.0.6
-	github.com/lestrrat-go/jwx/v3 v3.2.0
+	github.com/lestrrat-go/jwx/v3 v3.3.0
 	github.com/maypok86/otter v1.2.4
 	github.com/mmcloughlin/geohash v0.10.0
 	github.com/paulmach/orb v0.13.0
