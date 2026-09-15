@@ -40,6 +40,7 @@ The following is the top-level configuration structure. All top-level keys are o
 
 ____
 xref:configuration/server.adoc[server]:  ... +
+xref:configuration/health.adoc[health]:  ... +
 xref:configuration/client.adoc[client]:  ... +
 xref:configuration/log.adoc[logging]:  ... +
 xref:configuration/telemetry.adoc[telemetry]: ... +

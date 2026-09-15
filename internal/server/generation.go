@@ -19,21 +19,34 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"runtime/debug"
 	"sync"
 	"time"
 
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/analytics"
+	"github.com/Michad/tilegroxy/pkg/entities/authentication"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
 // How long a generation waits before trusting its refcount. The handler increments under the same
 // lock that guards the pointer read, so this only covers the window between those two operations
 const generationCloseFloor = 2 * time.Second
 
-// generation is one constructed set of entities plus the count of requests still using it. A reload
-// swaps the pointer and marks the outgoing generation closing; it releases once the last request returns
+// What a handler serves one request from. A reload swaps the pointer and marks the outgoing
+// generation closing; it releases once the last request returns
 type generation struct {
+	// Non-reloadable, so startup config carried across every reload. By value, so handlers have no
+	// path back to the live *config.Config a reload replaces
+	serverCfg config.ServerConfig
+	// Likewise non-reloadable
+	errCfg config.ErrorConfig
+
+	// Sole owner: requests hold the generation for their duration, so a reload cannot release
+	// entities out from under one in flight
 	all *entities.Entities
 
 	mu       sync.Mutex
@@ -52,8 +65,109 @@ type generation struct {
 	done chan struct{}
 }
 
-func newGeneration(ent *entities.Entities) *generation {
-	return &generation{all: ent, done: make(chan struct{})}
+func newGeneration(cfg *config.Config, ent *entities.Entities) *generation {
+	g := &generation{all: ent, done: make(chan struct{})}
+
+	if cfg != nil {
+		g.serverCfg = cfg.Server
+		g.errCfg = cfg.Error
+	}
+
+	return g
+}
+
+func (g *generation) succeededBy(ent *entities.Entities) *generation {
+	next := newGeneration(nil, ent)
+	next.serverCfg = g.serverCfg
+	next.errCfg = g.errCfg
+
+	return next
+}
+
+func (g *generation) entities() *entities.Entities {
+	if g == nil {
+		return nil
+	}
+
+	return g.all
+}
+
+func (g *generation) layerGroup() *layer.LayerGroup {
+	if all := g.entities(); all != nil {
+		return all.LayerGroup
+	}
+
+	return nil
+}
+
+func (g *generation) auth() authentication.Authentication {
+	if all := g.entities(); all != nil {
+		return all.Auth
+	}
+
+	return nil
+}
+
+func (g *generation) analytics() *analytics.AnalyticsWrapper {
+	if all := g.entities(); all != nil {
+		return all.Analytics
+	}
+
+	return nil
+}
+
+func (g *generation) tilePathPrefix() string {
+	return g.serverCfg.RootPath + g.serverCfg.TilePath
+}
+
+func (g *generation) writeHeaders(w http.ResponseWriter) {
+	for name, v := range g.serverCfg.Headers {
+		w.Header().Add(name, v)
+	}
+
+	if !g.serverCfg.Production {
+		w.Header().Add("X-Powered-By", "tilegroxy "+version)
+	}
+}
+
+// This mutex guards which generation is installed, the generation's own guards its refcount.
+// Lock order is always this one first
+type generationHolder struct {
+	current *generation
+	mu      sync.RWMutex
+}
+
+func (h *generationHolder) reload(gen *generation) {
+	h.mu.Lock()
+	old := h.current
+	h.current = gen
+	h.mu.Unlock()
+
+	old.markClosing(pkg.BackgroundContext(), generationCloseFloor)
+}
+
+// Refcount is incremented in the same critical section as the read, so a concurrent reload either
+// hands over the new generation or sees this request and defers retiring the old one
+func (h *generationHolder) acquire() (*generation, func()) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	cur := h.current
+
+	if cur == nil {
+		return cur, func() {}
+	}
+
+	cur.acquire()
+
+	return cur, cur.release
+}
+
+func (h *generationHolder) currentEntities() *entities.Entities {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	return h.current.entities()
 }
 
 func (g *generation) acquire() {
@@ -82,6 +196,10 @@ func (g *generation) release() {
 // markClosing retires the generation. It closes immediately once idle, or when the last in-flight
 // request returns. The floor covers the gap between a handler reading the pointer and incrementing
 func (g *generation) markClosing(ctx context.Context, floor time.Duration) {
+	if g == nil {
+		return
+	}
+
 	g.mu.Lock()
 	g.closing = true
 	g.closeCtx = ctx

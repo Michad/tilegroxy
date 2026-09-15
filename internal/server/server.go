@@ -67,10 +67,6 @@ type reloadEntitiesFunc = func(*config.Config, *entities.Entities) error
 // pkg/config dispatches each config-change event on its own goroutine, so two concurrent reloads
 // would otherwise both tear down the same generation and race to bind the health port.
 func healthReloader(ctx context.Context, cfg *config.Config, ent *entities.Entities, healthMutex *sync.Mutex, healthShutdown *func(context.Context) error, healthDrain *func(), draining *bool) error {
-	if !cfg.Server.Health.Enabled {
-		return nil
-	}
-
 	healthMutex.Lock()
 	defer healthMutex.Unlock()
 
@@ -84,6 +80,11 @@ func healthReloader(ctx context.Context, cfg *config.Config, ent *entities.Entit
 		if err := oldHealthShutdown(context.Background()); err != nil {
 			slog.WarnContext(ctx, fmt.Sprintf("Error shutting down previous health generation: %v", err))
 		}
+	}
+
+	// Nil pointers keep the final shutdown from calling into the generation just torn down
+	if !cfg.Health.Enabled {
+		return nil
 	}
 
 	newHealthShutdown, newHealthDrain, err := SetupHealth(ctx, cfg, ent.LayerGroup)
@@ -137,10 +138,9 @@ func setupHandlers(cfg *config.Config, ent *entities.Entities) (http.Handler, re
 	var myDocumentationHandler http.Handler
 	var myPreviewHandler http.Handler
 	registry := newGenerationRegistry()
-	firstGen := newGeneration(ent)
+	firstGen := newGeneration(cfg, ent)
 	registry.add(firstGen)
-	reloadable := newReloadableEntities(cfg, ent, firstGen)
-	myDefaultHandler := defaultHandler{reloadable}
+	myDefaultHandler := defaultHandler{firstGen}
 
 	var preview *previewHandler
 
@@ -153,30 +153,31 @@ func setupHandlers(cfg *config.Config, ent *entities.Entities) (http.Handler, re
 			myDocumentationHandler = &documentationHandler{myDefaultHandler}
 		}
 
-		preview = newPreviewHandler(reloadable)
+		preview = newPreviewHandler(firstGen)
 		myPreviewHandler = preview
 	}
 
-	tilePath := cfg.Server.RootPath + cfg.Server.TilePath + "/{layer}/{z}/{x}/{y}"
+	tilePath := firstGen.tilePathPrefix() + "/{layer}/{z}/{x}/{y}"
 	docsPath := cfg.Server.RootPath + cfg.Server.DocsPath + "/{path...}"
 	previewPath := cfg.Server.RootPath + "preview/{layer}"
-	handler, err := newTileHandler(reloadable)
+	handler, err := newTileHandler(firstGen)
 	if err != nil {
 		return nil, nil, nil, nil, nil, err
 	}
 
 	myTileHandler = &handler
 
-	tileJSON := setupTileJSONHandlers(cfg, reloadable)
+	tileJSON := setupTileJSONHandlers(cfg, firstGen)
 
-	reloadFunc := func(cfg2 *config.Config, ent2 *entities.Entities) error {
-		gen := newGeneration(ent2)
+	// The new config is deliberately ignored: every handler-visible section is non-reloadable
+	reloadFunc := func(_ *config.Config, ent2 *entities.Entities) error {
+		gen := firstGen.succeededBy(ent2)
 		registry.add(gen)
-		handler.reloadEntities(newReloadableEntities(cfg2, ent2, gen))
-		tileJSON.reloadEntities(cfg2, ent2, gen)
+		handler.reload(gen)
+		tileJSON.reload(gen)
 
 		if preview != nil {
-			preview.reloadEntities(newReloadableEntities(cfg2, ent2, gen))
+			preview.reload(gen)
 		}
 
 		return nil
@@ -333,7 +334,7 @@ func ListenAndServe(config *config.Config, ent *entities.Entities, reloadPtr *fu
 	// already draining, instead of reopening the readiness window shutdown just closed.
 	var draining bool
 
-	if config.Server.Health.Enabled {
+	if config.Health.Enabled {
 		healthShutdown, healthDrain, err = SetupHealth(ctx, config, ent.LayerGroup)
 
 		if err != nil {

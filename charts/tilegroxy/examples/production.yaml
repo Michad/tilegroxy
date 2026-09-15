@@ -12,16 +12,16 @@ config:
     headers:
       Access-Control-Allow-Origin: "*"
       X-Content-Type-Options: nosniff
-    health:
-      enabled: true
-      port: 3000
-      checks:
-        - name: cache
-          delay: 60
-        - name: tile
-          layer: osm
-          validation: success
-          delay: 60
+  health:
+    enabled: true
+    port: 3000
+    checks:
+      - name: cache
+        delay: 60
+      - name: tile
+        layer: osm
+        validation: success
+        delay: 60
   client:
     userAgent: tilegroxy/example-org
   logging:

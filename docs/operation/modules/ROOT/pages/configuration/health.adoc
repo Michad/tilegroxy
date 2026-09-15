@@ -50,13 +50,13 @@ The following can be supplied as environment variables:
 | Configuration Parameter | Environment Variable
 
 | Enabled
-| SERVER_HEALTH_ENABLED
+| HEALTH_ENABLED
 
 | Port
-| SERVER_HEALTH_PORT
+| HEALTH_PORT
 
 | Host
-| SERVER_HEALTH_HOST
+| HEALTH_HOST
 
 |===
 
@@ -181,20 +181,19 @@ Configuration options:
 
 
 ----
-server:
-  health:
-    port: 3020
-    checks:
-      - name: tile
-        layer: some_layer
-        x: 0
-        y: 0
-        z: 0
-        validation: content-type
-        result: image/png; charset=UTF-8
-        delay: 60 
-      - name: cache
-        delay: 600
+health:
+  port: 3020
+  checks:
+    - name: tile
+      layer: some_layer
+      x: 0
+      y: 0
+      z: 0
+      validation: content-type
+      result: image/png; charset=UTF-8
+      delay: 60 
+    - name: cache
+      delay: 600
         
 ----
 
