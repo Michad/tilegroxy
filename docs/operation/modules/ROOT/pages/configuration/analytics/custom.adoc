@@ -93,4 +93,4 @@ analytics:
     maxAge: 60
 ----
 
-A complete working script is available in link:../examples/analytics/[examples/analytics].
+A complete working script is available in link:/examples/analytics/custom_webhook.go[examples/analytics/custom_webhook.go].

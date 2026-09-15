@@ -20,11 +20,9 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
-	"sync"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -39,26 +37,14 @@ type tileJSONIndexEntry struct {
 // tileHandler does, as a separate instance rather than sharing tileHandler's, since the index and
 // per-layer routes are distinct http.Handler registrations.
 type tileJSONHandler struct {
-	entities    reloadableEntities
-	entityMutex sync.RWMutex
+	generationHolder
 	// index selects between the two endpoints sharing this handler: true serves the
 	// RootPath/IndexPath listing, false serves TilePath/{layer}.json for one layer.
 	index bool
 }
 
-func newTileJSONHandler(handler reloadableEntities, index bool) *tileJSONHandler {
-	return &tileJSONHandler{entities: handler, index: index}
-}
-
-func (h *tileJSONHandler) reloadEntities(newEntities reloadableEntities) {
-	h.entityMutex.Lock()
-	oldEntities := h.entities
-	h.entities = newEntities
-	h.entityMutex.Unlock()
-
-	if oldEntities.gen != nil {
-		oldEntities.gen.markClosing(pkg.BackgroundContext(), generationCloseFloor)
-	}
+func newTileJSONHandler(gen *generation, index bool) *tileJSONHandler {
+	return &tileJSONHandler{generationHolder{current: gen}, index}
 }
 
 // tileJSONHandlers bundles the two TileJSON endpoints and their routes, letting setupHandlers
@@ -74,13 +60,13 @@ type tileJSONHandlers struct {
 
 // setupTileJSONHandlers builds the TileJSON handlers when enabled. Its zero value (TileJSON
 // disabled) is safe to use directly: every method below no-ops on nil handlers.
-func setupTileJSONHandlers(cfg *config.Config, reloadable reloadableEntities) *tileJSONHandlers {
+func setupTileJSONHandlers(cfg *config.Config, gen *generation) *tileJSONHandlers {
 	if !cfg.Server.TileJSON.Enabled {
 		return &tileJSONHandlers{}
 	}
 
-	index := newTileJSONHandler(reloadable, true)
-	document := newTileJSONHandler(reloadable, false)
+	index := newTileJSONHandler(gen, true)
+	document := newTileJSONHandler(gen, false)
 
 	return &tileJSONHandlers{
 		index:        index,
@@ -88,17 +74,17 @@ func setupTileJSONHandlers(cfg *config.Config, reloadable reloadableEntities) *t
 		indexHTTP:    index,
 		documentHTTP: document,
 		indexPath:    cfg.Server.RootPath + cfg.Server.TileJSON.IndexPath,
-		documentPath: cfg.Server.RootPath + cfg.Server.TilePath + "/{layerjson}",
+		documentPath: gen.tilePathPrefix() + "/{layerjson}",
 	}
 }
 
-func (t *tileJSONHandlers) reloadEntities(cfg *config.Config, ent *entities.Entities, gen *generation) {
+func (t *tileJSONHandlers) reload(gen *generation) {
 	if t.index == nil {
 		return
 	}
 
-	t.index.reloadEntities(newReloadableEntities(cfg, ent, gen))
-	t.document.reloadEntities(newReloadableEntities(cfg, ent, gen))
+	t.index.reload(gen)
+	t.document.reload(gen)
 }
 
 func (t *tileJSONHandlers) wrapWithTelemetry() {
@@ -219,17 +205,10 @@ func (h *tileJSONHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	slog.DebugContext(ctx, "server: tilejson handler started")
 	defer slog.DebugContext(ctx, "server: tilejson handler ended")
 
-	// Copy the entities and take a hold on their generation in the same critical section as the
-	// pointer read, so a concurrent reload either sees this request or hands us the new generation
-	h.entityMutex.RLock()
-	entities := h.entities
-	if entities.gen != nil {
-		entities.gen.acquire()
-		defer entities.gen.release()
-	}
-	h.entityMutex.RUnlock()
+	cur, release := h.acquire()
+	defer release()
 
-	entities.writeHeaders(w)
+	cur.writeHeaders(w)
 
 	if req.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusNoContent)
@@ -241,29 +220,29 @@ func (h *tileJSONHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if !entities.auth.CheckAuthentication(ctx, req) {
-		writeError(ctx, w, &entities.config.Error, pkg.UnauthorizedError{Message: "CheckAuthentication returned false"}, config.DataTypeUnknown)
+	if !cur.auth().CheckAuthentication(ctx, req) {
+		writeError(ctx, w, &cur.errCfg, pkg.UnauthorizedError{Message: "CheckAuthentication returned false"}, config.DataTypeUnknown)
 		return
 	}
 
 	limitLayers, allowed := layerRestriction(ctx)
 	allowedArea := areaRestriction(ctx)
 
-	publicURLs := resolvePublicURLs(req, entities.config.Server.TileJSON.BaseURLs)
-	tilePathPrefix := entities.config.Server.RootPath + entities.config.Server.TilePath
+	publicURLs := resolvePublicURLs(req, cur.serverCfg.TileJSON.BaseURLs)
+	tilePathPrefix := cur.tilePathPrefix()
 
 	if h.index {
-		serveIndex(w, entities, publicURLs[0], tilePathPrefix, limitLayers, allowed)
+		serveIndex(w, cur, publicURLs[0], tilePathPrefix, limitLayers, allowed)
 		return
 	}
 
-	serveDocument(ctx, w, req, entities, publicURLs, tilePathPrefix, limitLayers, allowed, allowedArea)
+	serveDocument(ctx, w, req, cur, publicURLs, tilePathPrefix, limitLayers, allowed, allowedArea)
 }
 
-func serveIndex(w http.ResponseWriter, entities reloadableEntities, publicURL publicURLParts, tilePathPrefix string, limitLayers bool, allowed []string) {
+func serveIndex(w http.ResponseWriter, cur *generation, publicURL publicURLParts, tilePathPrefix string, limitLayers bool, allowed []string) {
 	entries := make([]tileJSONIndexEntry, 0)
 
-	for _, l := range entities.layerGroup.Layers() {
+	for _, l := range cur.layerGroup().Layers() {
 		if !l.TileJSONEligible() {
 			continue
 		}
@@ -283,22 +262,22 @@ func serveIndex(w http.ResponseWriter, entities reloadableEntities, publicURL pu
 	writeJSON(w, http.StatusOK, entries)
 }
 
-func serveDocument(ctx context.Context, w http.ResponseWriter, req *http.Request, entities reloadableEntities, publicURLs []publicURLParts, tilePathPrefix string, limitLayers bool, allowed []string, allowedArea *pkg.Bounds) {
+func serveDocument(ctx context.Context, w http.ResponseWriter, req *http.Request, cur *generation, publicURLs []publicURLParts, tilePathPrefix string, limitLayers bool, allowed []string, allowedArea *pkg.Bounds) {
 	pathValue := req.PathValue("layerjson")
 	name, ok := strings.CutSuffix(pathValue, ".json")
 	if !ok {
-		writeError(ctx, w, &entities.config.Error, pkg.UnauthorizedError{Message: "Layer " + pathValue + " does not exist"}, config.DataTypeUnknown)
+		writeError(ctx, w, &cur.errCfg, pkg.UnauthorizedError{Message: "Layer " + pathValue + " does not exist"}, config.DataTypeUnknown)
 		return
 	}
 
-	l, foundName := findTileJSONLayer(entities.layerGroup, name)
+	l, foundName := findTileJSONLayer(cur.layerGroup(), name)
 	if l == nil {
-		writeError(ctx, w, &entities.config.Error, pkg.UnauthorizedError{Message: "Layer " + name + " does not exist"}, config.DataTypeUnknown)
+		writeError(ctx, w, &cur.errCfg, pkg.UnauthorizedError{Message: "Layer " + name + " does not exist"}, config.DataTypeUnknown)
 		return
 	}
 
 	if limitLayers && !layerNameAllowed(foundName, l.ID, allowed) {
-		writeError(ctx, w, &entities.config.Error, pkg.UnauthorizedError{Message: "Denying access to non-allowed layer"}, config.DataTypeUnknown)
+		writeError(ctx, w, &cur.errCfg, pkg.UnauthorizedError{Message: "Denying access to non-allowed layer"}, config.DataTypeUnknown)
 		return
 	}
 

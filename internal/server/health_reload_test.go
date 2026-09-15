@@ -113,10 +113,10 @@ func healthTestConfig(t *testing.T) (config.Config, int) {
 
 	cfg := config.DefaultConfig()
 	cfg.Server.Port = freePort(t)
-	cfg.Server.Health.Enabled = true
-	cfg.Server.Health.Port = healthPort
-	cfg.Server.Health.Host = "127.0.0.1"
-	cfg.Server.Health.Checks = []map[string]any{
+	cfg.Health.Enabled = true
+	cfg.Health.Port = healthPort
+	cfg.Health.Host = "127.0.0.1"
+	cfg.Health.Checks = []map[string]any{
 		{"name": "tile", "layer": "test", "delay": 1},
 	}
 	cfg.Layers = []config.LayerConfig{
@@ -271,7 +271,7 @@ func Test_ListenAndServe_FailedHealthRebuildRecovers(t *testing.T) {
 
 	// Reload with a check name that doesn't resolve to any registered health check.
 	badCfg := cfg
-	badCfg.Server.Health.Checks = []map[string]any{
+	badCfg.Health.Checks = []map[string]any{
 		{"name": "this-check-does-not-exist", "delay": 1},
 	}
 
@@ -346,7 +346,7 @@ func Test_healthReloader_FailedRebuildDoesNotRetainStalePointer(t *testing.T) {
 	draining := false
 
 	badCfg := cfg
-	badCfg.Server.Health.Checks = []map[string]any{
+	badCfg.Health.Checks = []map[string]any{
 		{"name": "this-check-does-not-exist", "delay": 1},
 	}
 
@@ -358,4 +358,67 @@ func Test_healthReloader_FailedRebuildDoesNotRetainStalePointer(t *testing.T) {
 		require.NoError(t, healthShutdown(ctx))
 		require.Equal(t, 1, oldCalls, "the retained shutdown func must not be the stale previous generation's")
 	}
+}
+
+func waitForPortClosed(t *testing.T, port int) {
+	t.Helper()
+
+	require.Eventually(t, func() bool { return !dialPort(port) }, 15*time.Second, 100*time.Millisecond,
+		"port %v still accepting connections", port)
+}
+
+func Test_ListenAndServe_HealthDisabledOnReloadStopsServing(t *testing.T) {
+	cfg, healthPort := healthTestConfig(t)
+
+	lg, err := layer.ConstructLayerGroup(cfg, nil, nil, nil)
+	require.NoError(t, err)
+
+	reloadFn := startServer(t, &cfg, lg)
+
+	waitForPort(t, healthPort)
+	waitForHealthStatus(t, healthPort, "ok")
+
+	offCfg := cfg
+	offCfg.Health.Enabled = false
+
+	offLg, err := layer.ConstructLayerGroup(offCfg, nil, nil, nil)
+	require.NoError(t, err)
+
+	require.NoError(t, reloadFn(&offCfg, entitiesFor(offLg)))
+
+	waitForPortClosed(t, healthPort)
+
+	onLg, err := layer.ConstructLayerGroup(cfg, nil, nil, nil)
+	require.NoError(t, err)
+
+	require.NoError(t, reloadFn(&cfg, entitiesFor(onLg)))
+
+	waitForPort(t, healthPort)
+	waitForHealthStatus(t, healthPort, "ok")
+}
+
+func Test_healthReloader_DisablingClearsPointers(t *testing.T) {
+	cfg, _ := healthTestConfig(t)
+
+	lg, err := layer.ConstructLayerGroup(cfg, nil, nil, nil)
+	require.NoError(t, err)
+
+	var healthMutex sync.Mutex
+
+	oldCalls := 0
+	healthShutdown := func(context.Context) error {
+		oldCalls++
+		return nil
+	}
+	healthDrain := func() {}
+	draining := false
+
+	offCfg := cfg
+	offCfg.Health.Enabled = false
+
+	require.NoError(t, healthReloader(context.Background(), &offCfg, entitiesFor(lg), &healthMutex, &healthShutdown, &healthDrain, &draining))
+
+	require.Equal(t, 1, oldCalls, "the previous generation should have been shut down exactly once")
+	require.Nil(t, healthShutdown)
+	require.Nil(t, healthDrain)
 }

@@ -77,7 +77,6 @@ type BoundsConfig struct {
 
 type ServerConfig struct {
 	Encrypt    *EncryptionConfig // Whether and how to use TLS. Defaults to none AKA no encryption.
-	Health     HealthConfig      // Whether to enable health endpoints on a secondary port.
 	TileJSON   TileJSONConfig    // Whether to enable endpoints that describe layers using the TileJSON format
 	BindHost   string            // IP address to bind HTTP server to
 	Port       int               // Port to bind HTTP server to
@@ -289,6 +288,7 @@ type LayerConfig struct {
 
 type Config struct {
 	Server         ServerConfig
+	Health         HealthConfig
 	Client         ClientConfig
 	Logging        LogConfig
 	Error          ErrorConfig
@@ -452,15 +452,15 @@ func DefaultConfig() Config {
 			Timeout:    60,
 			Gzip:       false,
 			DrainDelay: 5,
-			Health: HealthConfig{
-				Enabled: false,
-				Port:    3000,
-				Host:    "0.0.0.0",
-			},
 			TileJSON: TileJSONConfig{
 				Enabled:   false,
 				IndexPath: "tilejson.json",
 			},
+		},
+		Health: HealthConfig{
+			Enabled: false,
+			Port:    3000,
+			Host:    "0.0.0.0",
 		},
 		Telemetry: TelemetryConfig{
 			Enabled: false,

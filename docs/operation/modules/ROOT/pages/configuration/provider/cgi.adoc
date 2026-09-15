@@ -1,6 +1,6 @@
 = CGI
 
-The CGI provider allows a call-out to an external executable on the local system that's responsible for generating the tile. This allows tilegroxy to act as the HTTP server for a CGI program like Apache httpd or nginx traditionally acts. The flagship use-case for this is to integrate with https://www.mapserver.org[MapServer]. A full example is available in link:../examples/mapserver/[examples/mapserver].
+The CGI provider allows a call-out to an external executable on the local system that's responsible for generating the tile. This allows tilegroxy to act as the HTTP server for a CGI program like Apache httpd or nginx traditionally acts. The flagship use-case for this is to integrate with https://www.mapserver.org[MapServer]. A full example is available in link:/examples/mapserver/README.md[examples/mapserver].
 
 Name should be "cgi"
 

@@ -67,7 +67,7 @@ func entitiesWithAnalytics(a analytics.Analytics) *entities.Entities {
 }
 
 func Test_GenerationClosesWhenIdle(t *testing.T) {
-	g := newGeneration(&entities.Entities{})
+	g := newGeneration(nil, &entities.Entities{})
 
 	// No in-flight requests, so marking it closing releases it after the floor.
 	g.markClosing(context.Background(), time.Millisecond)
@@ -77,7 +77,7 @@ func Test_GenerationClosesWhenIdle(t *testing.T) {
 }
 
 func Test_GenerationWaitsForInFlightRequest(t *testing.T) {
-	g := newGeneration(&entities.Entities{})
+	g := newGeneration(nil, &entities.Entities{})
 
 	g.acquire()
 
@@ -97,7 +97,7 @@ func Test_GenerationWaitsForInFlightRequest(t *testing.T) {
 }
 
 func Test_GenerationClosesOnlyOnce(t *testing.T) {
-	g := newGeneration(&entities.Entities{})
+	g := newGeneration(nil, &entities.Entities{})
 
 	g.acquire()
 	g.acquire()
@@ -111,7 +111,7 @@ func Test_GenerationClosesOnlyOnce(t *testing.T) {
 }
 
 func Test_GenerationConcurrentAcquireRelease(t *testing.T) {
-	g := newGeneration(&entities.Entities{})
+	g := newGeneration(nil, &entities.Entities{})
 
 	var wg sync.WaitGroup
 	for range 50 {
@@ -146,7 +146,7 @@ func (p panickingAnalytics) Close(_ context.Context) error {
 }
 
 func Test_MarkClosingRecoversFromPanicInClose(t *testing.T) {
-	g := newGeneration(entitiesWithAnalytics(panickingAnalytics{}))
+	g := newGeneration(nil, entitiesWithAnalytics(panickingAnalytics{}))
 
 	// The floor goroutine runs detached from any request; a panic in the underlying Close must
 	// not be allowed to escape it and take down the whole process.
@@ -159,8 +159,8 @@ func Test_MarkClosingRecoversFromPanicInClose(t *testing.T) {
 func Test_RegistryClosesEveryLiveGeneration(t *testing.T) {
 	reg := newGenerationRegistry()
 
-	g1 := newGeneration(&entities.Entities{})
-	g2 := newGeneration(&entities.Entities{})
+	g1 := newGeneration(nil, &entities.Entities{})
+	g2 := newGeneration(nil, &entities.Entities{})
 	reg.add(g1)
 	reg.add(g2)
 
@@ -176,7 +176,7 @@ func Test_RegistryDoesNotRetainClosedGenerations(t *testing.T) {
 
 	gens := make([]*generation, 0, 5)
 	for range 5 {
-		g := newGeneration(&entities.Entities{})
+		g := newGeneration(nil, &entities.Entities{})
 		reg.add(g)
 		gens = append(gens, g)
 	}
@@ -199,7 +199,7 @@ func Test_RegistryDoesNotRetainClosedGenerations(t *testing.T) {
 func Test_CloseAllWaitsForInFlightRequest(t *testing.T) {
 	reg := newGenerationRegistry()
 
-	g := newGeneration(&entities.Entities{})
+	g := newGeneration(nil, &entities.Entities{})
 	reg.add(g)
 
 	g.acquire()
@@ -231,7 +231,7 @@ func Test_CloseAllJoinsInProgressClose(t *testing.T) {
 	reg := newGenerationRegistry()
 
 	block := &blockingAnalytics{release: make(chan struct{})}
-	g := newGeneration(entitiesWithAnalytics(block))
+	g := newGeneration(nil, entitiesWithAnalytics(block))
 	reg.add(g)
 
 	// Start a close directly, as release() or the floor goroutine would, and have it block
@@ -279,7 +279,7 @@ func Test_CloseAllReturnsCloseError(t *testing.T) {
 	reg := newGenerationRegistry()
 
 	failErr := errors.New("boom")
-	g := newGeneration(entitiesWithAnalytics(&blockingAnalytics{closeErr: failErr}))
+	g := newGeneration(nil, entitiesWithAnalytics(&blockingAnalytics{closeErr: failErr}))
 	reg.add(g)
 
 	err := reg.closeAll(context.Background())
@@ -290,27 +290,27 @@ func Test_CloseAllReturnsCloseError(t *testing.T) {
 
 func Test_ReloadKeepsGenerationAliveForInFlightRequest(t *testing.T) {
 	reg := newGenerationRegistry()
-	oldGen := newGeneration(&entities.Entities{})
+	cfg := config.DefaultConfig()
+	oldGen := newGeneration(&cfg, &entities.Entities{})
 	reg.add(oldGen)
 
-	cfg := config.DefaultConfig()
-	handler, err := newTileHandler(newReloadableEntities(&cfg, oldGen.all, oldGen))
+	handler, err := newTileHandler(oldGen)
 	require.NoError(t, err)
 
 	// Simulate a request that read the pointer and is still running.
-	handler.entityMutex.RLock()
-	inFlight := handler.entities
-	inFlight.gen.acquire()
-	handler.entityMutex.RUnlock()
+	handler.mu.RLock()
+	inFlight := handler.current
+	inFlight.acquire()
+	handler.mu.RUnlock()
 
-	newGen := newGeneration(&entities.Entities{})
+	newGen := oldGen.succeededBy(&entities.Entities{})
 	reg.add(newGen)
-	handler.reloadEntities(newReloadableEntities(&cfg, newGen.all, newGen))
+	handler.reload(newGen)
 
 	time.Sleep(50 * time.Millisecond)
 	assert.False(t, oldGen.isClosed(), "the old generation must outlive the request holding it")
 
-	inFlight.gen.release()
+	inFlight.release()
 
 	require.Eventually(t, oldGen.isClosed, 5*time.Second, 10*time.Millisecond,
 		"the old generation must release once its last request returns")
@@ -330,9 +330,9 @@ func Test_ServeHTTPReleasesGenerationRef(t *testing.T) {
 	lg, err := layer.ConstructLayerGroup(cfg, cache.NewSingleCacheRegistry(c), nil, nil)
 	require.NoError(t, err)
 
-	gen := newGeneration(&entities.Entities{LayerGroup: lg, Auth: auth, Caches: cache.NewSingleCacheRegistry(c)})
+	gen := newGeneration(&cfg, &entities.Entities{LayerGroup: lg, Auth: auth, Cache: cache.NewSingleCacheRegistry(c)})
 
-	handler, err := newTileHandler(newReloadableEntities(&cfg, gen.all, gen))
+	handler, err := newTileHandler(gen)
 	require.NoError(t, err)
 
 	req := httptest.NewRequest(http.MethodGet, "http://example.com/tiles/main/8/12/32", nil).
@@ -352,16 +352,16 @@ func Test_ServeHTTPReleasesGenerationRef(t *testing.T) {
 
 func Test_CurrentEntitiesFollowsReload(t *testing.T) {
 	reg := newGenerationRegistry()
-	oldGen := newGeneration(&entities.Entities{})
-	newGen := newGeneration(&entities.Entities{})
+	cfg := config.DefaultConfig()
+	oldGen := newGeneration(&cfg, &entities.Entities{})
+	newGen := oldGen.succeededBy(&entities.Entities{})
 	reg.add(oldGen)
 
-	cfg := config.DefaultConfig()
-	handler, err := newTileHandler(newReloadableEntities(&cfg, oldGen.all, oldGen))
+	handler, err := newTileHandler(oldGen)
 	require.NoError(t, err)
 
 	reg.add(newGen)
-	handler.reloadEntities(newReloadableEntities(&cfg, newGen.all, newGen))
+	handler.reload(newGen)
 
 	// Shutdown closes whatever this returns, so it must track the swap.
 	assert.Same(t, newGen.all, handler.currentEntities())

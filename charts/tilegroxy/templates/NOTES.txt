@@ -32,7 +32,7 @@ Configured layers:
 
 {{- if ne (include "tilegroxy.healthEnabled" .) "true" }}
 
-WARNING: config.server.health.enabled is not set, so no liveness or readiness
+WARNING: config.health.enabled is not set, so no liveness or readiness
 probes were created. Kubernetes will not notice a wedged or unhealthy pod.
 {{- if .Values.preStop.enabled }} The preStop hook is covering endpoint
 propagation on shutdown in its place, but add health checks for the liveness

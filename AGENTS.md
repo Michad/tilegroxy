@@ -18,8 +18,7 @@ These apply to every change. Follow them without being asked.
 4. **Match the surrounding writing style in documentation.** Read the peer pages beside yours
    in `nav.adoc` first, match their layout and tone exactly, and compare again when done. Avoid
    AI cliches. No em-dashes.
-5. **Do not lower code coverage.** Up to 0.3% jitter is fine since the calculation varies
-   between runs. Anything more means the change needs tests.
+5. **Do not lower code coverage.** Target at least 85% coverage for new code. Check github page for current coverage stats. Up to 0.3% jitter is fine since the calculation varies between runs. Only run `make cover` when it's likely the change meaningfully affected coverage
 6. **Always run `make lint` and apply everything it reports**, advisory suggestions included.
    Fix findings rather than suppressing them with `//nolint`.
 7. **Avoid breaking backwards compatibility.** See the contract below. When a break looks

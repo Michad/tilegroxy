@@ -68,16 +68,16 @@ config:
       # CloudFront and the ALB sit in front, so CORS is handled here.
       Access-Control-Allow-Origin: "*"
       X-Content-Type-Options: nosniff
-    health:
-      enabled: true
-      port: 3000
-      checks:
-        - name: cache
-          delay: 60
-        - name: tile
-          layer: basemap
-          validation: success
-          delay: 60
+  health:
+    enabled: true
+    port: 3000
+    checks:
+      - name: cache
+        delay: 60
+      - name: tile
+        layer: basemap
+        validation: success
+        delay: 60
 
   # -------------------------------------------------------------------------
   # Secrets Manager. Once this is configured, any `secret.<name>` value

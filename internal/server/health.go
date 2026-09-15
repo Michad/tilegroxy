@@ -169,7 +169,7 @@ func (h healthHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 func SetupHealth(ctx context.Context, cfg *config.Config, layerGroup *layer.LayerGroup) (func(context.Context) error, func(), error) {
-	h := cfg.Server.Health
+	h := cfg.Health
 
 	slog.InfoContext(ctx, fmt.Sprintf("Initializing health subsystem with %v checks on %v:%v", len(h.Checks), h.Host, h.Port))
 

@@ -6,7 +6,7 @@ link:https://github.com/Michad/tilegroxy/tree/main/examples/configurations[Compl
 
 == Lazy Button
 
-A link:/docs/skills/generating-tilegroxy-config/SKILL.md[Skill] is available to help AI coding agents write and troubleshoot tilegroxy configuration. 
+A link:/skills/generating-tilegroxy-config/SKILL.md[Skill] is available to help AI coding agents write and troubleshoot tilegroxy configuration. 
 
 How to install it depends on your agent:
 
@@ -40,6 +40,7 @@ The following is the top-level configuration structure. All top-level keys are o
 
 ____
 xref:configuration/server.adoc[server]:  ... +
+xref:configuration/health.adoc[health]:  ... +
 xref:configuration/client.adoc[client]:  ... +
 xref:configuration/log.adoc[logging]:  ... +
 xref:configuration/telemetry.adoc[telemetry]: ... +

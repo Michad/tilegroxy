@@ -94,6 +94,10 @@ twice.
 {{- dig "server" dict (default dict .Values.config) | toYaml -}}
 {{- end }}
 
+{{- define "tilegroxy.health" -}}
+{{- dig "health" dict (default dict .Values.config) | toYaml -}}
+{{- end }}
+
 {{/*
 The port tilegroxy serves tiles on. Taken from the config so the Service,
 probes and container ports stay consistent with whatever the user configured.
@@ -103,11 +107,11 @@ probes and container ports stay consistent with whatever the user configured.
 {{- end }}
 
 {{- define "tilegroxy.healthEnabled" -}}
-{{- dig "health" "enabled" false (fromYaml (include "tilegroxy.server" .)) -}}
+{{- dig "enabled" false (fromYaml (include "tilegroxy.health" .)) -}}
 {{- end }}
 
 {{- define "tilegroxy.healthPort" -}}
-{{- dig "health" "port" 3000 (fromYaml (include "tilegroxy.server" .)) -}}
+{{- dig "port" 3000 (fromYaml (include "tilegroxy.health" .)) -}}
 {{- end }}
 
 {{/*

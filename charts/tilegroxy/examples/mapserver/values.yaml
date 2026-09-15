@@ -31,19 +31,19 @@ config:
     production: true
     headers:
       Access-Control-Allow-Origin: "*"
-    health:
-      enabled: true
-      port: 3000
-      checks:
-        - name: cache
-          delay: 60
-        # Exercises the whole CGI path, so a broken mapfile or a missing
-        # shapefile takes the pod out of the Service instead of serving
-        # errors. Uses a fixed layer name rather than the pattern below.
-        - name: tile
-          layer: states_states
-          validation: success
-          delay: 120
+  health:
+    enabled: true
+    port: 3000
+    checks:
+      - name: cache
+        delay: 60
+      # Exercises the whole CGI path, so a broken mapfile or a missing
+      # shapefile takes the pod out of the Service instead of serving
+      # errors. Uses a fixed layer name rather than the pattern below.
+      - name: tile
+        layer: states_states
+        validation: success
+        delay: 120
 
   cache:
     name: memory
