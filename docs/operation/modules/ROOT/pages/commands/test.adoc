@@ -26,8 +26,14 @@ Flags:
                             layers by default
       --no-cache            Don't write to the cache. The Cache
                             configuration must still be syntactically valid
+      --tenant string       The tenant ID to test as, standing in for what
+                            authentication would supply on a real request.
+                            Required to test a specific tenant's tiles when
+                            using a tenant cache
   -t, --threads uint16      How many layers to test at once. Be mindful of
                             spamming upstream providers (default 1)
+      --user string         The user ID to test as, standing in for what
+                            authentication would supply on a real request
   -x, --x-coordinate uint   The x coordinate to use to test (default 123)
   -y, --y-coordinate uint   The y coordinate to use to test (default 534)
   -z, --z-coordinate uint   The z coordinate to use to test (default 10)

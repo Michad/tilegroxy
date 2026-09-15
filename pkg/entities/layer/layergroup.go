@@ -364,6 +364,10 @@ func writeCache(ctx context.Context, cache cache.Cache, tileRequest pkg.TileRequ
 	// We need to make a new context to avoid the request finishing cancelling the ctx sent into the cache
 	newCtx := pkg.BackgroundContext()
 
+	// A cache can key off the identity (the tenant cache namespaces by it), so the write has to see
+	// the same identity the matching lookup did.
+	pkg.CopyAuthRestrictions(ctx, newCtx)
+
 	// Copy span over from original context
 	span := trace.SpanFromContext(ctx)
 	newCtx = trace.ContextWithSpan(newCtx, span)

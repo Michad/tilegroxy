@@ -60,9 +60,16 @@ Flags:
       --purge                   Delete the cached tiles covering the
                                 given area and zoom levels instead of
                                 populating them.
+      --tenant string           The tenant ID to seed as, standing in for
+                                what authentication would supply on a real
+                                request. Required to seed a specific
+                                tenant's tiles when using a tenant cache
   -t, --threads uint16          How many concurrent requests to use to
                                 perform seeding. Be mindful of spamming
                                 upstream providers (default 1)
+      --user string             The user ID to seed as, standing in for
+                                what authentication would supply on a real
+                                request
   -v, --verbose                 Output verbose information including every
                                 tile being requested and success or error status
   -z, --zoom uints              The zoom level(s) to seed (default [0,1,2,

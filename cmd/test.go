@@ -50,9 +50,11 @@ func runTest(cmd *cobra.Command, _ []string) {
 	numThread, err6 := cmd.Flags().GetUint16("threads")
 	jsonOut, err7 := cmd.Flags().GetBool("json")
 	filePath, err8 := cmd.Flags().GetString("file")
+	userID, err9 := cmd.Flags().GetString("user")
+	tenantID, err10 := cmd.Flags().GetString("tenant")
 	out := rootCmd.OutOrStdout()
 
-	if err := errors.Join(err1, err2, err3, err4, err5, err6, err7, err8); err != nil {
+	if err := errors.Join(err1, err2, err3, err4, err5, err6, err7, err8, err9, err10); err != nil {
 		fmt.Fprintf(out, "Error: %v", err)
 		exit(1)
 		return
@@ -77,6 +79,8 @@ func runTest(cmd *cobra.Command, _ []string) {
 		NoCache:        noCache,
 		JSON:           jsonOut,
 		FilePath:       filePath,
+		UserID:         userID,
+		TenantID:       tenantID,
 	}, out)
 
 	if err != nil {
@@ -114,4 +118,6 @@ func initTest() {
 	testCmd.Flags().Uint16P("threads", "t", 1, "How many layers to test at once. Be mindful of spamming upstream providers")
 	testCmd.Flags().Bool("json", false, "Output in JSON. If used with --file this only outputs the written file, not standard out")
 	testCmd.Flags().StringP("file", "f", "", "Write a run summary to this file.The file is JSON if --json is set, otherwise plain text")
+	testCmd.Flags().String("user", "", "The user ID to test as, standing in for what authentication would supply on a real request")
+	testCmd.Flags().String("tenant", "", "The tenant ID to test as, standing in for what authentication would supply on a real request. Required to test a specific tenant's tiles when using a tenant cache")
 }
