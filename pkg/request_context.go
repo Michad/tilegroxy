@@ -155,6 +155,18 @@ func BackgroundContext() context.Context {
 	return NewRequestContext(req)
 }
 
+// Sets the identity an offline run (seed, test) acts as, standing in for what auth would set on a
+// real request.
+func SetIdentity(ctx context.Context, userID, tenantID string) {
+	if u, ok := UserIDFromContext(ctx); ok && u != nil {
+		*u = userID
+	}
+
+	if t, ok := TenantIDFromContext(ctx); ok && t != nil {
+		*t = tenantID
+	}
+}
+
 func CopyAuthRestrictions(from, to context.Context) {
 	copyPtr(from, to, LimitLayersFromContext)
 	copyPtr(from, to, AllowedLayersFromContext)

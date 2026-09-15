@@ -55,9 +55,11 @@ func runSeed(cmd *cobra.Command, _ []string) {
 	cacheName, err11 := cmd.Flags().GetString("cache")
 	maxFailures, err12 := cmd.Flags().GetUint64("max-failures")
 	purge, err13 := cmd.Flags().GetBool("purge")
+	userID, err14 := cmd.Flags().GetString("user")
+	tenantID, err15 := cmd.Flags().GetString("tenant")
 	out := rootCmd.OutOrStdout()
 
-	if err := errors.Join(err1, err2, err3, err4, err5, err6, err7, err8, err9, err10, err11, err12, err13); err != nil {
+	if err := errors.Join(err1, err2, err3, err4, err5, err6, err7, err8, err9, err10, err11, err12, err13, err14, err15); err != nil {
 		fmt.Fprintf(out, "Error: %v", err)
 		exit(1)
 		return
@@ -83,7 +85,9 @@ func runSeed(cmd *cobra.Command, _ []string) {
 			ProgressFile: progressFile,
 			CacheName:    cacheName,
 			MaxFailures:  maxFailures,
-			Purge:        purge},
+			Purge:        purge,
+			UserID:       userID,
+			TenantID:     tenantID},
 		out)
 
 	if err != nil {
@@ -113,6 +117,8 @@ func initSeed() {
 	seedCmd.Flags().Uint64("max-failures", 0, "How many tiles can fail to render before the seed gives up and exits with a failure status. \nDefaults to the number of tiles being seeded, meaning the seed only fails if every tile does")
 	seedCmd.Flags().Bool("purge", false, "Delete the cached tiles covering the given area and zoom levels instead of populating them.")
 	seedCmd.Flags().String("cache", "", "Seed into the cache with this ID instead of the one the layer normally uses.")
+	seedCmd.Flags().String("user", "", "The user ID to seed as, standing in for what authentication would supply on a real request")
+	seedCmd.Flags().String("tenant", "", "The tenant ID to seed as, standing in for what authentication would supply on a real request. Required to seed a specific tenant's tiles when using a tenant cache")
 	seedCmd.MarkFlagsMutuallyExclusive("force", "purge")
 
 	if err != nil {

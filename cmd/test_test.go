@@ -325,3 +325,50 @@ func Test_TestCommand_InvalidConfig(t *testing.T) {
 	assert.NotEmpty(t, out)
 	assert.Equal(t, 1, exitStatus)
 }
+
+// A deployment keying tiles off the tenant needs to pick which tenant a test run acts as, so the
+// tile it writes lands in the namespace that tenant's requests read from.
+func Test_ExecuteTestCommand_TenantAndUser(t *testing.T) {
+	exitStatus = -1
+	rootCmd.ResetFlags()
+	testCmd.ResetFlags()
+	initRoot()
+	initTest()
+
+	ts := tileTestServer(t)
+	cacheDir := t.TempDir()
+
+	cfg := fmt.Sprintf(
+		`cache:
+  name: tenant
+  cache:
+    name: disk
+    path: %v
+layers:
+  - id: osm
+    provider:
+        name: proxy
+        url: %v/{z}/{x}/{y}.png
+`, cacheDir, ts.URL)
+
+	cmd := rootCmd
+	b := bytes.NewBufferString("")
+	cmd.SetOut(b)
+	cmd.SetErr(b)
+	cmd.SetArgs([]string{"test", "--raw-config", cfg, "--tenant", "tenant_a", "--user", "user_a"})
+	require.NoError(t, cmd.Execute())
+	out, err := io.ReadAll(b)
+	require.NoError(t, err)
+
+	assert.Contains(t, string(out), "Completed with 0 failures")
+	assert.Less(t, exitStatus, 1)
+
+	entries, err := os.ReadDir(cacheDir)
+	require.NoError(t, err)
+	require.NotEmpty(t, entries)
+
+	// The disk cache re-sanitizes the tenant cache's "~" separator into "_" when building filenames.
+	for _, entry := range entries {
+		assert.True(t, strings.HasPrefix(entry.Name(), "tenant_a_osm"), "cached tile %v isn't namespaced to the tenant", entry.Name())
+	}
+}

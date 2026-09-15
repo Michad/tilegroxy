@@ -313,3 +313,25 @@ func Test_SeedCommand_PurgeIgnoresTileLimit(t *testing.T) {
 	assert.NotContains(t, string(out), "--force")
 	assert.Equal(t, -1, exitStatus)
 }
+
+// A deployment keying tiles off the tenant needs to pick which tenant a seed runs as.
+func Test_SeedCommand_TenantAndUser(t *testing.T) {
+	exitStatus = -1
+	rootCmd.ResetFlags()
+	seedCmd.ResetFlags()
+	initRoot()
+	initSeed()
+
+	b := bytes.NewBufferString("")
+	rootCmd.SetOut(b)
+	rootCmd.SetErr(b)
+	rootCmd.SetArgs([]string{"seed", "--verbose", "-c", "../examples/configurations/simple.json", "-l", "osm", "-z", "0", "--purge", "--tenant", "tenant_a", "--user", "user_a"})
+	require.NoError(t, rootCmd.Execute())
+	out, err := io.ReadAll(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Contains(t, string(out), "Completed purging")
+	assert.Equal(t, -1, exitStatus)
+}

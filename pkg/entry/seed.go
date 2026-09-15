@@ -47,10 +47,13 @@ type SeedOptions struct {
 	CacheName    string
 	MaxFailures  uint64
 	Purge        bool
+	UserID       string
+	TenantID     string
 }
 
 func Seed(cfg *config.Config, opts SeedOptions, out io.Writer) error {
 	ctx := pkg.BackgroundContext()
+	pkg.SetIdentity(ctx, opts.UserID, opts.TenantID)
 
 	if opts.NumThread == 0 {
 		return errors.New("threads must be above 0")
@@ -351,6 +354,7 @@ func seedThread(wg *sync.WaitGroup, opts SeedOptions, out io.Writer, layerGroup 
 	}
 
 	ctx := pkg.BackgroundContext()
+	pkg.SetIdentity(ctx, opts.UserID, opts.TenantID)
 
 	for tile := range tiles {
 		var tileErr error
