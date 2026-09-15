@@ -330,7 +330,7 @@ func Test_ServeHTTPReleasesGenerationRef(t *testing.T) {
 	lg, err := layer.ConstructLayerGroup(cfg, cache.NewSingleCacheRegistry(c), nil, nil)
 	require.NoError(t, err)
 
-	gen := newGeneration(&cfg, &entities.Entities{LayerGroup: lg, Auth: auth, Cache: cache.NewSingleCacheRegistry(c)})
+	gen := newGeneration(&cfg, &entities.Entities{LayerGroup: lg, Auth: auth, Caches: cache.NewSingleCacheRegistry(c)})
 
 	handler, err := newTileHandler(gen)
 	require.NoError(t, err)
