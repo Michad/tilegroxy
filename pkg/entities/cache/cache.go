@@ -17,6 +17,7 @@ package cache
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -72,6 +73,33 @@ func RegisteredCacheNames() []string {
 	return names
 }
 
+// withoutCacheID drops the id naming a top-level cache entry, which selects the cache the way name
+// selects its type. No cache config declares one, so leaving it in would fail the unknown-key check.
+func withoutCacheID(rawConfig map[string]interface{}) map[string]interface{} {
+	found := false
+
+	for k := range rawConfig {
+		if strings.EqualFold(k, "id") {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return rawConfig
+	}
+
+	stripped := make(map[string]interface{}, len(rawConfig))
+
+	for k, v := range rawConfig {
+		if !strings.EqualFold(k, "id") {
+			stripped[k] = v
+		}
+	}
+
+	return stripped
+}
+
 func ConstructCache(rawConfig map[string]interface{}, deps CacheDeps) (Cache, error) {
 	name, ok := rawConfig["name"].(string)
 
@@ -86,7 +114,7 @@ func ConstructCache(rawConfig map[string]interface{}, deps CacheDeps) (Cache, er
 		reg, ok := RegisteredCache(name)
 		if ok {
 			cfg := reg.InitializeConfig()
-			err := config.DecodeEntityConfig(rawConfig, &cfg)
+			err := config.DecodeEntityConfig(withoutCacheID(rawConfig), &cfg)
 			if err != nil {
 				return nil, err
 			}

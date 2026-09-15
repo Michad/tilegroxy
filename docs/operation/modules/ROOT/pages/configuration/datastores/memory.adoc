@@ -1,0 +1,45 @@
+= Memory
+
+Defines an in-process store of tiles held in the memory of the tilegroxy daemon itself. Unlike the other datastores this is not a connection to anything external, it is the storage itself. Utilizes link:https://github.com/maypok86/otter[otter] under the hood.
+
+Only used by the xref:configuration/cache/memory.adoc[memory cache].
+
+*This is not recommended for production use.* The same caveats as the xref:configuration/cache/memory.adoc[memory cache] apply.
+
+Name should be "memory"
+
+Configuration options:
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| ID
+| The unique identifier of the datastore used to reference this datastore elsewhere in configuration
+| string
+| Yes
+| None
+
+| MaxSize
+| Maximum number of tiles to hold. Must be at least 10. Setting this too high can cause out-of-memory panics. This is not a guaranteed setting, which entry is evicted when exceeding this size is an implementation detail and the size can temporarily grow somewhat larger.
+| uint16
+| No
+| 100
+
+| TTL
+| Maximum time to live for entries in seconds
+| uint32
+| No
+| 3600
+|===
+
+Example:
+
+[,yaml]
+----
+datastores:
+  - name: memory
+    id: tiles
+    maxsize: 1000
+    ttl: 1000
+----

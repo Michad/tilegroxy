@@ -311,7 +311,7 @@ func Test_SetupHandlers_Preview_RegisteredWhenNotProduction(t *testing.T) {
 
 	var auth authentication.Authentication = authentications.Noop{}
 	var c cache.Cache = caches.Noop{}
-	lg, err := layer.ConstructLayerGroup(cfg, c, nil, nil)
+	lg, err := layer.ConstructLayerGroup(cfg, cache.NewSingleCacheRegistry(c), nil, nil)
 	require.NoError(t, err)
 
 	ent := &entities.Entities{LayerGroup: lg, Auth: auth}
@@ -340,7 +340,7 @@ func Test_SetupHandlers_Preview_NotRegisteredWhenProduction(t *testing.T) {
 
 	var auth authentication.Authentication = authentications.Noop{}
 	var c cache.Cache = caches.Noop{}
-	lg, err := layer.ConstructLayerGroup(cfg, c, nil, nil)
+	lg, err := layer.ConstructLayerGroup(cfg, cache.NewSingleCacheRegistry(c), nil, nil)
 	require.NoError(t, err)
 
 	ent := &entities.Entities{LayerGroup: lg, Auth: auth}

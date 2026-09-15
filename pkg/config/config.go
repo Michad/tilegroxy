@@ -34,6 +34,8 @@ import (
 	_ "github.com/spf13/viper/remote"
 )
 
+const DefaultCacheID = "default"
+
 // Configuration for TLS (HTTPS) operation. If this is configured then TLS is enabled. This can operate either with a static certificate and keyfile via the filesystem or via ACME/Let's Encrypt
 type EncryptionConfig struct {
 	Domain      string // The domain name you're operating with (the domain end-users use). Required
@@ -88,6 +90,11 @@ type ServerConfig struct {
 
 	ShutdownTimeout uint // How long (in seconds) the whole shutdown sequence gets. Defaults to Timeout plus DrainDelay.
 	DrainDelay      uint // How long (in seconds) to report unready before draining. Defaults to 5, set 0 when a preStop hook covers it.
+}
+
+type ConfigWithID struct {
+	ID     string
+	Config map[string]interface{}
 }
 
 // EffectiveShutdownTimeout resolves the shutdown budget. When unset it covers both phases that
@@ -170,6 +177,7 @@ type ErrorMessages struct {
 	ScriptError             string
 	Timeout                 string
 	ParamRegex              string
+	MustBeUnique            string
 }
 
 // Default embedded image keys, mirrored as literals from internal/images.GetStaticImage since
@@ -274,6 +282,7 @@ type LayerConfig struct {
 	Attribution    string            // Optional. Populates the `attribution` field of this layer's TileJSON document. Has no effect unless TileJSON is enabled
 	Examples       []string          // Optional. Concrete layer names used to generate TileJSON documents for a `pattern` layer. Has no effect on a layer identified by a plain id
 	CacheVersion   string            // Optional. Allows invalidating cache entries when changed. Prefixed into cache keys but not he actual layer name
+	Cache          string            // Optional. The id of a top-level cache to use instead of the default
 	AllowCoalesce  *bool             // Optional. Whether two requests that come in at the same time for the same tile should be combined. Defaults to auto, which is determined by whether caching is enabled
 }
 
@@ -287,7 +296,8 @@ type Config struct {
 	Secret         map[string]interface{}
 	Datastores     []map[string]interface{}
 	Authentication map[string]interface{}
-	Cache          map[string]interface{}
+	Cache          interface{} // Either a single cache or an array of caches.
+	DefaultCache   string      // The id of the cache layers use when they don't specify one. Defaults to the first entry
 	Analytics      map[string]interface{}
 	Layers         []LayerConfig
 }
@@ -354,6 +364,77 @@ func (c Config) Validate() error {
 	}
 
 	return errors.Join(errs...)
+}
+
+// normalize the top-level cache config into a list with IDs
+func NormalizeCaches(raw interface{}, errorMessages ErrorMessages) ([]ConfigWithID, error) {
+	switch typed := raw.(type) {
+	case nil:
+		return []ConfigWithID{{ID: DefaultCacheID, Config: map[string]interface{}{"name": "none"}}}, nil
+	case map[string]interface{}:
+		id, _ := typed["id"].(string)
+		if id == "" {
+			id = DefaultCacheID
+		}
+
+		return []ConfigWithID{{ID: id, Config: typed}}, nil
+	}
+
+	entries, err := toCacheEntryList(raw, errorMessages)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(entries) == 0 {
+		return []ConfigWithID{{ID: DefaultCacheID, Config: map[string]interface{}{"name": "none"}}}, nil
+	}
+
+	result := make([]ConfigWithID, 0, len(entries))
+	seen := make(map[string]bool, len(entries))
+
+	for i, entry := range entries {
+		id, _ := entry["id"].(string)
+		if id == "" {
+			// The docs let id default to name, which is unambiguous until two caches share a kind
+			id, _ = entry["name"].(string)
+		}
+
+		if id == "" {
+			return nil, fmt.Errorf(errorMessages.ParamRequired, fmt.Sprintf("cache[%d].id", i))
+		}
+
+		if seen[id] {
+			return nil, fmt.Errorf(errorMessages.MustBeUnique, fmt.Sprintf("cache[%d].id", i), id)
+		}
+
+		seen[id] = true
+		result = append(result, ConfigWithID{ID: id, Config: entry})
+	}
+
+	return result, nil
+}
+
+// toCacheEntryList coerces the array forms a YAML or JSON decoder can produce into a list of maps.
+func toCacheEntryList(raw interface{}, errorMessages ErrorMessages) ([]map[string]interface{}, error) {
+	switch typed := raw.(type) {
+	case []map[string]interface{}:
+		return typed, nil
+	case []interface{}:
+		entries := make([]map[string]interface{}, 0, len(typed))
+
+		for i, rawEntry := range typed {
+			entry, ok := rawEntry.(map[string]interface{})
+			if !ok {
+				return nil, fmt.Errorf(errorMessages.InvalidParam, fmt.Sprintf("cache[%d]", i), fmt.Sprintf("%#v", rawEntry))
+			}
+
+			entries = append(entries, entry)
+		}
+
+		return entries, nil
+	}
+
+	return nil, fmt.Errorf(errorMessages.InvalidParam, "cache", fmt.Sprintf("%#v", raw))
 }
 
 func DefaultConfig() Config {
@@ -435,6 +516,7 @@ func DefaultConfig() Config {
 				Timeout:                 "Timeout error",
 				ParamRequired:           "Parameter %v is required",
 				ParamRegex:              "Invalid value supplied for parameter %v: %v. Value must conform to regex: %v ",
+				MustBeUnique:            "Invalid value supplied for parameter %v: %v. Value must be unique. ",
 			},
 			Images: ErrorImages{
 				OutOfBounds:    defaultImageTransparent,
@@ -540,11 +622,19 @@ func unmarshal(viper *viper.Viper) (Config, error) {
 		return c, errors.New("analytics must be a single entry, not a list. Remove the leading '- ' and unindent the parameters beneath it")
 	}
 
+	// Same merging problem, but a list is valid for cache, so the list is taken from the raw value
+	// before Unmarshal flattens it rather than rejected.
+	rawCaches, cacheIsList := viper.Get("cache").([]interface{})
+
 	err := viper.Unmarshal(&c, func(dc *mapstructure.DecoderConfig) {
 		dc.ErrorUnused = true
 	})
 	if err != nil {
 		return c, err
+	}
+
+	if cacheIsList {
+		c.Cache = rawCaches
 	}
 
 	return c, nil

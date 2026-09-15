@@ -28,14 +28,14 @@ func TestSimpleYml(t *testing.T) {
 	c, err := LoadConfigFromFile("../../examples/configurations/simple.yml")
 
 	require.NoError(t, err)
-	assert.Equal(t, "none", c.Cache["name"])
+	assert.Equal(t, "none", c.Cache.(map[string]interface{})["name"])
 }
 
 func TestSimpleJson(t *testing.T) {
 	c, err := LoadConfigFromFile("../../examples/configurations/simple.json")
 
 	require.NoError(t, err)
-	assert.Equal(t, "none", c.Cache["name"])
+	assert.Equal(t, "none", c.Cache.(map[string]interface{})["name"])
 }
 
 func TestComplexYml(t *testing.T) {
@@ -487,4 +487,135 @@ func TestLoadAndWatchConfigFromFile_PanicInOnReloadDoesNotCrash(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("timed out waiting for panic to be reported via onReload")
 	}
+}
+
+func TestNormalizeCaches_SingleObject(t *testing.T) {
+	entries, err := NormalizeCaches(map[string]interface{}{"name": "memory"}, DefaultConfig().Error.Messages)
+
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	assert.Equal(t, DefaultCacheID, entries[0].ID)
+	assert.Equal(t, "memory", entries[0].Config["name"])
+}
+
+func TestNormalizeCaches_SingleObjectKeepsExplicitID(t *testing.T) {
+	entries, err := NormalizeCaches(map[string]interface{}{"name": "memory", "id": "mine"}, DefaultConfig().Error.Messages)
+
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	assert.Equal(t, "mine", entries[0].ID)
+}
+
+func TestNormalizeCaches_Absent(t *testing.T) {
+	entries, err := NormalizeCaches(nil, DefaultConfig().Error.Messages)
+
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	assert.Equal(t, "none", entries[0].Config["name"])
+}
+
+// A config decoded from YAML or JSON produces []interface{} rather than the []map[string]interface{}
+// a Go-built config uses, so both have to normalize the same way.
+func TestNormalizeCaches_ArrayForms(t *testing.T) {
+	expected := []ConfigWithID{
+		{ID: "a", Config: map[string]interface{}{"id": "a", "name": "memory"}},
+		{ID: "b", Config: map[string]interface{}{"id": "b", "name": "none"}},
+	}
+
+	typed, err := NormalizeCaches([]map[string]interface{}{
+		{"id": "a", "name": "memory"},
+		{"id": "b", "name": "none"},
+	}, DefaultConfig().Error.Messages)
+	require.NoError(t, err)
+	assert.Equal(t, expected, typed)
+
+	decoded, err := NormalizeCaches([]interface{}{
+		map[string]interface{}{"id": "a", "name": "memory"},
+		map[string]interface{}{"id": "b", "name": "none"},
+	}, DefaultConfig().Error.Messages)
+	require.NoError(t, err)
+	assert.Equal(t, expected, decoded)
+}
+
+func TestNormalizeCaches_EmptyArrayFallsBackToNoop(t *testing.T) {
+	entries, err := NormalizeCaches([]interface{}{}, DefaultConfig().Error.Messages)
+
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	assert.Equal(t, "none", entries[0].Config["name"])
+}
+
+func TestNormalizeCaches_IDDefaultsToName(t *testing.T) {
+	entries, err := NormalizeCaches([]map[string]interface{}{
+		{"name": "memory"},
+		{"id": "explicit", "name": "none"},
+	}, DefaultConfig().Error.Messages)
+	require.NoError(t, err)
+
+	require.Len(t, entries, 2)
+	assert.Equal(t, "memory", entries[0].ID)
+	assert.Equal(t, "explicit", entries[1].ID)
+}
+
+func TestNormalizeCaches_Errors(t *testing.T) {
+	messages := DefaultConfig().Error.Messages
+
+	_, err := NormalizeCaches([]map[string]interface{}{{"maxsize": 10}}, messages)
+	require.ErrorContains(t, err, "cache[0].id")
+
+	_, err = NormalizeCaches([]map[string]interface{}{
+		{"id": "same", "name": "memory"},
+		{"id": "same", "name": "none"},
+	}, messages)
+	require.ErrorContains(t, err, "same")
+
+	_, err = NormalizeCaches([]interface{}{"not-a-map"}, messages)
+	require.ErrorContains(t, err, "cache[0]")
+
+	_, err = NormalizeCaches("nonsense", messages)
+	require.ErrorContains(t, err, "cache")
+}
+
+// Viper merges a list of maps into one map key by key, so the cache list has to be recovered from
+// the raw value. Without that, two caches silently decode into a single mixed-up entry.
+func TestLoadConfig_CacheListSurvivesViperMerge(t *testing.T) {
+	c, err := LoadConfig(`
+cache:
+  - id: main
+    name: memory
+  - id: other
+    name: none
+layers: []
+`)
+	require.NoError(t, err)
+
+	entries, err := NormalizeCaches(c.Cache, c.Error.Messages)
+	require.NoError(t, err)
+	require.Len(t, entries, 2)
+	assert.Equal(t, "main", entries[0].ID)
+	assert.Equal(t, "memory", entries[0].Config["name"])
+	assert.Equal(t, "other", entries[1].ID)
+	assert.Equal(t, "none", entries[1].Config["name"])
+}
+
+func TestLoadConfig_DefaultCacheAndLayerCache(t *testing.T) {
+	c, err := LoadConfig(`
+cache:
+  - id: main
+    name: memory
+  - id: other
+    name: none
+defaultcache: other
+layers:
+  - id: osm
+    cache: main
+    provider:
+      name: proxy
+      url: "http://example.com/{z}/{x}/{y}.png"
+`)
+	require.NoError(t, err)
+
+	assert.Equal(t, "other", c.DefaultCache)
+	require.Len(t, c.Layers, 1)
+	assert.Equal(t, "main", c.Layers[0].Cache)
 }

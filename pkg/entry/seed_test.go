@@ -251,8 +251,7 @@ func Test_Seed_InvalidLayer(t *testing.T) {
 	}, &out), "invalid layer")
 }
 
-// A layer with a plain (non-multi) cache has no tiers to target, so an unknown --cache value has
-// to fail loudly rather than silently seeding the whole cache anyway.
+// An unknown --cache value has to fail loudly rather than silently seeding the default cache.
 func Test_Seed_InvalidCacheName(t *testing.T) {
 	cfg := seedTestConfig(t)
 
@@ -271,9 +270,9 @@ func Test_Seed_InvalidCacheName(t *testing.T) {
 	assert.Empty(t, rendered)
 }
 
-// Config loaded from YAML/JSON decodes tiers as []interface{} rather than the []map[string]interface{}
-// shape used when a config is built directly in Go, so both need to resolve the same tier.
-func Test_RestrictToCacheTier_DecodedConfig(t *testing.T) {
+// --cache names any configured cache by id, including one nested inside another, since nested
+// caches are registered under their own ids.
+func Test_OverrideLayerCache_SetsNestedCacheID(t *testing.T) {
 	cfg, err := config.LoadConfig(`
 cache:
   name: multi
@@ -289,27 +288,85 @@ layers:
 `)
 	require.NoError(t, err)
 
-	tier, err := restrictToCacheTier(cfg.Cache, "disk")
+	layers, err := overrideLayerCache(cfg, "osm", "disk")
 	require.NoError(t, err)
-	assert.Equal(t, "disk", tier["name"])
-	assert.Equal(t, "./disk_tile_cache", tier["path"])
+
+	require.Len(t, layers, 1)
+	assert.Equal(t, "disk", layers[0].Cache)
 }
 
-func Test_RestrictToCacheTier_NotMulti(t *testing.T) {
-	_, err := restrictToCacheTier(map[string]interface{}{"name": "memory"}, "disk")
-	require.ErrorContains(t, err, "disk")
+// A pattern layer is seeded by a concrete name, which still has to resolve to that layer.
+func Test_OverrideLayerCache_MatchesPatternLayer(t *testing.T) {
+	cfg, err := config.LoadConfig(`
+cache:
+  name: multi
+  tiers:
+    - name: memory
+    - name: disk
+      path: "./disk_tile_cache"
+layers:
+  - id: osm
+    pattern: "osm_{country}"
+    provider:
+      name: proxy
+      url: "http://example.com/{z}/{x}/{y}.png"
+`)
+	require.NoError(t, err)
+
+	layers, err := overrideLayerCache(cfg, "osm_us", "disk")
+	require.NoError(t, err)
+
+	require.Len(t, layers, 1)
+	assert.Equal(t, "disk", layers[0].Cache)
 }
 
-func Test_RestrictToCacheTier_NoMatch(t *testing.T) {
-	_, err := restrictToCacheTier(map[string]interface{}{
-		"name":  "multi",
-		"tiers": []map[string]interface{}{{"name": "memory"}},
-	}, "disk")
-	require.ErrorContains(t, err, "disk")
+// Only the layer being seeded is repointed; the rest keep whatever they were configured with.
+func Test_OverrideLayerCache_LeavesOtherLayers(t *testing.T) {
+	cfg, err := config.LoadConfig(`
+cache:
+  - id: main
+    name: memory
+  - id: other
+    name: none
+layers:
+  - id: osm
+    provider:
+      name: proxy
+      url: "http://example.com/{z}/{x}/{y}.png"
+  - id: untouched
+    cache: other
+    provider:
+      name: proxy
+      url: "http://example.com/{z}/{x}/{y}.png"
+`)
+	require.NoError(t, err)
+
+	layers, err := overrideLayerCache(cfg, "osm", "other")
+	require.NoError(t, err)
+
+	require.Len(t, layers, 2)
+	assert.Equal(t, "other", layers[0].Cache)
+	assert.Equal(t, "other", layers[1].Cache)
 }
 
-// --cache restricts a seed run to a single tier of a multi cache, so only that tier ends up
-// populated.
+func Test_OverrideLayerCache_UnknownLayer(t *testing.T) {
+	cfg, err := config.LoadConfig(`
+cache:
+  name: memory
+layers:
+  - id: osm
+    provider:
+      name: proxy
+      url: "http://example.com/{z}/{x}/{y}.png"
+`)
+	require.NoError(t, err)
+
+	_, err = overrideLayerCache(cfg, "nope", "disk")
+	require.ErrorContains(t, err, "nope")
+}
+
+// --cache points the seeded layer at one cache by id. Same-kind tiers without explicit ids
+// collide, so only the first is addressable.
 func Test_Seed_CacheNameTargetsOneTier(t *testing.T) {
 	layer.RegisterProvider(seedTestCountingRegistration{})
 	seedTestCounter.reset()
@@ -784,7 +841,7 @@ func Test_Seed_PurgeSkipsForceThreshold(t *testing.T) {
 	require.ErrorContains(t, checkSeedSize(e, SeedOptions{LayerName: "counts"}, &out), "--force")
 }
 
-// A purge restricted to one tier leaves the others alone, the same way seeding does.
+// A purge aimed at one cache id leaves the others alone, the same way seeding does.
 func Test_Seed_PurgeCacheNameTargetsOneTier(t *testing.T) {
 	cfg := seedTestConfig(t)
 	purged := t.TempDir()
