@@ -193,6 +193,7 @@ func (t Blend) PreAuth(ctx context.Context, providerContext layer.ProviderContex
 
 		acStruct := <-acResults
 		newProviderContext.Other[strconv.Itoa(i)] = acStruct.ProviderContext
+		newProviderContext.Other[strconv.Itoa(acStruct.int)] = acStruct.ProviderContext
 
 		if !acStruct.AuthBypass {
 			allBypass = false
