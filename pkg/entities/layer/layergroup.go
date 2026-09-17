@@ -70,7 +70,7 @@ func ConstructLayerGroup(cfg config.Config, caches *cache.CacheRegistry, secrete
 			return nil, fmt.Errorf("error constructing layer %v: %w", i, err)
 		}
 
-		layerObjects[i], err = ConstructLayer(l, cfg.Client, isNoopCache(layerCache), cfg.Error.Messages, &layerGroup, secreter, datastores)
+		layerObjects[i], err = ConstructLayer(l, cfg.Client, layerCache, cfg.Error.Messages, &layerGroup, secreter, datastores)
 		if err != nil {
 			return nil, fmt.Errorf("error constructing layer %v: %w", i, err)
 		}
@@ -102,8 +102,8 @@ func resolveLayerCache(l config.LayerConfig, caches *cache.CacheRegistry, errorM
 	return layerCache, nil
 }
 
-// isNoopCache reports whether a layer's cache discards everything, which is what decides whether
-// coalescing concurrent requests is worth doing by default.
+// isNoopCache reports whether a layer's cache discards everything, which is part of what decides
+// whether coalescing concurrent requests is worth doing by default.
 func isNoopCache(c cache.Cache) bool {
 	wrapper, ok := c.(cache.CacheWrapper)
 	return ok && wrapper.Name == "none"

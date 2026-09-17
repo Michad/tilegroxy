@@ -257,7 +257,37 @@ func constructCropWrappedProvider(rawConfig config.LayerConfig, errorMessages co
 	})
 }
 
-func resolveAllowCoalesce(rawConfig config.LayerConfig, cacheIsNoop bool) bool {
+// The placeholders a provider uses to interpolate the requester's identity into a URL, query, or
+// body. A provider config mentioning either produces per-identity tiles.
+var identityPlaceholders = []string{"{ctx.user}", "{ctx.tenant}"}
+
+// usesIdentityPlaceholder reports whether a raw provider config interpolates the requester's
+// identity anywhere. Nesting providers (ref, fallback, blend) hide configs inside themselves, and
+// a placeholder can sit in a map key as readily as a value, so the whole tree is walked.
+func usesIdentityPlaceholder(node any) bool {
+	switch v := node.(type) {
+	case string:
+		return slices.ContainsFunc(identityPlaceholders, func(placeholder string) bool {
+			return strings.Contains(v, placeholder)
+		})
+	case map[string]any:
+		for key, val := range v {
+			if usesIdentityPlaceholder(key) || usesIdentityPlaceholder(val) {
+				return true
+			}
+		}
+	case []any:
+		return slices.ContainsFunc(v, usesIdentityPlaceholder)
+	}
+
+	return false
+}
+
+// Coalescing serves every waiter the leader's tile, so it defaults on only where that's safe: the
+// layer caches (otherwise there's little to gain), its cache isn't keyed by identity, and the
+// provider doesn't build its request out of who asked. A tenant cache or an identity placeholder
+// says the tile varies per requester.
+func resolveAllowCoalesce(rawConfig config.LayerConfig, layerCache cache.Cache) bool {
 	if rawConfig.AllowCoalesce != nil {
 		return *rawConfig.AllowCoalesce
 	}
@@ -266,7 +296,15 @@ func resolveAllowCoalesce(rawConfig config.LayerConfig, cacheIsNoop bool) bool {
 		return false
 	}
 
-	return !cacheIsNoop
+	if cache.ContainsCache(layerCache, "tenant") {
+		return false
+	}
+
+	if usesIdentityPlaceholder(rawConfig.Provider) {
+		return false
+	}
+
+	return !isNoopCache(layerCache)
 }
 
 func resolvePatternAndValidator(rawConfig config.LayerConfig, errorMessages config.ErrorMessages) ([]layerSegment, map[string]*regexp.Regexp, error) {
@@ -316,7 +354,7 @@ func constructLayerCounters(layerID string) (metric.Int64Counter, metric.Int64Co
 	return tileAllCounter, tileAuthCounter, tileErrorCounter, tileSuccessCounter, errors.Join(err1, err2, err3, err4)
 }
 
-func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.ClientConfig, cacheIsNoop bool, errorMessages config.ErrorMessages, layerGroup *LayerGroup, secreter secret.Secreter, datastores *datastore.DatastoreRegistry) (*Layer, error) {
+func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.ClientConfig, layerCache cache.Cache, errorMessages config.ErrorMessages, layerGroup *LayerGroup, secreter secret.Secreter, datastores *datastore.DatastoreRegistry) (*Layer, error) {
 	var err error
 	if rawConfig.Client == nil {
 		rawConfig.Client = &defaultClientConfig
@@ -360,7 +398,7 @@ func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.Cli
 		return nil, err
 	}
 
-	allowCoalesce := resolveAllowCoalesce(rawConfig, cacheIsNoop)
+	allowCoalesce := resolveAllowCoalesce(rawConfig, layerCache)
 
 	segments, validator, err := resolvePatternAndValidator(rawConfig, errorMessages)
 	if err != nil {
