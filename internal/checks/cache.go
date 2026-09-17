@@ -17,6 +17,7 @@ package checks
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math/rand/v2"
 	"slices"
 	"strconv"
@@ -33,6 +34,8 @@ var cacheReq = pkg.TileRequest{LayerName: "___hc___", Z: 0, X: 0, Y: 0}
 
 type CacheCheckConfig struct {
 	Delay uint
+	// The ids of the caches to probe. Empty means every configured cache
+	Caches []string
 }
 
 func (s CacheCheckConfig) GetDelay() uint {
@@ -41,8 +44,12 @@ func (s CacheCheckConfig) GetDelay() uint {
 
 type CacheCheck struct {
 	CacheCheckConfig
-	cache         cache.Cache
-	errorMessages config.ErrorMessages
+	caches []identifiedCache
+}
+
+type identifiedCache struct {
+	id string
+	c  cache.Cache
 }
 
 func init() {
@@ -67,7 +74,37 @@ func (s CacheCheckRegistration) Initialize(checkConfig health.HealthCheckConfig,
 		cfg.Delay = 600
 	}
 
-	return &CacheCheck{cfg, deps.Cache, deps.AllConfig.Error.Messages}, nil
+	errorMessages := deps.AllConfig.Error.Messages
+
+	targets, err := resolveCaches(cfg.Caches, deps, errorMessages)
+	if err != nil {
+		return nil, err
+	}
+
+	return &CacheCheck{cfg, targets}, nil
+}
+
+func resolveCaches(ids []string, deps health.HealthCheckDeps, errorMessages config.ErrorMessages) ([]identifiedCache, error) {
+	if len(ids) == 0 {
+		ids = deps.Caches.IDs()
+	}
+
+	if len(ids) == 0 {
+		return nil, fmt.Errorf(errorMessages.ParamRequired, "check.cache.caches")
+	}
+
+	targets := make([]identifiedCache, 0, len(ids))
+
+	for _, id := range ids {
+		c, ok := deps.Caches.Get(id)
+		if !ok {
+			return nil, cache.NewUnknownCacheError(errorMessages, "check.cache.caches", id, deps.Caches.IDs())
+		}
+
+		targets = append(targets, identifiedCache{id: id, c: c})
+	}
+
+	return targets, nil
 }
 
 const numColorDigits = 6
@@ -92,19 +129,31 @@ func makeImage() (pkg.Image, error) {
 }
 
 func (h CacheCheck) Check(ctx context.Context) error {
+	errs := make([]error, 0, len(h.caches))
+
+	for _, target := range h.caches {
+		if err := checkOne(ctx, target.c); err != nil {
+			errs = append(errs, fmt.Errorf("cache %v: %w", target.id, err))
+		}
+	}
+
+	return errors.Join(errs...)
+}
+
+func checkOne(ctx context.Context, c cache.Cache) error {
 	img, err := makeImage()
 
 	if err != nil {
 		return err
 	}
 
-	err = h.cache.Save(ctx, cacheReq, &img)
+	err = c.Save(ctx, cacheReq, &img)
 
 	if err != nil {
 		return err
 	}
 
-	img2, err := h.cache.Lookup(ctx, cacheReq)
+	img2, err := c.Lookup(ctx, cacheReq)
 
 	if err != nil {
 		return err

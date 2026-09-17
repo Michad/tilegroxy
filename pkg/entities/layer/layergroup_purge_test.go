@@ -60,7 +60,6 @@ func purgeTestLayerGroup(t *testing.T, c *removeRecordingCache, cfg config.Layer
 
 	return &LayerGroup{
 		layers:           []*Layer{l},
-		DefaultCache:     c,
 		cacheHitCounter:  noop.Int64Counter{},
 		cacheMissCounter: noop.Int64Counter{},
 	}

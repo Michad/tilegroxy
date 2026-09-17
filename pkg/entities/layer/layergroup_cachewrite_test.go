@@ -87,7 +87,6 @@ func Test_LayerGroup_RenderTile_PlainContextBackgroundDoesNotPanic(t *testing.T)
 
 	lg := &LayerGroup{
 		layers:           []*Layer{l},
-		DefaultCache:     c,
 		cacheHitCounter:  noop.Int64Counter{},
 		cacheMissCounter: noop.Int64Counter{},
 	}
@@ -150,7 +149,6 @@ func Test_LayerGroup_RenderTile_BoundsConcurrentCacheWrites(t *testing.T) {
 
 	lg := &LayerGroup{
 		layers:            []*Layer{l},
-		DefaultCache:      c,
 		cacheHitCounter:   noop.Int64Counter{},
 		cacheMissCounter:  noop.Int64Counter{},
 		cacheWriteLimiter: make(chan struct{}, maxConcurrentCacheWrites),
@@ -207,7 +205,6 @@ func Test_LayerGroup_RenderTile_RejectsOutOfZoomRangeEvenOnCacheHit(t *testing.T
 
 	lg := &LayerGroup{
 		layers:           []*Layer{l},
-		DefaultCache:     c,
 		cacheHitCounter:  noop.Int64Counter{},
 		cacheMissCounter: noop.Int64Counter{},
 	}
@@ -238,7 +235,6 @@ func Test_LayerGroup_RenderTile_CacheHitSetsContextFlag(t *testing.T) {
 
 	lg := &LayerGroup{
 		layers:           []*Layer{l},
-		DefaultCache:     c,
 		cacheHitCounter:  noop.Int64Counter{},
 		cacheMissCounter: noop.Int64Counter{},
 	}
@@ -274,7 +270,6 @@ func Test_LayerGroup_RenderTile_CacheMissLeavesContextFlagFalse(t *testing.T) {
 
 	lg := &LayerGroup{
 		layers:            []*Layer{l},
-		DefaultCache:      c,
 		cacheHitCounter:   noop.Int64Counter{},
 		cacheMissCounter:  noop.Int64Counter{},
 		cacheWriteLimiter: make(chan struct{}, maxConcurrentCacheWrites),
@@ -311,7 +306,6 @@ func Test_LayerGroup_RenderTile_SkipCacheLeavesContextFlagFalse(t *testing.T) {
 
 	lg := &LayerGroup{
 		layers:           []*Layer{l},
-		DefaultCache:     c,
 		cacheHitCounter:  noop.Int64Counter{},
 		cacheMissCounter: noop.Int64Counter{},
 	}
@@ -398,7 +392,6 @@ func Test_LayerGroup_RenderTile_CacheWriteSeesTenant(t *testing.T) {
 
 	lg := &LayerGroup{
 		layers:            []*Layer{l},
-		DefaultCache:      c,
 		cacheHitCounter:   noop.Int64Counter{},
 		cacheMissCounter:  noop.Int64Counter{},
 		cacheWriteLimiter: make(chan struct{}, 1),

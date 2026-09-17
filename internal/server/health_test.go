@@ -79,12 +79,12 @@ func Test_Health_Setup(t *testing.T) {
 	ctx := pkg.BackgroundContext()
 	cfg, lg := initialize(t, false)
 
-	callback, _, err := SetupHealth(ctx, &cfg, lg)
+	callback, _, err := SetupHealth(ctx, &cfg, lg, nil)
 	require.NoError(t, err)
 	err = callback(ctx)
 	require.NoError(t, err)
 
-	callback, _, err = SetupHealth(ctx, &cfg, lg)
+	callback, _, err = SetupHealth(ctx, &cfg, lg, nil)
 	require.NoError(t, err)
 	err = callback(ctx)
 	require.NoError(t, err)
@@ -94,7 +94,7 @@ func Test_Health_Success(t *testing.T) {
 	ctx := pkg.BackgroundContext()
 	cfg, lg := initialize(t, false)
 
-	callback, _, err := SetupHealth(ctx, &cfg, lg)
+	callback, _, err := SetupHealth(ctx, &cfg, lg, nil)
 	require.NoError(t, err)
 	time.Sleep(1 * time.Second)
 
@@ -189,7 +189,7 @@ func Test_Health_Fail(t *testing.T) {
 	ctx := pkg.BackgroundContext()
 	cfg, lg := initialize(t, true)
 
-	callback, _, err := SetupHealth(ctx, &cfg, lg)
+	callback, _, err := SetupHealth(ctx, &cfg, lg, nil)
 	require.NoError(t, err)
 
 	baseURL := "http://127.0.0.1:" + strconv.Itoa(port)

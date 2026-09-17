@@ -32,12 +32,12 @@ func Test_Fail(t *testing.T) {
 
 	cacheReg := caches.NoopRegistration{}
 	cacheCfg := cacheReg.InitializeConfig()
-	cache, err := cacheReg.Initialize(cacheCfg, cache.CacheDeps{ErrorMessages: msg})
+	c, err := cacheReg.Initialize(cacheCfg, cache.CacheDeps{ErrorMessages: msg})
 	require.NoError(t, err)
 
 	reg := CacheCheckRegistration{}
 	cfgAny := reg.InitializeConfig()
-	hc, err := reg.Initialize(cfgAny, health.HealthCheckDeps{Cache: cache, AllConfig: &cfgAll})
+	hc, err := reg.Initialize(cfgAny, health.HealthCheckDeps{Caches: cache.NewSingleCacheRegistry(c), AllConfig: &cfgAll})
 	require.NoError(t, err)
 
 	err = hc.Check(context.Background())
@@ -50,12 +50,12 @@ func Test_Works(t *testing.T) {
 
 	cacheReg := caches.MemoryRegistration{}
 	cacheCfg := cacheReg.InitializeConfig()
-	cache, err := cacheReg.Initialize(cacheCfg, cache.CacheDeps{ErrorMessages: msg})
+	c, err := cacheReg.Initialize(cacheCfg, cache.CacheDeps{ErrorMessages: msg})
 	require.NoError(t, err)
 
 	reg := CacheCheckRegistration{}
 	cfgAny := reg.InitializeConfig()
-	hc, err := reg.Initialize(cfgAny, health.HealthCheckDeps{Cache: cache, AllConfig: &cfgAll})
+	hc, err := reg.Initialize(cfgAny, health.HealthCheckDeps{Caches: cache.NewSingleCacheRegistry(c), AllConfig: &cfgAll})
 	require.NoError(t, err)
 
 	require.IsType(t, &CacheCheck{}, hc)
@@ -65,4 +65,59 @@ func Test_Works(t *testing.T) {
 
 	err = hc.Check(context.Background())
 	assert.NoError(t, err)
+}
+
+func Test_AllCachesChecked(t *testing.T) {
+	cfgAll := config.DefaultConfig()
+	msg := cfgAll.Error.Messages
+
+	reg, err := cache.ConstructCacheRegistry([]map[string]interface{}{
+		{"id": "good", "name": "memory"},
+		{"id": "bad", "name": "none"},
+	}, "good", nil, cache.CacheDeps{ErrorMessages: msg})
+	require.NoError(t, err)
+
+	hc, err := CacheCheckRegistration{}.Initialize(CacheCheckConfig{}, health.HealthCheckDeps{Caches: reg, AllConfig: &cfgAll})
+	require.NoError(t, err)
+
+	err = hc.Check(context.Background())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "bad")
+	assert.NotContains(t, err.Error(), "good")
+}
+
+func Test_SelectedCachesChecked(t *testing.T) {
+	cfgAll := config.DefaultConfig()
+	msg := cfgAll.Error.Messages
+
+	reg, err := cache.ConstructCacheRegistry([]map[string]interface{}{
+		{"id": "good", "name": "memory"},
+		{"id": "bad", "name": "none"},
+	}, "good", nil, cache.CacheDeps{ErrorMessages: msg})
+	require.NoError(t, err)
+
+	hc, err := CacheCheckRegistration{}.Initialize(CacheCheckConfig{Caches: []string{"good"}}, health.HealthCheckDeps{Caches: reg, AllConfig: &cfgAll})
+	require.NoError(t, err)
+
+	assert.NoError(t, hc.Check(context.Background()))
+}
+
+func Test_UnknownCacheRejected(t *testing.T) {
+	cfgAll := config.DefaultConfig()
+	msg := cfgAll.Error.Messages
+
+	reg, err := cache.ConstructCacheRegistry([]map[string]interface{}{
+		{"id": "good", "name": "memory"},
+	}, "good", nil, cache.CacheDeps{ErrorMessages: msg})
+	require.NoError(t, err)
+
+	_, err = CacheCheckRegistration{}.Initialize(CacheCheckConfig{Caches: []string{"nope"}}, health.HealthCheckDeps{Caches: reg, AllConfig: &cfgAll})
+	assert.Error(t, err)
+}
+
+func Test_NoCachesAvailable(t *testing.T) {
+	cfgAll := config.DefaultConfig()
+
+	_, err := CacheCheckRegistration{}.Initialize(CacheCheckConfig{}, health.HealthCheckDeps{AllConfig: &cfgAll})
+	assert.Error(t, err)
 }
