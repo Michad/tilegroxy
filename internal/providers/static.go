@@ -77,5 +77,6 @@ func (t Static) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.Provi
 }
 
 func (t Static) GenerateTile(_ context.Context, _ layer.ProviderContext, _ pkg.TileRequest) (*pkg.Image, error) {
-	return t.img, nil
+	imgCopy := *t.img // Small overhead but avoids other providers polluting the source of truth
+	return &imgCopy, nil
 }
