@@ -242,6 +242,11 @@ func ConstructCacheRegistry(rawConfig interface{}, defaultID string, secreter se
 	}
 
 	for _, entry := range entries {
+		if _, taken := reg.caches[entry.ID]; taken {
+			closeErr := reg.Close(context.Background())
+			return nil, errors.Join(fmt.Errorf(deps.ErrorMessages.MustBeUnique, "cache.id", entry.ID), closeErr)
+		}
+
 		cfg := pkg.ReplaceEnv(entry.Config)
 
 		if secreter != nil {
