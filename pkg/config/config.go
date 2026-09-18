@@ -34,8 +34,6 @@ import (
 	_ "github.com/spf13/viper/remote"
 )
 
-const DefaultCacheID = "default"
-
 // Configuration for TLS (HTTPS) operation. If this is configured then TLS is enabled. This can operate either with a static certificate and keyfile via the filesystem or via ACME/Let's Encrypt
 type EncryptionConfig struct {
 	Domain      string // The domain name you're operating with (the domain end-users use). Required
@@ -370,11 +368,15 @@ func (c Config) Validate() error {
 func NormalizeCaches(raw interface{}, errorMessages ErrorMessages) ([]ConfigWithID, error) {
 	switch typed := raw.(type) {
 	case nil:
-		return []ConfigWithID{{ID: DefaultCacheID, Config: map[string]interface{}{"name": "none"}}}, nil
+		return []ConfigWithID{{ID: "none", Config: map[string]interface{}{"name": "none"}}}, nil
 	case map[string]interface{}:
-		id, _ := typed["id"].(string)
-		if id == "" {
-			id = DefaultCacheID
+		id, ok := typed["id"].(string)
+		if !ok || id == "" {
+			id, ok = typed["name"].(string)
+
+			if !ok || id == "" {
+				return nil, fmt.Errorf(errorMessages.ParamRequired, "cache.name")
+			}
 		}
 
 		return []ConfigWithID{{ID: id, Config: typed}}, nil
@@ -386,7 +388,7 @@ func NormalizeCaches(raw interface{}, errorMessages ErrorMessages) ([]ConfigWith
 	}
 
 	if len(entries) == 0 {
-		return []ConfigWithID{{ID: DefaultCacheID, Config: map[string]interface{}{"name": "none"}}}, nil
+		return []ConfigWithID{{ID: "none", Config: map[string]interface{}{"name": "none"}}}, nil
 	}
 
 	result := make([]ConfigWithID, 0, len(entries))

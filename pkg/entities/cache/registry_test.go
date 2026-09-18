@@ -64,10 +64,10 @@ func Test_CacheRegistry_SingleCacheGetsDefaultID(t *testing.T) {
 	reg, err := ConstructCacheRegistry(map[string]interface{}{"name": "stub-basic"}, "", nil, testDeps())
 	require.NoError(t, err)
 
-	assert.Equal(t, config.DefaultCacheID, reg.DefaultID())
+	assert.Equal(t, "stub-basic", reg.DefaultID())
 	assert.NotNil(t, reg.Default())
 
-	_, ok := reg.Get(config.DefaultCacheID)
+	_, ok := reg.Get("stub-basic")
 	assert.True(t, ok)
 }
 
@@ -157,11 +157,4 @@ func Test_CacheRegistry_NilIsSafe(t *testing.T) {
 
 	_, ok := reg.Get("anything")
 	assert.False(t, ok)
-}
-
-func Test_NewSingleCacheRegistry(t *testing.T) {
-	reg := NewSingleCacheRegistry(stubCache{})
-
-	assert.Equal(t, config.DefaultCacheID, reg.DefaultID())
-	assert.NotNil(t, reg.Default())
 }

@@ -39,13 +39,14 @@ type CacheRegistry struct {
 	defaultID string
 }
 
-// NewSingleCacheRegistry wraps one already-constructed cache as the sole, default entry.
+// A helper for tests that creates a singleton registry with a single item
 func NewSingleCacheRegistry(c Cache) *CacheRegistry {
+	ID := "test-single"
 	return &CacheRegistry{
-		caches:    map[string]Cache{config.DefaultCacheID: c},
-		order:     []string{config.DefaultCacheID},
-		owned:     []string{config.DefaultCacheID},
-		defaultID: config.DefaultCacheID,
+		caches:    map[string]Cache{ID: c},
+		order:     []string{ID},
+		owned:     []string{ID},
+		defaultID: ID,
 	}
 }
 

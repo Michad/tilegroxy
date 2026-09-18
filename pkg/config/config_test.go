@@ -494,7 +494,7 @@ func TestNormalizeCaches_SingleObject(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Len(t, entries, 1)
-	assert.Equal(t, DefaultCacheID, entries[0].ID)
+	assert.Equal(t, "memory", entries[0].ID)
 	assert.Equal(t, "memory", entries[0].Config["name"])
 }
 
