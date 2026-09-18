@@ -174,17 +174,17 @@ func (b Bounds) ConstructSingleZoomRange(zoom uint) (SingleZoomRange, error) {
 
 	lonMin := b.West
 	for lonMin > maxLong {
-		lonMin -= maxLong
+		lonMin -= (maxLong - minLong)
 	}
 	for lonMin < minLong {
-		lonMin -= minLong
+		lonMin -= (minLong - maxLong)
 	}
 	lonMax := b.East
 	for lonMax > maxLong {
-		lonMax -= maxLong
+		lonMax -= (maxLong - minLong)
 	}
 	for lonMax < minLong {
-		lonMax -= minLong
+		lonMax -= (minLong - maxLong)
 	}
 
 	n := math.Exp2(z)
