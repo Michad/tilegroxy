@@ -47,8 +47,8 @@ Configuration options:
 | Production
 | Hardens operation for usage in production. For instance, controls serving splash page, documentation, the xref:preview.adoc[layer preview] page, x-powered-by header.
 | bool
-| Yes
-| false
+| No
+| true
 
 | Timeout
 | How long (in seconds) a request can be in flight before we cancel it and return an error

@@ -22,7 +22,7 @@ By default tilegroxy ignores incoming HTTP headers and the query string.  It is 
 
 One of the primary use-cases for tilegroxy is to proxy tile requests to another HTTP(s) server. These inputs are cached and returned to the user, either as-is or with transformation.  In order to prevent a third-party server returning malicious inputs a few protections are available:
 
-* Content Type validation - if the server returns an invalid content-type then the request errors. By default only PNG and JPG images are allowed.
+* Content Type validation - if the server returns an invalid content-type then the request errors. By default only PNG, JPEG, and vector tile payloads are allowed. See xref:content-type.adoc[Content Type] for the full default allowlist.
 ** Content Type mirroring - when returning a payload retrieved from a third party HTTP service tilegroxy will return the same content-type as the server, this helps prevent using tilegroxy to deliver malicious javascript payloads disguised under a false content type
 * Content Size validation - if the server fails to return a content size header or if the content size is greater than a limit (by default 10 MiB) then the request errors.  Tilegroxy will not allocate a buffer greater than the allowed size even if the server responds with a larger response than advertised
 * TLS Validation - if the URL configured includes an https protocol then standard TLS certificate validation occurs. Tilegroxy uses default Go settings for validation including a minimum version of TLS 1.2 and rejection of insecure ciphers

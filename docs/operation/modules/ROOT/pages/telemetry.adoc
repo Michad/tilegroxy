@@ -75,7 +75,7 @@ Metrics are available for cache hit/miss and the number of tile requests broken 
 
 When using patterns with layers, metrics are logged against the ID of the layer not the name passed into the URL.  If using a Ref provider (including indirectly via the  Blend provider), the "child" layer requests are recorded in the layer-specific metrics *but not* the total metrics.
 
-The layer ID is sanitized to only alphanumeric characters and underscores, everything else is replaced with underscores. This keeps the instrument name valid for OTEL.  This can cause collisions, usage for "my-layer" and "my_layer" will get written the same metrics.
+The layer ID is sanitized to only alphanumeric characters, underscores, and hyphens; everything else is replaced with underscores.  It is also truncated to 200 characters to leave room for the metric name around it.  This keeps the instrument name valid for OTEL.  Either step can cause collisions, so usage for "my.layer" and "my_layer" will get written to the same metrics.
 
 The `tilegroxy.analytics.*` metrics are meant to help monitor the health of xref:configuration/analytics/index.adoc[Analytics] delivery.  A spike in `dropped` or `error` count means usage tracking is getting dropped, so it's worth alerting on these separately.
 

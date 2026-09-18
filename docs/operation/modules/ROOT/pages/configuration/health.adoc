@@ -22,7 +22,7 @@ Configuration options:
 | If set to false the port isn't bound to
 | boolean
 | No
-| true
+| false
 
 | Port
 | The port to serve health on
@@ -84,7 +84,7 @@ Configuration options:
 | How long to wait (in seconds) between subsequent checks
 | int
 | No
-| 600
+| 60
 
 | layer
 | The layername to send the request against
@@ -113,7 +113,7 @@ Configuration options:
 | validation
 | How to validate the resulting tile is as expected. Possible options: same, content-type, base-64, file, success. See below for details
 | string
-| Yes
+| No
 | same
 
 | result

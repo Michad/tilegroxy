@@ -2,7 +2,7 @@
 
 Allows you to combine the imagery from multiple providers.  The simplest use case for this is to "sandwich" or "composite" semi-transparent images on top of each other.  For example you can put county boundaries on top of a flood map or include a watermark on your maps.  Multiple blending modes are available to fine-tune the effect.
 
-This can only be used with layers that return JPEG or PNG images. Tiles will be scaled down to the lowest resolution to be combined and the combined result always output in PNG format.
+This can only be used with layers that return JPEG or PNG images. Tiles will be scaled up to the highest resolution of the inputs to be combined and the combined result always output in PNG format.
 
 Each downstream provider is called in parallel.
 
