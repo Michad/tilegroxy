@@ -55,10 +55,10 @@ The following placeholders are available in the URL:
 | The "east" coordinate of the bounding box defined by the incoming tile coordinates. In the projection specified by `srid`.
 
 | ymin
-| The "north" coordinate of the bounding box defined by the incoming tile coordinates. In the projection specified by `srid`. Not impacted by the `invertY` parameter.
+| The "south" coordinate of the bounding box defined by the incoming tile coordinates. In the projection specified by `srid`. Not impacted by the `invertY` parameter.
 
 | ymax
-| The "south" coordinate of the bounding box defined by the incoming tile coordinates. In the projection specified by `srid`. Not impacted by the `invertY` parameter.
+| The "north" coordinate of the bounding box defined by the incoming tile coordinates. In the projection specified by `srid`. Not impacted by the `invertY` parameter.
 
 | env.XXX
 | An environment variable whose name is XXX

@@ -131,7 +131,7 @@ Configuration options:
 | The format to output access logs in. Applies to both standard out and file out. Possible values: common, combined
 | string
 | No
-| common
+| combined
 |===
 
 The following can be supplied as environment variables:

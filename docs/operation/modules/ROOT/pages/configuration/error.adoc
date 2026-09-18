@@ -194,11 +194,16 @@ The templates used for error messages for the majority of errors can be configur
 The following are currently supported:
 
  NotAuthorized
+ ParamRequired
  InvalidParam
  RangeError
  ServerError
  ProviderError
  ParamsBothOrNeither
  ParamsMutuallyExclusive
+ OneOfRequired
  EnumError
+ ScriptError
  Timeout
+ ParamRegex
+ MustBeUnique

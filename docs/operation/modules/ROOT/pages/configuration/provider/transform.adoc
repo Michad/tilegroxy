@@ -8,7 +8,7 @@ func transform(r, g, b, a uint8) (uint8, uint8, uint8, uint8)
 
 You can include the logic in a dedicated file, or inline in configuration. No special types or functions are available for use besides the standard library. A package declaration and any imports are optional.
 
-This can only be used with layers that return JPEG or PNG images. Tiles will be scaled down to the lowest resolution to be combined and the combined result always output in PNG format.
+This can only be used with layers that return JPEG or PNG images. The result is always output in PNG format at the same size as the tile from the downstream provider.
 
 Name should be "transform"
 

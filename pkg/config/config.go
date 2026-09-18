@@ -82,7 +82,7 @@ type ServerConfig struct {
 	TilePath   string            // HTTP Path to serve tiles under (in addition to RootPath). Defaults to tiles which means /tiles/{layer}/{z}/{x}/{y}.
 	DocsPath   string            // HTTP Path for accessing the documentation website. Defaults to docs
 	Headers    map[string]string // Include these headers in all response from server
-	Production bool              // Controls serving splash page, documentation, x-powered-by header. Defaults to false, set true to harden for prod
+	Production bool              // Controls serving splash page, documentation, x-powered-by header. Defaults to true, set false to expose them outside prod
 	Timeout    uint              // How long (in seconds) a request can be in flight before we cancel it and return an error
 	Gzip       bool              // Whether to apply gzip compression. Not super helpful when just serving up raster images
 

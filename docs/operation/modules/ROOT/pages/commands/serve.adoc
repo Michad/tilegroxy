@@ -28,7 +28,7 @@ tilegroxy serve -c /path/to/tilegroxy.yml
 
 There are three primary endpoints (paths are all relative to the `RootPath` config):
 
-[cols="1,3"]
+[cols="2,1,4"]
 |===
 | Endpoint | Production | Description 
 
