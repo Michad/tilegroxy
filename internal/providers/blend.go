@@ -192,7 +192,7 @@ func (t Blend) PreAuth(ctx context.Context, providerContext layer.ProviderContex
 		errSlice[i] = <-errs
 
 		childAuthResult := <-childAuthResults
-		newProviderContext.Other[strconv.Itoa(i)] = childAuthResult.ProviderContext
+		newProviderContext.Other[strconv.Itoa(childAuthResult.int)] = childAuthResult.ProviderContext
 
 		if !childAuthResult.AuthBypass {
 			allBypass = false
