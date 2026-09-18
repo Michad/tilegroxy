@@ -83,7 +83,7 @@ func configToEntities(cfg config.Config) (*entities.Entities, error) {
 	// bad check name would first surface when serve binds the health port, after `config check`
 	// already called the config Valid.
 	for _, checkCfg := range cfg.Health.Checks {
-		if _, err := health.ConstructHealthCheck(checkCfg, layerGroup, &cfg); err != nil {
+		if _, err := health.ConstructHealthCheck(checkCfg, layerGroup, caches, &cfg); err != nil {
 			return nil, closeAndReturn(built, fmt.Errorf("error constructing health check: %w", err))
 		}
 	}

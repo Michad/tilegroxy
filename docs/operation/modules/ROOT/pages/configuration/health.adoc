@@ -161,6 +161,8 @@ This check puts a value into the cache, retrieves it, and confirms the value mat
 
 The key used to insert into the cache corresponds to a request against layer named "\_\__hc___" at coordinates 0,0,0.  The value inserted into the cache changes each time.
 
+Every cache configured at the top level is checked, not just the default one, so a cache used only by a layer that xref:configuration/layer.adoc[overrides its cache] is still monitored. Use `caches` to narrow that down. The check fails if any of the caches it covers fails, and the output names which ones.
+
 Name should be "cache"
 
 Configuration options:
@@ -174,6 +176,12 @@ Configuration options:
 | int
 | No
 | 600
+
+| caches
+| The ids of the caches to check. Every id must match a cache declared in xref:configuration/cache/index.adoc[cache]
+| string[]
+| No
+| Every configured cache
 
 |===
 

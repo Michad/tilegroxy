@@ -40,7 +40,6 @@ const maxConcurrentCacheWrites = 64
 
 type LayerGroup struct {
 	layers            []*Layer
-	DefaultCache      cache.Cache
 	cacheHitCounter   metric.Int64Counter
 	cacheMissCounter  metric.Int64Counter
 	cacheWriteLimiter chan struct{}
@@ -83,7 +82,6 @@ func ConstructLayerGroup(cfg config.Config, caches *cache.CacheRegistry, secrete
 	layerGroup.cacheMissCounter, err2 = meter.Int64Counter("tilegroxy.cache.total.miss", metric.WithDescription("Number of requests that missed the cache (ignoring skips)"))
 
 	layerGroup.layers = layerObjects
-	layerGroup.DefaultCache = caches.Default()
 	layerGroup.cacheWriteLimiter = make(chan struct{}, maxConcurrentCacheWrites)
 
 	return &layerGroup, errors.Join(err1, err2)
