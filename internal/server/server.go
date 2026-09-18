@@ -87,7 +87,7 @@ func healthReloader(ctx context.Context, cfg *config.Config, ent *entities.Entit
 		return nil
 	}
 
-	newHealthShutdown, newHealthDrain, err := SetupHealth(ctx, cfg, ent.LayerGroup)
+	newHealthShutdown, newHealthDrain, err := SetupHealth(ctx, cfg, ent.LayerGroup, ent.Caches)
 
 	// SetupHealth returns a non-nil shutdown func alongside an error when it fails partway, so
 	// record whatever it hands back either way. Otherwise the pointer keeps referencing the
@@ -335,7 +335,7 @@ func ListenAndServe(config *config.Config, ent *entities.Entities, reloadPtr *fu
 	var draining bool
 
 	if config.Health.Enabled {
-		healthShutdown, healthDrain, err = SetupHealth(ctx, config, ent.LayerGroup)
+		healthShutdown, healthDrain, err = SetupHealth(ctx, config, ent.LayerGroup, ent.Caches)
 
 		if err != nil {
 			return err

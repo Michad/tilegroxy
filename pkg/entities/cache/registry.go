@@ -39,13 +39,14 @@ type CacheRegistry struct {
 	defaultID string
 }
 
-// NewSingleCacheRegistry wraps one already-constructed cache as the sole, default entry.
+// A helper for tests that creates a singleton registry with a single item
 func NewSingleCacheRegistry(c Cache) *CacheRegistry {
+	ID := "test-single"
 	return &CacheRegistry{
-		caches:    map[string]Cache{config.DefaultCacheID: c},
-		order:     []string{config.DefaultCacheID},
-		owned:     []string{config.DefaultCacheID},
-		defaultID: config.DefaultCacheID,
+		caches:    map[string]Cache{ID: c},
+		order:     []string{ID},
+		owned:     []string{ID},
+		defaultID: ID,
 	}
 }
 
@@ -137,6 +138,25 @@ func (reg *CacheRegistry) registerNested(rawConfig map[string]interface{}, built
 	}
 
 	return nil
+}
+
+func ContainsCache(built Cache, name string) bool {
+	if wrapper, ok := built.(CacheWrapper); ok {
+		if wrapper.Name == name {
+			return true
+		}
+	}
+
+	for i := 0; ; i++ {
+		child, ok := nestedCache(built, i)
+		if !ok {
+			return false
+		}
+
+		if ContainsCache(child, name) {
+			return true
+		}
+	}
 }
 
 // nestedCache pulls the i-th child out of a constructed cache. Caches live in internal packages
@@ -242,6 +262,11 @@ func ConstructCacheRegistry(rawConfig interface{}, defaultID string, secreter se
 	}
 
 	for _, entry := range entries {
+		if _, taken := reg.caches[entry.ID]; taken {
+			closeErr := reg.Close(context.Background())
+			return nil, errors.Join(fmt.Errorf(deps.ErrorMessages.MustBeUnique, "cache.id", entry.ID), closeErr)
+		}
+
 		cfg := pkg.ReplaceEnv(entry.Config)
 
 		if secreter != nil {

@@ -38,7 +38,6 @@ func newSingleflightTestLayerGroup(l *Layer, c *alwaysMissCache) *LayerGroup {
 
 	return &LayerGroup{
 		layers:           []*Layer{l},
-		DefaultCache:     c,
 		cacheHitCounter:  noop.Int64Counter{},
 		cacheMissCounter: noop.Int64Counter{},
 	}

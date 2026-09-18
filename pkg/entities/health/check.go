@@ -38,8 +38,7 @@ type HealthCheckConfig interface {
 // as fields so the Initialize signature stays stable
 type HealthCheckDeps struct {
 	LayerGroup *layer.LayerGroup
-	// The default cache of the layer group, hoisted out so a check does not have to reach through it
-	Cache cache.Cache
+	Caches     *cache.CacheRegistry
 	// The full configuration, since a check may need to inspect settings outside its own block
 	AllConfig *config.Config
 }
@@ -76,7 +75,7 @@ func RegisteredHealthCheckNames() []string {
 	return names
 }
 
-func ConstructHealthCheck(rawConfig map[string]interface{}, lg *layer.LayerGroup, allCfg *config.Config) (HealthCheck, error) {
+func ConstructHealthCheck(rawConfig map[string]interface{}, lg *layer.LayerGroup, caches *cache.CacheRegistry, allCfg *config.Config) (HealthCheck, error) {
 	rawConfig = pkg.ReplaceEnv(rawConfig)
 
 	name, ok := rawConfig["name"].(string)
@@ -89,7 +88,7 @@ func ConstructHealthCheck(rawConfig map[string]interface{}, lg *layer.LayerGroup
 			if err != nil {
 				return nil, err
 			}
-			return reg.Initialize(cfg, HealthCheckDeps{LayerGroup: lg, Cache: lg.DefaultCache, AllConfig: allCfg})
+			return reg.Initialize(cfg, HealthCheckDeps{LayerGroup: lg, Caches: caches, AllConfig: allCfg})
 		}
 	}
 

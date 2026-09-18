@@ -32,6 +32,7 @@ import (
 
 	_ "github.com/Michad/tilegroxy/internal/checks"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/Michad/tilegroxy/pkg/entities/health"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/Michad/tilegroxy/pkg/static"
@@ -168,7 +169,7 @@ func (h healthHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func SetupHealth(ctx context.Context, cfg *config.Config, layerGroup *layer.LayerGroup) (func(context.Context) error, func(), error) {
+func SetupHealth(ctx context.Context, cfg *config.Config, layerGroup *layer.LayerGroup, caches *cache.CacheRegistry) (func(context.Context) error, func(), error) {
 	h := cfg.Health
 
 	slog.InfoContext(ctx, fmt.Sprintf("Initializing health subsystem with %v checks on %v:%v", len(h.Checks), h.Host, h.Port))
@@ -180,7 +181,7 @@ func SetupHealth(ctx context.Context, cfg *config.Config, layerGroup *layer.Laye
 	noopDrain := func() {}
 
 	if len(h.Checks) > 0 {
-		checks, callback, err = setupCheckRoutines(ctx, h, layerGroup, cfg, &checkResultCache)
+		checks, callback, err = setupCheckRoutines(ctx, h, layerGroup, caches, cfg, &checkResultCache)
 		if err != nil {
 			return callback, noopDrain, err
 		}
@@ -239,14 +240,14 @@ func setupHealthEndpoints(ctx context.Context, h config.HealthConfig, checks []h
 	return srv.Shutdown, func() { draining.Store(true) }, err
 }
 
-func setupCheckRoutines(ctx context.Context, h config.HealthConfig, layerGroup *layer.LayerGroup, cfg *config.Config, checkResultCache *sync.Map) ([]health.HealthCheck, func(context.Context) error, error) {
+func setupCheckRoutines(ctx context.Context, h config.HealthConfig, layerGroup *layer.LayerGroup, caches *cache.CacheRegistry, cfg *config.Config, checkResultCache *sync.Map) ([]health.HealthCheck, func(context.Context) error, error) {
 	checks := make([]health.HealthCheck, 0, len(h.Checks))
 	var callback func(context.Context) error
 	tickers := make([]*time.Ticker, 0, len(h.Checks))
 	exitChannels := make([]chan struct{}, 0, len(h.Checks))
 
 	for _, checkCfg := range h.Checks {
-		hc, err := health.ConstructHealthCheck(checkCfg, layerGroup, cfg)
+		hc, err := health.ConstructHealthCheck(checkCfg, layerGroup, caches, cfg)
 		if err != nil {
 			return nil, nil, err
 		}

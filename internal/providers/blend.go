@@ -141,7 +141,7 @@ func (t Blend) PreAuth(ctx context.Context, providerContext layer.ProviderContex
 
 	wg := sync.WaitGroup{}
 	errs := make(chan error, len(t.providers))
-	acResults := make(chan struct {
+	childAuthResults := make(chan struct {
 		int
 		layer.ProviderContext
 	}, len(t.providers))
@@ -163,7 +163,7 @@ func (t Blend) PreAuth(ctx context.Context, providerContext layer.ProviderContex
 					err = fmt.Errorf("unexpected blend error %v", r)
 				}
 
-				acResults <- struct {
+				childAuthResults <- struct {
 					int
 					layer.ProviderContext
 				}{index, ac}
@@ -191,15 +191,15 @@ func (t Blend) PreAuth(ctx context.Context, providerContext layer.ProviderContex
 	for i := range t.providers {
 		errSlice[i] = <-errs
 
-		acStruct := <-acResults
-		newProviderContext.Other[strconv.Itoa(acStruct.int)] = acStruct.ProviderContext
+		childAuthResult := <-childAuthResults
+		newProviderContext.Other[strconv.Itoa(childAuthResult.int)] = childAuthResult.ProviderContext
 
-		if !acStruct.AuthBypass {
+		if !childAuthResult.AuthBypass {
 			allBypass = false
 		}
 
-		if acStruct.AuthExpiration.Before(nextExp) {
-			nextExp = acStruct.AuthExpiration
+		if !childAuthResult.AuthExpiration.IsZero() && childAuthResult.AuthExpiration.Before(nextExp) {
+			nextExp = childAuthResult.AuthExpiration
 		}
 	}
 

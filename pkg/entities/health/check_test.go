@@ -69,13 +69,13 @@ func testLayerGroup(t *testing.T) *layer.LayerGroup {
 
 func Test_ConstructHealthCheck_UnknownNameErrors(t *testing.T) {
 	cfg := config.DefaultConfig()
-	_, err := ConstructHealthCheck(map[string]interface{}{"name": "not-a-real-check"}, testLayerGroup(t), &cfg)
+	_, err := ConstructHealthCheck(map[string]interface{}{"name": "not-a-real-check"}, testLayerGroup(t), nil, &cfg)
 	require.Error(t, err)
 }
 
 func Test_ConstructHealthCheck_ConstructsRegisteredCheck(t *testing.T) {
 	cfg := config.DefaultConfig()
-	hc, err := ConstructHealthCheck(map[string]interface{}{"name": "stub-check", "delay": 5}, testLayerGroup(t), &cfg)
+	hc, err := ConstructHealthCheck(map[string]interface{}{"name": "stub-check", "delay": 5}, testLayerGroup(t), nil, &cfg)
 	require.NoError(t, err)
 	require.NotNil(t, hc)
 
