@@ -139,6 +139,25 @@ func (reg *CacheRegistry) registerNested(rawConfig map[string]interface{}, built
 	return nil
 }
 
+func ContainsCache(built Cache, name string) bool {
+	if wrapper, ok := built.(CacheWrapper); ok {
+		if wrapper.Name == name {
+			return true
+		}
+	}
+
+	for i := 0; ; i++ {
+		child, ok := nestedCache(built, i)
+		if !ok {
+			return false
+		}
+
+		if ContainsCache(child, name) {
+			return true
+		}
+	}
+}
+
 // nestedCache pulls the i-th child out of a constructed cache. Caches live in internal packages
 // that pkg can't import, so this reads the exported Tiers/Cache fields reflectively rather than
 // type switching. Every nesting cache holds its children in one of those two shapes.

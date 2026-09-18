@@ -301,3 +301,153 @@ func Test_ConstructLayerGroup_CoalesceFollowsLayerCache(t *testing.T) {
 	assert.False(t, lg.layers[0].allowCoalesce)
 	assert.True(t, lg.layers[1].allowCoalesce)
 }
+
+// nestingStubCache stands in for the wrapping caches (multi, ttl, tenant) that live in
+// internal/caches, which this package can't import. The exported Cache field is what the registry
+// walks to find children.
+type nestingStubCache struct {
+	Cache cache.Cache
+}
+
+func (nestingStubCache) Lookup(_ context.Context, _ pkg.TileRequest) (*pkg.Image, error) {
+	return nil, nil
+}
+func (nestingStubCache) Save(_ context.Context, _ pkg.TileRequest, _ *pkg.Image) error { return nil }
+func (nestingStubCache) Remove(_ context.Context, _ pkg.TileRequest) (bool, error) {
+	return false, nil
+}
+
+type nestingStubCacheRegistration struct {
+	name string
+}
+
+func (s nestingStubCacheRegistration) Name() string { return s.name }
+func (s nestingStubCacheRegistration) InitializeConfig() any {
+	return struct{ Cache map[string]interface{} }{}
+}
+
+func (s nestingStubCacheRegistration) Initialize(configAny any, deps cache.CacheDeps) (cache.Cache, error) {
+	config := configAny.(struct{ Cache map[string]interface{} })
+
+	inner, err := cache.ConstructCache(config.Cache, deps)
+	if err != nil {
+		return nil, err
+	}
+
+	return nestingStubCache{Cache: inner}, nil
+}
+
+// A tenant cache means the provider's output varies by who asked, so coalescing - which hands
+// every waiter the leader's tile - must not turn itself on. Regression test for #942.
+func Test_ConstructLayerGroup_CoalesceOffForTenantCache(t *testing.T) {
+	cache.RegisterCache(namedStubCacheRegistration{name: "stub-coalesce-inner"})
+	cache.RegisterCache(nestingStubCacheRegistration{name: "tenant"})
+	cache.RegisterCache(nestingStubCacheRegistration{name: "stub-coalesce-outer"})
+
+	reg, err := cache.ConstructCacheRegistry([]map[string]interface{}{
+		{"id": "plain", "name": "stub-coalesce-inner"},
+		{"id": "tenanted", "name": "tenant", "cache": map[string]interface{}{"name": "stub-coalesce-inner"}},
+		{"id": "nested", "name": "stub-coalesce-outer", "cache": map[string]interface{}{
+			"name":  "tenant",
+			"cache": map[string]interface{}{"name": "stub-coalesce-inner"},
+		}},
+	}, "", nil, cache.CacheDeps{ErrorMessages: config.DefaultConfig().Error.Messages})
+	require.NoError(t, err)
+
+	allow := true
+	cfg := config.Config{Layers: []config.LayerConfig{
+		{ID: "plain", Provider: map[string]any{"name": "doc-example-sample"}, Cache: "plain"},
+		{ID: "tenanted", Provider: map[string]any{"name": "doc-example-sample"}, Cache: "tenanted"},
+		{ID: "nested", Provider: map[string]any{"name": "doc-example-sample"}, Cache: "nested"},
+		{ID: "override", Provider: map[string]any{"name": "doc-example-sample"}, Cache: "tenanted", AllowCoalesce: &allow},
+	}}
+
+	lg, err := ConstructLayerGroup(cfg, reg, nil, nil)
+	require.NoError(t, err)
+
+	assert.True(t, lg.layers[0].allowCoalesce, "a plain cache should still auto-enable coalescing")
+	assert.False(t, lg.layers[1].allowCoalesce, "a tenant cache should auto-disable coalescing")
+	assert.False(t, lg.layers[2].allowCoalesce, "a tenant cache nested under another cache should also auto-disable coalescing")
+	assert.True(t, lg.layers[3].allowCoalesce, "an explicit allowcoalesce must still win over the tenant default")
+}
+
+// A provider that builds its request out of the requester's identity returns different tiles to
+// different callers, so coalescing - which hands every waiter the leader's tile - must not turn
+// itself on. Regression test for #942.
+func Test_UsesIdentityPlaceholder(t *testing.T) {
+	tests := []struct {
+		name     string
+		provider any
+		expected bool
+	}{
+		{"user in a url", map[string]any{"name": "proxy", "url": "https://example.com/{z}/{x}/{y}?u={ctx.user}"}, true},
+		{"tenant in a url", map[string]any{"name": "proxy", "url": "https://example.com/{z}/{x}/{y}?t={ctx.tenant}"}, true},
+		{"nested inside another provider", map[string]any{
+			"name":    "fallback",
+			"primary": map[string]any{"name": "proxy", "url": "https://example.com/{ctx.tenant}/{z}/{x}/{y}"},
+		}, true},
+		{"inside a list of providers", map[string]any{
+			"name":      "blend",
+			"providers": []any{map[string]any{"name": "proxy", "url": "https://example.com/{ctx.user}"}},
+		}, true},
+		{"in a map key", map[string]any{"headers": map[string]any{"{ctx.user}": "x"}}, true},
+		{"a different ctx value", map[string]any{"name": "proxy", "url": "https://example.com/{z}/{x}/{y}?a={ctx.User-Agent}"}, false},
+		{"no placeholders at all", map[string]any{"name": "proxy", "url": "https://example.com/{z}/{x}/{y}"}, false},
+		{"no provider", nil, false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.expected, usesIdentityPlaceholder(test.provider))
+		})
+	}
+}
+
+// urlStubProvider stands in for the real providers that interpolate placeholders into a URL; those
+// live in internal/providers, which this package can't import.
+type urlStubProvider struct{}
+
+func (urlStubProvider) PreAuth(_ context.Context, providerContext ProviderContext) (ProviderContext, error) {
+	return providerContext, nil
+}
+
+func (urlStubProvider) GenerateTile(_ context.Context, _ ProviderContext, _ pkg.TileRequest) (*pkg.Image, error) {
+	return &pkg.Image{}, nil
+}
+
+func (urlStubProvider) DataType() config.DataType { return config.DataTypeUnknown }
+
+type urlStubProviderRegistration struct{}
+
+func (urlStubProviderRegistration) Name() string { return "stub-url" }
+func (urlStubProviderRegistration) InitializeConfig() any {
+	return struct{ URL string }{}
+}
+func (urlStubProviderRegistration) DataType(_ any) config.DataType { return config.DataTypeUnknown }
+func (urlStubProviderRegistration) Initialize(_ any, _ ProviderDeps) (Provider, error) {
+	return urlStubProvider{}, nil
+}
+
+func Test_ConstructLayerGroup_CoalesceOffForIdentityPlaceholder(t *testing.T) {
+	cache.RegisterCache(namedStubCacheRegistration{name: "stub-placeholder"})
+	RegisterProvider(urlStubProviderRegistration{})
+
+	reg, err := cache.ConstructCacheRegistry([]map[string]interface{}{
+		{"id": "real", "name": "stub-placeholder"},
+	}, "real", nil, cache.CacheDeps{ErrorMessages: config.DefaultConfig().Error.Messages})
+	require.NoError(t, err)
+
+	allow := true
+	cfg := config.Config{Layers: []config.LayerConfig{
+		{ID: "plain", Provider: map[string]any{"name": "stub-url", "url": "https://example.com/{z}/{x}/{y}"}},
+		{ID: "peruser", Provider: map[string]any{"name": "stub-url", "url": "https://example.com/{z}/{x}/{y}?u={ctx.user}"}},
+		{ID: "override", Provider: map[string]any{"name": "stub-url", "url": "https://example.com/{z}/{x}/{y}?u={ctx.user}"}, AllowCoalesce: &allow},
+	}}
+
+	lg, err := ConstructLayerGroup(cfg, reg, nil, nil)
+	require.NoError(t, err)
+
+	assert.True(t, lg.layers[0].allowCoalesce, "a provider with no identity placeholder should still auto-enable coalescing")
+	assert.False(t, lg.layers[1].allowCoalesce, "a provider interpolating the user should auto-disable coalescing")
+	assert.True(t, lg.layers[2].allowCoalesce, "an explicit allowcoalesce must still win")
+}

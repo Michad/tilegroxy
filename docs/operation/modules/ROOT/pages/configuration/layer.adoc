@@ -57,10 +57,10 @@ Configuration options:
 | false
 
 | allowcoalesce
-| Whether to allow concurrent requests for the same tile to be combined into one tile generation call. This includes requests triggered by different users. Helps avoid your upstream provider being spammed if, for whatever reason, your clients spam a single tile. However, if your tiles are customized per user, you will want to set this false.
+| Whether to allow concurrent requests for the same tile to be combined into one tile generation call. This includes requests triggered by different users. This helps avoid your upstream provider being spammed if, for whatever reason, your clients spam a single tile. However, if your tiles are customized per user/tenant, you will want to set this false. Left unset, we do our best to auto-detect when to coalesce and when not to. However it's strongly recommended to explicitly set this false when different users should receive different tiles.
 | bool
 | No
-| Auto (based on whether caching is enabled)
+| Auto (based on the layer's cache and provider)
 
 
 | description

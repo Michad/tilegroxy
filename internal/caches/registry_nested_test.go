@@ -126,3 +126,51 @@ func Test_Registry_ClosesNestedCacheOnce(t *testing.T) {
 	require.NoError(t, reg.Close(context.Background()))
 	assert.Equal(t, 1, closed)
 }
+
+// ContainsCache has to find a tenant cache wherever it sits, since that's what decides whether a
+// layer coalesces concurrent requests by default. Exercised against the real nesting caches.
+func Test_ContainsCache_FindsTenantAtAnyDepth(t *testing.T) {
+	deps := nestedTestDeps()
+
+	plain, err := cache.ConstructCache(map[string]interface{}{"name": "memory"}, deps)
+	require.NoError(t, err)
+	assert.False(t, cache.ContainsCache(plain, "tenant"))
+
+	direct, err := cache.ConstructCache(map[string]interface{}{
+		"name":  "tenant",
+		"cache": map[string]interface{}{"name": "memory"},
+	}, deps)
+	require.NoError(t, err)
+	assert.True(t, cache.ContainsCache(direct, "tenant"))
+
+	underTTL, err := cache.ConstructCache(map[string]interface{}{
+		"name": "ttl",
+		"ttl":  60,
+		"cache": map[string]interface{}{
+			"name":  "tenant",
+			"cache": map[string]interface{}{"name": "memory"},
+		},
+	}, deps)
+	require.NoError(t, err)
+	assert.True(t, cache.ContainsCache(underTTL, "tenant"))
+
+	inOneTier, err := cache.ConstructCache(map[string]interface{}{
+		"name": "multi",
+		"tiers": []map[string]interface{}{
+			{"name": "memory"},
+			{"name": "tenant", "cache": map[string]interface{}{"name": "memory"}},
+		},
+	}, deps)
+	require.NoError(t, err)
+	assert.True(t, cache.ContainsCache(inOneTier, "tenant"))
+
+	noTenant, err := cache.ConstructCache(map[string]interface{}{
+		"name": "multi",
+		"tiers": []map[string]interface{}{
+			{"name": "memory"},
+			{"name": "ttl", "ttl": 60, "cache": map[string]interface{}{"name": "memory"}},
+		},
+	}, deps)
+	require.NoError(t, err)
+	assert.False(t, cache.ContainsCache(noTenant, "tenant"))
+}
