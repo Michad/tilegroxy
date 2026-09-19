@@ -145,6 +145,12 @@ func (t Fallback) GenerateTile(ctx context.Context, providerContext layer.Provid
 		img, err = t.Primary.GenerateTile(ctx, providerContext, tileRequest)
 
 		if err != nil {
+			var authError pkg.ProviderAuthError
+			if errors.As(err, &authError) {
+				// Special case we want to allow to propagate so layer-level re-auth kicks in
+				return nil, authError
+			}
+
 			ok = false
 			if t.Cache != CacheModeAlways {
 				skipCacheSave = true

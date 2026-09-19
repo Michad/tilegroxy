@@ -2,7 +2,7 @@
 
 Delegates calls to a Primary provider, then falls back Secondary provider when an error is returned or the tile is outside the valid zoom or bounds. This is useful, for example, where you're integrating with a system that returns an error for requests outside of the coverage area and you want to return a Static image in those cases without it being logged as an error.  It especially can be useful in conjunction with the Blend provider.
 
-Currently the preAuth method is never called for the secondary provider, therefore only authless providers should be used as fallbacks. In the future we may include calls to the preAuth method but only when the fallback logic is triggered.
+The fallback provider is not meant to be used to handle auth errors with custom providers. The preAuth method is never called for the secondary provider and, if the primary provider returns an auth error, the secondary provider will not be called (the re-auth behaviour for the primary provider will occur as normal). Any auth error handling should be built into your custom provider itself.
 
 The bounds parameter is only applied at a per-tile level. That is, the edge where the fallback begins to kick in will visibly change as you zoom in/out. This allows this provider to work in a format agnostic manner for both raster and vector tiles.  See the xref:configuration/provider/crop.adoc[] provider to allow raster tiles to be limited at an exact geographic area.
 
