@@ -129,7 +129,7 @@ func (k *keySet) keyFor(ctx context.Context, kid string) (crypto.PublicKey, erro
 	}
 
 	if !found {
-		return nil, fmt.Errorf(k.errorMessages.InvalidParam, "jwt.kid")
+		return nil, fmt.Errorf(k.errorMessages.InvalidParam, "jwt.kid", kid)
 	}
 
 	if err = k.checkKeyAlgorithm(key); err != nil {
