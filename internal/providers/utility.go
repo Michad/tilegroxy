@@ -17,6 +17,7 @@ package providers
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"math"
 	"net/url"
 	"os"
@@ -157,7 +158,13 @@ func replacePlaceholdersInString(ctx context.Context, tileRequest pkg.TileReques
 			envVar := envMatch[5 : len(envMatch)-1]
 
 			param := "$" + strconv.Itoa(paramIndex)
-			replacements = append(replacements, os.Getenv(envVar))
+			envVarVal, envVarExists := os.LookupEnv(envVar)
+
+			if !envVarExists {
+				slog.Log(ctx, slog.LevelWarn, fmt.Sprintf("env variable %v could not be resolved while serving layer %v", envVar, tileRequest.LayerName))
+			}
+
+			replacements = append(replacements, envVarVal)
 			str = strings.Replace(str, envMatch, param, 1)
 			paramIndex++
 		}
@@ -174,6 +181,11 @@ func replacePlaceholdersInString(ctx context.Context, tileRequest pkg.TileReques
 
 			if valVal.Kind() == reflect.Pointer {
 				val = valVal.Elem().Interface()
+			}
+
+			if val == nil {
+				slog.Log(ctx, slog.LevelWarn, fmt.Sprintf("ctx variable %v could not be resolved while serving layer %v", ctxVar, tileRequest.LayerName))
+				val = ""
 			}
 
 			param := "$" + strconv.Itoa(paramIndex)
@@ -193,9 +205,15 @@ func replacePlaceholdersInString(ctx context.Context, tileRequest pkg.TileReques
 
 			param := "$" + strconv.Itoa(paramIndex)
 			var val any
+			valExists := false
 
 			if lpm != nil {
-				val = (*lpm)[layerVar]
+				val, valExists = (*lpm)[layerVar]
+			}
+
+			if !valExists {
+				slog.Log(ctx, slog.LevelWarn, fmt.Sprintf("layer variable %v could not be resolved while serving layer %v", layerVar, tileRequest.LayerName))
+				val = ""
 			}
 
 			replacements = append(replacements, val)
