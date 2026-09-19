@@ -124,6 +124,10 @@ func (h *TileCheck) Check(ctx context.Context) error {
 		return err
 	}
 
+	if img == nil {
+		return fmt.Errorf(h.errorMessages.InvalidParam, "tile", "non-nil")
+	}
+
 	switch h.Validation {
 	case ValidationSame:
 		return h.ValidateSame(ctx, img)
