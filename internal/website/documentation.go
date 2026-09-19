@@ -59,7 +59,7 @@ func ReadDocumentationFile(path string) ([]byte, string, error) {
 
 			return ReadDocumentationFile(path)
 		} else if strings.Contains(path, index) && errors.Is(err, fs.ErrNotExist) {
-			return ReadDocumentationFile(strings.Replace(path, index, indexFallback, -1))
+			return ReadDocumentationFile(strings.ReplaceAll(path, index, indexFallback))
 		}
 
 		return nil, "", fmt.Errorf("%w while trying %v", err, path)
