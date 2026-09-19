@@ -70,3 +70,30 @@ func TestDisk_LayerNamePathTraversalIsContained(t *testing.T) {
 	require.NotNil(t, result)
 	require.Equal(t, img.Content, result.Content)
 }
+
+// A 0-byte file left by an interrupted write must read as a miss rather than an empty tile.
+func TestDisk_TruncatedFileIsAMiss(t *testing.T) {
+	dir, err := os.MkdirTemp("", "tilegroxy-test-disk")
+	defer os.RemoveAll(dir)
+	require.NoError(t, err)
+
+	cAny, err := DiskRegistration{}.Initialize(DiskConfig{Path: dir}, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
+	require.NoError(t, err)
+	c := cAny.(*Disk)
+
+	tile := pkg.TileRequest{LayerName: "layer", Z: 1, X: 2, Y: 3}
+	require.NoError(t, os.WriteFile(filepath.Join(dir, requestToFilename(tile)), []byte{}, 0600))
+
+	result, err := c.Lookup(context.Background(), tile)
+	require.NoError(t, err)
+	require.Nil(t, result)
+
+	// The miss lets a subsequent save replace the truncated entry.
+	img := pkg.Image{Content: []byte("payload")}
+	require.NoError(t, c.Save(context.Background(), tile, &img))
+
+	result, err = c.Lookup(context.Background(), tile)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.Equal(t, img.Content, result.Content)
+}

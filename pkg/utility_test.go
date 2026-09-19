@@ -297,9 +297,23 @@ func Fuzz_EncodeDecodeImage(f *testing.F) {
 		// Test backwards compatibility
 		img3, err := DecodeImage(img1.Content)
 		require.NoError(t, err)
-		assert.Equal(t, img3.Content, img2.Content)
-		assert.Empty(t, img3.ContentType)
+
+		if len(img1.Content) == 0 {
+			assert.Nil(t, img3)
+		} else {
+			assert.Equal(t, img3.Content, img2.Content)
+			assert.Empty(t, img3.ContentType)
+		}
 	})
+}
+
+// A truncated or empty payload must read as a cache miss, not a successful empty tile.
+func Test_DecodeImage_Empty(t *testing.T) {
+	for _, b := range [][]byte{nil, {}} {
+		img, err := DecodeImage(b)
+		require.NoError(t, err)
+		assert.Nil(t, img)
+	}
 }
 
 // v1 payloads (Content + ContentType, no CreatedAt) must still decode after v2 was introduced.

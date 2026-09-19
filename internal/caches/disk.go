@@ -100,7 +100,35 @@ func (c Disk) Save(_ context.Context, t pkg.TileRequest, img *pkg.Image) error {
 		return err
 	}
 
-	return os.WriteFile(filepath.Clean(filepath.Join(c.Path, filename)), b, fs.FileMode(c.FileMode))
+	// Write to a temp file and rename so an interrupted write never leaves a readable partial entry
+	dest := filepath.Clean(filepath.Join(c.Path, filename))
+
+	tmp, err := os.CreateTemp(c.Path, filename+".tmp")
+
+	if err != nil {
+		return err
+	}
+
+	tmpName := tmp.Name()
+
+	defer func() {
+		tmp.Close()
+		os.Remove(tmpName)
+	}()
+
+	if err = tmp.Chmod(fs.FileMode(c.FileMode)); err != nil {
+		return err
+	}
+
+	if _, err = tmp.Write(b); err != nil {
+		return err
+	}
+
+	if err = tmp.Close(); err != nil {
+		return err
+	}
+
+	return os.Rename(tmpName, dest)
 }
 
 func (c Disk) Remove(_ context.Context, t pkg.TileRequest) (bool, error) {

@@ -1,10 +1,14 @@
 = Disks
 
-Stores the cache entries as files in a location on the filesystem.
+Stores the cache entries as files in a location on the filesystem. 
 
-If the filesystem is purely local then you will experience inconsistent performance if using tilegroxy in a high-availability deployment.
+Tilegroxy doesn't form clusters so a high-availability deployment with this cache pointing to a local filesystem will lead to inconsistent behaviour.
 
-Files are stored in a flat structure inside the specified directory. No cleanup process is included inside of `tilegroxy` itself. It is recommended you use an external cleanup process to avoid running out of disk space.
+Files are stored in a flat structure inside the specified directory. No automatic cleanup process is included inside of `tilegroxy` itself. It is recommended you use an external job to avoid running out of disk space. 
+
+Filenames are derived from the layer name and tile coordinates, for example `mylayer_1_2_3`. Layer names are sanitized by replacing potentially dangerous characters with an underscore. This can lead to exotically named layers colliding. Be cognizant of that risk when using this cache.
+
+Cache entries are written to a temporary file (in the same directory) and then renamed, so an interrupted write won't leave partial files behind. The temp files should get automatically removed, but if you see any old files ending with `.tmp`, feel free to clean them up.
 
 Name should be "disk"
 
@@ -37,8 +41,6 @@ Example:
 }
 ----
 
-== Cache key sanitization
 
-Filenames are derived from the layer name and tile coordinates, for example `mylayer_1_2_3`.  Since the layer name comes from the incoming request when using patterns, it is sanitized first: every character besides ASCII letters, digits, `-`, and `.` is replaced with `_`, as is a lone `.` or any run of two or more dots.  This keeps a crafted layer name containing something like `../` from reaching cache entries outside the configured `path`.  Ordinary names such as `osm` or `my-layer` are unchanged.
 
-Sanitization is many-to-one, so layer names differing only in unsafe characters share a cache entry.  For example `a/b` and `a b` both become `a_b`.  This is a tradeoff to keep filenames readable; see the note on layer naming in the xref:configuration/layer.adoc[Layer] configuration.
+
