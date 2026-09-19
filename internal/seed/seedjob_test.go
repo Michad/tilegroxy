@@ -157,3 +157,12 @@ func Test_SeedJob_InvalidZoom(t *testing.T) {
 	_, err := NewSeedJob("test", world(), []uint{pkg.MaxZoom + 1})
 	require.Error(t, err)
 }
+
+func Test_SeedJob_AntimeridianCrossingRejected(t *testing.T) {
+	_, err := NewSeedJob("test", pkg.Bounds{South: 40, North: 50, West: 170, East: -170}, []uint{4})
+
+	require.Error(t, err)
+	var rangeErr pkg.RangeError
+	require.ErrorAs(t, err, &rangeErr)
+	assert.Equal(t, "east", rangeErr.ParamName)
+}
