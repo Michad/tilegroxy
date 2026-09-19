@@ -39,11 +39,16 @@ func ReadDocumentationFile(path string) ([]byte, string, error) {
 		path = index
 	}
 
+	if path[len(path)-1] == '/' {
+		path += index
+	}
+
 	filePath := "resources/" + path
+
 	data, err := files.ReadFile(filePath)
 
 	if err != nil {
-		if errors.Is(err, errors.New("is a directory")) {
+		if _, err = files.ReadDir(filePath); err == nil {
 			if path[len(path)-1] != '/' {
 				path += "/"
 			}
