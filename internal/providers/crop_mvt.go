@@ -16,6 +16,7 @@ package providers
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -34,7 +35,8 @@ type CropMvtConfig struct {
 
 type CropMvt struct {
 	CropMvtConfig
-	Primary layer.Provider
+	Primary       layer.Provider
+	errorMessages config.ErrorMessages
 }
 
 func init() {
@@ -64,7 +66,7 @@ func (s CropMvtRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (la
 		return nil, err
 	}
 
-	return &CropMvt{cfg, primary}, nil
+	return &CropMvt{cfg, primary, deps.ErrorMessages}, nil
 }
 
 func (t CropMvt) PreAuth(ctx context.Context, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
@@ -94,6 +96,9 @@ func (t CropMvt) GenerateTile(ctx context.Context, providerContext layer.Provide
 	img, err := t.Primary.GenerateTile(ctx, providerContext, tileRequest)
 	if err != nil {
 		return nil, err
+	}
+	if img == nil {
+		return nil, fmt.Errorf(t.errorMessages.ParamRequired, "cropmvt.img")
 	}
 
 	if boundsToCrop.IsNullIsland() {
