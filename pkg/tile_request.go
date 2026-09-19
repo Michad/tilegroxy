@@ -170,6 +170,11 @@ func (b Bounds) ConstructSingleZoomRange(zoom uint) (SingleZoomRange, error) {
 		return SingleZoomRange{}, RangeError{"z", 0, MaxZoom}
 	}
 
+	// A bounds crossing the antimeridian would give an inverted x range, underflowing Count
+	if b.West > b.East {
+		return SingleZoomRange{}, RangeError{"east", b.West, maxLong}
+	}
+
 	z := float64(zoom)
 
 	lonMin := b.West
@@ -185,6 +190,11 @@ func (b Bounds) ConstructSingleZoomRange(zoom uint) (SingleZoomRange, error) {
 	}
 	for lonMax < minLong {
 		lonMax -= (minLong - maxLong)
+	}
+
+	// Normalizing each edge independently loses the crossing, leaving an inverted x range
+	if lonMin > lonMax {
+		return SingleZoomRange{}, RangeError{"east", lonMin, maxLong}
 	}
 
 	n := math.Exp2(z)

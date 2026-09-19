@@ -180,3 +180,44 @@ func TestTileToEWKT(t *testing.T) {
 	// test case from result of postgis `SELECT ST_AsEWKT(ST_TileEnvelope(2,1,1))` with precision tweak
 	assert.Equal(t, "SRID=3857;POLYGON((-10018754.1713945 0.0000000,-10018754.1713945 10018754.1713945,0.0000000 10018754.1713945,0.0000000 0.0000000,-10018754.1713945 0.0000000))", b.ToEWKT())
 }
+
+func TestConstructSingleZoomRangeNormal(t *testing.T) {
+	r, err := Bounds{South: 40, North: 50, West: -10, East: 10, SRID: SRIDWGS84}.ConstructSingleZoomRange(4)
+
+	require.NoError(t, err)
+	assert.Equal(t, uint(4), r.Z)
+	assert.Less(t, r.XMin, r.XMax)
+	assert.Less(t, r.YMin, r.YMax)
+	assert.Positive(t, r.Count())
+}
+
+func TestConstructSingleZoomRangeInvalidZoom(t *testing.T) {
+	_, err := WorldBounds().ConstructSingleZoomRange(MaxZoom + 1)
+
+	require.Error(t, err)
+	var rangeErr RangeError
+	require.ErrorAs(t, err, &rangeErr)
+}
+
+func TestConstructSingleZoomRangeAntimeridian(t *testing.T) {
+	for _, b := range []Bounds{
+		{South: 40, North: 50, West: 170, East: -170, SRID: SRIDWGS84},
+		{South: 40, North: 50, West: 170, East: 190, SRID: SRIDWGS84},
+	} {
+		_, err := b.ConstructSingleZoomRange(4)
+
+		require.Error(t, err)
+		var rangeErr RangeError
+		require.ErrorAs(t, err, &rangeErr)
+		assert.Equal(t, "east", rangeErr.ParamName)
+		assert.InDelta(t, 170.0, rangeErr.MinValue, .0001)
+		assert.InDelta(t, 180.0, rangeErr.MaxValue, .0001)
+	}
+}
+
+func TestConstructSingleZoomRangeWorldDoesNotUnderflow(t *testing.T) {
+	r, err := WorldBounds().ConstructSingleZoomRange(4)
+
+	require.NoError(t, err)
+	assert.Equal(t, uint64(16*16), r.Count())
+}

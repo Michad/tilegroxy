@@ -200,6 +200,27 @@ func Test_SeedCommand_ExcessTiles(t *testing.T) {
 	assert.Equal(t, 1, exitStatus)
 }
 
+func Test_SeedCommand_AntimeridianCrossing(t *testing.T) {
+	exitStatus = -1
+	rootCmd.ResetFlags()
+	seedCmd.ResetFlags()
+	initRoot()
+	initSeed()
+
+	b := bytes.NewBufferString("")
+	rootCmd.SetOut(b)
+	rootCmd.SetErr(b)
+	rootCmd.SetArgs([]string{"seed", "-c", "../examples/configurations/simple.json", "-l", "osm", "-w", "170", "-e", "-170", "-z", "4"})
+	require.NoError(t, rootCmd.Execute())
+	out, err := io.ReadAll(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Contains(t, string(out), "east must be between 170 and 180")
+	assert.Equal(t, 1, exitStatus)
+}
+
 // The progress file is what makes an interrupted seed resumable, so the command has to pick up
 // from a recorded position and clean the file up once the run finishes.
 func Test_SeedCommand_ProgressFileAndResume(t *testing.T) {
