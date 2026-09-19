@@ -83,6 +83,7 @@ func newKeySet(ctx context.Context, cfg JWKSConfig, algorithms []string, errorMe
 	cancel()
 	if err != nil {
 		if startupErr := k.startupError(ctx, err); startupErr != nil {
+			_ = k.Close(ctx)
 			return nil, startupErr
 		}
 		return k, nil
@@ -91,6 +92,7 @@ func newKeySet(ctx context.Context, cfg JWKSConfig, algorithms []string, errorMe
 	// Fetch once now so a bad URL fails at startup rather than surfacing as 401s later.
 	if _, err = cache.Refresh(ctx, cfg.URL); err != nil {
 		if startupErr := k.startupError(ctx, err); startupErr != nil {
+			_ = k.Close(ctx)
 			return nil, startupErr
 		}
 	}
