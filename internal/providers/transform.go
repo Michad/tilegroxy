@@ -46,6 +46,7 @@ type Transform struct {
 	TransformConfig
 	provider      layer.Provider
 	transformFunc func(uint8, uint8, uint8, uint8) (uint8, uint8, uint8, uint8)
+	errorMessages config.ErrorMessages
 }
 
 func init() {
@@ -113,7 +114,7 @@ func (s TransformRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (
 		return nil, fmt.Errorf(deps.ErrorMessages.ScriptError, "provider.transform", "transform function has the wrong signature")
 	}
 
-	return &Transform{cfg, provider, transformFunc}, nil
+	return &Transform{cfg, provider, transformFunc, deps.ErrorMessages}, nil
 }
 
 func (t Transform) PreAuth(ctx context.Context, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
@@ -142,6 +143,9 @@ func (t Transform) GenerateTile(ctx context.Context, providerContext layer.Provi
 
 	if err != nil {
 		return img, err
+	}
+	if img == nil {
+		return nil, fmt.Errorf(t.errorMessages.ParamRequired, "transform.img")
 	}
 
 	realImage, _, err := image.Decode(bytes.NewReader(img.Content))

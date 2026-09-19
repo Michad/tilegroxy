@@ -45,7 +45,8 @@ type EffectConfig struct {
 
 type Effect struct {
 	EffectConfig
-	provider layer.Provider
+	provider      layer.Provider
+	errorMessages config.ErrorMessages
 }
 
 func init() {
@@ -82,7 +83,7 @@ func (s EffectRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (lay
 		return nil, err
 	}
 
-	return &Effect{config, provider}, nil
+	return &Effect{config, provider, deps.ErrorMessages}, nil
 }
 
 func (t Effect) PreAuth(ctx context.Context, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
@@ -94,6 +95,9 @@ func (t Effect) GenerateTile(ctx context.Context, providerContext layer.Provider
 
 	if err != nil {
 		return img, err
+	}
+	if img == nil {
+		return nil, fmt.Errorf(t.errorMessages.ParamRequired, "effect.img")
 	}
 
 	realImage, _, err := image.Decode(bytes.NewReader(img.Content))
