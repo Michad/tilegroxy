@@ -133,12 +133,37 @@ func (t Crop) GenerateTile(ctx context.Context, providerContext layer.ProviderCo
 		return nil, fmt.Errorf(t.errorMessages.ParamRequired, "crop.img2")
 	}
 
-	realImage, _, err := image.Decode(bytes.NewReader(img.Content))
+	resultImage, err := compositeCrop(ctx, img.Content, img2.Content, *tileBounds, boundsToCrop)
 	if err != nil {
 		return nil, err
 	}
 
-	realImage2, _, err := image.Decode(bytes.NewReader(img2.Content))
+	var buf bytes.Buffer
+	writer := bufio.NewWriter(&buf)
+
+	err = png.Encode(writer, resultImage)
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = writer.Flush()
+
+	if err != nil {
+		return nil, err
+	}
+	output := buf.Bytes()
+
+	return &pkg.Image{Content: output, ContentType: mimePng, ForceSkipCache: img.ForceSkipCache || img2.ForceSkipCache}, nil
+}
+
+func compositeCrop(ctx context.Context, primary, secondary []byte, tileBounds, boundsToCrop pkg.Bounds) (image.Image, error) {
+	realImage, _, err := image.Decode(bytes.NewReader(primary))
+	if err != nil {
+		return nil, err
+	}
+
+	realImage2, _, err := image.Decode(bytes.NewReader(secondary))
 	if err != nil {
 		return nil, err
 	}
@@ -170,23 +195,7 @@ func (t Crop) GenerateTile(ctx context.Context, providerContext layer.ProviderCo
 		}
 	}
 
-	var buf bytes.Buffer
-	writer := bufio.NewWriter(&buf)
-
-	err = png.Encode(writer, resultImage)
-
-	if err != nil {
-		return nil, err
-	}
-
-	err = writer.Flush()
-
-	if err != nil {
-		return nil, err
-	}
-	output := buf.Bytes()
-
-	return &pkg.Image{Content: output, ContentType: mimePng, ForceSkipCache: img.ForceSkipCache || img2.ForceSkipCache}, nil
+	return resultImage, nil
 }
 
 func resizeImages(ctx context.Context, img image.Image, img2 image.Image) (image.Image, image.Image) {
