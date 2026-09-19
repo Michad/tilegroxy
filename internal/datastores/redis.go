@@ -124,9 +124,14 @@ func (s RedisWrapperRegistration) Initialize(cfgAny any, deps datastore.Datastor
 			return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "length(datastore.redis.servers)", len(cfg.Servers))
 		}
 
-		addrMap := make(map[string]string)
+		addrMap := make(map[string]string, len(cfg.Servers))
 		for _, addr := range cfg.Servers {
-			addrMap[addr.Host] = ":" + strconv.Itoa(int(addr.Port))
+			name := addr.String()
+			if _, dup := addrMap[name]; dup {
+				return nil, fmt.Errorf(deps.ErrorMessages.MustBeUnique, "datastore.redis.servers", name)
+			}
+
+			addrMap[name] = name
 		}
 
 		client = redis.NewRing(&redis.RingOptions{
