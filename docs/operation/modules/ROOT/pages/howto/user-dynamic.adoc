@@ -1,0 +1,61 @@
+= Serve User Dynamic Layers
+
+Tilegroxy can serve a layer whose tiles differ depending on who asked for them, either by building the upstream request out of the requester's identity, or by restricting the imagery to an area their credentials allow. 
+
+NOTE: Nothing here matters if you're not using xref:configuration/authentication/index.adoc[Authentication] to differentiate users. 
+
+This doc provides a few things to consider to ensure you don't accidentally leak tiles between users.
+
+CAUTION: Getting this right is the operator's responsibility 
+
+== Cache
+
+By default, a cache is keyed based on the layer and tile, not consider anything about the user.  We offer a xref:configuration/cache/tenant.adoc[tenant] cache, which injects the tenant ID into the cache key.  Tiles are still cached, just separately per tenant.  A request that arrives with no tenant ID falls back to the un-namespaced key, so this only protects you if every request is guaranteed to carry one.
+
+NOTE: Tilegroxy is architected assuming that you might have a multi-tenant environment with different "realms" of users who are grouped together. If that isn't the case, and you just have a flat list of users, it's recommended you set the tenant ID to be the user ID.
+
+Alternatively, you can choose to completely avoid the risk of cached tiles leaking between users by skipping caching entirely. You can do this either by omitting a cache for your configuration entirely, or by specifying `skipcache: true` for your layer.
+
+=== Seed and test commands
+
+The xref:commands/seed.adoc[seed] and xref:commands/test.adoc[test] CLI commands operate against purely synthetic tile requests. If you run them by default, they will generate tiles that have no user or tenant ID assigned. These cache entries would be entirely inaccessible at runtime if you're using the tenant cache. 
+
+Both commands support `--user` and `--tenant` flags to allow overriding those fields, enabling you to seed/test for specific users.  See xref:configuration/cache/tenant.adoc[tenant].
+
+== Coalesce
+
+Even if you entirely disable caching, there is still a risk that tiles can leak between users: coalescing.
+
+Tilegroxy has a mechanism to "coalesce" or combine identical requests that come in concurrently.  This helps protect against cases where e.g. 20 people load the exact same map at once and overwhelm your upstream tileserver (since the tiles aren't yet cached).  Of course, this mechanism works by serving the exact same tile to the user.  
+
+Tilegroxy has a degree of "smarts" to control when to coalesce or not based on whether the configuration has a cache and whether the provider refers to the user or tenant ID, but this can not catch all cases (especially if you are using a custom provider). Therefore it's important that you set `allowcoalesce: false` explicitly if your content will vary by user.
+
+
+== Example
+
+Here is an example of a layer that would be dynamic and cached per-tenant.
+
+[,yaml]
+----
+authentication:
+  name: jwt
+  key: env.JWT_KEY
+  algorithms:
+    - RS256
+  tenantid: org_id
+datastores:
+  - name: redis
+    id: tiles
+    host: redis.example.com
+cache:
+  name: tenant
+  cache:
+    name: redis
+    datastore: tiles
+layers:
+  - id: tenant_imagery
+    allowcoalesce: false
+    provider:
+      name: proxy
+      url: https://imagery.example.com/{ctx.tenant}/{z}/{x}/{y}.png
+----

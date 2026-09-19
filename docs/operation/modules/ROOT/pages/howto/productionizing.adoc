@@ -1,6 +1,6 @@
-= Productionizing
+= Run in Production
 
-When running tilegroxy by default it runs in a non-hardened mode most fit for development use-cases.  If you want to operate tilegroxy in a production use-case with substantial traffic consider the following action items:
+Tilegroxy puts a lot of trust and responsibility in its operator to deploy it securely, in accordance to the operator's use case. It is heavily recommended you fully read through the documentation before deploying this in a production (i.e. internet facing) deployment. The following is a non-exhaustive checklist of things to consider:
 
 [%interactive]
 * [ ] Deploy tilegroxy in a high-availability manner (that is to say N+1 Load Balanced) 
@@ -11,7 +11,7 @@ When running tilegroxy by default it runs in a non-hardened mode most fit for de
 * [ ] Consume logs into your aggregator or observability solution with a tool such as fluentbit/filebeat and/or rotate them with a tool such as logrotate
 * [ ] Ensure you have authentication configured either inside tilegroxy or upstream 
 * [ ] Ensure you have monitoring of the health endpoints and the endpoints are not exposed to the internet
-* [ ] Ensure cache-ing is configured against a distributed, high availability data-store
+* [ ] Ensure caching is configured against a distributed, high availability datastore
 * [ ] Consume telemetry data into an observability solution with trace sampling set at a level that won't overwhelm you
 * [ ] Configure the analytics dials and monitor the metrics to ensure usage data isn't dropped
-* [ ] Verify tilegroxy will be restarted on the unfortunate event it crashes such as via Docker's run=unless-stopped, Kubernete's restart policy, or SystemD's Restart=on-failure
+* [ ] Verify tilegroxy will be restarted on the unfortunate event it crashes such as via Docker's restart=unless-stopped, Kubernete's restart policy, or SystemD's Restart=on-failure
