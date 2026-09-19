@@ -38,8 +38,9 @@ type CropConfig struct {
 
 type Crop struct {
 	CropConfig
-	Primary   layer.Provider
-	Secondary layer.Provider
+	Primary       layer.Provider
+	Secondary     layer.Provider
+	errorMessages config.ErrorMessages
 }
 
 func init() {
@@ -79,7 +80,7 @@ func (s CropRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer
 		return nil, err
 	}
 
-	return &Crop{cfg, primary, secondary}, nil
+	return &Crop{cfg, primary, secondary, deps.ErrorMessages}, nil
 }
 
 func (t Crop) PreAuth(ctx context.Context, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
@@ -111,6 +112,9 @@ func (t Crop) GenerateTile(ctx context.Context, providerContext layer.ProviderCo
 	if err != nil {
 		return nil, err
 	}
+	if img == nil {
+		return nil, fmt.Errorf(t.errorMessages.ParamRequired, "crop.img")
+	}
 
 	if boundsToCrop.IsNullIsland() {
 		return img, nil
@@ -124,6 +128,9 @@ func (t Crop) GenerateTile(ctx context.Context, providerContext layer.ProviderCo
 	img2, err := t.Secondary.GenerateTile(ctx, providerContext, tileRequest)
 	if err != nil {
 		return nil, err
+	}
+	if img2 == nil {
+		return nil, fmt.Errorf(t.errorMessages.ParamRequired, "crop.img2")
 	}
 
 	realImage, _, err := image.Decode(bytes.NewReader(img.Content))
@@ -179,7 +186,7 @@ func (t Crop) GenerateTile(ctx context.Context, providerContext layer.ProviderCo
 	}
 	output := buf.Bytes()
 
-	return &pkg.Image{Content: output, ContentType: mimePng, ForceSkipCache: img.ForceSkipCache}, nil
+	return &pkg.Image{Content: output, ContentType: mimePng, ForceSkipCache: img.ForceSkipCache || img2.ForceSkipCache}, nil
 }
 
 func resizeImages(ctx context.Context, img image.Image, img2 image.Image) (image.Image, image.Image) {
