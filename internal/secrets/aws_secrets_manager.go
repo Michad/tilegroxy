@@ -17,6 +17,7 @@
 package secrets
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -114,6 +115,16 @@ func (s AWSSecretsManagerSecreter) Initialize(cfgAny any, _ secret.SecreterDeps)
 	}
 
 	return &AWSSecretsManager{cfg, svc, nil}, nil
+}
+
+// Close releases the secret cache. Otter runs maintenance goroutines that only exit on close, so a hot
+// reload would otherwise leak a set per generation
+func (s AWSSecretsManager) Close(_ context.Context) error {
+	if s.cache != nil {
+		s.cache.Close()
+	}
+
+	return nil
 }
 
 func (s AWSSecretsManager) Lookup(key string) (string, error) {

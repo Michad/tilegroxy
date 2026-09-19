@@ -154,3 +154,44 @@ func Test_Entities_AnalyticsTimeoutStillLeavesDatastoresOpen(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "analytics did not finish flushing")
 }
+
+// closableSecreter stands in for a secret store that owns a cache or background goroutines
+type closableSecreter struct {
+	closed *bool
+}
+
+func (s closableSecreter) Lookup(_ string) (string, error) { return "", nil }
+
+func (s closableSecreter) Close(_ context.Context) error {
+	*s.closed = true
+	return nil
+}
+
+type plainSecreter struct{}
+
+func (plainSecreter) Lookup(_ string) (string, error) { return "", nil }
+
+func Test_Entities_ClosesSecreter(t *testing.T) {
+	var closed bool
+	e := &Entities{Secreter: closableSecreter{closed: &closed}}
+
+	require.NoError(t, e.Close(context.Background()))
+	assert.True(t, closed, "a secret store's cache has to be released or every reload leaks one")
+}
+
+func Test_Entities_ClosesSecreterEvenWhenAnalyticsTimesOut(t *testing.T) {
+	var closed bool
+	e := &Entities{
+		Secreter:  closableSecreter{closed: &closed},
+		Analytics: &analytics.AnalyticsWrapper{Name: "failing", ID: "failing", Analytics: failingAnalytics{}},
+	}
+
+	require.Error(t, e.Close(context.Background()))
+	assert.True(t, closed)
+}
+
+func Test_Entities_CloseIgnoresPlainSecreter(t *testing.T) {
+	e := &Entities{Secreter: plainSecreter{}}
+
+	require.NoError(t, e.Close(context.Background()))
+}

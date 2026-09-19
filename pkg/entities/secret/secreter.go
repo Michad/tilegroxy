@@ -22,6 +22,8 @@ import (
 	"github.com/Michad/tilegroxy/pkg/config"
 )
 
+// Secreter resolves secret references in a configuration. An implementation holding resources may also
+// implement lifecycle.Closer, which is called when the configuration generation is released
 type Secreter interface {
 	Lookup(key string) (string, error)
 }

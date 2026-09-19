@@ -27,6 +27,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
+	"github.com/Michad/tilegroxy/pkg/entities/secret"
 )
 
 // Entities is one fully constructed generation of the pluggable entities described by a configuration. Hot
@@ -38,12 +39,14 @@ type Entities struct {
 	Analytics  *analytics.AnalyticsWrapper
 	Caches     *cache.CacheRegistry
 	Datastores *datastore.DatastoreRegistry
+	Secreter   secret.Secreter
 }
 
 // Close releases every entity holding resources. Providers close first: they hold nothing the analytics
 // flush depends on, and a custom provider's close hook should get the deadline while there's still
 // budget. Analytics closes next so batched events can still be written through the datastore
-// connections they depend on
+// connections they depend on. The secreter closes last because anything still shutting down may
+// resolve a secret
 func (e *Entities) Close(ctx context.Context) error {
 	if e == nil {
 		return nil
@@ -65,12 +68,13 @@ func (e *Entities) Close(ctx context.Context) error {
 
 	if analyticsErr != nil {
 		slog.WarnContext(ctx, "Leaving datastore connections open because analytics did not finish flushing: "+analyticsErr.Error())
-		return errors.Join(preFlushErr, analyticsErr, e.Caches.Close(ctx))
+		return errors.Join(preFlushErr, analyticsErr, e.Caches.Close(ctx), lifecycle.CloseIfCloser(ctx, e.Secreter))
 	}
 
 	return errors.Join(
 		preFlushErr,
 		e.Caches.Close(ctx),
 		e.Datastores.Close(ctx),
+		lifecycle.CloseIfCloser(ctx, e.Secreter),
 	)
 }
