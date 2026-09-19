@@ -185,7 +185,6 @@ func replacePlaceholdersInString(ctx context.Context, tileRequest pkg.TileReques
 
 			if val == nil {
 				slog.Log(ctx, slog.LevelWarn, fmt.Sprintf("ctx variable %v could not be resolved while serving layer %v", ctxVar, tileRequest.LayerName))
-				val = ""
 			}
 
 			param := "$" + strconv.Itoa(paramIndex)
@@ -213,7 +212,6 @@ func replacePlaceholdersInString(ctx context.Context, tileRequest pkg.TileReques
 
 			if !valExists {
 				slog.Log(ctx, slog.LevelWarn, fmt.Sprintf("layer variable %v could not be resolved while serving layer %v", layerVar, tileRequest.LayerName))
-				val = ""
 			}
 
 			replacements = append(replacements, val)
