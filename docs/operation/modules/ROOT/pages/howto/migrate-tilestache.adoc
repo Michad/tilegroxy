@@ -1,6 +1,6 @@
-= Migrating from tilestache
+= Migrate from Tilestache
 
-An important difference between tilegroxy and tilestache is that tilegroxy can only be run as a standalone executable rather than running as a module in another webserver.  However tilegroxy, like tilestache, can also link:./extensibility.md#using-tilegroxy-as-a-library[be used as a library] if you wish to build applications extending it.
+An important difference between tilegroxy and tilestache is that tilegroxy can only be run as a standalone executable rather than running as a module in another webserver.  However tilegroxy, like tilestache, can also xref:extensibility.adoc#using-tilegroxy-as-a-library[be used as a library] if you wish to build applications extending it.
 
 The configuration in tilegroxy is meant to be highly compatible with the configuration of tilestache, however there are significant differences. The tilegroxy configuration supports a variety of options that are not available in tilestache and while we try to keep most parameters optional and have sane and safe defaults, it is highly advised you familiarize yourself with the various options documented above.
 

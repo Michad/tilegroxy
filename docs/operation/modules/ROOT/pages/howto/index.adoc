@@ -1,0 +1,7 @@
+= How To
+
+The rest of this documentation describes what each option does.  These pages instead start from something you're trying to accomplish and work through the options it takes.
+
+* xref:howto/productionizing.adoc[] for taking a development deployment to production.
+* xref:howto/user-dynamic.adoc[] for serving tiles that differ depending on who asked for them.
+* xref:howto/migrate-tilestache.adoc[] for moving an existing tilestache configuration over.

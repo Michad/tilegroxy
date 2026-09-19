@@ -18,6 +18,10 @@ The configuration for tilegroxy should be treated the same as one would treat co
 
 By default tilegroxy ignores incoming HTTP headers and the query string.  It is possible for the Operator to utilize these in many of the same situations described in Layer Name Parameters. However, there is no facility for validating these inputs so operators are advised to use extreme caution in trusting these inputs.
 
+=== Per-User Tiles
+
+An Operator can configure a layer whose tiles depend on who requested them, by interpolating the identity into the upstream request or by cropping to an area the requester's credentials allow. The cache key carries no identity, so such a layer leaks tiles between users unless it uses a xref:configuration/cache/tenant.adoc[tenant] cache or skips caching. See xref:howto/user-dynamic.adoc[User Dynamic Layers].
+
 == Downstream Responses
 
 One of the primary use-cases for tilegroxy is to proxy tile requests to another HTTP(s) server. These inputs are cached and returned to the user, either as-is or with transformation.  In order to prevent a third-party server returning malicious inputs a few protections are available:
