@@ -17,9 +17,11 @@ package website
 import (
 	"embed"
 	"errors"
+	"fmt"
 	"io/fs"
 	"mime"
 	"path/filepath"
+	"strings"
 )
 
 var (
@@ -56,11 +58,11 @@ func ReadDocumentationFile(path string) ([]byte, string, error) {
 			path += index
 
 			return ReadDocumentationFile(path)
-		} else if path == index && errors.Is(err, fs.ErrNotExist) {
-			return ReadDocumentationFile(indexFallback)
+		} else if strings.Contains(path, index) && errors.Is(err, fs.ErrNotExist) {
+			return ReadDocumentationFile(strings.Replace(path, index, indexFallback, -1))
 		}
 
-		return nil, "", err
+		return nil, "", fmt.Errorf("%w while trying %v", err, path)
 	}
 
 	ext := mime.TypeByExtension(filepath.Ext(filePath))
