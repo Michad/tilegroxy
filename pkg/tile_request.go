@@ -175,6 +175,11 @@ func (b Bounds) ConstructSingleZoomRange(zoom uint) (SingleZoomRange, error) {
 		return SingleZoomRange{}, RangeError{"east", b.West, maxLong}
 	}
 
+	// An inverted y range either underflows Count or silently seeds a different latitude band
+	if b.South > b.North {
+		return SingleZoomRange{}, RangeError{"north", b.South, maxLat}
+	}
+
 	z := float64(zoom)
 
 	lonMin := b.West

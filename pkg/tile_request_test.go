@@ -215,6 +215,19 @@ func TestConstructSingleZoomRangeAntimeridian(t *testing.T) {
 	}
 }
 
+func TestConstructSingleZoomRangeInvertedLatitude(t *testing.T) {
+	// Low zooms used to give a valid-looking range for the wrong band, high zooms underflowed Count
+	for _, z := range []uint{2, 3, 5} {
+		_, err := Bounds{South: 60, North: -60, West: -180, East: 180, SRID: SRIDWGS84}.ConstructSingleZoomRange(z)
+
+		require.Error(t, err)
+		var rangeErr RangeError
+		require.ErrorAs(t, err, &rangeErr)
+		assert.Equal(t, "north", rangeErr.ParamName)
+		assert.InDelta(t, 60.0, rangeErr.MinValue, .0001)
+	}
+}
+
 func TestConstructSingleZoomRangeWorldDoesNotUnderflow(t *testing.T) {
 	r, err := WorldBounds().ConstructSingleZoomRange(4)
 
