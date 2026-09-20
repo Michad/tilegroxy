@@ -270,7 +270,12 @@ func (lg *LayerGroup) RenderTile(ctx context.Context, tileRequest pkg.TileReques
 		if cached, ok := pkg.CachedFromContext(ctx); ok && cached != nil {
 			*cached = true
 		}
-		return img, err
+		// A tile we have in hand shouldn't fail the request just because the cache also reported a problem.
+		if err != nil {
+			slog.WarnContext(ctx, fmt.Sprintf("Cache read error alongside hit %v\n", err))
+		}
+
+		return img, nil
 	}
 
 	lg.cacheMissCounter.Add(ctx, 1)
