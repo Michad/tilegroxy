@@ -131,6 +131,10 @@ func makeCombinedReloadFunc(ctx context.Context, handlerReloadFunc reloadEntitie
 //
 //nolint:maintidx
 func setupHandlers(cfg *config.Config, ent *entities.Entities) (http.Handler, reloadEntitiesFunc, func() *entities.Entities, *generationRegistry, func() error, error) {
+	if err := ValidateCORS(cfg.Server.CORS, cfg.Error.Messages); err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
+
 	r := http.ServeMux{}
 
 	var myRootHandler http.Handler
@@ -222,6 +226,10 @@ func setupHandlers(cfg *config.Config, ent *entities.Entities) (http.Handler, re
 
 	if cfg.Server.Timeout > math.MaxInt32 {
 		cfg.Server.Timeout = math.MaxInt32
+	}
+
+	if cfg.Server.CORS.Enabled {
+		rootHandler = corsHandler{rootHandler, cfg.Server.CORS}
 	}
 
 	rootHandler = httpContextHandler{rootHandler, cfg.Error}

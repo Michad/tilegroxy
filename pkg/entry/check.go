@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/Michad/tilegroxy/internal/server"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 )
@@ -30,6 +31,10 @@ type CheckOptions struct {
 func CheckConfig(cfg *config.Config, opts CheckOptions, out io.Writer) error {
 	if out == nil {
 		out = io.Discard
+	}
+
+	if err := server.ValidateCORS(cfg.Server.CORS, cfg.Error.Messages); err != nil {
+		return err
 	}
 
 	ent, err := configToEntities(pkg.BackgroundContext(), *cfg, nil)

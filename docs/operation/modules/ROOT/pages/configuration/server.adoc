@@ -39,7 +39,7 @@ Configuration options:
 | docs
 
 | Headers
-| Include these headers in all response from server
+| Include these headers in all response from server. For cross-origin headers prefer xref:configuration/cors.adoc[CORS], which can vary the response by request origin
 | map[string]string
 | No
 | None
@@ -83,6 +83,12 @@ Configuration options:
 | TileJSON
 | Configuration to turn on endpoints that describe layers using the TileJSON format
 | xref:configuration/tilejson.adoc[TileJSON]
+| No
+| None
+
+| CORS
+| Configuration for returning cross-origin resource sharing headers so browsers on other origins can use the tiles
+| xref:configuration/cors.adoc[CORS]
 | No
 | None
 |===
