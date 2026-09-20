@@ -15,6 +15,13 @@
 package providers
 
 import (
+	"bytes"
+	"image"
+	"image/color"
+	"image/jpeg"
+	"image/png"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/Michad/tilegroxy/internal/images"
@@ -73,4 +80,62 @@ func Test_Transform_Execute(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, *exp, img.Content)
+}
+
+// Writes a solid-color single pixel image to a temp file and returns its path.
+func writeTestImage(t *testing.T, name string, col color.Color, encode func(*os.File, image.Image) error) string {
+	t.Helper()
+
+	img := image.NewNRGBA(image.Rect(0, 0, 1, 1))
+	img.Set(0, 0, col)
+
+	path := filepath.Join(t.TempDir(), name)
+	f, err := os.Create(path)
+	require.NoError(t, err)
+	require.NoError(t, encode(f, img))
+	require.NoError(t, f.Close())
+
+	return path
+}
+
+func transformedPixel(t *testing.T, imagePath string, formula string) color.NRGBA {
+	t.Helper()
+
+	tr, err := TransformRegistration{}.Initialize(
+		TransformConfig{Provider: map[string]interface{}{"name": "static", "image": imagePath}, Formula: formula},
+		layer.ProviderDeps{ClientConfig: testClientConfig, ErrorMessages: testErrMessages})
+	require.NoError(t, err)
+
+	img, err := tr.GenerateTile(pkg.BackgroundContext(), layer.ProviderContext{}, pkg.TileRequest{LayerName: "l", Z: 9, X: 23, Y: 32})
+	require.NoError(t, err)
+
+	result, err := png.Decode(bytes.NewReader(img.Content))
+	require.NoError(t, err)
+
+	return color.NRGBAModel.Convert(result.At(0, 0)).(color.NRGBA)
+}
+
+func Test_Transform_JPEGChannelsArePassedThroughUnchanged(t *testing.T) {
+	path := writeTestImage(t, "src.jpg", color.NRGBA{R: 18, G: 52, B: 86, A: 255}, func(f *os.File, img image.Image) error {
+		return jpeg.Encode(f, img, &jpeg.Options{Quality: 100})
+	})
+
+	// JPEG is lossy, so assert the identity transform preserves whatever the decoder produced.
+	expected := transformedPixel(t, path, `func transform(r, g, b, a uint8) (uint8, uint8, uint8, uint8) { return r,g,b,a }`)
+	swapped := transformedPixel(t, path, `func transform(r, g, b, a uint8) (uint8, uint8, uint8, uint8) { return b,r,g,a }`)
+
+	assert.Equal(t, color.NRGBA{R: expected.B, G: expected.R, B: expected.G, A: 255}, swapped)
+	assert.InDelta(t, 18, int(expected.R), 8)
+	assert.InDelta(t, 52, int(expected.G), 8)
+	assert.InDelta(t, 86, int(expected.B), 8)
+}
+
+func Test_Transform_SemiTransparentPixelKeepsItsChannels(t *testing.T) {
+	path := writeTestImage(t, "src.png", color.NRGBA{R: 200, G: 100, B: 50, A: 128}, func(f *os.File, img image.Image) error {
+		return png.Encode(f, img)
+	})
+
+	result := transformedPixel(t, path, `func transform(r, g, b, a uint8) (uint8, uint8, uint8, uint8) { return r,g,b,a }`)
+
+	assert.Equal(t, color.NRGBA{R: 200, G: 100, B: 50, A: 128}, result)
 }
