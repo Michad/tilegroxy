@@ -21,7 +21,7 @@ Configuration options:
 | 10 MiB
 
 | UnknownLength
-| Allow responses that are missing a Content-Length header, this could lead to excessive memory usage
+| Allow responses that are missing a Content-Length header
 | bool
 | No
 | false

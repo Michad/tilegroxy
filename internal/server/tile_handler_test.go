@@ -107,7 +107,7 @@ func Test_TileHandler_Proxy(t *testing.T) {
 
 	cfg := config.DefaultConfig()
 	cfg.Client.ContentTypes = append(cfg.Client.ContentTypes, "text/html; charset=UTF-8")
-	cfg.Client.UnknownLength = true
+	cfg.Client.UnknownLength = new(true)
 	mainProvider := make(map[string]interface{})
 	mainProvider["name"] = "proxy"
 	t.Setenv("TEST", "t")
