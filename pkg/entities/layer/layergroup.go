@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"runtime/debug"
 	"slices"
+	"sync"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -34,8 +35,6 @@ import (
 	"golang.org/x/sync/singleflight"
 )
 
-// Bounds the background writeCache goroutines. A slow cache backend plus sustained misses would
-// otherwise accumulate goroutines and the images they pin without limit.
 const maxConcurrentCacheWrites = 64
 
 type LayerGroup struct {
@@ -43,10 +42,9 @@ type LayerGroup struct {
 	cacheHitCounter   metric.Int64Counter
 	cacheMissCounter  metric.Int64Counter
 	cacheWriteLimiter chan struct{}
-	// generateGroup coalesces concurrent provider fetches for the same tile on a cache miss, so a
-	// burst of requests for one cold tile results in a single upstream call instead of one per
-	// request. Keyed identically to the cache key (see tileRequest.String()) so it never conflates
-	// genuinely different tiles.
+	// Counts the background writeCache goroutines so Close can wait for them.
+	cacheWrites sync.WaitGroup
+	// combines concurrent provider fetches for the same tile, so a burst of requests for one tile results in a single upstream call
 	generateGroup singleflight.Group
 }
 
@@ -100,16 +98,12 @@ func resolveLayerCache(l config.LayerConfig, caches *cache.CacheRegistry, errorM
 	return layerCache, nil
 }
 
-// isNoopCache reports whether a layer's cache discards everything, which is part of what decides
-// whether coalescing concurrent requests is worth doing by default.
 func isNoopCache(c cache.Cache) bool {
 	wrapper, ok := c.(cache.CacheWrapper)
 	return ok && wrapper.Name == "none"
 }
 
-// findRefTargets recursively walks a raw provider config collecting the layer names that `ref`
-// entries target. Providers like `blend` and `fallback` nest other providers inside themselves, so
-// this can't be limited to the top level.
+// recursively walk a raw provider config collecting the layer names that `ref` entries target.
 func findRefTargets(node any, targets *[]string) {
 	switch v := node.(type) {
 	case map[string]any:
@@ -128,9 +122,7 @@ func findRefTargets(node any, targets *[]string) {
 	}
 }
 
-// validateRefs errors on refs pointing at a layer ID that doesn't statically exist, and on cycles
-// formed by refs. Only literal-ID layers can be resolved statically; refs targeting a patterned
-// layer name are guarded at request time by the depth counter in Ref.GenerateTile instead.
+// error on refs pointing at a layer ID that doesn't statically exist, and on cycles
 func validateRefs(layers []config.LayerConfig) error {
 	knownIDs := make(map[string]bool, len(layers))
 	hasPatternLayer := false
@@ -209,9 +201,6 @@ func validateRefs(layers []config.LayerConfig) error {
 	return nil
 }
 
-// validateNoDuplicateLayerIDs errors if two layers share the same literal ID. Without this,
-// FindLayer's linear scan silently makes the first match win and the second layer with that ID
-// permanently unreachable - a config that "validates" but quietly drops a layer.
 func validateNoDuplicateLayerIDs(layers []config.LayerConfig) error {
 	seen := make(map[string]bool, len(layers))
 	for _, l := range layers {
@@ -233,8 +222,6 @@ func (lg *LayerGroup) FindLayer(ctx context.Context, layerName string) *Layer {
 	return nil
 }
 
-// Layers returns every configured layer, for callers that need to enumerate them rather than
-// look one up by name, such as building the TileJSON index.
 func (lg *LayerGroup) Layers() []*Layer {
 	return lg.layers
 }
@@ -303,13 +290,16 @@ func (lg *LayerGroup) RenderTile(ctx context.Context, tileRequest pkg.TileReques
 	}
 
 	if img == nil {
-		return nil, errNilImage
+		return nil, errors.New("provider returned no image and no error")
 	}
 
 	if !img.ForceSkipCache {
 		select {
 		case lg.cacheWriteLimiter <- struct{}{}:
+			lg.cacheWrites.Add(1)
+
 			go func() {
+				defer lg.cacheWrites.Done()
 				defer func() { <-lg.cacheWriteLimiter }()
 				writeCache(ctx, l.Cache, cacheTileRequest, img)
 			}()
@@ -320,10 +310,6 @@ func (lg *LayerGroup) RenderTile(ctx context.Context, tileRequest pkg.TileReques
 
 	return img, nil
 }
-
-// errNilImage is returned when a provider reports success but hands back no image. composite_mvt
-// and blend already defend against nested providers doing this, so it's reachable in practice.
-var errNilImage = errors.New("provider returned no image and no error")
 
 // singleflightResult bundles what a coalesced generation call produces, so it can travel through
 // singleflight's `any` result value without a type assertion at every call site.
@@ -360,7 +346,7 @@ func leaderContext(ctx context.Context) (context.Context, context.CancelFunc) {
 	return leaderCtx, func() {}
 }
 
-// renderTileCoalesced deduplicates concurrent provider fetches for the same tile.
+// deduplicates concurrent provider fetches for the same tile.
 func (lg *LayerGroup) renderTileCoalesced(ctx context.Context, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	key := tileRequest.String()
 
@@ -387,8 +373,6 @@ func writeCache(ctx context.Context, cache cache.Cache, tileRequest pkg.TileRequ
 	// We need to make a new context to avoid the request finishing cancelling the ctx sent into the cache
 	newCtx := pkg.BackgroundContext()
 
-	// A cache can key off the identity (the tenant cache namespaces by it), so the write has to see
-	// the same identity the matching lookup did.
 	pkg.CopyAuthRestrictions(ctx, newCtx)
 
 	// Copy span over from original context
@@ -411,9 +395,6 @@ func writeCache(ctx context.Context, cache cache.Cache, tileRequest pkg.TileRequ
 }
 
 func (*LayerGroup) checkPermission(ctx context.Context, l *Layer, tileRequest pkg.TileRequest) error {
-	// These only return a usable pointer for a context built by pkg.NewRequestContext or
-	// pkg.BackgroundContext. A library consumer can pass a plain stdlib context, so fall back to
-	// unrestricted, which is what NewRequestContext installs anyway.
 	ctxLimitLayers, ok := pkg.LimitLayersFromContext(ctx)
 	limitLayers := ok && ctxLimitLayers != nil && *ctxLimitLayers
 
@@ -453,11 +434,7 @@ func (*LayerGroup) checkPermission(ctx context.Context, l *Layer, tileRequest pk
 	return nil
 }
 
-// Close releases any layer provider holding resources, most notably custom providers whose operator
-// script defines a close hook. Providers
-// aren't required to implement Closer, so most layers are a no-op. Nesting providers (blend,
-// fallback) forward to their own child providers via their own Close methods; ref deliberately
-// doesn't, since it references another layer by name rather than owning a provider.
+// releases any layer provider holding resources, most notably custom providers 
 func (lg *LayerGroup) Close(ctx context.Context) error {
 	if lg == nil {
 		return nil
@@ -474,6 +451,27 @@ func (lg *LayerGroup) Close(ctx context.Context) error {
 	}
 
 	return errors.Join(errs...)
+}
+
+// blocks until the background cache writes finish
+func (lg *LayerGroup) WaitForCacheWrites(ctx context.Context) error {
+	if lg == nil {
+		return nil
+	}
+
+	drained := make(chan struct{})
+
+	go func() {
+		lg.cacheWrites.Wait()
+		close(drained)
+	}()
+
+	select {
+	case <-drained:
+		return nil
+	case <-ctx.Done():
+		return fmt.Errorf("gave up waiting on in-flight cache writes: %w", ctx.Err())
+	}
 }
 
 // Resolves the layer and cacheversion like RenderTile so it removes the entry a render would read.
