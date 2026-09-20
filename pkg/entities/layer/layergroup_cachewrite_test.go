@@ -25,6 +25,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/metric/noop"
 )
@@ -410,5 +411,75 @@ func Test_LayerGroup_RenderTile_CacheWriteSeesTenant(t *testing.T) {
 		require.Equal(t, "tenant_a", saved)
 	case <-time.After(5 * time.Second):
 		t.Fatal("cache write never happened")
+	}
+}
+
+// slowSaveCache finishes its write only after a delay, so a Close that didn't wait would return
+// while the tile was still unwritten.
+type slowSaveCache struct {
+	saved atomic.Int32
+	delay time.Duration
+}
+
+func (c *slowSaveCache) Lookup(_ context.Context, _ pkg.TileRequest) (*pkg.Image, error) {
+	return nil, nil
+}
+
+func (c *slowSaveCache) Save(_ context.Context, _ pkg.TileRequest, _ *pkg.Image) error {
+	time.Sleep(c.delay)
+	c.saved.Add(1)
+	return nil
+}
+
+func (c *slowSaveCache) Remove(_ context.Context, _ pkg.TileRequest) (bool, error) {
+	return false, nil
+}
+
+// Cache writes run in the background, so a seed run that finished without waiting would report
+// tiles it never actually cached, and would close the cache out from under the write.
+func Test_LayerGroup_WaitForCacheWrites_WaitsForInFlightWrites(t *testing.T) {
+	c := &slowSaveCache{delay: 50 * time.Millisecond}
+	lg := newCacheWriteTestGroup(c)
+
+	_, err := lg.RenderTile(context.Background(), pkg.TileRequest{LayerName: "test", Z: 1, X: 0, Y: 0})
+	require.NoError(t, err)
+
+	require.NoError(t, lg.WaitForCacheWrites(context.Background()))
+	require.Equal(t, int32(1), c.saved.Load())
+}
+
+// Waiting forever on a wedged cache backend would hang shutdown, so the caller's deadline wins.
+func Test_LayerGroup_WaitForCacheWrites_GivesUpWhenContextEnds(t *testing.T) {
+	c := &blockingCache{unblock: make(chan struct{})}
+	defer close(c.unblock)
+
+	lg := newCacheWriteTestGroup(c)
+
+	_, err := lg.RenderTile(context.Background(), pkg.TileRequest{LayerName: "test", Z: 1, X: 0, Y: 0})
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	require.ErrorIs(t, lg.WaitForCacheWrites(ctx), context.DeadlineExceeded)
+}
+
+func newCacheWriteTestGroup(c cache.Cache) *LayerGroup {
+	l := &Layer{
+		ID:       "test",
+		Pattern:  []layerSegment{{value: "test", placeholder: false}},
+		Provider: &slowGenerateProvider{delay: 0},
+		Cache:    c,
+	}
+	l.tileAllCounter = noop.Int64Counter{}
+	l.tileAuthCounter = noop.Int64Counter{}
+	l.tileErrorCounter = noop.Int64Counter{}
+	l.tileSuccessCounter = noop.Int64Counter{}
+
+	return &LayerGroup{
+		layers:            []*Layer{l},
+		cacheHitCounter:   noop.Int64Counter{},
+		cacheMissCounter:  noop.Int64Counter{},
+		cacheWriteLimiter: make(chan struct{}, maxConcurrentCacheWrites),
 	}
 }
