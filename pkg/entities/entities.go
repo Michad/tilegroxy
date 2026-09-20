@@ -39,7 +39,7 @@ type Entities struct {
 	Secreter   secret.Secreter
 }
 
-// Close releases every entity holding resources. 
+// Close releases every entity holding resources.
 func (e *Entities) Close(ctx context.Context) error {
 	if e == nil {
 		return nil
