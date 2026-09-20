@@ -4,9 +4,9 @@ Stores the cache entries as files in a location on the filesystem.
 
 Tilegroxy doesn't form clusters so a high-availability deployment with this cache pointing to a local filesystem will lead to inconsistent behaviour.
 
-Files are stored in a flat structure inside the specified directory. No automatic cleanup process is included inside of `tilegroxy` itself. It is recommended you use an external job to avoid running out of disk space. 
+No automatic cleanup process is included inside of `tilegroxy` itself. It is recommended you use an external job to avoid running out of disk space.
 
-Filenames are derived from the layer name and tile coordinates, for example `mylayer_1_2_3`. Layer names are sanitized by replacing potentially dangerous characters with an underscore. This can lead to exotically named layers colliding. Be cognizant of that risk when using this cache.
+How entries are arranged on disk is controlled by `layout`. Sub-directories are created as tiles are cached. Layer names are sanitized by replacing potentially dangerous characters with an underscore. This can lead to exotically named layers colliding. Be cognizant of that risk when using this cache.
 
 Cache entries are written to a temporary file (in the same directory) and then renamed, so an interrupted write won't leave partial files behind. The temp files should get automatically removed, but if you see any old files ending with `.tmp`, feel free to clean them up.
 
@@ -29,6 +29,12 @@ Configuration options:
 | uint32
 | No
 | 0777
+
+| layout
+| How cache entries are arranged within `path`. Either `flat` for one file per entry directly inside the directory, or `coordinate` for a `layer/z/x/y` directory tree
+| string
+| No
+| flat
 |===
 
 Example:

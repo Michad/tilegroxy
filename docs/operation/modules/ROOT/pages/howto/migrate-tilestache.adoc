@@ -73,7 +73,7 @@ The following are the known incompatibilities with tilestache configurations:
 +++</li><ul style="margin-bottom:0"><li>+++
   No `umode` parameter - Instead use `filemode` with Go numerics instead of unix numerics. Might be added in the future
 +++</li><li>+++
-  No `dirs` parameter - Files are currently stored in a flat structure rather than creating separate directories
+  No `dirs` parameter - Instead use `layout`, which offers `flat` and `coordinate`. There is no equivalent to the `safe` or `quadtile` structures
 +++</li><li>+++
   No `gzip` parameter - Might be added in the future
 +++</li><li>+++

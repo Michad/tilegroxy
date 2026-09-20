@@ -39,6 +39,100 @@ func TestDisk(t *testing.T) {
 	validateRemove(t, c)
 }
 
+func TestDisk_CoordinateLayout(t *testing.T) {
+	dir, err := os.MkdirTemp("", "tilegroxy-test-disk")
+	defer os.RemoveAll(dir)
+	require.NoError(t, err)
+
+	cAny, err := DiskRegistration{}.Initialize(DiskConfig{Path: dir, Layout: DiskLayoutCoordinate}, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
+	require.NoError(t, err)
+	validateSaveAndLookup(t, cAny)
+	validateRemove(t, cAny)
+
+	c := cAny.(*Disk)
+	tile := pkg.TileRequest{LayerName: "layer", Z: 1, X: 2, Y: 3}
+	img := pkg.Image{Content: []byte("payload")}
+	require.NoError(t, c.Save(context.Background(), tile, &img))
+
+	_, err = os.Stat(filepath.Join(dir, "layer", "1", "2", "3"))
+	require.NoError(t, err, "tile should be written to layer/z/x/y")
+
+	// No stray temp files should survive alongside the tile.
+	entries, err := os.ReadDir(filepath.Join(dir, "layer", "1", "2"))
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+
+	result, err := c.Lookup(context.Background(), tile)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.Equal(t, img.Content, result.Content)
+
+	removed, err := c.Remove(context.Background(), tile)
+	require.NoError(t, err)
+	require.True(t, removed)
+
+	result, err = c.Lookup(context.Background(), tile)
+	require.NoError(t, err)
+	require.Nil(t, result)
+}
+
+// The two layouts use different paths, so an entry written by one must not be found by the other.
+func TestDisk_LayoutsDoNotShareEntries(t *testing.T) {
+	dir, err := os.MkdirTemp("", "tilegroxy-test-disk")
+	defer os.RemoveAll(dir)
+	require.NoError(t, err)
+
+	deps := cache.CacheDeps{ErrorMessages: config.ErrorMessages{}}
+	flatAny, err := DiskRegistration{}.Initialize(DiskConfig{Path: dir}, deps)
+	require.NoError(t, err)
+	coordAny, err := DiskRegistration{}.Initialize(DiskConfig{Path: dir, Layout: DiskLayoutCoordinate}, deps)
+	require.NoError(t, err)
+
+	tile := pkg.TileRequest{LayerName: "layer", Z: 1, X: 2, Y: 3}
+	require.NoError(t, flatAny.Save(context.Background(), tile, &pkg.Image{Content: []byte("flat")}))
+
+	result, err := coordAny.Lookup(context.Background(), tile)
+	require.NoError(t, err)
+	require.Nil(t, result)
+}
+
+// LayerName is User input, so a traversal sequence must not escape the tree in coordinate layout either.
+func TestDisk_CoordinateLayoutPathTraversalIsContained(t *testing.T) {
+	dir, err := os.MkdirTemp("", "tilegroxy-test-disk")
+	defer os.RemoveAll(dir)
+	require.NoError(t, err)
+
+	cAny, err := DiskRegistration{}.Initialize(DiskConfig{Path: dir, Layout: DiskLayoutCoordinate}, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
+	require.NoError(t, err)
+	c := cAny.(*Disk)
+
+	maliciousTile := pkg.TileRequest{LayerName: "../../escaped", Z: 1, X: 2, Y: 3}
+	img := pkg.Image{Content: []byte("payload")}
+	require.NoError(t, c.Save(context.Background(), maliciousTile, &img))
+
+	_, statErr := os.Stat(filepath.Join(filepath.Dir(filepath.Dir(dir)), "escaped"))
+	require.True(t, os.IsNotExist(statErr), "traversal payload escaped the cache directory")
+
+	entries, err := os.ReadDir(dir)
+	require.NoError(t, err)
+	require.Len(t, entries, 1, "expected exactly one directory written inside the cache directory")
+
+	result, err := c.Lookup(context.Background(), maliciousTile)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.Equal(t, img.Content, result.Content)
+}
+
+func TestDisk_InvalidLayout(t *testing.T) {
+	dir, err := os.MkdirTemp("", "tilegroxy-test-disk")
+	defer os.RemoveAll(dir)
+	require.NoError(t, err)
+
+	cfg := DiskConfig{Path: dir, Layout: "nonsense"}
+	_, err = DiskRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: config.ErrorMessages{EnumError: "invalid %v: %v not in %v"}})
+	require.Error(t, err)
+}
+
 // LayerName is User input for pattern layers, so a traversal sequence in it must not let
 // Save/Lookup reach outside the configured cache directory.
 func TestDisk_LayerNamePathTraversalIsContained(t *testing.T) {
