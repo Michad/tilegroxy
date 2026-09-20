@@ -301,6 +301,19 @@ func configureLogging(cfg *config.Config) (func() error, func() error, error) {
 	return closeMainLog, closeAuditLog, nil
 }
 
+func newHTTPServer(rootCtx context.Context, config *config.Config, rootHandler http.Handler) *http.Server {
+	return &http.Server{
+		Addr:              config.Server.BindHost + ":" + strconv.Itoa(config.Server.Port),
+		BaseContext:       func(_ net.Listener) context.Context { return rootCtx },
+		Handler:           rootHandler,
+		ReadHeaderTimeout: time.Second,
+		// Backstop for clients that stop reading, which timeoutHandler can't bound because it
+		// never gets to write. Double Server.Timeout so it only ever fires after that has
+		WriteTimeout: 2 * time.Duration(config.Server.Timeout) * time.Second, // #nosec G115 -- operator-supplied timeout in seconds, far below int64 overflow range
+		IdleTimeout:  2 * time.Duration(config.Server.Timeout) * time.Second, // #nosec G115 -- operator-supplied timeout in seconds, far below int64 overflow range
+	}
+}
+
 func ListenAndServe(config *config.Config, ent *entities.Entities, reloadPtr *func(*config.Config, *entities.Entities) error) error {
 	if config.Server.Encrypt != nil && config.Server.Encrypt.Domain == "" {
 		return fmt.Errorf(config.Error.Messages.ParamRequired, "server.encrypt.domain")
@@ -360,12 +373,7 @@ func ListenAndServe(config *config.Config, ent *entities.Entities, reloadPtr *fu
 		}
 	}
 
-	srv := &http.Server{
-		Addr:              config.Server.BindHost + ":" + strconv.Itoa(config.Server.Port),
-		BaseContext:       func(_ net.Listener) context.Context { return rootCtx },
-		Handler:           rootHandler,
-		ReadHeaderTimeout: time.Second,
-	}
+	srv := newHTTPServer(rootCtx, config, rootHandler)
 
 	srvErr := make(chan error, 1)
 
