@@ -434,7 +434,7 @@ func (*LayerGroup) checkPermission(ctx context.Context, l *Layer, tileRequest pk
 	return nil
 }
 
-// releases any layer provider holding resources, most notably custom providers 
+// releases any layer provider holding resources, most notably custom providers
 func (lg *LayerGroup) Close(ctx context.Context) error {
 	if lg == nil {
 		return nil

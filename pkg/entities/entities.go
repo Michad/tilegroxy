@@ -26,6 +26,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
+	"github.com/Michad/tilegroxy/pkg/entities/secret"
 )
 
 // One fully constructed generation of the pluggable entities described by a configuration. Hot reload builds a second generation and swaps it in, so grouping them gives the old one a single place to be released
@@ -35,9 +36,10 @@ type Entities struct {
 	Analytics  *analytics.AnalyticsWrapper
 	Caches     *cache.CacheRegistry
 	Datastores *datastore.DatastoreRegistry
+	Secreter   secret.Secreter
 }
 
-// Close releases every entity holding resources. 
+// Close releases every entity holding resources.
 func (e *Entities) Close(ctx context.Context) error {
 	if e == nil {
 		return nil
@@ -54,7 +56,7 @@ func (e *Entities) Close(ctx context.Context) error {
 
 	if analyticsErr != nil {
 		slog.WarnContext(ctx, "Leaving datastore connections open because analytics did not finish flushing: "+analyticsErr.Error())
-		return errors.Join(preFlushErr, analyticsErr, cacheWriteErr, e.Caches.Close(ctx))
+		return errors.Join(preFlushErr, analyticsErr, cacheWriteErr, e.Caches.Close(ctx), lifecycle.CloseIfCloser(ctx, e.Secreter))
 	}
 
 	return errors.Join(
@@ -62,5 +64,6 @@ func (e *Entities) Close(ctx context.Context) error {
 		cacheWriteErr,
 		e.Caches.Close(ctx),
 		e.Datastores.Close(ctx),
+		lifecycle.CloseIfCloser(ctx, e.Secreter),
 	)
 }

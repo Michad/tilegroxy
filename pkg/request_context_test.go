@@ -16,6 +16,7 @@ package pkg_test
 
 import (
 	"context"
+	"net/http"
 	"testing"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -114,4 +115,28 @@ func Test_SetIdentity_PlainContext(t *testing.T) {
 	require.NotPanics(t, func() {
 		pkg.SetIdentity(context.Background(), "someone", "acme-corp")
 	})
+}
+
+func Test_NewRequestContext_IP(t *testing.T) {
+	tests := []struct {
+		remoteAddr string
+		expected   string
+	}{
+		{"192.0.2.10:54321", "192.0.2.10"},
+		{"[2001:db8::1]:54321", "2001:db8::1"},
+		{"[::1]:1234", "::1"},
+		{"/run/tilegroxy.sock", "/run/tilegroxy.sock"},
+		{"", ""},
+	}
+
+	for _, test := range tests {
+		t.Run(test.remoteAddr, func(t *testing.T) {
+			req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com/tiles/1/2/3", nil)
+			require.NoError(t, err)
+			req.RemoteAddr = test.remoteAddr
+
+			ctx := pkg.NewRequestContext(req)
+			assert.Equal(t, test.expected, ctx.Value("ip"))
+		})
+	}
 }

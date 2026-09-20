@@ -46,7 +46,7 @@ The phases run in this order:
 . Wait for DrainDelay
 . The HTTP server finishes the requests already in flight
 . The health server and its background checks stop
-. Entities close, which flushes analytics and releases caches, datastores and providers
+. Entities close, which flushes analytics and releases caches, datastores, providers and the secret store
 . OpenTelemetry shuts down
 . Log file handles close
 

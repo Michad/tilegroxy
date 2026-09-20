@@ -121,17 +121,13 @@ func (t Transform) PreAuth(ctx context.Context, providerContext layer.ProviderCo
 	return t.provider.PreAuth(ctx, providerContext)
 }
 
-// #nosec G115
 func (t Transform) transform(ctx context.Context, col color.Color) color.Color {
-	r1, g1, b1, a1 := col.RGBA()
-	r1b := uint8(r1)
-	g1b := uint8(g1)
-	b1b := uint8(b1)
-	a1b := uint8(a1)
+	// Scripts work with 8 bit non-premultiplied channels, but color.Color exposes 16 bit premultiplied ones.
+	c1 := color.NRGBAModel.Convert(col).(color.NRGBA)
 
-	r2, g2, b2, a2 := t.transformFunc(r1b, g1b, b1b, a1b)
+	r2, g2, b2, a2 := t.transformFunc(c1.R, c1.G, c1.B, c1.A)
 
-	result := color.RGBA{r2, g2, b2, a2}
+	result := color.NRGBA{R: r2, G: g2, B: b2, A: a2}
 
 	slog.Log(ctx, config.LevelAbsurd, fmt.Sprintf("Converted %v to %v", col, result))
 
@@ -154,7 +150,7 @@ func (t Transform) GenerateTile(ctx context.Context, providerContext layer.Provi
 		return nil, err
 	}
 
-	resultImage := image.NewRGBA(realImage.Bounds())
+	resultImage := image.NewNRGBA(realImage.Bounds())
 
 	minBounds := realImage.Bounds().Min
 	maxBounds := realImage.Bounds().Max

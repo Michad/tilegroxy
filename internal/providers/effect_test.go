@@ -49,6 +49,47 @@ func Test_EffectValidate(t *testing.T) {
 	require.Error(t, err)
 }
 
+func Test_EffectValidateIntensityRange(t *testing.T) {
+	s := makeEffectProvider()
+
+	invalid := map[string][]float64{
+		"gaussian":   {-1, maxRadius + 1, 1e9},
+		"blur":       {-1, maxRadius + 1},
+		"median":     {maxRadius + 1},
+		"brightness": {-1.5, 1.5},
+		"saturation": {2},
+		"hue":        {-361, 361},
+		"gamma":      {-1, maxGamma + 1},
+		"threshold":  {-1, 256},
+	}
+
+	for mode, intensities := range invalid {
+		for _, intensity := range intensities {
+			c, err := EffectRegistration{}.Initialize(EffectConfig{Mode: mode, Intensity: intensity, Provider: s}, layer.ProviderDeps{ClientConfig: testClientConfig, ErrorMessages: testErrMessages})
+
+			assert.Nil(t, c, "%v %v", mode, intensity)
+			require.Error(t, err, "%v %v", mode, intensity)
+		}
+	}
+
+	valid := map[string][]float64{
+		"gaussian":   {0, 1, maxRadius},
+		"brightness": {-1, 0.5, 1},
+		"hue":        {-360, 360},
+		"gamma":      {0, maxGamma},
+		"threshold":  {0, 128, 255},
+	}
+
+	for mode, intensities := range valid {
+		for _, intensity := range intensities {
+			c, err := EffectRegistration{}.Initialize(EffectConfig{Mode: mode, Intensity: intensity, Provider: s}, layer.ProviderDeps{ClientConfig: testClientConfig, ErrorMessages: testErrMessages})
+
+			assert.NotNil(t, c, "%v %v", mode, intensity)
+			require.NoError(t, err, "%v %v", mode, intensity)
+		}
+	}
+}
+
 func Test_EffectExecuteGreyscale(t *testing.T) {
 	s := makeEffectProvider()
 	c, err := EffectRegistration{}.Initialize(EffectConfig{Mode: "grayscale", Provider: s}, layer.ProviderDeps{ClientConfig: testClientConfig, ErrorMessages: testErrMessages})

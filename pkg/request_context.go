@@ -16,8 +16,8 @@ package pkg
 
 import (
 	"context"
+	"net"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -38,6 +38,15 @@ const tenantIDKey = "tenant"
 const layerPatternMatchesKey = "layerPatternMatches"
 const refDepthKey = "refDepth"
 const cachedKey = "cached"
+
+func clientIP(remoteAddr string) string {
+	host, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		return remoteAddr
+	}
+
+	return host
+}
 
 //nolint:revive,staticcheck // We want values to be accessible
 func NewRequestContext(req *http.Request) context.Context {
@@ -60,7 +69,7 @@ func NewRequestContext(req *http.Request) context.Context {
 	ctx = context.WithValue(ctx, "query", req.URL.Query())
 	ctx = context.WithValue(ctx, "query-string", req.URL.RawQuery)
 	ctx = context.WithValue(ctx, "proto", req.Proto)
-	ctx = context.WithValue(ctx, "ip", strings.Split(req.RemoteAddr, ":")[0])
+	ctx = context.WithValue(ctx, "ip", clientIP(req.RemoteAddr))
 	ctx = context.WithValue(ctx, "method", req.Method)
 	ctx = context.WithValue(ctx, "host", req.Host)
 

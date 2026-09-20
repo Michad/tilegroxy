@@ -42,10 +42,11 @@ func configToEntities(cfg config.Config) (*entities.Entities, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error constructing secret: %w", err)
 	}
+	built.Secreter = secreter
 
 	datastores, err := datastore.ConstructDatastoreRegistry(cfg.Datastores, secreter, cfg.Error.Messages)
 	if err != nil {
-		return nil, fmt.Errorf("error constructing datastores: %w", err)
+		return nil, closeAndReturn(built, fmt.Errorf("error constructing datastores: %w", err))
 	}
 	built.Datastores = datastores
 
