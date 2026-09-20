@@ -234,3 +234,17 @@ func Test_ReloadAuditsSwapFailure(t *testing.T) {
 	assert.Contains(t, out, audit.OutcomeFailure)
 	assert.Contains(t, out, "swap failed")
 }
+
+func Test_ConfigToEntities_PassesReloadFuncToSecreter(t *testing.T) {
+	cfg := config.DefaultConfig()
+	cfg.Secret = map[string]interface{}{"name": "none"}
+
+	called := false
+	ent, err := configToEntities(pkg.BackgroundContext(), cfg, func() { called = true })
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = ent.Close(context.Background()) })
+
+	// "none" cannot be watched, so no wrapper and no callback, but construction must still succeed
+	assert.False(t, called)
+	require.NotNil(t, ent.Secreter)
+}

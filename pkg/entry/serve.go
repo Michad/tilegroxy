@@ -33,21 +33,31 @@ type ServeOptions struct {
 }
 
 func Serve(cfg *config.Config, _ ServeOptions, _ io.Writer, reloadPtr *func(*config.Config) error) error {
-	ent, err := configToEntities(*cfg)
+	var nextReloadPtr func(*config.Config, *entities.Entities) error
+
+	reload := newReloadCallback(&nextReloadPtr)
+	*reloadPtr = reload
+
+	// The watcher holds the config this process started with: a rotated secret re-resolves it, the
+	// file is not what changed
+	secretReload := func() {
+		if err := reload(cfg); err != nil {
+			slog.Error("Failed to reload after a secret changed: " + err.Error())
+		}
+	}
+
+	ent, err := configToEntities(pkg.BackgroundContext(), *cfg, secretReload)
 	if err != nil {
 		return err
 	}
 
-	var nextReloadPtr func(*config.Config, *entities.Entities) error
-
-	*reloadPtr = newReloadCallback(&nextReloadPtr)
-
-	err = server.ListenAndServe(cfg, ent, &nextReloadPtr)
-	return err
+	return server.ListenAndServe(cfg, ent, &nextReloadPtr)
 }
 
 func newReloadCallback(nextReloadPtr *func(*config.Config, *entities.Entities) error) func(*config.Config) error {
-	return func(newCfg *config.Config) (err error) {
+	var reload func(*config.Config) error
+
+	reload = func(newCfg *config.Config) (err error) {
 		auditCtx := pkg.BackgroundContext()
 
 		defer func() {
@@ -61,7 +71,11 @@ func newReloadCallback(nextReloadPtr *func(*config.Config, *entities.Entities) e
 			return nil
 		}
 
-		ent2, err := configToEntities(*newCfg)
+		ent2, err := configToEntities(auditCtx, *newCfg, func() {
+			if reloadErr := reload(newCfg); reloadErr != nil {
+				slog.Error("Failed to reload after a secret changed: " + reloadErr.Error())
+			}
+		})
 		if err != nil {
 			audit.ConfigReload(auditCtx, err)
 			return err
@@ -84,4 +98,6 @@ func newReloadCallback(nextReloadPtr *func(*config.Config, *entities.Entities) e
 
 		return nil
 	}
+
+	return reload
 }

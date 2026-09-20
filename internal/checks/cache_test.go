@@ -71,7 +71,7 @@ func Test_AllCachesChecked(t *testing.T) {
 	cfgAll := config.DefaultConfig()
 	msg := cfgAll.Error.Messages
 
-	reg, err := cache.ConstructCacheRegistry([]map[string]interface{}{
+	reg, err := cache.ConstructCacheRegistry(context.Background(), []map[string]interface{}{
 		{"id": "good", "name": "memory"},
 		{"id": "bad", "name": "none"},
 	}, "good", nil, cache.CacheDeps{ErrorMessages: msg})
@@ -90,7 +90,7 @@ func Test_SelectedCachesChecked(t *testing.T) {
 	cfgAll := config.DefaultConfig()
 	msg := cfgAll.Error.Messages
 
-	reg, err := cache.ConstructCacheRegistry([]map[string]interface{}{
+	reg, err := cache.ConstructCacheRegistry(context.Background(), []map[string]interface{}{
 		{"id": "good", "name": "memory"},
 		{"id": "bad", "name": "none"},
 	}, "good", nil, cache.CacheDeps{ErrorMessages: msg})
@@ -106,7 +106,7 @@ func Test_UnknownCacheRejected(t *testing.T) {
 	cfgAll := config.DefaultConfig()
 	msg := cfgAll.Error.Messages
 
-	reg, err := cache.ConstructCacheRegistry([]map[string]interface{}{
+	reg, err := cache.ConstructCacheRegistry(context.Background(), []map[string]interface{}{
 		{"id": "good", "name": "memory"},
 	}, "good", nil, cache.CacheDeps{ErrorMessages: msg})
 	require.NoError(t, err)

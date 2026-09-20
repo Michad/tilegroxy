@@ -74,7 +74,7 @@ func TestTtl(t *testing.T) {
 func memoryDatastoreRegistry(t *testing.T, id string) *datastore.DatastoreRegistry {
 	t.Helper()
 
-	reg, err := datastore.ConstructDatastoreRegistry([]map[string]interface{}{{"name": "memory", "id": id}}, nil, config.ErrorMessages{})
+	reg, err := datastore.ConstructDatastoreRegistry(context.Background(), []map[string]interface{}{{"name": "memory", "id": id}}, nil, config.ErrorMessages{})
 	require.NoError(t, err)
 
 	return reg
@@ -129,7 +129,7 @@ func TestMemoryDatastoreNotFound(t *testing.T) {
 }
 
 func TestMemoryDatastoreWrongType(t *testing.T) {
-	reg, err := datastore.ConstructDatastoreRegistry([]map[string]interface{}{{"name": "stub-memory-wrongtype", "id": "wrong"}}, nil, config.ErrorMessages{})
+	reg, err := datastore.ConstructDatastoreRegistry(context.Background(), []map[string]interface{}{{"name": "stub-memory-wrongtype", "id": "wrong"}}, nil, config.ErrorMessages{})
 	require.NoError(t, err)
 
 	deps := cache.CacheDeps{ErrorMessages: config.DefaultConfig().Error.Messages, Datastores: reg}

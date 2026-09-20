@@ -114,7 +114,7 @@ func Test_Postgres_WritesEvents(t *testing.T) {
 		},
 	}
 
-	datastores, err := datastore.ConstructDatastoreRegistry(dsCfg, nil, msgs)
+	datastores, err := datastore.ConstructDatastoreRegistry(context.Background(), dsCfg, nil, msgs)
 	require.NoError(t, err)
 
 	wrapper, ok := datastores.Get("test")
@@ -186,7 +186,7 @@ func Test_Postgres_InvalidConfig(t *testing.T) {
 	msgs := config.DefaultConfig().Error.Messages
 
 	// An empty registry: the datastore lookup must fail cleanly rather than panic.
-	empty, err := datastore.ConstructDatastoreRegistry(nil, nil, msgs)
+	empty, err := datastore.ConstructDatastoreRegistry(context.Background(), nil, nil, msgs)
 	require.NoError(t, err)
 
 	_, err = PostgresRegistration{}.Initialize(PostgresConfig{Table: "t"}, analytics.AnalyticsDeps{Datastores: empty, ErrorMessages: msgs})

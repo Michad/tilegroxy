@@ -88,7 +88,7 @@ func Test_Clickhouse_WritesEvents(t *testing.T) {
 		},
 	}
 
-	datastores, err := datastore.ConstructDatastoreRegistry(dsCfg, nil, msgs)
+	datastores, err := datastore.ConstructDatastoreRegistry(context.Background(), dsCfg, nil, msgs)
 	require.NoError(t, err)
 
 	wrapper, ok := datastores.Get("test")
@@ -152,7 +152,7 @@ func Test_Clickhouse_WritesEvents(t *testing.T) {
 func Test_Clickhouse_InvalidConfig(t *testing.T) {
 	msgs := config.DefaultConfig().Error.Messages
 
-	empty, err := datastore.ConstructDatastoreRegistry(nil, nil, msgs)
+	empty, err := datastore.ConstructDatastoreRegistry(context.Background(), nil, nil, msgs)
 	require.NoError(t, err)
 
 	_, err = ClickhouseRegistration{}.Initialize(ClickhouseConfig{Table: "t"}, analytics.AnalyticsDeps{Datastores: empty, ErrorMessages: msgs})
@@ -178,7 +178,7 @@ func Test_Clickhouse_WrongDatastoreType(t *testing.T) {
 		{"name": "postgresql", "id": "pg", "host": "127.0.0.1", "port": 5432},
 	}
 
-	datastores, err := datastore.ConstructDatastoreRegistry(dsCfg, nil, msgs)
+	datastores, err := datastore.ConstructDatastoreRegistry(context.Background(), dsCfg, nil, msgs)
 	require.NoError(t, err)
 
 	defer datastores.Close(ctx) //nolint:errcheck // Test cleanup

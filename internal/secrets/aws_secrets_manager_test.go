@@ -25,6 +25,8 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -44,6 +46,41 @@ func init() {
 	}
 }
 
+func newLocalstackSecretManager(ctx context.Context, t *testing.T) *AWSSecretsManager {
+	t.Helper()
+
+	req := testcontainers.ContainerRequest{
+		Image:        "localstack/localstack:3.8.1",
+		ExposedPorts: []string{"4566/tcp"},
+		Privileged:   true,
+		WaitingFor:   wait.ForAll(wait.ForLog("Ready"), wait.ForListeningPort("4566/tcp")),
+	}
+
+	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: req,
+		Started:          true,
+	})
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if err := c.Terminate(ctx); err != nil {
+			fmt.Println(err)
+		}
+	})
+
+	endpoint, err := c.PortEndpoint(ctx, "4566/tcp", "http")
+	require.NoError(t, err)
+
+	so, err := AWSSecretsManagerSecreter{}.Initialize(AWSSecretsManagerConfig{
+		Access:   "a",
+		Secret:   "a",
+		Region:   "us-east-1",
+		Endpoint: endpoint,
+	}, secret.SecreterDeps{ErrorMessages: config.ErrorMessages{}})
+	require.NoError(t, err)
+
+	return so.(*AWSSecretsManager)
+}
+
 func Test_SecretManager_Validate(t *testing.T) {
 	s, err := AWSSecretsManagerSecreter{}.Initialize(AWSSecretsManagerConfig{
 		Access:  "asffasfa",
@@ -58,63 +95,102 @@ func Test_SecretManager_Validate(t *testing.T) {
 
 func Test_SecretManager_Execute(t *testing.T) {
 	ctx := context.Background()
-	req := testcontainers.ContainerRequest{
-		Image:        "localstack/localstack:3.8.1",
-		ExposedPorts: []string{"4566/tcp"},
-		Privileged:   true,
-		WaitingFor:   wait.ForAll(wait.ForLog("Ready"), wait.ForListeningPort("4566/tcp")),
-	}
+	s := newLocalstackSecretManager(ctx, t)
 
-	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: req,
-		Started:          true,
-	})
-	require.NoError(t, err)
-	defer func(c testcontainers.Container, ctx context.Context) {
-		if err := c.Terminate(ctx); err != nil {
-			fmt.Println(err)
-		}
-	}(c, ctx)
+	require.NoError(t, s.makeSecret("test", "test"))
 
-	endpoint, err := c.PortEndpoint(ctx, "4566/tcp", "http")
-	require.NoError(t, err)
-
-	so, err := AWSSecretsManagerSecreter{}.Initialize(AWSSecretsManagerConfig{
-		Access:   "a",
-		Secret:   "a",
-		Region:   "us-east-1",
-		Endpoint: endpoint,
-	}, secret.SecreterDeps{ErrorMessages: config.ErrorMessages{}})
-	s := so.(*AWSSecretsManager)
-
-	require.NoError(t, err)
-
-	err = s.makeSecret("test", "test")
-	require.NoError(t, err)
-	v, err := s.Lookup("test")
+	v, _, err := s.Lookup(ctx, "test")
 	require.NoError(t, err)
 	assert.Equal(t, "test", v)
-	v2, err := s.Lookup("test")
+
+	v2, _, err := s.Lookup(ctx, "test")
 	require.NoError(t, err)
 	assert.Equal(t, v, v2)
 
-	err = s.makeSecret("test2", `{"key":"val"}`)
-	require.NoError(t, err)
-	v3, err := s.Lookup("test2:key")
+	require.NoError(t, s.makeSecret("test2", `{"key":"val"}`))
+
+	v3, _, err := s.Lookup(ctx, "test2:key")
 	require.NoError(t, err)
 	assert.Equal(t, "val", v3)
+}
 
-	so, err = AWSSecretsManagerSecreter{}.Initialize(AWSSecretsManagerConfig{
-		Access:   "a",
-		Secret:   "a",
-		Region:   "us-east-1",
-		Endpoint: endpoint,
-		TTL:      -1,
-	}, secret.SecreterDeps{ErrorMessages: config.ErrorMessages{}})
-	require.NoError(t, err)
-	s = so.(*AWSSecretsManager)
+// Two keys inside one JSON secret must cost a single GetSecretValue, which the name-level map is
+// the only thing providing now that the operator-facing cache lives in the wrapper
+func Test_SecretManager_JSONKeysShareOneFetch(t *testing.T) {
+	ctx := context.Background()
+	s := newLocalstackSecretManager(ctx, t)
 
-	v4, err := s.Lookup("test2:key")
+	require.NoError(t, s.makeSecret("shared", `{"user":"u","password":"p"}`))
+
+	user, v1, err := s.Lookup(ctx, "shared:user")
 	require.NoError(t, err)
-	assert.Equal(t, "val", v4)
+	assert.Equal(t, "u", user)
+
+	password, v2, err := s.Lookup(ctx, "shared:password")
+	require.NoError(t, err)
+	assert.Equal(t, "p", password)
+
+	assert.Equal(t, v1, v2, "both keys resolve to the same secret version")
+}
+
+func Test_SecretManager_CheckReportsCurrentVersion(t *testing.T) {
+	ctx := context.Background()
+	s := newLocalstackSecretManager(ctx, t)
+
+	require.NoError(t, s.makeSecret("rotating", "before"))
+
+	value, version, err := s.Lookup(ctx, "rotating")
+	require.NoError(t, err)
+	assert.Equal(t, "before", value)
+	require.NotEmpty(t, version)
+
+	// Check on an unchanged secret must agree with what Lookup recorded, which is what proves the
+	// AWSCURRENT selection matches GetSecretValue's default
+	versions, err := s.Check(ctx, []string{"rotating"})
+	require.NoError(t, err)
+	require.Len(t, versions, 1)
+	assert.Equal(t, version, versions[0])
+}
+
+func Test_SecretManager_CheckSeesRotation(t *testing.T) {
+	ctx := context.Background()
+	s := newLocalstackSecretManager(ctx, t)
+
+	require.NoError(t, s.makeSecret("rotating2", "before"))
+
+	_, version, err := s.Lookup(ctx, "rotating2")
+	require.NoError(t, err)
+
+	_, err = s.client.UpdateSecret(ctx, &secretsmanager.UpdateSecretInput{
+		SecretId:     aws.String("rotating2"),
+		SecretString: aws.String("after"),
+	})
+	require.NoError(t, err)
+
+	versions, err := s.Check(ctx, []string{"rotating2"})
+	require.NoError(t, err)
+	require.Len(t, versions, 1)
+	assert.NotEqual(t, version, versions[0], "a rotated secret reports a new version")
+}
+
+// Sibling JSON keys collapse to one DescribeSecret and report the same version
+func Test_SecretManager_CheckDeduplicatesSecretNames(t *testing.T) {
+	ctx := context.Background()
+	s := newLocalstackSecretManager(ctx, t)
+
+	require.NoError(t, s.makeSecret("shared2", `{"user":"u","password":"p"}`))
+
+	versions, err := s.Check(ctx, []string{"shared2:user", "shared2:password"})
+	require.NoError(t, err)
+	require.Len(t, versions, 2)
+	assert.Equal(t, versions[0], versions[1])
+	assert.NotEmpty(t, versions[0])
+}
+
+func Test_SecretManager_CheckOnMissingSecretErrors(t *testing.T) {
+	ctx := context.Background()
+	s := newLocalstackSecretManager(ctx, t)
+
+	_, err := s.Check(ctx, []string{"does-not-exist"})
+	require.Error(t, err)
 }

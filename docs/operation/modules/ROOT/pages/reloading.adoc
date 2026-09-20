@@ -31,6 +31,9 @@ The following sections of the configuration can be reloaded:
 
 Every other section, including xref:configuration/server.adoc[server], is fixed when the process starts. Changes to unsupported sections will be ignored. To check whether a pending configuration change can be reloaded, use xref:commands/config_diff.adoc[config diff].
 
+== Secrets
+
+xref:configuration/secret/index.adoc[Secret] has a `watch` option that, when set, can trigger a reload using the same mechanism described here. One key exception is that when a secret changes, the configuration itself *will not* change, even if the configuration has changed on disk. If you are using both secret reloading and configuration reloading, you may want to consider the timing of your changes to avoid excessive reloads.
 
 == Shutdown
 

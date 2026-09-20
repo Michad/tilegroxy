@@ -32,7 +32,7 @@ func CheckConfig(cfg *config.Config, opts CheckOptions, out io.Writer) error {
 		out = io.Discard
 	}
 
-	ent, err := configToEntities(*cfg)
+	ent, err := configToEntities(pkg.BackgroundContext(), *cfg, nil)
 
 	if err != nil {
 		return err

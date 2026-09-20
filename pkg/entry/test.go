@@ -182,7 +182,7 @@ func Test(cfg *config.Config, opts TestOptions, out io.Writer) (uint32, error) {
 		return 0, errors.New("threads must be above 0")
 	}
 
-	ent, err := configToEntities(*cfg)
+	ent, err := configToEntities(ctx, *cfg, nil)
 
 	if err != nil {
 		return 0, err

@@ -15,6 +15,7 @@
 package secret
 
 import (
+	"context"
 	"sync"
 	"testing"
 
@@ -31,21 +32,36 @@ type stubSecreter struct {
 	value string
 }
 
-func (s stubSecreter) Lookup(_ string) (string, error) {
-	return s.value, nil
+func (s stubSecreter) Lookup(_ context.Context, _ string) (string, string, error) {
+	return s.value, "v1", nil
+}
+
+func (s stubSecreter) Check(_ context.Context, keys []string) ([]string, error) {
+	out := make([]string, len(keys))
+	for i := range keys {
+		out[i] = "v1"
+	}
+	return out, nil
 }
 
 type stubSecreterRegistration struct{}
 
 func (stubSecreterRegistration) Name() string          { return "stub-secreter" }
 func (stubSecreterRegistration) InitializeConfig() any { return stubSecreterConfig{} }
+func (stubSecreterRegistration) CheckBatchSize() int   { return 2 }
 func (stubSecreterRegistration) Initialize(cfgAny any, _ SecreterDeps) (Secreter, error) {
 	cfg := cfgAny.(stubSecreterConfig)
 	return stubSecreter{value: cfg.Value}, nil
 }
 
+type stubUnwatchableRegistration struct{ stubSecreterRegistration }
+
+func (stubUnwatchableRegistration) Name() string        { return "stub-unwatchable" }
+func (stubUnwatchableRegistration) CheckBatchSize() int { return 0 }
+
 func init() {
 	RegisterSecreter(stubSecreterRegistration{})
+	RegisterSecreter(stubUnwatchableRegistration{})
 }
 
 func Test_ConstructSecreter_UnknownNameErrors(t *testing.T) {
@@ -58,7 +74,7 @@ func Test_ConstructSecreter_ConstructsRegisteredSecreter(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, s)
 
-	val, err := s.Lookup("anything")
+	val, _, err := s.Lookup(context.Background(), "anything")
 	require.NoError(t, err)
 	assert.Equal(t, "hunter2", val)
 }
@@ -69,7 +85,7 @@ func Test_ConstructSecreter_ReplacesEnvInRawConfig(t *testing.T) {
 	s, err := ConstructSecreter(map[string]interface{}{"name": "stub-secreter", "value": "env.STUB_SECRETER_VALUE"}, SecreterDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
 
-	val, err := s.Lookup("anything")
+	val, _, err := s.Lookup(context.Background(), "anything")
 	require.NoError(t, err)
 	assert.Equal(t, "from-env", val)
 }
@@ -92,4 +108,34 @@ func Test_RegisterSecreter_ConcurrentIsRaceFree(t *testing.T) {
 	wg.Wait()
 
 	assert.Contains(t, RegisteredSecreterNames(), "stub-secreter")
+}
+
+func Test_Secreter_CheckReturnsVersionPerKey(t *testing.T) {
+	s, err := ConstructSecreter(map[string]interface{}{"name": "stub-secreter", "value": "hunter2"}, SecreterDeps{ErrorMessages: config.ErrorMessages{}})
+	require.NoError(t, err)
+
+	versions, err := s.Check(context.Background(), []string{"a", "b"})
+	require.NoError(t, err)
+	assert.Equal(t, []string{"v1", "v1"}, versions)
+}
+
+// The backend decodes with ErrorUnused, so the generic watch keys must never reach it
+func Test_ConstructSecreter_StripsWatchKeysBeforeBackendDecode(t *testing.T) {
+	s, err := ConstructSecreter(map[string]interface{}{
+		"name":          "stub-secreter",
+		"value":         "hunter2",
+		"watch":         true,
+		"watchinterval": 60,
+	}, SecreterDeps{ErrorMessages: testErrorMessages()})
+	require.NoError(t, err)
+	require.NotNil(t, s)
+}
+
+func Test_ConstructSecreter_RejectsWatchOnUnwatchableBackend(t *testing.T) {
+	_, err := ConstructSecreter(map[string]interface{}{
+		"name":  "stub-unwatchable",
+		"value": "hunter2",
+		"watch": true,
+	}, SecreterDeps{ErrorMessages: testErrorMessages()})
+	require.Error(t, err)
 }

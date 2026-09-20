@@ -15,6 +15,7 @@
 package providers
 
 import (
+	"context"
 	"testing"
 
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -32,7 +33,7 @@ func Test_ConstructLayer_Bounds_Raster_WrapsInRealCrop(t *testing.T) {
 		},
 	}
 
-	l, err := layer.ConstructLayer(rawConfig, config.ClientConfig{}, nil, testErrMessages, nil, nil, nil)
+	l, err := layer.ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, testErrMessages, nil, nil, nil)
 
 	require.NoError(t, err)
 	require.NotNil(t, l)
@@ -51,7 +52,7 @@ func Test_ConstructLayer_Bounds_MVT_WrapsInRealCropMvt(t *testing.T) {
 		},
 	}
 
-	l, err := layer.ConstructLayer(rawConfig, config.ClientConfig{}, nil, testErrMessages, nil, nil, nil)
+	l, err := layer.ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, testErrMessages, nil, nil, nil)
 
 	require.NoError(t, err)
 	require.NotNil(t, l)
