@@ -69,10 +69,12 @@ func (h *timeoutHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(tw.code)
 		_, _ = w.Write(tw.wbuf.Bytes())
 	case <-ctx.Done():
-		tw.mu.Lock()
-		defer tw.mu.Unlock()
 		// Nothing written by the inner handler wins after this point; timeoutWriter.Write starts rejecting writes once tw.timedOut is set.
+		tw.mu.Lock()
 		tw.timedOut = true
+		tw.mu.Unlock()
+		// Deliberately outside the lock: writing to the real socket can block on a slow client,
+		// and the inner handler would block behind it on its next write
 		writeError(ctx, w, h.errCfg, pkg.TimeoutError{}, config.DataTypeUnknown)
 	}
 }
