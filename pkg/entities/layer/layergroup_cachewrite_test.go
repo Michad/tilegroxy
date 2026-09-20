@@ -16,6 +16,7 @@ package layer
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -482,4 +483,50 @@ func newCacheWriteTestGroup(c cache.Cache) *LayerGroup {
 		cacheMissCounter:  noop.Int64Counter{},
 		cacheWriteLimiter: make(chan struct{}, maxConcurrentCacheWrites),
 	}
+}
+
+// hitWithErrorCache returns the pair a multi tier cache used to return: a usable tile plus the error
+// from a degraded tier.
+type hitWithErrorCache struct {
+	img *pkg.Image
+}
+
+func (c hitWithErrorCache) Lookup(_ context.Context, _ pkg.TileRequest) (*pkg.Image, error) {
+	return c.img, errors.New("tier unavailable")
+}
+
+func (hitWithErrorCache) Save(_ context.Context, _ pkg.TileRequest, _ *pkg.Image) error {
+	return nil
+}
+
+func (hitWithErrorCache) Remove(_ context.Context, _ pkg.TileRequest) (bool, error) {
+	return false, nil
+}
+
+// A tile we already have shouldn't turn into an error response just because the cache also reported
+// a problem finding it.
+func Test_LayerGroup_RenderTile_CacheHitWithErrorStillServesTile(t *testing.T) {
+	img := pkg.Image{Content: []byte("cached")}
+
+	l := &Layer{
+		ID:       "test",
+		Pattern:  []layerSegment{{value: "test", placeholder: false}},
+		Provider: &slowGenerateProvider{delay: 0},
+		Cache:    hitWithErrorCache{img: &img},
+	}
+	l.tileAllCounter = noop.Int64Counter{}
+	l.tileAuthCounter = noop.Int64Counter{}
+	l.tileErrorCounter = noop.Int64Counter{}
+	l.tileSuccessCounter = noop.Int64Counter{}
+
+	lg := &LayerGroup{
+		layers:            []*Layer{l},
+		cacheHitCounter:   noop.Int64Counter{},
+		cacheMissCounter:  noop.Int64Counter{},
+		cacheWriteLimiter: make(chan struct{}, 1),
+	}
+
+	out, err := lg.RenderTile(context.Background(), pkg.TileRequest{LayerName: "test", Z: 1, X: 0, Y: 0})
+	require.NoError(t, err)
+	require.Equal(t, &img, out)
 }

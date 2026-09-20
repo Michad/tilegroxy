@@ -128,3 +128,25 @@ func TestMultiRemoveClearsTierWithOnlyCopy(t *testing.T) {
 
 	validateNoLookup(t, multi, tile)
 }
+
+// A tier that's down shouldn't fail a request a later tier can serve.
+func TestMultiLookupDegradedTierThenHit(t *testing.T) {
+	mem, err := MemoryRegistration{}.Initialize(MemoryConfig{}, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
+	require.NoError(t, err)
+
+	multi := Multi{Tiers: []cache.Cache{erroringCache{}, mem}}
+
+	tile := makeReq(53)
+	img := makeImg(24)
+	require.NoError(t, mem.Save(context.Background(), tile, &img))
+
+	validateLookup(t, multi, tile, &img)
+}
+
+func TestMultiLookupAllTiersErrorReturnsError(t *testing.T) {
+	multi := Multi{Tiers: []cache.Cache{erroringCache{}, erroringCache{}}}
+
+	img, err := multi.Lookup(context.Background(), makeReq(53))
+	require.Error(t, err)
+	require.Nil(t, img)
+}

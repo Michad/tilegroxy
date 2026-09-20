@@ -17,6 +17,8 @@ package caches
 import (
 	"context"
 	"errors"
+	"fmt"
+	"log/slog"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
@@ -86,7 +88,11 @@ func (c Multi) Lookup(ctx context.Context, t pkg.TileRequest) (*pkg.Image, error
 		}
 
 		if img != nil {
-			return img, allErrors
+			if allErrors != nil {
+				slog.WarnContext(ctx, fmt.Sprintf("Multi cache tier error before hit in later tier: %v", allErrors))
+			}
+
+			return img, nil
 		}
 	}
 
