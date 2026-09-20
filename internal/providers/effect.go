@@ -22,6 +22,7 @@ import (
 	"image"
 	_ "image/jpeg"
 	"image/png"
+	"maps"
 	"slices"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -33,9 +34,32 @@ import (
 	"github.com/anthonynsimon/bild/segment"
 )
 
-var intensityModes = []string{"blur", "gaussian", "brightness", "contrast", "gamma", "hue", "saturation", "dilate", "edge detection", "erode", "median", "threshold"}
+// Radii feed a (2r+1)^2 convolution kernel, so the ceiling keeps a typo from allocating gigabytes.
+const maxRadius = 100
+const maxGamma = 100
+
+type intensityRange struct {
+	min float64
+	max float64
+}
+
+var intensityRanges = map[string]intensityRange{
+	"blur":           {0, maxRadius},
+	"gaussian":       {0, maxRadius},
+	"dilate":         {0, maxRadius},
+	"edge detection": {0, maxRadius},
+	"erode":          {0, maxRadius},
+	"median":         {0, maxRadius},
+	"brightness":     {-1, 1},
+	"contrast":       {-1, 1},
+	"saturation":     {-1, 1},
+	"hue":            {-360, 360},
+	"gamma":          {0, maxGamma},
+	"threshold":      {0, 255},
+}
+
 var noIntensityModes = []string{"emboss", "grayscale", "invert", "sepia", "sharpen", "sobel"}
-var allEffectModes = slices.Concat(intensityModes, noIntensityModes)
+var allEffectModes = slices.Concat(slices.Sorted(maps.Keys(intensityRanges)), noIntensityModes)
 
 type EffectConfig struct {
 	Mode      string
@@ -76,6 +100,10 @@ func (s EffectRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (lay
 
 	if slices.Contains(noIntensityModes, config.Mode) && config.Intensity != 0 {
 		return nil, fmt.Errorf(deps.ErrorMessages.ParamsMutuallyExclusive, "provider.effect.intensity", "provider.effect.mode="+config.Mode)
+	}
+
+	if r, ok := intensityRanges[config.Mode]; ok && (config.Intensity < r.min || config.Intensity > r.max) {
+		return nil, fmt.Errorf(deps.ErrorMessages.RangeError, "provider.effect.intensity", r.min, r.max)
 	}
 
 	provider, err := layer.ConstructProvider(config.Provider, deps)
