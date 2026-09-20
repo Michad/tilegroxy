@@ -68,3 +68,12 @@ func Test_CheckConfig_InvalidConfigErrors(t *testing.T) {
 
 	require.Error(t, err)
 }
+
+func Test_CheckConfig_RejectsInvalidCORS(t *testing.T) {
+	cfg := config.DefaultConfig()
+	cfg.Server.CORS = config.CORSConfig{Enabled: true, WildcardOrigin: true, AllowCredentials: true}
+
+	err := CheckConfig(&cfg, CheckOptions{}, nil)
+
+	require.Error(t, err)
+}
