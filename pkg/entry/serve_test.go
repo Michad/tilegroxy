@@ -27,6 +27,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
+	"github.com/Michad/tilegroxy/pkg/entities/secret"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -83,9 +84,9 @@ func Test_ReloadClosesGenerationWhenSwapFails(t *testing.T) {
 		return swapErr
 	}
 
-	callback := newReloadCallback(&nextReload)
+	callback := newReloadCallback(&nextReload, &configTracker{current: &cfg})
 
-	err := callback(&cfg)
+	err := callback(&cfg, audit.ReasonConfigFile)
 
 	require.ErrorIs(t, err, swapErr)
 	assert.Equal(t, int32(1), closes.Load(), "a generation that never started serving must have its cache closed")
@@ -100,9 +101,9 @@ func Test_ReloadDoesNotCloseGenerationWhenSwapSucceeds(t *testing.T) {
 		return nil
 	}
 
-	callback := newReloadCallback(&nextReload)
+	callback := newReloadCallback(&nextReload, &configTracker{current: &cfg})
 
-	err := callback(&cfg)
+	err := callback(&cfg, audit.ReasonConfigFile)
 
 	require.NoError(t, err)
 	assert.Equal(t, int32(0), closes.Load(), "a generation that is now serving must not be closed")
@@ -120,9 +121,9 @@ func Test_ReloadDoesNotCloseWhenBuildFails(t *testing.T) {
 		return nil
 	}
 
-	callback := newReloadCallback(&nextReload)
+	callback := newReloadCallback(&nextReload, &configTracker{current: &cfg})
 
-	err := callback(&cfg)
+	err := callback(&cfg, audit.ReasonConfigFile)
 
 	require.Error(t, err)
 	assert.False(t, swapCalled, "swap must not run when the generation never got built")
@@ -141,9 +142,9 @@ func Test_ReloadClosesAlreadyBuiltEntitiesWhenBuildFailsPartway(t *testing.T) {
 		return nil
 	}
 
-	callback := newReloadCallback(&nextReload)
+	callback := newReloadCallback(&nextReload, &configTracker{current: &cfg})
 
-	err := callback(&cfg)
+	err := callback(&cfg, audit.ReasonConfigFile)
 
 	require.Error(t, err)
 	assert.False(t, swapCalled, "swap must not run when the generation never finished building")
@@ -157,9 +158,9 @@ func Test_ReloadCallback_NoopBeforeReloadTargetPublished(t *testing.T) {
 
 	var nextReload func(*config.Config, *entities.Entities) error
 
-	callback := newReloadCallback(&nextReload)
+	callback := newReloadCallback(&nextReload, &configTracker{current: &cfg})
 
-	assert.NoError(t, callback(&cfg))
+	assert.NoError(t, callback(&cfg, audit.ReasonConfigFile))
 }
 
 // The callback returned by newReloadCallback is the public hot-reload entrypoint handed back
@@ -174,9 +175,9 @@ func Test_ReloadCallback_RecoversPanic(t *testing.T) {
 		panic("simulated panic from a buggy reload target")
 	}
 
-	callback := newReloadCallback(&nextReload)
+	callback := newReloadCallback(&nextReload, &configTracker{current: &cfg})
 
-	err := callback(&cfg)
+	err := callback(&cfg, audit.ReasonConfigFile)
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "simulated panic from a buggy reload target")
@@ -191,7 +192,7 @@ func Test_ReloadAuditsSuccess(t *testing.T) {
 
 	var nextReload = func(_ *config.Config, _ *entities.Entities) error { return nil }
 
-	require.NoError(t, newReloadCallback(&nextReload)(&cfg))
+	require.NoError(t, newReloadCallback(&nextReload, &configTracker{current: &cfg})(&cfg, audit.ReasonConfigFile))
 
 	out := buf.String()
 	assert.Contains(t, out, audit.EventConfigReload)
@@ -210,7 +211,7 @@ func Test_ReloadAuditsBuildFailure(t *testing.T) {
 
 	var nextReload = func(_ *config.Config, _ *entities.Entities) error { return nil }
 
-	require.Error(t, newReloadCallback(&nextReload)(&cfg))
+	require.Error(t, newReloadCallback(&nextReload, &configTracker{current: &cfg})(&cfg, audit.ReasonConfigFile))
 
 	out := buf.String()
 	assert.Contains(t, out, audit.EventConfigReload)
@@ -227,10 +228,64 @@ func Test_ReloadAuditsSwapFailure(t *testing.T) {
 	swapErr := errors.New("swap failed")
 	var nextReload = func(_ *config.Config, _ *entities.Entities) error { return swapErr }
 
-	require.ErrorIs(t, newReloadCallback(&nextReload)(&cfg), swapErr)
+	require.ErrorIs(t, newReloadCallback(&nextReload, &configTracker{current: &cfg})(&cfg, audit.ReasonConfigFile), swapErr)
 
 	out := buf.String()
 	assert.Contains(t, out, audit.EventConfigReload)
 	assert.Contains(t, out, audit.OutcomeFailure)
 	assert.Contains(t, out, "swap failed")
+}
+
+func Test_ConfigToEntities_PassesReloadFuncToSecreter(t *testing.T) {
+	cfg := config.DefaultConfig()
+	cfg.Secret = map[string]interface{}{"name": "none"}
+
+	called := false
+	ent, err := configToEntities(pkg.BackgroundContext(), cfg, func(_ string) { called = true })
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = ent.Close(context.Background()) })
+
+	// "none" cannot be watched, so no wrapper and no callback, but construction must still succeed
+	assert.False(t, called)
+	require.NotNil(t, ent.Secreter)
+}
+
+// A secret rotation after a file hot-reload must re-resolve the config the operator just applied,
+// not the one the process started with.
+func Test_SecretReloadUsesLatestConfigAfterFileReload(t *testing.T) {
+	startupCfg, _ := spyCacheConfig(t)
+	newCfg := startupCfg
+	newCfg.Server.Port = 9999
+
+	var seen []int
+	var nextReload = func(c *config.Config, _ *entities.Entities) error {
+		seen = append(seen, c.Server.Port)
+		return nil
+	}
+
+	tracker := &configTracker{current: &startupCfg}
+	reload := newReloadCallback(&nextReload, tracker)
+
+	require.NoError(t, reload(&newCfg, audit.ReasonConfigFile))
+
+	tracker.secretReload(reload)(secret.ReasonSecretRotation)
+
+	require.Len(t, seen, 2)
+	assert.Equal(t, newCfg.Server.Port, seen[1], "the secret reload must re-apply the hot-reloaded config")
+}
+
+// The audit trail has to say what triggered a reload, otherwise a rotation and a file edit are
+// indistinguishable after the fact.
+func Test_ReloadAuditsSecretRotationReason(t *testing.T) {
+	var buf bytes.Buffer
+	audit.SetAuditLoggerOnStartup(slog.New(slog.NewJSONHandler(&buf, nil)))
+	t.Cleanup(func() { audit.SetAuditLoggerOnStartup(nil) })
+
+	cfg, _ := spyCacheConfig(t)
+
+	var nextReload = func(_ *config.Config, _ *entities.Entities) error { return nil }
+
+	require.NoError(t, newReloadCallback(&nextReload, &configTracker{current: &cfg})(&cfg, secret.ReasonSecretRotation))
+
+	assert.Contains(t, buf.String(), secret.ReasonSecretRotation)
 }

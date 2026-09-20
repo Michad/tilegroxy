@@ -50,7 +50,7 @@ func (reg *DatastoreRegistry) Close(ctx context.Context) error {
 	return errors.Join(errs...)
 }
 
-func ConstructDatastoreRegistry(cfg []map[string]interface{}, secreter secret.Secreter, errorMessages config.ErrorMessages) (*DatastoreRegistry, error) {
+func ConstructDatastoreRegistry(ctx context.Context, cfg []map[string]interface{}, secreter secret.Secreter, errorMessages config.ErrorMessages) (*DatastoreRegistry, error) {
 	var err error
 	reg := DatastoreRegistry{}
 	reg.datastores = make(map[string]DatastoreWrapper)
@@ -58,7 +58,10 @@ func ConstructDatastoreRegistry(cfg []map[string]interface{}, secreter secret.Se
 	for _, curCfg := range cfg {
 		curCfg = pkg.ReplaceEnv(curCfg)
 		if secreter != nil {
-			curCfg, err = pkg.ReplaceConfigValues(curCfg, "secret", secreter.Lookup)
+			curCfg, err = pkg.ReplaceConfigValues(curCfg, "secret", func(k string) (string, error) {
+				v, _, lookupErr := secreter.Lookup(ctx, k)
+				return v, lookupErr
+			})
 
 			if err != nil {
 				return nil, err

@@ -15,6 +15,7 @@
 package layer
 
 import (
+	"context"
 	"testing"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -34,7 +35,7 @@ func Test_ConstructLayer_Examples_OnPlainIDLayer_Fails(t *testing.T) {
 		Provider: map[string]any{"name": "fixed-tj-1"},
 	}
 
-	l, err := ConstructLayer(rawConfig, config.ClientConfig{}, nil, tileJSONErrorMessages, nil, nil, nil)
+	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, tileJSONErrorMessages, nil, nil, nil)
 	require.Error(t, err)
 	require.Nil(t, l)
 }
@@ -49,7 +50,7 @@ func Test_ConstructLayer_Examples_MatchingPattern_Succeeds(t *testing.T) {
 		Provider: map[string]any{"name": "fixed-tj-2"},
 	}
 
-	l, err := ConstructLayer(rawConfig, config.ClientConfig{}, nil, tileJSONErrorMessages, nil, nil, nil)
+	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, tileJSONErrorMessages, nil, nil, nil)
 	require.NoError(t, err)
 	require.NotNil(t, l)
 }
@@ -64,7 +65,7 @@ func Test_ConstructLayer_Examples_NotMatchingPattern_Fails(t *testing.T) {
 		Provider: map[string]any{"name": "fixed-tj-3"},
 	}
 
-	l, err := ConstructLayer(rawConfig, config.ClientConfig{}, nil, tileJSONErrorMessages, nil, nil, nil)
+	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, tileJSONErrorMessages, nil, nil, nil)
 	require.Error(t, err)
 	require.Nil(t, l)
 }
@@ -80,7 +81,7 @@ func Test_ConstructLayer_Examples_FailingParamValidator_Fails(t *testing.T) {
 		Provider:       map[string]any{"name": "fixed-tj-4"},
 	}
 
-	l, err := ConstructLayer(rawConfig, config.ClientConfig{}, nil, tileJSONErrorMessages, nil, nil, nil)
+	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, tileJSONErrorMessages, nil, nil, nil)
 	require.Error(t, err)
 	require.Nil(t, l)
 }
@@ -189,7 +190,7 @@ func Test_ConstructLayer_EmptyParamValidator_ErrorsNotPanics(t *testing.T) {
 	}
 
 	require.NotPanics(t, func() {
-		l, err := ConstructLayer(rawConfig, config.ClientConfig{}, nil, tileJSONErrorMessages, nil, nil, nil)
+		l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, tileJSONErrorMessages, nil, nil, nil)
 		require.Error(t, err)
 		require.Nil(t, l)
 		assert.Contains(t, err.Error(), "layer.paramValidator.name")

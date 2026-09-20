@@ -15,6 +15,7 @@
 package analytics
 
 import (
+	"context"
 	"testing"
 
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -39,7 +40,7 @@ func Test_Postgres_Names(t *testing.T) {
 func Test_Postgres_LegacyAliasInitializes(t *testing.T) {
 	msgs := config.DefaultConfig().Error.Messages
 
-	empty, err := datastore.ConstructDatastoreRegistry(nil, nil, msgs)
+	empty, err := datastore.ConstructDatastoreRegistry(context.Background(), nil, nil, msgs)
 	require.NoError(t, err)
 
 	reg, ok := analytics.RegisteredAnalytics("postgres")

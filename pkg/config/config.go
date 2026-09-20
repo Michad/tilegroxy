@@ -182,6 +182,7 @@ type ErrorMessages struct {
 	ProviderError           string
 	ParamsBothOrNeither     string
 	ParamsMutuallyExclusive string
+	ParamRequiresParam      string
 	OneOfRequired           string
 	EnumError               string
 	ScriptError             string
@@ -527,6 +528,7 @@ func DefaultConfig() Config {
 				ParamsBothOrNeither:     "Parameters %v and %v must be either both or neither supplied",
 				EnumError:               "Invalid value supplied for %v: '%v'. It must be one of: %v",
 				ParamsMutuallyExclusive: "Parameters %v and %v cannot both be set",
+				ParamRequiresParam:      "Parameter %v can only be set when %v is enabled",
 				ScriptError:             "The script specified for %v is invalid: %v",
 				OneOfRequired:           "You must specify one of: %v",
 				Timeout:                 "Timeout error",

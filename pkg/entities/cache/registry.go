@@ -250,7 +250,7 @@ func NewUnknownCacheError(errorMessages config.ErrorMessages, param, id string, 
 
 // ConstructCacheRegistry builds every configured cache. rawConfig is either a single cache or an
 // array of them; defaultID names the entry layers fall back to and defaults to the first.
-func ConstructCacheRegistry(rawConfig interface{}, defaultID string, secreter secret.Secreter, deps CacheDeps) (*CacheRegistry, error) {
+func ConstructCacheRegistry(ctx context.Context, rawConfig interface{}, defaultID string, secreter secret.Secreter, deps CacheDeps) (*CacheRegistry, error) {
 	entries, err := config.NormalizeCaches(rawConfig, deps.ErrorMessages)
 	if err != nil {
 		return nil, err
@@ -270,7 +270,10 @@ func ConstructCacheRegistry(rawConfig interface{}, defaultID string, secreter se
 		cfg := pkg.ReplaceEnv(entry.Config)
 
 		if secreter != nil {
-			cfg, err = pkg.ReplaceConfigValues(cfg, "secret", secreter.Lookup)
+			cfg, err = pkg.ReplaceConfigValues(cfg, "secret", func(k string) (string, error) {
+				v, _, lookupErr := secreter.Lookup(ctx, k)
+				return v, lookupErr
+			})
 			if err != nil {
 				closeErr := reg.Close(context.Background())
 				return nil, errors.Join(err, closeErr)

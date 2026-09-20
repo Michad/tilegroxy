@@ -43,7 +43,7 @@ func Test_DisabledByDefault(t *testing.T) {
 
 	// Emitting with no logger installed must not panic
 	AuthFailure(context.Background(), "no logger")
-	ConfigReload(context.Background(), nil)
+	ConfigReload(context.Background(), ReasonConfigFile, nil)
 }
 
 func Test_AuthFailureRecordsReason(t *testing.T) {
@@ -87,7 +87,7 @@ func Test_AuthFailureOmitsIdentityWhenUnknown(t *testing.T) {
 func Test_ConfigReloadSuccess(t *testing.T) {
 	buf := capture(t)
 
-	ConfigReload(pkg.BackgroundContext(), nil)
+	ConfigReload(pkg.BackgroundContext(), ReasonConfigFile, nil)
 
 	out := buf.String()
 	assert.Contains(t, out, EventConfigReload)
@@ -97,7 +97,7 @@ func Test_ConfigReloadSuccess(t *testing.T) {
 func Test_ConfigReloadFailureRecordsError(t *testing.T) {
 	buf := capture(t)
 
-	ConfigReload(pkg.BackgroundContext(), errors.New("layer osm is invalid"))
+	ConfigReload(pkg.BackgroundContext(), ReasonConfigFile, errors.New("layer osm is invalid"))
 
 	out := buf.String()
 	assert.Contains(t, out, EventConfigReload)

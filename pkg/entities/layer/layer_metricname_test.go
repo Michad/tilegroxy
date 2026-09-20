@@ -15,6 +15,7 @@
 package layer
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -69,7 +70,7 @@ func Test_ConstructLayer_LayerIDWithSpaceDoesNotFailConstruction(t *testing.T) {
 		Provider: map[string]any{"name": "doc-example-sample"},
 	}
 
-	l, err := ConstructLayer(rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{}, nil, nil, nil)
+	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{}, nil, nil, nil)
 
 	require.NoError(t, err)
 	require.NotNil(t, l)
@@ -83,7 +84,7 @@ func Test_ConstructLayer_LayerIDWithNonASCIIDoesNotFailConstruction(t *testing.T
 		Provider: map[string]any{"name": "doc-example-sample"},
 	}
 
-	l, err := ConstructLayer(rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{}, nil, nil, nil)
+	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{}, nil, nil, nil)
 
 	require.NoError(t, err)
 	require.NotNil(t, l)

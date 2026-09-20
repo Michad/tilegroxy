@@ -52,7 +52,7 @@ func buildDatastoreRegistry(t *testing.T, id string, regName string, native any)
 
 	datastore.RegisterDatastoreWrapper(stubDatastoreRegistration{name: regName, native: native})
 
-	reg, err := datastore.ConstructDatastoreRegistry([]map[string]interface{}{{"name": regName, "id": id}}, nil, config.ErrorMessages{})
+	reg, err := datastore.ConstructDatastoreRegistry(context.Background(), []map[string]interface{}{{"name": regName, "id": id}}, nil, config.ErrorMessages{})
 	require.NoError(t, err)
 
 	return reg

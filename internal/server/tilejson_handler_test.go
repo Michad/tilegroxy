@@ -15,6 +15,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -38,7 +39,7 @@ func buildTileJSONTestServing(t *testing.T, cfg config.Config) *generation {
 
 	var auth authentication.Authentication = authentications.Noop{}
 	var c cache.Cache = caches.Noop{}
-	lg, err := layer.ConstructLayerGroup(cfg, cache.NewSingleCacheRegistry(c), nil, nil)
+	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, cache.NewSingleCacheRegistry(c), nil, nil)
 	require.NoError(t, err)
 
 	return testServing(&cfg, auth, lg)
@@ -398,7 +399,7 @@ func Test_SetupHandlers_TileJSON_RoutesRegistered(t *testing.T) {
 
 	var auth authentication.Authentication = authentications.Noop{}
 	var c cache.Cache = caches.Noop{}
-	lg, err := layer.ConstructLayerGroup(cfg, cache.NewSingleCacheRegistry(c), nil, nil)
+	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, cache.NewSingleCacheRegistry(c), nil, nil)
 	require.NoError(t, err)
 
 	ent := &entities.Entities{LayerGroup: lg, Auth: auth}
@@ -435,7 +436,7 @@ func Test_SetupHandlers_TileJSON_Disabled_RoutesNotRegistered(t *testing.T) {
 
 	var auth authentication.Authentication = authentications.Noop{}
 	var c cache.Cache = caches.Noop{}
-	lg, err := layer.ConstructLayerGroup(cfg, cache.NewSingleCacheRegistry(c), nil, nil)
+	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, cache.NewSingleCacheRegistry(c), nil, nil)
 	require.NoError(t, err)
 
 	ent := &entities.Entities{LayerGroup: lg, Auth: auth}

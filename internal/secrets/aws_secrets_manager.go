@@ -21,12 +21,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
+	"sync"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
-
-	"github.com/maypok86/otter"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
@@ -34,11 +32,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 )
 
-const cacheSize = 10_000
-
 type AWSSecretsManagerConfig struct {
-	TTL int32 // How long to cache secrets in seconds. Cache disabled if less than 0. Defaults to 1 hour
-
 	Access  string
 	Secret  string
 	Region  string
@@ -49,10 +43,18 @@ type AWSSecretsManagerConfig struct {
 	Endpoint string // For non-AWS (e.g. localstack)
 }
 
+// awsSecretValue is one fetched secret, kept so sibling JSON keys reuse a single API call
+type awsSecretValue struct {
+	value   string
+	version string
+}
+
 type AWSSecretsManager struct {
 	AWSSecretsManagerConfig
 	client *secretsmanager.Client
-	cache  *otter.Cache[string, string]
+
+	mu        sync.Mutex
+	nameCache map[string]awsSecretValue
 }
 
 func init() {
@@ -74,9 +76,6 @@ func (s AWSSecretsManagerSecreter) Initialize(cfgAny any, _ secret.SecreterDeps)
 	cfg := cfgAny.(AWSSecretsManagerConfig)
 	if cfg.Separator == "" {
 		cfg.Separator = ":"
-	}
-	if cfg.TTL == 0 {
-		cfg.TTL = 60 * 60
 	}
 
 	awsConfig, err := awsconfig.LoadDefaultConfig(pkg.BackgroundContext(), func(lo *awsconfig.LoadOptions) error {
@@ -105,60 +104,19 @@ func (s AWSSecretsManagerSecreter) Initialize(cfgAny any, _ secret.SecreterDeps)
 		}
 	})
 
-	if cfg.TTL > 0 {
-		cache, err := otter.MustBuilder[string, string](cacheSize).WithTTL(time.Duration(cfg.TTL) * time.Second).Build()
-		if err != nil {
-			return nil, err
-		}
-
-		return &AWSSecretsManager{cfg, svc, &cache}, nil
-	}
-
-	return &AWSSecretsManager{cfg, svc, nil}, nil
+	return &AWSSecretsManager{AWSSecretsManagerConfig: cfg, client: svc, nameCache: make(map[string]awsSecretValue)}, nil
 }
 
-// Close releases the secret cache. Otter runs maintenance goroutines that only exit on close, so a hot
-// reload would otherwise leak a set per generation
-func (s AWSSecretsManager) Close(_ context.Context) error {
-	if s.cache != nil {
-		s.cache.Close()
-	}
-
-	return nil
-}
-
-func (s AWSSecretsManager) Lookup(key string) (string, error) {
-	ctx := pkg.BackgroundContext()
+func (s *AWSSecretsManager) Lookup(ctx context.Context, key string) (string, string, error) {
 	keySplit := strings.Split(key, s.Separator)
-
 	secretName := keySplit[0]
-	var secretString string
-	isCached := false
 
-	if s.cache != nil {
-		secretString, isCached = s.cache.Get(secretName)
+	entry, err := s.fetch(ctx, secretName)
+	if err != nil {
+		return "", "", err
 	}
 
-	if !isCached {
-		input := &secretsmanager.GetSecretValueInput{
-			SecretId: aws.String(secretName),
-		}
-
-		result, err := s.client.GetSecretValue(ctx, input)
-		if err != nil {
-			return "", err
-		}
-
-		if result.SecretString == nil {
-			return "", fmt.Errorf("aws secret %s has no string value, binary secrets are not supported", secretName)
-		}
-
-		secretString = *result.SecretString
-
-		if s.cache != nil {
-			s.cache.Set(secretName, secretString)
-		}
-	}
+	secretString := entry.value
 
 	if len(keySplit) > 1 {
 		result := make(map[string]interface{})
@@ -167,11 +125,95 @@ func (s AWSSecretsManager) Lookup(key string) (string, error) {
 		}
 	}
 
-	return secretString, nil
+	return secretString, entry.version, nil
+}
+
+func (s *AWSSecretsManager) fetch(ctx context.Context, secretName string) (awsSecretValue, error) {
+	s.mu.Lock()
+	entry, ok := s.nameCache[secretName]
+	s.mu.Unlock()
+
+	if ok {
+		return entry, nil
+	}
+
+	result, err := s.client.GetSecretValue(ctx, &secretsmanager.GetSecretValueInput{
+		SecretId: aws.String(secretName),
+	})
+	if err != nil {
+		return awsSecretValue{}, err
+	}
+
+	if result.SecretString == nil {
+		return awsSecretValue{}, fmt.Errorf("aws secret %s has no string value, binary secrets are not supported", secretName)
+	}
+
+	entry = awsSecretValue{value: *result.SecretString}
+	if result.VersionId != nil {
+		entry.version = *result.VersionId
+	}
+
+	s.mu.Lock()
+	s.nameCache[secretName] = entry
+	s.mu.Unlock()
+
+	return entry, nil
+}
+
+const awsCurrentStage = "AWSCURRENT"
+
+func (s *AWSSecretsManager) Check(ctx context.Context, keys []string) ([]string, error) {
+	// Sibling JSON keys share one secret, so describe each distinct name once
+	byName := make(map[string]string, len(keys))
+
+	for _, key := range keys {
+		name := strings.Split(key, s.Separator)[0]
+		if _, done := byName[name]; done {
+			continue
+		}
+
+		version, err := s.describeCurrentVersion(ctx, name)
+		if err != nil {
+			return nil, err
+		}
+
+		byName[name] = version
+	}
+
+	versions := make([]string, len(keys))
+	for i, key := range keys {
+		versions[i] = byName[strings.Split(key, s.Separator)[0]]
+	}
+
+	return versions, nil
+}
+
+func (s *AWSSecretsManager) describeCurrentVersion(ctx context.Context, secretName string) (string, error) {
+	out, err := s.client.DescribeSecret(ctx, &secretsmanager.DescribeSecretInput{
+		SecretId: aws.String(secretName),
+	})
+	if err != nil {
+		return "", err
+	}
+
+	for versionID, stages := range out.VersionIdsToStages {
+		for _, stage := range stages {
+			if stage == awsCurrentStage {
+				return versionID, nil
+			}
+		}
+	}
+
+	// No current version means nothing to compare against, which the caller treats as unwatchable
+	return "", nil
+}
+
+func (s AWSSecretsManagerSecreter) CheckBatchSize() int {
+	return 1
 }
 
 // Just for testing purposes
-func (s AWSSecretsManager) makeSecret(key, val string) error {
+func (s *AWSSecretsManager) makeSecret(key, val string) error {
 	_, err := s.client.CreateSecret(pkg.BackgroundContext(), &secretsmanager.CreateSecretInput{
 		Name:         &key,
 		SecretString: &val,

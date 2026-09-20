@@ -60,7 +60,7 @@ func (s countingRegistration) Initialize(_ any, _ cache.CacheDeps) (cache.Cache,
 // Mirrors the arrangement in the cache configuration docs: a tenant cache wrapping a multi cache,
 // where a layer can reference the multi cache nested two levels down.
 func Test_Registry_ReferencesNestedCacheByID(t *testing.T) {
-	reg, err := cache.ConstructCacheRegistry([]map[string]interface{}{
+	reg, err := cache.ConstructCacheRegistry(context.Background(), []map[string]interface{}{
 		{
 			"id":   "tenanted",
 			"name": "tenant",
@@ -88,7 +88,7 @@ func Test_Registry_ReferencesNestedCacheByID(t *testing.T) {
 }
 
 func Test_Registry_NestedIDCollidesWithTopLevel(t *testing.T) {
-	_, err := cache.ConstructCacheRegistry([]map[string]interface{}{
+	_, err := cache.ConstructCacheRegistry(context.Background(), []map[string]interface{}{
 		{
 			"id":   "outer",
 			"name": "ttl",
@@ -109,7 +109,7 @@ func Test_Registry_ClosesNestedCacheOnce(t *testing.T) {
 	closed := 0
 	cache.RegisterCache(countingRegistration{closed: &closed})
 
-	reg, err := cache.ConstructCacheRegistry([]map[string]interface{}{
+	reg, err := cache.ConstructCacheRegistry(context.Background(), []map[string]interface{}{
 		{
 			"id":   "outer",
 			"name": "multi",

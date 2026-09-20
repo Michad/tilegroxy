@@ -43,7 +43,7 @@ func runServe(cmd *cobra.Command, _ []string) {
 
 	cfg, err := extractConfigFromCommand(cmd, func(c config.Config, err error) {
 		if err != nil {
-			audit.ConfigReload(pkg.BackgroundContext(), err)
+			audit.ConfigReload(pkg.BackgroundContext(), audit.ReasonConfigFile, err)
 			fmt.Fprintf(out, "Error: %v\n", err.Error())
 		} else if reloadPtr != nil {
 			err := reloadPtr(&c)
