@@ -73,9 +73,22 @@ type BoundsConfig struct {
 	East  float64
 }
 
+// Configuration for CORS header rules.
+type CORSConfig struct {
+	Enabled          bool     // If true, apply CORS headers and answer preflight requests
+	WildcardOrigin   bool     // If true, return Access-Control-Allow-Origin: * and ignore Origins
+	Origins          []string // Origins to allow, optionally including scheme and port. The host may use * to match one subdomain or ** to match several. The request Origin is echoed back when it matches
+	Methods          []string // Methods to report in preflight responses. Defaults to GET, HEAD, OPTIONS
+	Headers          []string // Request headers to allow in preflight responses. A single entry of * echoes back whatever the browser asks for. Defaults to none
+	ExposedHeaders   []string // Response headers to make readable to browser scripts. Defaults to ETag
+	AllowCredentials bool     // If true, allow credentialed requests. Cannot be combined with WildcardOrigin
+	MaxAge           uint     // How long (in seconds) a browser may cache a preflight response. Defaults to 0 which omits the header
+}
+
 type ServerConfig struct {
 	Encrypt    *EncryptionConfig // Whether and how to use TLS. Defaults to none AKA no encryption.
 	TileJSON   TileJSONConfig    // Whether to enable endpoints that describe layers using the TileJSON format
+	CORS       CORSConfig        // Whether and how to return cross-origin resource sharing headers
 	BindHost   string            // IP address to bind HTTP server to
 	Port       int               // Port to bind HTTP server to
 	RootPath   string            // Root HTTP Path to apply to all endpoints. Defaults to /
@@ -456,6 +469,11 @@ func DefaultConfig() Config {
 			TileJSON: TileJSONConfig{
 				Enabled:   false,
 				IndexPath: "tilejson.json",
+			},
+			CORS: CORSConfig{
+				Enabled:        false,
+				Methods:        []string{http.MethodGet, http.MethodHead, http.MethodOptions},
+				ExposedHeaders: []string{"ETag"},
 			},
 		},
 		Health: HealthConfig{

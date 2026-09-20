@@ -1,0 +1,95 @@
+= CORS
+
+Configuration for returning cross-origin resource sharing (CORS) headers on all endpoints (healthcheck excluded). Disabled by default. 
+
+When enabled, overwrites any CORS headers specified via xref:configuration/server.adoc[Server.Headers].
+
+CORS headers being returned is contingent on an origin match. If neither `WildcardOrigin` or `Origins` are specified, CORS headers will never be triggered. When `WildcardOrigin` is true, CORS headers are always returned. Otherwise, CORS is triggered if the incoming origin matches one of the entries in `Origins` (including wildcard evaluation).  
+
+NOTE: While `WildcardOrigin` will cause the Access-Control-Allow-Origin header to come back with a '\*', wildcard evaluation against the explicit `Origins` array happens server-side, resulting in the incoming origin being echoed back when there is a match. This has implications on browser behaviour.
+
+`Vary: Origin` is always included so a shared cache in front of tilegroxy doesn't serve one origin's response to another. Preflight (`OPTIONS`) requests are answered with a 204 and the negotiated methods, headers and max age.
+
+Configuration options:
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| Enabled
+| If true, return CORS headers and answer preflight requests
+| bool
+| No
+| false
+
+| WildcardOrigin
+| If true, return Access-Control-Allow-Origin: '*' and ignore the `Origins` field
+| bool
+| No
+| false
+
+| Origins
+| The origins allowed to make cross-origin requests, optionally including scheme and port. A '\*' can be included in the host portion to match any subdomain and '\**' can be used to wildcard match multiple subdomains.
+| string[]
+| No
+| None
+
+| Methods
+| The methods reported in preflight responses
+| string[]
+| No
+| GET, HEAD, OPTIONS
+
+| Headers
+| The request headers a caller may send, reported in preflight responses. A single entry of `*` echoes back whatever the browser asks for
+| string[]
+| No
+| None
+
+| ExposedHeaders
+| The response headers made readable to browser scripts, beyond the handful browsers always expose. 
+| string[]
+| No
+| ETag
+
+| AllowCredentials
+| If true, allow requests that carry cookies or HTTP authentication. Cannot be combined with WildcardOrigin, or with a wildcard in Headers or ExposedHeaders
+| bool
+| No
+| false
+
+| MaxAge
+| How long (in seconds) a browser may cache a preflight response. Zero omits the header and leaves the browser's own default in place
+| uint
+| No
+| 0
+|===
+
+The following can be supplied as environment variables:
+
+[cols="1,3"]
+|===
+| Configuration Parameter | Environment Variable
+
+| Enabled
+| SERVER_CORS_ENABLED
+
+| WildcardOrigin
+| SERVER_CORS_WILDCARDORIGIN
+
+| MaxAge
+| SERVER_CORS_MAXAGE
+|===
+
+Example:
+
+----
+server:
+  cors:
+    enabled: true
+    origins:
+      - https://*.example.com
+    exposedheaders:
+      - ETag
+    maxage: 600
+----
