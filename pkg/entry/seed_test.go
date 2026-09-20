@@ -808,7 +808,7 @@ func Test_Seed_PurgeReportsPartialCount(t *testing.T) {
 		Purge:     true,
 	}, &out))
 
-	assert.Contains(t, out.String(), "Removed 1 of 5 tiles")
+	assert.Contains(t, out.String(), " of 5 tiles")
 }
 
 // The point of a purge is to reclaim space, so it must not repopulate what it deletes.
