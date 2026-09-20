@@ -27,6 +27,7 @@ func testErrorMessages() config.ErrorMessages {
 		InvalidParam:            "Invalid value supplied for parameter %v: %v",
 		RangeError:              "%v must be between %v and %v",
 		ParamsMutuallyExclusive: "Parameters %v and %v cannot both be set",
+		ParamRequiresParam:      "Parameter %v can only be set when %v is enabled",
 	}
 }
 
@@ -62,14 +63,13 @@ func Test_ParseWatchConfig_DefaultsIntervalWhenWatching(t *testing.T) {
 func Test_ParseWatchConfig_IntervalWithoutWatchErrors(t *testing.T) {
 	_, _, err := parseWatchConfig(map[string]interface{}{"watchinterval": 60}, 1, testErrorMessages())
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "secret.watch")
-	assert.Contains(t, err.Error(), "secret.watchinterval")
+	assert.Contains(t, err.Error(), "Parameter secret.watchinterval can only be set when secret.watch is enabled")
 }
 
 func Test_ParseWatchConfig_TTLWithoutWatchErrors(t *testing.T) {
 	_, _, err := parseWatchConfig(map[string]interface{}{"ttl": 60}, 1, testErrorMessages())
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "secret.ttl")
+	assert.Contains(t, err.Error(), "Parameter secret.ttl can only be set when secret.watch is enabled")
 }
 
 func Test_ParseWatchConfig_IntervalBelowOneErrors(t *testing.T) {

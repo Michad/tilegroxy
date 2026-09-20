@@ -24,11 +24,17 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
 )
 
-// watchingSecreter records every key resolved through it so a background poll can notice when one rotates and rebuild the generation against fresh values
+// Reasons a secret watch hands to ReloadFunc, recorded on the resulting audit event
+const (
+	ReasonSecretRotation = "secret_rotation"
+	ReasonSecretTTL      = "secret_ttl"
+)
+
+// Records every resolved key so a background poll can notice a rotation and rebuild against fresh values
 type watchingSecreter struct {
 	backend   Secreter
 	batchSize int
-	reload    func()
+	reload    func(reason string)
 
 	mu       sync.Mutex
 	versions map[string]string
@@ -40,7 +46,7 @@ type watchingSecreter struct {
 	wg       sync.WaitGroup
 }
 
-func newWatchingSecreter(backend Secreter, _ secretWatchConfig, batchSize int, reload func()) *watchingSecreter {
+func newWatchingSecreter(backend Secreter, _ secretWatchConfig, batchSize int, reload func(reason string)) *watchingSecreter {
 	return &watchingSecreter{
 		backend:   backend,
 		batchSize: batchSize,
@@ -60,8 +66,9 @@ func (w *watchingSecreter) start(cfg secretWatchConfig) {
 
 	if cfg.TTL > 0 {
 		w.wg.Add(1)
-		go w.runTicker(time.Duration(cfg.TTL)*time.Second, func(_ context.Context) {
-			w.triggerReload()
+		go w.runTicker(time.Duration(cfg.TTL)*time.Second, func(ctx context.Context) {
+			slog.InfoContext(ctx, "Reloading configuration because the secret TTL elapsed")
+			w.triggerReload(ReasonSecretTTL)
 		})
 	}
 }
@@ -171,11 +178,12 @@ func (w *watchingSecreter) checkOnce(ctx context.Context) {
 	}
 
 	if changed {
-		w.triggerReload()
+		slog.InfoContext(ctx, "Reloading configuration because a watched secret changed")
+		w.triggerReload(ReasonSecretRotation)
 	}
 }
 
-func (w *watchingSecreter) triggerReload() {
+func (w *watchingSecreter) triggerReload(reason string) {
 	w.mu.Lock()
 	closed := w.closed
 	w.mu.Unlock()
@@ -184,7 +192,7 @@ func (w *watchingSecreter) triggerReload() {
 		return
 	}
 
-	w.reload()
+	w.reload(reason)
 }
 
 // Close stops the pollers and releases the wrapped backend

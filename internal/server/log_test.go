@@ -128,7 +128,7 @@ func Test_AuditLoggingWritesEventsToFile(t *testing.T) {
 
 	require.True(t, audit.Enabled())
 
-	audit.ConfigReload(pkg.BackgroundContext(), nil)
+	audit.ConfigReload(pkg.BackgroundContext(), audit.ReasonConfigFile, nil)
 	require.NoError(t, closeLog())
 
 	content, err := os.ReadFile(path) // #nosec G304 -- test-controlled temp path
@@ -175,7 +175,7 @@ func Test_AuditLoggingOmitsRequestAttributesWithoutARequest(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { audit.SetAuditLoggerOnStartup(nil) })
 
-	audit.ConfigReload(pkg.BackgroundContext(), nil)
+	audit.ConfigReload(pkg.BackgroundContext(), audit.ReasonConfigFile, nil)
 	require.NoError(t, closeLog())
 
 	content, err := os.ReadFile(path) // #nosec G304 -- test-controlled temp path
@@ -225,7 +225,7 @@ func Test_AuditLoggingPlainFormat(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { audit.SetAuditLoggerOnStartup(nil) })
 
-	audit.ConfigReload(pkg.BackgroundContext(), errors.New("bad layer"))
+	audit.ConfigReload(pkg.BackgroundContext(), audit.ReasonConfigFile, errors.New("bad layer"))
 	require.NoError(t, closeLog())
 
 	content, err := os.ReadFile(path) // #nosec G304 -- test-controlled temp path

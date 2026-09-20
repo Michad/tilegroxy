@@ -40,7 +40,7 @@ type Secreter interface {
 type SecreterDeps struct {
 	ErrorMessages config.ErrorMessages
 	// ReloadFunc rebuilds the entity generation when a watched secret rotates. Nil disables watching
-	ReloadFunc func()
+	ReloadFunc func(reason string)
 }
 
 type SecreterRegistration interface {

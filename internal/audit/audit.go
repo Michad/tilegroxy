@@ -35,6 +35,10 @@ const (
 	OutcomeFailure = "failure"
 )
 
+// ReasonConfigFile marks a reload the config file watcher triggered. Secret-driven reloads supply
+// their own reason from pkg/entities/secret.
+const ReasonConfigFile = "config_file"
+
 var logger *slog.Logger
 
 func SetAuditLoggerOnStartup(l *slog.Logger) {
@@ -76,8 +80,8 @@ func AuthFailure(ctx context.Context, reason string) {
 }
 
 // ConfigReload records a hot reload of the configuration. A reload that fails to apply is recorded
-// with the error that stopped it.
-func ConfigReload(ctx context.Context, err error) {
+// with the error that stopped it. reason is one of the Reason constants and says what triggered it.
+func ConfigReload(ctx context.Context, reason string, err error) {
 	if !Enabled() {
 		return
 	}
@@ -85,6 +89,7 @@ func ConfigReload(ctx context.Context, err error) {
 	if err != nil {
 		log(ctx, "Configuration reload failed",
 			slog.String("event", EventConfigReload),
+			slog.String("reason", reason),
 			slog.String("outcome", OutcomeFailure),
 			slog.String("error", err.Error()))
 
@@ -93,5 +98,6 @@ func ConfigReload(ctx context.Context, err error) {
 
 	log(ctx, "Configuration reloaded",
 		slog.String("event", EventConfigReload),
+		slog.String("reason", reason),
 		slog.String("outcome", OutcomeSuccess))
 }

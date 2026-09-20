@@ -30,7 +30,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
 )
 
-func configToEntities(ctx context.Context, cfg config.Config, reloadFunc func()) (*entities.Entities, error) {
+func configToEntities(ctx context.Context, cfg config.Config, reloadFunc func(reason string)) (*entities.Entities, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}

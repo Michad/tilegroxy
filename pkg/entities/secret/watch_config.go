@@ -34,7 +34,7 @@ type secretWatchConfig struct {
 	TTL           int
 }
 
-// Pull the generic watch keys out of a secret config, returning the parsed values and the remaining map for the backend to decode
+// Backends decode with ErrorUnused, so the shared keys have to come out before they see the map
 func parseWatchConfig(rawConfig map[string]interface{}, batchSize int, errorMessages config.ErrorMessages) (secretWatchConfig, map[string]interface{}, error) {
 	generic := make(map[string]interface{})
 	stripped := make(map[string]interface{}, len(rawConfig))
@@ -84,10 +84,10 @@ func validateWatchConfig(cfg *secretWatchConfig, generic map[string]interface{},
 
 	if !cfg.Watch {
 		if hasInterval {
-			return fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "secret.watch", "secret.watchinterval")
+			return fmt.Errorf(errorMessages.ParamRequiresParam, "secret.watchinterval", "secret.watch")
 		}
 		if hasTTL {
-			return fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "secret.watch", "secret.ttl")
+			return fmt.Errorf(errorMessages.ParamRequiresParam, "secret.ttl", "secret.watch")
 		}
 
 		return nil

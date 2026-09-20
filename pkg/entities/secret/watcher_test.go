@@ -80,14 +80,14 @@ func (s *scriptedSecreter) counts() (int, int) {
 }
 
 // newTestWatcher builds a wrapper with its tickers disabled so tests drive checkOnce directly
-func newTestWatcher(t *testing.T, backend Secreter, batchSize int, reload func()) *watchingSecreter {
+func newTestWatcher(t *testing.T, backend Secreter, batchSize int, reload func(reason string)) *watchingSecreter {
 	t.Helper()
 	return newWatchingSecreter(backend, secretWatchConfig{Watch: true, WatchInterval: defaultWatchInterval}, batchSize, reload)
 }
 
 func Test_Watcher_LookupRecordsKeyAndServesFromCache(t *testing.T) {
 	backend := &scriptedSecreter{version: "v1"}
-	w := newTestWatcher(t, backend, 10, func() {})
+	w := newTestWatcher(t, backend, 10, func(_ string) {})
 
 	v, ver, err := w.Lookup(context.Background(), "a")
 	require.NoError(t, err)
@@ -105,7 +105,7 @@ func Test_Watcher_LookupRecordsKeyAndServesFromCache(t *testing.T) {
 func Test_Watcher_ChangedVersionTriggersExactlyOneReload(t *testing.T) {
 	backend := &scriptedSecreter{version: "v1"}
 	var reloads int
-	w := newTestWatcher(t, backend, 10, func() { reloads++ })
+	w := newTestWatcher(t, backend, 10, func(_ string) { reloads++ })
 
 	_, _, err := w.Lookup(context.Background(), "a")
 	require.NoError(t, err)
@@ -121,7 +121,7 @@ func Test_Watcher_ChangedVersionTriggersExactlyOneReload(t *testing.T) {
 func Test_Watcher_UnchangedVersionTriggersNoReload(t *testing.T) {
 	backend := &scriptedSecreter{version: "v1"}
 	var reloads int
-	w := newTestWatcher(t, backend, 10, func() { reloads++ })
+	w := newTestWatcher(t, backend, 10, func(_ string) { reloads++ })
 
 	_, _, err := w.Lookup(context.Background(), "a")
 	require.NoError(t, err)
@@ -133,7 +133,7 @@ func Test_Watcher_UnchangedVersionTriggersNoReload(t *testing.T) {
 
 func Test_Watcher_ChunksKeysToBatchSize(t *testing.T) {
 	backend := &scriptedSecreter{version: "v1"}
-	w := newTestWatcher(t, backend, 20, func() {})
+	w := newTestWatcher(t, backend, 20, func(_ string) {})
 
 	for i := range 45 {
 		_, _, err := w.Lookup(context.Background(), string(rune('a'+i%26))+string(rune('0'+i/26)))
@@ -148,7 +148,7 @@ func Test_Watcher_ChunksKeysToBatchSize(t *testing.T) {
 
 func Test_Watcher_BatchSizeOneCallsCheckPerKey(t *testing.T) {
 	backend := &scriptedSecreter{version: "v1"}
-	w := newTestWatcher(t, backend, 1, func() {})
+	w := newTestWatcher(t, backend, 1, func(_ string) {})
 
 	_, _, err := w.Lookup(context.Background(), "a")
 	require.NoError(t, err)
@@ -165,7 +165,7 @@ func Test_Watcher_BatchSizeOneCallsCheckPerKey(t *testing.T) {
 func Test_Watcher_EmptyRecordedVersionIsNeverChecked(t *testing.T) {
 	backend := &scriptedSecreter{version: ""}
 	var reloads int
-	w := newTestWatcher(t, backend, 10, func() { reloads++ })
+	w := newTestWatcher(t, backend, 10, func(_ string) { reloads++ })
 
 	_, _, err := w.Lookup(context.Background(), "a")
 	require.NoError(t, err)
@@ -180,7 +180,7 @@ func Test_Watcher_EmptyRecordedVersionIsNeverChecked(t *testing.T) {
 func Test_Watcher_CheckErrorLeavesVersionsIntactAndSkipsReload(t *testing.T) {
 	backend := &scriptedSecreter{version: "v1"}
 	var reloads int
-	w := newTestWatcher(t, backend, 10, func() { reloads++ })
+	w := newTestWatcher(t, backend, 10, func(_ string) { reloads++ })
 
 	_, _, err := w.Lookup(context.Background(), "a")
 	require.NoError(t, err)
@@ -205,7 +205,7 @@ func Test_Watcher_CheckErrorLeavesVersionsIntactAndSkipsReload(t *testing.T) {
 func Test_Watcher_VersionGoingEmptyTriggersNoReload(t *testing.T) {
 	backend := &scriptedSecreter{version: "v1"}
 	var reloads int
-	w := newTestWatcher(t, backend, 10, func() { reloads++ })
+	w := newTestWatcher(t, backend, 10, func(_ string) { reloads++ })
 
 	_, _, err := w.Lookup(context.Background(), "a")
 	require.NoError(t, err)
@@ -219,7 +219,7 @@ func Test_Watcher_VersionGoingEmptyTriggersNoReload(t *testing.T) {
 func Test_Watcher_CloseClosesBackendAndStopsReloads(t *testing.T) {
 	backend := &scriptedSecreter{version: "v1"}
 	var reloads int
-	w := newTestWatcher(t, backend, 10, func() { reloads++ })
+	w := newTestWatcher(t, backend, 10, func(_ string) { reloads++ })
 
 	_, _, err := w.Lookup(context.Background(), "a")
 	require.NoError(t, err)
@@ -237,7 +237,7 @@ func Test_Watcher_CloseClosesBackendAndStopsReloads(t *testing.T) {
 
 func Test_Watcher_CheckIsForwardedToBackendVerbatim(t *testing.T) {
 	backend := &scriptedSecreter{version: "v1"}
-	w := newTestWatcher(t, backend, 10, func() {})
+	w := newTestWatcher(t, backend, 10, func(_ string) {})
 
 	versions, err := w.Check(context.Background(), []string{"x", "y"})
 	require.NoError(t, err)
@@ -251,9 +251,12 @@ func Test_Watcher_TTLTickerReloadsWithoutVersionChange(t *testing.T) {
 	var mu sync.Mutex
 	reloads := 0
 
-	w := newWatchingSecreter(backend, secretWatchConfig{Watch: true, WatchInterval: 3600, TTL: 1}, 10, func() {
+	var lastReason string
+
+	w := newWatchingSecreter(backend, secretWatchConfig{Watch: true, WatchInterval: 3600, TTL: 1}, 10, func(reason string) {
 		mu.Lock()
 		defer mu.Unlock()
+		lastReason = reason
 		reloads++
 	})
 	w.start(secretWatchConfig{Watch: true, WatchInterval: 3600, TTL: 1})
@@ -267,6 +270,10 @@ func Test_Watcher_TTLTickerReloadsWithoutVersionChange(t *testing.T) {
 		defer mu.Unlock()
 		return reloads >= 1
 	}, 5*time.Second, 50*time.Millisecond, "the TTL ticker must fire a reload on its own")
+
+	mu.Lock()
+	defer mu.Unlock()
+	assert.Equal(t, ReasonSecretTTL, lastReason)
 }
 
 func Test_ConstructSecreter_WrapsWhenWatching(t *testing.T) {
@@ -275,7 +282,7 @@ func Test_ConstructSecreter_WrapsWhenWatching(t *testing.T) {
 		"value":         "hunter2",
 		"watch":         true,
 		"watchinterval": 3600,
-	}, SecreterDeps{ErrorMessages: testErrorMessages(), ReloadFunc: func() {}})
+	}, SecreterDeps{ErrorMessages: testErrorMessages(), ReloadFunc: func(_ string) {}})
 	require.NoError(t, err)
 
 	w, ok := s.(*watchingSecreter)
@@ -287,7 +294,7 @@ func Test_ConstructSecreter_DoesNotWrapWhenNotWatching(t *testing.T) {
 	s, err := ConstructSecreter(map[string]interface{}{
 		"name":  "stub-secreter",
 		"value": "hunter2",
-	}, SecreterDeps{ErrorMessages: testErrorMessages(), ReloadFunc: func() {}})
+	}, SecreterDeps{ErrorMessages: testErrorMessages(), ReloadFunc: func(_ string) {}})
 	require.NoError(t, err)
 
 	_, ok := s.(*watchingSecreter)
