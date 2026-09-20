@@ -21,27 +21,47 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
+	"strconv"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 )
 
+type DiskLayout string
+
+const (
+	DiskLayoutFlat       = "flat"       // Every tile is a file directly inside path
+	DiskLayoutCoordinate = "coordinate" // Tiles are nested in a layer/z/x/y directory tree
+)
+
+var allDiskLayouts = []DiskLayout{DiskLayoutFlat, DiskLayoutCoordinate}
+
 type DiskConfig struct {
 	Path     string
 	FileMode uint32
+	Layout   DiskLayout
 }
 
 type Disk struct {
 	DiskConfig
 }
 
-// requestToFilename sanitizes LayerName (see safeLayerName) so a traversal sequence can't reach
-// outside the cache directory. The rest of the name is left alone so filenames stay readable and
-// caches written by earlier versions keep matching.
+// For the "flat" layout - layer name and tile coordinates in one filename
 func requestToFilename(t pkg.TileRequest) string {
 	safe := t
 	safe.LayerName = safeLayerName(t.LayerName)
 	return safe.StringWithSeparator("_")
+}
+
+// Returns the directory holding the tile and the tile's filename within it, both relative to Path. For the "coordinate" layout
+func (c Disk) requestToPath(t pkg.TileRequest) (string, string) {
+	if c.Layout == DiskLayoutCoordinate {
+		dir := filepath.Join(safeLayerName(t.LayerName), strconv.Itoa(t.Z), strconv.Itoa(t.X))
+		return filepath.Join(c.Path, dir), strconv.Itoa(t.Y)
+	}
+
+	return c.Path, requestToFilename(t)
 }
 
 func init() {
@@ -68,6 +88,12 @@ func (s DiskRegistration) Initialize(configAny any, deps cache.CacheDeps) (cache
 	if config.FileMode == 0 {
 		config.FileMode = 0777
 	}
+	if config.Layout == "" {
+		config.Layout = DiskLayoutFlat
+	}
+	if !slices.Contains(allDiskLayouts, config.Layout) {
+		return nil, fmt.Errorf(deps.ErrorMessages.EnumError, "cache.disk.layout", config.Layout, allDiskLayouts)
+	}
 
 	err := os.MkdirAll(config.Path, fs.FileMode(config.FileMode))
 	if err != nil {
@@ -78,9 +104,9 @@ func (s DiskRegistration) Initialize(configAny any, deps cache.CacheDeps) (cache
 }
 
 func (c Disk) Lookup(_ context.Context, t pkg.TileRequest) (*pkg.Image, error) {
-	filename := requestToFilename(t)
+	dir, filename := c.requestToPath(t)
 
-	b, err := os.ReadFile(filepath.Clean(filepath.Join(c.Path, filename)))
+	b, err := os.ReadFile(filepath.Clean(filepath.Join(dir, filename)))
 
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, nil
@@ -93,17 +119,23 @@ func (c Disk) Lookup(_ context.Context, t pkg.TileRequest) (*pkg.Image, error) {
 }
 
 func (c Disk) Save(_ context.Context, t pkg.TileRequest, img *pkg.Image) error {
-	filename := requestToFilename(t)
+	dir, filename := c.requestToPath(t)
 	b, err := img.Encode()
 
 	if err != nil {
 		return err
 	}
 
-	// Write to a temp file and rename so an interrupted write never leaves a readable partial entry
-	dest := filepath.Clean(filepath.Join(c.Path, filename))
+	if dir != c.Path {
+		if err = os.MkdirAll(dir, fs.FileMode(c.FileMode)); err != nil {
+			return err
+		}
+	}
 
-	tmp, err := os.CreateTemp(c.Path, filename+".tmp")
+	// Write to a temp file and rename so an interrupted write never leaves a readable partial entry
+	dest := filepath.Clean(filepath.Join(dir, filename))
+
+	tmp, err := os.CreateTemp(dir, filename+".tmp")
 
 	if err != nil {
 		return err
@@ -111,9 +143,10 @@ func (c Disk) Save(_ context.Context, t pkg.TileRequest, img *pkg.Image) error {
 
 	tmpName := tmp.Name()
 
+	// Both fail in the success path: the rename already consumed the temp file and closed it.
 	defer func() {
-		tmp.Close()
-		os.Remove(tmpName)
+		_ = tmp.Close()
+		_ = os.Remove(tmpName)
 	}()
 
 	if err = tmp.Chmod(fs.FileMode(c.FileMode)); err != nil {
@@ -132,9 +165,9 @@ func (c Disk) Save(_ context.Context, t pkg.TileRequest, img *pkg.Image) error {
 }
 
 func (c Disk) Remove(_ context.Context, t pkg.TileRequest) (bool, error) {
-	filename := requestToFilename(t)
+	dir, filename := c.requestToPath(t)
 
-	err := os.Remove(filepath.Clean(filepath.Join(c.Path, filename)))
+	err := os.Remove(filepath.Clean(filepath.Join(dir, filename)))
 
 	if errors.Is(err, os.ErrNotExist) {
 		return false, nil
