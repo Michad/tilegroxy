@@ -109,7 +109,7 @@ func (c ServerConfig) EffectiveShutdownTimeout() uint {
 type ClientConfig struct {
 	UserAgent           string            // The user agent to include in outgoing http requests. Separate from Headers to avoid omitting this.
 	MaxLength           int               // The maximum Content-Length to allow incoming responses. Default: 10 Megabytes
-	UnknownLength       bool              // If true, allow responses that are missing a Content-Length header, this could lead to memory overruns. Default: false. Not inherited from the global client config by layers - see MergeDefaultsFrom
+	UnknownLength       *bool             // If true, allow responses that are missing a Content-Length header. Default: false.
 	ContentTypes        []string          // The content-types to allow servers to return. Anything else will be interpreted as an error
 	StatusCodes         []int             // The status codes from the remote server to consider successful.  Defaults to just 200
 	Headers             map[string]string // Include these headers in requests. Defaults to none
@@ -129,10 +129,9 @@ func (c *ClientConfig) MergeDefaultsFrom(o ClientConfig) {
 	if c.MaxLength == 0 {
 		c.MaxLength = o.MaxLength
 	}
-	// UnknownLength is deliberately not inherited. Being a plain bool, "unset" and "explicitly
-	// false" are indistinguishable, so inheriting could only ever be observed overriding a layer
-	// that set `unknownlength: false` to tighten a permissive global default. Making it a *bool
-	// would distinguish the two but ripples through call sites outside this package.
+	if c.UnknownLength == nil {
+		c.UnknownLength = o.UnknownLength
+	}
 	if len(c.Headers) == 0 {
 		c.Headers = o.Headers
 	}
@@ -468,12 +467,9 @@ func DefaultConfig() Config {
 			Enabled: false,
 		},
 		Client: ClientConfig{
-			UserAgent:     "tilegroxy/" + version,
-			MaxLength:     1024 * 1024 * 10,
-			UnknownLength: false,
-			// The two vector types cover HTTP-proxied MVT sources, which would otherwise fail
-			// until the operator extended this list themselves. They're literals here because
-			// pkg/config can't import internal/providers, where mvtContentType lives.
+			UserAgent:           "tilegroxy/" + version,
+			MaxLength:           1024 * 1024 * 10,
+			UnknownLength:       new(false),
 			ContentTypes:        []string{"image/png", "image/jpg", "image/jpeg", "application/vnd.mapbox-vector-tile", "application/x-protobuf"},
 			StatusCodes:         []int{http.StatusOK},
 			Headers:             map[string]string{},

@@ -48,25 +48,21 @@ func clientIP(remoteAddr string) string {
 	return host
 }
 
-func p[A any](val A) *A {
-	return &val
-}
-
 //nolint:revive,staticcheck // We want values to be accessible
 func NewRequestContext(req *http.Request) context.Context {
 
 	ctx := req.Context()
 	ctx = context.WithValue(ctx, reqKey, req)
 	ctx = context.WithValue(ctx, startTimeKey, time.Now())
-	ctx = context.WithValue(ctx, limitLayersKey, p(false))
+	ctx = context.WithValue(ctx, limitLayersKey, new(false))
 	ctx = context.WithValue(ctx, allowedLayersKey, &([]string{}))
-	ctx = context.WithValue(ctx, limitAreaPartialKey, p(false))
+	ctx = context.WithValue(ctx, limitAreaPartialKey, new(false))
 	ctx = context.WithValue(ctx, allowedAreaKey, &Bounds{})
-	ctx = context.WithValue(ctx, userIDKey, p(""))
-	ctx = context.WithValue(ctx, tenantIDKey, p(""))
+	ctx = context.WithValue(ctx, userIDKey, new(""))
+	ctx = context.WithValue(ctx, tenantIDKey, new(""))
 	ctx = context.WithValue(ctx, layerPatternMatchesKey, &map[string]string{})
-	ctx = context.WithValue(ctx, refDepthKey, p(0))
-	ctx = context.WithValue(ctx, cachedKey, p(false))
+	ctx = context.WithValue(ctx, refDepthKey, new(0))
+	ctx = context.WithValue(ctx, cachedKey, new(false))
 
 	ctx = context.WithValue(ctx, "uri", req.RequestURI)
 	ctx = context.WithValue(ctx, "path", req.URL.Path)

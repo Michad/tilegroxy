@@ -370,7 +370,7 @@ func GetTile(ctx context.Context, clientConfig config.ClientConfig, url string, 
 	}
 
 	if resp.ContentLength == -1 {
-		if !clientConfig.UnknownLength {
+		if clientConfig.UnknownLength == nil || !*clientConfig.UnknownLength {
 			return nil, &InvalidContentLengthError{Length: -1}
 		}
 	} else {

@@ -313,21 +313,17 @@ func TestMergeDefaultsFrom(t *testing.T) {
 	assert.Equal(t, c1.UserAgent, c3.UserAgent)
 }
 
-// UnknownLength is a plain bool, so a layer setting `unknownlength: false` to tighten a permissive
-// global default is indistinguishable from one that left it unset. Inheriting could only ever be
-// observed overriding that explicit false, so MergeDefaultsFrom leaves the field alone.
 func TestMergeDefaultsFrom_UnknownLength(t *testing.T) {
-	defaults := ClientConfig{UnknownLength: true}
+	defaults := ClientConfig{UnknownLength: new(true)}
 
 	// A layer explicitly tightening the limit keeps its false.
-	explicitFalse := ClientConfig{UnknownLength: false, Timeout: 5}
+	explicitFalse := ClientConfig{UnknownLength: new(false), Timeout: 5}
 	explicitFalse.MergeDefaultsFrom(defaults)
-	assert.False(t, explicitFalse.UnknownLength, "an explicit layer-level false must not be overridden by a permissive global default")
+	assert.False(t, *explicitFalse.UnknownLength, "an explicit layer-level false must not be overridden by a permissive global default")
 
-	// A layer that says nothing also stays false, since unset is not distinguishable from false.
 	var unset ClientConfig
 	unset.MergeDefaultsFrom(defaults)
-	assert.False(t, unset.UnknownLength, "unset is indistinguishable from an explicit false, so it stays false rather than silently loosening the limit")
+	assert.True(t, *unset.UnknownLength, "should inherit default")
 
 	// Unrelated fields still inherit normally.
 	assert.Equal(t, uint(0), unset.Timeout)
