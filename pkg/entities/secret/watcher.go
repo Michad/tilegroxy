@@ -30,6 +30,8 @@ const (
 	ReasonSecretTTL      = "secret_ttl"
 )
 
+const maxFailedReloads = 3
+
 // Records every resolved key so a background poll can notice a rotation and rebuild against fresh values
 type watchingSecreter struct {
 	backend   Secreter
@@ -39,6 +41,7 @@ type watchingSecreter struct {
 	mu       sync.Mutex
 	versions map[string]string
 	values   map[string]string
+	reloaded uint8
 	closed   bool
 
 	stop     chan struct{}
@@ -134,6 +137,11 @@ func (w *watchingSecreter) checkOnce(ctx context.Context) {
 		w.mu.Unlock()
 		return
 	}
+	if w.reloaded > maxFailedReloads {
+		w.mu.Unlock()
+		slog.ErrorContext(ctx, "Secret reload has repeatedly failed to complete. Secrets will not be scanned for changes going forward.")
+		return
+	}
 
 	keys := make([]string, 0, len(w.versions))
 	recorded := make(map[string]string, len(w.versions))
@@ -179,6 +187,9 @@ func (w *watchingSecreter) checkOnce(ctx context.Context) {
 
 	if changed {
 		slog.InfoContext(ctx, "Reloading configuration because a watched secret changed")
+		w.mu.Lock()
+		w.reloaded = w.reloaded + 1
+		w.mu.Unlock()
 		w.triggerReload(ReasonSecretRotation)
 	}
 }
