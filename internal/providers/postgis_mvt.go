@@ -88,18 +88,18 @@ func (s PostgisMvtRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) 
 
 	if cfg.GID != "" {
 		if !columnRegex.MatchString(cfg.GID) {
-			return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "postgismvt.gid", cfg.GID, columnRegex)
+			return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "postgismvt.gid", cfg.GID)
 		}
 	}
 	if cfg.Geometry != "" {
 		if !columnRegex.MatchString(cfg.Geometry) {
-			return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "postgismvt.geometry", cfg.Geometry, columnRegex)
+			return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "postgismvt.geometry", cfg.Geometry)
 		}
 	}
 	if len(cfg.Attributes) > 0 {
 		for i, attribute := range cfg.Attributes {
 			if !columnRegex.MatchString(attribute) {
-				return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "postgismvt.attributes."+strconv.Itoa(i), attribute, columnRegex)
+				return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "postgismvt.attributes."+strconv.Itoa(i), attribute)
 			}
 		}
 	}
