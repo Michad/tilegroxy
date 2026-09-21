@@ -94,6 +94,9 @@ config:
     name: awssecretsmanager
     region: us-east-1
     separator: ":"
+    # Rotated credentials are picked up without a restart. `ttl` forces a reload
+    # even when no change is detected, and requires `watch`.
+    watch: true
     ttl: 3600
 
   # -------------------------------------------------------------------------

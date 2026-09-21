@@ -9,10 +9,10 @@
 #
 # Build and push to your own registry, then point image.repository at it:
 #
-#   docker build -t my-registry/tilegroxy-mapserver:0.10.0 .
-#   docker push my-registry/tilegroxy-mapserver:0.10.0
+#   docker build -t my-registry/tilegroxy-mapserver:0.12.0 .
+#   docker push my-registry/tilegroxy-mapserver:0.12.0
 
-ARG TILEGROXY_VERSION=0.10.0
+ARG TILEGROXY_VERSION=0.12.0
 
 FROM ghcr.io/michad/tilegroxy:${TILEGROXY_VERSION} AS tilegroxy
 
