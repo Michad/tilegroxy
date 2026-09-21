@@ -29,8 +29,8 @@ github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRF
 github.com/alecthomas/units v0.0.0-20190717042225-c3de453c63f4/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
 github.com/andybalholm/brotli v1.2.2 h1:HzTuoo2ErYQqf5qvcJInB8uvqSVxRttzkFexPWtnceM=
 github.com/andybalholm/brotli v1.2.2/go.mod h1:rzTDkvFWvIrjDXZHkuS16NPggd91W3kUSvPlQ1pLaKY=
-github.com/anthonynsimon/bild v0.17.0 h1:kmPJOZpUgvrM2uoS7KMesbDU5+QTvZ92zIBjHM/oa18=
-github.com/anthonynsimon/bild v0.17.0/go.mod h1:ULwssBwK+8dLFObGrI3fIydKYQ2l454Y0eo+mqPclto=
+github.com/anthonynsimon/bild v0.17.1 h1:CVcoR+jxUx++UBXpVJHTjt7RmfEbsnhtlqPR5utSfiU=
+github.com/anthonynsimon/bild v0.17.1/go.mod h1:eUfWJXV5GGXA2Gobz4osvpJdkdEVZpXwDSJi/PAXnpA=
 github.com/armon/go-metrics v0.4.1 h1:hR91U9KYmb6bLBYLQjyM+3j+rcd/UhE+G78SFnF8gJA=
 github.com/armon/go-metrics v0.4.1/go.mod h1:E6amYzXo6aW1tqzoZGT755KkbgrJsSdpwZ+3JqfkOG4=
 github.com/aws/aws-sdk-go-v2 v1.47.0 h1:0jsHallhJCeaU0Ko48c/3FK1ctOQ7NpzggxriJOQ8MQ=
