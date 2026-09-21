@@ -61,7 +61,7 @@ jobs:
           filter_mode: file
           golangci_lint_version: v2.12.2
         
-      - uses: reviewdog/action-suggester@4553543bea739d9d503379d786148cfd561de5fa # v1.25.0
+      - uses: reviewdog/action-suggester@9d84de0d37e5b9e8de5ddec1e63ac29ef0026991 # v1.26.0
         if: success() || failure()
         with:
           tool_name: Go Lint Issues
