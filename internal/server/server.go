@@ -228,12 +228,13 @@ func setupHandlers(cfg *config.Config, ent *entities.Entities) (http.Handler, re
 		cfg.Server.Timeout = math.MaxInt32
 	}
 
+	rootHandler = httpContextHandler{rootHandler, cfg.Error}
+	rootHandler = newTimeoutHandler(rootHandler, time.Duration(cfg.Server.Timeout)*time.Second, &cfg.Error) // #nosec G115
+
 	if cfg.Server.CORS.Enabled {
 		rootHandler = corsHandler{rootHandler, cfg.Server.CORS}
 	}
 
-	rootHandler = httpContextHandler{rootHandler, cfg.Error}
-	rootHandler = newTimeoutHandler(rootHandler, time.Duration(cfg.Server.Timeout)*time.Second, &cfg.Error) // #nosec G115
 	var closeAccessLog func() error
 	rootHandler, closeAccessLog, err = configureAccessLogging(cfg.Logging.Access, cfg.Error.Messages, rootHandler)
 

@@ -188,7 +188,7 @@ func (w *watchingSecreter) checkOnce(ctx context.Context) {
 	if changed {
 		slog.InfoContext(ctx, "Reloading configuration because a watched secret changed")
 		w.mu.Lock()
-		w.reloaded = w.reloaded + 1
+		w.reloaded++
 		w.mu.Unlock()
 		w.triggerReload(ReasonSecretRotation)
 	}

@@ -19,8 +19,8 @@ The [Dockerfile](Dockerfile) here therefore copies the tilegroxy binary out of t
 onto a Debian base, where `cgi-mapserver` provides `/usr/bin/mapserv`:
 
 ```sh
-docker build -t my-registry/tilegroxy-mapserver:0.10.0 .
-docker push my-registry/tilegroxy-mapserver:0.10.0
+docker build -t my-registry/tilegroxy-mapserver:0.12.0 .
+docker push my-registry/tilegroxy-mapserver:0.12.0
 ```
 
 Then point `image.repository` at it, as [values.yaml](values.yaml) does.
