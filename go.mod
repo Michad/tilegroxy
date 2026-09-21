@@ -4,7 +4,7 @@ go 1.26.6
 
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.48.0
-	github.com/anthonynsimon/bild v0.17.0
+	github.com/anthonynsimon/bild v0.17.1
 	github.com/aws/aws-sdk-go-v2 v1.47.0
 	github.com/aws/aws-sdk-go-v2/config v1.33.4
 	github.com/aws/aws-sdk-go-v2/credentials v1.20.4
