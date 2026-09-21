@@ -58,7 +58,7 @@ func Test_ShutdownBudgetExplicitOverridesTimeout(t *testing.T) {
 func Test_ShutdownBudgetReservesFlushSlice(t *testing.T) {
 	// A ShutdownTimeout well above flushReserveFloor*flushReserveFraction keeps the fraction, rather
 	// than the floor, driving the reserve, so the test stays valid if either constant changes.
-	totalSeconds := uint(flushReserveFloor/time.Second)*flushReserveFraction*2 + 1 //nolint:gosec // small test constant, no overflow risk
+	totalSeconds := uint(flushReserveFloor/time.Second)*flushReserveFraction*2 + 1 // #nosec G115 -- small test constant, no overflow risk
 
 	cfg := config.DefaultConfig()
 	cfg.Server.ShutdownTimeout = totalSeconds
