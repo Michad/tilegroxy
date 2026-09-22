@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -157,6 +158,56 @@ func ContainsCache(built Cache, name string) bool {
 			return true
 		}
 	}
+}
+
+// Finds the lifetime of a ttl cache anywhere in a chain. The shortest wins when several are nested
+func ExtractTTLFromCache(built Cache) (time.Duration, bool) {
+	var shortest time.Duration
+	found := false
+
+	if wrapper, ok := built.(CacheWrapper); ok && wrapper.Name == "ttl" {
+		if ttl, ok := findTTLViaReflect(wrapper.Cache); ok {
+			shortest = ttl
+			found = true
+		}
+	}
+
+	for i := 0; ; i++ {
+		child, ok := nestedCache(built, i)
+		if !ok {
+			return shortest, found
+		}
+
+		if ttl, ok := ExtractTTLFromCache(child); ok && (!found || ttl < shortest) {
+			shortest = ttl
+			found = true
+		}
+	}
+}
+
+// Caches live in internal packages pkg can't import, so the exported field is read reflectively the same way nested children are.
+func findTTLViaReflect(built Cache) (time.Duration, bool) {
+	value := reflect.ValueOf(unwrap(built))
+	for value.Kind() == reflect.Pointer {
+		if value.IsNil() {
+			return 0, false
+		}
+
+		value = value.Elem()
+	}
+
+	if value.Kind() != reflect.Struct {
+		return 0, false
+	}
+
+	field := value.FieldByName("TTL")
+	if !field.IsValid() || !field.CanInterface() {
+		return 0, false
+	}
+
+	ttl, ok := field.Interface().(time.Duration)
+
+	return ttl, ok && ttl > 0
 }
 
 // nestedCache pulls the i-th child out of a constructed cache. Caches live in internal packages

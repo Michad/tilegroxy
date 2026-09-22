@@ -62,6 +62,12 @@ Configuration options:
 | No
 | Auto (based on the layer's cache and provider)
 
+| cachecontrol
+| Overrides the `Cache-Control` block from xref:configuration/server.adoc[Server] for this layer. The override applies field by field, so a layer that specifies one directive keeps the rest of what the server configured
+| xref:configuration/cache_control.adoc[Cache Control]
+| No
+| None
+
 
 | description
 | Populates the `description` field of this layer's xref:configuration/tilejson.adoc[TileJSON] document. Has no effect unless TileJSON is enabled

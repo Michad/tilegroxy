@@ -22,6 +22,10 @@ The xref:commands/seed.adoc[seed] and xref:commands/test.adoc[test] CLI commands
 
 Both commands support `--user` and `--tenant` flags to allow overriding those fields, enabling you to seed/test for specific users.  See xref:configuration/cache/tenant.adoc[tenant].
 
+== Cache-Control
+
+As well as tilegroxy's cache, tiles may be cached in a browser (or CDN) cache as controlled by the Cache-Control header.  xref:configuration/cache_control.adoc[Cache-Control] is disabled by default, but if enabled it automatically detects the visibility directive to use via the same logic by which coalescing is determined (see below). Therefore, if you utilize Cache-Control, it's recommended to ensure you explicitly set `visibility=private` or turn the header off for the layer in question. Even if you don't utilize a CDN, this can lead to different users on shared machines seeing each other's content.
+
 == Coalesce
 
 Even if you entirely disable caching, there is still a risk that tiles can leak between users: coalescing.

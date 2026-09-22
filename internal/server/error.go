@@ -107,7 +107,7 @@ func writeErrorMessage(ctx context.Context, w http.ResponseWriter, cfg *config.E
 	// Nothing else marks an error response as uncacheable - with AlwaysOK the status is even 200 -
 	// so a CDN in front of tilegroxy would hold onto "tile unavailable" long after the upstream
 	// recovers.
-	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set(cacheControlHeader, noStoreDirective)
 
 	switch cfg.Mode {
 	case config.ModeErrorPlainText:

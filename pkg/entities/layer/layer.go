@@ -204,7 +204,8 @@ type Layer struct {
 	DataType           config.DataType // The version from the config with auto-resolution applied
 	providerContext    ProviderContext
 	authMutex          sync.Mutex
-	allowCoalesce      bool // The version from config with auto-resolution applied
+	allowCoalesce      bool              // The version from config with auto-resolution applied
+	CacheControl       CacheControlFacts // What this layer's cache and provider say about caching its tiles downstream
 	tileAllCounter     metric.Int64Counter
 	tileAuthCounter    metric.Int64Counter
 	tileErrorCounter   metric.Int64Counter
@@ -307,6 +308,34 @@ func resolveAllowCoalesce(rawConfig config.LayerConfig, layerCache cache.Cache) 
 	return !isNoopCache(layerCache)
 }
 
+// CacheControlFacts is what a layer's own configuration says about how its tiles may be cached
+// downstream, resolved once at construction. The server turns these into header directives.
+type CacheControlFacts struct {
+	// Uncacheable is true when the layer keeps no tiles of its own, which argues against anything
+	// downstream keeping them either.
+	Uncacheable bool
+	// PerIdentity is true when the tiles appear to vary by who asked, so a shared cache must not
+	// hand one caller's tile to the next.
+	PerIdentity bool
+	// TTL is the lifetime the layer's cache enforces, if any. Zero means nothing to go on.
+	TTL time.Duration
+}
+
+func resolveCacheControlFacts(rawConfig config.LayerConfig, layerCache cache.Cache) CacheControlFacts {
+	facts := CacheControlFacts{
+		Uncacheable: rawConfig.SkipCache || isNoopCache(layerCache),
+		PerIdentity: cache.ContainsCache(layerCache, "tenant") || usesIdentityPlaceholder(rawConfig.Provider),
+	}
+
+	if !facts.Uncacheable {
+		if ttl, ok := cache.ExtractTTLFromCache(layerCache); ok {
+			facts.TTL = ttl
+		}
+	}
+
+	return facts
+}
+
 func resolvePatternAndValidator(rawConfig config.LayerConfig, errorMessages config.ErrorMessages) ([]layerSegment, map[string]*regexp.Regexp, error) {
 	isPattern := rawConfig.Pattern != "" && rawConfig.Pattern != rawConfig.ID
 
@@ -407,7 +436,7 @@ func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.Cli
 
 	tileAllCounter, tileAuthCounter, tileErrorCounter, tileSuccessCounter, err := constructLayerCounters(rawConfig.ID)
 
-	return &Layer{rawConfig.ID, segments, validator, rawConfig, provider, nil, errorMessages, datatype, ProviderContext{}, sync.Mutex{}, allowCoalesce, tileAllCounter, tileAuthCounter, tileErrorCounter, tileSuccessCounter}, err
+	return &Layer{rawConfig.ID, segments, validator, rawConfig, provider, nil, errorMessages, datatype, ProviderContext{}, sync.Mutex{}, allowCoalesce, resolveCacheControlFacts(rawConfig, layerCache), tileAllCounter, tileAuthCounter, tileErrorCounter, tileSuccessCounter}, err
 }
 
 // getProviderContext returns a snapshot of the current provider context, re-authenticating

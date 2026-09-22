@@ -1,0 +1,190 @@
+= Cache Control
+
+Configuration for the `Cache-Control` header returned on tile responses. Disabled by default.
+
+If you simply set `Enabled` to true, tilegroxy will use the <<Automatic behaviour>> below. Beyond that, you can override each directive by setting the matching field explicitly. Automatic behaviour can be entirely turned off with `Auto: false`.
+
+This block can be specified on xref:configuration/server.adoc[Server] to apply to every layer and on an individual xref:configuration/layer.adoc[Layer] to override it. The override applies field by field (`extra` is replaced if set in both places, not added to). A layer can turn the header on for itself while the server leaves it off, or set `enabled: false` to turn off what the server enabled.
+
+The header applies to successful tile responses, error responses always return `no-store` regardless of this configuration. Other endpoints, including xref:configuration/tilejson.adoc[TileJSON], are unaffected.
+
+== Automatic behaviour
+
+The intent with auto mode is to infer the appropriate header based on how the layer is configured, so different layers may get different directives.
+
+=== Freshness
+
+When the layer's cache chain includes a xref:configuration/cache/ttl.adoc[TTL cache], `max-age` will be returned using the amount of time that particular tile has left. A tile generated 50 minutes ago under a one hour TTL returns `max-age=600`, so it falls out of both browser's and tilegroxy's caches in 10 minutes.
+
+When the layer's cache has no TTL to read, tilegroxy has nothing to say about how long the tile stays good and no `max-age` is returned. Set `MaxAge` explicitly for those layers.
+
+Layers that don't cache at all, either through `skipcache` or a xref:configuration/cache/none.adoc[none] cache, return `no-store`. 
+
+=== Visibility
+
+`private` is returned when the layer's tiles appear to vary by who asked, such as if a xref:configuration/cache/tenant.adoc[tenant] cache is used or the configuration contains the `{ctx.user}` or `{ctx.tenant}` placeholders. Otherwise `public` is returned.
+
+CAUTION: This heuristic is not comprehensive and cannot detect all cases. For example, a xref:configuration/provider/custom.adoc[custom] provider might or might not return the same content for different users. Set `Visibility` to `private` explicitly on any layer whose tiles differ between callers. See also xref:../howto/user-dynamic.adoc[user-dynamic layers]
+
+Configuration options:
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| Enabled
+| If true, return a `Cache-Control` header on tile responses. On a layer, set false to turn off a header the server enabled
+| bool
+| No
+| false
+
+| Auto
+| If false, don't derive any directive from the layer's configuration and return only the fields set below
+| bool
+| No
+| true
+
+| MaxAge
+| How long (in seconds) a browser may reuse a tile without asking again. Returned as `max-age`. 
+| uint
+| No
+| Auto
+
+| SharedMaxAge
+| How long (in seconds) a shared cache such as a CDN may reuse a tile, overriding MaxAge for those caches. Returned as `s-maxage`. 
+| uint
+| No
+| None
+
+| StaleWhileRevalidate
+| How long (in seconds) a cache may serve an expired tile while it fetches a fresh one in the background. Returned as `stale-while-revalidate`. 
+| uint
+| No
+| None
+
+| Visibility
+| Whether caches shared between callers may store the tile. Either `public` or `private`. 
+| string
+| No
+| Auto
+
+| NoStore
+| If true, return `no-store` alone and instruct caches not to keep the tile at all. Cannot be combined with any other field in this block besides Enabled
+| bool
+| No
+| Auto
+
+| Extra
+| Additional directives returned as-is, for anything the fields above don't cover, such as `immutable` or `stale-if-error=86400`. Always appended, unless `no-store` is returned. Entries may not contain a comma
+| string[]
+| No
+| None
+|===
+
+The following can be supplied as environment variables:
+
+[cols="1,3"]
+|===
+| Configuration Parameter | Environment Variable
+
+| Enabled
+| SERVER_CACHECONTROL_ENABLED
+
+| Auto
+| SERVER_CACHECONTROL_AUTO
+
+| MaxAge
+| SERVER_CACHECONTROL_MAXAGE
+
+| SharedMaxAge
+| SERVER_CACHECONTROL_SHAREDMAXAGE
+
+| StaleWhileRevalidate
+| SERVER_CACHECONTROL_STALEWHILEREVALIDATE
+
+| Visibility
+| SERVER_CACHECONTROL_VISIBILITY
+
+| NoStore
+| SERVER_CACHECONTROL_NOSTORE
+|===
+
+Examples:
+
+Turning the header on for every layer and letting each one derive its own value from its cache:
+
+----
+server:
+  cachecontrol:
+    enabled: true
+
+cache:
+  name: ttl
+  ttl: 3600
+  cache:
+    name: disk
+    path: "./disk_tile_cache"
+----
+
+Returns, for a tile generated 50 minutes ago:
+
+----
+Cache-Control: public, max-age=600
+----
+
+Adding a CDN lifetime and a stale window on top of the derived freshness, neither of which is derived:
+
+----
+server:
+  cachecontrol:
+    enabled: true
+    sharedmaxage: 86400
+    stalewhilerevalidate: 60
+----
+
+Returns, for that same tile:
+
+----
+Cache-Control: public, max-age=600, s-maxage=86400, stale-while-revalidate=60
+----
+ 
+
+A layer opting out of derivation entirely and stating its own header:
+
+----
+layers:
+  - id: basemap
+    cachecontrol:
+      auto: false
+      visibility: public
+      maxage: 86400
+      extra:
+        - immutable
+    provider:
+      name: proxy
+      url: https://example.com/basemap/{z}/{x}/{y}.png
+----
+
+Returns:
+
+----
+Cache-Control: public, max-age=86400, immutable
+----
+
+A layer opting out of the header the server turned on, leaving every other layer unaffected:
+
+----
+server:
+  cachecontrol:
+    enabled: true
+
+layers:
+  - id: preview
+    cachecontrol:
+      enabled: false
+    provider:
+      name: proxy
+      url: https://example.com/preview/{z}/{x}/{y}.png
+----
+
+Returns no `Cache-Control` header at all for `preview`.

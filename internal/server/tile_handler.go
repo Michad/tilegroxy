@@ -113,7 +113,11 @@ func setTileSpanAttributes(span trace.Span, tileReq pkg.TileRequest) {
 // writeTile sends the rendered tile body, or a 304 when the request carries a matching
 // If-None-Match, recording the outcome on the span. A write failure still counts as a success
 // since the tile itself was generated.
-func writeTile(ctx context.Context, w http.ResponseWriter, req *http.Request, span trace.Span, img *pkg.Image) {
+func writeTile(ctx context.Context, w http.ResponseWriter, req *http.Request, span trace.Span, img *pkg.Image, cacheControl string) {
+	if cacheControl != "" {
+		w.Header().Set(cacheControlHeader, cacheControl)
+	}
+
 	if img.ContentType != "" {
 		w.Header().Add("Content-Type", img.ContentType)
 	}
@@ -219,7 +223,7 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	writeTile(ctx, w, req, span, img)
+	writeTile(ctx, w, req, span, img, cur.generateCacheControlForTile(ctx, tileReq, img))
 
 	// This isn't in the else clause because the tile was still generated successfully even though request errored
 	h.tileSuccessCounter.Add(ctx, 1)
