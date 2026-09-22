@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
@@ -40,7 +41,7 @@ func constructWithCache(t *testing.T, rawCache map[string]any, layerCfg config.L
 		layerCfg.Provider = map[string]any{"name": "static", "color": "FFFFFF"}
 	}
 
-	l, err := layer.ConstructLayer(layerCfg, config.DefaultConfig().Client, builtCache, errorMessages, nil, nil, nil)
+	l, err := layer.ConstructLayer(pkg.BackgroundContext(), layerCfg, config.DefaultConfig().Client, builtCache, errorMessages, nil, nil, nil)
 	require.NoError(t, err)
 
 	return l
