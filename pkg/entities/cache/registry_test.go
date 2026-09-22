@@ -17,6 +17,7 @@ package cache
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -158,3 +159,55 @@ func Test_CacheRegistry_NilIsSafe(t *testing.T) {
 	_, ok := reg.Get("anything")
 	assert.False(t, ok)
 }
+
+// A nil inner cache must not panic the walk looking for a TTL
+func Test_CacheTTL_NilCacheIsNotFound(t *testing.T) {
+	ttl, ok := ExtractTTLFromCache(CacheWrapper{Name: "ttl", Cache: (*nilInnerCache)(nil)})
+
+	assert.False(t, ok)
+	assert.Zero(t, ttl)
+}
+
+// The ttl cache is held by pointer, so the walk has to dereference to reach its field
+func Test_CacheTTL_ReadsThroughPointer(t *testing.T) {
+	ttl, ok := ExtractTTLFromCache(CacheWrapper{Name: "ttl", Cache: &nilInnerCache{TTL: 90 * time.Second}})
+
+	assert.True(t, ok)
+	assert.Equal(t, 90*time.Second, ttl)
+}
+
+// A ttl cache with no TTL field at all, such as one that isn't a struct
+func Test_CacheTTL_NonStructIsNotFound(t *testing.T) {
+	ttl, ok := ExtractTTLFromCache(CacheWrapper{Name: "ttl", Cache: funcCache(nil)})
+
+	assert.False(t, ok)
+	assert.Zero(t, ttl)
+}
+
+// A ttl cache whose TTL field isn't a duration says nothing about freshness
+func Test_CacheTTL_NonDurationFieldIsNotFound(t *testing.T) {
+	ttl, ok := ExtractTTLFromCache(CacheWrapper{Name: "ttl", Cache: oddTTLCache{}})
+
+	assert.False(t, ok)
+	assert.Zero(t, ttl)
+}
+
+type nilInnerCache struct{ TTL time.Duration }
+
+func (*nilInnerCache) Lookup(_ context.Context, _ pkg.TileRequest) (*pkg.Image, error) {
+	return nil, nil
+}
+func (*nilInnerCache) Save(_ context.Context, _ pkg.TileRequest, _ *pkg.Image) error { return nil }
+func (*nilInnerCache) Remove(_ context.Context, _ pkg.TileRequest) (bool, error)     { return false, nil }
+
+type oddTTLCache struct{ TTL string }
+
+func (oddTTLCache) Lookup(_ context.Context, _ pkg.TileRequest) (*pkg.Image, error) { return nil, nil }
+func (oddTTLCache) Save(_ context.Context, _ pkg.TileRequest, _ *pkg.Image) error   { return nil }
+func (oddTTLCache) Remove(_ context.Context, _ pkg.TileRequest) (bool, error)       { return false, nil }
+
+type funcCache func()
+
+func (funcCache) Lookup(_ context.Context, _ pkg.TileRequest) (*pkg.Image, error) { return nil, nil }
+func (funcCache) Save(_ context.Context, _ pkg.TileRequest, _ *pkg.Image) error   { return nil }
+func (funcCache) Remove(_ context.Context, _ pkg.TileRequest) (bool, error)       { return false, nil }

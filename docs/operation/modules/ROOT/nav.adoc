@@ -49,6 +49,7 @@
 *** xref:configuration/encryption.adoc[]
 *** xref:configuration/tilejson.adoc[]
 *** xref:configuration/cors.adoc[]
+*** xref:configuration/cache_control.adoc[]
 ** xref:configuration/health.adoc[]
 ** xref:configuration/client.adoc[]
 ** xref:configuration/log.adoc[]

@@ -39,7 +39,7 @@ Configuration options:
 | docs
 
 | Headers
-| Include these headers in all response from server. For cross-origin headers prefer xref:configuration/cors.adoc[CORS], which can vary the response by request origin
+| Include these headers in all response from server. For cross-origin headers prefer xref:configuration/cors.adoc[CORS], which can vary the response by request origin. For `Cache-Control` prefer xref:configuration/cache_control.adoc[Cache Control], which derives the value from the layer
 | map[string]string
 | No
 | None
@@ -89,6 +89,12 @@ Configuration options:
 | CORS
 | Configuration for returning cross-origin resource sharing headers so browsers on other origins can use the tiles
 | xref:configuration/cors.adoc[CORS]
+| No
+| None
+
+| CacheControl
+| Configuration for returning a `Cache-Control` header so browsers and CDNs can reuse a tile without asking again
+| xref:configuration/cache_control.adoc[Cache Control]
 | No
 | None
 |===

@@ -135,6 +135,10 @@ func setupHandlers(cfg *config.Config, ent *entities.Entities) (http.Handler, re
 		return nil, nil, nil, nil, nil, err
 	}
 
+	if err := validateAllCacheControl(cfg); err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
+
 	r := http.ServeMux{}
 
 	var myRootHandler http.Handler

@@ -73,7 +73,6 @@ type BoundsConfig struct {
 	East  float64
 }
 
-// Configuration for CORS header rules.
 type CORSConfig struct {
 	Enabled          bool     // If true, apply CORS headers and answer preflight requests
 	WildcardOrigin   bool     // If true, return Access-Control-Allow-Origin: * and ignore Origins
@@ -85,19 +84,78 @@ type CORSConfig struct {
 	MaxAge           uint     // How long (in seconds) a browser may cache a preflight response. Defaults to 0 which omits the header
 }
 
+const (
+	CacheVisibilityPublic  = "public"
+	CacheVisibilityPrivate = "private"
+)
+
+type CacheControlConfig struct {
+	Enabled              *bool    // If true, return a Cache-Control header on tile responses. Defaults false
+	Auto                 *bool    // If false, don't derive any directive from the layer's configuration. Defaults true
+	MaxAge               *uint    // How long (in seconds) a browser may reuse a tile. Returned as max-age. Replaces the derived remaining lifetime
+	SharedMaxAge         *uint    // How long (in seconds) a shared cache may reuse a tile. Returned as s-maxage. Never derived
+	StaleWhileRevalidate *uint    // How long (in seconds) a cache may serve an expired tile while revalidating. Returned as stale-while-revalidate. Never derived
+	Visibility           string   // Either public or private. Replaces the derived visibility
+	NoStore              *bool    // If true, return no-store alone. Cannot be combined with the other fields
+	Extra                []string // Additional directives returned as-is. Always appended
+}
+
+func (c *CacheControlConfig) MergeDefaultsFrom(other CacheControlConfig) {
+	if c.Enabled == nil {
+		c.Enabled = other.Enabled
+	}
+
+	if c.Auto == nil {
+		c.Auto = other.Auto
+	}
+
+	if c.MaxAge == nil {
+		c.MaxAge = other.MaxAge
+	}
+
+	if c.SharedMaxAge == nil {
+		c.SharedMaxAge = other.SharedMaxAge
+	}
+
+	if c.StaleWhileRevalidate == nil {
+		c.StaleWhileRevalidate = other.StaleWhileRevalidate
+	}
+
+	if c.Visibility == "" {
+		c.Visibility = other.Visibility
+	}
+
+	if c.NoStore == nil {
+		c.NoStore = other.NoStore
+	}
+
+	if len(c.Extra) == 0 {
+		c.Extra = other.Extra
+	}
+}
+
+func (c CacheControlConfig) IsEnabled() bool {
+	return c.Enabled != nil && *c.Enabled
+}
+
+func (c CacheControlConfig) AutoEnabled() bool {
+	return c.Auto == nil || *c.Auto
+}
+
 type ServerConfig struct {
-	Encrypt    *EncryptionConfig // Whether and how to use TLS. Defaults to none AKA no encryption.
-	TileJSON   TileJSONConfig    // Whether to enable endpoints that describe layers using the TileJSON format
-	CORS       CORSConfig        // Whether and how to return cross-origin resource sharing headers
-	BindHost   string            // IP address to bind HTTP server to
-	Port       int               // Port to bind HTTP server to
-	RootPath   string            // Root HTTP Path to apply to all endpoints. Defaults to /
-	TilePath   string            // HTTP Path to serve tiles under (in addition to RootPath). Defaults to tiles which means /tiles/{layer}/{z}/{x}/{y}.
-	DocsPath   string            // HTTP Path for accessing the documentation website. Defaults to docs
-	Headers    map[string]string // Include these headers in all response from server
-	Production bool              // Controls serving splash page, documentation, x-powered-by header. Defaults to true, set false to expose them outside prod
-	Timeout    uint              // How long (in seconds) a request can be in flight before we cancel it and return an error
-	Gzip       bool              // Whether to apply gzip compression. Not super helpful when just serving up raster images
+	Encrypt      *EncryptionConfig  // Whether and how to use TLS. Defaults to none AKA no encryption.
+	TileJSON     TileJSONConfig     // Whether to enable endpoints that describe layers using the TileJSON format
+	CORS         CORSConfig         // Whether and how to return cross-origin resource sharing headers
+	CacheControl CacheControlConfig // Whether and how to return a Cache-Control header on tile responses
+	BindHost     string             // IP address to bind HTTP server to
+	Port         int                // Port to bind HTTP server to
+	RootPath     string             // Root HTTP Path to apply to all endpoints. Defaults to /
+	TilePath     string             // HTTP Path to serve tiles under (in addition to RootPath). Defaults to tiles which means /tiles/{layer}/{z}/{x}/{y}.
+	DocsPath     string             // HTTP Path for accessing the documentation website. Defaults to docs
+	Headers      map[string]string  // Include these headers in all response from server
+	Production   bool               // Controls serving splash page, documentation, x-powered-by header. Defaults to true, set false to expose them outside prod
+	Timeout      uint               // How long (in seconds) a request can be in flight before we cancel it and return an error
+	Gzip         bool               // Whether to apply gzip compression. Not super helpful when just serving up raster images
 
 	ShutdownTimeout uint // How long (in seconds) the whole shutdown sequence gets. Defaults to Timeout plus DrainDelay.
 	DrainDelay      uint // How long (in seconds) to report unready before draining. Defaults to 5, set 0 when a preStop hook covers it.
@@ -278,23 +336,24 @@ type LogConfig struct {
 
 // Defines a layer to be served up by the application
 type LayerConfig struct {
-	ID             string            // A distinct identifier for this layer. If no pattern is defined this is used to match against the layer name. Also used
-	Pattern        string            // A pattern to match against for layer names in incoming requests. Includes placeholders from which values can be extracted when matching. Not regular expressions, placeholders are simply wrapped in curly braces
-	ParamValidator map[string]string // A mapping of regular expressions to use for each value extracted from the pattern. Keys must match the placeholders in pattern. This is external from the pattern itself to keep parsing the pattern simple and less error prone. If a key of "*" is defined it applies to all placeholders
-	Provider       map[string]any    // Raw config parameters for the provider to use. Name determines the specific schema
-	SkipCache      bool              // If true, don't use the cache
-	SkipAnalytics  bool              // If true, successful requests for this layer don't produce analytics events
-	Client         *ClientConfig     // If specified, the default Client is overridden.
-	DataType       DataType          // Optional. Declares this layer's data type. Must not contradict the provider's own DataType(); required if Bounds is set and the provider's type is unknown
-	MinZoom        *int              // Optional. Requests below this zoom are rejected as out of bounds. nil means no lower limit
-	MaxZoom        *int              // Optional. Requests above this zoom are rejected as out of bounds. nil means no upper limit
-	Bounds         BoundsConfig      // Optional. Automatically wraps this layer's provider in crop/cropmvt, restricting it to this geographic area
-	Description    string            // Optional. Populates the `description` field of this layer's TileJSON document. Has no effect unless TileJSON is enabled
-	Attribution    string            // Optional. Populates the `attribution` field of this layer's TileJSON document. Has no effect unless TileJSON is enabled
-	Examples       []string          // Optional. Concrete layer names used to generate TileJSON documents for a `pattern` layer. Has no effect on a layer identified by a plain id
-	CacheVersion   string            // Optional. Allows invalidating cache entries when changed. Prefixed into cache keys but not he actual layer name
-	Cache          string            // Optional. The id of a top-level cache to use instead of the default
-	AllowCoalesce  *bool             // Optional. Whether two requests that come in at the same time for the same tile should be combined. Defaults to auto, which is determined by whether caching is enabled
+	ID             string              // A distinct identifier for this layer. If no pattern is defined this is used to match against the layer name. Also used
+	Pattern        string              // A pattern to match against for layer names in incoming requests. Includes placeholders from which values can be extracted when matching. Not regular expressions, placeholders are simply wrapped in curly braces
+	ParamValidator map[string]string   // A mapping of regular expressions to use for each value extracted from the pattern. Keys must match the placeholders in pattern. This is external from the pattern itself to keep parsing the pattern simple and less error prone. If a key of "*" is defined it applies to all placeholders
+	Provider       map[string]any      // Raw config parameters for the provider to use. Name determines the specific schema
+	SkipCache      bool                // If true, don't use the cache
+	SkipAnalytics  bool                // If true, successful requests for this layer don't produce analytics events
+	Client         *ClientConfig       // If specified, the default Client is overridden.
+	DataType       DataType            // Optional. Declares this layer's data type. Must not contradict the provider's own DataType(); required if Bounds is set and the provider's type is unknown
+	MinZoom        *int                // Optional. Requests below this zoom are rejected as out of bounds. nil means no lower limit
+	MaxZoom        *int                // Optional. Requests above this zoom are rejected as out of bounds. nil means no upper limit
+	Bounds         BoundsConfig        // Optional. Automatically wraps this layer's provider in crop/cropmvt, restricting it to this geographic area
+	Description    string              // Optional. Populates the `description` field of this layer's TileJSON document. Has no effect unless TileJSON is enabled
+	Attribution    string              // Optional. Populates the `attribution` field of this layer's TileJSON document. Has no effect unless TileJSON is enabled
+	Examples       []string            // Optional. Concrete layer names used to generate TileJSON documents for a `pattern` layer. Has no effect on a layer identified by a plain id
+	CacheVersion   string              // Optional. Allows invalidating cache entries when changed. Prefixed into cache keys but not he actual layer name
+	Cache          string              // Optional. The id of a top-level cache to use instead of the default
+	AllowCoalesce  *bool               // Optional. Whether two requests that come in at the same time for the same tile should be combined. Defaults to auto, which is determined by whether caching is enabled
+	CacheControl   *CacheControlConfig // Optional. Overrides the server's Cache-Control block field by field for this layer
 }
 
 type Config struct {
@@ -475,6 +534,10 @@ func DefaultConfig() Config {
 				Enabled:        false,
 				Methods:        []string{http.MethodGet, http.MethodHead, http.MethodOptions},
 				ExposedHeaders: []string{"ETag"},
+			},
+			CacheControl: CacheControlConfig{
+				Enabled: new(false),
+				Auto:    new(true),
 			},
 		},
 		Health: HealthConfig{
