@@ -144,7 +144,7 @@ func Test_GenerateTile(t *testing.T) {
 		},
 	}
 
-	datastore, err := datastore.ConstructDatastoreRegistry(dsCfg, nil, config.DefaultConfig().Error.Messages)
+	datastore, err := datastore.ConstructDatastoreRegistry(context.Background(), dsCfg, nil, config.DefaultConfig().Error.Messages)
 	require.NoError(t, err)
 
 	wrapper, ok := datastore.Get("test")

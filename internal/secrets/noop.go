@@ -15,6 +15,7 @@
 package secrets
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -49,6 +50,14 @@ func (s NoopRegistration) Initialize(cfgAny any, deps secret.SecreterDeps) (secr
 	return Noop{cfg, deps.ErrorMessages}, nil
 }
 
-func (s Noop) Lookup(key string) (string, error) {
-	return "", fmt.Errorf(s.errorMessages.ParamRequired, key)
+func (s Noop) Lookup(_ context.Context, key string) (string, string, error) {
+	return "", "", fmt.Errorf(s.errorMessages.ParamRequired, key)
+}
+
+func (s Noop) Check(_ context.Context, keys []string) ([]string, error) {
+	return make([]string, len(keys)), nil
+}
+
+func (s NoopRegistration) CheckBatchSize() int {
+	return 0
 }

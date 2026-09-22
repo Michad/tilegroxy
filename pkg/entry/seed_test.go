@@ -64,7 +64,7 @@ func Test_SeedThread_RecoversFromPanic(t *testing.T) {
 		{ID: "panics", Provider: map[string]interface{}{"name": "seed-test-panic-provider"}},
 	}
 
-	lg, err := layer.ConstructLayerGroup(cfg, nil, nil, nil)
+	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
 	require.NoError(t, err)
 
 	var wg sync.WaitGroup

@@ -82,7 +82,7 @@ func Seed(cfg *config.Config, opts SeedOptions, out io.Writer) error {
 		}
 	}
 
-	ent, err := configToEntities(entityConfig)
+	ent, err := configToEntities(ctx, entityConfig, nil)
 	if err != nil {
 		return err
 	}

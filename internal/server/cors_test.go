@@ -15,11 +15,17 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Michad/tilegroxy/internal/authentications"
+	"github.com/Michad/tilegroxy/internal/caches"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -364,4 +370,26 @@ func Test_CORS_ClearsStaticHeaderNotReplaced(t *testing.T) {
 
 	assert.Equal(t, "https://a.example.com", w.Header().Get("Access-Control-Allow-Origin"))
 	assert.Empty(t, w.Header().Get("Access-Control-Allow-Credentials"))
+}
+
+// CORS must wrap OUTSIDE the timeout handler. Inside it, a timed-out request loses its CORS
+// headers: the timeout path abandons the buffered headers and writes the error to the real
+// writer, so the browser reports an opaque CORS failure instead of the 503.
+func Test_SetupHandlers_CORSWrapsOutsideTimeout(t *testing.T) {
+	cfg := config.DefaultConfig()
+	cfg.Server.CORS.Enabled = true
+	cfg.Server.CORS.Origins = []string{"https://example.com"}
+	cfg.Layers = []config.LayerConfig{staticLayerConfig("main")}
+	// Access logging would otherwise wrap outermost and hide which of CORS/timeout is on top
+	cfg.Logging.Access.Console = false
+
+	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, cache.NewSingleCacheRegistry(caches.Noop{}), nil, nil)
+	require.NoError(t, err)
+
+	rootHandler, err := setupTestRootHandler(&cfg, &entities.Entities{LayerGroup: lg, Auth: authentications.Noop{}})
+	require.NoError(t, err)
+
+	// CORS is the outermost wrapper. Anything else means it sank below the timeout handler and a
+	// timed-out response would arrive without CORS headers.
+	require.IsType(t, corsHandler{}, rootHandler)
 }

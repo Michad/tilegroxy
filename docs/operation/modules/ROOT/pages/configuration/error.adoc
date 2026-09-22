@@ -201,6 +201,7 @@ The following are currently supported:
  ProviderError
  ParamsBothOrNeither
  ParamsMutuallyExclusive
+ ParamRequiresParam
  OneOfRequired
  EnumError
  ScriptError

@@ -86,7 +86,7 @@ func setupAnalyticsHandler(t *testing.T, layers []config.LayerConfig, fields []s
 	var auth authentication.Authentication = authentications.Noop{}
 	var c cache.Cache = caches.Noop{}
 
-	lg, err := layer.ConstructLayerGroup(cfg, cache.NewSingleCacheRegistry(c), nil, nil)
+	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, cache.NewSingleCacheRegistry(c), nil, nil)
 	require.NoError(t, err)
 
 	moduleCfg := map[string]interface{}{"name": "servertestrecorder"}
@@ -94,7 +94,7 @@ func setupAnalyticsHandler(t *testing.T, layers []config.LayerConfig, fields []s
 		moduleCfg["fields"] = fields
 	}
 
-	a, err := analytics.ConstructAnalytics(moduleCfg, nil, analytics.AnalyticsDeps{ErrorMessages: cfg.Error.Messages})
+	a, err := analytics.ConstructAnalytics(context.Background(), moduleCfg, nil, analytics.AnalyticsDeps{ErrorMessages: cfg.Error.Messages})
 	require.NoError(t, err)
 
 	handler, err := newTileHandler(testServingWithAnalytics(&cfg, auth, lg, a))
@@ -229,7 +229,7 @@ func Test_TileHandler_Analytics_NoModulesConfigured(t *testing.T) {
 	var auth authentication.Authentication = authentications.Noop{}
 	var c cache.Cache = caches.Noop{}
 
-	lg, err := layer.ConstructLayerGroup(cfg, cache.NewSingleCacheRegistry(c), nil, nil)
+	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, cache.NewSingleCacheRegistry(c), nil, nil)
 	require.NoError(t, err)
 
 	handler, err := newTileHandler(testServing(&cfg, auth, lg))
@@ -273,10 +273,10 @@ func generationFor(t *testing.T) (*config.Config, *entities.Entities) {
 
 	var c cache.Cache = caches.Noop{}
 
-	lg, err := layer.ConstructLayerGroup(cfg, cache.NewSingleCacheRegistry(c), nil, nil)
+	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, cache.NewSingleCacheRegistry(c), nil, nil)
 	require.NoError(t, err)
 
-	a, err := analytics.ConstructAnalytics(
+	a, err := analytics.ConstructAnalytics(context.Background(),
 		map[string]interface{}{"name": "servertestcloser"}, nil, analytics.AnalyticsDeps{ErrorMessages: cfg.Error.Messages})
 	require.NoError(t, err)
 

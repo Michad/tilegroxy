@@ -15,6 +15,7 @@
 package datastore
 
 import (
+	"context"
 	"testing"
 
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -55,7 +56,7 @@ func Test_ConstructDatastoreRegistry_DuplicateIDErrors(t *testing.T) {
 		{"name": "stub", "id": "dupe"},
 	}
 
-	_, err := ConstructDatastoreRegistry(cfg, nil, config.ErrorMessages{})
+	_, err := ConstructDatastoreRegistry(context.Background(), cfg, nil, config.ErrorMessages{})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "duplicate datastore id")
 }
@@ -66,7 +67,7 @@ func Test_ConstructDatastoreRegistry_EmptyIDErrors(t *testing.T) {
 		{"name": "stub"},
 	}
 
-	_, err := ConstructDatastoreRegistry(cfg, nil, config.ErrorMessages{})
+	_, err := ConstructDatastoreRegistry(context.Background(), cfg, nil, config.ErrorMessages{})
 	require.Error(t, err)
 }
 
@@ -76,7 +77,7 @@ func Test_ConstructDatastoreRegistry_UniqueIDsWork(t *testing.T) {
 		{"name": "stub", "id": "two"},
 	}
 
-	reg, err := ConstructDatastoreRegistry(cfg, nil, config.ErrorMessages{})
+	reg, err := ConstructDatastoreRegistry(context.Background(), cfg, nil, config.ErrorMessages{})
 	require.NoError(t, err)
 
 	_, ok := reg.Get("one")

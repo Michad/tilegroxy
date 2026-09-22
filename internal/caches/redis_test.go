@@ -225,7 +225,7 @@ func TestRedisWithContainerUsingDatastore(t *testing.T) {
 		},
 	}
 
-	reg, err := datastore.ConstructDatastoreRegistry(dsCfg, nil, config.ErrorMessages{})
+	reg, err := datastore.ConstructDatastoreRegistry(context.Background(), dsCfg, nil, config.ErrorMessages{})
 	require.NoError(t, err)
 	defer func() { require.NoError(t, reg.Close(ctx)) }()
 

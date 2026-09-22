@@ -15,6 +15,7 @@
 package providers
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -51,7 +52,7 @@ func Test_Ref_CycleViaPattern_HitsDepthBackstop(t *testing.T) {
 		{ID: "loop", Pattern: "loop_{n}", Provider: provider, Client: &cfg.Client, SkipCache: true},
 	}
 
-	lg, err := layer.ConstructLayerGroup(cfg, nil, nil, nil)
+	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
 	require.NoError(t, err)
 
 	ctx := pkg.BackgroundContext()
@@ -81,7 +82,7 @@ func buildRefChain(t *testing.T, n int) *layer.LayerGroup {
 
 	cfg.Layers = append(cfg.Layers, config.LayerConfig{ID: "chainEnd", Provider: map[string]any{"name": "static", "color": "FFF0"}, Client: &cfg.Client, SkipCache: true})
 
-	lg, err := layer.ConstructLayerGroup(cfg, nil, nil, nil)
+	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
 	require.NoError(t, err)
 
 	return lg
@@ -116,7 +117,7 @@ func Test_Ref_PropagatesAuthRestrictions(t *testing.T) {
 		}},
 	}
 
-	lg, err := layer.ConstructLayerGroup(cfg, nil, nil, nil)
+	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
 	require.NoError(t, err)
 
 	ctx := pkg.BackgroundContext()

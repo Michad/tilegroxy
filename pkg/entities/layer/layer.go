@@ -383,7 +383,7 @@ func constructLayerCounters(layerID string) (metric.Int64Counter, metric.Int64Co
 	return tileAllCounter, tileAuthCounter, tileErrorCounter, tileSuccessCounter, errors.Join(err1, err2, err3, err4)
 }
 
-func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.ClientConfig, layerCache cache.Cache, errorMessages config.ErrorMessages, layerGroup *LayerGroup, secreter secret.Secreter, datastores *datastore.DatastoreRegistry) (*Layer, error) {
+func ConstructLayer(ctx context.Context, rawConfig config.LayerConfig, defaultClientConfig config.ClientConfig, layerCache cache.Cache, errorMessages config.ErrorMessages, layerGroup *LayerGroup, secreter secret.Secreter, datastores *datastore.DatastoreRegistry) (*Layer, error) {
 	var err error
 	if rawConfig.Client == nil {
 		rawConfig.Client = &defaultClientConfig
@@ -394,7 +394,10 @@ func ConstructLayer(rawConfig config.LayerConfig, defaultClientConfig config.Cli
 
 	rawConfig.Provider = pkg.ReplaceEnv(rawConfig.Provider)
 	if secreter != nil {
-		rawConfig.Provider, err = pkg.ReplaceConfigValues(rawConfig.Provider, "secret", secreter.Lookup)
+		rawConfig.Provider, err = pkg.ReplaceConfigValues(rawConfig.Provider, "secret", func(k string) (string, error) {
+			v, _, lookupErr := secreter.Lookup(ctx, k)
+			return v, lookupErr
+		})
 		if err != nil {
 			return nil, err
 		}

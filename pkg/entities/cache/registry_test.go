@@ -62,7 +62,7 @@ func testDeps() CacheDeps {
 }
 
 func Test_CacheRegistry_SingleCacheGetsDefaultID(t *testing.T) {
-	reg, err := ConstructCacheRegistry(map[string]interface{}{"name": "stub-basic"}, "", nil, testDeps())
+	reg, err := ConstructCacheRegistry(context.Background(), map[string]interface{}{"name": "stub-basic"}, "", nil, testDeps())
 	require.NoError(t, err)
 
 	assert.Equal(t, "stub-basic", reg.DefaultID())
@@ -73,7 +73,7 @@ func Test_CacheRegistry_SingleCacheGetsDefaultID(t *testing.T) {
 }
 
 func Test_CacheRegistry_ArrayDefaultsToFirstEntry(t *testing.T) {
-	reg, err := ConstructCacheRegistry([]map[string]interface{}{
+	reg, err := ConstructCacheRegistry(context.Background(), []map[string]interface{}{
 		{"id": "first", "name": "stub-basic"},
 		{"id": "second", "name": "stub-basic"},
 	}, "", nil, testDeps())
@@ -87,7 +87,7 @@ func Test_CacheRegistry_ArrayDefaultsToFirstEntry(t *testing.T) {
 }
 
 func Test_CacheRegistry_ExplicitDefault(t *testing.T) {
-	reg, err := ConstructCacheRegistry([]map[string]interface{}{
+	reg, err := ConstructCacheRegistry(context.Background(), []map[string]interface{}{
 		{"id": "first", "name": "stub-basic"},
 		{"id": "second", "name": "stub-basic"},
 	}, "second", nil, testDeps())
@@ -97,7 +97,7 @@ func Test_CacheRegistry_ExplicitDefault(t *testing.T) {
 }
 
 func Test_CacheRegistry_UnknownDefaultErrors(t *testing.T) {
-	_, err := ConstructCacheRegistry([]map[string]interface{}{
+	_, err := ConstructCacheRegistry(context.Background(), []map[string]interface{}{
 		{"id": "first", "name": "stub-basic"},
 	}, "nope", nil, testDeps())
 
@@ -105,7 +105,7 @@ func Test_CacheRegistry_UnknownDefaultErrors(t *testing.T) {
 }
 
 func Test_CacheRegistry_MissingIDFallsBackToName(t *testing.T) {
-	reg, err := ConstructCacheRegistry([]map[string]interface{}{
+	reg, err := ConstructCacheRegistry(context.Background(), []map[string]interface{}{
 		{"name": "stub-basic"},
 	}, "", nil, testDeps())
 	require.NoError(t, err)
@@ -116,7 +116,7 @@ func Test_CacheRegistry_MissingIDFallsBackToName(t *testing.T) {
 }
 
 func Test_CacheRegistry_MissingIDAndNameErrors(t *testing.T) {
-	_, err := ConstructCacheRegistry([]map[string]interface{}{
+	_, err := ConstructCacheRegistry(context.Background(), []map[string]interface{}{
 		{"maxsize": 10},
 	}, "", nil, testDeps())
 
@@ -124,7 +124,7 @@ func Test_CacheRegistry_MissingIDAndNameErrors(t *testing.T) {
 }
 
 func Test_CacheRegistry_DuplicateIDErrors(t *testing.T) {
-	_, err := ConstructCacheRegistry([]map[string]interface{}{
+	_, err := ConstructCacheRegistry(context.Background(), []map[string]interface{}{
 		{"id": "dupe", "name": "stub-basic"},
 		{"id": "dupe", "name": "stub-basic"},
 	}, "", nil, testDeps())
@@ -138,7 +138,7 @@ func Test_CacheRegistry_ClosesEachCacheOnce(t *testing.T) {
 	closed := 0
 	RegisterCache(closableCacheRegistration{closed: &closed})
 
-	reg, err := ConstructCacheRegistry([]map[string]interface{}{
+	reg, err := ConstructCacheRegistry(context.Background(), []map[string]interface{}{
 		{"id": "a", "name": "stub-closable"},
 		{"id": "b", "name": "stub-closable"},
 	}, "", nil, testDeps())

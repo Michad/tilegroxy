@@ -103,7 +103,7 @@ func Test_Entities_ClosesLayerGroupProviders(t *testing.T) {
 	layer.RegisterProvider(closeCountingRegistration{})
 	cfg := config.DefaultConfig()
 	cfg.Layers = []config.LayerConfig{{ID: "l", Provider: map[string]any{"name": "close-counting"}}}
-	lg, err := layer.ConstructLayerGroup(cfg, nil, nil, nil)
+	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
 	require.NoError(t, err)
 
 	e := &Entities{LayerGroup: lg}
@@ -234,10 +234,10 @@ func Test_Entities_CacheWriteDrainDoesNotSpendTheAnalyticsReserve(t *testing.T) 
 		{ID: "test", Provider: map[string]any{"name": "rendering"}},
 	}
 
-	caches, err := cache.ConstructCacheRegistry(cfg.Cache, cfg.DefaultCache, nil, cache.CacheDeps{ErrorMessages: cfg.Error.Messages})
+	caches, err := cache.ConstructCacheRegistry(context.Background(), cfg.Cache, cfg.DefaultCache, nil, cache.CacheDeps{ErrorMessages: cfg.Error.Messages})
 	require.NoError(t, err)
 
-	lg, err := layer.ConstructLayerGroup(cfg, caches, nil, nil)
+	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, caches, nil, nil)
 	require.NoError(t, err)
 
 	// Leaves a cache write in flight for the drain to find.
@@ -268,7 +268,13 @@ type closableSecreter struct {
 	closed *bool
 }
 
-func (s closableSecreter) Lookup(_ string) (string, error) { return "", nil }
+func (s closableSecreter) Lookup(_ context.Context, _ string) (string, string, error) {
+	return "", "", nil
+}
+
+func (s closableSecreter) Check(_ context.Context, keys []string) ([]string, error) {
+	return make([]string, len(keys)), nil
+}
 
 func (s closableSecreter) Close(_ context.Context) error {
 	*s.closed = true
@@ -277,7 +283,13 @@ func (s closableSecreter) Close(_ context.Context) error {
 
 type plainSecreter struct{}
 
-func (plainSecreter) Lookup(_ string) (string, error) { return "", nil }
+func (plainSecreter) Lookup(_ context.Context, _ string) (string, string, error) {
+	return "", "", nil
+}
+
+func (plainSecreter) Check(_ context.Context, keys []string) ([]string, error) {
+	return make([]string, len(keys)), nil
+}
 
 func Test_Entities_ClosesSecreter(t *testing.T) {
 	var closed bool

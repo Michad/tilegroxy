@@ -115,13 +115,16 @@ const noneName = "none"
 
 // secreter is separate from deps because it resolves values in the raw config before the module is
 // constructed, rather than being handed to the module
-func ConstructAnalytics(rawConfig map[string]interface{}, secreter secret.Secreter, deps AnalyticsDeps) (*AnalyticsWrapper, error) {
+func ConstructAnalytics(ctx context.Context, rawConfig map[string]interface{}, secreter secret.Secreter, deps AnalyticsDeps) (*AnalyticsWrapper, error) {
 	var err error
 
 	rawConfig = pkg.ReplaceEnv(rawConfig)
 
 	if secreter != nil {
-		rawConfig, err = pkg.ReplaceConfigValues(rawConfig, "secret", secreter.Lookup)
+		rawConfig, err = pkg.ReplaceConfigValues(rawConfig, "secret", func(k string) (string, error) {
+			v, _, lookupErr := secreter.Lookup(ctx, k)
+			return v, lookupErr
+		})
 		if err != nil {
 			return nil, err
 		}

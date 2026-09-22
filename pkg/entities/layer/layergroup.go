@@ -48,7 +48,7 @@ type LayerGroup struct {
 	generateGroup singleflight.Group
 }
 
-func ConstructLayerGroup(cfg config.Config, caches *cache.CacheRegistry, secreter secret.Secreter, datastores *datastore.DatastoreRegistry) (*LayerGroup, error) {
+func ConstructLayerGroup(ctx context.Context, cfg config.Config, caches *cache.CacheRegistry, secreter secret.Secreter, datastores *datastore.DatastoreRegistry) (*LayerGroup, error) {
 	var err1, err2 error
 	var layerGroup LayerGroup
 	layerObjects := make([]*Layer, len(cfg.Layers))
@@ -67,7 +67,7 @@ func ConstructLayerGroup(cfg config.Config, caches *cache.CacheRegistry, secrete
 			return nil, fmt.Errorf("error constructing layer %v: %w", i, err)
 		}
 
-		layerObjects[i], err = ConstructLayer(l, cfg.Client, layerCache, cfg.Error.Messages, &layerGroup, secreter, datastores)
+		layerObjects[i], err = ConstructLayer(ctx, l, cfg.Client, layerCache, cfg.Error.Messages, &layerGroup, secreter, datastores)
 		if err != nil {
 			return nil, fmt.Errorf("error constructing layer %v: %w", i, err)
 		}

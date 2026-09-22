@@ -15,6 +15,7 @@
 package secret
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
@@ -25,19 +26,29 @@ import (
 // Secreter resolves secret references in a configuration. An implementation holding resources may also
 // implement lifecycle.Closer, which is called when the configuration generation is released
 type Secreter interface {
-	Lookup(key string) (string, error)
+	// Lookup resolves key into its value and an opaque version identifier. An implementation without
+	// change detection returns an empty version
+	Lookup(ctx context.Context, key string) (string, string, error)
+
+	// Check returns the current version of each key, positionally matching keys. An empty version
+	// means the key cannot be watched for changes
+	Check(ctx context.Context, keys []string) ([]string, error)
 }
 
 // SecreterDeps carries everything a secret module is given at construction. New dependencies are added as
 // fields so the Initialize signature stays stable
 type SecreterDeps struct {
 	ErrorMessages config.ErrorMessages
+	// ReloadFunc rebuilds the entity generation when a watched secret rotates. Nil disables watching
+	ReloadFunc func(reason string)
 }
 
 type SecreterRegistration interface {
 	Name() string
 	Initialize(config any, deps SecreterDeps) (Secreter, error)
 	InitializeConfig() any
+	// CheckBatchSize caps how many keys Check accepts at once. 0 means the backend cannot be watched
+	CheckBatchSize() int
 }
 
 var registrationsMu sync.RWMutex
@@ -74,12 +85,29 @@ func ConstructSecreter(rawConfig map[string]interface{}, deps SecreterDeps) (Sec
 	if ok {
 		reg, ok := RegisteredSecreter(name)
 		if ok {
-			cfg := reg.InitializeConfig()
-			err := config.DecodeEntityConfig(rawConfig, &cfg)
+			watchCfg, stripped, err := parseWatchConfig(rawConfig, reg.CheckBatchSize(), deps.ErrorMessages)
 			if err != nil {
 				return nil, err
 			}
-			return reg.Initialize(cfg, deps)
+
+			cfg := reg.InitializeConfig()
+			if err := config.DecodeEntityConfig(stripped, &cfg); err != nil {
+				return nil, err
+			}
+
+			built, err := reg.Initialize(cfg, deps)
+			if err != nil {
+				return nil, err
+			}
+
+			if !watchCfg.Watch || deps.ReloadFunc == nil {
+				return built, nil
+			}
+
+			w := newWatchingSecreter(built, watchCfg, reg.CheckBatchSize(), deps.ReloadFunc)
+			w.start(watchCfg)
+
+			return w, nil
 		}
 	}
 
