@@ -11,6 +11,7 @@
 *** xref:configuration/provider/effect.adoc[]
 *** xref:configuration/provider/fallback.adoc[]
 *** xref:configuration/provider/ref.adoc[]
+*** xref:configuration/provider/pmtiles.adoc[]
 *** xref:configuration/provider/postgismvt.adoc[]
 *** xref:configuration/provider/compositemvt.adoc[]
 *** xref:configuration/provider/static.adoc[]

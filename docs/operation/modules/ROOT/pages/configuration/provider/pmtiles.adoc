@@ -1,0 +1,45 @@
+= PMTiles
+
+Serves tiles out of a link:https://docs.protomaps.com/pmtiles/[PMTiles] archive. A PMTiles archive is a single file holding a whole tileset, addressed entirely by byte range. This provider works either with a local file or via http calls. Uses go-pmtiles under the hood.
+
+Both raster and vector archives are supported. The tile type declared in the archive header determines the data type of the layer, so you don't need to set `datatype` on the layer.
+
+The archive is treated as immutable and static, the file and URL won't work with request-time parameters. Replacing the file underneath a running tilegroxy is not supported and will lead to undefined behaviour. 
+
+We attempt to pull minzoom, maxzoom, bounds, and datatype from the archive header. Setting these fields on the xref:configuration/layer.adoc[layer] overrides the values taken from the archive. If xref:configuration/tilejson.adoc[TileJSON] is enabled, the TileJSON document is entirely taken from the PMTile archive if possible, falling back on standard logic.
+
+Name should be "pmtiles"
+
+Configuration options:
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| file
+| The path to a PMTiles archive on the local filesystem. Mutually exclusive with `url` and required if `url` is undefined
+| string
+| No
+| None
+
+| url
+| An HTTPS URL pointing at a PMTiles archive. The server must support range requests. Mutually exclusive with `file` and required if `file` is undefined
+| string
+| No
+| None
+
+| headers
+| Extra headers to include in the range requests made against `url`. Ignored when using `file`
+| map[string]string
+| No
+| None
+
+|===
+
+Example:
+
+----
+provider:
+  name: pmtiles
+  file: /data/tiles/overture.pmtiles
+----
