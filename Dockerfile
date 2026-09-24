@@ -7,7 +7,7 @@ COPY . /usr/app
 
 RUN npm ci && node_modules/antora/bin/antora antora-playbook.yml
 
-FROM golang:1.26-alpine3.23@sha256:e57c41c1d5864341031181b0db34b9a537bb5773eb6428e4e5bdaea0f9135406 AS build_stage
+FROM golang:1.27-alpine3.23@sha256:cabba651db628d291c68ad3217c7fe837b865d60276d9dfe1baa931311b1720c AS build_stage
 
 COPY . .
 COPY --from=docs_stage /usr/app/build/site internal/website/resources/
