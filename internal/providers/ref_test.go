@@ -140,3 +140,83 @@ func Test_Ref_PropagatesAuthRestrictions(t *testing.T) {
 
 	assert.Equal(t, direct.Content, img.Content, "tile behind a ref must be cropped to the same auth bounds as one requested directly")
 }
+
+func constructPMTilesRefGroup(t *testing.T, layers ...config.LayerConfig) *layer.LayerGroup {
+	t.Helper()
+
+	cfg := config.DefaultConfig()
+	cfg.Layers = layers
+
+	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = lg.Close(context.Background()) })
+
+	return lg
+}
+
+func pmtilesLayer(id string) config.LayerConfig {
+	return config.LayerConfig{ID: id, Provider: map[string]any{"name": "pmtiles", "file": pmtilesMVTFixture}}
+}
+
+func refProvider(target string) map[string]any {
+	return map[string]any{"name": "ref", "layer": target}
+}
+
+func Test_Ref_Metadata_ResolvesTargetsDefinedBeforeAndAfter(t *testing.T) {
+	lg := constructPMTilesRefGroup(t,
+		pmtilesLayer("before"),
+		config.LayerConfig{ID: "composite", Provider: map[string]any{
+			"name":      "compositemvt",
+			"providers": []any{refProvider("before"), refProvider("after")},
+		}},
+		pmtilesLayer("after"),
+	)
+
+	target := lg.FindLayer(context.Background(), "before")
+	require.NotEmpty(t, target.Metadata().VectorLayers)
+
+	composite := lg.FindLayer(context.Background(), "composite")
+	doc := composite.BuildTileJSON("composite", nil, nil)
+
+	assert.Equal(t, config.DataTypeMVT, composite.DataType)
+	assert.Equal(t, target.Metadata().VectorLayers, doc.VectorLayers)
+	assert.Equal(t, target.Metadata().Attribution, doc.Attribution)
+	require.Error(t, composite.CheckZoomBounds(pkg.TileRequest{Z: 2}))
+}
+
+func Test_Ref_Metadata_FollowsChainAndTargetConfig(t *testing.T) {
+	target := pmtilesLayer("target")
+	target.Attribution = "configured"
+
+	lg := constructPMTilesRefGroup(t,
+		config.LayerConfig{ID: "outer", Provider: refProvider("middle")},
+		config.LayerConfig{ID: "middle", Provider: refProvider("target")},
+		target,
+	)
+
+	md := lg.FindLayer(context.Background(), "outer").Metadata()
+
+	assert.Equal(t, config.DataTypeMVT, md.DataType)
+	assert.Equal(t, "configured", md.Attribution)
+	assert.NotEmpty(t, md.VectorLayers)
+}
+
+func Test_Ref_Metadata_ContradictingDataTypeFails(t *testing.T) {
+	cfg := config.DefaultConfig()
+	cfg.Layers = []config.LayerConfig{
+		{ID: "outer", LayerMetadata: config.LayerMetadata{DataType: config.DataTypeRaster}, Provider: refProvider("target")},
+		pmtilesLayer("target"),
+	}
+
+	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
+
+	require.Error(t, err)
+	assert.Nil(t, lg)
+}
+
+func Test_Ref_Metadata_UnresolvedIsEmpty(t *testing.T) {
+	assert.Equal(t, config.LayerMetadata{}, Ref{RefConfig: RefConfig{Layer: "x"}}.Metadata())
+
+	lg := constructPMTilesRefGroup(t, pmtilesLayer("only"))
+	assert.Equal(t, config.LayerMetadata{}, Ref{RefConfig: RefConfig{Layer: "missing"}, layerGroup: lg}.Metadata())
+}

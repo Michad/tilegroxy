@@ -1,0 +1,80 @@
+# Serves Overture Maps (https://overturemaps.org) vector tiles directly from the PMTiles archives
+# Overture publishes on S3, with no tile preparation needed. Each theme is its own archive.
+# Datatype, zoom range, bounds, attribution and vector_layers come from each archive's header and
+# metadata. For a newer release, update the date in the URLs; see
+# https://docs.overturemaps.org/examples/overture-tiles/ for the current one.
+server:
+  production: false
+  cors:
+    enabled: true
+    wildcardorigin: true
+  tilejson:
+    enabled: true
+  timeout: 10
+# Dense tiles (such as places in Manhattan) decompress past the 10 MB default, so allow 50 MB.
+client:
+  maxlength: 52428800
+cache:
+  name: memory
+  maxsize: 10000
+  ttl: 86400
+layers:
+  - id: overture_base
+    provider:
+      name: pmtiles
+      url: https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-08-19.0/base.pmtiles
+  - id: overture_transportation
+    provider:
+      name: pmtiles
+      url: https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-08-19.0/transportation.pmtiles
+  - id: overture_buildings
+    provider:
+      name: pmtiles
+      url: https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-08-19.0/buildings.pmtiles
+  - id: overture_places
+    provider:
+      name: pmtiles
+      url: https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-08-19.0/places.pmtiles
+  - id: overture_divisions
+    provider:
+      name: pmtiles
+      url: https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-08-19.0/divisions.pmtiles
+  - id: overture_basemap
+    provider:
+      name: compositemvt
+      providers:
+      - name: fallback
+        primary:
+          name: ref
+          layer: overture_buildings
+        secondary:
+          name: static
+          image: embedded:empty.mvt
+      - name: fallback
+        primary:
+          name: ref
+          layer: overture_transportation
+        secondary:
+          name: static
+          image: embedded:empty.mvt
+      - name: fallback
+        primary:
+          name: ref
+          layer: overture_divisions
+        secondary:
+          name: static
+          image: embedded:empty.mvt
+      - name: fallback
+        primary:
+          name: ref
+          layer: overture_places
+        secondary:
+          name: static
+          image: embedded:empty.mvt
+      - name: fallback
+        primary:
+          name: ref
+          layer: overture_base
+        secondary:
+          name: static
+          image: embedded:empty.mvt

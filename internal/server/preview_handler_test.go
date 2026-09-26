@@ -386,6 +386,50 @@ func Test_PreviewHandler_IgnoresReloadedServerConfig(t *testing.T) {
 	assert.NotContains(t, string(body), "maps")
 }
 
+func servePMTilesPreview(t *testing.T, target string) string {
+	t.Helper()
+
+	cfg := config.DefaultConfig()
+	cfg.Layers = []config.LayerConfig{
+		{ID: "pm", Provider: map[string]interface{}{"name": "pmtiles", "file": "../pmtiles/testdata/vector.pmtiles"}},
+	}
+
+	h := newPreviewHandler(buildTileJSONTestServing(t, cfg))
+
+	req := httptest.NewRequest(http.MethodGet, target, nil).WithContext(pkg.BackgroundContext())
+	req.SetPathValue("layer", "pm")
+	w := httptest.NewRecorder()
+
+	h.ServeHTTP(w, req)
+
+	res := w.Result()
+	defer func() { require.NoError(t, res.Body.Close()) }()
+	require.Equal(t, http.StatusOK, res.StatusCode)
+
+	body, err := io.ReadAll(res.Body)
+	require.NoError(t, err)
+
+	return string(body)
+}
+
+func Test_PreviewHandler_LayerMetadata_UsesVectorLayers(t *testing.T) {
+	body := servePMTilesPreview(t, "http://internal-host/preview/pm")
+
+	assert.Contains(t, body, "from the tile metadata")
+	assert.Contains(t, body, `["landmarks"]`)
+	assert.Contains(t, body, "sourceLayerKnown =  true")
+	assert.Contains(t, body, "maxzoom:  1 ")
+	assert.Contains(t, body, "var bounds = [[")
+}
+
+func Test_PreviewHandler_LayerMetadata_NameOverrideWins(t *testing.T) {
+	body := servePMTilesPreview(t, "http://internal-host/preview/pm?name=custom_layer")
+
+	assert.Contains(t, body, `["custom_layer"]`)
+	assert.NotContains(t, body, "landmarks")
+	assert.NotContains(t, body, "from the tile metadata")
+}
+
 func Test_PreviewHandler_NoMetadata_ProbesGuessedLayer(t *testing.T) {
 	cfg := config.DefaultConfig()
 	cfg.Layers = []config.LayerConfig{
