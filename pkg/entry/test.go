@@ -61,21 +61,21 @@ const (
 )
 
 func pickTile(l *layer.Layer, layerName string) pkg.TileRequest {
-	hasBounds := l.Config.Bounds != (config.BoundsConfig{})
-	hasZoom := l.Config.MinZoom != nil || l.Config.MaxZoom != nil
-	hasCenter := len(l.Config.Center) > centerLatIndex
+	hasBounds := l.Metadata().Bounds != (config.BoundsConfig{})
+	hasZoom := l.Metadata().MinZoom != nil || l.Metadata().MaxZoom != nil
+	hasCenter := len(l.Metadata().Center) > centerLatIndex
 
 	if !hasBounds && !hasZoom && !hasCenter {
 		return pkg.TileRequest{LayerName: layerName, Z: defaultZ, X: defaultX, Y: defaultY}
 	}
 
 	minZoom := 0
-	if l.Config.MinZoom != nil {
-		minZoom = *l.Config.MinZoom
+	if l.Metadata().MinZoom != nil {
+		minZoom = *l.Metadata().MinZoom
 	}
 	maxZoom := pkg.MaxZoom
-	if l.Config.MaxZoom != nil {
-		maxZoom = *l.Config.MaxZoom
+	if l.Metadata().MaxZoom != nil {
+		maxZoom = *l.Metadata().MaxZoom
 	}
 
 	z := uint((minZoom + maxZoom) / 2) // #nosec G115 -- min/maxZoom are bounded well within int range
@@ -83,19 +83,19 @@ func pickTile(l *layer.Layer, layerName string) pkg.TileRequest {
 	bounds := pkg.WorldBounds()
 	if hasBounds {
 		bounds = pkg.Bounds{
-			South: l.Config.Bounds.South,
-			North: l.Config.Bounds.North,
-			West:  l.Config.Bounds.West,
-			East:  l.Config.Bounds.East,
+			South: l.Metadata().Bounds.South,
+			North: l.Metadata().Bounds.North,
+			West:  l.Metadata().Bounds.West,
+			East:  l.Metadata().Bounds.East,
 		}
 	}
 
 	if hasCenter {
-		lon, lat := l.Config.Center[0], l.Config.Center[centerLatIndex]
+		lon, lat := l.Metadata().Center[0], l.Metadata().Center[centerLatIndex]
 		bounds = pkg.Bounds{South: lat, North: lat, West: lon, East: lon}
 
-		if len(l.Config.Center) > centerZoomIndex {
-			z = uint(min(max(int(l.Config.Center[centerZoomIndex]), minZoom), maxZoom)) // #nosec G115 -- clamped to the layer's zoom range
+		if len(l.Metadata().Center) > centerZoomIndex {
+			z = uint(min(max(int(l.Metadata().Center[centerZoomIndex]), minZoom), maxZoom)) // #nosec G115 -- clamped to the layer's zoom range
 		}
 	}
 
@@ -109,7 +109,7 @@ func pickTile(l *layer.Layer, layerName string) pkg.TileRequest {
 	x := min((zoomRange.XMin+zoomRange.XMax-1)/2, lastTile) //nolint:mnd // Midpoint of an exclusive-max range
 	y := min((zoomRange.YMin+zoomRange.YMax-1)/2, lastTile) //nolint:mnd // Midpoint of an exclusive-max range
 
-	return pkg.TileRequest{LayerName: layerName, Z: int(z), X: x, Y: y} // #nosec G115 -- z is the midpoint of minZoom/maxZoom, bounded well within int range
+	return pkg.TileRequest{LayerName: layerName, Z: int(z), X: x, Y: y} // #nosec G115 -- z is 0-21, bounded well within int range
 }
 
 // the set of layer names tested when none are given. A pattern layer's ID

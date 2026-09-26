@@ -426,6 +426,38 @@ func (c Config) Validate() error {
 		if l.Bounds != (BoundsConfig{}) && (l.Bounds.South > l.Bounds.North || l.Bounds.West > l.Bounds.East) {
 			errs = append(errs, fmt.Errorf(c.Error.Messages.InvalidParam, fmt.Sprintf("layers[%d].bounds", i), fmt.Sprintf("%+v", l.Bounds)))
 		}
+
+		if l.Center != nil {
+			if len(l.Center) < 2 || len(l.Center) > 3 {
+				errs = append(errs, fmt.Errorf(c.Error.Messages.RangeError, fmt.Sprintf("layers[%d].center.size", i), 2, 3))
+			} else {
+				if len(l.Center) == 3 {
+					centerZoom := l.Center[2]
+					effMaxZoom := 21
+					if l.MaxZoom != nil && *l.MaxZoom < effMaxZoom {
+						effMaxZoom = *l.MaxZoom
+					}
+
+					effMinZoom := 0
+					if l.MinZoom != nil && *l.MinZoom > 0 {
+						effMinZoom = *l.MinZoom
+					}
+
+					if centerZoom < float64(effMinZoom) || centerZoom > float64(effMaxZoom) {
+						errs = append(errs, fmt.Errorf(c.Error.Messages.RangeError, fmt.Sprintf("layers[%d].center.zoom", i), effMinZoom, effMaxZoom))
+					}
+				}
+
+				if l.Bounds != (BoundsConfig{}) {
+					if l.Center[0] > l.Bounds.East || l.Center[0] < l.Bounds.West {
+						errs = append(errs, fmt.Errorf(c.Error.Messages.RangeError, fmt.Sprintf("layers[%d].center[0]", i), l.Bounds.West, l.Bounds.East))
+					}
+					if l.Center[1] > l.Bounds.North || l.Center[1] < l.Bounds.South {
+						errs = append(errs, fmt.Errorf(c.Error.Messages.RangeError, fmt.Sprintf("layers[%d].center[1]", i), l.Bounds.South, l.Bounds.North))
+					}
+				}
+			}
+		}
 	}
 
 	return errors.Join(errs...)

@@ -230,7 +230,20 @@ func resizeImages(ctx context.Context, img image.Image, img2 image.Image) (image
 
 // The implicit layer bounds wrapper must not hide the primary's metadata from the layer.
 func (t Crop) Metadata() config.LayerMetadata {
-	return layer.MetadataOf(t.Primary)
+	md := layer.MetadataOf(t.Primary)
+
+	// Auth bounds replace the configured bounds per request, so they aren't a reliable limit.
+	if t.BoundsFromAuth || t.Bounds.IsNullIsland() {
+		return md
+	}
+
+	cropped := t.Bounds
+	if reported := pkg.BoundsFromConfig(md.Bounds); !reported.IsNullIsland() && reported.Intersects(t.Bounds) {
+		cropped = reported.IntersectionWith(t.Bounds)
+	}
+	md.Bounds = cropped.ToConfig()
+
+	return md
 }
 
 func (t Crop) Close(ctx context.Context) error {
