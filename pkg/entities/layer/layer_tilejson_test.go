@@ -16,6 +16,7 @@ package layer
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -143,12 +144,8 @@ func Test_Layer_BuildTileJSON_ExplicitFields(t *testing.T) {
 	l := &Layer{
 		ID: "l2",
 		Config: config.LayerConfig{
-			ID:          "l2",
-			MinZoom:     &minZoom,
-			MaxZoom:     &maxZoom,
-			Description: "Aerial imagery",
-			Attribution: "(c) Example",
-			Bounds:      config.BoundsConfig{South: 51, North: 63, West: -7, East: 0.1},
+			ID:            "l2",
+			LayerMetadata: config.LayerMetadata{MinZoom: &minZoom, MaxZoom: &maxZoom, Bounds: config.BoundsConfig{South: 51, North: 63, West: -7, East: 0.1}, TileJSONMetadata: config.TileJSONMetadata{Description: "Aerial imagery", Attribution: "(c) Example"}},
 		},
 		DataType: config.DataTypeRaster,
 	}
@@ -166,8 +163,8 @@ func Test_Layer_BuildTileJSON_IntersectsAllowedArea(t *testing.T) {
 	l := &Layer{
 		ID: "l4",
 		Config: config.LayerConfig{
-			ID:     "l4",
-			Bounds: config.BoundsConfig{South: -10, North: 10, West: -10, East: 10},
+			ID:            "l4",
+			LayerMetadata: config.LayerMetadata{Bounds: config.BoundsConfig{South: -10, North: 10, West: -10, East: 10}},
 		},
 		DataType: config.DataTypeRaster,
 	}
@@ -195,4 +192,95 @@ func Test_ConstructLayer_EmptyParamValidator_ErrorsNotPanics(t *testing.T) {
 		require.Nil(t, l)
 		assert.Contains(t, err.Error(), "layer.paramValidator.name")
 	})
+}
+
+func testMetadata() config.LayerMetadata {
+	minZoom, maxZoom := 3, 9
+	return config.LayerMetadata{
+		MinZoom:          &minZoom,
+		MaxZoom:          &maxZoom,
+		Bounds:           config.BoundsConfig{South: 10, North: 20, West: 30, East: 40},
+		TileJSONMetadata: config.TileJSONMetadata{Description: "archive description", Attribution: "archive attribution", Version: "1.2", Center: []float64{35, 15, 5}, VectorLayers: []config.VectorLayer{{ID: "roads"}}},
+	}
+}
+
+func Test_Layer_BuildTileJSON_FromMetadata(t *testing.T) {
+	l := &Layer{ID: "m", Config: config.LayerConfig{ID: "m"}, metadata: testMetadata()}
+
+	doc := l.BuildTileJSON("m", []string{"https://example.com/tiles/m/{z}/{x}/{y}"}, nil)
+
+	assert.Equal(t, 3, doc.MinZoom)
+	assert.Equal(t, 9, doc.MaxZoom)
+	assert.Equal(t, []float64{30, 10, 40, 20}, doc.Bounds)
+	assert.Equal(t, "archive description", doc.Description)
+	assert.Equal(t, "archive attribution", doc.Attribution)
+	assert.Equal(t, "1.2", doc.Version)
+	assert.Equal(t, []float64{35, 15, 5}, doc.Center)
+	assert.Equal(t, []config.VectorLayer{{ID: "roads"}}, doc.VectorLayers)
+	assert.Equal(t, "m", doc.Name)
+}
+
+func Test_Layer_BuildTileJSON_ConfigOverridesMetadata(t *testing.T) {
+	minZoom, maxZoom := 1, 15
+	l := &Layer{ID: "m", Config: config.LayerConfig{
+		ID:            "m",
+		LayerMetadata: config.LayerMetadata{MinZoom: &minZoom, MaxZoom: &maxZoom, Bounds: config.BoundsConfig{South: 11, North: 12, West: 31, East: 32}, TileJSONMetadata: config.TileJSONMetadata{Description: "layer description", Attribution: "layer attribution"}},
+	}, metadata: testMetadata()}
+
+	doc := l.BuildTileJSON("m", nil, nil)
+
+	assert.Equal(t, 1, doc.MinZoom)
+	assert.Equal(t, 15, doc.MaxZoom)
+	assert.Equal(t, []float64{31, 11, 32, 12}, doc.Bounds)
+	assert.Equal(t, "layer description", doc.Description)
+	assert.Equal(t, "layer attribution", doc.Attribution)
+	assert.Equal(t, "1.2", doc.Version)
+}
+
+func Test_Layer_BuildTileJSON_MetadataBoundsIntersectAllowedArea(t *testing.T) {
+	l := &Layer{ID: "m", Config: config.LayerConfig{ID: "m"}, metadata: testMetadata()}
+
+	doc := l.BuildTileJSON("m", nil, &pkg.Bounds{South: 15, North: 25, West: 35, East: 45, SRID: pkg.SRIDWGS84})
+
+	assert.Equal(t, []float64{35, 15, 40, 20}, doc.Bounds)
+}
+
+func Test_Layer_BuildTileJSON_OmitsEmptyMetadataFields(t *testing.T) {
+	l := &Layer{ID: "l", Config: config.LayerConfig{ID: "l"}}
+
+	b, err := json.Marshal(l.BuildTileJSON("l", nil, nil))
+	require.NoError(t, err)
+
+	assert.NotContains(t, string(b), "version")
+	assert.NotContains(t, string(b), "center")
+	assert.NotContains(t, string(b), "vector_layers")
+}
+
+func Test_VectorLayer_MarshalMatchesSpec(t *testing.T) {
+	minZoom := 0
+	b, err := json.Marshal([]config.VectorLayer{
+		{ID: "roads"},
+		{ID: "water", Fields: map[string]string{"name": "String"}, Description: "lakes", MinZoom: &minZoom},
+	})
+	require.NoError(t, err)
+
+	assert.JSONEq(t, `[{"id":"roads","fields":{}},{"id":"water","fields":{"name":"String"},"description":"lakes","minzoom":0}]`, string(b))
+}
+
+func Test_Layer_BuildTileJSON_ConfigOnlyMetadataFields(t *testing.T) {
+	l := &Layer{ID: "m", Config: config.LayerConfig{
+		ID: "m",
+		LayerMetadata: config.LayerMetadata{TileJSONMetadata: config.TileJSONMetadata{
+			Version:      "2.0",
+			Center:       []float64{1, 2, 3},
+			VectorLayers: []config.VectorLayer{{ID: "water"}},
+		}},
+	}, metadata: testMetadata()}
+
+	doc := l.BuildTileJSON("m", nil, nil)
+
+	assert.Equal(t, "2.0", doc.Version)
+	assert.Equal(t, []float64{1, 2, 3}, doc.Center)
+	assert.Equal(t, []config.VectorLayer{{ID: "water"}}, doc.VectorLayers)
+	assert.Equal(t, "archive description", doc.Description)
 }

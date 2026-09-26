@@ -47,18 +47,25 @@ type TestOptions struct {
 	TenantID       string
 }
 
-// the default tile used when a layer has no configured bounds/zoom to derive one from.
+// the default tile used when a layer has no configured center/bounds/zoom to derive one from.
 const (
 	defaultZ = 10
 	defaultX = 123
 	defaultY = 534
 )
 
+// center is longitude, latitude, then an optional zoom
+const (
+	centerLatIndex  = 1
+	centerZoomIndex = 2
+)
+
 func pickTile(l *layer.Layer, layerName string) pkg.TileRequest {
 	hasBounds := l.Config.Bounds != (config.BoundsConfig{})
 	hasZoom := l.Config.MinZoom != nil || l.Config.MaxZoom != nil
+	hasCenter := len(l.Config.Center) > centerLatIndex
 
-	if !hasBounds && !hasZoom {
+	if !hasBounds && !hasZoom && !hasCenter {
 		return pkg.TileRequest{LayerName: layerName, Z: defaultZ, X: defaultX, Y: defaultY}
 	}
 
@@ -83,13 +90,24 @@ func pickTile(l *layer.Layer, layerName string) pkg.TileRequest {
 		}
 	}
 
+	if hasCenter {
+		lon, lat := l.Config.Center[0], l.Config.Center[centerLatIndex]
+		bounds = pkg.Bounds{South: lat, North: lat, West: lon, East: lon}
+
+		if len(l.Config.Center) > centerZoomIndex {
+			z = uint(min(max(int(l.Config.Center[centerZoomIndex]), minZoom), maxZoom)) // #nosec G115 -- clamped to the layer's zoom range
+		}
+	}
+
 	zoomRange, err := bounds.ConstructSingleZoomRange(z)
 	if err != nil {
 		return pkg.TileRequest{LayerName: layerName, Z: defaultZ, X: defaultX, Y: defaultY}
 	}
 
-	x := (zoomRange.XMin + zoomRange.XMax - 1) / 2 //nolint:mnd // Midpoint of an exclusive-max range
-	y := (zoomRange.YMin + zoomRange.YMax - 1) / 2 //nolint:mnd // Midpoint of an exclusive-max range
+	// A point on the east or south edge of the world lands one past the last tile
+	lastTile := 1<<int(z) - 1                               // #nosec G115 -- z is at most MaxZoom
+	x := min((zoomRange.XMin+zoomRange.XMax-1)/2, lastTile) //nolint:mnd // Midpoint of an exclusive-max range
+	y := min((zoomRange.YMin+zoomRange.YMax-1)/2, lastTile) //nolint:mnd // Midpoint of an exclusive-max range
 
 	return pkg.TileRequest{LayerName: layerName, Z: int(z), X: x, Y: y} // #nosec G115 -- z is the midpoint of minZoom/maxZoom, bounded well within int range
 }

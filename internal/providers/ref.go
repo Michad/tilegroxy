@@ -93,3 +93,16 @@ func (t Ref) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequ
 
 	return t.layerGroup.RenderTile(newCtx, newRequest)
 }
+
+func (t Ref) Metadata() config.LayerMetadata {
+	if t.layerGroup == nil {
+		return config.LayerMetadata{}
+	}
+
+	target := t.layerGroup.FindLayer(context.Background(), t.Layer)
+	if target == nil {
+		return config.LayerMetadata{}
+	}
+
+	return target.Metadata()
+}

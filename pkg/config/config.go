@@ -336,19 +336,14 @@ type LogConfig struct {
 
 // Defines a layer to be served up by the application
 type LayerConfig struct {
-	ID             string              // A distinct identifier for this layer. If no pattern is defined this is used to match against the layer name. Also used
-	Pattern        string              // A pattern to match against for layer names in incoming requests. Includes placeholders from which values can be extracted when matching. Not regular expressions, placeholders are simply wrapped in curly braces
-	ParamValidator map[string]string   // A mapping of regular expressions to use for each value extracted from the pattern. Keys must match the placeholders in pattern. This is external from the pattern itself to keep parsing the pattern simple and less error prone. If a key of "*" is defined it applies to all placeholders
-	Provider       map[string]any      // Raw config parameters for the provider to use. Name determines the specific schema
-	SkipCache      bool                // If true, don't use the cache
-	SkipAnalytics  bool                // If true, successful requests for this layer don't produce analytics events
-	Client         *ClientConfig       // If specified, the default Client is overridden.
-	DataType       DataType            // Optional. Declares this layer's data type. Must not contradict the provider's own DataType(); required if Bounds is set and the provider's type is unknown
-	MinZoom        *int                // Optional. Requests below this zoom are rejected as out of bounds. nil means no lower limit
-	MaxZoom        *int                // Optional. Requests above this zoom are rejected as out of bounds. nil means no upper limit
-	Bounds         BoundsConfig        // Optional. Automatically wraps this layer's provider in crop/cropmvt, restricting it to this geographic area
-	Description    string              // Optional. Populates the `description` field of this layer's TileJSON document. Has no effect unless TileJSON is enabled
-	Attribution    string              // Optional. Populates the `attribution` field of this layer's TileJSON document. Has no effect unless TileJSON is enabled
+	ID             string            // A distinct identifier for this layer. If no pattern is defined this is used to match against the layer name. Also used
+	Pattern        string            // A pattern to match against for layer names in incoming requests. Includes placeholders from which values can be extracted when matching. Not regular expressions, placeholders are simply wrapped in curly braces
+	ParamValidator map[string]string // A mapping of regular expressions to use for each value extracted from the pattern. Keys must match the placeholders in pattern. This is external from the pattern itself to keep parsing the pattern simple and less error prone. If a key of "*" is defined it applies to all placeholders
+	Provider       map[string]any    // Raw config parameters for the provider to use. Name determines the specific schema
+	SkipCache      bool              // If true, don't use the cache
+	SkipAnalytics  bool              // If true, successful requests for this layer don't produce analytics events
+	Client         *ClientConfig     // If specified, the default Client is overridden.
+	LayerMetadata  `mapstructure:",squash" yaml:",inline"`
 	Examples       []string            // Optional. Concrete layer names used to generate TileJSON documents for a `pattern` layer. Has no effect on a layer identified by a plain id
 	CacheVersion   string              // Optional. Allows invalidating cache entries when changed. Prefixed into cache keys but not he actual layer name
 	Cache          string              // Optional. The id of a top-level cache to use instead of the default

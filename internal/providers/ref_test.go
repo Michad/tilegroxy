@@ -140,3 +140,7 @@ func Test_Ref_PropagatesAuthRestrictions(t *testing.T) {
 
 	assert.Equal(t, direct.Content, img.Content, "tile behind a ref must be cropped to the same auth bounds as one requested directly")
 }
+
+func refProvider(target string) map[string]any {
+	return map[string]any{"name": "ref", "layer": target}
+}

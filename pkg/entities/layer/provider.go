@@ -60,6 +60,21 @@ type ProviderRegistration interface {
 	DataType(config any) config.DataType
 }
 
+// MetadataProvider is optionally implemented by providers that can describe their own tiles.
+// Layer configuration always takes precedence over the reported values.
+type MetadataProvider interface {
+	Metadata() config.LayerMetadata
+}
+
+// MetadataOf returns a provider's metadata, or the zero value when it has none to offer.
+func MetadataOf(p Provider) config.LayerMetadata {
+	if m, ok := p.(MetadataProvider); ok {
+		return m.Metadata()
+	}
+
+	return config.LayerMetadata{}
+}
+
 var registrationsMu sync.RWMutex
 var registrations = make(map[string]ProviderRegistration)
 

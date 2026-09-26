@@ -15,6 +15,7 @@
 package config
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -220,7 +221,7 @@ func TestValidate_DefaultConfigIsValid(t *testing.T) {
 func TestValidate_MinZoomAboveMaxZoomRejected(t *testing.T) {
 	c := DefaultConfig()
 	minZoom, maxZoom := 10, 4
-	c.Layers = []LayerConfig{{ID: "l1", MinZoom: &minZoom, MaxZoom: &maxZoom}}
+	c.Layers = []LayerConfig{{ID: "l1", LayerMetadata: LayerMetadata{MinZoom: &minZoom, MaxZoom: &maxZoom}}}
 
 	err := c.Validate()
 	require.Error(t, err)
@@ -229,7 +230,7 @@ func TestValidate_MinZoomAboveMaxZoomRejected(t *testing.T) {
 func TestValidate_MinZoomBelowMaxZoomAccepted(t *testing.T) {
 	c := DefaultConfig()
 	minZoom, maxZoom := 4, 10
-	c.Layers = []LayerConfig{{ID: "l1", MinZoom: &minZoom, MaxZoom: &maxZoom}}
+	c.Layers = []LayerConfig{{ID: "l1", LayerMetadata: LayerMetadata{MinZoom: &minZoom, MaxZoom: &maxZoom}}}
 
 	err := c.Validate()
 	require.NoError(t, err)
@@ -237,7 +238,7 @@ func TestValidate_MinZoomBelowMaxZoomAccepted(t *testing.T) {
 
 func TestValidate_InvertedBoundsRejected(t *testing.T) {
 	c := DefaultConfig()
-	c.Layers = []LayerConfig{{ID: "l1", Bounds: BoundsConfig{South: 63, North: 51, West: -10, East: 2}}}
+	c.Layers = []LayerConfig{{ID: "l1", LayerMetadata: LayerMetadata{Bounds: BoundsConfig{South: 63, North: 51, West: -10, East: 2}}}}
 
 	err := c.Validate()
 	require.Error(t, err)
@@ -245,7 +246,7 @@ func TestValidate_InvertedBoundsRejected(t *testing.T) {
 
 func TestValidate_WellFormedBoundsAccepted(t *testing.T) {
 	c := DefaultConfig()
-	c.Layers = []LayerConfig{{ID: "l1", Bounds: BoundsConfig{South: 51, North: 63, West: -10, East: 2}}}
+	c.Layers = []LayerConfig{{ID: "l1", LayerMetadata: LayerMetadata{Bounds: BoundsConfig{South: 51, North: 63, West: -10, East: 2}}}}
 
 	err := c.Validate()
 	require.NoError(t, err)
@@ -390,10 +391,7 @@ func Test_LayerConfig_HasDataTypeZoomBoundsFields(t *testing.T) {
 	minZoom := 4
 	maxZoom := 18
 	cfg := LayerConfig{
-		DataType: DataTypeRaster,
-		MinZoom:  &minZoom,
-		MaxZoom:  &maxZoom,
-		Bounds:   BoundsConfig{South: -10, North: 10, West: -10, East: 10},
+		LayerMetadata: LayerMetadata{DataType: DataTypeRaster, MinZoom: &minZoom, MaxZoom: &maxZoom, Bounds: BoundsConfig{South: -10, North: 10, West: -10, East: 10}},
 	}
 
 	assert.Equal(t, DataTypeRaster, cfg.DataType)
@@ -614,4 +612,79 @@ layers:
 	assert.Equal(t, "other", c.DefaultCache)
 	require.Len(t, c.Layers, 1)
 	assert.Equal(t, "main", c.Layers[0].Cache)
+}
+
+func Test_LoadConfig_LayerMetadata(t *testing.T) {
+	c, err := LoadConfig(`
+layers:
+  - id: meta
+    provider:
+      name: static
+    description: desc
+    attribution: attr
+    version: "1.2"
+    center: [1.5, 2.5, 3]
+    vectorlayers:
+      - id: roads
+        description: Roads
+        minzoom: 2
+        fields:
+          Name: String
+`)
+	require.NoError(t, err)
+
+	md := c.Layers[0].LayerMetadata
+	assert.Equal(t, "desc", md.Description)
+	assert.Equal(t, "attr", md.Attribution)
+	assert.Equal(t, "1.2", md.Version)
+	assert.Equal(t, []float64{1.5, 2.5, 3}, md.Center)
+	require.Len(t, md.VectorLayers, 1)
+	assert.Equal(t, "roads", md.VectorLayers[0].ID)
+	assert.Equal(t, "Roads", md.VectorLayers[0].Description)
+	assert.Equal(t, 2, *md.VectorLayers[0].MinZoom)
+	// Viper lowercases every map key, including field names.
+	assert.Equal(t, map[string]string{"name": "String"}, md.VectorLayers[0].Fields)
+}
+
+func Test_LayerMetadata_WithDefaults(t *testing.T) {
+	low, high := 1, 9
+	defaults := LayerMetadata{
+		DataType: DataTypeMVT,
+		MinZoom:  &low,
+		MaxZoom:  &high,
+		Bounds:   BoundsConfig{South: 1, North: 2, West: 3, East: 4},
+		TileJSONMetadata: TileJSONMetadata{
+			Description:  "d",
+			Attribution:  "a",
+			Version:      "v",
+			Center:       []float64{1, 2, 3},
+			VectorLayers: []VectorLayer{{ID: "roads"}},
+		},
+	}
+
+	assert.Equal(t, defaults, LayerMetadata{}.WithDefaults(defaults))
+	assert.Equal(t, defaults, LayerMetadata{DataType: DataTypeUnknown}.WithDefaults(defaults))
+	assert.Equal(t, LayerMetadata{DataType: DataTypeUnknown}, LayerMetadata{DataType: DataTypeUnknown}.WithDefaults(LayerMetadata{}))
+
+	set := LayerMetadata{
+		DataType: DataTypeRaster,
+		MinZoom:  &high,
+		MaxZoom:  &low,
+		Bounds:   BoundsConfig{North: 1, East: 1},
+		TileJSONMetadata: TileJSONMetadata{
+			Description:  "d2",
+			Attribution:  "a2",
+			Version:      "v2",
+			Center:       []float64{0, 0, 0},
+			VectorLayers: []VectorLayer{},
+		},
+	}
+
+	assert.Equal(t, set, set.WithDefaults(defaults))
+}
+
+func Test_VectorLayer_MarshalJSON_NilFieldsIsObject(t *testing.T) {
+	b, err := json.Marshal(VectorLayer{ID: "roads"})
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"id":"roads","fields":{}}`, string(b))
 }

@@ -78,6 +78,13 @@ func (s CompositeMVTRegistration) Initialize(cfgAny any, deps layer.ProviderDeps
 	return &CompositeMVT{providers: providers, errorMessages: deps.ErrorMessages}, nil
 }
 
+func (t CompositeMVT) Metadata() config.LayerMetadata {
+	md := mergeMetadata(t.providers...)
+	md.DataType = config.DataTypeMVT
+
+	return md
+}
+
 // Close releases the child providers. CompositeMVT holds them directly rather than through a
 // Layer, so they're unreachable from LayerGroup.Close without this.
 func (t CompositeMVT) Close(ctx context.Context) error {

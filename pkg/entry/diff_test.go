@@ -149,6 +149,18 @@ func Test_DiffConfig_ModifiedLayerKeepsProviderStructure(t *testing.T) {
 	require.NotContains(t, provider, "name")
 }
 
+// Metadata fields are embedded in LayerConfig but written flat in a config file
+func Test_DiffConfig_ModifiedLayerMetadataIsFlat(t *testing.T) {
+	oldCfg := diffBaseConfig()
+	newCfg := diffBaseConfig()
+	newCfg.Layers[0].Version = "2"
+
+	res := diffAsMap(t, oldCfg, newCfg)
+
+	layers := res["reload"].(map[string]any)["modified"].(map[string]any)["layers"].(map[string]any)
+	require.Equal(t, map[string]any{"version": "2"}, layers["main"])
+}
+
 // Reordering the layer list changes nothing about what gets served
 func Test_DiffConfig_ReorderedLayersAreNotAChange(t *testing.T) {
 	first := config.LayerConfig{ID: "a", Provider: map[string]any{"name": "static", "color": "FFF"}}

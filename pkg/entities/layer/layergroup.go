@@ -82,7 +82,51 @@ func ConstructLayerGroup(ctx context.Context, cfg config.Config, caches *cache.C
 	layerGroup.layers = layerObjects
 	layerGroup.cacheWriteLimiter = make(chan struct{}, maxConcurrentCacheWrites)
 
+	if err := layerGroup.resolveMetadata(ctx); err != nil {
+		return nil, errors.Join(err, layerGroup.Close(ctx))
+	}
+
 	return &layerGroup, errors.Join(err1, err2)
+}
+
+// Resolves ref targets before the layers referencing them so metadata can flow through refs.
+func (lg *LayerGroup) resolveMetadata(ctx context.Context) error {
+	resolved := make(map[*Layer]bool, len(lg.layers))
+
+	var resolve func(l *Layer) error
+	resolve = func(l *Layer) error {
+		if resolved[l] {
+			return nil
+		}
+
+		// Marked up front so a pattern-based cycle, which validateRefs can't see, still terminates.
+		resolved[l] = true
+
+		var targets []string
+		findRefTargets(l.Config.Provider, &targets)
+
+		for _, target := range targets {
+			if t := lg.FindLayer(ctx, target); t != nil {
+				if err := resolve(t); err != nil {
+					return err
+				}
+			}
+		}
+
+		if err := l.resolveMetadata(); err != nil {
+			return fmt.Errorf("error constructing layer %v: %w", l.ID, err)
+		}
+
+		return nil
+	}
+
+	for _, l := range lg.layers {
+		if err := resolve(l); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func resolveLayerCache(l config.LayerConfig, caches *cache.CacheRegistry, errorMessages config.ErrorMessages) (cache.Cache, error) {

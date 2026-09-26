@@ -16,6 +16,7 @@ package pkg
 import (
 	"testing"
 
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -233,4 +234,13 @@ func TestConstructSingleZoomRangeWorldDoesNotUnderflow(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, uint64(16*16), r.Count())
+}
+
+func TestBoundsConfigRoundTrip(t *testing.T) {
+	cfg := config.BoundsConfig{South: 1, North: 2, West: 3, East: 4}
+
+	b := BoundsFromConfig(cfg)
+
+	assert.Equal(t, Bounds{South: 1, North: 2, West: 3, East: 4, SRID: SRIDWGS84}, b)
+	assert.Equal(t, cfg, b.ToConfig())
 }

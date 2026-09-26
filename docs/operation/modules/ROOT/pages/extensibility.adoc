@@ -198,6 +198,8 @@ func (t Sample) GenerateTile(ctx context.Context, providerContext layer.Provider
 }
 ----
 
+A provider that can describe its own tiles can also implement the optional `layer.MetadataProvider` interface. Its `Metadata()` method returns a `config.LayerMetadata`, the same struct the layer configuration embeds, whose data type, zoom range, bounds, and TileJSON fields act as defaults for the layer. Anything set in the layer configuration still wins. It can be called more than once during startup, so keep it cheap.
+
 From here, implementing the provider is the same as implementing a Custom provider.  The other entities can be specified in the same way.
 
 See the link:https://github.com/Michad/tilegroxy/tree/main/pkg[pkg package] for other structs and methods available for customizing tilegroxy.

@@ -15,6 +15,7 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"net/http"
@@ -117,7 +118,7 @@ func Test_PreviewHandler_UnknownLayer_Returns401(t *testing.T) {
 func Test_PreviewHandler_VectorLayer_NotesInBody(t *testing.T) {
 	cfg := config.DefaultConfig()
 	cfg.Layers = []config.LayerConfig{
-		{ID: "vec", DataType: config.DataTypeMVT, Provider: map[string]interface{}{"name": "proxy", "url": "http://example.com/{z}/{x}/{y}"}},
+		{ID: "vec", LayerMetadata: config.LayerMetadata{DataType: config.DataTypeMVT}, Provider: map[string]interface{}{"name": "proxy", "url": "http://example.com/{z}/{x}/{y}"}},
 	}
 
 	ent := buildTileJSONTestServing(t, cfg)
@@ -142,7 +143,7 @@ func Test_PreviewHandler_VectorLayer_NotesInBody(t *testing.T) {
 func Test_PreviewHandler_VectorLayer_NameOverride_UsesQueryParam(t *testing.T) {
 	cfg := config.DefaultConfig()
 	cfg.Layers = []config.LayerConfig{
-		{ID: "vec", DataType: config.DataTypeMVT, Provider: map[string]interface{}{"name": "proxy", "url": "http://example.com/{z}/{x}/{y}"}},
+		{ID: "vec", LayerMetadata: config.LayerMetadata{DataType: config.DataTypeMVT}, Provider: map[string]interface{}{"name": "proxy", "url": "http://example.com/{z}/{x}/{y}"}},
 	}
 
 	ent := buildTileJSONTestServing(t, cfg)
@@ -162,16 +163,16 @@ func Test_PreviewHandler_VectorLayer_NameOverride_UsesQueryParam(t *testing.T) {
 	body, err := io.ReadAll(res.Body)
 	require.NoError(t, err)
 	assert.Contains(t, string(body), "custom_layer")
-	assert.Contains(t, string(body), "sourceLayerForced =  true")
+	assert.Contains(t, string(body), "sourceLayerKnown =  true")
 }
 
 func Test_PreviewHandler_LayerWithBounds_UsesFitBounds(t *testing.T) {
 	cfg := config.DefaultConfig()
 	cfg.Layers = []config.LayerConfig{
 		{
-			ID:       "bounded",
-			Provider: map[string]interface{}{"name": "static", "color": "FFF"},
-			Bounds:   config.BoundsConfig{South: 10, North: 20, West: 30, East: 40},
+			ID:            "bounded",
+			Provider:      map[string]interface{}{"name": "static", "color": "FFF"},
+			LayerMetadata: config.LayerMetadata{Bounds: config.BoundsConfig{South: 10, North: 20, West: 30, East: 40}},
 		},
 	}
 
@@ -383,4 +384,47 @@ func Test_PreviewHandler_IgnoresReloadedServerConfig(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(body), `http:\/\/example.com\/tiles\/main\/{z}\/{x}\/{y}`)
 	assert.NotContains(t, string(body), "maps")
+}
+
+func Test_PreviewHandler_NoMetadata_ProbesGuessedLayer(t *testing.T) {
+	cfg := config.DefaultConfig()
+	cfg.Layers = []config.LayerConfig{
+		{ID: "vec", LayerMetadata: config.LayerMetadata{DataType: config.DataTypeMVT}, Provider: map[string]interface{}{"name": "proxy", "url": "http://example.com/{z}/{x}/{y}"}},
+	}
+
+	h := newPreviewHandler(buildTileJSONTestServing(t, cfg))
+
+	req := httptest.NewRequest(http.MethodGet, "http://internal-host/preview/vec", nil).WithContext(pkg.BackgroundContext())
+	req.SetPathValue("layer", "vec")
+	w := httptest.NewRecorder()
+
+	h.ServeHTTP(w, req)
+
+	res := w.Result()
+	defer func() { require.NoError(t, res.Body.Close()) }()
+
+	body, err := io.ReadAll(res.Body)
+	require.NoError(t, err)
+	assert.Contains(t, string(body), `["vec"]`)
+	assert.Contains(t, string(body), "sourceLayerKnown =  false")
+	assert.Contains(t, string(body), "var bounds = null")
+}
+
+func Test_PreviewSourceLayers(t *testing.T) {
+	assert.Empty(t, previewSourceLayers(nil))
+	assert.Empty(t, previewSourceLayers([]config.VectorLayer{}))
+	assert.Equal(t, []string{"roads", "water"}, previewSourceLayers([]config.VectorLayer{{ID: "roads"}, {}, {ID: "water"}}))
+}
+
+func Test_PreviewTemplate_CenterWithoutBounds(t *testing.T) {
+	var buf bytes.Buffer
+	require.NoError(t, previewPageTemplate.Execute(&buf, previewTemplateData{
+		LayerName:          "l",
+		Center:             []float64{12.5, 41.9, 6},
+		IsVector:           true,
+		VectorSourceLayers: []string{"a"},
+	}))
+
+	assert.Contains(t, buf.String(), "var center = [12.5,41.9,6]")
+	assert.Contains(t, buf.String(), "var bounds = null")
 }

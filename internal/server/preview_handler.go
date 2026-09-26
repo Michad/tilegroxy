@@ -15,7 +15,6 @@
 package server
 
 import (
-	"context"
 	_ "embed"
 	"html/template"
 	"log/slog"
@@ -23,6 +22,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
 type previewHandler struct {
@@ -35,19 +35,21 @@ func newPreviewHandler(gen *generation) *previewHandler {
 
 // previewTemplateData is what previewPageTemplate renders. Fields are exported only because html/template requires it
 type previewTemplateData struct {
-	LayerName         string
-	TileURL           string
-	HasBounds         bool
-	South             float64
-	North             float64
-	West              float64
-	East              float64
-	MinZoom           int
-	MaxZoom           int
-	IsVector          bool
-	VectorSourceLayer string
-	SourceLayerForced bool
-	Attribution       string
+	LayerName          string
+	TileURL            string
+	HasBounds          bool
+	South              float64
+	North              float64
+	West               float64
+	East               float64
+	Center             []float64 // longitude, latitude, optional zoom
+	MinZoom            int
+	MaxZoom            int
+	IsVector           bool
+	VectorSourceLayers []string
+	SourceLayerKnown   bool
+	FromMetadata       bool
+	Attribution        string
 }
 
 //go:embed preview_handler.html.tmpl
@@ -55,39 +57,21 @@ var previewPageHTML string
 
 var previewPageTemplate = template.Must(template.New("preview").Parse(previewPageHTML))
 
-func previewZoomRange(cfg config.LayerConfig) (int, int) {
-	minZoom := 0
-	if cfg.MinZoom != nil {
-		minZoom = *cfg.MinZoom
-	}
+func previewBounds(doc layer.TileJSONDocument) (bool, pkg.Bounds) {
+	bounds := pkg.Bounds{West: doc.Bounds[0], South: doc.Bounds[1], East: doc.Bounds[2], North: doc.Bounds[3], SRID: pkg.SRIDWGS84}
 
-	maxZoom := pkg.MaxZoom
-	if cfg.MaxZoom != nil {
-		maxZoom = *cfg.MaxZoom
-	}
-
-	return minZoom, maxZoom
+	return bounds != pkg.WorldBounds(), bounds
 }
 
-func previewBounds(ctx context.Context, cfg config.LayerConfig) (bool, pkg.Bounds) {
-	hasBounds := cfg.Bounds != (config.BoundsConfig{})
-	bounds := pkg.WorldBounds()
-	if hasBounds {
-		bounds = pkg.Bounds{
-			South: cfg.Bounds.South,
-			North: cfg.Bounds.North,
-			West:  cfg.Bounds.West,
-			East:  cfg.Bounds.East,
-			SRID:  pkg.SRIDWGS84,
+func previewSourceLayers(vectorLayers []config.VectorLayer) []string {
+	ids := make([]string, 0, len(vectorLayers))
+	for _, v := range vectorLayers {
+		if v.ID != "" {
+			ids = append(ids, v.ID)
 		}
 	}
 
-	if allowedArea := areaRestriction(ctx); allowedArea != nil {
-		bounds = bounds.IntersectionWith(*allowedArea)
-		hasBounds = true
-	}
-
-	return hasBounds, bounds
+	return ids
 }
 
 func (h *previewHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -133,34 +117,44 @@ func (h *previewHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	tilePathPrefix := cur.tilePathPrefix()
 	tileURL := publicURL.build(tilePathPrefix + "/" + name + "/{z}/{x}/{y}")
 
-	minZoom, maxZoom := previewZoomRange(l.Config)
-	hasBounds, bounds := previewBounds(ctx, l.Config)
+	doc := l.BuildTileJSON(name, nil, areaRestriction(ctx))
+	hasBounds, bounds := previewBounds(doc)
 
-	// Best-effort guess at the MVT source-layer name inside the tile, matching the postgis_mvt
-	// Provider's own default of falling back to the layer's name. The page probes a sample tile
-	// to check this guess and falls back further on its own, unless the operator overrides it
-	// with ?name=, in which case we trust that value outright and skip the client-side probe.
-	sourceLayer := name
-	sourceLayerForced := false
+	// Without ?name= or provider metadata, guess the source-layer the way postgis_mvt defaults it;
+	// the page then probes a sample tile to verify the guess.
+	sourceLayers := []string{name}
+	sourceLayerKnown := false
+	fromMetadata := false
 	if override := req.URL.Query().Get("name"); override != "" {
-		sourceLayer = override
-		sourceLayerForced = true
+		sourceLayers = []string{override}
+		sourceLayerKnown = true
+	} else if ids := previewSourceLayers(doc.VectorLayers); len(ids) > 0 {
+		sourceLayers = ids
+		sourceLayerKnown = true
+		fromMetadata = true
+	}
+
+	var center []float64
+	if !hasBounds && len(doc.Center) >= 2 {
+		center = doc.Center
 	}
 
 	data := previewTemplateData{
-		LayerName:         name,
-		TileURL:           tileURL,
-		HasBounds:         hasBounds,
-		South:             bounds.South,
-		North:             bounds.North,
-		West:              bounds.West,
-		East:              bounds.East,
-		MinZoom:           minZoom,
-		MaxZoom:           maxZoom,
-		IsVector:          l.DataType == config.DataTypeMVT,
-		VectorSourceLayer: sourceLayer,
-		SourceLayerForced: sourceLayerForced,
-		Attribution:       l.Config.Attribution,
+		LayerName:          name,
+		TileURL:            tileURL,
+		HasBounds:          hasBounds,
+		South:              bounds.South,
+		North:              bounds.North,
+		West:               bounds.West,
+		East:               bounds.East,
+		Center:             center,
+		MinZoom:            doc.MinZoom,
+		MaxZoom:            doc.MaxZoom,
+		IsVector:           l.DataType == config.DataTypeMVT,
+		VectorSourceLayers: sourceLayers,
+		SourceLayerKnown:   sourceLayerKnown,
+		FromMetadata:       fromMetadata,
+		Attribution:        doc.Attribution,
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")

@@ -10,9 +10,9 @@ The preview page is a development aid and is only available when xref:configurat
 
 == The Map
 
-The page loads MapLibre GL JS from CDN and points a layer at the `/tiles/\{layer}/\{z}/\{x}/\{y}` endpoint.  If xref:tilejson.adoc[TileJSON] is enabled, it will use the configured `baseURL`. The map is framed to the layer's configured bounds/zoom, falling back to the whole world when bounds aren't set.
+The page loads MapLibre GL JS from CDN and points a layer at the `/tiles/\{layer}/\{z}/\{x}/\{y}` endpoint.  If xref:tilejson.adoc[TileJSON] is enabled, it will use the configured metadata (such as bounds) to frame it. When there are no bounds the map uses the provider's center if it has one, otherwise the whole world.
 
-A layer configured with `datatype: mvt` is rendered with a plain outline style. We make an effort to guess the layer name (the layer inside the MVT tiles themselves). If it guesses wrong, styling won't apply and you'll see nothing. Add `?name=` to the URL to set the source-layer name explicitly instead.
+A vector layer is rendered with a plain outline style. If the provider lists the layers inside its tiles (the `vectorlayers` metadata), each of those layers is drawn in its own color. Otherwise we make an effort to guess the layer name (the layer inside the MVT tiles themselves). If it guesses wrong, styling won't apply and you'll see nothing. Add `?name=` to the URL to set the source-layer name explicitly instead.
 
 == Security
 
