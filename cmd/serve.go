@@ -58,7 +58,14 @@ func runServe(cmd *cobra.Command, _ []string) {
 		return
 	}
 
-	err = tg.Serve(cfg, tg.ServeOptions{}, out, &reloadPtr)
+	reloadSource, err := reloadSourceFromCommand(cmd)
+	if err != nil {
+		fmt.Fprintf(out, "Error: %v\n", err.Error())
+		exit(1)
+		return
+	}
+
+	err = tg.Serve(cfg, tg.ServeOptions{ReloadConfig: reloadSource}, out, &reloadPtr)
 
 	if err != nil {
 		fmt.Fprintf(out, "Error: %v\n", err.Error())
@@ -73,10 +80,6 @@ func init() {
 
 func initServe() {
 	rootCmd.AddCommand(serveCmd)
-	serveCmd.Flags().Bool(reloadFlag, false, "Automatically reload configuration upon changes")
+	serveCmd.Flags().Bool(reloadFlag, false, "Reload configuration upon file changes or SIGHUP")
 	serveCmd.MarkFlagsMutuallyExclusive("raw-config", reloadFlag)
-	serveCmd.MarkFlagsMutuallyExclusive("remote-provider", reloadFlag)
-	serveCmd.MarkFlagsMutuallyExclusive("remote-endpoint", reloadFlag)
-	serveCmd.MarkFlagsMutuallyExclusive("remote-path", reloadFlag)
-	serveCmd.MarkFlagsMutuallyExclusive("remote-type", reloadFlag)
 }

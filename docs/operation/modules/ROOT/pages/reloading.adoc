@@ -14,7 +14,36 @@ Buffered xref:configuration/analytics/index.adoc[analytics] events are flushed b
 
 Tilegroxy uses link:https://github.com/fsnotify/fsnotify[fsnotify] to detect when configuration has changed. It is possible for the file change event to reach tilegroxy before the file has finished being written. Tilegroxy waits 1 second before applying changes to avoid this but if you are using a filesystem with especially slow writes it is possible tilegroxy will attempt to read the configuration too early. This will usually result in an invalid configuration which will be ignored but could result in operating against incorrect configuration.  It is therefore recommended to avoid using hot reload if you're at risk of slow writes, especially if using YAML configurations.
 
-Automatic configuration reloading will not work with remote providers (such as etcd) or certain file systems that do not support file notifications (such as NFS, SMB, or FUSE).
+Automatic configuration reloading will not work with remote providers (such as etcd) or certain file systems that do not support file notifications (such as NFS, SMB, or FUSE). Use a reload signal in those cases.
+
+== Reload signal
+
+When `--hot-reload` is enabled, sending tilegroxy the `SIGHUP` signal re-reads the configuration from its original source and reloads it the same way a file change does. This lets you control exactly when a reload happens, such as after a new secret or datastore has been deployed.
+
+This is the only way to reload configuration pulled from a remote provider, since remote configuration is not watched for changes. `--hot-reload` cannot be combined with `--raw-config` since that configuration can't change.
+
+A reload that fails (the configuration can't be read, is invalid, or an entity fails to initialize) is logged and the current configuration keeps serving. Signals received while a reload is already running are combined into a single reload that runs once the current one finishes.
+
+Without `--hot-reload`, `SIGHUP` is not handled and terminates the process.
+
+Reload signals are only supported on Linux, macOS, and other Unix-like systems. Windows never delivers `SIGHUP`.
+
+Common ways to send the signal:
+
+[source,bash]
+----
+kill -HUP <pid>
+docker kill --signal=HUP <container>
+----
+
+With systemd, add the following to the service unit so `systemctl reload tilegroxy` triggers a reload:
+
+[source,ini]
+----
+[Service]
+ExecStart=/usr/local/bin/tilegroxy serve --hot-reload -c /etc/tilegroxy/tilegroxy.yml
+ExecReload=/bin/kill -HUP $MAINPID
+----
 
 == Supported Configuration
 
@@ -33,7 +62,7 @@ Every other section, including xref:configuration/server.adoc[server], is fixed 
 
 == Secrets
 
-xref:configuration/secret/index.adoc[Secret] has a `watch` option that, when set, can trigger a reload using the same mechanism described here. One key exception is that when a secret changes, the configuration itself *will not* change, even if the configuration has changed on disk. If you are using both secret reloading and configuration reloading, you may want to consider the timing of your changes to avoid excessive reloads.
+xref:configuration/secret/index.adoc[Secret] has a `watch` option that, when set, can trigger a reload using the same mechanism described here. One key exception is that when a secret changes, the configuration itself *will not* change, even if the configuration has changed on disk or remotely. If you are using both secret reloading and configuration reloading, you may want to consider the timing of your changes to avoid excessive reloads.
 
 == Shutdown
 

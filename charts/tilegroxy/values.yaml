@@ -59,6 +59,7 @@ existingConfigMap: ""
 configPath: /tilegroxy/config/tilegroxy.yml
 
 # Watch the config file and hot reload supported sections without a restart.
+# Also reloads when the container receives SIGHUP.
 # Off by default: ConfigMap updates land as an atomic symlink swap that fsnotify
 # does report, but core sections (server, telemetry) still need a restart, so a
 # rollout is the predictable path. See

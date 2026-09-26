@@ -176,6 +176,9 @@ the pod template and triggers a normal rollout) is the more predictable path. Se
 [reloading documentation](https://tilegroxy.com/operation/reloading.html) for the
 caveats, particularly on NFS and other filesystems without change notification.
 
+With `hotReload` on, a reload can also be triggered on demand by sending `SIGHUP` to the
+container, for example `kubectl exec <pod> -- kill -HUP 1`.
+
 ## Values
 
 | Key | Default | Description |

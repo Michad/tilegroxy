@@ -19,8 +19,11 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"os"
+	"os/signal"
 	"runtime/debug"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/Michad/tilegroxy/internal/audit"
@@ -31,9 +34,14 @@ import (
 )
 
 type ServeOptions struct {
+	// ReloadConfig re-reads the configuration from its original source. When set, SIGHUP triggers a reload
+	ReloadConfig func() (config.Config, error)
 }
 
-func Serve(cfg *config.Config, _ ServeOptions, _ io.Writer, reloadPtr *func(*config.Config) error) error {
+// Windows never delivers SIGHUP, so signal-driven reload is Unix only
+var reloadSignals = []os.Signal{syscall.SIGHUP}
+
+func Serve(cfg *config.Config, opts ServeOptions, _ io.Writer, reloadPtr *func(*config.Config) error) error {
 	var nextReloadPtr func(*config.Config, *entities.Entities) error
 
 	tracker := &configTracker{current: cfg}
@@ -48,7 +56,61 @@ func Serve(cfg *config.Config, _ ServeOptions, _ io.Writer, reloadPtr *func(*con
 		return err
 	}
 
+	if opts.ReloadConfig != nil {
+		stop := watchReloadSignal(opts.ReloadConfig, reload)
+		defer stop()
+	}
+
 	return server.ListenAndServe(cfg, ent, &nextReloadPtr)
+}
+
+// One goroutine and a one-slot channel serialize reloads and collapse signals received mid-reload into one follow-up
+func watchReloadSignal(load func() (config.Config, error), reload func(*config.Config, string) error) func() {
+	sigs := make(chan os.Signal, 1)
+	done := make(chan struct{})
+
+	signal.Notify(sigs, reloadSignals...)
+
+	go func() {
+		for {
+			select {
+			case <-done:
+				return
+			case <-sigs:
+				reloadFromSource(load, reload)
+			}
+		}
+	}()
+
+	return func() {
+		signal.Stop(sigs)
+		close(done)
+	}
+}
+
+func reloadFromSource(load func() (config.Config, error), reload func(*config.Config, string) error) {
+	ctx := pkg.BackgroundContext()
+
+	defer func() {
+		if r := recover(); r != nil {
+			err := fmt.Errorf("config reload panic: %v\n%s", r, debug.Stack())
+			audit.ConfigReload(ctx, audit.ReasonSignal, err)
+			slog.ErrorContext(ctx, "Failed to reload configuration: "+err.Error())
+		}
+	}()
+
+	slog.InfoContext(ctx, "Reloading configuration because a reload signal was received")
+
+	newCfg, err := load()
+	if err != nil {
+		audit.ConfigReload(ctx, audit.ReasonSignal, err)
+	} else {
+		err = reload(&newCfg, audit.ReasonSignal)
+	}
+
+	if err != nil {
+		slog.ErrorContext(ctx, "Failed to reload configuration: "+err.Error())
+	}
 }
 
 // A rotated secret re-resolves whichever config is live, which is not always the one this process

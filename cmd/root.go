@@ -73,38 +73,56 @@ func initRoot() {
 	rootCmd.MarkFlagsMutuallyExclusive("config", "raw-config", "remote-provider")
 }
 
-// A common utility for use by multiple commands to bootstrap the core application config.
-// reloadFunc is optional if hot reloading is not supported in triggering command
-func extractConfigFromCommand(cmd *cobra.Command, reloadFunc func(c config.Config, err error)) (*config.Config, error) {
-	var err error
-	configPath, err1 := cmd.Flags().GetString("config")
-	configRaw, err2 := cmd.Flags().GetString("raw-config")
-	remoteProvider, err3 := cmd.Flags().GetString("remote-provider")
-	remoteEndpoint, err4 := cmd.Flags().GetString("remote-endpoint")
-	remotePath, err5 := cmd.Flags().GetString("remote-path")
-	remoteType, err6 := cmd.Flags().GetString("remote-type")
+type configFlags struct {
+	path           string
+	raw            string
+	remoteProvider string
+	remoteEndpoint string
+	remotePath     string
+	remoteType     string
+	reload         bool
+}
+
+func readConfigFlags(cmd *cobra.Command) (configFlags, error) {
+	var f configFlags
+	var err1, err2, err3, err4, err5, err6 error
+
+	f.path, err1 = cmd.Flags().GetString("config")
+	f.raw, err2 = cmd.Flags().GetString("raw-config")
+	f.remoteProvider, err3 = cmd.Flags().GetString("remote-provider")
+	f.remoteEndpoint, err4 = cmd.Flags().GetString("remote-endpoint")
+	f.remotePath, err5 = cmd.Flags().GetString("remote-path")
+	f.remoteType, err6 = cmd.Flags().GetString("remote-type")
 
 	reload, err := cmd.Flags().GetBool(reloadFlag)
 	if err != nil {
 		// This is only defined in the serve command so expect it to fail in commands that don't support reload
 		reload = false
 	}
+	f.reload = reload
 
-	if err = errors.Join(err1, err2, err3, err4, err5, err6); err != nil {
+	return f, errors.Join(err1, err2, err3, err4, err5, err6)
+}
+
+// A common utility for use by multiple commands to bootstrap the core application config.
+// reloadFunc is optional if hot reloading is not supported in triggering command
+func extractConfigFromCommand(cmd *cobra.Command, reloadFunc func(c config.Config, err error)) (*config.Config, error) {
+	f, err := readConfigFlags(cmd)
+	if err != nil {
 		return nil, err
 	}
 
 	var cfg config.Config
 
 	switch {
-	case reload && reloadFunc != nil:
-		cfg, err = config.LoadAndWatchConfigFromFile(configPath, reloadFunc)
-	case configRaw != "":
-		cfg, err = config.LoadConfig(configRaw)
-	case remoteProvider != "":
-		cfg, err = config.LoadConfigFromRemote(remoteProvider, remoteEndpoint, remotePath, remoteType)
-	case configPath != "":
-		cfg, err = config.LoadConfigFromFile(configPath)
+	case f.raw != "":
+		cfg, err = config.LoadConfig(f.raw)
+	case f.remoteProvider != "":
+		cfg, err = config.LoadConfigFromRemote(f.remoteProvider, f.remoteEndpoint, f.remotePath, f.remoteType)
+	case f.reload && reloadFunc != nil:
+		cfg, err = config.LoadAndWatchConfigFromFile(f.path, reloadFunc)
+	case f.path != "":
+		cfg, err = config.LoadConfigFromFile(f.path)
 	default:
 		err = errors.New("no configuration supplied")
 	}
@@ -113,4 +131,22 @@ func extractConfigFromCommand(cmd *cobra.Command, reloadFunc func(c config.Confi
 		return nil, err
 	}
 	return &cfg, nil
+}
+
+// Re-reads the configuration from wherever the command loaded it. Nil when reloading wasn't requested
+func reloadSourceFromCommand(cmd *cobra.Command) (func() (config.Config, error), error) {
+	f, err := readConfigFlags(cmd)
+	if err != nil || !f.reload {
+		return nil, err
+	}
+
+	if f.remoteProvider != "" {
+		return func() (config.Config, error) {
+			return config.LoadConfigFromRemote(f.remoteProvider, f.remoteEndpoint, f.remotePath, f.remoteType)
+		}, nil
+	}
+
+	return func() (config.Config, error) {
+		return config.LoadConfigFromFile(f.path)
+	}, nil
 }
