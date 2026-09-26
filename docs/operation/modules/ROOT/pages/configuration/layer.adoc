@@ -57,7 +57,7 @@ Configuration options:
 | false
 
 | allowcoalesce
-| Whether to allow concurrent requests for the same tile to be combined into one tile generation call. This includes requests triggered by different users. This helps avoid your upstream provider being spammed if, for whatever reason, your clients spam a single tile. However, if your tiles are customized per user/tenant, you will want to set this false. Left unset, we do our best to auto-detect when to coalesce and when not to. However it's strongly recommended to explicitly set this false when different users should receive different tiles.
+| Whether to allow concurrent requests for the same tile to be combined into one tile generation call. This includes requests triggered by different users. If your tiles are customized per user/tenant, you will want to set this false. See xref:../howto/user-dynamic.adoc#_coalesce[this how-to] for further information
 | bool
 | No
 | Auto (based on the layer's cache and provider)
@@ -70,19 +70,31 @@ Configuration options:
 
 
 | description
-| Populates the `description` field of this layer's xref:configuration/tilejson.adoc[TileJSON] document. Has no effect unless TileJSON is enabled
+| Defines a description of this layer for metadata purposes. Currently has no effect unless TileJSON is enabled. Some providers may supply a default if unset here
 | string
 | No
 | None
 
 | attribution
-| Populates the `attribution` field of this layer's xref:configuration/tilejson.adoc[TileJSON] document. Has no effect unless TileJSON is enabled
+|  Defines an attribution of this layer for metadata purposes. Currently has no effect unless TileJSON is enabled. Some providers may supply a default if unset here
 | string
 | No
 | None
 
+| center
+| Specified as a triplet of longitude, latitude, zoom. Defines a center (or representative) point of this layer. Also used by the xref:commands/test.adoc[test command] to pick a default tile. Some providers may supply a default if unset here
+| float[]
+| No
+| None
+
+| vectorlayers
+| Only valid for vector data types. Defines the sub-layers inside the tiles matching the tilejson `vector_layers` format (`id`, `fields`, `description`, `minzoom`, and `maxzoom`). Currently only used for metadata purposes and has no effect unless TileJSON is enabled. Some providers may supply a default if unset here.  
+| Object[]
+| No
+| None
+
 | datatype
-| Declares what type of tiles this layer returns. This is inferred from the provider when possible. If this contradicts the provider (for example datatype is raster but the provider always produces vector tiles) startup fails. Required if it can't be inferred and a feature relying on it (such as bounds) is used. Also determines whether xref:configuration/error.adoc[error responses] for this layer use the raster or vector-tile error images
+| Declares what type of tiles this layer returns. This is inferred from the provider when possible. If this contradicts the provider (for example datatype is raster but the provider always produces vector tiles) startup fails. Required if it can't be inferred and a feature relying on it (such as bounds) is used. Also determines the data type of xref:configuration/error.adoc[error responses] for this layer
 | string, one of: raster, mvt
 | No
 | Taken from the provider
@@ -91,13 +103,13 @@ Configuration options:
 | Requests for a zoom level below this are rejected as out of bounds
 | int
 | No
-| No lower limit
+| Taken from the provider if it supplies one, otherwise no lower limit
 
 | maxzoom
 | Requests for a zoom level above this are rejected as out of bounds
 | int
 | No
-| No upper limit
+| Taken from the provider if it supplies one, otherwise no upper limit
 
 | bounds
 | Restricts this layer to a geographic area. When set, the layer's provider is automatically cropped (via xref:configuration/provider/crop.adoc[crop] or xref:configuration/provider/cropmvt.adoc[cropmvt]). This requires the layer's data type to be resolvable

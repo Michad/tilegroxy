@@ -18,6 +18,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"image"
 	"image/png"
@@ -26,6 +27,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
+	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
 	"github.com/anthonynsimon/bild/transform"
 )
 
@@ -224,4 +226,16 @@ func resizeImages(ctx context.Context, img image.Image, img2 image.Image) (image
 	}
 
 	return img, img2
+}
+
+// The implicit layer bounds wrapper must not hide the primary's metadata from the layer.
+func (t Crop) Metadata() config.LayerMetadata {
+	return layer.MetadataOf(t.Primary)
+}
+
+func (t Crop) Close(ctx context.Context) error {
+	return errors.Join(
+		lifecycle.CloseIfCloser(ctx, t.Primary),
+		lifecycle.CloseIfCloser(ctx, t.Secondary),
+	)
 }

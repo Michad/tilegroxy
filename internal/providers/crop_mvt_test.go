@@ -15,6 +15,7 @@
 package providers
 
 import (
+	"context"
 	"testing"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -267,4 +268,17 @@ func Test_CropMvt_ExecuteCropWithAuth(t *testing.T) {
 	require.True(t, ok, "expected a polygon, got %T", outLayers[0].Features[0].Geometry)
 	// The bounds from auth crop to the west half of the world
 	assertBound(t, 0, 0, 2048, 4096, poly.Bound())
+}
+
+func Test_CropMvt_ForwardsPrimaryMetadata(t *testing.T) {
+	md := config.LayerMetadata{TileJSONMetadata: config.TileJSONMetadata{Description: "from primary"}}
+
+	assert.Equal(t, md, CropMvt{Primary: metadataOnlyProvider{md: md}}.Metadata())
+}
+
+func Test_CropMvt_ClosesPrimary(t *testing.T) {
+	var closed bool
+
+	require.NoError(t, CropMvt{Primary: closeRecordingProvider{closed: &closed}}.Close(context.Background()))
+	assert.True(t, closed)
 }

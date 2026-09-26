@@ -122,7 +122,7 @@ func Test_LayerGroup_PurgeTile_UnknownLayerErrors(t *testing.T) {
 func Test_LayerGroup_PurgeTile_OutOfZoomRangeErrors(t *testing.T) {
 	c := &removeRecordingCache{}
 	minZoom := 4
-	lg := purgeTestLayerGroup(t, c, config.LayerConfig{MinZoom: &minZoom})
+	lg := purgeTestLayerGroup(t, c, config.LayerConfig{LayerMetadata: config.LayerMetadata{MinZoom: &minZoom}})
 
 	_, err := lg.PurgeTile(context.Background(), pkg.TileRequest{LayerName: "test", Z: 1, X: 0, Y: 0})
 

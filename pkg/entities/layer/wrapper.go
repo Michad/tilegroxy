@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
 	"go.opentelemetry.io/otel/codes"
 )
@@ -61,4 +62,8 @@ func (t ProviderWrapper) GenerateTile(ctx context.Context, providerContext Provi
 // the underlying Closer.
 func (t ProviderWrapper) Close(ctx context.Context) error {
 	return lifecycle.CloseIfCloser(ctx, t.Provider)
+}
+
+func (t ProviderWrapper) Metadata() config.LayerMetadata {
+	return MetadataOf(t.Provider)
 }

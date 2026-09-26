@@ -15,6 +15,7 @@
 package layer
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -28,6 +29,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/Michad/tilegroxy/pkg/entities/datastore"
+	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
 	"github.com/Michad/tilegroxy/pkg/static"
 	"go.opentelemetry.io/otel"
@@ -210,6 +212,7 @@ type Layer struct {
 	tileAuthCounter    metric.Int64Counter
 	tileErrorCounter   metric.Int64Counter
 	tileSuccessCounter metric.Int64Counter
+	metadata           config.LayerMetadata // As reported by the provider
 }
 
 func resolveDataType(rawConfig config.LayerConfig, errorMessages config.ErrorMessages) (config.DataType, error) {
@@ -218,19 +221,20 @@ func resolveDataType(rawConfig config.LayerConfig, errorMessages config.ErrorMes
 		return config.DataTypeUnknown, err
 	}
 
-	layerDataType := rawConfig.DataType
+	return reconcileDataType(rawConfig.DataType, providerDataType, errorMessages)
+}
 
-	// An explicit datatype that disagrees with what the provider actually produces is a config error.
-	if layerDataType != "" && layerDataType != config.DataTypeUnknown &&
-		providerDataType != config.DataTypeUnknown && layerDataType != providerDataType {
-		return config.DataTypeUnknown, fmt.Errorf(errorMessages.InvalidParam, "layer.datatype", string(layerDataType))
+// An explicit datatype that disagrees with what the provider actually produces is a config error.
+func reconcileDataType(configured, reported config.DataType, errorMessages config.ErrorMessages) (config.DataType, error) {
+	if configured == "" || configured == config.DataTypeUnknown {
+		return cmp.Or(reported, configured), nil
 	}
 
-	if layerDataType == "" || layerDataType == config.DataTypeUnknown {
-		return providerDataType, nil
+	if reported != "" && reported != config.DataTypeUnknown && configured != reported {
+		return config.DataTypeUnknown, fmt.Errorf(errorMessages.InvalidParam, "layer.datatype", string(configured))
 	}
 
-	return layerDataType, nil
+	return configured, nil
 }
 
 func constructCropWrappedProvider(rawConfig config.LayerConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup, datatype config.DataType, datastores *datastore.DatastoreRegistry) (Provider, error) {
@@ -240,13 +244,8 @@ func constructCropWrappedProvider(rawConfig config.LayerConfig, errorMessages co
 	}
 
 	wrapperConfig := map[string]interface{}{
-		"name": wrapperName,
-		"bounds": pkg.Bounds{
-			South: rawConfig.Bounds.South,
-			North: rawConfig.Bounds.North,
-			West:  rawConfig.Bounds.West,
-			East:  rawConfig.Bounds.East,
-		},
+		"name":    wrapperName,
+		"bounds":  pkg.BoundsFromConfig(rawConfig.Bounds),
 		"primary": rawConfig.Provider,
 	}
 
@@ -415,6 +414,11 @@ func ConstructLayer(ctx context.Context, rawConfig config.LayerConfig, defaultCl
 		return nil, fmt.Errorf(errorMessages.ParamRequired, "layer.datatype")
 	}
 
+	segments, validator, err := resolvePatternAndValidator(rawConfig, errorMessages)
+	if err != nil {
+		return nil, err
+	}
+
 	var provider Provider
 	if boundsSet {
 		provider, err = constructCropWrappedProvider(rawConfig, errorMessages, layerGroup, datatype, datastores)
@@ -432,14 +436,33 @@ func ConstructLayer(ctx context.Context, rawConfig config.LayerConfig, defaultCl
 
 	allowCoalesce := resolveAllowCoalesce(rawConfig, layerCache)
 
-	segments, validator, err := resolvePatternAndValidator(rawConfig, errorMessages)
+	tileAllCounter, tileAuthCounter, tileErrorCounter, tileSuccessCounter, err := constructLayerCounters(rawConfig.ID)
 	if err != nil {
-		return nil, err
+		return nil, errors.Join(err, lifecycle.CloseIfCloser(ctx, provider))
 	}
 
-	tileAllCounter, tileAuthCounter, tileErrorCounter, tileSuccessCounter, err := constructLayerCounters(rawConfig.ID)
+	l := &Layer{rawConfig.ID, segments, validator, rawConfig, provider, nil, errorMessages, datatype, ProviderContext{}, sync.Mutex{}, allowCoalesce, resolveCacheControlFacts(rawConfig, layerCache), tileAllCounter, tileAuthCounter, tileErrorCounter, tileSuccessCounter, config.LayerMetadata{}}
 
-	return &Layer{rawConfig.ID, segments, validator, rawConfig, provider, nil, errorMessages, datatype, ProviderContext{}, sync.Mutex{}, allowCoalesce, resolveCacheControlFacts(rawConfig, layerCache), tileAllCounter, tileAuthCounter, tileErrorCounter, tileSuccessCounter}, err
+	if err := l.resolveMetadata(); err != nil {
+		return nil, errors.Join(err, lifecycle.CloseIfCloser(ctx, provider))
+	}
+
+	return l, nil
+}
+
+// Rerun once referenced layers exist, since a ref provider's metadata comes from its target layer.
+func (l *Layer) resolveMetadata() error {
+	metadata := MetadataOf(l.Provider)
+
+	datatype, err := reconcileDataType(l.DataType, metadata.DataType, l.ErrorMessages)
+	if err != nil {
+		return err
+	}
+
+	l.DataType = datatype
+	l.metadata = metadata
+
+	return nil
 }
 
 // getProviderContext returns a snapshot of the current provider context, re-authenticating
@@ -505,23 +528,40 @@ func (l *Layer) IsPattern() bool {
 	return l.Config.Pattern != "" && l.Config.Pattern != l.Config.ID
 }
 
-// CheckZoomBounds rejects a request outside this layer's configured minzoom/maxzoom. Called
-// before the cache lookup so a cached tile can't bypass a zoom limit added after it was cached.
+// CheckZoomBounds rejects a request outside this layer's minzoom/maxzoom. Called before the cache
+// lookup so a cached tile can't bypass a zoom limit added after it was cached.
 func (l *Layer) CheckZoomBounds(tileRequest pkg.TileRequest) error {
-	minZoom := 0
-	if l.Config.MinZoom != nil {
-		minZoom = *l.Config.MinZoom
-	}
-	maxZoom := pkg.MaxZoom
-	if l.Config.MaxZoom != nil {
-		maxZoom = *l.Config.MaxZoom
-	}
+	minZoom, maxZoom := l.zoomRange()
 
 	if tileRequest.Z < minZoom || tileRequest.Z > maxZoom {
 		return pkg.RangeError{ParamName: "z", MinValue: float64(minZoom), MaxValue: float64(maxZoom)}
 	}
 
 	return nil
+}
+
+func (l *Layer) zoomRange() (int, int) {
+	md := l.Metadata()
+
+	minZoom := 0
+	if md.MinZoom != nil {
+		minZoom = *md.MinZoom
+	}
+
+	maxZoom := pkg.MaxZoom
+	if md.MaxZoom != nil {
+		maxZoom = *md.MaxZoom
+	}
+
+	return minZoom, maxZoom
+}
+
+// Metadata returns what the provider reports about its tiles, overridden by this layer's configuration.
+func (l *Layer) Metadata() config.LayerMetadata {
+	md := l.Config.WithDefaults(l.metadata)
+	md.DataType = l.DataType
+
+	return md
 }
 
 func (l *Layer) RenderTileNoCache(ctx context.Context, tileRequest pkg.TileRequest) (*pkg.Image, error) {

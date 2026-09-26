@@ -28,9 +28,9 @@ func Test_RenderTileNoCache_BelowMinZoom_ReturnsRangeError(t *testing.T) {
 
 	minZoom := 4
 	rawConfig := config.LayerConfig{
-		ID:       "z1",
-		MinZoom:  &minZoom,
-		Provider: map[string]any{"name": "fixed-zoom-1"},
+		ID:            "z1",
+		LayerMetadata: config.LayerMetadata{MinZoom: &minZoom},
+		Provider:      map[string]any{"name": "fixed-zoom-1"},
 	}
 
 	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil)
@@ -48,9 +48,9 @@ func Test_RenderTileNoCache_AboveMaxZoom_ReturnsRangeError(t *testing.T) {
 
 	maxZoom := 10
 	rawConfig := config.LayerConfig{
-		ID:       "z2",
-		MaxZoom:  &maxZoom,
-		Provider: map[string]any{"name": "fixed-zoom-2"},
+		ID:            "z2",
+		LayerMetadata: config.LayerMetadata{MaxZoom: &maxZoom},
+		Provider:      map[string]any{"name": "fixed-zoom-2"},
 	}
 
 	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil)
@@ -69,10 +69,9 @@ func Test_RenderTileNoCache_WithinZoomRange_Succeeds(t *testing.T) {
 	minZoom := 4
 	maxZoom := 10
 	rawConfig := config.LayerConfig{
-		ID:       "z3",
-		MinZoom:  &minZoom,
-		MaxZoom:  &maxZoom,
-		Provider: map[string]any{"name": "fixed-zoom-3"},
+		ID:            "z3",
+		LayerMetadata: config.LayerMetadata{MinZoom: &minZoom, MaxZoom: &maxZoom},
+		Provider:      map[string]any{"name": "fixed-zoom-3"},
 	}
 
 	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil)
@@ -102,7 +101,7 @@ func Test_RenderTileNoCache_NoZoomLimitsConfigured_Succeeds(t *testing.T) {
 func Test_CheckZoomBounds_BothLimitsConfigured_ReportsConfiguredRangeNotGlobalDefaults(t *testing.T) {
 	minZoom := 4
 	maxZoom := 10
-	l := &Layer{Config: config.LayerConfig{ID: "z5", MinZoom: &minZoom, MaxZoom: &maxZoom}}
+	l := &Layer{Config: config.LayerConfig{ID: "z5", LayerMetadata: config.LayerMetadata{MinZoom: &minZoom, MaxZoom: &maxZoom}}}
 
 	err := l.CheckZoomBounds(pkg.TileRequest{LayerName: "z5", Z: 2, X: 0, Y: 0})
 	require.Error(t, err)

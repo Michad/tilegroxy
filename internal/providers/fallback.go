@@ -170,6 +170,10 @@ func (t Fallback) GenerateTile(ctx context.Context, providerContext layer.Provid
 	return img, err
 }
 
+func (t Fallback) Metadata() config.LayerMetadata {
+	return layer.MetadataOf(t.Primary)
+}
+
 // Close releases both child providers. Fallback holds them directly rather than through a Layer,
 // so they're unreachable from LayerGroup.Close without this.
 func (t Fallback) Close(ctx context.Context) error {
