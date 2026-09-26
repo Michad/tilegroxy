@@ -19,6 +19,7 @@ import (
 	"html/template"
 	"log/slog"
 	"net/http"
+	"slices"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -74,6 +75,20 @@ func previewSourceLayers(vectorLayers []config.VectorLayer) []string {
 	return ids
 }
 
+// Provider-reported centers skip config validation, so an out-of-range zoom must not reach the map.
+func previewCenter(doc layer.TileJSONDocument) []float64 {
+	if len(doc.Center) < 2 {
+		return nil
+	}
+
+	center := slices.Clone(doc.Center)
+	if len(center) > 2 {
+		center[2] = min(max(center[2], float64(doc.MinZoom)), float64(doc.MaxZoom))
+	}
+
+	return center
+}
+
 func (h *previewHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	slog.DebugContext(ctx, "server: preview handler started")
@@ -120,8 +135,7 @@ func (h *previewHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	doc := l.BuildTileJSON(name, nil, areaRestriction(ctx))
 	hasBounds, bounds := previewBounds(doc)
 
-	// Without ?name= or provider metadata, guess the source-layer the way postgis_mvt defaults it;
-	// the page then probes a sample tile to verify the guess.
+	// Without ?name= or metadata, guess postgis_mvt's default source-layer; the page probes a tile to verify.
 	sourceLayers := []string{name}
 	sourceLayerKnown := false
 	fromMetadata := false
@@ -135,8 +149,8 @@ func (h *previewHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	var center []float64
-	if !hasBounds && len(doc.Center) >= 2 {
-		center = doc.Center
+	if !hasBounds {
+		center = previewCenter(doc)
 	}
 
 	data := previewTemplateData{

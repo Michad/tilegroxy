@@ -24,7 +24,7 @@ type LayerMetadata struct {
 	DataType         DataType     // Optional. Declares this layer's data type. Must not contradict the provider's own DataType(); required if Bounds is set and the provider's type is unknown
 	MinZoom          *int         // Optional. Requests below this zoom are rejected as out of bounds. nil means no lower limit
 	MaxZoom          *int         // Optional. Requests above this zoom are rejected as out of bounds. nil means no upper limit
-	Bounds           BoundsConfig // Optional. Automatically wraps this layer's provider in crop/cropmvt, restricting it to this geographic area
+	Bounds           BoundsConfig // Optional. When set on the layer, wraps its provider in crop/cropmvt. Provider-reported bounds are descriptive only
 	TileJSONMetadata `mapstructure:",squash" yaml:",inline"`
 }
 
