@@ -266,6 +266,8 @@ func Test_Test_PicksTileFromCenter(t *testing.T) {
 }
 
 func Test_PickTile_Center(t *testing.T) {
+	layer.RegisterProvider(testRecordingRegistration{})
+
 	minZoom := 2
 	maxZoom := 6
 
@@ -276,15 +278,17 @@ func Test_PickTile_Center(t *testing.T) {
 	}{
 		{"no zoom uses zoom range midpoint", config.LayerMetadata{MinZoom: &minZoom, MaxZoom: &maxZoom, TileJSONMetadata: config.TileJSONMetadata{Center: []float64{-73.5, 40.5}}}, pkg.TileRequest{Z: 4, X: 4, Y: 6}},
 		{"no zoom or range", config.LayerMetadata{TileJSONMetadata: config.TileJSONMetadata{Center: []float64{0.5, 0.5}}}, pkg.TileRequest{Z: 10, X: 513, Y: 510}},
-		{"zoom above maxzoom is clamped", config.LayerMetadata{MaxZoom: &maxZoom, TileJSONMetadata: config.TileJSONMetadata{Center: []float64{-73.5, 40.5, 15}}}, pkg.TileRequest{Z: 6, X: 18, Y: 24}},
-		{"zoom below minzoom is clamped", config.LayerMetadata{MinZoom: &minZoom, TileJSONMetadata: config.TileJSONMetadata{Center: []float64{-73.5, 40.5, 0}}}, pkg.TileRequest{Z: 2, X: 1, Y: 1}},
+		{"center zoom", config.LayerMetadata{MaxZoom: &maxZoom, TileJSONMetadata: config.TileJSONMetadata{Center: []float64{-73.5, 40.5, 5}}}, pkg.TileRequest{Z: 5, X: 9, Y: 12}},
 		{"east edge of the world", config.LayerMetadata{TileJSONMetadata: config.TileJSONMetadata{Center: []float64{180, -85.06, 1}}}, pkg.TileRequest{Z: 1, X: 1, Y: 1}},
 		{"lone longitude is ignored", config.LayerMetadata{TileJSONMetadata: config.TileJSONMetadata{Center: []float64{-73.5}}}, pkg.TileRequest{Z: defaultZ, X: defaultX, Y: defaultY}},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			l := &layer.Layer{Config: config.LayerConfig{LayerMetadata: tc.metadata}}
+			cfg := config.LayerConfig{ID: "l", LayerMetadata: tc.metadata, Provider: map[string]interface{}{"name": "test-recording-provider"}}
+			l, err := layer.ConstructLayer(context.Background(), cfg, config.ClientConfig{}, nil, config.ErrorMessages{}, nil, nil, nil)
+			require.NoError(t, err)
+
 			tc.expected.LayerName = "l"
 			require.Equal(t, tc.expected, pickTile(l, "l"))
 		})

@@ -27,7 +27,6 @@ import (
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/Michad/tilegroxy/pkg/entities/datastore"
-	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
@@ -61,72 +60,65 @@ func ConstructLayerGroup(ctx context.Context, cfg config.Config, caches *cache.C
 		return nil, err
 	}
 
-	for i, l := range cfg.Layers {
+	// Populated as layers are built so a ref provider can describe a target built before it.
+	layerGroup.layers = layerObjects
+
+	for _, i := range buildOrder(cfg.Layers, cfg.Error.Messages) {
+		l := cfg.Layers[i]
 		layerCache, err := resolveLayerCache(l, caches, cfg.Error.Messages)
 		if err != nil {
-			return nil, fmt.Errorf("error constructing layer %v: %w", i, err)
+			return nil, errors.Join(fmt.Errorf("error constructing layer %v: %w", i, err), layerGroup.Close(ctx))
 		}
 
-		layerObjects[i], err = ConstructLayer(ctx, l, cfg.Client, layerCache, cfg.Error.Messages, &layerGroup, secreter, datastores)
+		built, err := ConstructLayer(ctx, l, cfg.Client, layerCache, cfg.Error.Messages, &layerGroup, secreter, datastores)
 		if err != nil {
-			return nil, fmt.Errorf("error constructing layer %v: %w", i, err)
+			return nil, errors.Join(fmt.Errorf("error constructing layer %v: %w", i, err), layerGroup.Close(ctx))
 		}
 
-		layerObjects[i].Cache = layerCache
+		built.Cache = layerCache
+		layerObjects[i] = built
 	}
 
 	meter := otel.Meter(packageName)
 	layerGroup.cacheHitCounter, err1 = meter.Int64Counter("tilegroxy.cache.total.hit", metric.WithDescription("Number of requests that hit the cache (ignoring skips)"))
 	layerGroup.cacheMissCounter, err2 = meter.Int64Counter("tilegroxy.cache.total.miss", metric.WithDescription("Number of requests that missed the cache (ignoring skips)"))
 
-	layerGroup.layers = layerObjects
 	layerGroup.cacheWriteLimiter = make(chan struct{}, maxConcurrentCacheWrites)
-
-	if err := layerGroup.resolveMetadata(ctx); err != nil {
-		return nil, errors.Join(err, layerGroup.Close(ctx))
-	}
 
 	return &layerGroup, errors.Join(err1, err2)
 }
 
-// Resolves ref targets before the layers referencing them so metadata can flow through refs.
-func (lg *LayerGroup) resolveMetadata(ctx context.Context) error {
-	resolved := make(map[*Layer]bool, len(lg.layers))
+// Marking before recursing ends pattern-based cycles validateRefs can't see; that ref then describes nothing.
+func buildOrder(layers []config.LayerConfig, errorMessages config.ErrorMessages) []int {
+	order := make([]int, 0, len(layers))
+	visited := make([]bool, len(layers))
 
-	var resolve func(l *Layer) error
-	resolve = func(l *Layer) error {
-		if resolved[l] {
-			return nil
+	var visit func(i int)
+	visit = func(i int) {
+		if visited[i] {
+			return
 		}
-
-		// Marked up front so a pattern-based cycle, which validateRefs can't see, still terminates.
-		resolved[l] = true
+		visited[i] = true
 
 		var targets []string
-		findRefTargets(l.Config.Provider, &targets)
+		findRefTargets(layers[i].Provider, &targets)
 
 		for _, target := range targets {
-			if t := lg.FindLayer(ctx, target); t != nil {
-				if err := resolve(t); err != nil {
-					return err
-				}
+			if j := slices.IndexFunc(layers, func(l config.LayerConfig) bool {
+				return ConfigMatchesName(l, errorMessages, target)
+			}); j >= 0 {
+				visit(j)
 			}
 		}
 
-		if err := l.resolveMetadata(); err != nil {
-			return fmt.Errorf("error constructing layer %v: %w", l.ID, err)
-		}
-
-		return nil
+		order = append(order, i)
 	}
 
-	for _, l := range lg.layers {
-		if err := resolve(l); err != nil {
-			return err
-		}
+	for i := range layers {
+		visit(i)
 	}
 
-	return nil
+	return order
 }
 
 func resolveLayerCache(l config.LayerConfig, caches *cache.CacheRegistry, errorMessages config.ErrorMessages) (cache.Cache, error) {
@@ -258,7 +250,7 @@ func validateNoDuplicateLayerIDs(layers []config.LayerConfig) error {
 
 func (lg *LayerGroup) FindLayer(ctx context.Context, layerName string) *Layer {
 	for _, l := range lg.layers {
-		if l.MatchesName(ctx, layerName) {
+		if l != nil && l.MatchesName(ctx, layerName) {
 			return l
 		}
 	}
@@ -496,7 +488,7 @@ func (lg *LayerGroup) Close(ctx context.Context) error {
 			continue
 		}
 
-		errs = append(errs, lifecycle.CloseIfCloser(ctx, l.Provider))
+		errs = append(errs, CloseProvider(ctx, l.Provider))
 	}
 
 	return errors.Join(errs...)

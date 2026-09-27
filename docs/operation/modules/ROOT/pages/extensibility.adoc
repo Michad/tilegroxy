@@ -177,7 +177,7 @@ func (s SampleRegistration) Name() string {
 	return "sample"
 }
 
-// Declares what kind of tile this provider produces. Return config.DataTypeRaster or config.DataTypeMVT if it's always one or the other, or config.DataTypeUnknown if it depends
+// Declares what kind of tile this provider produces. Return config.DataTypeRaster or config.DataTypeMVT if it's always one or the other, or config.DataTypeUnknown if it depends. A provider nesting others can return config.DataTypeUnknown and let its children report theirs
 func (s SampleRegistration) DataType(cfgAny any) config.DataType {
 	return config.DataTypeUnknown
 }
@@ -198,7 +198,7 @@ func (t Sample) GenerateTile(ctx context.Context, providerContext layer.Provider
 }
 ----
 
-A provider that can describe its own tiles can also implement the optional `layer.MetadataProvider` interface. Its `Metadata()` method returns a `config.LayerMetadata`, the same struct the layer configuration embeds, whose data type, zoom range, bounds, and TileJSON fields act as defaults for the layer. Anything set in the layer configuration still wins. It can be called more than once during startup, so keep it cheap.
+A provider that can describe its own tiles can also implement the optional `layer.MetadataProvider` interface, returning a `layer.Description`. Providers describe, they never restrict. See xref:configuration/layer.adoc#_metadata[layer metadata] for how the layer uses it. A provider that nests other providers should implement `layer.Parent` so its children are described and closed along with it.
 
 From here, implementing the provider is the same as implementing a Custom provider.  The other entities can be specified in the same way.
 

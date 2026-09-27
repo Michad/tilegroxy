@@ -49,16 +49,12 @@ func (l *Layer) TileJSONNames() []string {
 }
 
 func (l *Layer) BuildTileJSON(name string, tilesURLs []string, allowedArea *pkg.Bounds) TileJSONDocument {
-	minZoom, maxZoom := l.zoomRange()
-	md := l.Metadata()
+	md := l.metadata.ForRequest(allowedArea)
+	minZoom, maxZoom := md.ZoomRange()
 
 	bounds := pkg.WorldBounds()
 	if md.Bounds != (config.BoundsConfig{}) {
 		bounds = pkg.BoundsFromConfig(md.Bounds)
-	}
-
-	if allowedArea != nil && !allowedArea.IsNullIsland() {
-		bounds = bounds.IntersectionWith(*allowedArea)
 	}
 
 	return TileJSONDocument{

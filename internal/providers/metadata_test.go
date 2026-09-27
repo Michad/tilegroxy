@@ -15,6 +15,12 @@
 package providers
 
 import (
+	"context"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -26,93 +32,265 @@ import (
 
 func zoomPtr(z int) *int { return &z }
 
-func Test_MergeMetadata_UnionsChildren(t *testing.T) {
-	a := config.LayerMetadata{
-		DataType:         config.DataTypeMVT,
+func describedChild() metadataOnlyProvider {
+	return metadataOnlyProvider{md: layer.Description{
+		DataType:         config.DataTypeRaster,
 		MinZoom:          zoomPtr(2),
 		MaxZoom:          zoomPtr(10),
-		Bounds:           config.BoundsConfig{South: 0, North: 10, West: 0, East: 10},
-		TileJSONMetadata: config.TileJSONMetadata{Description: "a", Attribution: "OSM", Center: []float64{1, 2, 3}, VectorLayers: []config.VectorLayer{{ID: "roads"}, {ID: "water"}}},
+		Bounds:           config.BoundsConfig{South: -5, North: 5, West: -5, East: 5},
+		TileJSONMetadata: config.TileJSONMetadata{Description: "child", Attribution: "OSM", Center: []float64{1, 2, 3}},
+	}}
+}
+
+func Test_SingleChildProviders_PassThroughDescription(t *testing.T) {
+	child := describedChild()
+
+	wrappers := map[string]layer.Provider{
+		"effect":                 Effect{provider: child},
+		"transform":              Transform{provider: child},
+		"crop without bounds":    Crop{Primary: child},
+		"cropmvt without bounds": CropMvt{Primary: child},
 	}
-	b := config.LayerMetadata{
+
+	for name, wrapper := range wrappers {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, layer.DescribeTree(child), layer.DescribeTree(wrapper))
+		})
+	}
+}
+
+func Test_ProvidersHoldingChildren_ImplementParent(t *testing.T) {
+	files, err := filepath.Glob("*.go")
+	require.NoError(t, err)
+
+	fset := token.NewFileSet()
+	holders := map[string]bool{}
+	methods := map[string]map[string]bool{}
+
+	for _, f := range files {
+		if strings.HasSuffix(f, "_test.go") {
+			continue
+		}
+
+		parsed, err := parser.ParseFile(fset, f, nil, parser.SkipObjectResolution)
+		require.NoError(t, err)
+
+		ast.Inspect(parsed, func(n ast.Node) bool {
+			switch v := n.(type) {
+			case *ast.TypeSpec:
+				if st, ok := v.Type.(*ast.StructType); ok && holdsProvider(st) {
+					holders[v.Name.Name] = true
+				}
+			case *ast.FuncDecl:
+				if v.Recv != nil && len(v.Recv.List) == 1 {
+					recv := receiverName(v.Recv.List[0].Type)
+					if methods[recv] == nil {
+						methods[recv] = map[string]bool{}
+					}
+					methods[recv][v.Name.Name] = true
+				}
+			}
+			return true
+		})
+	}
+
+	require.NotEmpty(t, holders)
+
+	for name := range holders {
+		assert.True(t, methods[name]["Children"], "%v holds a layer.Provider so must implement layer.Parent", name)
+	}
+}
+
+func holdsProvider(st *ast.StructType) bool {
+	for _, field := range st.Fields.List {
+		expr := field.Type
+		if arr, ok := expr.(*ast.ArrayType); ok {
+			expr = arr.Elt
+		}
+
+		if sel, ok := expr.(*ast.SelectorExpr); ok && sel.Sel.Name == "Provider" {
+			if pkgIdent, ok := sel.X.(*ast.Ident); ok && pkgIdent.Name == "layer" {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func receiverName(expr ast.Expr) string {
+	if star, ok := expr.(*ast.StarExpr); ok {
+		expr = star.X
+	}
+
+	if ident, ok := expr.(*ast.Ident); ok {
+		return ident.Name
+	}
+
+	return ""
+}
+
+func Test_NestingProviders_Describe(t *testing.T) {
+	primary := describedChild()
+	secondary := metadataOnlyProvider{md: layer.Description{
 		DataType:         config.DataTypeRaster,
 		MinZoom:          zoomPtr(0),
 		MaxZoom:          zoomPtr(14),
-		Bounds:           config.BoundsConfig{South: -5, North: 5, West: -5, East: 5},
-		TileJSONMetadata: config.TileJSONMetadata{Description: "b", Version: "2", Attribution: "Overture", VectorLayers: []config.VectorLayer{{ID: "water", Fields: map[string]string{"kind": "String"}}, {ID: "buildings"}}},
+		Bounds:           config.BoundsConfig{South: 0, North: 20, West: 0, East: 20},
+		TileJSONMetadata: config.TileJSONMetadata{Attribution: "Overture"},
+	}}
+	cropBounds := pkg.Bounds{South: 0, North: 10, West: 0, East: 10}
+
+	union := layer.Description{
+		DataType:         config.DataTypeRaster,
+		MinZoom:          zoomPtr(0),
+		MaxZoom:          zoomPtr(14),
+		Bounds:           config.BoundsConfig{South: -5, North: 20, West: -5, East: 20},
+		TileJSONMetadata: config.TileJSONMetadata{Description: "child", Attribution: "OSM, Overture", Center: []float64{1, 2, 3}},
 	}
 
-	md := mergeMetadata(metadataOnlyProvider{md: a}, metadataOnlyProvider{md: b}, metadataOnlyProvider{md: config.LayerMetadata{MinZoom: zoomPtr(1), MaxZoom: zoomPtr(1), Bounds: config.BoundsConfig{South: 1, North: 2, West: 1, East: 2}, TileJSONMetadata: config.TileJSONMetadata{Attribution: "OSM"}}})
+	clipped := primary.md
+	clipped.Bounds = config.BoundsConfig{South: 0, North: 5, West: 0, East: 5}
+	clipped.Center = []float64{1, 2, 3}
 
-	assert.Equal(t, config.DataTypeMVT, md.DataType)
-	assert.Equal(t, 0, *md.MinZoom)
-	assert.Equal(t, 14, *md.MaxZoom)
-	assert.Equal(t, config.BoundsConfig{South: -5, North: 10, West: -5, East: 10}, md.Bounds)
-	assert.Equal(t, "a", md.Description)
-	assert.Equal(t, "2", md.Version)
-	assert.Equal(t, "OSM, Overture", md.Attribution)
-	assert.Equal(t, []float64{1, 2, 3}, md.Center)
-	assert.Equal(t, []config.VectorLayer{{ID: "roads"}, {ID: "water"}, {ID: "buildings"}}, md.VectorLayers)
+	tests := []struct {
+		name     string
+		provider layer.Provider
+		want     layer.Description
+	}{
+		{
+			// Advertising only the primary's zoom range made the layer reject zooms the secondary serves.
+			name:     "fallback unions both children",
+			provider: Fallback{Primary: primary, Secondary: secondary},
+			want:     union,
+		},
+		{
+			name:     "blend unions its children",
+			provider: Blend{providers: []layer.Provider{primary, secondary}},
+			want:     union,
+		},
+		{
+			name:     "compositemvt unions its children",
+			provider: CompositeMVT{providers: []layer.Provider{primary, secondary}},
+			want:     union,
+		},
+		{
+			name:     "crop with the default secondary clips to its bounds",
+			provider: Crop{CropConfig: CropConfig{Bounds: cropBounds}, Primary: primary, Secondary: secondary},
+			want:     clipped,
+		},
+		{
+			name:     "crop with a custom secondary unions",
+			provider: Crop{CropConfig: CropConfig{Bounds: cropBounds, Secondary: map[string]any{"name": "static"}}, Primary: primary, Secondary: secondary},
+			want:     union,
+		},
+		{
+			name:     "crop with bounds from auth passes through",
+			provider: Crop{CropConfig: CropConfig{Bounds: cropBounds, BoundsFromAuth: true}, Primary: primary, Secondary: secondary},
+			want:     primary.md,
+		},
+		{
+			name:     "cropmvt clips to its bounds",
+			provider: CropMvt{CropMvtConfig: CropMvtConfig{Bounds: cropBounds}, Primary: primary},
+			want:     clipped,
+		},
+		{
+			name:     "cropmvt clip drops a center outside its bounds",
+			provider: CropMvt{CropMvtConfig: CropMvtConfig{Bounds: pkg.Bounds{South: 3, North: 10, West: 3, East: 10}}, Primary: primary},
+			want: layer.Description{
+				DataType: config.DataTypeRaster, MinZoom: zoomPtr(2), MaxZoom: zoomPtr(10),
+				Bounds:           config.BoundsConfig{South: 3, North: 5, West: 3, East: 5},
+				TileJSONMetadata: config.TileJSONMetadata{Description: "child", Attribution: "OSM"},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, layer.DescribeTree(tc.provider))
+		})
+	}
 }
 
-func Test_MergeMetadata_UnknownLimitsStayUnset(t *testing.T) {
-	a := config.LayerMetadata{MinZoom: zoomPtr(2), MaxZoom: zoomPtr(10), Bounds: config.BoundsConfig{North: 1, East: 1}}
+func Test_CropWrapBounds_WrapsBuiltProvider(t *testing.T) {
+	child := describedChild()
+	bounds := pkg.Bounds{South: 0, North: 10, West: 0, East: 10}
 
-	md := mergeMetadata(metadataOnlyProvider{md: a}, &closableProvider{})
+	p, err := CropRegistration{}.WrapBounds(child, bounds, layer.ProviderDeps{})
+	require.NoError(t, err)
+	crop, ok := p.(*Crop)
+	require.True(t, ok)
+	assert.Equal(t, child, crop.Primary)
+	assert.Equal(t, bounds, crop.Bounds)
+	assert.Nil(t, crop.CropConfig.Secondary)
 
-	assert.Nil(t, md.MinZoom)
-	assert.Nil(t, md.MaxZoom)
-	assert.Zero(t, md.Bounds)
-	assert.Nil(t, md.VectorLayers)
-	assert.Empty(t, md.Attribution)
+	p, err = CropMvtRegistration{}.WrapBounds(child, bounds, layer.ProviderDeps{})
+	require.NoError(t, err)
+	cropMvt, ok := p.(*CropMvt)
+	require.True(t, ok)
+	assert.Equal(t, child, cropMvt.Primary)
+	assert.Equal(t, bounds, cropMvt.Bounds)
 }
 
-func Test_MergeMetadata_SingleChildPassesThrough(t *testing.T) {
-	a := config.LayerMetadata{MinZoom: zoomPtr(2), MaxZoom: zoomPtr(10), Bounds: config.BoundsConfig{North: 1, East: 1}, TileJSONMetadata: config.TileJSONMetadata{VectorLayers: []config.VectorLayer{{ID: "roads"}}}}
+func refFallbackLayerGroup(t *testing.T) *layer.LayerGroup {
+	t.Helper()
 
-	md := mergeMetadata(metadataOnlyProvider{md: a})
+	cfg := config.DefaultConfig()
+	cfg.Layers = []config.LayerConfig{
+		{
+			ID: "main",
+			Provider: map[string]any{
+				"name":      "fallback",
+				"primary":   map[string]any{"name": "ref", "layer": "lowres"},
+				"secondary": map[string]any{"name": "static", "color": "0F0"},
+			},
+			Client:    &cfg.Client,
+			SkipCache: true,
+		},
+		{
+			ID:            "view",
+			Provider:      map[string]any{"name": "ref", "layer": "lowres"},
+			LayerMetadata: config.LayerMetadata{Bounds: config.BoundsConfig{South: -10, North: 10, West: -10, East: 10}},
+			Client:        &cfg.Client,
+			SkipCache:     true,
+		},
+		{
+			ID:            "lowres",
+			Provider:      map[string]any{"name": "static", "color": "F00"},
+			LayerMetadata: config.LayerMetadata{MaxZoom: zoomPtr(10), TileJSONMetadata: config.TileJSONMetadata{Attribution: "low"}},
+			Client:        &cfg.Client,
+			SkipCache:     true,
+		},
+	}
 
-	assert.Equal(t, a.MinZoom, md.MinZoom)
-	assert.Equal(t, a.MaxZoom, md.MaxZoom)
-	assert.Equal(t, a.Bounds, md.Bounds)
-	assert.Equal(t, []config.VectorLayer{{ID: "roads"}}, md.VectorLayers)
+	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = lg.Close(context.Background()) })
+
+	return lg
 }
 
-func Test_Fallback_PicksFirstMetadata(t *testing.T) {
-	primary := config.LayerMetadata{DataType: config.DataTypeMVT, MinZoom: zoomPtr(4), MaxZoom: zoomPtr(8), TileJSONMetadata: config.TileJSONMetadata{Description: "primary"}}
-	secondary := config.LayerMetadata{MinZoom: zoomPtr(0), MaxZoom: zoomPtr(6), TileJSONMetadata: config.TileJSONMetadata{Description: "secondary"}}
+func Test_LayerGroup_FallbackPastRefTargetZoom_ServesSecondary(t *testing.T) {
+	lg := refFallbackLayerGroup(t)
 
-	md := Fallback{Primary: metadataOnlyProvider{md: primary}, Secondary: metadataOnlyProvider{md: secondary}}.Metadata()
+	img, err := lg.RenderTile(pkg.BackgroundContext(), pkg.TileRequest{LayerName: "main", Z: 12, X: 0, Y: 0})
+	require.NoError(t, err)
+	require.NotNil(t, img)
 
-	assert.Equal(t, config.DataTypeMVT, md.DataType)
-	assert.Equal(t, "primary", md.Description)
-	require.NotNil(t, md.MinZoom)
-	assert.Equal(t, 4, *md.MinZoom)
-	assert.Equal(t, 8, *md.MaxZoom)
+	main := lg.FindLayer(context.Background(), "main")
+	assert.Equal(t, "low", main.Metadata().Advertised.Attribution, "the ref target was built first so its description flows through")
+	assert.Nil(t, main.Metadata().Advertised.MaxZoom, "the static secondary has no zoom limit")
 }
 
-func Test_CompositeMVT_MergesChildMetadata(t *testing.T) {
-	c := CompositeMVT{providers: []layer.Provider{
-		layer.ProviderWrapper{Name: "a", Provider: metadataOnlyProvider{md: config.LayerMetadata{TileJSONMetadata: config.TileJSONMetadata{VectorLayers: []config.VectorLayer{{ID: "roads"}}}}}},
-		metadataOnlyProvider{md: config.LayerMetadata{TileJSONMetadata: config.TileJSONMetadata{VectorLayers: []config.VectorLayer{{ID: "water"}}}}},
-	}}
+func Test_LayerGroup_RefWithBounds_InfersDataTypeFromTarget(t *testing.T) {
+	lg := refFallbackLayerGroup(t)
 
-	md := c.Metadata()
+	view := lg.FindLayer(context.Background(), "view")
+	require.NotNil(t, view)
+	assert.Equal(t, config.DataTypeRaster, view.DataType)
+	assert.Equal(t, 10, *view.Metadata().Advertised.MaxZoom)
 
-	assert.Equal(t, config.DataTypeMVT, md.DataType)
-	assert.Equal(t, []config.VectorLayer{{ID: "roads"}, {ID: "water"}}, md.VectorLayers)
-}
-
-func Test_CropMvt_IntersectsPrimaryBounds(t *testing.T) {
-	crop := pkg.Bounds{South: 0, North: 10, West: 0, East: 10}
-	primary := metadataOnlyProvider{md: config.LayerMetadata{Bounds: config.BoundsConfig{South: -5, North: 5, West: -5, East: 5}}}
-
-	md := CropMvt{CropMvtConfig: CropMvtConfig{Bounds: crop}, Primary: primary}.Metadata()
-	assert.Equal(t, config.BoundsConfig{South: 0, North: 5, West: 0, East: 5}, md.Bounds)
-
-	md = CropMvt{CropMvtConfig: CropMvtConfig{Bounds: crop}, Primary: metadataOnlyProvider{}}.Metadata()
-	assert.Equal(t, crop.ToConfig(), md.Bounds)
-
-	md = CropMvt{CropMvtConfig: CropMvtConfig{Bounds: crop, BoundsFromAuth: true}, Primary: primary}.Metadata()
-	assert.Equal(t, primary.md.Bounds, md.Bounds)
+	wrapper, ok := view.Provider.(layer.ProviderWrapper)
+	require.True(t, ok)
+	assert.Equal(t, "crop", wrapper.Name)
 }

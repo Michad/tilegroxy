@@ -52,6 +52,7 @@ func purgeTestLayerGroup(t *testing.T, c *removeRecordingCache, cfg config.Layer
 		Provider: &slowGenerateProvider{delay: 0},
 		Cache:    c,
 		Config:   cfg,
+		metadata: ResolvedMetadata{Limits: Limits{MinZoom: cfg.MinZoom, MaxZoom: cfg.MaxZoom, Bounds: cfg.Bounds}},
 	}
 	l.tileAllCounter = noop.Int64Counter{}
 	l.tileAuthCounter = noop.Int64Counter{}

@@ -117,6 +117,10 @@ func (s TransformRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (
 	return &Transform{cfg, provider, transformFunc, deps.ErrorMessages}, nil
 }
 
+func (t Transform) Children() []layer.Provider {
+	return []layer.Provider{t.provider}
+}
+
 func (t Transform) PreAuth(ctx context.Context, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
 	return t.provider.PreAuth(ctx, providerContext)
 }
