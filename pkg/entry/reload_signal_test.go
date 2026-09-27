@@ -31,6 +31,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func readyNow() chan struct{} {
+	ready := make(chan struct{})
+	close(ready)
+
+	return ready
+}
+
 func captureAudit(t *testing.T) *bytes.Buffer {
 	t.Helper()
 
@@ -49,12 +56,14 @@ func Test_ReloadSignal_ReloadsFromSource(t *testing.T) {
 	var got *config.Config
 
 	stop := watchReloadSignal(
+		readyNow(),
 		func() (config.Config, error) { return want, nil },
 		func(c *config.Config, reason string) error {
 			got = c
 			reasons <- reason
 			return nil
 		},
+		nil,
 	)
 	defer stop()
 
@@ -78,6 +87,7 @@ func Test_ReloadSignal_SerializesAndCoalesces(t *testing.T) {
 	running, maxRunning, calls := 0, 0, 0
 
 	stop := watchReloadSignal(
+		readyNow(),
 		func() (config.Config, error) { return config.DefaultConfig(), nil },
 		func(_ *config.Config, _ string) error {
 			mu.Lock()
@@ -98,6 +108,7 @@ func Test_ReloadSignal_SerializesAndCoalesces(t *testing.T) {
 
 			return nil
 		},
+		nil,
 	)
 	defer stop()
 
@@ -137,6 +148,7 @@ func Test_ReloadSignal_LoadErrorIsAuditedAndSkipsReload(t *testing.T) {
 			reloadCalled = true
 			return nil
 		},
+		nil,
 	)
 
 	assert.False(t, reloadCalled)
@@ -152,22 +164,100 @@ func Test_ReloadSignal_RecoversLoadPanic(t *testing.T) {
 		reloadFromSource(
 			func() (config.Config, error) { panic("bad loader") },
 			func(_ *config.Config, _ string) error { return nil },
+			nil,
 		)
 	})
 
 	assert.Contains(t, buf.String(), "bad loader")
 }
 
-func Test_ReloadSignal_ReloadErrorIsLogged(t *testing.T) {
-	var logs bytes.Buffer
-	prev := slog.Default()
-	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, nil)))
-	t.Cleanup(func() { slog.SetDefault(prev) })
+func Test_ReloadSignal_ReloadErrorIsReported(t *testing.T) {
+	var out bytes.Buffer
 
 	reloadFromSource(
 		func() (config.Config, error) { return config.DefaultConfig(), nil },
 		func(_ *config.Config, _ string) error { return errors.New("swap rejected") },
+		&out,
 	)
 
-	assert.Contains(t, logs.String(), "swap rejected")
+	assert.Equal(t, "Error: swap rejected\n", out.String())
+}
+
+// A signal sent while the server is still starting must be held until it can apply, not dropped
+func Test_ReloadSignal_WaitsForReady(t *testing.T) {
+	ready := make(chan struct{})
+	reloads := make(chan struct{}, 1)
+
+	stop := watchReloadSignal(
+		ready,
+		func() (config.Config, error) { return config.DefaultConfig(), nil },
+		func(_ *config.Config, _ string) error {
+			reloads <- struct{}{}
+			return nil
+		},
+		nil,
+	)
+	defer stop()
+
+	require.NoError(t, syscall.Kill(syscall.Getpid(), syscall.SIGHUP))
+
+	select {
+	case <-reloads:
+		t.Fatal("reload ran before the server was ready")
+	case <-time.After(200 * time.Millisecond):
+	}
+
+	close(ready)
+
+	select {
+	case <-reloads:
+	case <-time.After(5 * time.Second):
+		t.Fatal("signal received before ready was dropped")
+	}
+}
+
+// Stopping must not leave the goroutine blocked waiting for a server that never became ready
+func Test_ReloadSignal_StopWhileWaitingForReady(t *testing.T) {
+	stop := watchReloadSignal(
+		make(chan struct{}),
+		func() (config.Config, error) { return config.DefaultConfig(), nil },
+		func(_ *config.Config, _ string) error { return nil },
+		nil,
+	)
+
+	require.NoError(t, syscall.Kill(syscall.Getpid(), syscall.SIGHUP))
+	time.Sleep(100 * time.Millisecond)
+
+	assert.NotPanics(t, stop)
+}
+
+// File and signal reloads share one lock so they can't race each other
+func Test_SerializeReloads_NeverOverlap(t *testing.T) {
+	var mu sync.Mutex
+	running, maxRunning := 0, 0
+
+	serialized := serializeReloads(func(_ *config.Config, _ string) error {
+		mu.Lock()
+		running++
+		maxRunning = max(maxRunning, running)
+		mu.Unlock()
+
+		time.Sleep(10 * time.Millisecond)
+
+		mu.Lock()
+		running--
+		mu.Unlock()
+
+		return nil
+	})
+
+	cfg := config.DefaultConfig()
+
+	var wg sync.WaitGroup
+	for _, reason := range []string{audit.ReasonConfigFile, audit.ReasonSignal, audit.ReasonConfigFile, audit.ReasonSignal} {
+		wg.Go(func() { assert.NoError(t, serialized(&cfg, reason)) })
+	}
+	wg.Wait()
+
+	assert.Equal(t, 1, maxRunning)
 }

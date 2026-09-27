@@ -177,7 +177,8 @@ the pod template and triggers a normal rollout) is the more predictable path. Se
 caveats, particularly on NFS and other filesystems without change notification.
 
 With `hotReload` on, a reload can also be triggered on demand by sending `SIGHUP` to the
-container, for example `kubectl exec <pod> -- kill -HUP 1`.
+container, for example `kubectl exec <pod> -- kill -HUP 1`. Only do this with `hotReload`
+enabled: otherwise `SIGHUP` terminates tilegroxy and the pod restarts.
 
 ## Values
 

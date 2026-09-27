@@ -136,7 +136,7 @@ func entitiesFor(lg *layer.LayerGroup) *entities.Entities {
 // returns the reload callback it published, registering cleanup that stops the server.
 //
 // ListenAndServe writes through reloadPtr on its own goroutine with no synchronization, so the
-// value is handed over through a channel from the onReloadPtrSet hook rather than read directly.
+// value is handed over through a channel from the onReady callback rather than read directly.
 func startServer(t *testing.T, cfg *config.Config, lg *layer.LayerGroup) reloadEntitiesFunc {
 	t.Helper()
 
@@ -144,12 +144,9 @@ func startServer(t *testing.T, cfg *config.Config, lg *layer.LayerGroup) reloadE
 
 	published := make(chan reloadEntitiesFunc, 1)
 
-	onReloadPtrSet = func() { published <- reloadFn }
-	t.Cleanup(func() { onReloadPtrSet = nil })
-
 	done := make(chan error, 1)
 	go func() {
-		err := ListenAndServe(cfg, entitiesFor(lg), &reloadFn)
+		err := ListenAndServe(cfg, entitiesFor(lg), &reloadFn, func() { published <- reloadFn })
 		// Unblock the handoff if the server died before ever publishing.
 		select {
 		case published <- nil:

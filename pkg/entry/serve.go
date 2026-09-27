@@ -41,14 +41,23 @@ type ServeOptions struct {
 // Windows never delivers SIGHUP, so signal-driven reload is Unix only
 var reloadSignals = []os.Signal{syscall.SIGHUP}
 
-func Serve(cfg *config.Config, opts ServeOptions, _ io.Writer, reloadPtr *func(*config.Config) error) error {
+func Serve(cfg *config.Config, opts ServeOptions, out io.Writer, reloadPtr *func(*config.Config) error) error {
 	var nextReloadPtr func(*config.Config, *entities.Entities) error
 
 	tracker := &configTracker{current: cfg}
 
 	reload := newReloadCallback(&nextReloadPtr, tracker)
+	serialized := serializeReloads(reload)
+
 	*reloadPtr = func(newCfg *config.Config) error {
-		return reload(newCfg, audit.ReasonConfigFile)
+		return serialized(newCfg, audit.ReasonConfigFile)
+	}
+
+	ready := make(chan struct{})
+
+	if opts.ReloadConfig != nil {
+		stop := watchReloadSignal(ready, opts.ReloadConfig, serialized, out)
+		defer stop()
 	}
 
 	ent, err := configToEntities(pkg.BackgroundContext(), *cfg, tracker.secretReload(reload))
@@ -56,16 +65,23 @@ func Serve(cfg *config.Config, opts ServeOptions, _ io.Writer, reloadPtr *func(*
 		return err
 	}
 
-	if opts.ReloadConfig != nil {
-		stop := watchReloadSignal(opts.ReloadConfig, reload)
-		defer stop()
-	}
-
-	return server.ListenAndServe(cfg, ent, &nextReloadPtr)
+	return server.ListenAndServe(cfg, ent, &nextReloadPtr, func() { close(ready) })
 }
 
-// One goroutine and a one-slot channel serialize reloads and collapse signals received mid-reload into one follow-up
-func watchReloadSignal(load func() (config.Config, error), reload func(*config.Config, string) error) func() {
+// Secret reloads must not use this since a generation's Close waits on its secret pollers
+func serializeReloads(reload func(*config.Config, string) error) func(*config.Config, string) error {
+	var mu sync.Mutex
+
+	return func(newCfg *config.Config, reason string) error {
+		mu.Lock()
+		defer mu.Unlock()
+
+		return reload(newCfg, reason)
+	}
+}
+
+// Signals received before the server is ready wait for it, then collapse with any others into one reload
+func watchReloadSignal(ready <-chan struct{}, load func() (config.Config, error), reload func(*config.Config, string) error, out io.Writer) func() {
 	sigs := make(chan os.Signal, 1)
 	done := make(chan struct{})
 
@@ -77,7 +93,13 @@ func watchReloadSignal(load func() (config.Config, error), reload func(*config.C
 			case <-done:
 				return
 			case <-sigs:
-				reloadFromSource(load, reload)
+			}
+
+			select {
+			case <-done:
+				return
+			case <-ready:
+				reloadFromSource(load, reload, out)
 			}
 		}
 	}()
@@ -88,14 +110,20 @@ func watchReloadSignal(load func() (config.Config, error), reload func(*config.C
 	}
 }
 
-func reloadFromSource(load func() (config.Config, error), reload func(*config.Config, string) error) {
+func reloadFromSource(load func() (config.Config, error), reload func(*config.Config, string) error, out io.Writer) {
 	ctx := pkg.BackgroundContext()
+
+	report := func(err error) {
+		if out != nil {
+			fmt.Fprintf(out, "Error: %v\n", err.Error())
+		}
+	}
 
 	defer func() {
 		if r := recover(); r != nil {
 			err := fmt.Errorf("config reload panic: %v\n%s", r, debug.Stack())
 			audit.ConfigReload(ctx, audit.ReasonSignal, err)
-			slog.ErrorContext(ctx, "Failed to reload configuration: "+err.Error())
+			report(err)
 		}
 	}()
 
@@ -109,7 +137,7 @@ func reloadFromSource(load func() (config.Config, error), reload func(*config.Co
 	}
 
 	if err != nil {
-		slog.ErrorContext(ctx, "Failed to reload configuration: "+err.Error())
+		report(err)
 	}
 }
 

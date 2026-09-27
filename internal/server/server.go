@@ -49,11 +49,6 @@ func handleNoContent(w http.ResponseWriter, _ *http.Request) {
 // override this to send a signal they control.
 var InterruptFlags = []os.Signal{os.Interrupt, syscall.SIGTERM}
 
-// onReloadPtrSet is a test-only hook invoked right after ListenAndServe publishes the reload
-// callback through its reloadPtr argument, giving a test on another goroutine a happens-before
-// edge for reading it. Nil in production.
-var onReloadPtrSet func()
-
 // reloadEntitiesFunc names the reload callback shape so it can be spelled out inside
 // ListenAndServe's body, where the "config" parameter name shadows the config package.
 type reloadEntitiesFunc = func(*config.Config, *entities.Entities) error
@@ -327,7 +322,8 @@ func newHTTPServer(rootCtx context.Context, config *config.Config, rootHandler h
 	}
 }
 
-func ListenAndServe(config *config.Config, ent *entities.Entities, reloadPtr *func(*config.Config, *entities.Entities) error) error {
+// onReady, when not nil, runs once reloadPtr is published, giving another goroutine a happens-before edge for reading it
+func ListenAndServe(config *config.Config, ent *entities.Entities, reloadPtr *func(*config.Config, *entities.Entities) error, onReady func()) error {
 	if config.Server.Encrypt != nil && config.Server.Encrypt.Domain == "" {
 		return fmt.Errorf(config.Error.Messages.ParamRequired, "server.encrypt.domain")
 	}
@@ -372,8 +368,8 @@ func ListenAndServe(config *config.Config, ent *entities.Entities, reloadPtr *fu
 		*reloadPtr = makeCombinedReloadFunc(ctx, handlerReloadFunc, &healthMutex, &healthShutdown, &healthDrain, &draining)
 	}
 
-	if onReloadPtrSet != nil {
-		onReloadPtrSet()
+	if onReady != nil {
+		onReady()
 	}
 
 	var otelShutdown func(context.Context) error
