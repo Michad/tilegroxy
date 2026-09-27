@@ -30,6 +30,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/analytics"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
+	"github.com/Michad/tilegroxy/pkg/static"
 )
 
 // How long a generation waits before trusting its refcount. The handler increments under the same
@@ -126,6 +127,7 @@ func (g *generation) writeHeaders(w http.ResponseWriter) {
 	}
 
 	if !g.serverCfg.Production {
+		version, _, _ := static.GetVersionInformation()
 		w.Header().Add("X-Powered-By", "tilegroxy "+version)
 	}
 }
