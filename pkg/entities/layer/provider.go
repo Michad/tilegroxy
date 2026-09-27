@@ -16,7 +16,6 @@ package layer
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -39,14 +38,25 @@ type ProviderContext struct {
 	Other          map[string]interface{} // A generic holder in cases where a provider needs extra storage - for instance Blend which needs Context for child providers
 }
 
+// LayerGroup is the set of configured layers, letting an entity render tiles from other layers
+type LayerGroup interface {
+	// Renders a tile through the named layer, including its cache and permission checks
+	RenderTile(ctx context.Context, tileRequest pkg.TileRequest) (*pkg.Image, error)
+	// Renders a tile through the named layer's provider, skipping its cache
+	RenderTileNoCache(ctx context.Context, tileRequest pkg.TileRequest) (*pkg.Image, error)
+	// Reports whether a layer name, including one matching a layer pattern, resolves to a layer
+	HasLayer(ctx context.Context, layerName string) bool
+	ListLayerIDs() []string
+}
+
 // ProviderDeps carries everything a provider is given at construction. New dependencies are added as
 // fields so the Initialize signature stays stable
 type ProviderDeps struct {
 	ClientConfig  config.ClientConfig
 	ErrorMessages config.ErrorMessages
 	// The group the provider belongs to, used by nesting providers to reach sibling layers
-	LayerGroup *LayerGroup
-	Datastores *datastore.DatastoreRegistry
+	LayerGroup LayerGroup
+	Datastores datastore.DatastoreRegistry
 }
 
 type ProviderRegistration interface {
@@ -84,54 +94,4 @@ func RegisteredProviderNames() []string {
 		names = append(names, n)
 	}
 	return names
-}
-
-func ConstructProvider(rawConfig map[string]interface{}, deps ProviderDeps) (Provider, error) {
-	name, ok := rawConfig["name"].(string)
-
-	if ok {
-		reg, ok := RegisteredProvider(name)
-		if ok {
-			cfg := reg.InitializeConfig()
-			err := config.DecodeEntityConfig(rawConfig, &cfg)
-			if err != nil {
-				return nil, err
-			}
-			provider, err := reg.Initialize(cfg, deps)
-
-			if err != nil {
-				return nil, err
-			}
-
-			return ProviderWrapper{Name: name, Provider: provider}, nil
-		}
-	}
-
-	nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
-	return nil, fmt.Errorf(deps.ErrorMessages.EnumError, "provider.name", nameCoerce, RegisteredProviderNames())
-}
-
-func dataTypeFromRawConfig(rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (config.DataType, error) {
-	name, ok := rawConfig["name"].(string)
-	if !ok {
-		nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
-		return config.DataTypeUnknown, fmt.Errorf(errorMessages.EnumError, "provider.name", nameCoerce, RegisteredProviderNames())
-	}
-
-	reg, ok := RegisteredProvider(name)
-	if !ok {
-		return config.DataTypeUnknown, fmt.Errorf(errorMessages.EnumError, "provider.name", name, RegisteredProviderNames())
-	}
-
-	cfg := reg.InitializeConfig()
-	if err := config.DecodeEntityConfig(rawConfig, &cfg); err != nil {
-		return config.DataTypeUnknown, err
-	}
-
-	return reg.DataType(cfg), nil
-}
-
-func ExtractDataType(rawConfig map[string]interface{}) config.DataType {
-	datatype, _ := dataTypeFromRawConfig(rawConfig, config.ErrorMessages{})
-	return datatype
 }

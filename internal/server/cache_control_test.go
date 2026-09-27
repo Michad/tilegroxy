@@ -20,17 +20,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 var cacheControlNow = time.Unix(1700000000, 0)
 
-func layerWithFacts(facts layer.CacheControlFacts, cfg *config.CacheControlConfig) *layer.Layer {
-	return &layer.Layer{
+func layerWithFacts(facts layers.CacheControlFacts, cfg *config.CacheControlConfig) *layers.Layer {
+	return &layers.Layer{
 		ID:           "test",
 		Config:       config.LayerConfig{ID: "test", CacheControl: cfg},
 		CacheControl: facts,
@@ -44,7 +44,7 @@ func tileAged(seconds int) *pkg.Image {
 
 func Test_CacheControl_DisabledReturnsNothing(t *testing.T) {
 	cfg := config.DefaultConfig().Server.CacheControl
-	l := layerWithFacts(layer.CacheControlFacts{TTL: time.Hour}, nil)
+	l := layerWithFacts(layers.CacheControlFacts{TTL: time.Hour}, nil)
 
 	assert.Empty(t, generateCacheControlValue(cfg, l, tileAged(0), cacheControlNow))
 }
@@ -52,14 +52,14 @@ func Test_CacheControl_DisabledReturnsNothing(t *testing.T) {
 // The documented example: a one hour TTL, a tile generated 50 minutes ago
 func Test_CacheControl_DerivesRemainingLifetime(t *testing.T) {
 	cfg := config.CacheControlConfig{Enabled: new(true)}
-	l := layerWithFacts(layer.CacheControlFacts{TTL: time.Hour}, nil)
+	l := layerWithFacts(layers.CacheControlFacts{TTL: time.Hour}, nil)
 
 	assert.Equal(t, "public, max-age=600", generateCacheControlValue(cfg, l, tileAged(3000), cacheControlNow))
 }
 
 func Test_CacheControl_ExpiredTileFloorsAtZero(t *testing.T) {
 	cfg := config.CacheControlConfig{Enabled: new(true)}
-	l := layerWithFacts(layer.CacheControlFacts{TTL: time.Hour}, nil)
+	l := layerWithFacts(layers.CacheControlFacts{TTL: time.Hour}, nil)
 
 	assert.Equal(t, "public, max-age=0", generateCacheControlValue(cfg, l, tileAged(7200), cacheControlNow))
 }
@@ -67,28 +67,28 @@ func Test_CacheControl_ExpiredTileFloorsAtZero(t *testing.T) {
 // An entry written by a path that bypasses the TTL cache is treated as fresh, not as 1970
 func Test_CacheControl_UnknownAgeGetsFullTTL(t *testing.T) {
 	cfg := config.CacheControlConfig{Enabled: new(true)}
-	l := layerWithFacts(layer.CacheControlFacts{TTL: time.Hour}, nil)
+	l := layerWithFacts(layers.CacheControlFacts{TTL: time.Hour}, nil)
 
 	assert.Equal(t, "public, max-age=3600", generateCacheControlValue(cfg, l, &pkg.Image{}, cacheControlNow))
 }
 
 func Test_CacheControl_NoTTLOmitsMaxAge(t *testing.T) {
 	cfg := config.CacheControlConfig{Enabled: new(true)}
-	l := layerWithFacts(layer.CacheControlFacts{}, nil)
+	l := layerWithFacts(layers.CacheControlFacts{}, nil)
 
 	assert.Equal(t, "public", generateCacheControlValue(cfg, l, tileAged(10), cacheControlNow))
 }
 
 func Test_CacheControl_UncacheableLayerReturnsNoStore(t *testing.T) {
 	cfg := config.CacheControlConfig{Enabled: new(true)}
-	l := layerWithFacts(layer.CacheControlFacts{Uncacheable: true}, nil)
+	l := layerWithFacts(layers.CacheControlFacts{Uncacheable: true}, nil)
 
 	assert.Equal(t, "no-store", generateCacheControlValue(cfg, l, tileAged(10), cacheControlNow))
 }
 
 func Test_CacheControl_PerIdentityLayerIsPrivate(t *testing.T) {
 	cfg := config.CacheControlConfig{Enabled: new(true)}
-	l := layerWithFacts(layer.CacheControlFacts{PerIdentity: true, TTL: time.Hour}, nil)
+	l := layerWithFacts(layers.CacheControlFacts{PerIdentity: true, TTL: time.Hour}, nil)
 
 	assert.Equal(t, "private, max-age=3000", generateCacheControlValue(cfg, l, tileAged(600), cacheControlNow))
 }
@@ -106,14 +106,14 @@ func Test_CacheControl_AddsSharedMaxAgeAndStaleWindow(t *testing.T) {
 		SharedMaxAge:         new(uint(86400)),
 		StaleWhileRevalidate: new(uint(60)),
 	}
-	l := layerWithFacts(layer.CacheControlFacts{TTL: time.Hour}, nil)
+	l := layerWithFacts(layers.CacheControlFacts{TTL: time.Hour}, nil)
 
 	assert.Equal(t, "public, max-age=600, s-maxage=86400, stale-while-revalidate=60", generateCacheControlValue(cfg, l, tileAged(3000), cacheControlNow))
 }
 
 func Test_CacheControl_ExplicitMaxAgeReplacesDerivedLifetime(t *testing.T) {
 	cfg := config.CacheControlConfig{Enabled: new(true), MaxAge: new(uint(86400))}
-	l := layerWithFacts(layer.CacheControlFacts{TTL: time.Hour}, nil)
+	l := layerWithFacts(layers.CacheControlFacts{TTL: time.Hour}, nil)
 
 	assert.Equal(t, "public, max-age=86400", generateCacheControlValue(cfg, l, tileAged(3000), cacheControlNow))
 }
@@ -121,7 +121,7 @@ func Test_CacheControl_ExplicitMaxAgeReplacesDerivedLifetime(t *testing.T) {
 // Zero is a set value, not an unset one, so it revalidates every time rather than deriving
 func Test_CacheControl_ZeroMaxAgeIsDistinctFromUnset(t *testing.T) {
 	cfg := config.CacheControlConfig{Enabled: new(true), MaxAge: new(uint(0))}
-	l := layerWithFacts(layer.CacheControlFacts{TTL: time.Hour}, nil)
+	l := layerWithFacts(layers.CacheControlFacts{TTL: time.Hour}, nil)
 
 	assert.Equal(t, "public, max-age=0", generateCacheControlValue(cfg, l, tileAged(10), cacheControlNow))
 }
@@ -135,35 +135,35 @@ func Test_CacheControl_AutoFalseReturnsOnlyWhatIsConfigured(t *testing.T) {
 		MaxAge:     new(uint(86400)),
 		Extra:      []string{"immutable"},
 	}
-	l := layerWithFacts(layer.CacheControlFacts{Uncacheable: true, PerIdentity: true, TTL: time.Minute}, nil)
+	l := layerWithFacts(layers.CacheControlFacts{Uncacheable: true, PerIdentity: true, TTL: time.Minute}, nil)
 
 	assert.Equal(t, "public, max-age=86400, immutable", generateCacheControlValue(cfg, l, tileAged(10), cacheControlNow))
 }
 
 func Test_CacheControl_AutoFalseWithNothingElseReturnsNothing(t *testing.T) {
 	cfg := config.CacheControlConfig{Enabled: new(true), Auto: new(false)}
-	l := layerWithFacts(layer.CacheControlFacts{TTL: time.Hour}, nil)
+	l := layerWithFacts(layers.CacheControlFacts{TTL: time.Hour}, nil)
 
 	assert.Empty(t, generateCacheControlValue(cfg, l, tileAged(10), cacheControlNow))
 }
 
 func Test_CacheControl_ExplicitNoStoreOverridesDerivation(t *testing.T) {
 	cfg := config.CacheControlConfig{Enabled: new(true), NoStore: new(true)}
-	l := layerWithFacts(layer.CacheControlFacts{TTL: time.Hour}, nil)
+	l := layerWithFacts(layers.CacheControlFacts{TTL: time.Hour}, nil)
 
 	assert.Equal(t, "no-store", generateCacheControlValue(cfg, l, tileAged(10), cacheControlNow))
 }
 
 func Test_CacheControl_ExplicitNoStoreFalseKeepsUncacheableLayerStorable(t *testing.T) {
 	cfg := config.CacheControlConfig{Enabled: new(true), NoStore: new(false)}
-	l := layerWithFacts(layer.CacheControlFacts{Uncacheable: true}, nil)
+	l := layerWithFacts(layers.CacheControlFacts{Uncacheable: true}, nil)
 
 	assert.Equal(t, "public", generateCacheControlValue(cfg, l, tileAged(10), cacheControlNow))
 }
 
 func Test_CacheControl_ExtraAppendedToDerivedDirectives(t *testing.T) {
 	cfg := config.CacheControlConfig{Enabled: new(true), Extra: []string{"immutable", "stale-if-error=86400"}}
-	l := layerWithFacts(layer.CacheControlFacts{TTL: time.Hour}, nil)
+	l := layerWithFacts(layers.CacheControlFacts{TTL: time.Hour}, nil)
 
 	assert.Equal(t, "public, max-age=3600, immutable, stale-if-error=86400", generateCacheControlValue(cfg, l, &pkg.Image{}, cacheControlNow))
 }
@@ -172,7 +172,7 @@ func Test_CacheControl_ExtraAppendedToDerivedDirectives(t *testing.T) {
 func Test_CacheControl_LayerOverridesFieldByField(t *testing.T) {
 	serverCfg := config.CacheControlConfig{Enabled: new(true), SharedMaxAge: new(uint(86400))}
 	l := layerWithFacts(
-		layer.CacheControlFacts{TTL: time.Hour},
+		layers.CacheControlFacts{TTL: time.Hour},
 		&config.CacheControlConfig{Visibility: config.CacheVisibilityPrivate},
 	)
 
@@ -183,7 +183,7 @@ func Test_CacheControl_LayerOverridesFieldByField(t *testing.T) {
 
 func Test_CacheControl_LayerWithoutBlockUsesServerBlock(t *testing.T) {
 	serverCfg := config.CacheControlConfig{Enabled: new(true), MaxAge: new(uint(60))}
-	l := layerWithFacts(layer.CacheControlFacts{}, nil)
+	l := layerWithFacts(layers.CacheControlFacts{}, nil)
 
 	assert.Equal(t, serverCfg, mergeCacheControl(serverCfg, l))
 }
@@ -191,7 +191,7 @@ func Test_CacheControl_LayerWithoutBlockUsesServerBlock(t *testing.T) {
 // A layer can turn the header on for itself while the server leaves it off
 func Test_CacheControl_LayerCanEnableWithoutServer(t *testing.T) {
 	serverCfg := config.CacheControlConfig{Enabled: new(false)}
-	l := layerWithFacts(layer.CacheControlFacts{TTL: time.Hour}, &config.CacheControlConfig{Enabled: new(true)})
+	l := layerWithFacts(layers.CacheControlFacts{TTL: time.Hour}, &config.CacheControlConfig{Enabled: new(true)})
 
 	assert.Equal(t, "public, max-age=3600", generateCacheControlValue(mergeCacheControl(serverCfg, l), l, &pkg.Image{}, cacheControlNow))
 }
@@ -199,7 +199,7 @@ func Test_CacheControl_LayerCanEnableWithoutServer(t *testing.T) {
 // A layer can turn the header off for itself while the server leaves it on
 func Test_CacheControl_LayerCanDisableWhatServerEnabled(t *testing.T) {
 	serverCfg := config.CacheControlConfig{Enabled: new(true)}
-	l := layerWithFacts(layer.CacheControlFacts{TTL: time.Hour}, &config.CacheControlConfig{Enabled: new(false)})
+	l := layerWithFacts(layers.CacheControlFacts{TTL: time.Hour}, &config.CacheControlConfig{Enabled: new(false)})
 
 	assert.Empty(t, generateCacheControlValue(mergeCacheControl(serverCfg, l), l, &pkg.Image{}, cacheControlNow))
 }
@@ -207,7 +207,7 @@ func Test_CacheControl_LayerCanDisableWhatServerEnabled(t *testing.T) {
 // A layer block that says nothing about Enabled still inherits the server's
 func Test_CacheControl_LayerWithoutEnabledInheritsServer(t *testing.T) {
 	serverCfg := config.CacheControlConfig{Enabled: new(true)}
-	l := layerWithFacts(layer.CacheControlFacts{TTL: time.Hour}, &config.CacheControlConfig{Visibility: config.CacheVisibilityPrivate})
+	l := layerWithFacts(layers.CacheControlFacts{TTL: time.Hour}, &config.CacheControlConfig{Visibility: config.CacheVisibilityPrivate})
 
 	assert.Equal(t, "private, max-age=3600", generateCacheControlValue(mergeCacheControl(serverCfg, l), l, &pkg.Image{}, cacheControlNow))
 }

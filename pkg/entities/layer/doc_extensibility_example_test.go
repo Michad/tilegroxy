@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package layer
+package layer_test
 
 import (
 	"context"
@@ -21,6 +21,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/require"
 )
 
@@ -53,27 +54,30 @@ func (s docExampleSampleRegistration) DataType(_ any) config.DataType {
 	return config.DataTypeUnknown
 }
 
-func (s docExampleSampleRegistration) Initialize(cfgAny any, _ ProviderDeps) (Provider, error) {
+func (s docExampleSampleRegistration) Initialize(cfgAny any, _ layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(docExampleSampleConfig)
 	return &docExampleSample{cfg}, nil
 }
 
-func (t docExampleSample) PreAuth(_ context.Context, providerContext ProviderContext) (ProviderContext, error) {
+func (t docExampleSample) PreAuth(_ context.Context, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
 	return providerContext, nil
 }
 
-func (t docExampleSample) GenerateTile(_ context.Context, _ ProviderContext, _ pkg.TileRequest) (*pkg.Image, error) {
+func (t docExampleSample) GenerateTile(_ context.Context, _ layer.ProviderContext, _ pkg.TileRequest) (*pkg.Image, error) {
 	return nil, errors.New("not implemented")
 }
 
 func Test_DocExtensibilityExample_RegistersAndConstructs(t *testing.T) {
-	RegisterProvider(docExampleSampleRegistration{})
+	layer.RegisterProvider(docExampleSampleRegistration{})
 
-	provider, err := ConstructProvider(map[string]interface{}{"name": "doc-example-sample"}, ProviderDeps{ClientConfig: config.ClientConfig{}, ErrorMessages: config.ErrorMessages{}})
+	reg, ok := layer.RegisteredProvider("doc-example-sample")
+	require.True(t, ok)
+
+	provider, err := reg.Initialize(reg.InitializeConfig(), layer.ProviderDeps{ClientConfig: config.ClientConfig{}, ErrorMessages: config.ErrorMessages{}})
 
 	require.NoError(t, err)
 	require.NotNil(t, provider)
 
-	_, err = provider.GenerateTile(context.Background(), ProviderContext{}, pkg.TileRequest{})
+	_, err = provider.GenerateTile(context.Background(), layer.ProviderContext{}, pkg.TileRequest{})
 	require.Error(t, err)
 }

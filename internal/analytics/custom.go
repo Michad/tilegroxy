@@ -28,7 +28,7 @@ import (
 )
 
 type CustomConfig struct {
-	analytics.CommonConfig `mapstructure:",squash"`
+	CommonConfig `mapstructure:",squash"`
 	// Contains the go code to record events as a file.
 	File string
 	// Contains the go code to record events inline.
@@ -42,7 +42,7 @@ type Custom struct {
 	recordFunc func(context.Context, []analytics.Event, map[string]interface{}, config.ErrorMessages) error
 	closeFunc  func(context.Context) error
 	errorMsgs  config.ErrorMessages
-	batcher    *analytics.Batcher
+	batcher    *Batcher
 }
 
 func init() {
@@ -125,7 +125,7 @@ func (s CustomRegistration) Initialize(cfgAny any, deps analytics.AnalyticsDeps)
 		closeFunc = fn
 	}
 
-	batchCfg, err := analytics.ApplyBatchDefaults(cfg.Batch, deps.ErrorMessages)
+	batchCfg, err := ApplyBatchDefaults(cfg.Batch, deps.ErrorMessages)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +137,7 @@ func (s CustomRegistration) Initialize(cfgAny any, deps analytics.AnalyticsDeps)
 
 	c := &Custom{CustomConfig: cfg, recordFunc: recordFunc, closeFunc: closeFunc, errorMsgs: deps.ErrorMessages}
 
-	batcher, err := analytics.NewBatcher(id, batchCfg, c.flush)
+	batcher, err := NewBatcher(id, batchCfg, c.flush)
 	if err != nil {
 		return nil, err
 	}

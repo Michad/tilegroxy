@@ -24,7 +24,7 @@ import (
 type SeedJob struct {
 	layerName string
 	bounds    pkg.Bounds
-	ranges    []pkg.SingleZoomRange
+	ranges    []SingleZoomRange
 	count     uint64
 }
 
@@ -36,7 +36,7 @@ func NewSeedJob(layerName string, bounds pkg.Bounds, zooms []uint) (*SeedJob, er
 	e := &SeedJob{layerName: layerName, bounds: bounds}
 
 	for _, z := range sorted {
-		r, err := bounds.ConstructSingleZoomRange(z)
+		r, err := NewSingleZoomRange(bounds, z)
 		if err != nil {
 			return nil, err
 		}

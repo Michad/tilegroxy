@@ -21,6 +21,7 @@ import (
 
 	_ "github.com/Michad/tilegroxy/internal/authentications"
 	_ "github.com/Michad/tilegroxy/internal/caches"
+	"github.com/Michad/tilegroxy/internal/configload"
 	_ "github.com/Michad/tilegroxy/internal/providers"
 	_ "github.com/Michad/tilegroxy/internal/secrets"
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -112,13 +113,13 @@ func extractConfigFromCommand(cmd *cobra.Command, reloadFunc func(c config.Confi
 
 	switch {
 	case f.raw != "":
-		cfg, err = config.LoadConfig(f.raw)
+		cfg, err = configload.LoadConfig(f.raw)
 	case f.remoteProvider != "":
-		cfg, err = config.LoadConfigFromRemote(f.remoteProvider, f.remoteEndpoint, f.remotePath, f.remoteType)
+		cfg, err = configload.LoadConfigFromRemote(f.remoteProvider, f.remoteEndpoint, f.remotePath, f.remoteType)
 	case f.reload && reloadFunc != nil:
-		cfg, err = config.LoadAndWatchConfigFromFile(f.path, reloadFunc)
+		cfg, err = configload.LoadAndWatchConfigFromFile(f.path, reloadFunc)
 	case f.path != "":
-		cfg, err = config.LoadConfigFromFile(f.path)
+		cfg, err = configload.LoadConfigFromFile(f.path)
 	default:
 		err = errors.New("no configuration supplied")
 	}
@@ -138,17 +139,17 @@ func reloadSourceFromCommand(cmd *cobra.Command) (func() (config.Config, error),
 
 	if f.raw != "" {
 		return func() (config.Config, error) {
-			return config.LoadConfig(f.raw)
+			return configload.LoadConfig(f.raw)
 		}, nil
 	}
 
 	if f.remoteProvider != "" {
 		return func() (config.Config, error) {
-			return config.LoadConfigFromRemote(f.remoteProvider, f.remoteEndpoint, f.remotePath, f.remoteType)
+			return configload.LoadConfigFromRemote(f.remoteProvider, f.remoteEndpoint, f.remotePath, f.remoteType)
 		}, nil
 	}
 
 	return func() (config.Config, error) {
-		return config.LoadConfigFromFile(f.path)
+		return configload.LoadConfigFromFile(f.path)
 	}, nil
 }

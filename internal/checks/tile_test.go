@@ -22,11 +22,11 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/health"
-	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/Michad/tilegroxy/internal/images"
+	"github.com/Michad/tilegroxy/internal/layers"
 	_ "github.com/Michad/tilegroxy/internal/providers"
 )
 
@@ -181,7 +181,7 @@ func Test_Same(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func initialize(t *testing.T, fail bool) (config.Config, *layer.LayerGroup, TileCheckRegistration, TileCheckConfig) {
+func initialize(t *testing.T, fail bool) (config.Config, *layers.LayerGroup, TileCheckRegistration, TileCheckConfig) {
 	cfgAll := config.DefaultConfig()
 
 	var layerCfg config.LayerConfig
@@ -205,7 +205,7 @@ func initialize(t *testing.T, fail bool) (config.Config, *layer.LayerGroup, Tile
 	}
 
 	cfgAll.Layers = append(cfgAll.Layers, layerCfg)
-	lg, err := layer.ConstructLayerGroup(context.Background(), cfgAll, nil, nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfgAll, nil, nil, nil)
 	require.NoError(t, err)
 
 	reg := TileCheckRegistration{}

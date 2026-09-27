@@ -18,9 +18,9 @@ import (
 	"context"
 	"testing"
 
+	"github.com/Michad/tilegroxy/internal/datastores"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/analytics"
-	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -40,7 +40,7 @@ func Test_Postgres_Names(t *testing.T) {
 func Test_Postgres_LegacyAliasInitializes(t *testing.T) {
 	msgs := config.DefaultConfig().Error.Messages
 
-	empty, err := datastore.ConstructDatastoreRegistry(context.Background(), nil, nil, msgs)
+	empty, err := datastores.ConstructDatastoreRegistry(context.Background(), nil, nil, msgs)
 	require.NoError(t, err)
 
 	reg, ok := analytics.RegisteredAnalytics("postgres")

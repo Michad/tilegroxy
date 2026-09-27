@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/Michad/tilegroxy/internal/images"
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
@@ -59,7 +60,7 @@ func Test_BlendCloseClosesChildProviders(t *testing.T) {
 	p2 := &closableProvider{}
 	// ConstructProvider always wraps, so one child is wrapped here to match what production
 	// actually builds: the close has to survive both hops, not just the forwarding one
-	b := &Blend{providers: []layer.Provider{layer.ProviderWrapper{Name: "child", Provider: p1}, p2}}
+	b := &Blend{providers: []layer.Provider{layers.ProviderWrapper{Name: "child", Provider: p1}, p2}}
 
 	require.NoError(t, b.Close(context.Background()))
 

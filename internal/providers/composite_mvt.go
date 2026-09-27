@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
@@ -65,7 +66,7 @@ func (s CompositeMVTRegistration) Initialize(cfgAny any, deps layer.ProviderDeps
 	errorSlice := make([]error, 0, len(cfg.Providers))
 
 	for _, p := range cfg.Providers {
-		provider, err := layer.ConstructProvider(p, deps)
+		provider, err := layers.ConstructProvider(p, deps)
 		providers = append(providers, provider)
 		errorSlice = append(errorSlice, err)
 	}

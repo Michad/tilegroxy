@@ -18,7 +18,7 @@ import (
 	"errors"
 	"fmt"
 
-	tg "github.com/Michad/tilegroxy/pkg/entry"
+	"github.com/Michad/tilegroxy/internal/entry"
 	"github.com/spf13/cobra"
 )
 
@@ -69,7 +69,7 @@ func runTest(cmd *cobra.Command, _ []string) {
 		return
 	}
 
-	errCount, err := tg.Test(cfg, tg.TestOptions{
+	errCount, err := entry.Test(cfg, entry.TestOptions{
 		LayerNames:     layerNames,
 		Z:              z,
 		X:              x,

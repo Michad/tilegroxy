@@ -9,7 +9,7 @@ all: clean test docs build version
 lint: golangci sec
 
 build:
-	go build -v -o ${OUT} -ldflags="-X \"${PKG}/pkg/static.tilegroxyVersion=${VERSION}\" -X \"${PKG}/pkg/static.tilegroxyBuildRef=${REF}\" -X \"${PKG}/pkg/static.tilegroxyBuildDate=${DATE}\"" -tags viper_bind_struct
+	go build -v -o ${OUT} -ldflags="-X \"${PKG}/internal/static.tilegroxyVersion=${VERSION}\" -X \"${PKG}/internal/static.tilegroxyBuildRef=${REF}\" -X \"${PKG}/internal/static.tilegroxyBuildDate=${DATE}\"" -tags viper_bind_struct
 
 test:
 	@go test ./internal/... ./pkg/... ./cmd/... -count=1 -tags viper_bind_struct

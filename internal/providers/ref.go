@@ -38,7 +38,7 @@ type RefConfig struct {
 
 type Ref struct {
 	RefConfig
-	layerGroup *layer.LayerGroup
+	layerGroup layer.LayerGroup
 }
 
 func init() {

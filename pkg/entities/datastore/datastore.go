@@ -15,10 +15,8 @@
 package datastore
 
 import (
-	"fmt"
 	"sync"
 
-	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
 )
@@ -70,23 +68,7 @@ func RegisteredDatastoreWrapperNames() []string {
 	return names
 }
 
-func ConstructDatastoreWrapper(rawConfig map[string]interface{}, deps DatastoreDeps) (DatastoreWrapper, error) {
-	rawConfig = pkg.ReplaceEnv(rawConfig)
-
-	name, ok := rawConfig["name"].(string)
-
-	if ok {
-		reg, ok := RegisteredDatastoreWrapper(name)
-		if ok {
-			cfg := reg.InitializeConfig()
-			err := config.DecodeEntityConfig(rawConfig, &cfg)
-			if err != nil {
-				return nil, err
-			}
-			return reg.Initialize(cfg, deps)
-		}
-	}
-
-	nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
-	return nil, fmt.Errorf(deps.ErrorMessages.EnumError, "datastore.name", nameCoerce, RegisteredDatastoreWrapperNames())
+// DatastoreRegistry gives entities access to the datastores configured by ID
+type DatastoreRegistry interface {
+	Get(id string) (DatastoreWrapper, bool)
 }

@@ -54,7 +54,7 @@ func (s MultiRegistration) Initialize(configAny any, deps cache.CacheDeps) (cach
 	tierCaches := make([]cache.Cache, len(config.Tiers))
 
 	for i, tierRawConfig := range config.Tiers {
-		tierCache, err := cache.ConstructCache(tierRawConfig, deps)
+		tierCache, err := ConstructCache(tierRawConfig, deps)
 
 		if err != nil {
 			return nil, err

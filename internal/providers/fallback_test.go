@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/Michad/tilegroxy/internal/images"
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
@@ -76,7 +77,7 @@ func Test_FallbackCloseClosesChildProviders(t *testing.T) {
 	primary := &closableProvider{}
 	secondary := &closableProvider{}
 	// Wrapped to match production, where ConstructProvider hands Fallback wrapped children
-	f := &Fallback{Primary: layer.ProviderWrapper{Name: "primary", Provider: primary}, Secondary: secondary}
+	f := &Fallback{Primary: layers.ProviderWrapper{Name: "primary", Provider: primary}, Secondary: secondary}
 
 	require.NoError(t, f.Close(context.Background()))
 

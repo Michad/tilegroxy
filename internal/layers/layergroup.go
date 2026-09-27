@@ -1,0 +1,526 @@
+// Copyright 2024 Michael Davis
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package layers
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log/slog"
+	"runtime/debug"
+	"slices"
+	"sync"
+
+	"github.com/Michad/tilegroxy/internal/caches"
+	"github.com/Michad/tilegroxy/internal/datastores"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
+	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
+	"github.com/Michad/tilegroxy/pkg/entities/secret"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
+	"golang.org/x/sync/singleflight"
+)
+
+const maxConcurrentCacheWrites = 64
+
+type LayerGroup struct {
+	layers            []*Layer
+	cacheHitCounter   metric.Int64Counter
+	cacheMissCounter  metric.Int64Counter
+	cacheWriteLimiter chan struct{}
+	// Counts the background writeCache goroutines so Close can wait for them.
+	cacheWrites sync.WaitGroup
+	// combines concurrent provider fetches for the same tile, so a burst of requests for one tile results in a single upstream call
+	generateGroup singleflight.Group
+}
+
+func ConstructLayerGroup(ctx context.Context, cfg config.Config, cacheRegistry *caches.CacheRegistry, secreter secret.Secreter, datastoreRegistry *datastores.Registry) (*LayerGroup, error) {
+	var err1, err2 error
+	var layerGroup LayerGroup
+	layerObjects := make([]*Layer, len(cfg.Layers))
+
+	if err := validateNoDuplicateLayerIDs(cfg.Layers); err != nil {
+		return nil, err
+	}
+
+	if err := validateRefs(cfg.Layers); err != nil {
+		return nil, err
+	}
+
+	for i, l := range cfg.Layers {
+		layerCache, err := resolveLayerCache(l, cacheRegistry, cfg.Error.Messages)
+		if err != nil {
+			return nil, fmt.Errorf("error constructing layer %v: %w", i, err)
+		}
+
+		layerObjects[i], err = ConstructLayer(ctx, l, cfg.Client, layerCache, cfg.Error.Messages, &layerGroup, secreter, datastoreRegistry)
+		if err != nil {
+			return nil, fmt.Errorf("error constructing layer %v: %w", i, err)
+		}
+
+		layerObjects[i].Cache = layerCache
+	}
+
+	meter := otel.Meter(packageName)
+	layerGroup.cacheHitCounter, err1 = meter.Int64Counter("tilegroxy.cache.total.hit", metric.WithDescription("Number of requests that hit the cache (ignoring skips)"))
+	layerGroup.cacheMissCounter, err2 = meter.Int64Counter("tilegroxy.cache.total.miss", metric.WithDescription("Number of requests that missed the cache (ignoring skips)"))
+
+	layerGroup.layers = layerObjects
+	layerGroup.cacheWriteLimiter = make(chan struct{}, maxConcurrentCacheWrites)
+
+	return &layerGroup, errors.Join(err1, err2)
+}
+
+func resolveLayerCache(l config.LayerConfig, cacheRegistry *caches.CacheRegistry, errorMessages config.ErrorMessages) (cache.Cache, error) {
+	if l.Cache == "" {
+		return cacheRegistry.Default(), nil
+	}
+
+	layerCache, ok := cacheRegistry.Get(l.Cache)
+	if !ok {
+		return nil, caches.NewUnknownCacheError(errorMessages, "layer.cache", l.Cache, cacheRegistry.IDs())
+	}
+
+	return layerCache, nil
+}
+
+func isNoopCache(c cache.Cache) bool {
+	wrapper, ok := c.(caches.CacheWrapper)
+	return ok && wrapper.Name == "none"
+}
+
+// recursively walk a raw provider config collecting the layer names that `ref` entries target.
+func findRefTargets(node any, targets *[]string) {
+	switch v := node.(type) {
+	case map[string]any:
+		if name, ok := v["name"].(string); ok && name == "ref" {
+			if target, ok := v["layer"].(string); ok && target != "" {
+				*targets = append(*targets, target)
+			}
+		}
+		for _, val := range v {
+			findRefTargets(val, targets)
+		}
+	case []any:
+		for _, val := range v {
+			findRefTargets(val, targets)
+		}
+	}
+}
+
+// error on refs pointing at a layer ID that doesn't statically exist, and on cycles
+func validateRefs(layers []config.LayerConfig) error {
+	knownIDs := make(map[string]bool, len(layers))
+	hasPatternLayer := false
+	for _, l := range layers {
+		if l.Pattern == "" || l.Pattern == l.ID {
+			knownIDs[l.ID] = true
+		} else {
+			hasPatternLayer = true
+		}
+	}
+
+	refsByLayer := make(map[string][]string, len(layers))
+	for _, l := range layers {
+		var targets []string
+		findRefTargets(l.Provider, &targets)
+		if len(targets) > 0 {
+			refsByLayer[l.ID] = targets
+		}
+	}
+
+	// With any pattern layer present, an unmatched target might still resolve to it at request
+	// time, so a dangling target can only be flagged when every layer is literal-ID-matched.
+	if !hasPatternLayer {
+		for id, targets := range refsByLayer {
+			for _, target := range targets {
+				if !knownIDs[target] {
+					return fmt.Errorf("layer %q has a ref provider targeting unknown layer %q", id, target)
+				}
+			}
+		}
+	}
+
+	// DFS cycle detection over the ref graph (literal-ID-resolvable edges only)
+	const (
+		white = 0
+		gray  = 1
+		black = 2
+	)
+	color := make(map[string]int, len(refsByLayer))
+	var path []string
+
+	var visit func(id string) error
+	visit = func(id string) error {
+		switch color[id] {
+		case gray:
+			cycle := append(append([]string{}, path...), id)
+			return fmt.Errorf("ref cycle detected among layers: %v", cycle)
+		case black:
+			return nil
+		}
+
+		color[id] = gray
+		path = append(path, id)
+
+		for _, target := range refsByLayer[id] {
+			if _, ok := refsByLayer[target]; ok {
+				if err := visit(target); err != nil {
+					return err
+				}
+			}
+		}
+
+		path = path[:len(path)-1]
+		color[id] = black
+		return nil
+	}
+
+	for id := range refsByLayer {
+		if color[id] == white {
+			if err := visit(id); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func validateNoDuplicateLayerIDs(layers []config.LayerConfig) error {
+	seen := make(map[string]bool, len(layers))
+	for _, l := range layers {
+		if seen[l.ID] {
+			return fmt.Errorf("duplicate layer id %q: every layer must have a unique id", l.ID)
+		}
+		seen[l.ID] = true
+	}
+	return nil
+}
+
+func (lg *LayerGroup) FindLayer(ctx context.Context, layerName string) *Layer {
+	for _, l := range lg.layers {
+		if l.MatchesName(ctx, layerName) {
+			return l
+		}
+	}
+
+	return nil
+}
+
+func (lg *LayerGroup) HasLayer(ctx context.Context, layerName string) bool {
+	return lg.FindLayer(ctx, layerName) != nil
+}
+
+func (lg *LayerGroup) Layers() []*Layer {
+	return lg.layers
+}
+
+func (lg *LayerGroup) ListLayerIDs() []string {
+	r := make([]string, 0, len(lg.layers))
+	for _, l := range lg.layers {
+		r = append(r, l.ID)
+	}
+	return r
+}
+
+func (lg *LayerGroup) RenderTile(ctx context.Context, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+	var img *pkg.Image
+	var err error
+
+	l := lg.FindLayer(ctx, tileRequest.LayerName)
+
+	if l == nil {
+		return nil, pkg.UnauthorizedError{Message: "Layer " + tileRequest.LayerName + " does not exist"}
+	}
+
+	if err := l.CheckZoomBounds(tileRequest); err != nil {
+		return nil, err
+	}
+
+	if l.Config.SkipCache {
+		return lg.RenderTileNoCache(ctx, tileRequest)
+	}
+
+	err = lg.checkPermission(ctx, l, tileRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	cacheTileRequest := tileRequest
+	if l.Config.CacheVersion != "" {
+		cacheTileRequest = pkg.TileRequest{LayerName: l.Config.CacheVersion + tileRequest.LayerName, X: tileRequest.X, Y: tileRequest.Y, Z: tileRequest.Z}
+	}
+
+	img, err = l.Cache.Lookup(ctx, cacheTileRequest)
+
+	if img != nil {
+		slog.DebugContext(ctx, "Cache hit")
+		lg.cacheHitCounter.Add(ctx, 1)
+		if cached, ok := pkg.CachedFromContext(ctx); ok && cached != nil {
+			*cached = true
+		}
+		// A tile we have in hand shouldn't fail the request just because the cache also reported a problem.
+		if err != nil {
+			slog.WarnContext(ctx, fmt.Sprintf("Cache read error alongside hit %v\n", err))
+		}
+
+		return img, nil
+	}
+
+	lg.cacheMissCounter.Add(ctx, 1)
+
+	if err != nil {
+		slog.WarnContext(ctx, fmt.Sprintf("Cache read error %v\n", err))
+	}
+
+	if l.allowCoalesce {
+		img, err = lg.renderTileCoalesced(ctx, tileRequest)
+	} else {
+		img, err = lg.RenderTileNoCache(ctx, tileRequest)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	if img == nil {
+		return nil, errors.New("provider returned no image and no error")
+	}
+
+	if !img.ForceSkipCache {
+		select {
+		case lg.cacheWriteLimiter <- struct{}{}:
+			lg.cacheWrites.Add(1)
+
+			go func() {
+				defer lg.cacheWrites.Done()
+				defer func() { <-lg.cacheWriteLimiter }()
+				writeCache(ctx, l.Cache, cacheTileRequest, img)
+			}()
+		default:
+			slog.WarnContext(ctx, "Skipping cache write: too many cache writes already in flight")
+		}
+	}
+
+	return img, nil
+}
+
+// singleflightResult bundles what a coalesced generation call produces, so it can travel through
+// singleflight's `any` result value without a type assertion at every call site.
+type singleflightResult struct {
+	img   *pkg.Image
+	err   error
+	panic any // non-nil if the provider call underneath panicked instead of returning
+	stack []byte
+}
+
+func (lg *LayerGroup) renderTileRecovered(ctx context.Context, tileRequest pkg.TileRequest) singleflightResult {
+	resultPtr := new(singleflightResult)
+
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				*resultPtr = singleflightResult{panic: r, stack: debug.Stack()}
+			}
+		}()
+
+		img, err := lg.RenderTileNoCache(ctx, tileRequest)
+		*resultPtr = singleflightResult{img: img, err: err}
+	}()
+
+	return *resultPtr
+}
+
+// disconnect from cancellation but leave deadline in place so downstream doesn't hang forever but we avoid a connection hiccup on request A preventing request B getting a result
+func leaderContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	leaderCtx := context.WithoutCancel(ctx)
+	if deadline, ok := ctx.Deadline(); ok {
+		return context.WithDeadline(leaderCtx, deadline)
+	}
+	return leaderCtx, func() {}
+}
+
+// deduplicates concurrent provider fetches for the same tile.
+func (lg *LayerGroup) renderTileCoalesced(ctx context.Context, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+	key := tileRequest.String()
+
+	leaderCtx, cancel := leaderContext(ctx)
+
+	resultCh := lg.generateGroup.DoChan(key, func() (any, error) {
+		defer cancel()
+		return lg.renderTileRecovered(leaderCtx, tileRequest), nil
+	})
+
+	select {
+	case res := <-resultCh:
+		sr, _ := res.Val.(singleflightResult)
+		if sr.panic != nil {
+			panic(fmt.Sprintf("%v\n\n%s", sr.panic, sr.stack))
+		}
+		return sr.img, sr.err
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+}
+
+func writeCache(ctx context.Context, cache cache.Cache, tileRequest pkg.TileRequest, img *pkg.Image) {
+	// We need to make a new context to avoid the request finishing cancelling the ctx sent into the cache
+	newCtx := pkg.BackgroundContext()
+
+	pkg.CopyAuthRestrictions(ctx, newCtx)
+
+	// Copy span over from original context
+	span := trace.SpanFromContext(ctx)
+	newCtx = trace.ContextWithSpan(newCtx, span)
+
+	// This runs on its own goroutine, so a panic from a third-party Cache.Save would otherwise be
+	// unrecoverable and take down the process over a write no client is waiting on.
+	defer func() {
+		if r := recover(); r != nil {
+			slog.ErrorContext(newCtx, fmt.Sprintf("Recovered from panic in background cache write: %v", r))
+		}
+	}()
+
+	err := cache.Save(newCtx, tileRequest, img)
+
+	if err != nil {
+		slog.WarnContext(newCtx, fmt.Sprintf("Cache save error %v\n", err))
+	}
+}
+
+func (*LayerGroup) checkPermission(ctx context.Context, l *Layer, tileRequest pkg.TileRequest) error {
+	ctxLimitLayers, ok := pkg.LimitLayersFromContext(ctx)
+	limitLayers := ok && ctxLimitLayers != nil && *ctxLimitLayers
+
+	ctxAllowedLayers, ok := pkg.AllowedLayersFromContext(ctx)
+	var allowedLayers []string
+	if ok && ctxAllowedLayers != nil {
+		allowedLayers = *ctxAllowedLayers
+	}
+
+	ctxAllowedArea, ok := pkg.AllowedAreaFromContext(ctx)
+	allowedArea := pkg.Bounds{}
+	if ok && ctxAllowedArea != nil {
+		allowedArea = *ctxAllowedArea
+	}
+
+	ctxLimitAreaPartial, ok := pkg.LimitAreaPartialFromContext(ctx)
+	limitAreaPartial := ok && ctxLimitAreaPartial != nil && *ctxLimitAreaPartial
+
+	if limitLayers {
+		if !slices.Contains(allowedLayers, l.ID) {
+			return pkg.UnauthorizedError{Message: "Denying access to non-allowed layer"}
+		}
+	}
+
+	if !allowedArea.IsNullIsland() {
+		bounds, err := tileRequest.GetBounds()
+		if limitAreaPartial {
+			if err != nil || !allowedArea.Intersects(*bounds) {
+				return pkg.UnauthorizedError{Message: "Denying access to non-allowed area"}
+			}
+		} else {
+			if err != nil || !allowedArea.Contains(*bounds) {
+				return pkg.UnauthorizedError{Message: "Denying access to non-allowed area"}
+			}
+		}
+	}
+	return nil
+}
+
+// releases any layer provider holding resources, most notably custom providers
+func (lg *LayerGroup) Close(ctx context.Context) error {
+	if lg == nil {
+		return nil
+	}
+
+	errs := make([]error, 0, len(lg.layers))
+
+	for _, l := range lg.layers {
+		if l == nil {
+			continue
+		}
+
+		errs = append(errs, lifecycle.CloseIfCloser(ctx, l.Provider))
+	}
+
+	return errors.Join(errs...)
+}
+
+// blocks until the background cache writes finish
+func (lg *LayerGroup) WaitForCacheWrites(ctx context.Context) error {
+	if lg == nil {
+		return nil
+	}
+
+	drained := make(chan struct{})
+
+	go func() {
+		lg.cacheWrites.Wait()
+		close(drained)
+	}()
+
+	select {
+	case <-drained:
+		return nil
+	case <-ctx.Done():
+		return fmt.Errorf("gave up waiting on in-flight cache writes: %w", ctx.Err())
+	}
+}
+
+// Resolves the layer and cacheversion like RenderTile so it removes the entry a render would read.
+func (lg *LayerGroup) PurgeTile(ctx context.Context, tileRequest pkg.TileRequest) (bool, error) {
+	l := lg.FindLayer(ctx, tileRequest.LayerName)
+
+	if l == nil {
+		return false, pkg.UnauthorizedError{Message: "Layer " + tileRequest.LayerName + " does not exist"}
+	}
+
+	if err := l.CheckZoomBounds(tileRequest); err != nil {
+		return false, err
+	}
+
+	if l.Config.SkipCache {
+		return false, nil
+	}
+
+	cacheTileRequest := tileRequest
+	if l.Config.CacheVersion != "" {
+		cacheTileRequest = pkg.TileRequest{LayerName: l.Config.CacheVersion + tileRequest.LayerName, X: tileRequest.X, Y: tileRequest.Y, Z: tileRequest.Z}
+	}
+
+	return l.Cache.Remove(ctx, cacheTileRequest)
+}
+
+func (lg *LayerGroup) RenderTileNoCache(ctx context.Context, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+	var err error
+
+	l := lg.FindLayer(ctx, tileRequest.LayerName)
+
+	if l == nil {
+		return nil, pkg.UnauthorizedError{Message: "Layer " + tileRequest.LayerName + " does not exist"}
+	}
+
+	err = lg.checkPermission(ctx, l, tileRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	return l.RenderTileNoCache(ctx, tileRequest)
+}

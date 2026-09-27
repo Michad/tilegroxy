@@ -26,9 +26,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Michad/tilegroxy/internal/entities"
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
-	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/require"
 )
 
@@ -128,7 +128,7 @@ func healthTestConfig(t *testing.T) (config.Config, int) {
 
 // entitiesFor wraps a LayerGroup in the entities bundle ListenAndServe takes. The health
 // subsystem reads nothing else, and Entities.Close tolerates the rest being nil.
-func entitiesFor(lg *layer.LayerGroup) *entities.Entities {
+func entitiesFor(lg *layers.LayerGroup) *entities.Entities {
 	return &entities.Entities{LayerGroup: lg}
 }
 
@@ -137,7 +137,7 @@ func entitiesFor(lg *layer.LayerGroup) *entities.Entities {
 //
 // ListenAndServe writes through reloadPtr on its own goroutine with no synchronization, so the
 // value is handed over through a channel from the onReady callback rather than read directly.
-func startServer(t *testing.T, cfg *config.Config, lg *layer.LayerGroup) reloadEntitiesFunc {
+func startServer(t *testing.T, cfg *config.Config, lg *layers.LayerGroup) reloadEntitiesFunc {
 	t.Helper()
 
 	var reloadFn reloadEntitiesFunc
@@ -180,7 +180,7 @@ func startServer(t *testing.T, cfg *config.Config, lg *layer.LayerGroup) reloadE
 func Test_ListenAndServe_HealthChecksRebuildOnReload(t *testing.T) {
 	cfg1, healthPort := healthTestConfig(t)
 
-	lg1, err := layer.ConstructLayerGroup(context.Background(), cfg1, nil, nil, nil)
+	lg1, err := layers.ConstructLayerGroup(context.Background(), cfg1, nil, nil, nil)
 	require.NoError(t, err)
 
 	reloadFn := startServer(t, &cfg1, lg1)
@@ -193,7 +193,7 @@ func Test_ListenAndServe_HealthChecksRebuildOnReload(t *testing.T) {
 		{ID: "test", Provider: map[string]any{"name": "fail", "onauth": true, "message": "simulated failure"}},
 	}
 
-	lg2, err := layer.ConstructLayerGroup(context.Background(), cfg2, nil, nil, nil)
+	lg2, err := layers.ConstructLayerGroup(context.Background(), cfg2, nil, nil, nil)
 	require.NoError(t, err)
 
 	require.NoError(t, reloadFn(&cfg2, entitiesFor(lg2)))
@@ -201,13 +201,13 @@ func Test_ListenAndServe_HealthChecksRebuildOnReload(t *testing.T) {
 	waitForHealthStatus(t, healthPort, "error")
 }
 
-// pkg/config dispatches each config-change event on its own goroutine, so concurrent reloads are
+// internal/configload dispatches each config-change event on its own goroutine, so concurrent reloads are
 // reachable in production. Two reloads that both invoke the same generation's shutdown func
 // deadlock the second caller, so the body runs behind a timeout to fail rather than hang.
 func Test_ListenAndServe_ConcurrentHealthReloadsDoNotDeadlock(t *testing.T) {
 	cfg, healthPort := healthTestConfig(t)
 
-	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
 	require.NoError(t, err)
 
 	reloadFn := startServer(t, &cfg, lg)
@@ -228,7 +228,7 @@ func Test_ListenAndServe_ConcurrentHealthReloadsDoNotDeadlock(t *testing.T) {
 			go func() {
 				defer wg.Done()
 
-				lgN, errN := layer.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
+				lgN, errN := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
 				if errN != nil {
 					t.Error(errN)
 					return
@@ -258,7 +258,7 @@ func Test_ListenAndServe_ConcurrentHealthReloadsDoNotDeadlock(t *testing.T) {
 func Test_ListenAndServe_FailedHealthRebuildRecovers(t *testing.T) {
 	cfg, healthPort := healthTestConfig(t)
 
-	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
 	require.NoError(t, err)
 
 	reloadFn := startServer(t, &cfg, lg)
@@ -272,13 +272,13 @@ func Test_ListenAndServe_FailedHealthRebuildRecovers(t *testing.T) {
 		{"name": "this-check-does-not-exist", "delay": 1},
 	}
 
-	badLg, err := layer.ConstructLayerGroup(context.Background(), badCfg, nil, nil, nil)
+	badLg, err := layers.ConstructLayerGroup(context.Background(), badCfg, nil, nil, nil)
 	require.NoError(t, err)
 
 	require.Error(t, reloadFn(&badCfg, entitiesFor(badLg)), "a reload with an unknown health check name must surface an error")
 
 	// A subsequent good reload must bring the health endpoint back.
-	goodLg, err := layer.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
+	goodLg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
 	require.NoError(t, err)
 
 	require.NoError(t, reloadFn(&cfg, entitiesFor(goodLg)))
@@ -294,7 +294,7 @@ func Test_ListenAndServe_FailedHealthRebuildRecovers(t *testing.T) {
 func Test_healthReloader_RebuildsAlreadyDrainingWhenShutdownStarted(t *testing.T) {
 	cfg, healthPort := healthTestConfig(t)
 
-	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -326,7 +326,7 @@ func Test_healthReloader_RebuildsAlreadyDrainingWhenShutdownStarted(t *testing.T
 func Test_healthReloader_FailedRebuildDoesNotRetainStalePointer(t *testing.T) {
 	cfg, _ := healthTestConfig(t)
 
-	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -367,7 +367,7 @@ func waitForPortClosed(t *testing.T, port int) {
 func Test_ListenAndServe_HealthDisabledOnReloadStopsServing(t *testing.T) {
 	cfg, healthPort := healthTestConfig(t)
 
-	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
 	require.NoError(t, err)
 
 	reloadFn := startServer(t, &cfg, lg)
@@ -378,14 +378,14 @@ func Test_ListenAndServe_HealthDisabledOnReloadStopsServing(t *testing.T) {
 	offCfg := cfg
 	offCfg.Health.Enabled = false
 
-	offLg, err := layer.ConstructLayerGroup(context.Background(), offCfg, nil, nil, nil)
+	offLg, err := layers.ConstructLayerGroup(context.Background(), offCfg, nil, nil, nil)
 	require.NoError(t, err)
 
 	require.NoError(t, reloadFn(&offCfg, entitiesFor(offLg)))
 
 	waitForPortClosed(t, healthPort)
 
-	onLg, err := layer.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
+	onLg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
 	require.NoError(t, err)
 
 	require.NoError(t, reloadFn(&cfg, entitiesFor(onLg)))
@@ -397,7 +397,7 @@ func Test_ListenAndServe_HealthDisabledOnReloadStopsServing(t *testing.T) {
 func Test_healthReloader_DisablingClearsPointers(t *testing.T) {
 	cfg, _ := healthTestConfig(t)
 
-	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
 	require.NoError(t, err)
 
 	var healthMutex sync.Mutex

@@ -28,6 +28,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
@@ -76,7 +77,7 @@ func (s TransformRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (
 		cfg.Threads = 1
 	}
 
-	provider, err := layer.ConstructProvider(cfg.Provider, deps)
+	provider, err := layers.ConstructProvider(cfg.Provider, deps)
 	if err != nil {
 		return nil, err
 	}
