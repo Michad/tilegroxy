@@ -18,7 +18,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"image"
 	"image/png"
@@ -27,7 +26,6 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
-	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
 	"github.com/anthonynsimon/bild/transform"
 )
 
@@ -74,7 +72,7 @@ func (s CropRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer
 
 	secondaryCfg := cfg.Secondary
 	if secondaryCfg == nil {
-		secondaryCfg = map[string]interface{}{"name": "static", "color": "0000"}
+		secondaryCfg = defaultCropSecondary()
 	}
 
 	secondary, err := layer.ConstructProvider(secondaryCfg, deps)
@@ -228,27 +226,29 @@ func resizeImages(ctx context.Context, img image.Image, img2 image.Image) (image
 	return img, img2
 }
 
-// The implicit layer bounds wrapper must not hide the primary's metadata from the layer.
-func (t Crop) Metadata() config.LayerMetadata {
-	md := layer.MetadataOf(t.Primary)
-
-	// Auth bounds replace the configured bounds per request, so they aren't a reliable limit.
-	if t.BoundsFromAuth || t.Bounds.IsNullIsland() {
-		return md
+// Only the default transparent secondary leaves the output limited to the primary within bounds.
+func (t Crop) Metadata() layer.Description {
+	primary := layer.DescribeTree(t.Primary)
+	if t.CropConfig.Secondary != nil {
+		return layer.Union(primary, layer.DescribeTree(t.Secondary))
 	}
 
-	cropped := t.Bounds
-	if reported := pkg.BoundsFromConfig(md.Bounds); !reported.IsNullIsland() && reported.Intersects(t.Bounds) {
-		cropped = reported.IntersectionWith(t.Bounds)
-	}
-	md.Bounds = cropped.ToConfig()
-
-	return md
+	return clipToCrop(primary, t.Bounds, t.BoundsFromAuth)
 }
 
-func (t Crop) Close(ctx context.Context) error {
-	return errors.Join(
-		lifecycle.CloseIfCloser(ctx, t.Primary),
-		lifecycle.CloseIfCloser(ctx, t.Secondary),
-	)
+func (t Crop) Children() []layer.Provider {
+	return []layer.Provider{t.Primary, t.Secondary}
+}
+
+func (s CropRegistration) WrapBounds(inner layer.Provider, bounds pkg.Bounds, deps layer.ProviderDeps) (layer.Provider, error) {
+	secondary, err := layer.ConstructProvider(defaultCropSecondary(), deps)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Crop{CropConfig{Bounds: bounds}, inner, secondary, deps.ErrorMessages}, nil
+}
+
+func defaultCropSecondary() map[string]interface{} {
+	return map[string]interface{}{"name": "static", "color": "0000"}
 }

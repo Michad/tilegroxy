@@ -22,7 +22,6 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
-	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
 	"github.com/paulmach/orb"
 	"github.com/paulmach/orb/encoding/mvt"
 	"github.com/paulmach/orb/maptile"
@@ -137,24 +136,14 @@ func boundsToOrbBound(b pkg.Bounds) orb.Bound {
 	}
 }
 
-// The implicit layer bounds wrapper must not hide the primary's metadata from the layer.
-func (t CropMvt) Metadata() config.LayerMetadata {
-	md := layer.MetadataOf(t.Primary)
-
-	// Auth bounds replace the configured bounds per request, so they aren't a reliable limit.
-	if t.BoundsFromAuth || t.Bounds.IsNullIsland() {
-		return md
-	}
-
-	cropped := t.Bounds
-	if reported := pkg.BoundsFromConfig(md.Bounds); !reported.IsNullIsland() && reported.Intersects(t.Bounds) {
-		cropped = reported.IntersectionWith(t.Bounds)
-	}
-	md.Bounds = cropped.ToConfig()
-
-	return md
+func (t CropMvt) Metadata() layer.Description {
+	return clipToCrop(layer.DescribeTree(t.Primary), t.Bounds, t.BoundsFromAuth)
 }
 
-func (t CropMvt) Close(ctx context.Context) error {
-	return lifecycle.CloseIfCloser(ctx, t.Primary)
+func (t CropMvt) Children() []layer.Provider {
+	return []layer.Provider{t.Primary}
+}
+
+func (s CropMvtRegistration) WrapBounds(inner layer.Provider, bounds pkg.Bounds, deps layer.ProviderDeps) (layer.Provider, error) {
+	return &CropMvt{CropMvtConfig{Bounds: bounds}, inner, deps.ErrorMessages}, nil
 }

@@ -173,15 +173,16 @@ func Test_Ref_Metadata_ResolvesTargetsDefinedBeforeAndAfter(t *testing.T) {
 	)
 
 	target := lg.FindLayer(context.Background(), "before")
-	require.NotEmpty(t, target.Metadata().VectorLayers)
+	require.NotEmpty(t, target.Metadata().Advertised.VectorLayers)
 
 	composite := lg.FindLayer(context.Background(), "composite")
 	doc := composite.BuildTileJSON("composite", nil, nil)
 
 	assert.Equal(t, config.DataTypeMVT, composite.DataType)
-	assert.Equal(t, target.Metadata().VectorLayers, doc.VectorLayers)
-	assert.Equal(t, target.Metadata().Attribution, doc.Attribution)
-	require.Error(t, composite.CheckZoomBounds(pkg.TileRequest{Z: 2}))
+	assert.Equal(t, target.Metadata().Advertised.VectorLayers, doc.VectorLayers)
+	assert.Equal(t, target.Metadata().Advertised.Attribution, doc.Attribution)
+	// The archive's zoom range is advertised but not enforced, since the layer sets no limits of its own.
+	require.NoError(t, composite.CheckZoomBounds(pkg.TileRequest{Z: 2}))
 }
 
 func Test_Ref_Metadata_FollowsChainAndTargetConfig(t *testing.T) {
@@ -194,7 +195,7 @@ func Test_Ref_Metadata_FollowsChainAndTargetConfig(t *testing.T) {
 		target,
 	)
 
-	md := lg.FindLayer(context.Background(), "outer").Metadata()
+	md := lg.FindLayer(context.Background(), "outer").Metadata().Advertised
 
 	assert.Equal(t, config.DataTypeMVT, md.DataType)
 	assert.Equal(t, "configured", md.Attribution)
@@ -215,8 +216,8 @@ func Test_Ref_Metadata_ContradictingDataTypeFails(t *testing.T) {
 }
 
 func Test_Ref_Metadata_UnresolvedIsEmpty(t *testing.T) {
-	assert.Equal(t, config.LayerMetadata{}, Ref{RefConfig: RefConfig{Layer: "x"}}.Metadata())
+	assert.Equal(t, layer.Description{}, Ref{RefConfig: RefConfig{Layer: "x"}}.Metadata())
 
 	lg := constructPMTilesRefGroup(t, pmtilesLayer("only"))
-	assert.Equal(t, config.LayerMetadata{}, Ref{RefConfig: RefConfig{Layer: "missing"}, layerGroup: lg}.Metadata())
+	assert.Equal(t, layer.Description{}, Ref{RefConfig: RefConfig{Layer: "missing"}, layerGroup: lg}.Metadata())
 }

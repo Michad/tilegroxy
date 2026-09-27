@@ -271,7 +271,7 @@ func Test_CropMvt_ExecuteCropWithAuth(t *testing.T) {
 }
 
 func Test_CropMvt_ForwardsPrimaryMetadata(t *testing.T) {
-	md := config.LayerMetadata{TileJSONMetadata: config.TileJSONMetadata{Description: "from primary"}}
+	md := layer.Description{TileJSONMetadata: config.TileJSONMetadata{Description: "from primary"}}
 
 	assert.Equal(t, md, CropMvt{Primary: metadataOnlyProvider{md: md}}.Metadata())
 }
@@ -279,6 +279,6 @@ func Test_CropMvt_ForwardsPrimaryMetadata(t *testing.T) {
 func Test_CropMvt_ClosesPrimary(t *testing.T) {
 	var closed bool
 
-	require.NoError(t, CropMvt{Primary: closeRecordingProvider{closed: &closed}}.Close(context.Background()))
+	require.NoError(t, layer.CloseProvider(context.Background(), CropMvt{Primary: closeRecordingProvider{closed: &closed}}))
 	assert.True(t, closed)
 }

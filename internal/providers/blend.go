@@ -34,7 +34,6 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
-	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
 
 	"github.com/anthonynsimon/bild/blend"
 	"github.com/anthonynsimon/bild/transform"
@@ -284,16 +283,8 @@ func (t Blend) GenerateTile(ctx context.Context, providerContext layer.ProviderC
 	return &pkg.Image{Content: output, ContentType: mimePng, ForceSkipCache: skipWrite.Load()}, nil
 }
 
-// Close releases the child providers. Blend holds them directly rather than through a Layer, so
-// they're unreachable from LayerGroup.Close without this.
-func (t Blend) Close(ctx context.Context) error {
-	errs := make([]error, 0, len(t.providers))
-
-	for _, p := range t.providers {
-		errs = append(errs, lifecycle.CloseIfCloser(ctx, p))
-	}
-
-	return errors.Join(errs...)
+func (t Blend) Children() []layer.Provider {
+	return t.providers
 }
 
 func (t Blend) blendImage(ctx context.Context, img image.Image, size image.Point, combinedImg image.Image) image.Image {

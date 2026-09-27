@@ -35,7 +35,7 @@ type PMTilesConfig struct {
 type PMTiles struct {
 	archive     *pmtiles.Archive
 	contentType string
-	metadata    config.LayerMetadata
+	metadata    layer.Description
 }
 
 func init() {
@@ -113,11 +113,11 @@ func openPMTilesSource(cfg PMTilesConfig, deps layer.ProviderDeps) (pmtiles.Sour
 	}
 }
 
-func pmtilesMetadata(archive *pmtiles.Archive, dataType config.DataType) config.LayerMetadata {
+func pmtilesMetadata(archive *pmtiles.Archive, dataType config.DataType) layer.Description {
 	header := archive.Header()
 	minZoom, maxZoom := int(header.MinZoom), int(header.MaxZoom)
 
-	md := config.LayerMetadata{
+	md := layer.Description{
 		DataType: dataType,
 		MinZoom:  &minZoom,
 		MaxZoom:  &maxZoom,
@@ -202,7 +202,7 @@ func pmtilesCoordinates(r pkg.TileRequest) (uint8, uint32, uint32, bool) {
 	return uint8(r.Z), uint32(r.X), uint32(r.Y), true // #nosec G115 -- range checked above
 }
 
-func (t *PMTiles) Metadata() config.LayerMetadata {
+func (t *PMTiles) Metadata() layer.Description {
 	return t.metadata
 }
 

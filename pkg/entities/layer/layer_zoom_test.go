@@ -101,7 +101,7 @@ func Test_RenderTileNoCache_NoZoomLimitsConfigured_Succeeds(t *testing.T) {
 func Test_CheckZoomBounds_BothLimitsConfigured_ReportsConfiguredRangeNotGlobalDefaults(t *testing.T) {
 	minZoom := 4
 	maxZoom := 10
-	l := &Layer{Config: config.LayerConfig{ID: "z5", LayerMetadata: config.LayerMetadata{MinZoom: &minZoom, MaxZoom: &maxZoom}}}
+	l := &Layer{metadata: ResolvedMetadata{Limits: Limits{MinZoom: &minZoom, MaxZoom: &maxZoom}}}
 
 	err := l.CheckZoomBounds(pkg.TileRequest{LayerName: "z5", Z: 2, X: 0, Y: 0})
 	require.Error(t, err)

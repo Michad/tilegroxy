@@ -141,14 +141,10 @@ func Test_Layer_BuildTileJSON_Defaults(t *testing.T) {
 func Test_Layer_BuildTileJSON_ExplicitFields(t *testing.T) {
 	minZoom := 4
 	maxZoom := 16
-	l := &Layer{
-		ID: "l2",
-		Config: config.LayerConfig{
-			ID:            "l2",
-			LayerMetadata: config.LayerMetadata{MinZoom: &minZoom, MaxZoom: &maxZoom, Bounds: config.BoundsConfig{South: 51, North: 63, West: -7, East: 0.1}, TileJSONMetadata: config.TileJSONMetadata{Description: "Aerial imagery", Attribution: "(c) Example"}},
-		},
-		DataType: config.DataTypeRaster,
-	}
+	l := resolvedLayer(t, config.LayerConfig{
+		ID:            "l2",
+		LayerMetadata: config.LayerMetadata{MinZoom: &minZoom, MaxZoom: &maxZoom, Bounds: config.BoundsConfig{South: 51, North: 63, West: -7, East: 0.1}, TileJSONMetadata: config.TileJSONMetadata{Description: "Aerial imagery", Attribution: "(c) Example"}},
+	}, Description{})
 
 	doc := l.BuildTileJSON("l2", []string{"https://example.com/tiles/l2/{z}/{x}/{y}"}, nil)
 
@@ -160,14 +156,10 @@ func Test_Layer_BuildTileJSON_ExplicitFields(t *testing.T) {
 }
 
 func Test_Layer_BuildTileJSON_IntersectsAllowedArea(t *testing.T) {
-	l := &Layer{
-		ID: "l4",
-		Config: config.LayerConfig{
-			ID:            "l4",
-			LayerMetadata: config.LayerMetadata{Bounds: config.BoundsConfig{South: -10, North: 10, West: -10, East: 10}},
-		},
-		DataType: config.DataTypeRaster,
-	}
+	l := resolvedLayer(t, config.LayerConfig{
+		ID:            "l4",
+		LayerMetadata: config.LayerMetadata{Bounds: config.BoundsConfig{South: -10, North: 10, West: -10, East: 10}},
+	}, Description{})
 
 	allowed := pkg.Bounds{South: -5, North: 5, West: -5, East: 20, SRID: pkg.SRIDWGS84}
 
@@ -194,9 +186,9 @@ func Test_ConstructLayer_EmptyParamValidator_ErrorsNotPanics(t *testing.T) {
 	})
 }
 
-func testMetadata() config.LayerMetadata {
+func testDescription() Description {
 	minZoom, maxZoom := 3, 9
-	return config.LayerMetadata{
+	return Description{
 		MinZoom:          &minZoom,
 		MaxZoom:          &maxZoom,
 		Bounds:           config.BoundsConfig{South: 10, North: 20, West: 30, East: 40},
@@ -204,8 +196,17 @@ func testMetadata() config.LayerMetadata {
 	}
 }
 
+func resolvedLayer(t *testing.T, cfg config.LayerConfig, reported Description) *Layer {
+	t.Helper()
+
+	md, err := resolveMetadata(cfg.ID, cfg.LayerMetadata, reported, tileJSONErrorMessages)
+	require.NoError(t, err)
+
+	return &Layer{ID: cfg.ID, Config: cfg, metadata: md}
+}
+
 func Test_Layer_BuildTileJSON_FromMetadata(t *testing.T) {
-	l := &Layer{ID: "m", Config: config.LayerConfig{ID: "m"}, metadata: testMetadata()}
+	l := resolvedLayer(t, config.LayerConfig{ID: "m"}, testDescription())
 
 	doc := l.BuildTileJSON("m", []string{"https://example.com/tiles/m/{z}/{x}/{y}"}, nil)
 
@@ -222,10 +223,10 @@ func Test_Layer_BuildTileJSON_FromMetadata(t *testing.T) {
 
 func Test_Layer_BuildTileJSON_ConfigOverridesMetadata(t *testing.T) {
 	minZoom, maxZoom := 1, 15
-	l := &Layer{ID: "m", Config: config.LayerConfig{
+	l := resolvedLayer(t, config.LayerConfig{
 		ID:            "m",
 		LayerMetadata: config.LayerMetadata{MinZoom: &minZoom, MaxZoom: &maxZoom, Bounds: config.BoundsConfig{South: 11, North: 12, West: 31, East: 32}, TileJSONMetadata: config.TileJSONMetadata{Description: "layer description", Attribution: "layer attribution"}},
-	}, metadata: testMetadata()}
+	}, testDescription())
 
 	doc := l.BuildTileJSON("m", nil, nil)
 
@@ -235,14 +236,25 @@ func Test_Layer_BuildTileJSON_ConfigOverridesMetadata(t *testing.T) {
 	assert.Equal(t, "layer description", doc.Description)
 	assert.Equal(t, "layer attribution", doc.Attribution)
 	assert.Equal(t, "1.2", doc.Version)
+	assert.Nil(t, doc.Center, "the provider's center lies outside the layer's bounds")
 }
 
 func Test_Layer_BuildTileJSON_MetadataBoundsIntersectAllowedArea(t *testing.T) {
-	l := &Layer{ID: "m", Config: config.LayerConfig{ID: "m"}, metadata: testMetadata()}
+	l := resolvedLayer(t, config.LayerConfig{ID: "m"}, testDescription())
 
 	doc := l.BuildTileJSON("m", nil, &pkg.Bounds{South: 15, North: 25, West: 35, East: 45, SRID: pkg.SRIDWGS84})
 
 	assert.Equal(t, []float64{35, 15, 40, 20}, doc.Bounds)
+	assert.Equal(t, []float64{35, 15, 5}, doc.Center)
+}
+
+func Test_Layer_BuildTileJSON_AllowedAreaExcludingCenterDropsIt(t *testing.T) {
+	l := resolvedLayer(t, config.LayerConfig{ID: "m"}, testDescription())
+
+	doc := l.BuildTileJSON("m", nil, &pkg.Bounds{South: 18, North: 25, West: 38, East: 45, SRID: pkg.SRIDWGS84})
+
+	assert.Equal(t, []float64{38, 18, 40, 20}, doc.Bounds)
+	assert.Nil(t, doc.Center)
 }
 
 func Test_Layer_BuildTileJSON_OmitsEmptyMetadataFields(t *testing.T) {
@@ -268,19 +280,19 @@ func Test_VectorLayer_MarshalMatchesSpec(t *testing.T) {
 }
 
 func Test_Layer_BuildTileJSON_ConfigOnlyMetadataFields(t *testing.T) {
-	l := &Layer{ID: "m", Config: config.LayerConfig{
+	l := resolvedLayer(t, config.LayerConfig{
 		ID: "m",
 		LayerMetadata: config.LayerMetadata{TileJSONMetadata: config.TileJSONMetadata{
 			Version:      "2.0",
-			Center:       []float64{1, 2, 3},
+			Center:       []float64{31, 12, 4},
 			VectorLayers: []config.VectorLayer{{ID: "water"}},
 		}},
-	}, metadata: testMetadata()}
+	}, testDescription())
 
 	doc := l.BuildTileJSON("m", nil, nil)
 
 	assert.Equal(t, "2.0", doc.Version)
-	assert.Equal(t, []float64{1, 2, 3}, doc.Center)
+	assert.Equal(t, []float64{31, 12, 4}, doc.Center)
 	assert.Equal(t, []config.VectorLayer{{ID: "water"}}, doc.VectorLayers)
 	assert.Equal(t, "archive description", doc.Description)
 }

@@ -15,7 +15,6 @@
 package layer
 
 import (
-	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -29,7 +28,6 @@ import (
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/Michad/tilegroxy/pkg/entities/datastore"
-	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
 	"github.com/Michad/tilegroxy/pkg/static"
 	"go.opentelemetry.io/otel"
@@ -212,49 +210,28 @@ type Layer struct {
 	tileAuthCounter    metric.Int64Counter
 	tileErrorCounter   metric.Int64Counter
 	tileSuccessCounter metric.Int64Counter
-	metadata           config.LayerMetadata // As reported by the provider
+	metadata           ResolvedMetadata
 }
 
-func resolveDataType(rawConfig config.LayerConfig, errorMessages config.ErrorMessages) (config.DataType, error) {
-	providerDataType, err := dataTypeFromRawConfig(rawConfig.Provider, errorMessages)
-	if err != nil {
-		return config.DataTypeUnknown, err
-	}
-
-	return reconcileDataType(rawConfig.DataType, providerDataType, errorMessages)
-}
-
-// An explicit datatype that disagrees with what the provider actually produces is a config error.
-func reconcileDataType(configured, reported config.DataType, errorMessages config.ErrorMessages) (config.DataType, error) {
-	if configured == "" || configured == config.DataTypeUnknown {
-		return cmp.Or(reported, configured), nil
-	}
-
-	if reported != "" && reported != config.DataTypeUnknown && configured != reported {
-		return config.DataTypeUnknown, fmt.Errorf(errorMessages.InvalidParam, "layer.datatype", string(configured))
-	}
-
-	return configured, nil
-}
-
-func constructCropWrappedProvider(rawConfig config.LayerConfig, errorMessages config.ErrorMessages, layerGroup *LayerGroup, datatype config.DataType, datastores *datastore.DatastoreRegistry) (Provider, error) {
+// The inner provider is built and described first so the right bounds wrapper can be picked from its data type.
+func wrapBounds(inner Provider, rawConfig config.LayerConfig, datatype config.DataType, deps ProviderDeps) (Provider, error) {
 	wrapperName := "cropmvt"
 	if datatype == config.DataTypeRaster {
 		wrapperName = "crop"
 	}
 
-	wrapperConfig := map[string]interface{}{
-		"name":    wrapperName,
-		"bounds":  pkg.BoundsFromConfig(rawConfig.Bounds),
-		"primary": rawConfig.Provider,
+	reg, ok := RegisteredProvider(wrapperName)
+	wrapper, isWrapper := reg.(BoundsWrapper)
+	if !ok || !isWrapper {
+		return nil, fmt.Errorf(deps.ErrorMessages.EnumError, "provider.name", wrapperName, RegisteredProviderNames())
 	}
 
-	return ConstructProvider(wrapperConfig, ProviderDeps{
-		ClientConfig:  *rawConfig.Client,
-		ErrorMessages: errorMessages,
-		LayerGroup:    layerGroup,
-		Datastores:    datastores,
-	})
+	p, err := wrapper.WrapBounds(inner, pkg.BoundsFromConfig(rawConfig.Bounds), deps)
+	if err != nil {
+		return nil, err
+	}
+
+	return ProviderWrapper{Name: wrapperName, Provider: p, dataType: datatype}, nil
 }
 
 // The placeholders a provider uses to interpolate the requester's identity into a URL, query, or
@@ -402,67 +379,50 @@ func ConstructLayer(ctx context.Context, rawConfig config.LayerConfig, defaultCl
 		}
 	}
 
-	datatype, err := resolveDataType(rawConfig, errorMessages)
-	if err != nil {
-		return nil, err
-	}
-
-	boundsSet := rawConfig.Bounds != (config.BoundsConfig{})
-
-	// Bounds filtering needs a known data type to pick the right crop wrapper.
-	if boundsSet && datatype == config.DataTypeUnknown {
-		return nil, fmt.Errorf(errorMessages.ParamRequired, "layer.datatype")
-	}
-
 	segments, validator, err := resolvePatternAndValidator(rawConfig, errorMessages)
 	if err != nil {
 		return nil, err
 	}
 
-	var provider Provider
-	if boundsSet {
-		provider, err = constructCropWrappedProvider(rawConfig, errorMessages, layerGroup, datatype, datastores)
-	} else {
-		provider, err = ConstructProvider(rawConfig.Provider, ProviderDeps{
-			ClientConfig:  *rawConfig.Client,
-			ErrorMessages: errorMessages,
-			LayerGroup:    layerGroup,
-			Datastores:    datastores,
-		})
+	deps := ProviderDeps{
+		ClientConfig:  *rawConfig.Client,
+		ErrorMessages: errorMessages,
+		LayerGroup:    layerGroup,
+		Datastores:    datastores,
 	}
+
+	provider, err := ConstructProvider(rawConfig.Provider, deps)
 	if err != nil {
 		return nil, err
+	}
+
+	metadata, err := resolveMetadata(rawConfig.ID, rawConfig.LayerMetadata, DescribeTree(provider), errorMessages)
+	if err != nil {
+		return nil, errors.Join(err, CloseProvider(ctx, provider))
+	}
+
+	datatype := metadata.Advertised.DataType
+
+	if rawConfig.Bounds != (config.BoundsConfig{}) {
+		if !isKnownDataType(datatype) {
+			return nil, errors.Join(fmt.Errorf(errorMessages.ParamRequired, "layer.datatype"), CloseProvider(ctx, provider))
+		}
+
+		wrapped, err := wrapBounds(provider, rawConfig, datatype, deps)
+		if err != nil {
+			return nil, errors.Join(err, CloseProvider(ctx, provider))
+		}
+		provider = wrapped
 	}
 
 	allowCoalesce := resolveAllowCoalesce(rawConfig, layerCache)
 
 	tileAllCounter, tileAuthCounter, tileErrorCounter, tileSuccessCounter, err := constructLayerCounters(rawConfig.ID)
 	if err != nil {
-		return nil, errors.Join(err, lifecycle.CloseIfCloser(ctx, provider))
+		return nil, errors.Join(err, CloseProvider(ctx, provider))
 	}
 
-	l := &Layer{rawConfig.ID, segments, validator, rawConfig, provider, nil, errorMessages, datatype, ProviderContext{}, sync.Mutex{}, allowCoalesce, resolveCacheControlFacts(rawConfig, layerCache), tileAllCounter, tileAuthCounter, tileErrorCounter, tileSuccessCounter, config.LayerMetadata{}}
-
-	if err := l.resolveMetadata(); err != nil {
-		return nil, errors.Join(err, lifecycle.CloseIfCloser(ctx, provider))
-	}
-
-	return l, nil
-}
-
-// Rerun once referenced layers exist, since a ref provider's metadata comes from its target layer.
-func (l *Layer) resolveMetadata() error {
-	metadata := MetadataOf(l.Provider)
-
-	datatype, err := reconcileDataType(l.DataType, metadata.DataType, l.ErrorMessages)
-	if err != nil {
-		return err
-	}
-
-	l.DataType = datatype
-	l.metadata = metadata
-
-	return nil
+	return &Layer{rawConfig.ID, segments, validator, rawConfig, provider, nil, errorMessages, datatype, ProviderContext{}, sync.Mutex{}, allowCoalesce, resolveCacheControlFacts(rawConfig, layerCache), tileAllCounter, tileAuthCounter, tileErrorCounter, tileSuccessCounter, metadata}, nil
 }
 
 // getProviderContext returns a snapshot of the current provider context, re-authenticating
@@ -528,9 +488,10 @@ func (l *Layer) IsPattern() bool {
 	return l.Config.Pattern != "" && l.Config.Pattern != l.Config.ID
 }
 
-// Checked before the cache lookup so a cached tile can't bypass a zoom limit added later.
+// CheckZoomBounds rejects a request outside this layer's configured minzoom/maxzoom. Called before the
+// cache lookup so a cached tile can't bypass a zoom limit added after it was cached.
 func (l *Layer) CheckZoomBounds(tileRequest pkg.TileRequest) error {
-	minZoom, maxZoom := l.zoomRange()
+	minZoom, maxZoom := zoomRange(l.metadata.Limits.MinZoom, l.metadata.Limits.MaxZoom)
 
 	if tileRequest.Z < minZoom || tileRequest.Z > maxZoom {
 		return pkg.RangeError{ParamName: "z", MinValue: float64(minZoom), MaxValue: float64(maxZoom)}
@@ -539,28 +500,8 @@ func (l *Layer) CheckZoomBounds(tileRequest pkg.TileRequest) error {
 	return nil
 }
 
-func (l *Layer) zoomRange() (int, int) {
-	md := l.Metadata()
-
-	minZoom := 0
-	if md.MinZoom != nil {
-		minZoom = *md.MinZoom
-	}
-
-	maxZoom := pkg.MaxZoom
-	if md.MaxZoom != nil {
-		maxZoom = *md.MaxZoom
-	}
-
-	return minZoom, maxZoom
-}
-
-// Metadata returns what the provider reports about its tiles, overridden by this layer's configuration.
-func (l *Layer) Metadata() config.LayerMetadata {
-	md := l.Config.WithDefaults(l.metadata)
-	md.DataType = l.DataType
-
-	return md
+func (l *Layer) Metadata() ResolvedMetadata {
+	return l.metadata
 }
 
 func (l *Layer) RenderTileNoCache(ctx context.Context, tileRequest pkg.TileRequest) (*pkg.Image, error) {

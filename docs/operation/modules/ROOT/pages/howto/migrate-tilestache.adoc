@@ -27,7 +27,7 @@ The following are the known incompatibilities with tilestache configurations:
 +++</li><li>+++
  Configuration keys are case insensitive and have no spaces
 +++</li><li>+++
- Configuring projections is currently unsupported
+ Tiles are always served in Web Mercator (EPSG:3857). There is no `projection` parameter
 +++</li><li>+++
  Cache contents are not guaranteed to be transferrable
 +++</li><li>+++
@@ -35,7 +35,7 @@ The following are the known incompatibilities with tilestache configurations:
 +++</li><ul style="margin-bottom:0"><li>+++
   Layers are supplied as a flat array of layer objects with an `id` parameter for the URL-safe layer name instead of them being supplied as an Object with the id being a key.
 +++</li><li>+++
-  Most parameters unavailable. Some can be configured via the `Client` configuration and others will be added in future versions.
+  Most parameters unavailable. Some have an equivalent in the `Client` configuration
 +++</li><li>+++
   The `write cache` parameter is replaced with `skipcache` with inverted value
 +++</li><li>+++
@@ -51,7 +51,7 @@ The following are the known incompatibilities with tilestache configurations:
 +++</li><li>+++
   No `timeout` parameter - instead specify the timeout via the `Client` configuration
 +++</li><li>+++
-  No `source projection` parameter - Might be added in the future
+  No `source projection` parameter - instead use `srid`, which supports 4326 and 3857
 +++</li></ul><li>+++
  Sandwich provider:
 +++</li><ul style="margin-bottom:0"><li>+++
@@ -71,11 +71,11 @@ The following are the known incompatibilities with tilestache configurations:
 +++</li></ul><li>+++
  Disk cache:
 +++</li><ul style="margin-bottom:0"><li>+++
-  No `umode` parameter - Instead use `filemode` with Go numerics instead of unix numerics. Might be added in the future
+  No `umode` parameter - Instead use `filemode` with Go numerics instead of unix numerics
 +++</li><li>+++
   No `dirs` parameter - Instead use `layout`, which offers `flat` and `coordinate`. There is no equivalent to the `safe` or `quadtile` structures
 +++</li><li>+++
-  No `gzip` parameter - Might be added in the future
+  No `gzip` parameter - Tiles are stored uncompressed
 +++</li><li>+++
   The `path` parameter must be supplied as a file path, not a URI
 +++</li></ul><li>+++
@@ -95,7 +95,7 @@ The following are the known incompatibilities with tilestache configurations:
 +++</li></ul><li>+++
  S3 cache:
 +++</li><ul style="margin-bottom:0"><li>+++
-  No `use_locks` parameter - Caches are currently lockless
+  No `use_locks` parameter - Caches are lockless. Identical concurrent requests are coalesced within a single tilegroxy instance instead
 +++</li><li>+++
   No `reduced_redundancy` parameter - Instead use the more flexible `storageclass` parameter with the "REDUCED_REDUNDANCY" option
 +++</li><li>+++

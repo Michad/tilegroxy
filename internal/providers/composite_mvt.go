@@ -26,7 +26,6 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
-	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
 )
 
 type CompositeMVTConfig struct {
@@ -78,23 +77,8 @@ func (s CompositeMVTRegistration) Initialize(cfgAny any, deps layer.ProviderDeps
 	return &CompositeMVT{providers: providers, errorMessages: deps.ErrorMessages}, nil
 }
 
-func (t CompositeMVT) Metadata() config.LayerMetadata {
-	md := mergeMetadata(t.providers...)
-	md.DataType = config.DataTypeMVT
-
-	return md
-}
-
-// Close releases the child providers. CompositeMVT holds them directly rather than through a
-// Layer, so they're unreachable from LayerGroup.Close without this.
-func (t CompositeMVT) Close(ctx context.Context) error {
-	errs := make([]error, 0, len(t.providers))
-
-	for _, p := range t.providers {
-		errs = append(errs, lifecycle.CloseIfCloser(ctx, p))
-	}
-
-	return errors.Join(errs...)
+func (t CompositeMVT) Children() []layer.Provider {
+	return t.providers
 }
 
 func (t CompositeMVT) PreAuth(_ context.Context, providerContext layer.ProviderContext) (layer.ProviderContext, error) {

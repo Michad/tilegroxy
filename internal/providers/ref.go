@@ -39,6 +39,7 @@ type RefConfig struct {
 type Ref struct {
 	RefConfig
 	layerGroup *layer.LayerGroup
+	target     layer.Description
 }
 
 func init() {
@@ -62,7 +63,15 @@ func (s RefRegistration) DataType(_ any) config.DataType {
 
 func (s RefRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(RefConfig)
-	return &Ref{cfg, deps.LayerGroup}, nil
+	ref := &Ref{RefConfig: cfg, layerGroup: deps.LayerGroup}
+
+	if deps.LayerGroup != nil {
+		if target := deps.LayerGroup.FindLayer(context.Background(), cfg.Layer); target != nil {
+			ref.target = target.Metadata().Advertised
+		}
+	}
+
+	return ref, nil
 }
 
 func (t Ref) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.ProviderContext, error) {
@@ -94,15 +103,7 @@ func (t Ref) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequ
 	return t.layerGroup.RenderTile(newCtx, newRequest)
 }
 
-func (t Ref) Metadata() config.LayerMetadata {
-	if t.layerGroup == nil {
-		return config.LayerMetadata{}
-	}
-
-	target := t.layerGroup.FindLayer(context.Background(), t.Layer)
-	if target == nil {
-		return config.LayerMetadata{}
-	}
-
-	return target.Metadata()
+// Built before this layer, so the target's metadata is final.
+func (t Ref) Metadata() layer.Description {
+	return t.target
 }

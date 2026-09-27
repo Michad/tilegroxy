@@ -198,9 +198,12 @@ func (r wrapMarkerRegistration) Name() string {
 	return r.name
 }
 
-func (r wrapMarkerRegistration) DataType(cfgAny any) config.DataType {
-	cfg := cfgAny.(wrapMarkerConfig)
-	return ExtractDataType(cfg.Primary)
+func (r wrapMarkerRegistration) DataType(_ any) config.DataType {
+	return config.DataTypeUnknown
+}
+
+func (r wrapMarkerRegistration) WrapBounds(inner Provider, _ pkg.Bounds, _ ProviderDeps) (Provider, error) {
+	return wrapMarkerProvider{primary: inner, name: r.name}, nil
 }
 
 func (r wrapMarkerRegistration) Initialize(cfgAny any, deps ProviderDeps) (Provider, error) {
@@ -309,9 +312,7 @@ func (r closableTypedTestRegistration) Initialize(_ any, _ ProviderDeps) (Provid
 	return closableTypedProvider{closed: r.closed}, nil
 }
 
-// Data type is resolved from raw config via ProviderRegistration.DataType, without constructing
-// anything, so bounds wrapping must not build a throwaway primary instance just to inspect its
-// type - only the one instance nested inside the crop wrapper should ever exist.
+// The bounds wrapper wraps the provider already built to learn its data type rather than building another.
 func Test_ConstructLayer_Bounds_ConstructsProviderOnce(t *testing.T) {
 	RegisterProvider(wrapMarkerRegistration{name: "crop"})
 	closed := false
@@ -328,4 +329,27 @@ func Test_ConstructLayer_Bounds_ConstructsProviderOnce(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, l)
 	require.False(t, closed, "no provider should be closed when exactly one instance is ever constructed")
+
+	marker, ok := l.Provider.(ProviderWrapper).Provider.(wrapMarkerProvider)
+	require.True(t, ok)
+	assert.Equal(t, "closable-raster-1", marker.primary.(ProviderWrapper).Name)
+}
+
+func Test_ConstructLayer_Bounds_WrapperNotRegistered_FailsAndCloses(t *testing.T) {
+	closed := false
+	RegisterProvider(closableTypedTestRegistration{name: "closable-mvt-1", dt: config.DataTypeMVT, closed: &closed})
+	RegisterProvider(fixedTypeTestRegistration{name: "cropmvt", dt: config.DataTypeMVT})
+	t.Cleanup(func() { RegisterProvider(wrapMarkerRegistration{name: "cropmvt"}) })
+
+	rawConfig := config.LayerConfig{
+		ID:            "l11",
+		LayerMetadata: config.LayerMetadata{Bounds: config.BoundsConfig{South: -10, North: 10, West: -10, East: 10}},
+		Provider:      map[string]any{"name": "closable-mvt-1"},
+	}
+
+	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{EnumError: "enum %v %v %v", InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil)
+
+	require.Error(t, err)
+	assert.Nil(t, l)
+	assert.True(t, closed)
 }

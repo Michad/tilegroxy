@@ -213,7 +213,7 @@ func Test_Crop_ExecuteCropNoBounds(t *testing.T) {
 }
 
 type metadataOnlyProvider struct {
-	md config.LayerMetadata
+	md layer.Description
 }
 
 func (p metadataOnlyProvider) PreAuth(_ context.Context, pc layer.ProviderContext) (layer.ProviderContext, error) {
@@ -224,12 +224,12 @@ func (p metadataOnlyProvider) GenerateTile(_ context.Context, _ layer.ProviderCo
 	return nil, nil
 }
 
-func (p metadataOnlyProvider) Metadata() config.LayerMetadata {
+func (p metadataOnlyProvider) Metadata() layer.Description {
 	return p.md
 }
 
 func Test_Crop_ForwardsPrimaryMetadata(t *testing.T) {
-	md := config.LayerMetadata{TileJSONMetadata: config.TileJSONMetadata{Description: "from primary"}}
+	md := layer.Description{TileJSONMetadata: config.TileJSONMetadata{Description: "from primary"}}
 
 	assert.Equal(t, md, Crop{Primary: metadataOnlyProvider{md: md}}.Metadata())
 }
@@ -247,10 +247,10 @@ func (p closeRecordingProvider) Close(_ context.Context) error {
 func Test_Crop_ClosesChildren(t *testing.T) {
 	var primaryClosed, secondaryClosed bool
 
-	err := Crop{
+	err := layer.CloseProvider(context.Background(), Crop{
 		Primary:   closeRecordingProvider{closed: &primaryClosed},
 		Secondary: closeRecordingProvider{closed: &secondaryClosed},
-	}.Close(context.Background())
+	})
 
 	require.NoError(t, err)
 	assert.True(t, primaryClosed)

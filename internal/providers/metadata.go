@@ -15,73 +15,15 @@
 package providers
 
 import (
-	"math"
-	"slices"
-	"strings"
-
-	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
-// Zoom and bounds stay unset unless every provider reports them, since the layer enforces them as limits.
-func mergeMetadata(providers ...layer.Provider) config.LayerMetadata {
-	var merged config.LayerMetadata
-	var attributions []string
-
-	for i, p := range providers {
-		md := layer.MetadataOf(p)
-		next := merged.WithDefaults(md)
-
-		if md.Attribution != "" && !slices.Contains(attributions, md.Attribution) {
-			attributions = append(attributions, md.Attribution)
-		}
-
-		next.VectorLayers = appendVectorLayers(merged.VectorLayers, md.VectorLayers)
-
-		if i > 0 {
-			next.MinZoom = combineZoom(merged.MinZoom, md.MinZoom, func(a, b int) int { return min(a, b) })
-			next.MaxZoom = combineZoom(merged.MaxZoom, md.MaxZoom, func(a, b int) int { return max(a, b) })
-			next.Bounds = unionBounds(merged.Bounds, md.Bounds)
-		}
-
-		merged = next
+// Auth bounds replace the configured bounds per request, so they aren't a reliable limit.
+func clipToCrop(d layer.Description, bounds pkg.Bounds, boundsFromAuth bool) layer.Description {
+	if boundsFromAuth || bounds.IsNullIsland() {
+		return d
 	}
 
-	merged.Attribution = strings.Join(attributions, ", ")
-
-	return merged
-}
-
-func combineZoom(a, b *int, pick func(int, int) int) *int {
-	if a == nil || b == nil {
-		return nil
-	}
-
-	z := pick(*a, *b)
-
-	return &z
-}
-
-func unionBounds(a, b config.BoundsConfig) config.BoundsConfig {
-	if a == (config.BoundsConfig{}) || b == (config.BoundsConfig{}) {
-		return config.BoundsConfig{}
-	}
-
-	return config.BoundsConfig{
-		South: math.Min(a.South, b.South),
-		North: math.Max(a.North, b.North),
-		West:  math.Min(a.West, b.West),
-		East:  math.Max(a.East, b.East),
-	}
-}
-
-// Layers sharing an id are kept once since TileJSON treats the id as the source-layer name.
-func appendVectorLayers(existing, layers []config.VectorLayer) []config.VectorLayer {
-	for _, l := range layers {
-		if !slices.ContainsFunc(existing, func(e config.VectorLayer) bool { return e.ID == l.ID }) {
-			existing = append(existing, l)
-		}
-	}
-
-	return existing
+	return d.Clip(bounds.ToConfig())
 }

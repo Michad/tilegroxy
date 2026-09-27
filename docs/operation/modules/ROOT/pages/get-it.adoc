@@ -36,7 +36,7 @@ See link:https://tilegroxy.com/development/tests.html[developer documentation] f
 
 Tilegroxy is available as a container image on the Github container repository.
 
-You can pull the most recent versioned release with the `latest` tag and the very latest (and maybe buggy) build with the `edge` tag. Tags are also available for version numbers.  https://github.com/Michad/tilegroxy/pkgs/container/tilegroxy[See here for a full list].
+You can pull the most recent versioned release with the `latest` tag and the very latest (and maybe buggy) build with the `edge` tag. Tags are also available for version numbers.  https://github.com/Michad/tilegroxy/pkgs/container/tilegroxy[See here for a full list].  Tags for just the major version, such as `1`, pick up new releases without crossing a breaking change as described in xref:compatibility.adoc[Compatibility].
 
 For example:
 

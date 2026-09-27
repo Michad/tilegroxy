@@ -210,8 +210,11 @@ func Test_PMTiles_LayerUsesArchiveMetadata(t *testing.T) {
 	t.Cleanup(func() { _ = l.Provider.(layer.ProviderWrapper).Close(context.Background()) })
 
 	assert.Equal(t, config.DataTypeMVT, l.DataType)
-	require.Error(t, l.CheckZoomBounds(pkg.TileRequest{Z: 2}))
+	// The archive's zoom range is advertised but not enforced, since the layer sets no limits of its own.
+	require.NoError(t, l.CheckZoomBounds(pkg.TileRequest{Z: 2}))
 	require.NoError(t, l.CheckZoomBounds(pkg.TileRequest{Z: 1}))
+	assert.Equal(t, 0, *l.Metadata().Advertised.MinZoom)
+	assert.Equal(t, 1, *l.Metadata().Advertised.MaxZoom)
 }
 
 func Test_PMTiles_LayerBoundsKeepsArchiveMetadata(t *testing.T) {
@@ -226,8 +229,9 @@ func Test_PMTiles_LayerBoundsKeepsArchiveMetadata(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = l.Provider.(layer.ProviderWrapper).Close(context.Background()) })
 
-	require.Error(t, l.CheckZoomBounds(pkg.TileRequest{Z: 1}))
+	require.NoError(t, l.CheckZoomBounds(pkg.TileRequest{Z: 1}))
 	require.NoError(t, l.CheckZoomBounds(pkg.TileRequest{Z: 2}))
+	assert.Equal(t, config.BoundsConfig{South: -10, North: 10, West: -10, East: 10}, l.Metadata().Limits.Bounds)
 }
 
 func Test_PMTilesVectorLayers_DropsNonConformingEntries(t *testing.T) {

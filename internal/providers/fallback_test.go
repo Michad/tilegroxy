@@ -63,22 +63,27 @@ func (r fixedDataTypeTestRegistration) Initialize(_ any, _ layer.ProviderDeps) (
 	return fixedDataTypeTestProvider{dt: r.dt}, nil
 }
 
-func Test_DataType_Fallback_PassesThroughPrimary(t *testing.T) {
+func Test_DataType_Fallback_ComesFromChildren(t *testing.T) {
 	layer.RegisterProvider(fixedDataTypeTestRegistration{name: "fixed-mvt-fallback-test", dt: config.DataTypeMVT})
 
-	dt := FallbackRegistration{}.DataType(FallbackConfig{Primary: map[string]interface{}{"name": "fixed-mvt-fallback-test"}})
-	assert.Equal(t, config.DataTypeMVT, dt)
+	assert.Equal(t, config.DataTypeUnknown, FallbackRegistration{}.DataType(FallbackConfig{}))
+
+	p, err := layer.ConstructProvider(map[string]any{
+		"name":      "fallback",
+		"primary":   map[string]any{"name": "fixed-mvt-fallback-test"},
+		"secondary": map[string]any{"name": "proxy", "url": "http://example.com/{z}/{x}/{y}"},
+	}, layer.ProviderDeps{})
+	require.NoError(t, err)
+	assert.Equal(t, config.DataTypeMVT, layer.DescribeTree(p).DataType)
 }
 
-// Fallback holds Primary/Secondary directly, outside any layer, so they're unreachable through
-// LayerGroup.Close unless Fallback forwards to them itself.
 func Test_FallbackCloseClosesChildProviders(t *testing.T) {
 	primary := &closableProvider{}
 	secondary := &closableProvider{}
 	// Wrapped to match production, where ConstructProvider hands Fallback wrapped children
 	f := &Fallback{Primary: layer.ProviderWrapper{Name: "primary", Provider: primary}, Secondary: secondary}
 
-	require.NoError(t, f.Close(context.Background()))
+	require.NoError(t, layer.CloseProvider(context.Background(), f))
 
 	assert.True(t, primary.closed)
 	assert.True(t, secondary.closed)

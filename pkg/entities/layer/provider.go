@@ -53,24 +53,13 @@ type ProviderRegistration interface {
 	Name() string
 	Initialize(config any, deps ProviderDeps) (Provider, error)
 	InitializeConfig() any
-	// Declares whether this provider produces raster or vector tiles, or config.DataTypeUnknown if it depends on
-	// upstream data. Given the already-decoded config so nesting providers (fallback, crop) can recurse into
-	// their primary's registration without constructing anything. Checked against a layer's datatype setting
-	// at startup, before any provider is initialized.
+	// Whether this provider itself produces raster or vector tiles. Nesting providers return config.DataTypeUnknown.
 	DataType(config any) config.DataType
 }
 
-// MetadataProvider is optionally implemented by providers that can describe their own tiles.
-type MetadataProvider interface {
-	Metadata() config.LayerMetadata
-}
-
-func MetadataOf(p Provider) config.LayerMetadata {
-	if m, ok := p.(MetadataProvider); ok {
-		return m.Metadata()
-	}
-
-	return config.LayerMetadata{}
+// BoundsWrapper lets a ProviderRegistration restrict an already built provider to a layer's bounds.
+type BoundsWrapper interface {
+	WrapBounds(inner Provider, bounds pkg.Bounds, deps ProviderDeps) (Provider, error)
 }
 
 var registrationsMu sync.RWMutex
@@ -116,7 +105,7 @@ func ConstructProvider(rawConfig map[string]interface{}, deps ProviderDeps) (Pro
 				return nil, err
 			}
 
-			return ProviderWrapper{Name: name, Provider: provider}, nil
+			return ProviderWrapper{Name: name, Provider: provider, dataType: reg.DataType(cfg)}, nil
 		}
 	}
 
@@ -144,6 +133,7 @@ func dataTypeFromRawConfig(rawConfig map[string]interface{}, errorMessages confi
 	return reg.DataType(cfg), nil
 }
 
+// Deprecated: a provider's data type now comes from DescribeTree on the built provider.
 func ExtractDataType(rawConfig map[string]interface{}) config.DataType {
 	datatype, _ := dataTypeFromRawConfig(rawConfig, config.ErrorMessages{})
 	return datatype

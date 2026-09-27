@@ -15,16 +15,15 @@
 package config
 
 import (
-	"cmp"
 	"encoding/json"
 )
 
-// Describes a layer's tiles. Set on the layer by the operator or reported by its provider.
+// Describes a layer's tiles as configured by the operator. Zoom and bounds are enforced, the rest overrides what the provider reports.
 type LayerMetadata struct {
-	DataType         DataType     // Optional. Declares this layer's data type. Must not contradict the provider's own DataType(); required if Bounds is set and the provider's type is unknown
+	DataType         DataType     // Optional. Declares this layer's data type. Must not contradict the type the provider reports; required if Bounds is set and the provider's type is unknown
 	MinZoom          *int         // Optional. Requests below this zoom are rejected as out of bounds. nil means no lower limit
 	MaxZoom          *int         // Optional. Requests above this zoom are rejected as out of bounds. nil means no upper limit
-	Bounds           BoundsConfig // Optional. When set on the layer, wraps its provider in crop/cropmvt. Provider-reported bounds are descriptive only
+	Bounds           BoundsConfig // Optional. Wraps this layer's provider in crop/cropmvt, restricting it to this geographic area
 	TileJSONMetadata `mapstructure:",squash" yaml:",inline"`
 }
 
@@ -54,36 +53,4 @@ func (v VectorLayer) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(plain(v))
-}
-
-func (m LayerMetadata) WithDefaults(defaults LayerMetadata) LayerMetadata {
-	if m.DataType == "" || m.DataType == DataTypeUnknown {
-		m.DataType = cmp.Or(defaults.DataType, m.DataType)
-	}
-
-	if m.MinZoom == nil {
-		m.MinZoom = defaults.MinZoom
-	}
-
-	if m.MaxZoom == nil {
-		m.MaxZoom = defaults.MaxZoom
-	}
-
-	if m.Bounds == (BoundsConfig{}) {
-		m.Bounds = defaults.Bounds
-	}
-
-	m.Description = cmp.Or(m.Description, defaults.Description)
-	m.Attribution = cmp.Or(m.Attribution, defaults.Attribution)
-	m.Version = cmp.Or(m.Version, defaults.Version)
-
-	if m.Center == nil {
-		m.Center = defaults.Center
-	}
-
-	if m.VectorLayers == nil {
-		m.VectorLayers = defaults.VectorLayers
-	}
-
-	return m
 }

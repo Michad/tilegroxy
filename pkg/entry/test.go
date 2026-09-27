@@ -60,41 +60,29 @@ const (
 )
 
 func pickTile(l *layer.Layer, layerName string) pkg.TileRequest {
-	hasBounds := l.Metadata().Bounds != (config.BoundsConfig{})
-	hasZoom := l.Metadata().MinZoom != nil || l.Metadata().MaxZoom != nil
-	hasCenter := len(l.Metadata().Center) > centerLatIndex
+	md := l.Metadata().Advertised
+	hasBounds := md.Bounds != (config.BoundsConfig{})
+	hasZoom := md.MinZoom != nil || md.MaxZoom != nil
+	hasCenter := len(md.Center) > centerLatIndex
 
 	if !hasBounds && !hasZoom && !hasCenter {
 		return pkg.TileRequest{LayerName: layerName, Z: defaultZ, X: defaultX, Y: defaultY}
 	}
 
-	minZoom := 0
-	if l.Metadata().MinZoom != nil {
-		minZoom = *l.Metadata().MinZoom
-	}
-	maxZoom := pkg.MaxZoom
-	if l.Metadata().MaxZoom != nil {
-		maxZoom = *l.Metadata().MaxZoom
-	}
-
+	minZoom, maxZoom := md.ZoomRange()
 	z := uint((minZoom + maxZoom) / 2) // #nosec G115 -- min/maxZoom are bounded well within int range
 
 	bounds := pkg.WorldBounds()
 	if hasBounds {
-		bounds = pkg.Bounds{
-			South: l.Metadata().Bounds.South,
-			North: l.Metadata().Bounds.North,
-			West:  l.Metadata().Bounds.West,
-			East:  l.Metadata().Bounds.East,
-		}
+		bounds = pkg.BoundsFromConfig(md.Bounds)
 	}
 
 	if hasCenter {
-		lon, lat := l.Metadata().Center[0], l.Metadata().Center[centerLatIndex]
+		lon, lat := md.Center[0], md.Center[centerLatIndex]
 		bounds = pkg.Bounds{South: lat, North: lat, West: lon, East: lon}
 
-		if len(l.Metadata().Center) > centerZoomIndex {
-			z = uint(min(max(int(l.Metadata().Center[centerZoomIndex]), minZoom), maxZoom)) // #nosec G115 -- clamped to the layer's zoom range
+		if len(md.Center) > centerZoomIndex {
+			z = uint(md.Center[centerZoomIndex]) // #nosec G115 -- resolved metadata keeps the center zoom within the layer's zoom range
 		}
 	}
 

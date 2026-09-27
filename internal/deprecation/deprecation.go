@@ -1,0 +1,40 @@
+// Copyright 2026 Michael Davis
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Package deprecation logs a uniform warning when an operator's configuration uses a deprecated option.
+package deprecation
+
+import (
+	"context"
+	"fmt"
+	"log/slog"
+	"sync"
+)
+
+const NextMajorVersion = "2.0"
+
+var warned sync.Map
+
+func WarnConfig(deprecated string, replacement string, removedIn string) {
+	if _, seen := warned.LoadOrStore(deprecated, true); seen {
+		return
+	}
+
+	slog.WarnContext(context.Background(), fmt.Sprintf("[deprecation warning]: %v is deprecated, use %v instead. Targeted removal: %v", deprecated, replacement, removedIn))
+}
+
+// Reset forgets which warnings were logged so tests can observe them again
+func Reset() {
+	warned.Clear()
+}

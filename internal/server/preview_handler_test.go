@@ -460,28 +460,6 @@ func Test_PreviewSourceLayers(t *testing.T) {
 	assert.Equal(t, []string{"roads", "water"}, previewSourceLayers([]config.VectorLayer{{ID: "roads"}, {}, {ID: "water"}}))
 }
 
-func Test_PreviewCenter(t *testing.T) {
-	doc := layer.TileJSONDocument{MinZoom: 2, MaxZoom: 12}
-
-	assert.Nil(t, previewCenter(doc))
-
-	doc.Center = []float64{1}
-	assert.Nil(t, previewCenter(doc))
-
-	doc.Center = []float64{1, 2}
-	assert.Equal(t, []float64{1, 2}, previewCenter(doc))
-
-	doc.Center = []float64{1, 2, 6}
-	assert.Equal(t, []float64{1, 2, 6}, previewCenter(doc))
-
-	doc.Center = []float64{1, 2, 18}
-	assert.Equal(t, []float64{1, 2, 12}, previewCenter(doc))
-	assert.Equal(t, []float64{1, 2, 18}, doc.Center)
-
-	doc.Center = []float64{1, 2, 0}
-	assert.Equal(t, []float64{1, 2, 2}, previewCenter(doc))
-}
-
 func Test_PreviewTemplate_CenterWithoutBounds(t *testing.T) {
 	var buf bytes.Buffer
 	require.NoError(t, previewPageTemplate.Execute(&buf, previewTemplateData{

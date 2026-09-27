@@ -23,6 +23,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -53,7 +54,7 @@ func init() {
 	}
 }
 
-func coreServeTest(t *testing.T, cfg string, port int, url string) (*http.Response, func(), error) {
+func coreServeTest(t *testing.T, cfg string, port int, url string, hotReload bool) (*http.Response, func(), error) {
 	exitStatus = -1
 	rootCmd.ResetFlags()
 	serveCmd.ResetFlags()
@@ -61,7 +62,11 @@ func coreServeTest(t *testing.T, cfg string, port int, url string) (*http.Respon
 	initServe()
 
 	if _, err := os.Stat(cfg); err == nil {
-		rootCmd.SetArgs([]string{"serve", "-c", cfg, "--hot-reload"})
+		args := []string{"serve", "-c", cfg}
+		if hotReload {
+			args = append(args, "--hot-reload")
+		}
+		rootCmd.SetArgs(args)
 	} else {
 		rootCmd.SetArgs([]string{"serve", "--raw-config", cfg})
 	}
@@ -166,7 +171,7 @@ layers:
       color: "FFFFFF"
 `
 
-	_, f, err := coreServeTest(t, cfg, 12340, "http://localhost:12340/") //nolint:bodyclose // Linter doesn't detect this right
+	_, f, err := coreServeTest(t, cfg, 12340, "http://localhost:12340/", true) //nolint:bodyclose // Linter doesn't detect this right
 	if f != nil {
 		defer f()
 	}
@@ -197,7 +202,7 @@ layers:
 `
 	t.Setenv("KEY", "hunter2")
 
-	resp, postFunc, err := coreServeTest(t, cfg, 12342, "http://localhost:12342/root/tiles/color/8/12/32") //nolint:bodyclose // Linter doesn't detect this right
+	resp, postFunc, err := coreServeTest(t, cfg, 12342, "http://localhost:12342/root/tiles/color/8/12/32", true) //nolint:bodyclose // Linter doesn't detect this right
 	defer postFunc()
 
 	require.NoError(t, err)
@@ -291,7 +296,7 @@ layers:
 	err := os.WriteFile(cfgFile, []byte(cfg1), 0600)
 	require.NoError(t, err)
 
-	resp, postFunc, err := coreServeTest(t, cfgFile, 12343, "http://localhost:12343/tiles/color/8/12/32") //nolint:bodyclose // Linter doesn't detect this right
+	resp, postFunc, err := coreServeTest(t, cfgFile, 12343, "http://localhost:12343/tiles/color/8/12/32", true) //nolint:bodyclose // Linter doesn't detect this right
 	defer postFunc()
 
 	require.NoError(t, err)
@@ -332,6 +337,48 @@ layers:
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Equal(t, "image/png", resp.Header["Content-Type"][0])
 	resp.Body.Close()
+}
+
+// Without --hot-reload a file change is ignored until SIGHUP asks for it
+func Test_ServeCommand_ReloadsOnSighup(t *testing.T) {
+	cfgFile := filepath.Join(t.TempDir(), "test_servecommand_reload_on_signal.yml")
+
+	cfg1 := `server:
+  port: 12347
+layers:
+  - id: color
+    provider:
+      name: static
+      color: "FFFFFF"
+`
+	cfg2 := strings.Replace(cfg1, "id: color", "id: color2", 1)
+
+	require.NoError(t, os.WriteFile(cfgFile, []byte(cfg1), 0600))
+
+	resp, postFunc, err := coreServeTest(t, cfgFile, 12347, "http://localhost:12347/tiles/color/8/12/32", false) //nolint:bodyclose // Linter doesn't detect this right
+	defer postFunc()
+
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	status := func(layer string) int {
+		req, err := http.NewRequest(http.MethodGet, "http://localhost:12347/tiles/"+layer+"/8/12/32", nil)
+		require.NoError(t, err)
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		resp.Body.Close()
+
+		return resp.StatusCode
+	}
+
+	require.NoError(t, os.WriteFile(cfgFile, []byte(cfg2), 0600))
+	time.Sleep(3 * time.Second)
+	assert.Equal(t, http.StatusOK, status("color"), "a file change alone must not reload")
+
+	require.NoError(t, syscall.Kill(syscall.Getpid(), syscall.SIGHUP))
+
+	assert.Eventually(t, func() bool { return status("color2") == http.StatusOK }, 10*time.Second, 100*time.Millisecond)
+	assert.Equal(t, http.StatusUnauthorized, status("color"))
 }
 
 func Test_ServeCommand_ExecuteNoContentRoute(t *testing.T) {
@@ -381,7 +428,7 @@ layers:
 `
 	cfg = fmt.Sprintf(cfg, tmpLog.Name())
 
-	resp, postFunc, err := coreServeTest(t, cfg, 12341, "http://localhost:12341/") //nolint:bodyclose // Linter doesn't detect this right
+	resp, postFunc, err := coreServeTest(t, cfg, 12341, "http://localhost:12341/", true) //nolint:bodyclose // Linter doesn't detect this right
 	defer postFunc()
 
 	require.NoError(t, err)
