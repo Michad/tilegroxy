@@ -322,8 +322,8 @@ func newHTTPServer(rootCtx context.Context, config *config.Config, rootHandler h
 	}
 }
 
-// onReady, when not nil, runs once reloadPtr is published, giving another goroutine a happens-before edge for reading it
-func ListenAndServe(config *config.Config, ent *entities.Entities, reloadPtr *func(*config.Config, *entities.Entities) error, onReady func()) error {
+// onReady, when not nil, receives the reload function once the server can accept reloads
+func ListenAndServe(config *config.Config, ent *entities.Entities, onReady func(reloadEntitiesFunc)) error {
 	if config.Server.Encrypt != nil && config.Server.Encrypt.Domain == "" {
 		return fmt.Errorf(config.Error.Messages.ParamRequired, "server.encrypt.domain")
 	}
@@ -364,12 +364,8 @@ func ListenAndServe(config *config.Config, ent *entities.Entities, reloadPtr *fu
 		}
 	}
 
-	if reloadPtr != nil {
-		*reloadPtr = makeCombinedReloadFunc(ctx, handlerReloadFunc, &healthMutex, &healthShutdown, &healthDrain, &draining)
-	}
-
 	if onReady != nil {
-		onReady()
+		onReady(makeCombinedReloadFunc(ctx, handlerReloadFunc, &healthMutex, &healthShutdown, &healthDrain, &draining))
 	}
 
 	var otelShutdown func(context.Context) error
