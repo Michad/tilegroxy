@@ -16,8 +16,10 @@ package cmd
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -114,6 +116,56 @@ func Test_CreateCommand_ExecuteJsonFile(t *testing.T) {
 	assert.NotEmpty(t, c)
 	assert.Equal(t, -1, exitStatus)
 }
+
+func Test_CreateCommand_UnwritableOutput(t *testing.T) {
+	exitStatus = -1
+	rootCmd.ResetFlags()
+	createCmd.ResetFlags()
+	initRoot()
+	initCreate()
+
+	path := filepath.Join(t.TempDir(), "missing", "tilegroxy.yml")
+
+	out := bytes.NewBufferString("")
+	errOut := bytes.NewBufferString("")
+	rootCmd.SetOut(out)
+	rootCmd.SetErr(errOut)
+	rootCmd.SetArgs([]string{"config", "create", "-o", path})
+
+	require.NotPanics(t, func() { require.NoError(t, rootCmd.Execute()) })
+	assert.Equal(t, 1, exitStatus)
+	assert.Contains(t, errOut.String(), "Error:")
+	assert.Contains(t, errOut.String(), path)
+	assert.Empty(t, out.String())
+}
+
+type failingWriter struct{}
+
+func (failingWriter) Write([]byte) (int, error) {
+	return 0, errors.New("write failed")
+}
+
+func Test_CreateCommand_WriteFailure(t *testing.T) {
+	for _, format := range []string{"--json", "--yaml"} {
+		t.Run(format, func(t *testing.T) {
+			exitStatus = -1
+			rootCmd.ResetFlags()
+			createCmd.ResetFlags()
+			initRoot()
+			initCreate()
+
+			errOut := bytes.NewBufferString("")
+			rootCmd.SetOut(failingWriter{})
+			rootCmd.SetErr(errOut)
+			rootCmd.SetArgs([]string{"config", "create", format})
+
+			require.NotPanics(t, func() { require.NoError(t, rootCmd.Execute()) })
+			assert.Equal(t, 1, exitStatus)
+			assert.Contains(t, errOut.String(), "write failed")
+		})
+	}
+}
+
 func Test_CreateCommand_ExecuteYmlFile(t *testing.T) {
 	exitStatus = -1
 	rootCmd.ResetFlags()

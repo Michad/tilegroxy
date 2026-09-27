@@ -16,6 +16,8 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -39,20 +41,21 @@ Example:
 }
 
 func runCreate(cmd *cobra.Command, _ []string) {
-	var err error
+	if err := createConfig(cmd); err != nil {
+		fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err)
+		exit(1)
+	}
+}
 
+func createConfig(cmd *cobra.Command) error {
 	noPretty, _ := cmd.Flags().GetBool("no-pretty")
 	forceJSON, _ := cmd.Flags().GetBool("json")
 	forceYML, _ := cmd.Flags().GetBool("yaml")
 	writePath, _ := cmd.Flags().GetString("output")
 
-	out := cmd.OutOrStdout()
-
 	cfg := make(map[string]interface{})
-	err = mapstructure.Decode(config.DefaultConfig(), &cfg)
-
-	if err != nil {
-		panic(err)
+	if err := mapstructure.Decode(config.DefaultConfig(), &cfg); err != nil {
+		return err
 	}
 
 	if writePath != "" && !forceJSON && !forceYML {
@@ -63,44 +66,41 @@ func runCreate(cmd *cobra.Command, _ []string) {
 		} // Check for extension being yaml isn't needed because we default to yaml
 	}
 
-	var file *os.File
-
-	if writePath != "" {
-		file, err = os.OpenFile(filepath.Clean(writePath), os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0600)
-
-		if err != nil {
-			panic(err)
-		}
-
-		defer file.Close()
+	if writePath == "" {
+		return encodeConfig(cmd.OutOrStdout(), cfg, forceJSON, !noPretty)
 	}
 
-	if forceJSON {
-		var enc *json.Encoder
-
-		if writePath != "" {
-			enc = json.NewEncoder(file)
-		} else {
-			enc = json.NewEncoder(out)
-		}
-		if !noPretty {
-			enc.SetIndent(" ", "  ")
-		}
-		err = enc.Encode(cfg)
-	} else {
-		var enc *yaml.Encoder
-
-		if writePath != "" {
-			enc = yaml.NewEncoder(file)
-		} else {
-			enc = yaml.NewEncoder(out)
-		}
-		err = enc.Encode(cfg)
+	file, err := os.OpenFile(filepath.Clean(writePath), os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0600)
+	if err != nil {
+		return err
 	}
+
+	err = encodeConfig(file, cfg, forceJSON, !noPretty)
+	closeErr := file.Close()
 
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return closeErr
+}
+
+func encodeConfig(out io.Writer, cfg map[string]interface{}, asJSON bool, pretty bool) error {
+	if asJSON {
+		enc := json.NewEncoder(out)
+		if pretty {
+			enc.SetIndent(" ", "  ")
+		}
+
+		return enc.Encode(cfg)
+	}
+
+	enc := yaml.NewEncoder(out)
+	if err := enc.Encode(cfg); err != nil {
+		return err
+	}
+
+	return enc.Close()
 }
 
 func init() {
