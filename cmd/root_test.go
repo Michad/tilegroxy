@@ -15,6 +15,8 @@
 package cmd
 
 import (
+	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -73,4 +75,41 @@ func Test_ReloadSource_ErrorsWithoutConfigFlags(t *testing.T) {
 	_, err := reloadSourceFromCommand(&cobra.Command{})
 
 	assert.Error(t, err)
+}
+
+func Test_ExecuteArgs_FlagsDoNotCarryOver(t *testing.T) {
+	rootCmd.ResetFlags()
+	versionCmd.ResetFlags()
+	initRoot()
+	initVersion()
+
+	b := bytes.NewBufferString("")
+	rootCmd.SetOut(b)
+	rootCmd.SetErr(b)
+	t.Cleanup(func() { rootCmd.SetArgs(nil) })
+
+	ExecuteArgs("version", "--json")
+	assert.True(t, strings.HasPrefix(b.String(), "{"))
+
+	b.Reset()
+	ExecuteArgs("version")
+	assert.True(t, strings.HasPrefix(b.String(), "tilegroxy/"))
+}
+
+func Test_ResetFlags_RestoresSliceDefaults(t *testing.T) {
+	c := &cobra.Command{}
+	c.Flags().StringSlice("empty", []string{}, "")
+	c.Flags().StringSlice("filled", []string{"a", "b"}, "")
+	require.NoError(t, c.ParseFlags([]string{"--empty", "x", "--filled", "y"}))
+
+	resetFlags(c)
+
+	empty, err := c.Flags().GetStringSlice("empty")
+	require.NoError(t, err)
+	assert.Empty(t, empty)
+
+	filled, err := c.Flags().GetStringSlice("filled")
+	require.NoError(t, err)
+	assert.Equal(t, []string{"a", "b"}, filled)
+	assert.False(t, c.Flags().Changed("filled"))
 }

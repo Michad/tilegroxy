@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
@@ -61,7 +62,7 @@ func (s CropMvtRegistration) DataType(_ any) config.DataType {
 func (s CropMvtRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(CropMvtConfig)
 
-	primary, err := layer.ConstructProvider(cfg.Primary, deps)
+	primary, err := layers.ConstructProvider(cfg.Primary, deps)
 	if err != nil {
 		return nil, err
 	}
@@ -110,18 +111,18 @@ func (t CropMvt) GenerateTile(ctx context.Context, providerContext layer.Provide
 		return img, nil
 	}
 
-	layers, err := mvt.Unmarshal(img.Content)
+	collection, err := mvt.Unmarshal(img.Content)
 	if err != nil {
 		return nil, err
 	}
 
 	tile := maptile.New(uint32(tileRequest.X), uint32(tileRequest.Y), maptile.Zoom(tileRequest.Z)) //#nosec G115 -- tileRequest coordinates are already range-checked by GetBounds above
 
-	layers.ProjectToWGS84(tile)
-	layers.Clip(boundsToOrbBound(boundsToCrop))
-	layers.ProjectToTile(tile)
+	collection.ProjectToWGS84(tile)
+	collection.Clip(boundsToOrbBound(boundsToCrop))
+	collection.ProjectToTile(tile)
 
-	output, err := mvt.Marshal(layers)
+	output, err := mvt.Marshal(collection)
 	if err != nil {
 		return nil, err
 	}

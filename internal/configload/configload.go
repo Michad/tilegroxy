@@ -1,0 +1,422 @@
+// Copyright 2026 Michael Davis
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package configload
+
+import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log/slog"
+	"path/filepath"
+	"runtime/debug"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/fsnotify/fsnotify"
+	"github.com/go-viper/mapstructure/v2"
+	"github.com/spf13/viper"
+	_ "github.com/spf13/viper/remote"
+)
+
+type ConfigWithID struct {
+	ID     string
+	Config map[string]interface{}
+}
+
+var CustomLogLevel = map[string]slog.Level{
+	"trace":  config.LevelTrace,
+	"absurd": config.LevelAbsurd,
+}
+
+// Validate covers the fields entity construction doesn't touch: error.mode, logging levels, and
+// logging formats. Without this they'd only fail once the code path using them runs, letting
+// `config check` report "Valid" for a config that breaks as soon as it's served.
+func Validate(c config.Config) error {
+	var errs []error
+
+	switch c.Error.Mode {
+	case config.ModeErrorPlainText, config.ModeErrorNoError, config.ModeErrorImage, config.ModeErrorImageHeader:
+	default:
+		errs = append(errs, fmt.Errorf(c.Error.Messages.InvalidParam, "error.mode", c.Error.Mode))
+	}
+
+	if _, ok := CustomLogLevel[strings.ToLower(c.Logging.Main.Level)]; !ok {
+		var level slog.Level
+		if err := level.UnmarshalText([]byte(c.Logging.Main.Level)); err != nil {
+			errs = append(errs, fmt.Errorf(c.Error.Messages.InvalidParam, "logging.main.level", c.Logging.Main.Level))
+		}
+	}
+
+	if c.Logging.Audit.Enabled {
+		if !c.Logging.Audit.Console && c.Logging.Audit.Path == "" {
+			errs = append(errs, fmt.Errorf(c.Error.Messages.OneOfRequired, []string{"logging.audit.console", "logging.audit.path"}))
+		}
+	}
+
+	switch c.Logging.Main.Format {
+	case config.MainFormatPlain, config.MainFormatJSON:
+	default:
+		errs = append(errs, fmt.Errorf(c.Error.Messages.InvalidParam, "logging.main.format", c.Logging.Main.Format))
+	}
+
+	switch c.Logging.Access.Format {
+	case config.AccessFormatCommon, config.AccessFormatCombined:
+	default:
+		errs = append(errs, fmt.Errorf(c.Error.Messages.InvalidParam, "logging.access.format", c.Logging.Access.Format))
+	}
+
+	switch c.Logging.Audit.Format {
+	case config.AuditFormatPlain, config.AuditFormatJSON:
+	default:
+		errs = append(errs, fmt.Errorf(c.Error.Messages.InvalidParam, "logging.audit.format", c.Logging.Audit.Format))
+	}
+
+	if c.Server.Timeout == 0 {
+		errs = append(errs, fmt.Errorf(c.Error.Messages.InvalidParam, "server.timeout", "0"))
+	}
+
+	if c.Server.DrainDelay >= EffectiveShutdownTimeout(c.Server) {
+		errs = append(errs, fmt.Errorf(c.Error.Messages.InvalidParam, "server.draindelay", strconv.FormatUint(uint64(c.Server.DrainDelay), 10)))
+	}
+
+	for i, l := range c.Layers {
+		if l.MinZoom != nil && l.MaxZoom != nil && *l.MinZoom > *l.MaxZoom {
+			errs = append(errs, fmt.Errorf(c.Error.Messages.InvalidParam, fmt.Sprintf("layers[%d].maxzoom", i), strconv.Itoa(*l.MaxZoom)))
+		}
+
+		if l.Bounds != (config.BoundsConfig{}) && (l.Bounds.South > l.Bounds.North || l.Bounds.West > l.Bounds.East) {
+			errs = append(errs, fmt.Errorf(c.Error.Messages.InvalidParam, fmt.Sprintf("layers[%d].bounds", i), fmt.Sprintf("%+v", l.Bounds)))
+		}
+	}
+
+	return errors.Join(errs...)
+}
+
+// normalize the top-level cache config into a list with IDs
+func NormalizeCaches(raw interface{}, errorMessages config.ErrorMessages) ([]ConfigWithID, error) {
+	switch typed := raw.(type) {
+	case nil:
+		return []ConfigWithID{{ID: "none", Config: map[string]interface{}{"name": "none"}}}, nil
+	case map[string]interface{}:
+		id, ok := typed["id"].(string)
+		if !ok || id == "" {
+			id, ok = typed["name"].(string)
+
+			if !ok || id == "" {
+				return nil, fmt.Errorf(errorMessages.ParamRequired, "cache.name")
+			}
+		}
+
+		return []ConfigWithID{{ID: id, Config: typed}}, nil
+	}
+
+	entries, err := toCacheEntryList(raw, errorMessages)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(entries) == 0 {
+		return []ConfigWithID{{ID: "none", Config: map[string]interface{}{"name": "none"}}}, nil
+	}
+
+	result := make([]ConfigWithID, 0, len(entries))
+	seen := make(map[string]bool, len(entries))
+
+	for i, entry := range entries {
+		id, _ := entry["id"].(string)
+		if id == "" {
+			// The docs let id default to name, which is unambiguous until two caches share a kind
+			id, _ = entry["name"].(string)
+		}
+
+		if id == "" {
+			return nil, fmt.Errorf(errorMessages.ParamRequired, fmt.Sprintf("cache[%d].id", i))
+		}
+
+		if seen[id] {
+			return nil, fmt.Errorf(errorMessages.MustBeUnique, fmt.Sprintf("cache[%d].id", i), id)
+		}
+
+		seen[id] = true
+		result = append(result, ConfigWithID{ID: id, Config: entry})
+	}
+
+	return result, nil
+}
+
+// toCacheEntryList coerces the array forms a YAML or JSON decoder can produce into a list of maps.
+func toCacheEntryList(raw interface{}, errorMessages config.ErrorMessages) ([]map[string]interface{}, error) {
+	switch typed := raw.(type) {
+	case []map[string]interface{}:
+		return typed, nil
+	case []interface{}:
+		entries := make([]map[string]interface{}, 0, len(typed))
+
+		for i, rawEntry := range typed {
+			entry, ok := rawEntry.(map[string]interface{})
+			if !ok {
+				return nil, fmt.Errorf(errorMessages.InvalidParam, fmt.Sprintf("cache[%d]", i), fmt.Sprintf("%#v", rawEntry))
+			}
+
+			entries = append(entries, entry)
+		}
+
+		return entries, nil
+	}
+
+	return nil, fmt.Errorf(errorMessages.InvalidParam, "cache", fmt.Sprintf("%#v", raw))
+}
+
+// DecodeEntityConfig decodes a raw entity config map into the config struct returned by that
+// entity's InitializeConfig(). It errors on unknown keys so a typo'd field isn't silently ignored,
+// which for a security control means quietly reverting to its default. "name" is stripped first
+// since it selects the registration and no entity config declares it. "id" is left in place
+// because datastore does declare one.
+func DecodeEntityConfig(rawConfig map[string]interface{}, out any) error {
+	stripped := make(map[string]interface{}, len(rawConfig))
+	for k, v := range rawConfig {
+		if strings.EqualFold(k, "name") {
+			continue
+		}
+		stripped[k] = v
+	}
+
+	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		ErrorUnused: true,
+		Result:      out,
+	})
+	if err != nil {
+		return err
+	}
+
+	return decoder.Decode(stripped)
+}
+
+func initViper() *viper.Viper {
+	var viper = viper.NewWithOptions(viper.KeyDelimiter("_"))
+	viper.AutomaticEnv()
+	registerDefaults(viper)
+	return viper
+}
+
+// registerDefaults makes every scalar in DefaultConfig() addressable via SetDefault. AutomaticEnv
+// only looks up env vars for keys viper already knows, which without this means only the keys the
+// operator happened to write in the config file.
+func registerDefaults(v *viper.Viper) {
+	b, err := json.Marshal(config.DefaultConfig())
+	if err != nil {
+		// DefaultConfig() is statically known, so a failure here is a programming error.
+		panic(err)
+	}
+
+	var asMap map[string]interface{}
+	if err := json.Unmarshal(b, &asMap); err != nil {
+		panic(err)
+	}
+
+	flattenDefaults(v, "", asMap)
+}
+
+func flattenDefaults(v *viper.Viper, prefix string, m map[string]interface{}) {
+	for k, val := range m {
+		key := k
+		if prefix != "" {
+			key = prefix + "_" + k
+		}
+
+		if nested, ok := val.(map[string]interface{}); ok {
+			flattenDefaults(v, key, nested)
+		} else {
+			v.SetDefault(key, val)
+		}
+	}
+}
+
+func unmarshal(viper *viper.Viper) (config.Config, error) {
+	c := config.DefaultConfig()
+
+	// Viper merges a list of maps into a single map key-by-key, so an analytics section written as a list
+	// decodes without error into a silent mixture of its entries. Caught here because it's the shape
+	// analytics used during development and the failure is otherwise invisible
+	if _, ok := viper.Get("analytics").([]interface{}); ok {
+		return c, errors.New("analytics must be a single entry, not a list. Remove the leading '- ' and unindent the parameters beneath it")
+	}
+
+	// Same merging problem, but a list is valid for cache, so the list is taken from the raw value
+	// before Unmarshal flattens it rather than rejected.
+	rawCaches, cacheIsList := viper.Get("cache").([]interface{})
+
+	err := viper.Unmarshal(&c, func(dc *mapstructure.DecoderConfig) {
+		dc.ErrorUnused = true
+	})
+	if err != nil {
+		return c, err
+	}
+
+	if cacheIsList {
+		c.Cache = rawCaches
+	}
+
+	return c, nil
+}
+
+func LoadConfig(raw string) (config.Config, error) {
+	viper := initViper()
+
+	if strings.Index(strings.TrimSpace(raw), "{") == 0 {
+		viper.SetConfigType("json")
+	} else {
+		viper.SetConfigType("yaml")
+	}
+
+	err := viper.ReadConfig(bytes.NewBufferString(raw))
+	if err != nil {
+		return config.Config{}, err
+	}
+
+	return unmarshal(viper)
+}
+
+func LoadAndWatchConfigFromFile(filename string, onReload func(config.Config, error)) (config.Config, error) {
+	viper := initViper()
+
+	viper.SetConfigFile(filename)
+
+	err := viper.ReadInConfig()
+
+	if err != nil {
+		return config.Config{}, err
+	}
+
+	if onReload != nil {
+		configFile, err := filepath.Abs(filename)
+		if err != nil {
+			return config.Config{}, err
+		}
+
+		watcher, err := fsnotify.NewWatcher()
+		if err != nil {
+			return config.Config{}, err
+		}
+
+		if err := watcher.Add(filepath.Dir(configFile)); err != nil {
+			_ = watcher.Close()
+			return config.Config{}, err
+		}
+
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					onReload(config.Config{}, fmt.Errorf("config watcher panic: %v\n%s", r, debug.Stack()))
+				}
+			}()
+
+			watchConfigFile(filename, configFile, watcher, onReload)
+		}()
+	}
+
+	return unmarshal(viper)
+}
+
+func watchConfigFile(filename, configFile string, watcher *fsnotify.Watcher, onReload func(config.Config, error)) {
+	configDir := filepath.Dir(configFile)
+
+	defer watcher.Close()
+
+	var lastConfigLoad time.Time
+
+	for {
+		select {
+		case event, ok := <-watcher.Events:
+			if !ok {
+				return
+			}
+
+			if filepath.Clean(event.Name) != configFile {
+				continue
+			}
+
+			// A remove/rename means the watch descriptor for this file is gone even though the
+			// directory watch survives. Re-adding is a no-op if the file already exists again and
+			// otherwise ensures we notice the recreate as soon as it happens.
+			if event.Has(fsnotify.Remove) || event.Has(fsnotify.Rename) {
+				_ = watcher.Add(configDir)
+				continue
+			}
+
+			if !event.Has(fsnotify.Write) && !event.Has(fsnotify.Create) {
+				continue
+			}
+
+			// Avoid duplicate file change events https://github.com/spf13/viper/issues/609
+			if time.Since(lastConfigLoad) < time.Second {
+				continue
+			}
+			lastConfigLoad = time.Now()
+
+			// Do the reload in a separate thread than the main notify thread to avoid the delay below interfering with the dedupe logic above
+			go func() {
+				defer func() {
+					if r := recover(); r != nil {
+						onReload(config.Config{}, fmt.Errorf("config reload panic: %v\n%s", r, debug.Stack()))
+					}
+				}()
+
+				// fsnotify can send events before file has finished writing - give it a second to settle... this might need to be extended to a retry-with-exp-backoff in the future - https://github.com/spf13/viper/issues/1085
+				time.Sleep(time.Second)
+
+				reloaded := initViper()
+				reloaded.SetConfigFile(filename)
+				err := reloaded.ReadInConfig()
+
+				if err != nil {
+					onReload(config.Config{}, err)
+				} else {
+					onReload(unmarshal(reloaded))
+				}
+			}()
+		case _, ok := <-watcher.Errors:
+			if !ok {
+				return
+			}
+		}
+	}
+}
+
+func LoadConfigFromFile(filename string) (config.Config, error) {
+	return LoadAndWatchConfigFromFile(filename, nil)
+}
+
+func LoadConfigFromRemote(provider, endpoint, path, format string) (config.Config, error) {
+	viper := initViper()
+
+	viper.SetConfigType(format)
+	err := viper.AddRemoteProvider(provider, endpoint, path)
+
+	if err != nil {
+		return config.Config{}, err
+	}
+
+	err = viper.ReadRemoteConfig()
+
+	if err != nil {
+		return config.Config{}, err
+	}
+
+	return unmarshal(viper)
+}

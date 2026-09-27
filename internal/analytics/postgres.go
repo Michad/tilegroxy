@@ -27,7 +27,7 @@ import (
 )
 
 type PostgresConfig struct {
-	analytics.CommonConfig `mapstructure:",squash"`
+	CommonConfig `mapstructure:",squash"`
 	// The ID of a datastore with a name of "postgresql"
 	Datastore string
 	// The table to insert events into. Tilegroxy never creates it, see the docs for the recommended DDL
@@ -42,7 +42,7 @@ type Postgres struct {
 	columns map[string]string
 	// The identifier used by CopyFrom, split so a schema-qualified table works
 	tableIdent pgx.Identifier
-	batcher    *analytics.Batcher
+	batcher    *Batcher
 }
 
 func init() {
@@ -116,7 +116,7 @@ func (s PostgresRegistration) Initialize(cfgAny any, deps analytics.AnalyticsDep
 		return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "analytics.postgresql.datastore", cfg.Datastore)
 	}
 
-	batchCfg, err := analytics.ApplyBatchDefaults(cfg.Batch, deps.ErrorMessages)
+	batchCfg, err := ApplyBatchDefaults(cfg.Batch, deps.ErrorMessages)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func (s PostgresRegistration) Initialize(cfgAny any, deps analytics.AnalyticsDep
 		tableIdent:     pgx.Identifier(strings.Split(cfg.Table, ".")),
 	}
 
-	batcher, err := analytics.NewBatcher(id, batchCfg, p.flush)
+	batcher, err := NewBatcher(id, batchCfg, p.flush)
 	if err != nil {
 		return nil, err
 	}

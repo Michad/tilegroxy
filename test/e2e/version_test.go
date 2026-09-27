@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// The values pkg/static falls back to when the linker flags did not land.
+// The values internal/static falls back to when the linker flags did not land.
 const (
 	unsetVersion = "v0.X.Y"
 	unsetRef     = "HEAD"

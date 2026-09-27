@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/Michad/tilegroxy/internal/configload"
 	"github.com/Michad/tilegroxy/pkg/config"
 )
 
@@ -38,7 +39,7 @@ type shutdownBudget struct {
 }
 
 func newShutdownBudget(cfg *config.Config) shutdownBudget {
-	total := time.Duration(cfg.Server.EffectiveShutdownTimeout()) * time.Second // #nosec G115 -- operator-supplied timeout in seconds, far below int64 overflow range
+	total := time.Duration(configload.EffectiveShutdownTimeout(cfg.Server)) * time.Second // #nosec G115 -- operator-supplied timeout in seconds, far below int64 overflow range
 
 	reserve := total / flushReserveFraction
 	if reserve < flushReserveFloor {

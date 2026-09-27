@@ -59,7 +59,7 @@ func (s TenantRegistration) Name() string {
 func (s TenantRegistration) Initialize(configAny any, deps cache.CacheDeps) (cache.Cache, error) {
 	config := configAny.(TenantConfig)
 
-	inner, err := cache.ConstructCache(config.Cache, deps)
+	inner, err := ConstructCache(config.Cache, deps)
 	if err != nil {
 		return nil, err
 	}

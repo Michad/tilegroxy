@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/Michad/tilegroxy/pkg"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -222,4 +223,39 @@ func Test_ReplaceURLPlaceholders_LiteralDollarPreserved(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, "https://example.com/a$b/c$/1/1/0.png", result)
+}
+
+func TestParseZoom(t *testing.T) {
+	zooms, err := ParseZoomString("1")
+	assert.Equal(t, []int{1}, zooms)
+	require.NoError(t, err)
+
+	zooms, err = ParseZoomString("1-2")
+	assert.Equal(t, []int{1, 2}, zooms)
+	require.NoError(t, err)
+
+	zooms, err = ParseZoomString("1,2")
+	assert.Equal(t, []int{1, 2}, zooms)
+	require.NoError(t, err)
+
+	_, err = ParseZoomString("2-1")
+	require.Error(t, err)
+
+	_, err = ParseZoomString("fish")
+	require.Error(t, err)
+
+	_, err = ParseZoomString("f")
+	require.Error(t, err)
+
+	_, err = ParseZoomString("-1")
+	require.Error(t, err)
+
+	_, err = ParseZoomString("25")
+	require.Error(t, err)
+
+	_, err = ParseZoomString("2-30")
+	require.Error(t, err)
+
+	_, err = ParseZoomString("-1-1")
+	require.Error(t, err)
 }

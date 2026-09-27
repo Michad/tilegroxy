@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"slices"
 
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
@@ -69,7 +70,7 @@ func (s FallbackRegistration) Name() string {
 
 func (s FallbackRegistration) DataType(cfgAny any) config.DataType {
 	cfg := cfgAny.(FallbackConfig)
-	return layer.ExtractDataType(cfg.Primary)
+	return layers.ExtractDataType(cfg.Primary)
 }
 
 func (s FallbackRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
@@ -78,7 +79,7 @@ func (s FallbackRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (l
 
 	if cfg.Zoom != "" {
 		var err error
-		zoom, err = pkg.ParseZoomString(cfg.Zoom)
+		zoom, err = ParseZoomString(cfg.Zoom)
 
 		if err != nil {
 			return nil, err
@@ -97,11 +98,11 @@ func (s FallbackRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (l
 		return nil, fmt.Errorf(deps.ErrorMessages.EnumError, "provider.fallback.cachemode", cfg.Cache, allCacheModes)
 	}
 
-	primary, err := layer.ConstructProvider(cfg.Primary, deps)
+	primary, err := layers.ConstructProvider(cfg.Primary, deps)
 	if err != nil {
 		return nil, err
 	}
-	secondary, err := layer.ConstructProvider(cfg.Secondary, deps)
+	secondary, err := layers.ConstructProvider(cfg.Secondary, deps)
 	if err != nil {
 		return nil, err
 	}

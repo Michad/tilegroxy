@@ -47,12 +47,12 @@ func (s stubDatastoreRegistration) Initialize(cfgAny any, _ datastore.DatastoreD
 	return stubDatastoreWrapper{id: cfg.ID, native: s.native}, nil
 }
 
-func buildDatastoreRegistry(t *testing.T, id string, regName string, native any) *datastore.DatastoreRegistry {
+func buildDatastoreRegistry(t *testing.T, id string, regName string, native any) *datastores.Registry {
 	t.Helper()
 
 	datastore.RegisterDatastoreWrapper(stubDatastoreRegistration{name: regName, native: native})
 
-	reg, err := datastore.ConstructDatastoreRegistry(context.Background(), []map[string]interface{}{{"name": regName, "id": id}}, nil, config.ErrorMessages{})
+	reg, err := datastores.ConstructDatastoreRegistry(context.Background(), []map[string]interface{}{{"name": regName, "id": id}}, nil, config.ErrorMessages{})
 	require.NoError(t, err)
 
 	return reg

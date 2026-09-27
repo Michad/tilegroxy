@@ -30,9 +30,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Michad/tilegroxy/internal/entities"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"golang.org/x/crypto/acme/autocert"
@@ -59,7 +59,7 @@ type reloadEntitiesFunc = func(*config.Config, *entities.Entities) error
 // "config" parameter shadows.
 //
 // The mutex is held across the whole teardown-then-rebuild rather than just around the pointer.
-// pkg/config dispatches each config-change event on its own goroutine, so two concurrent reloads
+// internal/configload dispatches each config-change event on its own goroutine, so two concurrent reloads
 // would otherwise both tear down the same generation and race to bind the health port.
 func healthReloader(ctx context.Context, cfg *config.Config, ent *entities.Entities, healthMutex *sync.Mutex, healthShutdown *func(context.Context) error, healthDrain *func(), draining *bool) error {
 	healthMutex.Lock()

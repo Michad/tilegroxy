@@ -19,15 +19,11 @@ package analytics
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
-	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/datastore"
-	"github.com/Michad/tilegroxy/pkg/entities/secret"
-	"github.com/go-viper/mapstructure/v2"
 )
 
 // Event is a single successful tile delivery. Everything but Fields is always populated
@@ -49,7 +45,7 @@ type Event struct {
 
 // Analytics receives events for successful tile requests. Implementations must not block the caller; Record
 // runs on the request goroutine after the response is written so a slow implementation delays connection
-// reuse. Modules talking to a remote system should hand off to a Batcher instead of performing I/O inline.
+// reuse. Modules talking to a remote system should queue events and write them in the background.
 // Returning an error is for reporting only, it never surfaces to the user or affects the response
 type Analytics interface {
 	Record(ctx context.Context, event Event) error
@@ -58,7 +54,7 @@ type Analytics interface {
 // AnalyticsDeps carries everything an analytics module is given at construction. New dependencies are
 // added as fields so the Initialize signature stays stable
 type AnalyticsDeps struct {
-	Datastores    *datastore.DatastoreRegistry
+	Datastores    datastore.DatastoreRegistry
 	ErrorMessages config.ErrorMessages
 }
 
@@ -66,21 +62,6 @@ type AnalyticsRegistration interface {
 	Name() string
 	Initialize(config any, deps AnalyticsDeps) (Analytics, error)
 	InitializeConfig() any
-}
-
-// CommonConfig holds the parameters every analytics module accepts. Modules embed it with
-// `mapstructure:",squash"` so these keys sit at the top level of the module's configuration
-type CommonConfig struct {
-	// Identifier used in logs to attribute analytics messages. Defaults to the module name
-	ID string
-	// Names of additional attributes to include, from the set in event_fields.go. An unrecognized name is a
-	// startup error so mistakes surface when running `tilegroxy config check`
-	Fields []string
-	// Arbitrary additional attributes. Keys are the output attribute names, values select a source via a
-	// `ctx.` or `hdr.` prefix and are otherwise used as a literal constant
-	ExtraFields map[string]string
-	// Controls how events are buffered before being written to the destination
-	Batch BatchConfig
 }
 
 var registrationsMu sync.RWMutex
@@ -107,60 +88,4 @@ func RegisteredAnalyticsNames() []string {
 		names = append(names, n)
 	}
 	return names
-}
-
-// noneName is the module that records nothing, used as the default so an absent analytics block behaves
-// the same as an explicitly disabled one
-const noneName = "none"
-
-// secreter is separate from deps because it resolves values in the raw config before the module is
-// constructed, rather than being handed to the module
-func ConstructAnalytics(ctx context.Context, rawConfig map[string]interface{}, secreter secret.Secreter, deps AnalyticsDeps) (*AnalyticsWrapper, error) {
-	var err error
-
-	rawConfig = pkg.ReplaceEnv(rawConfig)
-
-	if secreter != nil {
-		rawConfig, err = pkg.ReplaceConfigValues(rawConfig, "secret", func(k string) (string, error) {
-			v, _, lookupErr := secreter.Lookup(ctx, k)
-			return v, lookupErr
-		})
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	name, ok := rawConfig["name"].(string)
-
-	if ok {
-		reg, ok := RegisteredAnalytics(name)
-		if ok {
-			cfg := reg.InitializeConfig()
-			err := mapstructure.Decode(rawConfig, &cfg)
-			if err != nil {
-				return nil, err
-			}
-
-			// Built from the same raw config the module sees so field validation happens once here
-			resolver, err := newFieldResolver(rawConfig, deps.ErrorMessages)
-			if err != nil {
-				return nil, err
-			}
-
-			a, err := reg.Initialize(cfg, deps)
-			if err != nil {
-				return nil, err
-			}
-
-			id, _ := rawConfig["id"].(string)
-			if id == "" {
-				id = name
-			}
-
-			return &AnalyticsWrapper{Name: name, ID: id, Analytics: a, resolver: resolver}, nil
-		}
-	}
-
-	nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
-	return nil, fmt.Errorf(deps.ErrorMessages.EnumError, "analytics.name", nameCoerce, RegisteredAnalyticsNames())
 }

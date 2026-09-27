@@ -149,7 +149,7 @@ func Test_GoogleAnalytics_AnonymousUsesHashedIP(t *testing.T) {
 
 	require.NoError(t, a.Record(pkg.BackgroundContext(), analytics.Event{
 		LayerID: "main",
-		Fields:  map[string]any{analytics.FieldIP: "10.1.2.3"},
+		Fields:  map[string]any{FieldIP: "10.1.2.3"},
 	}))
 
 	closeGA(t, a)

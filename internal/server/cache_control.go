@@ -21,9 +21,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Michad/tilegroxy/internal/configload"
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
 const cacheControlHeader = "Cache-Control"
@@ -31,7 +32,7 @@ const noStoreDirective = "no-store"
 
 // The path is the dotted prefix the block was found at so the message names the right place
 func ValidateCacheControl(cfg config.CacheControlConfig, path string, errorMessages config.ErrorMessages) error {
-	if !cfg.IsEnabled() {
+	if !configload.CacheControlEnabled(cfg) {
 		return nil
 	}
 
@@ -83,24 +84,24 @@ func checkNoStoreConflicts(cfg config.CacheControlConfig) []string {
 	return conflicts
 }
 
-func mergeCacheControl(serverCfg config.CacheControlConfig, l *layer.Layer) config.CacheControlConfig {
+func mergeCacheControl(serverCfg config.CacheControlConfig, l *layers.Layer) config.CacheControlConfig {
 	if l == nil || l.Config.CacheControl == nil {
 		return serverCfg
 	}
 
 	merged := *l.Config.CacheControl
-	merged.MergeDefaultsFrom(serverCfg)
+	configload.MergeCacheControlDefaults(&merged, serverCfg)
 
 	return merged
 }
 
-func generateCacheControlValue(cfg config.CacheControlConfig, l *layer.Layer, img *pkg.Image, now time.Time) string {
-	if !cfg.IsEnabled() {
+func generateCacheControlValue(cfg config.CacheControlConfig, l *layers.Layer, img *pkg.Image, now time.Time) string {
+	if !configload.CacheControlEnabled(cfg) {
 		return ""
 	}
 
-	var facts layer.CacheControlFacts
-	if cfg.AutoEnabled() && l != nil {
+	var facts layers.CacheControlFacts
+	if configload.CacheControlAutoEnabled(cfg) && l != nil {
 		facts = l.CacheControl
 	}
 
@@ -131,12 +132,12 @@ func generateCacheControlValue(cfg config.CacheControlConfig, l *layer.Layer, im
 	return strings.Join(directives, ", ")
 }
 
-func resolveVisibility(cfg config.CacheControlConfig, facts layer.CacheControlFacts) string {
+func resolveVisibility(cfg config.CacheControlConfig, facts layers.CacheControlFacts) string {
 	if cfg.Visibility != "" {
 		return cfg.Visibility
 	}
 
-	if !cfg.AutoEnabled() {
+	if !configload.CacheControlAutoEnabled(cfg) {
 		return ""
 	}
 
@@ -147,12 +148,12 @@ func resolveVisibility(cfg config.CacheControlConfig, facts layer.CacheControlFa
 	return config.CacheVisibilityPublic
 }
 
-func resolveRemainingTTL(cfg config.CacheControlConfig, facts layer.CacheControlFacts, img *pkg.Image, now time.Time) (uint, bool) {
+func resolveRemainingTTL(cfg config.CacheControlConfig, facts layers.CacheControlFacts, img *pkg.Image, now time.Time) (uint, bool) {
 	if cfg.MaxAge != nil {
 		return *cfg.MaxAge, true
 	}
 
-	if !cfg.AutoEnabled() || facts.TTL <= 0 {
+	if !configload.CacheControlAutoEnabled(cfg) || facts.TTL <= 0 {
 		return 0, false
 	}
 
@@ -190,7 +191,7 @@ func validateAllCacheControl(cfg *config.Config) error {
 		}
 
 		merged := *l.CacheControl
-		merged.MergeDefaultsFrom(cfg.Server.CacheControl)
+		configload.MergeCacheControlDefaults(&merged, cfg.Server.CacheControl)
 
 		if err := ValidateCacheControl(merged, "layer."+l.ID+".cachecontrol", cfg.Error.Messages); err != nil {
 			return err

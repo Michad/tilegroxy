@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Michad/tilegroxy/internal/caches"
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -85,6 +86,10 @@ func (s CacheCheckRegistration) Initialize(checkConfig health.HealthCheckConfig,
 }
 
 func resolveCaches(ids []string, deps health.HealthCheckDeps, errorMessages config.ErrorMessages) ([]identifiedCache, error) {
+	if deps.Caches == nil {
+		return nil, fmt.Errorf(errorMessages.ParamRequired, "check.cache.caches")
+	}
+
 	if len(ids) == 0 {
 		ids = deps.Caches.IDs()
 	}
@@ -98,7 +103,7 @@ func resolveCaches(ids []string, deps health.HealthCheckDeps, errorMessages conf
 	for _, id := range ids {
 		c, ok := deps.Caches.Get(id)
 		if !ok {
-			return nil, cache.NewUnknownCacheError(errorMessages, "check.cache.caches", id, deps.Caches.IDs())
+			return nil, caches.NewUnknownCacheError(errorMessages, "check.cache.caches", id, deps.Caches.IDs())
 		}
 
 		targets = append(targets, identifiedCache{id: id, c: c})

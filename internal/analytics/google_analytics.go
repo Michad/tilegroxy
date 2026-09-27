@@ -40,7 +40,7 @@ const (
 )
 
 type GoogleAnalyticsConfig struct {
-	analytics.CommonConfig `mapstructure:",squash"`
+	CommonConfig `mapstructure:",squash"`
 	// The GA4 measurement ID, in the form G-XXXXXXX
 	MeasurementID string
 	// The Measurement Protocol API secret. Expected to be supplied via env. or secret.
@@ -59,7 +59,7 @@ type GoogleAnalytics struct {
 	GoogleAnalyticsConfig
 	url     string
 	client  *http.Client
-	batcher *analytics.Batcher
+	batcher *Batcher
 }
 
 func init() {
@@ -100,7 +100,7 @@ func (s GoogleAnalyticsRegistration) Initialize(cfgAny any, deps analytics.Analy
 		cfg.Timeout = gaDefaultTimeout
 	}
 
-	batchCfg, err := analytics.ApplyBatchDefaults(cfg.Batch, deps.ErrorMessages)
+	batchCfg, err := ApplyBatchDefaults(cfg.Batch, deps.ErrorMessages)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +131,7 @@ func (s GoogleAnalyticsRegistration) Initialize(cfgAny any, deps analytics.Analy
 		client:                &http.Client{Timeout: time.Duration(cfg.Timeout) * time.Second}, // #nosec G115 -- operator-supplied timeout in seconds, far below int64 overflow range
 	}
 
-	batcher, err := analytics.NewBatcher(id, batchCfg, g.flush)
+	batcher, err := NewBatcher(id, batchCfg, g.flush)
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +201,7 @@ func (g *GoogleAnalytics) clientID(e analytics.Event) string {
 		return e.UserID
 	}
 
-	if ip, ok := e.Fields[analytics.FieldIP].(string); ok && ip != "" {
+	if ip, ok := e.Fields[FieldIP].(string); ok && ip != "" {
 		sum := sha256.Sum256([]byte(ip))
 		return hex.EncodeToString(sum[:])
 	}

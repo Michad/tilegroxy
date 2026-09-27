@@ -26,10 +26,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Michad/tilegroxy/internal/static"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/analytics"
-	"github.com/Michad/tilegroxy/pkg/static"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -37,7 +37,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 
-	_ "github.com/Michad/tilegroxy/internal/analytics"
+	internalanalytics "github.com/Michad/tilegroxy/internal/analytics"
 	_ "github.com/Michad/tilegroxy/internal/authentications"
 	_ "github.com/Michad/tilegroxy/internal/caches"
 	_ "github.com/Michad/tilegroxy/internal/datastores"
@@ -263,7 +263,7 @@ func (s *generation) recordAnalytics(ctx context.Context, tileReq pkg.TileReques
 		UserID:    userID,
 	}
 
-	s.analytics().RecordEvent(ctx, event, analytics.FieldSource{
+	s.analytics().RecordEvent(ctx, event, internalanalytics.FieldSource{
 		LayerName:   tileReq.LayerName,
 		Bytes:       len(img.Content),
 		ContentType: img.ContentType,

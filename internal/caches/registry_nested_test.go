@@ -60,7 +60,7 @@ func (s countingRegistration) Initialize(_ any, _ cache.CacheDeps) (cache.Cache,
 // Mirrors the arrangement in the cache configuration docs: a tenant cache wrapping a multi cache,
 // where a layer can reference the multi cache nested two levels down.
 func Test_Registry_ReferencesNestedCacheByID(t *testing.T) {
-	reg, err := cache.ConstructCacheRegistry(context.Background(), []map[string]interface{}{
+	reg, err := ConstructCacheRegistry(context.Background(), []map[string]interface{}{
 		{
 			"id":   "tenanted",
 			"name": "tenant",
@@ -88,7 +88,7 @@ func Test_Registry_ReferencesNestedCacheByID(t *testing.T) {
 }
 
 func Test_Registry_NestedIDCollidesWithTopLevel(t *testing.T) {
-	_, err := cache.ConstructCacheRegistry(context.Background(), []map[string]interface{}{
+	_, err := ConstructCacheRegistry(context.Background(), []map[string]interface{}{
 		{
 			"id":   "outer",
 			"name": "ttl",
@@ -109,7 +109,7 @@ func Test_Registry_ClosesNestedCacheOnce(t *testing.T) {
 	closed := 0
 	cache.RegisterCache(countingRegistration{closed: &closed})
 
-	reg, err := cache.ConstructCacheRegistry(context.Background(), []map[string]interface{}{
+	reg, err := ConstructCacheRegistry(context.Background(), []map[string]interface{}{
 		{
 			"id":   "outer",
 			"name": "multi",
@@ -132,18 +132,18 @@ func Test_Registry_ClosesNestedCacheOnce(t *testing.T) {
 func Test_ContainsCache_FindsTenantAtAnyDepth(t *testing.T) {
 	deps := nestedTestDeps()
 
-	plain, err := cache.ConstructCache(map[string]interface{}{"name": "memory"}, deps)
+	plain, err := ConstructCache(map[string]interface{}{"name": "memory"}, deps)
 	require.NoError(t, err)
-	assert.False(t, cache.ContainsCache(plain, "tenant"))
+	assert.False(t, ContainsCache(plain, "tenant"))
 
-	direct, err := cache.ConstructCache(map[string]interface{}{
+	direct, err := ConstructCache(map[string]interface{}{
 		"name":  "tenant",
 		"cache": map[string]interface{}{"name": "memory"},
 	}, deps)
 	require.NoError(t, err)
-	assert.True(t, cache.ContainsCache(direct, "tenant"))
+	assert.True(t, ContainsCache(direct, "tenant"))
 
-	underTTL, err := cache.ConstructCache(map[string]interface{}{
+	underTTL, err := ConstructCache(map[string]interface{}{
 		"name": "ttl",
 		"ttl":  60,
 		"cache": map[string]interface{}{
@@ -152,9 +152,9 @@ func Test_ContainsCache_FindsTenantAtAnyDepth(t *testing.T) {
 		},
 	}, deps)
 	require.NoError(t, err)
-	assert.True(t, cache.ContainsCache(underTTL, "tenant"))
+	assert.True(t, ContainsCache(underTTL, "tenant"))
 
-	inOneTier, err := cache.ConstructCache(map[string]interface{}{
+	inOneTier, err := ConstructCache(map[string]interface{}{
 		"name": "multi",
 		"tiers": []map[string]interface{}{
 			{"name": "memory"},
@@ -162,9 +162,9 @@ func Test_ContainsCache_FindsTenantAtAnyDepth(t *testing.T) {
 		},
 	}, deps)
 	require.NoError(t, err)
-	assert.True(t, cache.ContainsCache(inOneTier, "tenant"))
+	assert.True(t, ContainsCache(inOneTier, "tenant"))
 
-	noTenant, err := cache.ConstructCache(map[string]interface{}{
+	noTenant, err := ConstructCache(map[string]interface{}{
 		"name": "multi",
 		"tiers": []map[string]interface{}{
 			{"name": "memory"},
@@ -172,5 +172,5 @@ func Test_ContainsCache_FindsTenantAtAnyDepth(t *testing.T) {
 		},
 	}, deps)
 	require.NoError(t, err)
-	assert.False(t, cache.ContainsCache(noTenant, "tenant"))
+	assert.False(t, ContainsCache(noTenant, "tenant"))
 }

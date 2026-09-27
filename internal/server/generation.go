@@ -24,12 +24,13 @@ import (
 	"sync"
 	"time"
 
+	internalanalytics "github.com/Michad/tilegroxy/internal/analytics"
+
+	"github.com/Michad/tilegroxy/internal/entities"
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
-	"github.com/Michad/tilegroxy/pkg/entities/analytics"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
-	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
 // How long a generation waits before trusting its refcount. The handler increments under the same
@@ -92,7 +93,7 @@ func (g *generation) entities() *entities.Entities {
 	return g.all
 }
 
-func (g *generation) layerGroup() *layer.LayerGroup {
+func (g *generation) layerGroup() *layers.LayerGroup {
 	if all := g.entities(); all != nil {
 		return all.LayerGroup
 	}
@@ -108,7 +109,7 @@ func (g *generation) auth() authentication.Authentication {
 	return nil
 }
 
-func (g *generation) analytics() *analytics.AnalyticsWrapper {
+func (g *generation) analytics() *internalanalytics.AnalyticsWrapper {
 	if all := g.entities(); all != nil {
 		return all.Analytics
 	}

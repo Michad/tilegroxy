@@ -20,7 +20,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/internal/util"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 )
 
@@ -50,7 +50,7 @@ func (s StaticKeyRegistration) Name() string {
 func (s StaticKeyRegistration) Initialize(cfgAny any, _ authentication.AuthenticationDeps) (authentication.Authentication, error) {
 	cfg := cfgAny.(StaticKeyConfig)
 	if cfg.Key == "" {
-		keyStr := pkg.RandomString()
+		keyStr := util.RandomString()
 
 		slog.WarnContext(context.Background(), fmt.Sprintf("Generated authentication key: %v\n", keyStr))
 		cfg.Key = keyStr

@@ -20,19 +20,20 @@ import (
 	"reflect"
 	"testing"
 
+	internalanalytics "github.com/Michad/tilegroxy/internal/analytics"
+
+	"github.com/Michad/tilegroxy/internal/entities"
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
-	"github.com/Michad/tilegroxy/pkg/entities/analytics"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
-	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
 )
 
-func testServing(cfg *config.Config, auth authentication.Authentication, lg *layer.LayerGroup) *generation {
+func testServing(cfg *config.Config, auth authentication.Authentication, lg *layers.LayerGroup) *generation {
 	return testServingWithAnalytics(cfg, auth, lg, nil)
 }
 
-func testServingWithAnalytics(cfg *config.Config, auth authentication.Authentication, lg *layer.LayerGroup, a *analytics.AnalyticsWrapper) *generation {
+func testServingWithAnalytics(cfg *config.Config, auth authentication.Authentication, lg *layers.LayerGroup, a *internalanalytics.AnalyticsWrapper) *generation {
 	return newGeneration(cfg, &entities.Entities{LayerGroup: lg, Auth: auth, Analytics: a})
 }
 
@@ -54,7 +55,7 @@ func Test_SucceededBy_AppliesNewEntities(t *testing.T) {
 	startCfg := config.DefaultConfig()
 	start := newGeneration(&startCfg, nil)
 
-	lg := &layer.LayerGroup{}
+	lg := &layers.LayerGroup{}
 	next := start.succeededBy(&entities.Entities{LayerGroup: lg})
 
 	assert.Same(t, lg, next.layerGroup())
