@@ -10,6 +10,8 @@ You can include the logic in a dedicated file, or inline in configuration. No sp
 
 This can only be used with layers that return JPEG or PNG images. The result is always output in PNG format at the same size as the tile from the downstream provider.
 
+If the function panics for any pixel the whole tile fails with an error. The partially transformed tile is not returned or cached, and the panic is logged along with a stack trace.
+
 Name should be "transform"
 
 Configuration options:
