@@ -34,6 +34,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Michad/tilegroxy/internal/telemetry"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/static"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -43,7 +44,6 @@ import (
 )
 
 var packageName = static.GetPackage()
-var version, ref, buildDate = static.GetVersionInformation()
 var tracer trace.Tracer = otel.Tracer(packageName)
 
 // The main result type for tiles. Can include a result of any content type - primarily either raster or vector imagery type.
@@ -434,12 +434,7 @@ func MakeChildSpan(ctx context.Context, newRequest *TileRequest, providerName st
 	newCtx, span := tracer.Start(ctx, spanName, trace.WithSpanKind(trace.SpanKindInternal))
 
 	if span.IsRecording() {
-		span.SetAttributes(
-			attribute.String("service.name", "tilegroxy"),
-			attribute.String("service.version", version+"-"+ref),
-			attribute.String("service.build", buildDate),
-			attribute.String("code.function", functionName),
-		)
+		span.SetAttributes(telemetry.ServiceAttributes(attribute.String("code.function", functionName))...)
 
 		if newRequest != nil {
 			span.SetAttributes(

@@ -20,6 +20,18 @@ import (
 	"github.com/Michad/tilegroxy/pkg/config"
 )
 
+// Tilegroxy returns some errors as pointers and others as values, so value targets must match both.
+func asValue[T any](e *T, target any) bool {
+	t, ok := target.(*T)
+	if !ok || e == nil {
+		return false
+	}
+
+	*t = *e
+
+	return true
+}
+
 // Indicates high level categories of errors, used to decide the HTTP status code to return and the level of logging to use for such an error
 type TypeOfError int
 
@@ -85,6 +97,11 @@ func (e ProviderAuthError) External(_ config.ErrorMessages) string {
 	return e.Error()
 }
 
+// As lets value targets match, since custom providers may return this error as a pointer.
+func (e *ProviderAuthError) As(target any) bool {
+	return asValue(e, target)
+}
+
 // Indicates the provider returned an unacceptable content length based on the configuration
 type InvalidContentLengthError struct {
 	Length int
@@ -103,6 +120,11 @@ func (e InvalidContentLengthError) Type() TypeOfError {
 func (e InvalidContentLengthError) External(messages config.ErrorMessages) string {
 	// notest
 	return messages.ProviderError
+}
+
+// As lets value targets match, since GetTile returns this error as a pointer.
+func (e *InvalidContentLengthError) As(target any) bool {
+	return asValue(e, target)
 }
 
 // Indicates the provider returned an unacceptable content type based on the configuration
@@ -125,6 +147,11 @@ func (e InvalidContentTypeError) External(messages config.ErrorMessages) string 
 	return messages.ProviderError
 }
 
+// As lets value targets match, since GetTile returns this error as a pointer.
+func (e *InvalidContentTypeError) As(target any) bool {
+	return asValue(e, target)
+}
+
 // Indicates the provider returned an unacceptable status code based on the configuration
 type RemoteServerError struct {
 	StatusCode int
@@ -143,6 +170,11 @@ func (e RemoteServerError) Type() TypeOfError {
 func (e RemoteServerError) External(messages config.ErrorMessages) string {
 	// notest
 	return messages.ProviderError
+}
+
+// As lets value targets match, since GetTile returns this error as a pointer.
+func (e *RemoteServerError) As(target any) bool {
+	return asValue(e, target)
 }
 
 type InvalidSridError struct {

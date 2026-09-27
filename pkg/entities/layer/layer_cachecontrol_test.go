@@ -55,6 +55,7 @@ func Test_CacheControlFacts_ReadsTTLFromCache(t *testing.T) {
 	assert.Equal(t, time.Hour, l.CacheControl.TTL)
 	assert.False(t, l.CacheControl.Uncacheable)
 	assert.False(t, l.CacheControl.PerIdentity)
+	assert.NotNil(t, l.Cache)
 }
 
 // The TTL can sit anywhere in the chain, so the whole tree is walked to find it
