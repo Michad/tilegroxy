@@ -31,7 +31,7 @@ func Test_ListenAndServe_Validate(t *testing.T) {
 	cfg := config.DefaultConfig()
 	cfg.Server.Encrypt = &config.EncryptionConfig{Certificate: "asfjaslkf", Domain: ""}
 
-	require.Error(t, ListenAndServe(&cfg, nil, nil, nil))
+	require.Error(t, ListenAndServe(&cfg, nil, nil))
 }
 
 func Test_InterruptFlagsIncludesSigterm(t *testing.T) {

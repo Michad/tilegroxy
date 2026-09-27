@@ -39,14 +39,14 @@ var serveCmd = &cobra.Command{
 func runServe(cmd *cobra.Command, _ []string) {
 	out := rootCmd.OutOrStdout()
 
-	var reloadPtr func(*config.Config) error
+	reloader := tg.NewReloader()
 
 	cfg, err := extractConfigFromCommand(cmd, func(c config.Config, err error) {
 		if err != nil {
 			audit.ConfigReload(pkg.BackgroundContext(), audit.ReasonConfigFile, err)
 			fmt.Fprintf(out, "Error: %v\n", err.Error())
-		} else if reloadPtr != nil {
-			err := reloadPtr(&c)
+		} else {
+			err := reloader.Reload(&c)
 			if err != nil {
 				fmt.Fprintf(out, "Error: %v\n", err.Error())
 			}
@@ -65,7 +65,7 @@ func runServe(cmd *cobra.Command, _ []string) {
 		return
 	}
 
-	err = tg.Serve(cfg, tg.ServeOptions{ReloadConfig: reloadSource}, out, &reloadPtr)
+	err = tg.Serve(cfg, tg.ServeOptions{ReloadConfig: reloadSource, Reloader: reloader}, out, nil)
 
 	if err != nil {
 		fmt.Fprintf(out, "Error: %v\n", err.Error())

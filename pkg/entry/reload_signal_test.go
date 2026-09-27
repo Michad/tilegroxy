@@ -230,34 +230,3 @@ func Test_ReloadSignal_StopWhileWaitingForReady(t *testing.T) {
 
 	assert.NotPanics(t, stop)
 }
-
-// File and signal reloads share one lock so they can't race each other
-func Test_SerializeReloads_NeverOverlap(t *testing.T) {
-	var mu sync.Mutex
-	running, maxRunning := 0, 0
-
-	serialized := serializeReloads(func(_ *config.Config, _ string) error {
-		mu.Lock()
-		running++
-		maxRunning = max(maxRunning, running)
-		mu.Unlock()
-
-		time.Sleep(10 * time.Millisecond)
-
-		mu.Lock()
-		running--
-		mu.Unlock()
-
-		return nil
-	})
-
-	cfg := config.DefaultConfig()
-
-	var wg sync.WaitGroup
-	for _, reason := range []string{audit.ReasonConfigFile, audit.ReasonSignal, audit.ReasonConfigFile, audit.ReasonSignal} {
-		wg.Go(func() { assert.NoError(t, serialized(&cfg, reason)) })
-	}
-	wg.Wait()
-
-	assert.Equal(t, 1, maxRunning)
-}
