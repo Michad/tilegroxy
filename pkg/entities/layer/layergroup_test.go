@@ -23,6 +23,8 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	_ "github.com/Michad/tilegroxy/internal/caches"
 )
 
 type closableProvider struct {
@@ -280,12 +282,10 @@ func Test_ConstructLayerGroup_UnknownLayerCacheErrors(t *testing.T) {
 func Test_ConstructLayerGroup_CoalesceFollowsLayerCache(t *testing.T) {
 	cache.RegisterCache(namedStubCacheRegistration{name: "stub-layer-real"})
 
-	// The real noop lives in internal/caches, which this package can't import, so a stub stands in
-	// under the same name. Coalescing keys off the wrapper name, which is what matters here.
-	cache.RegisterCache(namedStubCacheRegistration{name: "none"})
+	cache.RegisterCache(noopStubCacheRegistration{})
 
 	reg, err := cache.ConstructCacheRegistry(context.Background(), []map[string]interface{}{
-		{"id": "off", "name": "none"},
+		{"id": "off", "name": "stub-layer-noop"},
 		{"id": "on", "name": "stub-layer-real"},
 	}, "", nil, cache.CacheDeps{ErrorMessages: config.DefaultConfig().Error.Messages})
 	require.NoError(t, err)
@@ -302,12 +302,26 @@ func Test_ConstructLayerGroup_CoalesceFollowsLayerCache(t *testing.T) {
 	assert.True(t, lg.layers[1].allowCoalesce)
 }
 
-// nestingStubCache stands in for the wrapping caches (multi, ttl, tenant) that live in
-// internal/caches, which this package can't import. The exported Cache field is what the registry
-// walks to find children.
-type nestingStubCache struct {
-	Cache cache.Cache
+type noopStubCache struct{ namedStubCache }
+
+func (noopStubCache) IsNoop() bool { return true }
+
+type noopStubCacheRegistration struct{}
+
+func (noopStubCacheRegistration) Name() string          { return "stub-layer-noop" }
+func (noopStubCacheRegistration) InitializeConfig() any { return struct{}{} }
+func (noopStubCacheRegistration) Initialize(_ any, _ cache.CacheDeps) (cache.Cache, error) {
+	return noopStubCache{}, nil
 }
+
+// nestingStubCache is a third-party wrapping cache, detected purely through the capability interfaces.
+type nestingStubCache struct {
+	inner cache.Cache
+	keyed bool
+}
+
+func (c nestingStubCache) Children() []cache.Cache { return []cache.Cache{c.inner} }
+func (c nestingStubCache) KeyedByIdentity() bool   { return c.keyed }
 
 func (nestingStubCache) Lookup(_ context.Context, _ pkg.TileRequest) (*pkg.Image, error) {
 	return nil, nil
@@ -318,7 +332,8 @@ func (nestingStubCache) Remove(_ context.Context, _ pkg.TileRequest) (bool, erro
 }
 
 type nestingStubCacheRegistration struct {
-	name string
+	name  string
+	keyed bool
 }
 
 func (s nestingStubCacheRegistration) Name() string { return s.name }
@@ -334,21 +349,21 @@ func (s nestingStubCacheRegistration) Initialize(configAny any, deps cache.Cache
 		return nil, err
 	}
 
-	return nestingStubCache{Cache: inner}, nil
+	return nestingStubCache{inner: inner, keyed: s.keyed}, nil
 }
 
 // A tenant cache means the provider's output varies by who asked, so coalescing - which hands
 // every waiter the leader's tile - must not turn itself on. Regression test for #942.
 func Test_ConstructLayerGroup_CoalesceOffForTenantCache(t *testing.T) {
 	cache.RegisterCache(namedStubCacheRegistration{name: "stub-coalesce-inner"})
-	cache.RegisterCache(nestingStubCacheRegistration{name: "tenant"})
+	cache.RegisterCache(nestingStubCacheRegistration{name: "stub-tenant", keyed: true})
 	cache.RegisterCache(nestingStubCacheRegistration{name: "stub-coalesce-outer"})
 
 	reg, err := cache.ConstructCacheRegistry(context.Background(), []map[string]interface{}{
 		{"id": "plain", "name": "stub-coalesce-inner"},
-		{"id": "tenanted", "name": "tenant", "cache": map[string]interface{}{"name": "stub-coalesce-inner"}},
+		{"id": "tenanted", "name": "stub-tenant", "cache": map[string]interface{}{"name": "stub-coalesce-inner"}},
 		{"id": "nested", "name": "stub-coalesce-outer", "cache": map[string]interface{}{
-			"name":  "tenant",
+			"name":  "stub-tenant",
 			"cache": map[string]interface{}{"name": "stub-coalesce-inner"},
 		}},
 	}, "", nil, cache.CacheDeps{ErrorMessages: config.DefaultConfig().Error.Messages})
@@ -369,6 +384,33 @@ func Test_ConstructLayerGroup_CoalesceOffForTenantCache(t *testing.T) {
 	assert.False(t, lg.layers[1].allowCoalesce, "a tenant cache should auto-disable coalescing")
 	assert.False(t, lg.layers[2].allowCoalesce, "a tenant cache nested under another cache should also auto-disable coalescing")
 	assert.True(t, lg.layers[3].allowCoalesce, "an explicit allowcoalesce must still win over the tenant default")
+}
+
+func Test_ConstructLayerGroup_CoalesceOffForBuiltinTenantCache(t *testing.T) {
+	reg, err := cache.ConstructCacheRegistry(context.Background(), []map[string]interface{}{
+		{"id": "tenanted", "name": "multi", "tiers": []interface{}{
+			map[string]interface{}{"name": "memory"},
+			map[string]interface{}{"name": "ttl", "ttl": 60, "cache": map[string]interface{}{
+				"name":  "tenant",
+				"cache": map[string]interface{}{"name": "memory"},
+			}},
+		}},
+		{"id": "noop", "name": "none"},
+	}, "", nil, cache.CacheDeps{ErrorMessages: config.DefaultConfig().Error.Messages})
+	require.NoError(t, err)
+
+	cfg := config.Config{Layers: []config.LayerConfig{
+		{ID: "tenanted", Provider: map[string]any{"name": "doc-example-sample"}, Cache: "tenanted"},
+		{ID: "noop", Provider: map[string]any{"name": "doc-example-sample"}, Cache: "noop"},
+	}}
+
+	lg, err := ConstructLayerGroup(context.Background(), cfg, reg, nil, nil)
+	require.NoError(t, err)
+
+	assert.False(t, lg.layers[0].allowCoalesce)
+	assert.True(t, lg.layers[0].CacheControl.PerIdentity)
+	assert.False(t, lg.layers[1].allowCoalesce)
+	assert.True(t, lg.layers[1].CacheControl.Uncacheable)
 }
 
 // A provider that builds its request out of the requester's identity returns different tiles to

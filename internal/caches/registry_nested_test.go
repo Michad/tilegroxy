@@ -127,7 +127,7 @@ func Test_Registry_ClosesNestedCacheOnce(t *testing.T) {
 	assert.Equal(t, 1, closed)
 }
 
-// ContainsCache has to find a tenant cache wherever it sits, since that's what decides whether a
+// Tenant detection has to find a tenant cache wherever it sits, since that's what decides whether a
 // layer coalesces concurrent requests by default. Exercised against the real nesting caches.
 func Test_ContainsCache_FindsTenantAtAnyDepth(t *testing.T) {
 	deps := nestedTestDeps()
@@ -135,6 +135,7 @@ func Test_ContainsCache_FindsTenantAtAnyDepth(t *testing.T) {
 	plain, err := cache.ConstructCache(map[string]interface{}{"name": "memory"}, deps)
 	require.NoError(t, err)
 	assert.False(t, cache.ContainsCache(plain, "tenant"))
+	assert.False(t, cache.IsKeyedByIdentity(plain))
 
 	direct, err := cache.ConstructCache(map[string]interface{}{
 		"name":  "tenant",
@@ -142,6 +143,7 @@ func Test_ContainsCache_FindsTenantAtAnyDepth(t *testing.T) {
 	}, deps)
 	require.NoError(t, err)
 	assert.True(t, cache.ContainsCache(direct, "tenant"))
+	assert.True(t, cache.IsKeyedByIdentity(direct))
 
 	underTTL, err := cache.ConstructCache(map[string]interface{}{
 		"name": "ttl",
@@ -153,6 +155,7 @@ func Test_ContainsCache_FindsTenantAtAnyDepth(t *testing.T) {
 	}, deps)
 	require.NoError(t, err)
 	assert.True(t, cache.ContainsCache(underTTL, "tenant"))
+	assert.True(t, cache.IsKeyedByIdentity(underTTL))
 
 	inOneTier, err := cache.ConstructCache(map[string]interface{}{
 		"name": "multi",
@@ -163,6 +166,7 @@ func Test_ContainsCache_FindsTenantAtAnyDepth(t *testing.T) {
 	}, deps)
 	require.NoError(t, err)
 	assert.True(t, cache.ContainsCache(inOneTier, "tenant"))
+	assert.True(t, cache.IsKeyedByIdentity(inOneTier))
 
 	noTenant, err := cache.ConstructCache(map[string]interface{}{
 		"name": "multi",
@@ -173,4 +177,5 @@ func Test_ContainsCache_FindsTenantAtAnyDepth(t *testing.T) {
 	}, deps)
 	require.NoError(t, err)
 	assert.False(t, cache.ContainsCache(noTenant, "tenant"))
+	assert.False(t, cache.IsKeyedByIdentity(noTenant))
 }

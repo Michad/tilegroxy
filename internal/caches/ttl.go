@@ -29,13 +29,13 @@ import (
 // normal request path then regenerates and overwrites it, which is all a per-layer TTL needs.
 type TTLCache struct {
 	Cache cache.Cache
-	TTL   time.Duration
+	ttl   time.Duration
 	// clock returns the current time. Overridden in tests, defaults to time.Now.
 	clock func() time.Time
 }
 
 func NewTTLCache(inner cache.Cache, ttl time.Duration) *TTLCache {
-	return &TTLCache{Cache: inner, TTL: ttl}
+	return &TTLCache{Cache: inner, ttl: ttl}
 }
 
 type TTLConfig struct {
@@ -88,7 +88,7 @@ func (c *TTLCache) Lookup(ctx context.Context, t pkg.TileRequest) (*pkg.Image, e
 
 	// CreatedAt is zero for entries written before TTL support existed, or by a path that
 	// bypasses TTLCache. Treat those as always fresh rather than always expired.
-	if img.CreatedAt != 0 && c.now().Sub(time.Unix(img.CreatedAt, 0)) > c.TTL {
+	if img.CreatedAt != 0 && c.now().Sub(time.Unix(img.CreatedAt, 0)) > c.ttl {
 		return nil, nil
 	}
 
@@ -103,6 +103,14 @@ func (c *TTLCache) Save(ctx context.Context, t pkg.TileRequest, img *pkg.Image) 
 // An entry past its TTL still occupies space, so it's removed rather than treated as already gone.
 func (c *TTLCache) Remove(ctx context.Context, t pkg.TileRequest) (bool, error) {
 	return c.Cache.Remove(ctx, t)
+}
+
+func (c *TTLCache) TTL() time.Duration {
+	return c.ttl
+}
+
+func (c *TTLCache) Children() []cache.Cache {
+	return []cache.Cache{c.Cache}
 }
 
 func (c *TTLCache) Close(ctx context.Context) error {

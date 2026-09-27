@@ -26,6 +26,13 @@ import (
 type CacheWrapper struct {
 	Name  string
 	Cache Cache
+	// ref is the id a nested cache is registered under, falling back to its configured name.
+	ref         string
+	refExplicit bool
+}
+
+func (w CacheWrapper) Unwrap() Cache {
+	return w.Cache
 }
 
 func (w CacheWrapper) Lookup(ctx context.Context, t pkg.TileRequest) (*pkg.Image, error) {

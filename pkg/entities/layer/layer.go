@@ -273,7 +273,7 @@ func resolveAllowCoalesce(rawConfig config.LayerConfig, layerCache cache.Cache) 
 		return false
 	}
 
-	if cache.ContainsCache(layerCache, "tenant") {
+	if cache.IsKeyedByIdentity(layerCache) {
 		return false
 	}
 
@@ -281,7 +281,7 @@ func resolveAllowCoalesce(rawConfig config.LayerConfig, layerCache cache.Cache) 
 		return false
 	}
 
-	return !isNoopCache(layerCache)
+	return !cache.IsNoop(layerCache)
 }
 
 // CacheControlFacts is what a layer's own configuration says about how its tiles may be cached
@@ -299,8 +299,8 @@ type CacheControlFacts struct {
 
 func resolveCacheControlFacts(rawConfig config.LayerConfig, layerCache cache.Cache) CacheControlFacts {
 	facts := CacheControlFacts{
-		Uncacheable: rawConfig.SkipCache || isNoopCache(layerCache),
-		PerIdentity: cache.ContainsCache(layerCache, "tenant") || usesIdentityPlaceholder(rawConfig.Provider),
+		Uncacheable: rawConfig.SkipCache || cache.IsNoop(layerCache),
+		PerIdentity: cache.IsKeyedByIdentity(layerCache) || usesIdentityPlaceholder(rawConfig.Provider),
 	}
 
 	if !facts.Uncacheable {

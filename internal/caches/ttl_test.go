@@ -181,7 +181,7 @@ func Test_TTLRegistration_ConstructsWrappedCache(t *testing.T) {
 
 	ttlCache, ok := c.(*TTLCache)
 	require.True(t, ok)
-	require.Equal(t, time.Minute, ttlCache.TTL)
+	require.Equal(t, time.Minute, ttlCache.TTL())
 
 	req := testTileRequest()
 	img := pkg.Image{Content: []byte("data"), ContentType: "image/png"}
