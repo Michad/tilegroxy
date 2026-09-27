@@ -27,6 +27,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/require"
 )
@@ -395,4 +396,132 @@ func Test_Test_FileOutputJSON(t *testing.T) {
 	require.NoError(t, json.Unmarshal(content, &summary))
 	require.Equal(t, 1, summary.Tested)
 	require.Equal(t, 0, summary.Failed)
+}
+
+type testPanicProvider struct{}
+
+func (testPanicProvider) PreAuth(_ context.Context, pc layer.ProviderContext) (layer.ProviderContext, error) {
+	pc.AuthBypass = true
+	return pc, nil
+}
+
+func (testPanicProvider) GenerateTile(_ context.Context, _ layer.ProviderContext, _ pkg.TileRequest) (*pkg.Image, error) {
+	panic("provider exploded")
+}
+
+type testPanicRegistration struct{}
+
+func (testPanicRegistration) Name() string                   { return "test-panic-provider" }
+func (testPanicRegistration) InitializeConfig() any          { return struct{}{} }
+func (testPanicRegistration) DataType(_ any) config.DataType { return config.DataTypeRaster }
+func (testPanicRegistration) Initialize(_ any, _ layer.ProviderDeps) (layer.Provider, error) {
+	return testPanicProvider{}, nil
+}
+
+type testNilImageProvider struct{}
+
+func (testNilImageProvider) PreAuth(_ context.Context, pc layer.ProviderContext) (layer.ProviderContext, error) {
+	pc.AuthBypass = true
+	return pc, nil
+}
+
+func (testNilImageProvider) GenerateTile(_ context.Context, _ layer.ProviderContext, _ pkg.TileRequest) (*pkg.Image, error) {
+	return nil, nil
+}
+
+type testNilImageRegistration struct{}
+
+func (testNilImageRegistration) Name() string                   { return "test-nil-image-provider" }
+func (testNilImageRegistration) InitializeConfig() any          { return struct{}{} }
+func (testNilImageRegistration) DataType(_ any) config.DataType { return config.DataTypeRaster }
+func (testNilImageRegistration) Initialize(_ any, _ layer.ProviderDeps) (layer.Provider, error) {
+	return testNilImageProvider{}, nil
+}
+
+type testPanicCache struct{}
+
+func (testPanicCache) Lookup(_ context.Context, _ pkg.TileRequest) (*pkg.Image, error) {
+	panic("cache exploded")
+}
+func (testPanicCache) Save(_ context.Context, _ pkg.TileRequest, _ *pkg.Image) error { return nil }
+func (testPanicCache) Remove(_ context.Context, _ pkg.TileRequest) (bool, error)     { return false, nil }
+
+type testPanicCacheRegistration struct{}
+
+func (testPanicCacheRegistration) InitializeConfig() any { return struct{}{} }
+func (testPanicCacheRegistration) Name() string          { return "test-panic-cache" }
+func (testPanicCacheRegistration) Initialize(_ any, _ cache.CacheDeps) (cache.Cache, error) {
+	return testPanicCache{}, nil
+}
+
+func runFailingTest(t *testing.T, cfg config.Config, noCache bool) (uint32, TestSummary, string) {
+	t.Helper()
+
+	filePath := filepath.Join(t.TempDir(), "summary.json")
+
+	var out bytes.Buffer
+	errCount, err := Test(&cfg, TestOptions{Z: 1, X: 0, Y: 0, CoordinatesSet: true, NumThread: 1, NoCache: noCache, JSON: true, FilePath: filePath}, &out)
+	require.NoError(t, err)
+
+	content, err := os.ReadFile(filePath) // #nosec G304 -- test-controlled temp path
+	require.NoError(t, err)
+
+	var summary TestSummary
+	require.NoError(t, json.Unmarshal(content, &summary))
+
+	return errCount, summary, out.String()
+}
+
+func Test_Test_ProviderPanicCountsAsFailure(t *testing.T) {
+	layer.RegisterProvider(testPanicRegistration{})
+	layer.RegisterProvider(testFixedRegistration{})
+
+	cfg := config.DefaultConfig()
+	cfg.Layers = []config.LayerConfig{
+		{ID: "panic_layer", Provider: map[string]interface{}{"name": "test-panic-provider"}},
+		{ID: "plain_layer", Provider: map[string]interface{}{"name": "test-fixed-provider"}},
+	}
+
+	errCount, summary, out := runFailingTest(t, cfg, true)
+
+	require.Equal(t, uint32(1), errCount)
+	require.Equal(t, 2, summary.Tested)
+	require.Equal(t, 1, summary.Failed)
+	require.Len(t, summary.Failures, 1)
+	require.Equal(t, "panic_layer", summary.Failures[0].LayerName)
+	require.Contains(t, summary.Failures[0].Error, "provider exploded")
+	require.Contains(t, out, "plain_layer")
+}
+
+func Test_Test_NilImageCountsAsFailure(t *testing.T) {
+	layer.RegisterProvider(testNilImageRegistration{})
+
+	cfg := config.DefaultConfig()
+	cfg.Layers = []config.LayerConfig{
+		{ID: "nil_layer", Provider: map[string]interface{}{"name": "test-nil-image-provider"}},
+	}
+
+	errCount, summary, _ := runFailingTest(t, cfg, false)
+
+	require.Equal(t, uint32(1), errCount)
+	require.Len(t, summary.Failures, 1)
+	require.Equal(t, "provider returned no image and no error", summary.Failures[0].Error)
+}
+
+func Test_Test_CachePanicCountsAsFailure(t *testing.T) {
+	layer.RegisterProvider(testFixedRegistration{})
+	cache.RegisterCache(testPanicCacheRegistration{})
+
+	cfg := config.DefaultConfig()
+	cfg.Cache = map[string]interface{}{"name": "test-panic-cache"}
+	cfg.Layers = []config.LayerConfig{
+		{ID: "plain_layer", Provider: map[string]interface{}{"name": "test-fixed-provider"}},
+	}
+
+	errCount, summary, out := runFailingTest(t, cfg, false)
+
+	require.Equal(t, uint32(1), errCount)
+	require.Len(t, summary.Failures, 1)
+	require.Contains(t, summary.Failures[0].Error, "cache exploded")
+	require.Contains(t, out, "cache exploded")
 }
