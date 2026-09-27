@@ -275,6 +275,39 @@ func Test_ConstructLayerGroup_UnknownLayerCacheErrors(t *testing.T) {
 	require.ErrorContains(t, err, "nonexistent")
 }
 
+// A failed build must release the layers already built, or every rejected hot reload leaks them.
+func Test_ConstructLayerGroup_ProviderFailureClosesBuiltLayers(t *testing.T) {
+	closed := false
+	RegisterProvider(closableTypedTestRegistration{name: "closable-group-1", dt: config.DataTypeRaster, closed: &closed})
+
+	cfg := config.DefaultConfig()
+	cfg.Layers = []config.LayerConfig{
+		{ID: "good", Provider: map[string]any{"name": "closable-group-1"}},
+		{ID: "bad", Provider: map[string]any{"name": "not-a-registered-provider"}},
+	}
+
+	lg, err := ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
+	require.Error(t, err)
+	assert.Nil(t, lg)
+	assert.True(t, closed)
+}
+
+func Test_ConstructLayerGroup_CacheFailureClosesBuiltLayers(t *testing.T) {
+	closed := false
+	RegisterProvider(closableTypedTestRegistration{name: "closable-group-2", dt: config.DataTypeRaster, closed: &closed})
+
+	cfg := config.DefaultConfig()
+	cfg.Layers = []config.LayerConfig{
+		{ID: "good", Provider: map[string]any{"name": "closable-group-2"}},
+		{ID: "bad", Provider: map[string]any{"name": "closable-group-2"}, Cache: "nonexistent"},
+	}
+
+	lg, err := ConstructLayerGroup(context.Background(), cfg, twoCacheRegistry(t), nil, nil)
+	require.ErrorContains(t, err, "nonexistent")
+	assert.Nil(t, lg)
+	assert.True(t, closed)
+}
+
 // Coalescing defaults to on only when the layer actually caches. A layer overriding a noop default
 // with a real cache has to pick that up from its own cache, not the group's.
 func Test_ConstructLayerGroup_CoalesceFollowsLayerCache(t *testing.T) {
