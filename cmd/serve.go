@@ -20,9 +20,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/Michad/tilegroxy/internal/audit"
+	"github.com/Michad/tilegroxy/internal/entry"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	tg "github.com/Michad/tilegroxy/pkg/entry"
 )
 
 var serveCmd = &cobra.Command{
@@ -65,7 +65,7 @@ func runServe(cmd *cobra.Command, _ []string) {
 		return
 	}
 
-	err = tg.Serve(cfg, tg.ServeOptions{ReloadConfig: reloadSource}, out, &reloadPtr)
+	err = entry.Serve(cfg, entry.ServeOptions{ReloadConfig: reloadSource}, out, &reloadPtr)
 
 	if err != nil {
 		fmt.Fprintf(out, "Error: %v\n", err.Error())

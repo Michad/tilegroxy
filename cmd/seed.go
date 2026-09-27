@@ -18,8 +18,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/Michad/tilegroxy/internal/entry"
 	"github.com/Michad/tilegroxy/pkg"
-	tg "github.com/Michad/tilegroxy/pkg/entry"
 	"github.com/spf13/cobra"
 )
 
@@ -74,8 +74,8 @@ func runSeed(cmd *cobra.Command, _ []string) {
 
 	b := pkg.Bounds{South: float64(minLat), West: float64(minLon), North: float64(maxLat), East: float64(maxLon)}
 
-	err = tg.Seed(cfg,
-		tg.SeedOptions{
+	err = entry.Seed(cfg,
+		entry.SeedOptions{
 			Zoom:         zoom,
 			Bounds:       b,
 			LayerName:    layerName,

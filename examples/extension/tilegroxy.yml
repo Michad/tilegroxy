@@ -1,0 +1,33 @@
+# Configuration for the my_tg_wrapper example. Every entity here comes from ./sample.
+# The server and health ports can be overridden with SERVER_PORT and HEALTH_PORT.
+server:
+  port: 8089
+health:
+  enabled: true
+  port: 3089
+  checks:
+    - name: sample
+      layer: color
+      delay: 5
+secret:
+  name: sample
+  values:
+    apikey: hunter2
+datastores:
+  - name: sample
+    id: memory
+cache:
+  name: sample
+  datastore: memory
+authentication:
+  name: sample
+  header: X-Api-Key
+  key: secret.apikey
+analytics:
+  name: sample
+  path: analytics.log
+layers:
+  - id: color
+    provider:
+      name: sample
+      color: "00AA88"

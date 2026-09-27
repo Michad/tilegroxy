@@ -16,7 +16,6 @@ package authentication
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"sync"
 
@@ -63,24 +62,4 @@ func RegisteredAuthenticationNames() []string {
 		names = append(names, n)
 	}
 	return names
-}
-
-func ConstructAuth(rawConfig map[string]interface{}, deps AuthenticationDeps) (Authentication, error) {
-	name, ok := rawConfig["name"].(string)
-
-	if ok {
-		reg, ok := RegisteredAuthentication(name)
-		if ok {
-			cfg := reg.InitializeConfig()
-			err := config.DecodeEntityConfig(rawConfig, &cfg)
-			if err != nil {
-				return nil, err
-			}
-			a, err := reg.Initialize(cfg, deps)
-			return AuthWrapper{Name: name, Auth: a}, err
-		}
-	}
-
-	nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
-	return nil, fmt.Errorf(deps.ErrorMessages.EnumError, "authentication.name", nameCoerce, RegisteredAuthenticationNames())
 }

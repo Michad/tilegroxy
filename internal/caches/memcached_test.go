@@ -23,10 +23,9 @@ import (
 	"strings"
 	"testing"
 
-	_ "github.com/Michad/tilegroxy/internal/datastores"
+	"github.com/Michad/tilegroxy/internal/datastores"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
-	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -190,7 +189,7 @@ func TestMemcachedWithContainerUsingDatastore(t *testing.T) {
 		},
 	}
 
-	reg, err := datastore.ConstructDatastoreRegistry(context.Background(), dsCfg, nil, config.ErrorMessages{})
+	reg, err := datastores.ConstructDatastoreRegistry(context.Background(), dsCfg, nil, config.ErrorMessages{})
 	require.NoError(t, err)
 	defer func() { require.NoError(t, reg.Close(ctx)) }()
 
@@ -233,11 +232,11 @@ func TestMemcachedWithContainerLegacyMemcacheNameAlias(t *testing.T) {
 		},
 	}
 
-	reg, err := datastore.ConstructDatastoreRegistry(context.Background(), dsCfg, nil, config.ErrorMessages{})
+	reg, err := datastores.ConstructDatastoreRegistry(context.Background(), dsCfg, nil, config.ErrorMessages{})
 	require.NoError(t, err)
 	defer func() { require.NoError(t, reg.Close(ctx)) }()
 
-	c, err := cache.ConstructCache(map[string]interface{}{"name": "memcache", "datastore": "mymemcache"}, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}, Datastores: reg})
+	c, err := ConstructCache(map[string]interface{}{"name": "memcache", "datastore": "mymemcache"}, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}, Datastores: reg})
 	require.NoError(t, err)
 
 	validateSaveAndLookup(t, c)

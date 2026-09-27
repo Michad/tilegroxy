@@ -23,6 +23,7 @@ import (
 	"image/png"
 	"log/slog"
 
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
@@ -65,7 +66,7 @@ func (s CropRegistration) DataType(_ any) config.DataType {
 func (s CropRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(CropConfig)
 
-	primary, err := layer.ConstructProvider(cfg.Primary, deps)
+	primary, err := layers.ConstructProvider(cfg.Primary, deps)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +76,7 @@ func (s CropRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer
 		secondaryCfg = map[string]interface{}{"name": "static", "color": "0000"}
 	}
 
-	secondary, err := layer.ConstructProvider(secondaryCfg, deps)
+	secondary, err := layers.ConstructProvider(secondaryCfg, deps)
 	if err != nil {
 		return nil, err
 	}

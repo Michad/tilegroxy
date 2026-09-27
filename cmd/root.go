@@ -18,13 +18,16 @@ import (
 	"errors"
 	"flag"
 	"os"
+	"strings"
 
 	_ "github.com/Michad/tilegroxy/internal/authentications"
 	_ "github.com/Michad/tilegroxy/internal/caches"
+	"github.com/Michad/tilegroxy/internal/configload"
 	_ "github.com/Michad/tilegroxy/internal/providers"
 	_ "github.com/Michad/tilegroxy/internal/secrets"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 const reloadFlag = "hot-reload"
@@ -45,6 +48,43 @@ func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
 		exit(1)
+	}
+}
+
+// ExecuteArgs runs one command from args rather than the process arguments, so a wrapper can run
+// several in sequence. Flags don't carry over between runs. As with Execute, a failing command
+// exits the process.
+func ExecuteArgs(args ...string) {
+	resetFlags(rootCmd)
+	rootCmd.SetArgs(args)
+	Execute()
+}
+
+func resetFlags(c *cobra.Command) {
+	reset := func(f *pflag.Flag) {
+		if !f.Changed {
+			return
+		}
+
+		if sv, ok := f.Value.(pflag.SliceValue); ok {
+			var defaults []string
+			if trimmed := strings.Trim(f.DefValue, "[]"); trimmed != "" {
+				defaults = strings.Split(trimmed, ",")
+			}
+
+			_ = sv.Replace(defaults)
+		} else {
+			_ = f.Value.Set(f.DefValue)
+		}
+
+		f.Changed = false
+	}
+
+	c.PersistentFlags().VisitAll(reset)
+	c.Flags().VisitAll(reset)
+
+	for _, sub := range c.Commands() {
+		resetFlags(sub)
 	}
 }
 
@@ -112,13 +152,13 @@ func extractConfigFromCommand(cmd *cobra.Command, reloadFunc func(c config.Confi
 
 	switch {
 	case f.raw != "":
-		cfg, err = config.LoadConfig(f.raw)
+		cfg, err = configload.LoadConfig(f.raw)
 	case f.remoteProvider != "":
-		cfg, err = config.LoadConfigFromRemote(f.remoteProvider, f.remoteEndpoint, f.remotePath, f.remoteType)
+		cfg, err = configload.LoadConfigFromRemote(f.remoteProvider, f.remoteEndpoint, f.remotePath, f.remoteType)
 	case f.reload && reloadFunc != nil:
-		cfg, err = config.LoadAndWatchConfigFromFile(f.path, reloadFunc)
+		cfg, err = configload.LoadAndWatchConfigFromFile(f.path, reloadFunc)
 	case f.path != "":
-		cfg, err = config.LoadConfigFromFile(f.path)
+		cfg, err = configload.LoadConfigFromFile(f.path)
 	default:
 		err = errors.New("no configuration supplied")
 	}
@@ -138,17 +178,17 @@ func reloadSourceFromCommand(cmd *cobra.Command) (func() (config.Config, error),
 
 	if f.raw != "" {
 		return func() (config.Config, error) {
-			return config.LoadConfig(f.raw)
+			return configload.LoadConfig(f.raw)
 		}, nil
 	}
 
 	if f.remoteProvider != "" {
 		return func() (config.Config, error) {
-			return config.LoadConfigFromRemote(f.remoteProvider, f.remoteEndpoint, f.remotePath, f.remoteType)
+			return configload.LoadConfigFromRemote(f.remoteProvider, f.remoteEndpoint, f.remotePath, f.remoteType)
 		}, nil
 	}
 
 	return func() (config.Config, error) {
-		return config.LoadConfigFromFile(f.path)
+		return configload.LoadConfigFromFile(f.path)
 	}, nil
 }

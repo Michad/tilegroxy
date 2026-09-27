@@ -27,6 +27,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/Michad/tilegroxy/internal/util"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
@@ -171,7 +172,7 @@ func (t CGI) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequ
 		return nil, err
 	}
 
-	slog.DebugContext(ctx, fmt.Sprintf("Calling CGI via %v", pkg.RedactURLForLog(uri)))
+	slog.DebugContext(ctx, fmt.Sprintf("Calling CGI via %v", util.RedactURLForLog(uri)))
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+t.Domain+uri, nil)
 	if err != nil {

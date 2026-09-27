@@ -16,8 +16,6 @@ package cache
 
 import (
 	"context"
-	"fmt"
-	"strings"
 	"sync"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -36,7 +34,7 @@ type Cache interface {
 // the Initialize signature stays stable
 type CacheDeps struct {
 	ErrorMessages config.ErrorMessages
-	Datastores    *datastore.DatastoreRegistry
+	Datastores    datastore.DatastoreRegistry
 }
 
 type CacheRegistration interface {
@@ -73,56 +71,8 @@ func RegisteredCacheNames() []string {
 	return names
 }
 
-// withoutCacheID drops the id naming a top-level cache entry, which selects the cache the way name
-// selects its type. No cache config declares one, so leaving it in would fail the unknown-key check.
-func withoutCacheID(rawConfig map[string]interface{}) map[string]interface{} {
-	found := false
-
-	for k := range rawConfig {
-		if strings.EqualFold(k, "id") {
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		return rawConfig
-	}
-
-	stripped := make(map[string]interface{}, len(rawConfig))
-
-	for k, v := range rawConfig {
-		if !strings.EqualFold(k, "id") {
-			stripped[k] = v
-		}
-	}
-
-	return stripped
-}
-
-func ConstructCache(rawConfig map[string]interface{}, deps CacheDeps) (Cache, error) {
-	name, ok := rawConfig["name"].(string)
-
-	if ok {
-		// An alias for the no-op cache, so fixtures can name an obviously-fake cache. It goes
-		// through the same construction path operator config does, so `cache: {name: test}` in
-		// production is a no-op cache rather than an error.
-		if name == "test" || name == "Test" {
-			name = "none"
-		}
-
-		reg, ok := RegisteredCache(name)
-		if ok {
-			cfg := reg.InitializeConfig()
-			err := config.DecodeEntityConfig(withoutCacheID(rawConfig), &cfg)
-			if err != nil {
-				return nil, err
-			}
-			a, err := reg.Initialize(cfg, deps)
-			return CacheWrapper{Name: name, Cache: a}, err
-		}
-	}
-
-	nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
-	return nil, fmt.Errorf(deps.ErrorMessages.EnumError, "cache.name", nameCoerce, RegisteredCacheNames())
+// CacheRegistry gives entities access to the caches configured by ID
+type CacheRegistry interface {
+	Get(id string) (Cache, bool)
+	IDs() []string
 }

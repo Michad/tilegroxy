@@ -22,11 +22,10 @@ import (
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
-	_ "github.com/Michad/tilegroxy/internal/datastores"
+	"github.com/Michad/tilegroxy/internal/datastores"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/analytics"
-	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -88,7 +87,7 @@ func Test_Clickhouse_WritesEvents(t *testing.T) {
 		},
 	}
 
-	datastores, err := datastore.ConstructDatastoreRegistry(context.Background(), dsCfg, nil, msgs)
+	datastores, err := datastores.ConstructDatastoreRegistry(context.Background(), dsCfg, nil, msgs)
 	require.NoError(t, err)
 
 	wrapper, ok := datastores.Get("test")
@@ -152,7 +151,7 @@ func Test_Clickhouse_WritesEvents(t *testing.T) {
 func Test_Clickhouse_InvalidConfig(t *testing.T) {
 	msgs := config.DefaultConfig().Error.Messages
 
-	empty, err := datastore.ConstructDatastoreRegistry(context.Background(), nil, nil, msgs)
+	empty, err := datastores.ConstructDatastoreRegistry(context.Background(), nil, nil, msgs)
 	require.NoError(t, err)
 
 	_, err = ClickhouseRegistration{}.Initialize(ClickhouseConfig{Table: "t"}, analytics.AnalyticsDeps{Datastores: empty, ErrorMessages: msgs})
@@ -178,7 +177,7 @@ func Test_Clickhouse_WrongDatastoreType(t *testing.T) {
 		{"name": "postgresql", "id": "pg", "host": "127.0.0.1", "port": 5432},
 	}
 
-	datastores, err := datastore.ConstructDatastoreRegistry(context.Background(), dsCfg, nil, msgs)
+	datastores, err := datastores.ConstructDatastoreRegistry(context.Background(), dsCfg, nil, msgs)
 	require.NoError(t, err)
 
 	defer datastores.Close(ctx) //nolint:errcheck // Test cleanup

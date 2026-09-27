@@ -21,7 +21,7 @@ import (
 )
 
 type NoopConfig struct {
-	analytics.CommonConfig `mapstructure:",squash"`
+	CommonConfig `mapstructure:",squash"`
 }
 
 type Noop struct {

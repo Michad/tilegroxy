@@ -16,10 +16,8 @@ package health
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
-	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
@@ -37,8 +35,8 @@ type HealthCheckConfig interface {
 // HealthCheckDeps carries everything a health check is given at construction. New dependencies are added
 // as fields so the Initialize signature stays stable
 type HealthCheckDeps struct {
-	LayerGroup *layer.LayerGroup
-	Caches     *cache.CacheRegistry
+	LayerGroup layer.LayerGroup
+	Caches     cache.CacheRegistry
 	// The full configuration, since a check may need to inspect settings outside its own block
 	AllConfig *config.Config
 }
@@ -73,25 +71,4 @@ func RegisteredHealthCheckNames() []string {
 		names = append(names, n)
 	}
 	return names
-}
-
-func ConstructHealthCheck(rawConfig map[string]interface{}, lg *layer.LayerGroup, caches *cache.CacheRegistry, allCfg *config.Config) (HealthCheck, error) {
-	rawConfig = pkg.ReplaceEnv(rawConfig)
-
-	name, ok := rawConfig["name"].(string)
-
-	if ok {
-		reg, ok := RegisteredHealthCheck(name)
-		if ok {
-			cfg := reg.InitializeConfig()
-			err := config.DecodeEntityConfig(rawConfig, &cfg)
-			if err != nil {
-				return nil, err
-			}
-			return reg.Initialize(cfg, HealthCheckDeps{LayerGroup: lg, Caches: caches, AllConfig: allCfg})
-		}
-	}
-
-	nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
-	return nil, fmt.Errorf(allCfg.Error.Messages.EnumError, "check.name", nameCoerce, RegisteredHealthCheckNames())
 }

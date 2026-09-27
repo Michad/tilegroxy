@@ -26,16 +26,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 const port = 3456
 
-func initialize(t *testing.T, fail bool) (config.Config, *layer.LayerGroup) {
+func initialize(t *testing.T, fail bool) (config.Config, *layers.LayerGroup) {
 	cfgAll := config.DefaultConfig()
 
 	var layerCfg config.LayerConfig
@@ -69,7 +69,7 @@ func initialize(t *testing.T, fail bool) (config.Config, *layer.LayerGroup) {
 	}
 
 	cfgAll.Layers = append(cfgAll.Layers, layerCfg)
-	lg, err := layer.ConstructLayerGroup(context.Background(), cfgAll, nil, nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfgAll, nil, nil, nil)
 	require.NoError(t, err)
 
 	return cfgAll, lg

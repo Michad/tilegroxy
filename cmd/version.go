@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/Michad/tilegroxy/pkg/static"
+	"github.com/Michad/tilegroxy/internal/static"
 	"github.com/spf13/cobra"
 )
 

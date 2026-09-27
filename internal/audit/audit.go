@@ -36,7 +36,7 @@ const (
 )
 
 // ReasonConfigFile marks a reload the config file watcher triggered. Secret-driven reloads supply
-// their own reason from pkg/entities/secret.
+// their own reason from internal/secrets.
 const ReasonConfigFile = "config_file"
 
 // ReasonSignal marks a reload triggered by the process receiving SIGHUP.

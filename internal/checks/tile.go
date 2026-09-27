@@ -57,7 +57,7 @@ func (s TileCheckConfig) GetDelay() uint {
 
 type TileCheck struct {
 	TileCheckConfig
-	lg            *layer.LayerGroup
+	lg            layer.LayerGroup
 	errorMessages config.ErrorMessages
 	req           pkg.TileRequest
 	img           *pkg.Image
@@ -102,7 +102,7 @@ func (s TileCheckRegistration) Initialize(checkConfig health.HealthCheckConfig, 
 		return nil, fmt.Errorf(deps.AllConfig.Error.Messages.EnumError, "check.validation", cfg.Validation, AllValidationModes)
 	}
 
-	if deps.LayerGroup.FindLayer(pkg.BackgroundContext(), cfg.Layer) == nil {
+	if !deps.LayerGroup.HasLayer(pkg.BackgroundContext(), cfg.Layer) {
 		return nil, fmt.Errorf(deps.AllConfig.Error.Messages.EnumError, "check.layer", cfg.Layer, deps.LayerGroup.ListLayerIDs())
 	}
 

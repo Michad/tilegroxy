@@ -19,8 +19,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/Michad/tilegroxy/pkg"
-	"github.com/Michad/tilegroxy/pkg/static"
+	"github.com/Michad/tilegroxy/internal/static"
+	"github.com/Michad/tilegroxy/internal/util"
 	"go.opentelemetry.io/otel"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -39,7 +39,7 @@ import (
 const serviceName = "tilegroxy"
 const batchTime = 10 * time.Second
 
-var instanceID = pkg.RandomString()
+var instanceID = util.RandomString()
 
 func setupOTELSDK(ctx context.Context) (func(context.Context) error, error) {
 	var err error

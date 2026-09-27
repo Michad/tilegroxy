@@ -26,7 +26,6 @@ import (
 	"github.com/Michad/tilegroxy/internal/datastores"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
-	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -225,7 +224,7 @@ func TestRedisWithContainerUsingDatastore(t *testing.T) {
 		},
 	}
 
-	reg, err := datastore.ConstructDatastoreRegistry(context.Background(), dsCfg, nil, config.ErrorMessages{})
+	reg, err := datastores.ConstructDatastoreRegistry(context.Background(), dsCfg, nil, config.ErrorMessages{})
 	require.NoError(t, err)
 	defer func() { require.NoError(t, reg.Close(ctx)) }()
 

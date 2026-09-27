@@ -46,6 +46,19 @@ func BinaryPath(t *testing.T) string {
 	return path
 }
 
+// ExtensionBinaryPath resolves the example extension wrapper that `make extension` builds.
+func ExtensionBinaryPath(t *testing.T) string {
+	t.Helper()
+
+	path := filepath.Join(repoRoot(t), "examples", "extension", "my_tg_wrapper")
+
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("no extension binary at %v. Run `make e2e`, which builds it first", path)
+	}
+
+	return path
+}
+
 // repoRoot locates the repository root from this source file's own path, so tests do not depend on
 // the working directory the runner chose.
 func repoRoot(t *testing.T) string {

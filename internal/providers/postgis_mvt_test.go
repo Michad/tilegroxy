@@ -26,10 +26,9 @@ import (
 	"testing"
 	"time"
 
-	_ "github.com/Michad/tilegroxy/internal/datastores"
+	"github.com/Michad/tilegroxy/internal/datastores"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
@@ -97,21 +96,21 @@ func Test_Validate(t *testing.T) {
 	cfg.Limit = 1
 
 	cfg.GID = "; safkjas @(%$)!@IU%"
-	_, err := reg.Initialize(cfg, layer.ProviderDeps{ClientConfig: config.DefaultConfig().Client, ErrorMessages: config.DefaultConfig().Error.Messages, Datastores: &datastore.DatastoreRegistry{}})
+	_, err := reg.Initialize(cfg, layer.ProviderDeps{ClientConfig: config.DefaultConfig().Client, ErrorMessages: config.DefaultConfig().Error.Messages, Datastores: &datastores.Registry{}})
 	require.Error(t, err)
 	cfg.GID = "gid"
 
 	cfg.Geometry = "; safkjas @(%$)!@IU%"
-	_, err = reg.Initialize(cfg, layer.ProviderDeps{ClientConfig: config.DefaultConfig().Client, ErrorMessages: config.DefaultConfig().Error.Messages, Datastores: &datastore.DatastoreRegistry{}})
+	_, err = reg.Initialize(cfg, layer.ProviderDeps{ClientConfig: config.DefaultConfig().Client, ErrorMessages: config.DefaultConfig().Error.Messages, Datastores: &datastores.Registry{}})
 	require.Error(t, err)
 	cfg.Geometry = "GEOM"
 
 	cfg.Attributes = []string{"; safkjas @(%$)!@IU%"}
-	_, err = reg.Initialize(cfg, layer.ProviderDeps{ClientConfig: config.DefaultConfig().Client, ErrorMessages: config.DefaultConfig().Error.Messages, Datastores: &datastore.DatastoreRegistry{}})
+	_, err = reg.Initialize(cfg, layer.ProviderDeps{ClientConfig: config.DefaultConfig().Client, ErrorMessages: config.DefaultConfig().Error.Messages, Datastores: &datastores.Registry{}})
 	require.Error(t, err)
 	cfg.Attributes = []string{"str"}
 
-	_, err = reg.Initialize(cfg, layer.ProviderDeps{ClientConfig: config.DefaultConfig().Client, ErrorMessages: config.DefaultConfig().Error.Messages, Datastores: &datastore.DatastoreRegistry{}})
+	_, err = reg.Initialize(cfg, layer.ProviderDeps{ClientConfig: config.DefaultConfig().Client, ErrorMessages: config.DefaultConfig().Error.Messages, Datastores: &datastores.Registry{}})
 	require.Error(t, err)
 
 }
@@ -144,7 +143,7 @@ func Test_GenerateTile(t *testing.T) {
 		},
 	}
 
-	datastore, err := datastore.ConstructDatastoreRegistry(context.Background(), dsCfg, nil, config.DefaultConfig().Error.Messages)
+	datastore, err := datastores.ConstructDatastoreRegistry(context.Background(), dsCfg, nil, config.DefaultConfig().Error.Messages)
 	require.NoError(t, err)
 
 	wrapper, ok := datastore.Get("test")

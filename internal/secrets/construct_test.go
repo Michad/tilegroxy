@@ -1,0 +1,121 @@
+// Copyright 2026 Michael Davis
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package secrets
+
+import (
+	"context"
+	"testing"
+
+	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/secret"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+type stubSecreterConfig struct {
+	Value string
+}
+
+type stubSecreter struct {
+	value string
+}
+
+func (s stubSecreter) Lookup(_ context.Context, _ string) (string, string, error) {
+	return s.value, "v1", nil
+}
+
+func (s stubSecreter) Check(_ context.Context, keys []string) ([]string, error) {
+	out := make([]string, len(keys))
+	for i := range keys {
+		out[i] = "v1"
+	}
+	return out, nil
+}
+
+type stubSecreterRegistration struct{}
+
+func (stubSecreterRegistration) Name() string          { return "stub-secreter" }
+func (stubSecreterRegistration) InitializeConfig() any { return stubSecreterConfig{} }
+func (stubSecreterRegistration) CheckBatchSize() int   { return 2 }
+func (stubSecreterRegistration) Initialize(cfgAny any, _ secret.SecreterDeps) (secret.Secreter, error) {
+	cfg := cfgAny.(stubSecreterConfig)
+	return stubSecreter{value: cfg.Value}, nil
+}
+
+type stubUnwatchableRegistration struct{ stubSecreterRegistration }
+
+func (stubUnwatchableRegistration) Name() string        { return "stub-unwatchable" }
+func (stubUnwatchableRegistration) CheckBatchSize() int { return 0 }
+
+func init() {
+	secret.RegisterSecreter(stubSecreterRegistration{})
+	secret.RegisterSecreter(stubUnwatchableRegistration{})
+}
+
+func Test_ConstructSecreter_UnknownNameErrors(t *testing.T) {
+	_, err := ConstructSecreter(map[string]interface{}{"name": "not-a-real-secreter"}, secret.SecreterDeps{ErrorMessages: config.ErrorMessages{EnumError: "%v %v %v"}})
+	require.Error(t, err)
+}
+
+func Test_ConstructSecreter_ConstructsRegisteredSecreter(t *testing.T) {
+	s, err := ConstructSecreter(map[string]interface{}{"name": "stub-secreter", "value": "hunter2"}, secret.SecreterDeps{ErrorMessages: config.ErrorMessages{}})
+	require.NoError(t, err)
+	require.NotNil(t, s)
+
+	val, _, err := s.Lookup(context.Background(), "anything")
+	require.NoError(t, err)
+	assert.Equal(t, "hunter2", val)
+}
+
+func Test_ConstructSecreter_ReplacesEnvInRawConfig(t *testing.T) {
+	t.Setenv("STUB_SECRETER_VALUE", "from-env")
+
+	s, err := ConstructSecreter(map[string]interface{}{"name": "stub-secreter", "value": "env.STUB_SECRETER_VALUE"}, secret.SecreterDeps{ErrorMessages: config.ErrorMessages{}})
+	require.NoError(t, err)
+
+	val, _, err := s.Lookup(context.Background(), "anything")
+	require.NoError(t, err)
+	assert.Equal(t, "from-env", val)
+}
+
+// The backend decodes with ErrorUnused, so the generic watch keys must never reach it
+func Test_ConstructSecreter_StripsWatchKeysBeforeBackendDecode(t *testing.T) {
+	s, err := ConstructSecreter(map[string]interface{}{
+		"name":          "stub-secreter",
+		"value":         "hunter2",
+		"watch":         true,
+		"watchinterval": 60,
+	}, secret.SecreterDeps{ErrorMessages: testErrorMessages()})
+	require.NoError(t, err)
+	require.NotNil(t, s)
+}
+
+func Test_ConstructSecreter_RejectsWatchOnUnwatchableBackend(t *testing.T) {
+	_, err := ConstructSecreter(map[string]interface{}{
+		"name":  "stub-unwatchable",
+		"value": "hunter2",
+		"watch": true,
+	}, secret.SecreterDeps{ErrorMessages: testErrorMessages()})
+	require.Error(t, err)
+}
+
+func Test_Secreter_CheckReturnsVersionPerKey(t *testing.T) {
+	s, err := ConstructSecreter(map[string]interface{}{"name": "stub-secreter", "value": "hunter2"}, secret.SecreterDeps{ErrorMessages: config.ErrorMessages{}})
+	require.NoError(t, err)
+
+	versions, err := s.Check(context.Background(), []string{"a", "b"})
+	require.NoError(t, err)
+	assert.Equal(t, []string{"v1", "v1"}, versions)
+}
