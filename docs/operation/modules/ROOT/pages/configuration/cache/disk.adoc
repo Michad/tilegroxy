@@ -10,6 +10,8 @@ How entries are arranged on disk is controlled by `layout`. Sub-directories are 
 
 Cache entries are written to a temporary file (in the same directory) and then renamed, so an interrupted write won't leave partial files behind. The temp files should get automatically removed, but if you see any old files ending with `.tmp`, feel free to clean them up.
 
+Entries can optionally be stored gzip compressed by listing content types in `gzip`. Only tiles whose content type is in that list are compressed, so formats that are already compressed such as PNG and JPEG can be left out to avoid wasting CPU. Vector tiles usually compress well. Tiles that are already gzip compressed are stored as-is. Tiles with no content type are matched by the type Go detects from their contents. Compressed and uncompressed entries are detected automatically when read, so `gzip` can be changed at any time without clearing the cache.
+
 Name should be "disk"
 
 Configuration options:
@@ -35,6 +37,12 @@ Configuration options:
 | string
 | No
 | flat
+
+| gzip
+| Content types (such as `application/vnd.mapbox-vector-tile`) of tiles to store gzip compressed. Parameters such as `charset` are ignored when matching
+| string[]
+| No
+| None
 |===
 
 Example:
@@ -43,7 +51,8 @@ Example:
 ----
 "cache": {
   "name": "disk",
-  "path": "./disk_tile_cache"
+  "path": "./disk_tile_cache",
+  "gzip": ["application/vnd.mapbox-vector-tile", "application/json"]
 }
 ----
 

@@ -75,7 +75,7 @@ The following are the known incompatibilities with tilestache configurations:
 +++</li><li>+++
   No `dirs` parameter - Instead use `layout`, which offers `flat` and `coordinate`. There is no equivalent to the `safe` or `quadtile` structures
 +++</li><li>+++
-  No `gzip` parameter - Tiles are stored uncompressed
+  The `gzip` parameter takes a list of content types instead of file extensions, for example `application/json` instead of `json`. It has no default, so entries are stored uncompressed unless it is set
 +++</li><li>+++
   The `path` parameter must be supplied as a file path, not a URI
 +++</li></ul><li>+++
