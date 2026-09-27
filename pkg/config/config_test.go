@@ -16,6 +16,7 @@ package config
 
 import (
 	"encoding/json"
+	"math"
 	"os"
 	"path/filepath"
 	"testing"
@@ -58,6 +59,16 @@ server:
 `)
 
 	require.Error(t, err)
+}
+
+func TestLoadConfig_ClampsServerTimeout(t *testing.T) {
+	c, err := LoadConfig(`
+server:
+  timeout: 99999999999
+`)
+
+	require.NoError(t, err)
+	assert.Equal(t, uint(math.MaxInt32), c.Server.Timeout)
 }
 
 func TestLoadConfig_UnknownPortKeyErrors(t *testing.T) {

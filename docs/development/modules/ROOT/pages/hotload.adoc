@@ -12,6 +12,10 @@ The reference is taken inside the same lock that reads the generation pointer to
 
 A registry holds every live generation so shutdown can release all of them rather than only the one currently serving.  Without it, a reload landing shortly before shutdown would leave the previous generation's analytics batcher draining with nothing waiting on it.
 
+Every HTTP handler reads the generation through one shared holder, so a reload swaps the pointer once and retires the outgoing generation once.  When each handler kept its own pointer, the first swap started the close timer while the other handlers were still serving from the old generation.
+
+The health subsystem is rebuilt on each reload so its checks run against the new generation's layers.  A single supervisor owns it and holds its lock for the whole teardown and rebuild, so concurrent reloads can't stop the same instance twice or race for the port.  Once shutdown begins draining, a rebuild comes up already reporting unready, and once health has stopped a reload no longer brings it back.
+
 A single `Reloader` in `pkg/entry` owns every reload, whatever triggered it.  It holds one lock for the whole of a reload, from building the new generation through the swap, so two reloads can't finish out of order.  Reloads requested before `ListenAndServe` hands over its swap function are queued rather than dropped, and the latest one is applied once the server is ready.
 
 Secret watches request a reload without waiting for it.  Closing a generation waits for its secret pollers to stop, so a poller blocked on the reload lock could deadlock a reload that is closing that same generation.  Requests that arrive while one is already queued collapse into it, since the queued reload re-resolves every secret anyway.

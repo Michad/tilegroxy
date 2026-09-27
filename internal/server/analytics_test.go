@@ -97,7 +97,7 @@ func setupAnalyticsHandler(t *testing.T, layers []config.LayerConfig, fields []s
 	a, err := analytics.ConstructAnalytics(context.Background(), moduleCfg, nil, analytics.AnalyticsDeps{ErrorMessages: cfg.Error.Messages})
 	require.NoError(t, err)
 
-	handler, err := newTileHandler(testServingWithAnalytics(&cfg, auth, lg, a))
+	handler, err := newTileHandler(newGenerationHolder(testServingWithAnalytics(&cfg, auth, lg, a)))
 	require.NoError(t, err)
 
 	return &handler, rec
@@ -232,7 +232,7 @@ func Test_TileHandler_Analytics_NoModulesConfigured(t *testing.T) {
 	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, cache.NewSingleCacheRegistry(c), nil, nil)
 	require.NoError(t, err)
 
-	handler, err := newTileHandler(testServing(&cfg, auth, lg))
+	handler, err := newTileHandler(newGenerationHolder(testServing(&cfg, auth, lg)))
 	require.NoError(t, err)
 
 	status := doTileRequest(t, &handler, "main", "8", "12", "32")
@@ -299,7 +299,7 @@ func Test_TileHandler_ReloadReleasesOldGenerationOnce(t *testing.T) {
 	oldGen := newGeneration(oldCfg, oldEnt)
 	registry.add(oldGen)
 
-	handler, err := newTileHandler(oldGen)
+	handler, err := newTileHandler(newGenerationHolder(oldGen))
 	require.NoError(t, err)
 
 	analytics.RegisterAnalytics(closeTrackerRegistration{instance: newTracker})

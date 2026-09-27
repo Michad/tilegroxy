@@ -19,14 +19,12 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"math"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"runtime/debug"
 	"strconv"
-	"sync"
 	"syscall"
 	"time"
 
@@ -49,210 +47,131 @@ func handleNoContent(w http.ResponseWriter, _ *http.Request) {
 // override this to send a signal they control.
 var InterruptFlags = []os.Signal{os.Interrupt, syscall.SIGTERM}
 
-// reloadEntitiesFunc names the reload callback shape so it can be spelled out inside
-// ListenAndServe's body, where the "config" parameter name shadows the config package.
 type reloadEntitiesFunc = func(*config.Config, *entities.Entities) error
 
-// healthReloader tears down the current health subsystem generation and builds a fresh one against
-// the new generation's LayerGroup. Declared at package level rather than as a closure inside
-// ListenAndServe so its parameter types can name *config.Config, which that function's own
-// "config" parameter shadows.
-//
-// The mutex is held across the whole teardown-then-rebuild rather than just around the pointer.
-// pkg/config dispatches each config-change event on its own goroutine, so two concurrent reloads
-// would otherwise both tear down the same generation and race to bind the health port.
-func healthReloader(ctx context.Context, cfg *config.Config, ent *entities.Entities, healthMutex *sync.Mutex, healthShutdown *func(context.Context) error, healthDrain *func(), draining *bool) error {
-	healthMutex.Lock()
-	defer healthMutex.Unlock()
+// handlerSetup is the HTTP side of the server: the root handler plus the generations it serves from
+type handlerSetup struct {
+	root           http.Handler
+	first          *generation
+	gens           *generationHolder
+	registry       *generationRegistry
+	closeAccessLog func() error
+}
 
-	oldHealthShutdown := *healthShutdown
-	*healthShutdown = nil
-	*healthDrain = nil
+// The new config is deliberately ignored: every handler-visible section is non-reloadable
+func (s handlerSetup) reload(_ *config.Config, ent *entities.Entities) error {
+	slog.WarnContext(pkg.BackgroundContext(), "Requesting to refresh entities from configuration")
 
-	// The old generation has to free its listener before the new one binds, since the health
-	// host/port rarely changes between reloads.
-	if oldHealthShutdown != nil {
-		if err := oldHealthShutdown(context.Background()); err != nil {
-			slog.WarnContext(ctx, fmt.Sprintf("Error shutting down previous health generation: %v", err))
-		}
-	}
+	gen := s.first.succeededBy(ent)
+	s.registry.add(gen)
+	s.gens.reload(gen)
 
-	// Nil pointers keep the final shutdown from calling into the generation just torn down
-	if !cfg.Health.Enabled {
-		return nil
-	}
-
-	newHealthShutdown, newHealthDrain, err := SetupHealth(ctx, cfg, ent.LayerGroup, ent.Caches)
-
-	// SetupHealth returns a non-nil shutdown func alongside an error when it fails partway, so
-	// record whatever it hands back either way. Otherwise the pointer keeps referencing the
-	// already-shut-down previous generation and ListenAndServe's final shutdown calls it again.
-	// The previous generation is not resurrected: it was built against the old config and
-	// LayerGroup, so rebuilding it could fail just as easily. The error propagates instead, and
-	// the next successful reload brings health back.
-	*healthShutdown = newHealthShutdown
-	*healthDrain = newHealthDrain
-
-	// If shutdown already started draining before this reload landed, the new generation must not
-	// come up reporting ready: a reload racing with shutdown must not reopen the window that
-	// draining closed.
-	if draining != nil && *draining {
-		newHealthDrain()
-	}
-
-	if err != nil {
-		slog.ErrorContext(ctx, fmt.Sprintf("Failed to rebuild health subsystem on reload, reload aborted: %v", err))
-		return err
-	}
+	slog.WarnContext(pkg.BackgroundContext(), "Completed refreshing entities from configuration")
 
 	return nil
 }
 
-// build the reload callback ListenAndServe hands back to its caller: it
-// swaps the tile handlers to the new entities, then rebuilds the health subsystem against that
-// same generation so health checks aren't left pinned to the LayerGroup from startup.
-func makeCombinedReloadFunc(ctx context.Context, handlerReloadFunc reloadEntitiesFunc, healthMutex *sync.Mutex, healthShutdown *func(context.Context) error, healthDrain *func(), draining *bool) reloadEntitiesFunc {
-	return func(cfg2 *config.Config, ent2 *entities.Entities) error {
-		if err := healthReloader(ctx, cfg2, ent2, healthMutex, healthShutdown, healthDrain, draining); err != nil {
-			return err
-		}
-
-		return handlerReloadFunc(cfg2, ent2)
-	}
-}
-
-// build the HTTP handlers. The returned accessor yields whichever generation of entities is
-// currently serving, which is what shutdown needs to release after a hot reload has swapped generations
-//
-//nolint:maintidx
-func setupHandlers(cfg *config.Config, ent *entities.Entities) (http.Handler, reloadEntitiesFunc, func() *entities.Entities, *generationRegistry, func() error, error) {
+func setupHandlers(cfg *config.Config, ent *entities.Entities) (handlerSetup, error) {
 	if err := ValidateCORS(cfg.Server.CORS, cfg.Error.Messages); err != nil {
-		return nil, nil, nil, nil, nil, err
+		return handlerSetup{}, err
 	}
 
 	if err := validateAllCacheControl(cfg); err != nil {
-		return nil, nil, nil, nil, nil, err
+		return handlerSetup{}, err
 	}
 
-	r := http.ServeMux{}
-
-	var myRootHandler http.Handler
-	var myTileHandler http.Handler
-	var myDocumentationHandler http.Handler
-	var myPreviewHandler http.Handler
 	registry := newGenerationRegistry()
-	firstGen := newGeneration(cfg, ent)
-	registry.add(firstGen)
-	myDefaultHandler := defaultHandler{firstGen}
+	first := newGeneration(cfg, ent)
+	registry.add(first)
+	gens := newGenerationHolder(first)
 
-	var preview *previewHandler
+	mux, err := newRouter(cfg, gens)
+	if err != nil {
+		return handlerSetup{}, err
+	}
+
+	root, closeAccessLog, err := wrapRootHandler(cfg, mux)
+	if err != nil {
+		return handlerSetup{}, err
+	}
+
+	return handlerSetup{root: root, first: first, gens: gens, registry: registry, closeAccessLog: closeAccessLog}, nil
+}
+
+func newRouter(cfg *config.Config, gens *generationHolder) (*http.ServeMux, error) {
+	instrument := func(h http.Handler, route string) http.Handler {
+		if !cfg.Telemetry.Enabled {
+			return h
+		}
+
+		return otelhttp.NewHandler(h, route, otelhttp.WithMessageEvents(otelhttp.WriteEvents))
+	}
+
+	r := &http.ServeMux{}
+
+	tilePath := cfg.Server.RootPath + cfg.Server.TilePath + "/{layer}/{z}/{x}/{y}"
+
+	tile, err := newTileHandler(gens)
+	if err != nil {
+		return nil, err
+	}
+
+	tiles := instrument(&tile, tilePath)
+	r.Handle(tilePath, tiles)
+	r.Handle(tilePath+"/", tiles)
 
 	if cfg.Server.Production {
-		myRootHandler = http.HandlerFunc(handleNoContent)
+		r.Handle(cfg.Server.RootPath, instrument(http.HandlerFunc(handleNoContent), cfg.Server.RootPath))
 	} else {
-		myRootHandler = &myDefaultHandler
+		root := defaultHandler{gens}
+		r.Handle(cfg.Server.RootPath, instrument(&root, cfg.Server.RootPath))
 
 		if cfg.Server.DocsPath != "" {
-			myDocumentationHandler = &documentationHandler{myDefaultHandler}
+			docsPath := cfg.Server.RootPath + cfg.Server.DocsPath + "/{path...}"
+			r.Handle(docsPath, instrument(&documentationHandler{root}, docsPath))
 		}
 
-		preview = newPreviewHandler(firstGen)
-		myPreviewHandler = preview
+		previewPath := cfg.Server.RootPath + "preview/{layer}"
+		r.Handle(previewPath, instrument(newPreviewHandler(gens), previewPath))
 	}
 
-	tilePath := firstGen.tilePathPrefix() + "/{layer}/{z}/{x}/{y}"
-	docsPath := cfg.Server.RootPath + cfg.Server.DocsPath + "/{path...}"
-	previewPath := cfg.Server.RootPath + "preview/{layer}"
-	handler, err := newTileHandler(firstGen)
-	if err != nil {
-		return nil, nil, nil, nil, nil, err
-	}
-
-	myTileHandler = &handler
-
-	tileJSON := setupTileJSONHandlers(cfg, firstGen)
-
-	// The new config is deliberately ignored: every handler-visible section is non-reloadable
-	reloadFunc := func(_ *config.Config, ent2 *entities.Entities) error {
-		gen := firstGen.succeededBy(ent2)
-		registry.add(gen)
-		handler.reload(gen)
-		tileJSON.reload(gen)
-
-		if preview != nil {
-			preview.reload(gen)
-		}
-
-		return nil
-	}
+	tileJSON := setupTileJSONHandlers(cfg, gens)
 
 	if cfg.Telemetry.Enabled {
-		myRootHandler = otelhttp.NewHandler(myRootHandler, cfg.Server.RootPath, otelhttp.WithMessageEvents(otelhttp.WriteEvents))
-		myTileHandler = otelhttp.NewHandler(myTileHandler, tilePath, otelhttp.WithMessageEvents(otelhttp.WriteEvents))
-
-		if myDocumentationHandler != nil {
-			myDocumentationHandler = otelhttp.NewHandler(myDocumentationHandler, docsPath, otelhttp.WithMessageEvents(otelhttp.WriteEvents))
-		}
-
-		if myPreviewHandler != nil {
-			myPreviewHandler = otelhttp.NewHandler(myPreviewHandler, previewPath, otelhttp.WithMessageEvents(otelhttp.WriteEvents))
-		}
-
 		tileJSON.wrapWithTelemetry()
 	}
 
-	r.Handle(cfg.Server.RootPath, myRootHandler)
-	r.Handle(tilePath, myTileHandler)
-	r.Handle(tilePath+"/", myTileHandler)
+	tileJSON.registerRoutes(r)
 
-	if myDocumentationHandler != nil {
-		r.Handle(docsPath, myDocumentationHandler)
-	}
+	return r, nil
+}
 
-	if myPreviewHandler != nil {
-		r.Handle(previewPath, myPreviewHandler)
-	}
-
-	tileJSON.registerRoutes(&r)
-
-	var rootHandler http.Handler
-
-	rootHandler = &r
+func wrapRootHandler(cfg *config.Config, mux *http.ServeMux) (http.Handler, func() error, error) {
+	var rootHandler http.Handler = mux
 
 	if cfg.Server.Gzip {
 		rootHandler = handlers.CompressHandler(rootHandler)
 	}
 
-	if cfg.Server.Timeout > math.MaxInt32 {
-		cfg.Server.Timeout = math.MaxInt32
-	}
-
 	rootHandler = httpContextHandler{rootHandler, cfg.Error}
-	rootHandler = newTimeoutHandler(rootHandler, time.Duration(cfg.Server.Timeout)*time.Second, &cfg.Error) // #nosec G115
+	rootHandler = newTimeoutHandler(rootHandler, time.Duration(cfg.Server.Timeout)*time.Second, &cfg.Error) // #nosec G115 -- config normalization clamps the timeout to MaxInt32 seconds
 
 	if cfg.Server.CORS.Enabled {
 		rootHandler = corsHandler{rootHandler, cfg.Server.CORS}
 	}
 
-	var closeAccessLog func() error
-	rootHandler, closeAccessLog, err = configureAccessLogging(cfg.Logging.Access, cfg.Error.Messages, rootHandler)
-
-	if err != nil {
-		return nil, nil, nil, nil, nil, err
-	}
-
-	return rootHandler, reloadFunc, handler.currentEntities, registry, closeAccessLog, nil
+	return configureAccessLogging(cfg.Logging.Access, cfg.Error.Messages, rootHandler)
 }
 
-func listenAndServeTLS(config *config.Config, srvErr chan error, srv *http.Server) {
-	httpPort := config.Server.Encrypt.HTTPPort
-	httpHostPort := net.JoinHostPort(config.Server.BindHost, strconv.Itoa(httpPort))
+func listenAndServeTLS(cfg *config.Config, srvErr chan error, srv *http.Server) {
+	httpPort := cfg.Server.Encrypt.HTTPPort
+	httpHostPort := net.JoinHostPort(cfg.Server.BindHost, strconv.Itoa(httpPort))
 
-	if config.Server.Encrypt.Certificate != "" && config.Server.Encrypt.KeyFile != "" {
+	if cfg.Server.Encrypt.Certificate != "" && cfg.Server.Encrypt.KeyFile != "" {
 		if httpPort != 0 {
 			srv := &http.Server{
 				Addr:              httpHostPort,
-				Handler:           httpRedirectHandler{protoAndHost: "https://" + config.Server.Encrypt.Domain},
+				Handler:           httpRedirectHandler{protoAndHost: "https://" + cfg.Server.Encrypt.Domain},
 				ReadHeaderTimeout: time.Second,
 			}
 
@@ -261,18 +180,18 @@ func listenAndServeTLS(config *config.Config, srvErr chan error, srv *http.Serve
 			}()
 		}
 
-		srvErr <- srv.ListenAndServeTLS(config.Server.Encrypt.Certificate, config.Server.Encrypt.KeyFile)
+		srvErr <- srv.ListenAndServeTLS(cfg.Server.Encrypt.Certificate, cfg.Server.Encrypt.KeyFile)
 	} else {
 		// Let's Encrypt workflow
 
 		cacheDir := "certs"
-		if config.Server.Encrypt.Cache != "" {
-			cacheDir = config.Server.Encrypt.Cache
+		if cfg.Server.Encrypt.Cache != "" {
+			cacheDir = cfg.Server.Encrypt.Cache
 		}
 
 		certManager := autocert.Manager{
 			Prompt:     autocert.AcceptTOS,
-			HostPolicy: autocert.HostWhitelist(config.Server.Encrypt.Domain),
+			HostPolicy: autocert.HostWhitelist(cfg.Server.Encrypt.Domain),
 			Cache:      autocert.DirCache(cacheDir),
 		}
 
@@ -309,32 +228,32 @@ func configureLogging(cfg *config.Config) (func() error, func() error, error) {
 	return closeMainLog, closeAuditLog, nil
 }
 
-func newHTTPServer(rootCtx context.Context, config *config.Config, rootHandler http.Handler) *http.Server {
+func newHTTPServer(rootCtx context.Context, cfg *config.Config, rootHandler http.Handler) *http.Server {
 	return &http.Server{
-		Addr:              config.Server.BindHost + ":" + strconv.Itoa(config.Server.Port),
+		Addr:              cfg.Server.BindHost + ":" + strconv.Itoa(cfg.Server.Port),
 		BaseContext:       func(_ net.Listener) context.Context { return rootCtx },
 		Handler:           rootHandler,
 		ReadHeaderTimeout: time.Second,
 		// Backstop for clients that stop reading, which timeoutHandler can't bound because it
 		// never gets to write. Double Server.Timeout so it only ever fires after that has
-		WriteTimeout: 2 * time.Duration(config.Server.Timeout) * time.Second, // #nosec G115 -- operator-supplied timeout in seconds, far below int64 overflow range
-		IdleTimeout:  2 * time.Duration(config.Server.Timeout) * time.Second, // #nosec G115 -- operator-supplied timeout in seconds, far below int64 overflow range
+		WriteTimeout: 2 * time.Duration(cfg.Server.Timeout) * time.Second, // #nosec G115 -- operator-supplied timeout in seconds, far below int64 overflow range
+		IdleTimeout:  2 * time.Duration(cfg.Server.Timeout) * time.Second, // #nosec G115 -- operator-supplied timeout in seconds, far below int64 overflow range
 	}
 }
 
 // onReady, when not nil, receives the reload function once the server can accept reloads
-func ListenAndServe(config *config.Config, ent *entities.Entities, onReady func(reloadEntitiesFunc)) error {
-	if config.Server.Encrypt != nil && config.Server.Encrypt.Domain == "" {
-		return fmt.Errorf(config.Error.Messages.ParamRequired, "server.encrypt.domain")
+func ListenAndServe(cfg *config.Config, ent *entities.Entities, onReady func(reloadEntitiesFunc)) error {
+	if cfg.Server.Encrypt != nil && cfg.Server.Encrypt.Domain == "" {
+		return fmt.Errorf(cfg.Error.Messages.ParamRequired, "server.encrypt.domain")
 	}
 
-	rootHandler, handlerReloadFunc, _, registry, closeAccessLog, err := setupHandlers(config, ent)
+	routes, err := setupHandlers(cfg, ent)
 
 	if err != nil {
 		return err
 	}
 
-	closeMainLog, closeAuditLog, err := configureLogging(config)
+	closeMainLog, closeAuditLog, err := configureLogging(cfg)
 
 	if err != nil {
 		return err
@@ -348,29 +267,26 @@ func ListenAndServe(config *config.Config, ent *entities.Entities, onReady func(
 	ctx, stop := signal.NotifyContext(rootCtx, InterruptFlags...)
 	defer stop()
 
-	var healthMutex sync.Mutex
-	var healthShutdown func(context.Context) error
-	var healthDrain func()
-	// Guarded by healthMutex, same as healthShutdown and healthDrain. Recorded here so a reload
-	// that rebuilds the health subsystem after shutdown has begun brings the new generation up
-	// already draining, instead of reopening the readiness window shutdown just closed.
-	var draining bool
+	health := &healthSupervisor{}
 
-	if config.Health.Enabled {
-		healthShutdown, healthDrain, err = SetupHealth(ctx, config, ent.LayerGroup, ent.Caches)
-
-		if err != nil {
-			return err
-		}
+	if err = health.Start(ctx, cfg, ent); err != nil {
+		return err
 	}
 
 	if onReady != nil {
-		onReady(makeCombinedReloadFunc(ctx, handlerReloadFunc, &healthMutex, &healthShutdown, &healthDrain, &draining))
+		// Health rebuilds against the same entities so its checks aren't pinned to the startup LayerGroup
+		onReady(func(newCfg *config.Config, newEnt *entities.Entities) error {
+			if err := health.Reload(ctx, newCfg, newEnt); err != nil {
+				return err
+			}
+
+			return routes.reload(newCfg, newEnt)
+		})
 	}
 
 	var otelShutdown func(context.Context) error
 
-	if config.Telemetry.Enabled {
+	if cfg.Telemetry.Enabled {
 		// Set up OpenTelemetry.
 		otelShutdown, err = setupOTELSDK(ctx)
 		if err != nil {
@@ -378,7 +294,7 @@ func ListenAndServe(config *config.Config, ent *entities.Entities, onReady func(
 		}
 	}
 
-	srv := newHTTPServer(rootCtx, config, rootHandler)
+	srv := newHTTPServer(rootCtx, cfg, routes.root)
 
 	srvErr := make(chan error, 1)
 
@@ -391,8 +307,8 @@ func ListenAndServe(config *config.Config, ent *entities.Entities, onReady func(
 
 		slog.InfoContext(context.Background(), "Binding...")
 
-		if config.Server.Encrypt != nil {
-			listenAndServeTLS(config, srvErr, srv)
+		if cfg.Server.Encrypt != nil {
+			listenAndServeTLS(cfg, srvErr, srv)
 		} else {
 			srvErr <- srv.ListenAndServe()
 		}
@@ -405,15 +321,12 @@ func ListenAndServe(config *config.Config, ent *entities.Entities, onReady func(
 		stop()
 	}
 
-	return runShutdown(context.Background(), newShutdownBudget(config), buildShutdownPhases(shutdownDeps{
-		healthMutex:    &healthMutex,
-		draining:       &draining,
-		healthShutdown: &healthShutdown,
-		healthDrain:    &healthDrain,
+	return runShutdown(context.Background(), newShutdownBudget(cfg), buildShutdownPhases(shutdownDeps{
+		health:         health,
 		srv:            srv,
-		registry:       registry,
+		registry:       routes.registry,
 		otelShutdown:   otelShutdown,
-		closeAccessLog: closeAccessLog,
+		closeAccessLog: routes.closeAccessLog,
 		closeMainLog:   closeMainLog,
 		closeAuditLog:  closeAuditLog,
 	}))
@@ -422,10 +335,7 @@ func ListenAndServe(config *config.Config, ent *entities.Entities, onReady func(
 // shutdownDeps is what the teardown phases need from ListenAndServe. Gathered into one struct so
 // the phase wiring can live outside that function
 type shutdownDeps struct {
-	healthMutex    *sync.Mutex
-	draining       *bool
-	healthShutdown *func(context.Context) error
-	healthDrain    *func()
+	health         *healthSupervisor
 	srv            *http.Server
 	registry       *generationRegistry
 	otelShutdown   func(context.Context) error
@@ -435,34 +345,11 @@ type shutdownDeps struct {
 }
 
 func buildShutdownPhases(d shutdownDeps) shutdownPhases {
-	// Read under the mutex healthReloader writes them under, so a reload landing as shutdown
-	// starts can't be observed half-applied
-	d.healthMutex.Lock()
-	finalHealthShutdown := *d.healthShutdown
-	finalHealthDrain := *d.healthDrain
-	d.healthMutex.Unlock()
-
 	return shutdownPhases{
-		drain: func() {
-			// Set under the mutex healthReloader reads, so a reload landing mid-shutdown brings
-			// the rebuilt health subsystem up already draining
-			d.healthMutex.Lock()
-			*d.draining = true
-			d.healthMutex.Unlock()
-
-			if finalHealthDrain != nil {
-				finalHealthDrain()
-			}
-		},
+		drain:       d.health.Drain,
 		server:      d.srv.Shutdown,
 		generations: d.registry.closeAll,
-		health: func(shutdownCtx context.Context) error {
-			if finalHealthShutdown == nil {
-				return nil
-			}
-
-			return finalHealthShutdown(shutdownCtx)
-		},
+		health:      d.health.Shutdown,
 		otel: func(shutdownCtx context.Context) error {
 			if d.otelShutdown == nil {
 				return nil

@@ -294,7 +294,7 @@ func Test_ReloadKeepsGenerationAliveForInFlightRequest(t *testing.T) {
 	oldGen := newGeneration(&cfg, &entities.Entities{})
 	reg.add(oldGen)
 
-	handler, err := newTileHandler(oldGen)
+	handler, err := newTileHandler(newGenerationHolder(oldGen))
 	require.NoError(t, err)
 
 	// Simulate a request that read the pointer and is still running.
@@ -332,7 +332,7 @@ func Test_ServeHTTPReleasesGenerationRef(t *testing.T) {
 
 	gen := newGeneration(&cfg, &entities.Entities{LayerGroup: lg, Auth: auth, Caches: cache.NewSingleCacheRegistry(c)})
 
-	handler, err := newTileHandler(gen)
+	handler, err := newTileHandler(newGenerationHolder(gen))
 	require.NoError(t, err)
 
 	req := httptest.NewRequest(http.MethodGet, "http://example.com/tiles/main/8/12/32", nil).
@@ -357,7 +357,7 @@ func Test_CurrentEntitiesFollowsReload(t *testing.T) {
 	newGen := oldGen.succeededBy(&entities.Entities{})
 	reg.add(oldGen)
 
-	handler, err := newTileHandler(oldGen)
+	handler, err := newTileHandler(newGenerationHolder(oldGen))
 	require.NoError(t, err)
 
 	reg.add(newGen)
@@ -365,4 +365,34 @@ func Test_CurrentEntitiesFollowsReload(t *testing.T) {
 
 	// Shutdown closes whatever this returns, so it must track the swap.
 	assert.Same(t, newGen.all, handler.currentEntities())
+}
+
+func Test_SetupHandlers_ReloadSwapsEveryHandlerAtOnce(t *testing.T) {
+	cfg := config.DefaultConfig()
+	cfg.Server.Production = false
+	cfg.Server.TileJSON.Enabled = true
+	cfg.Layers = []config.LayerConfig{staticLayerConfig("main")}
+
+	routes, err := setupHandlers(&cfg, buildTileJSONTestServing(t, cfg).all)
+	require.NoError(t, err)
+
+	oldGen := routes.gens.current
+
+	nextCfg := cfg
+	nextCfg.Layers = []config.LayerConfig{staticLayerConfig("next")}
+	require.NoError(t, routes.reload(&nextCfg, buildTileJSONTestServing(t, nextCfg).all))
+
+	// Every route must see the new layer as soon as reload returns, not just the tile route
+	for _, path := range []string{"/tiles/next/8/12/32", "/tiles/next.json", "/preview/next"} {
+		w := httptest.NewRecorder()
+		routes.root.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "http://example.com"+path, nil).WithContext(pkg.BackgroundContext()))
+		assert.Equal(t, http.StatusOK, w.Code, path)
+	}
+
+	require.Eventually(t, oldGen.isClosed, 5*time.Second, 10*time.Millisecond)
+	assert.Equal(t, 1, oldGen.closeCount())
+	assert.Equal(t, 1, routes.registry.liveCount(), "only the serving generation should remain")
+
+	require.NoError(t, routes.registry.closeAll(context.Background()))
+	require.NoError(t, routes.closeAccessLog())
 }

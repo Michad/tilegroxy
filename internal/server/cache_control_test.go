@@ -277,7 +277,7 @@ func cacheControlHandlerRequest(t *testing.T, cfg config.Config, ifNoneMatch str
 	lg, auth, err := configToEntities(cfg)
 	require.NoError(t, err)
 
-	handler, err := newTileHandler(testServing(&cfg, auth, lg))
+	handler, err := newTileHandler(newGenerationHolder(testServing(&cfg, auth, lg)))
 	require.NoError(t, err)
 
 	req := httptest.NewRequest(http.MethodGet, "http://example.com/tiles/main/10/10/10", nil).WithContext(pkg.BackgroundContext())

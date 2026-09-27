@@ -98,8 +98,9 @@ func Test_DefaultHandler_RedirectUsesStartupPaths(t *testing.T) {
 	startCfg.Server.RootPath = "/"
 	startCfg.Server.DocsPath = "docs"
 
-	h := defaultHandler{newGeneration(&startCfg, nil)}
-	h.generation = h.succeededBy(nil)
+	first := newGeneration(&startCfg, nil)
+	h := defaultHandler{newGenerationHolder(first)}
+	h.reload(first.succeededBy(nil))
 
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "http://localhost/", nil))
