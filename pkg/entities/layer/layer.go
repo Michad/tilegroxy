@@ -422,7 +422,23 @@ func ConstructLayer(ctx context.Context, rawConfig config.LayerConfig, defaultCl
 		return nil, errors.Join(err, CloseProvider(ctx, provider))
 	}
 
-	return &Layer{rawConfig.ID, segments, validator, rawConfig, provider, nil, errorMessages, datatype, ProviderContext{}, sync.Mutex{}, allowCoalesce, resolveCacheControlFacts(rawConfig, layerCache), tileAllCounter, tileAuthCounter, tileErrorCounter, tileSuccessCounter, metadata}, nil
+	return &Layer{
+		ID:                 rawConfig.ID,
+		Pattern:            segments,
+		ParamValidator:     validator,
+		Config:             rawConfig,
+		Provider:           provider,
+		Cache:              layerCache,
+		ErrorMessages:      errorMessages,
+		DataType:           datatype,
+		allowCoalesce:      allowCoalesce,
+		CacheControl:       resolveCacheControlFacts(rawConfig, layerCache),
+		tileAllCounter:     tileAllCounter,
+		tileAuthCounter:    tileAuthCounter,
+		tileErrorCounter:   tileErrorCounter,
+		tileSuccessCounter: tileSuccessCounter,
+		metadata:           metadata,
+	}, nil
 }
 
 // getProviderContext returns a snapshot of the current provider context, re-authenticating
