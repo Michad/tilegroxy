@@ -126,14 +126,6 @@ func makeCombinedReloadFunc(ctx context.Context, handlerReloadFunc reloadEntitie
 //
 //nolint:maintidx
 func setupHandlers(cfg *config.Config, ent *entities.Entities) (http.Handler, reloadEntitiesFunc, func() *entities.Entities, *generationRegistry, func() error, error) {
-	if err := ValidateCORS(cfg.Server.CORS, cfg.Error.Messages); err != nil {
-		return nil, nil, nil, nil, nil, err
-	}
-
-	if err := validateAllCacheControl(cfg); err != nil {
-		return nil, nil, nil, nil, nil, err
-	}
-
 	r := http.ServeMux{}
 
 	var myRootHandler http.Handler
@@ -324,8 +316,8 @@ func newHTTPServer(rootCtx context.Context, config *config.Config, rootHandler h
 
 // onReady, when not nil, runs once reloadPtr is published, giving another goroutine a happens-before edge for reading it
 func ListenAndServe(config *config.Config, ent *entities.Entities, reloadPtr *func(*config.Config, *entities.Entities) error, onReady func()) error {
-	if config.Server.Encrypt != nil && config.Server.Encrypt.Domain == "" {
-		return fmt.Errorf(config.Error.Messages.ParamRequired, "server.encrypt.domain")
+	if err := ValidateConfig(config); err != nil {
+		return err
 	}
 
 	rootHandler, handlerReloadFunc, _, registry, closeAccessLog, err := setupHandlers(config, ent)
