@@ -19,8 +19,11 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"os"
+	"os/signal"
 	"runtime/debug"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/Michad/tilegroxy/internal/audit"
@@ -31,16 +34,30 @@ import (
 )
 
 type ServeOptions struct {
+	// Rereads the configuration from its original source.
+	ReloadConfig func() (config.Config, error)
 }
 
-func Serve(cfg *config.Config, _ ServeOptions, _ io.Writer, reloadPtr *func(*config.Config) error) error {
+// Windows never delivers SIGHUP, so signal-driven reload is Unix only
+var reloadSignals = []os.Signal{syscall.SIGHUP}
+
+func Serve(cfg *config.Config, opts ServeOptions, out io.Writer, reloadPtr *func(*config.Config) error) error {
 	var nextReloadPtr func(*config.Config, *entities.Entities) error
 
 	tracker := &configTracker{current: cfg}
 
 	reload := newReloadCallback(&nextReloadPtr, tracker)
+	serialized := serializeReloads(reload)
+
 	*reloadPtr = func(newCfg *config.Config) error {
-		return reload(newCfg, audit.ReasonConfigFile)
+		return serialized(newCfg, audit.ReasonConfigFile)
+	}
+
+	ready := make(chan struct{})
+
+	if opts.ReloadConfig != nil {
+		stop := watchReloadSignal(ready, opts.ReloadConfig, serialized, out)
+		defer stop()
 	}
 
 	ent, err := configToEntities(pkg.BackgroundContext(), *cfg, tracker.secretReload(reload))
@@ -48,7 +65,80 @@ func Serve(cfg *config.Config, _ ServeOptions, _ io.Writer, reloadPtr *func(*con
 		return err
 	}
 
-	return server.ListenAndServe(cfg, ent, &nextReloadPtr)
+	return server.ListenAndServe(cfg, ent, &nextReloadPtr, func() { close(ready) })
+}
+
+// Secret reloads must not use this since a generation's Close waits on its secret pollers
+func serializeReloads(reload func(*config.Config, string) error) func(*config.Config, string) error {
+	var mu sync.Mutex
+
+	return func(newCfg *config.Config, reason string) error {
+		mu.Lock()
+		defer mu.Unlock()
+
+		return reload(newCfg, reason)
+	}
+}
+
+// Signals received before the server is ready wait for it, then collapse with any others into one reload
+func watchReloadSignal(ready <-chan struct{}, load func() (config.Config, error), reload func(*config.Config, string) error, out io.Writer) func() {
+	sigs := make(chan os.Signal, 1)
+	done := make(chan struct{})
+
+	signal.Notify(sigs, reloadSignals...)
+
+	go func() {
+		for {
+			select {
+			case <-done:
+				return
+			case <-sigs:
+			}
+
+			select {
+			case <-done:
+				return
+			case <-ready:
+				reloadFromSource(load, reload, out)
+			}
+		}
+	}()
+
+	return func() {
+		signal.Stop(sigs)
+		close(done)
+	}
+}
+
+func reloadFromSource(load func() (config.Config, error), reload func(*config.Config, string) error, out io.Writer) {
+	ctx := pkg.BackgroundContext()
+
+	report := func(err error) {
+		if out != nil {
+			fmt.Fprintf(out, "Error: %v\n", err.Error())
+		}
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			err := fmt.Errorf("config reload panic: %v\n%s", r, debug.Stack())
+			audit.ConfigReload(ctx, audit.ReasonSignal, err)
+			report(err)
+		}
+	}()
+
+	slog.InfoContext(ctx, "Reloading configuration because a reload signal was received")
+
+	newCfg, err := load()
+	if err != nil {
+		audit.ConfigReload(ctx, audit.ReasonSignal, err)
+	} else {
+		err = reload(&newCfg, audit.ReasonSignal)
+	}
+
+	if err != nil {
+		report(err)
+	}
 }
 
 // A rotated secret re-resolves whichever config is live, which is not always the one this process

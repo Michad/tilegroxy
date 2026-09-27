@@ -39,6 +39,9 @@ const (
 // their own reason from pkg/entities/secret.
 const ReasonConfigFile = "config_file"
 
+// ReasonSignal marks a reload triggered by the process receiving SIGHUP.
+const ReasonSignal = "signal"
+
 var logger *slog.Logger
 
 func SetAuditLoggerOnStartup(l *slog.Logger) {

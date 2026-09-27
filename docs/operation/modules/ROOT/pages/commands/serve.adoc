@@ -15,8 +15,8 @@ Usage:
   tilegroxy serve [flags]
 
 Flags:
-  -h, --help         help for serve
-      --hot-reload   Automatically reload configuration upon changes
+  -h, --help               help for serve
+      --hot-reload         Automatically reload configuration upon changes
 ----
 
 ----
@@ -57,6 +57,6 @@ Use xref:commands/config_check.adoc[config check] to validate the configuration 
 
 == Reloading and shutdown
 
-The `--hot-reload` flag watches the configuration file and applies changes without a restart. It requires a file, therefore it cannot be combined with `--raw-config` or the `--remote-*` flags. See xref:reloading.adoc[Reloading Configuration] for details.
+The `--hot-reload` flag watches the configuration file and applies changes without a restart. It requires a file, therefore it cannot be combined with `--raw-config` or the `--remote-*` flags. Independent of that flag, the SIGHUP signal always reloads the configuration from wherever it was originally loaded, including the `--remote-*` flags. See xref:reloading.adoc[Reloading Configuration] for details.
 
 The SIGINT or SIGTERM signals cause the server to gracefully shut down, allowing in-flight requests to finish and buffered analytics to flush. See xref:reloading.adoc[Shutdown] for more on that.
