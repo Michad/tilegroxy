@@ -50,7 +50,13 @@ The following types are available for custom providers:
 | Type | Description
 
 | link:../pkg/request_context.go[Context]
-| A context.Context with special values applied. Contains contextual information specific to the incoming request. Can retrieve headers via the Value method and authz information if configured properly. Do note there won't be a request when seed and test commands are run, this context will be a "Background Context" at those times
+| A context.Context with special values applied. Contains contextual information specific to the incoming request. Can retrieve headers and the request fields `uri`, `path`, `query`, `query-string`, `proto`, `ip`, `method` and `host` via the Value method. Headers use their canonical name and are a string, or a []string when the header is repeated. Use `RequestStateFromContext` for authz information. Do note there won't be a request when seed and test commands are run, this context will be a "Background Context" at those times
+
+| link:../pkg/request_context.go[RequestState]
+| A struct with the state tilegroxy tracks for the incoming request, such as `UserID`, `TenantID`, `AllowedLayers` and `LayerPatternMatches`. Retrieve it with `RequestStateFromContext(ctx)`, which returns false for a context not built by tilegroxy
+
+| link:../pkg/request_context.go[RequestStateFromContext]
+| Returns the `RequestState` for a Context. Reading these values via the Value method with keys such as `user`, `tenant` or `allowedLayers` still works but is deprecated
 
 | link:../pkg/entities/layer/provider.go[ProviderContext]
 | A struct for on the fly, provider-specific information. It is primarily used to facilitate authentication. Includes an Expiration field to inform the application when to re-auth via the preAuth method (this should occur before auth actually expires). Also includes an auth token field, a auth Bypass field (for un-authed usecases), and a map

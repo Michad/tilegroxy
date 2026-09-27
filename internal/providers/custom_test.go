@@ -16,6 +16,7 @@ package providers
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
@@ -115,6 +116,35 @@ func generateTile(ctx tilegroxy.Context, providerContext tilegroxy.ProviderConte
 	assert.NotNil(t, img)
 	assert.Equal(t, []byte{0x01, 0x02}, img.Content)
 
+}
+
+// Scripts written against the old string keys must see the same values as the typed request state.
+func Test_CustomProviderReadsRequestState(t *testing.T) {
+	p := buildCustomProviderFromScript(t, `
+var _ = os.Getenv
+var _ context.Context
+
+func preAuth(ctx tilegroxy.Context, providerContext tilegroxy.ProviderContext, params map[string]interface{}, cientConfig tilegroxy.ClientConfig, errorMessages tilegroxy.ErrorMessages,
+)  (tilegroxy.ProviderContext, error) {
+	return tilegroxy.ProviderContext{AuthBypass: true}, nil
+}
+
+func generateTile(ctx tilegroxy.Context, providerContext tilegroxy.ProviderContext, tileRequest tilegroxy.TileRequest, params map[string]interface{}, clientConfig tilegroxy.ClientConfig, errorMessages tilegroxy.ErrorMessages ) (*tilegroxy.Image, error ) {
+	legacy := *ctx.Value("user").(*string)
+	state, _ := tilegroxy.RequestStateFromContext(ctx)
+	return &tilegroxy.Image{Content: []byte(legacy + "|" + state.UserID + "|" + ctx.Value("X-Test").(string))}, nil
+}
+`)
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com", nil)
+	require.NoError(t, err)
+	req.Header.Set("X-Test", "header")
+	ctx := pkg.NewRequestContext(req)
+	pkg.SetIdentity(ctx, "someone", "")
+
+	img, err := p.GenerateTile(ctx, layer.ProviderContext{}, pkg.TileRequest{LayerName: "l", Z: 1, X: 1, Y: 1})
+	require.NoError(t, err)
+	assert.Equal(t, "someone|someone|header", string(img.Content))
 }
 
 func Test_CustomProviderCloseInvokesScript(t *testing.T) {

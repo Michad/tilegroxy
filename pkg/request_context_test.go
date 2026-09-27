@@ -17,7 +17,9 @@ package pkg_test
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"testing"
+	"time"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/stretchr/testify/assert"
@@ -139,4 +141,172 @@ func Test_NewRequestContext_IP(t *testing.T) {
 			assert.Equal(t, test.expected, ctx.Value("ip"))
 		})
 	}
+}
+
+// Custom scripts and {ctx.*} placeholders read through ctx.Value with the historic string keys, so
+// those reads must keep their types and share storage with the typed accessors.
+func Test_NewRequestContext_LegacyStringKeys(t *testing.T) {
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com/tiles/1/2/3?a=b", nil)
+	require.NoError(t, err)
+	req.RemoteAddr = "192.0.2.10:1234"
+	req.RequestURI = "/tiles/1/2/3?a=b"
+	req.Header.Set("User-Agent", "agent")
+	req.Header.Add("X-Multi", "one")
+	req.Header.Add("X-Multi", "two")
+
+	ctx := pkg.NewRequestContext(req)
+
+	assert.Equal(t, "/tiles/1/2/3?a=b", ctx.Value("uri"))
+	assert.Equal(t, "/tiles/1/2/3", ctx.Value("path"))
+	assert.Equal(t, url.Values{"a": []string{"b"}}, ctx.Value("query"))
+	assert.Equal(t, "a=b", ctx.Value("query-string"))
+	assert.Equal(t, "HTTP/1.1", ctx.Value("proto"))
+	assert.Equal(t, "192.0.2.10", ctx.Value("ip"))
+	assert.Equal(t, http.MethodGet, ctx.Value("method"))
+	assert.Equal(t, "example.com", ctx.Value("host"))
+	assert.Equal(t, "agent", ctx.Value("User-Agent"))
+	assert.Equal(t, []string{"one", "two"}, ctx.Value("X-Multi"))
+	assert.Same(t, req, ctx.Value("req"))
+	assert.IsType(t, time.Time{}, ctx.Value("startTime"))
+	assert.Nil(t, ctx.Value("Not-A-Header"))
+
+	user, ok := pkg.UserIDFromContext(ctx)
+	require.True(t, ok)
+	*user = "someone"
+	assert.Same(t, user, ctx.Value("user"))
+
+	tenant, _ := pkg.TenantIDFromContext(ctx)
+	assert.Same(t, tenant, ctx.Value("tenant"))
+	limitLayers, _ := pkg.LimitLayersFromContext(ctx)
+	assert.Same(t, limitLayers, ctx.Value("limitLayers"))
+	allowedLayers, _ := pkg.AllowedLayersFromContext(ctx)
+	assert.Same(t, allowedLayers, ctx.Value("allowedLayers"))
+	partial, _ := pkg.LimitAreaPartialFromContext(ctx)
+	assert.Same(t, partial, ctx.Value("limitAreaPartial"))
+	area, _ := pkg.AllowedAreaFromContext(ctx)
+	assert.Same(t, area, ctx.Value("allowedArea"))
+	matches, _ := pkg.LayerPatternMatchesFromContext(ctx)
+	assert.Same(t, matches, ctx.Value("layerPatternMatches"))
+	depth, _ := pkg.RefDepthFromContext(ctx)
+	assert.Same(t, depth, ctx.Value("refDepth"))
+	cached, _ := pkg.CachedFromContext(ctx)
+	assert.Same(t, cached, ctx.Value("cached"))
+}
+
+type ctxKey string
+
+// Wrapping the request context further must hide neither the request state nor the parent's values.
+func Test_NewRequestContext_DerivedContexts(t *testing.T) {
+	parent := context.WithValue(context.Background(), ctxKey("outer"), "parent")
+	req, err := http.NewRequestWithContext(parent, http.MethodGet, "http://example.com", nil)
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(pkg.NewRequestContext(req))
+	defer cancel()
+	ctx = context.WithValue(ctx, ctxKey("inner"), "child")
+
+	state, ok := pkg.RequestStateFromContext(ctx)
+	require.True(t, ok)
+	state.TenantID = "acme-corp"
+
+	tenant, _ := pkg.TenantIDFromContext(ctx)
+	assert.Equal(t, "acme-corp", *tenant)
+	assert.Equal(t, "parent", ctx.Value(ctxKey("outer")))
+	assert.Equal(t, "child", ctx.Value(ctxKey("inner")))
+	assert.Equal(t, http.MethodGet, ctx.Value("method"))
+
+	reqOut, ok := pkg.ReqFromContext(ctx)
+	require.True(t, ok)
+	assert.Same(t, req, reqOut)
+	_, ok = pkg.StartTimeFromContext(ctx)
+	assert.True(t, ok)
+
+	cancel()
+	require.Error(t, ctx.Err())
+}
+
+func Test_RequestStateFromContext_PlainContext(t *testing.T) {
+	_, ok := pkg.RequestStateFromContext(context.Background())
+	assert.False(t, ok)
+	_, ok = pkg.ReqFromContext(context.Background())
+	assert.False(t, ok)
+	_, ok = pkg.StartTimeFromContext(context.Background())
+	assert.False(t, ok)
+	_, ok = pkg.UserIDFromContext(context.Background())
+	assert.False(t, ok)
+}
+
+// Stands in for a context a library consumer built by hand with the deprecated string keys.
+type legacyContext struct {
+	context.Context
+
+	values map[string]any
+}
+
+func (c legacyContext) Value(key any) any {
+	if k, ok := key.(string); ok {
+		return c.values[k]
+	}
+
+	return c.Context.Value(key)
+}
+
+func Test_Accessors_LegacyHandBuiltContext(t *testing.T) {
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com", nil)
+	require.NoError(t, err)
+	start := time.Now()
+	user := "someone"
+	limit := true
+
+	ctx := legacyContext{Context: context.Background(), values: map[string]any{
+		"req":         req,
+		"startTime":   start,
+		"user":        &user,
+		"limitLayers": &limit,
+	}}
+
+	reqOut, ok := pkg.ReqFromContext(ctx)
+	require.True(t, ok)
+	assert.Same(t, req, reqOut)
+	startOut, ok := pkg.StartTimeFromContext(ctx)
+	require.True(t, ok)
+	assert.Equal(t, start, startOut)
+	userOut, ok := pkg.UserIDFromContext(ctx)
+	require.True(t, ok)
+	assert.Same(t, &user, userOut)
+
+	to := pkg.BackgroundContext()
+	pkg.CopyAuthRestrictions(ctx, to)
+
+	newUser, _ := pkg.UserIDFromContext(to)
+	assert.Equal(t, "someone", *newUser)
+	newLimit, _ := pkg.LimitLayersFromContext(to)
+	assert.True(t, *newLimit)
+}
+
+// The source request may keep changing its own allowed layers after the copy.
+func Test_CopyAuthRestrictions_DoesNotAliasAllowedLayers(t *testing.T) {
+	from := pkg.BackgroundContext()
+	to := pkg.BackgroundContext()
+
+	src, _ := pkg.RequestStateFromContext(from)
+	src.AllowedLayers = []string{"a", "b"}
+
+	pkg.CopyAuthRestrictions(from, to)
+	src.AllowedLayers[0] = "changed"
+
+	dst, _ := pkg.RequestStateFromContext(to)
+	assert.Equal(t, []string{"a", "b"}, dst.AllowedLayers)
+}
+
+func Test_RequestState_Lookup(t *testing.T) {
+	state, ok := pkg.RequestStateFromContext(pkg.BackgroundContext())
+	require.True(t, ok)
+
+	v, ok := state.Lookup("user")
+	require.True(t, ok)
+	assert.Same(t, &state.UserID, v)
+
+	_, ok = state.Lookup("nothing")
+	assert.False(t, ok)
 }

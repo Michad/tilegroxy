@@ -52,6 +52,11 @@ If a vulnerability can only be fixed by changing or removing a feature, it may b
 | `algorithms`
 | 2.0
 | xref:configuration/authentication/jwt.adoc[JWT authentication]
+
+| `ctx.Value("user")` and the other request state keys
+| `RequestStateFromContext`
+| 2.0
+| xref:extensibility.adoc#_custom_providers[Custom providers] and library code. The `{ctx.user}` and `{ctx.tenant}` placeholders are not affected
 |===
 
 == What's Not Covered
