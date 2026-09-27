@@ -25,8 +25,8 @@ Configuration options:
 | None
 
 | filemode
-| A https://pkg.go.dev/io/fs#FileMode[Go filemode] as an integer to use for all created files/directories
-| uint32
+| The permissions to use for all created files/directories. Either a unix octal string such as `"0644"` or a https://pkg.go.dev/io/fs#FileMode[Go filemode] as an integer. In YAML an unquoted number with a leading zero such as `0644` is also read as octal, but JSON has no octal numbers so use the string form there
+| string or uint32
 | No
 | 0777
 

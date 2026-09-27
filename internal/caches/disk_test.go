@@ -191,3 +191,62 @@ func TestDisk_TruncatedFileIsAMiss(t *testing.T) {
 	require.NotNil(t, result)
 	require.Equal(t, img.Content, result.Content)
 }
+
+func decodeDiskFileMode(t *testing.T, raw string) (FileMode, error) {
+	t.Helper()
+
+	c, err := config.LoadConfig(raw)
+	require.NoError(t, err)
+
+	var cfg DiskConfig
+	err = config.DecodeEntityConfig(c.Cache.(map[string]interface{}), &cfg)
+	return cfg.FileMode, err
+}
+
+func TestDisk_FileModeNotations(t *testing.T) {
+	tests := []struct {
+		name string
+		raw  string
+	}{
+		{"yaml octal number", "cache:\n  name: disk\n  path: /tmp\n  filemode: 0640\n"},
+		{"yaml octal string", "cache:\n  name: disk\n  path: /tmp\n  filemode: \"0640\"\n"},
+		{"yaml unprefixed string", "cache:\n  name: disk\n  path: /tmp\n  filemode: \"640\"\n"},
+		{"yaml 0o string", "cache:\n  name: disk\n  path: /tmp\n  filemode: \"0o640\"\n"},
+		{"json number", `{"cache": {"name": "disk", "path": "/tmp", "filemode": 416}}`},
+		{"json string", `{"cache": {"name": "disk", "path": "/tmp", "filemode": "0640"}}`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mode, err := decodeDiskFileMode(t, tt.raw)
+			require.NoError(t, err)
+			require.Equal(t, FileMode(0640), mode)
+		})
+	}
+}
+
+func TestDisk_FileModeInvalidString(t *testing.T) {
+	for _, v := range []string{"rw-r-----", "0999", "1777", ""} {
+		t.Run(v, func(t *testing.T) {
+			_, err := decodeDiskFileMode(t, "cache:\n  name: disk\n  path: /tmp\n  filemode: \""+v+"\"\n")
+			require.Error(t, err)
+		})
+	}
+}
+
+func TestDisk_FileModeAppliedToEntries(t *testing.T) {
+	dir := t.TempDir()
+
+	var cfg DiskConfig
+	require.NoError(t, config.DecodeEntityConfig(map[string]interface{}{"path": dir, "filemode": "0640"}, &cfg))
+
+	c, err := DiskRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
+	require.NoError(t, err)
+
+	tile := pkg.TileRequest{LayerName: "layer", Z: 1, X: 2, Y: 3}
+	require.NoError(t, c.Save(context.Background(), tile, &pkg.Image{Content: []byte("payload")}))
+
+	info, err := os.Stat(filepath.Join(dir, requestToFilename(tile)))
+	require.NoError(t, err)
+	require.Equal(t, os.FileMode(0640), info.Mode().Perm())
+}
