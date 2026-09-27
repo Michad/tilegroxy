@@ -219,6 +219,8 @@ func (t Sample) GenerateTile(ctx context.Context, providerContext layer.Provider
 
 From here, implementing the provider is the same as implementing a Custom provider.  The other entities can be specified in the same way.
 
+A complete project implementing every entity type, along with a wrapper executable that tests its configuration before serving it, can be found in link:/examples/extension/README.md[examples/extension].
+
 The link:https://github.com/Michad/tilegroxy/tree/main/pkg[pkg package] contains everything available for writing your own entities:
 
 |===
