@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"runtime/debug"
 	"slices"
+	"sort"
 	"sync"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -148,8 +149,15 @@ func findRefTargets(node any, targets *[]string) {
 				*targets = append(*targets, target)
 			}
 		}
-		for _, val := range v {
-			findRefTargets(val, targets)
+
+		keys := make([]string, 0, len(v))
+		for k := range v {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+
+		for _, k := range keys {
+			findRefTargets(v[k], targets)
 		}
 	case []any:
 		for _, val := range v {
