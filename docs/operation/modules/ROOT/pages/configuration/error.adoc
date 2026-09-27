@@ -149,7 +149,7 @@ The following can be supplied as environment variables:
 
 In addition to an image on the filesystem you can refer to a static color or a built-in image.
 
-There are currently 4 built-in raster images available:
+There are 4 built-in raster images available:
 
 |===
 | Image name | Description | Preview
@@ -191,7 +191,7 @@ You can also reference any color by including an hex code prefixed by "color:". 
 
 The templates used for error messages for the majority of errors can be configured.  Since tilegroxy is a backend service the main time you see words coming from it is in error messages, so it's all the more important to be flexible with those words.  This is most useful for those whose primary language is not English and want to decrease how often they need to deal with translating. Unfortunately, many lower-level errors can return messages not covered by these string.
 
-The following are currently supported:
+The following are supported:
 
  NotAuthorized
  ParamRequired

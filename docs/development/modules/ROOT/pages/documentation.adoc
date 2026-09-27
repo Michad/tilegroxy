@@ -26,4 +26,4 @@ Github does not support `include` pragmas (see link:https://github.com/github/ma
 
 This is performed using link:https://github.com/asciidoctor/asciidoctor-reducer[asciidoctor-reducer] via running `make readme`. This requires you have a somewhat modern ruby & gem installed.
 
-We use this to allow our main README file to share content with the main documentation website. The `README.adoc` file should not be modified itself, instead any modifications should be made to `README_source.adoc` and then `make readme` run to update the main README. The command should also be run any time an included doc is updated.  This is not yet automated.
+We use this to allow our main README file to share content with the main documentation website. The `README.adoc` file should not be modified itself, instead any modifications should be made to `README_source.adoc` and then `make readme` run to update the main README. The command should also be run any time an included doc is updated.

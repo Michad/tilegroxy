@@ -1,0 +1,68 @@
+= Compatibility
+
+Starting with version 1.0, tilegroxy follows link:https://semver.org/[semantic versioning].  An upgrade within the same major version (for example 1.2 to 1.5) should never require you to change your configuration, scripts, or code.  This document describes exactly what that promise covers, how features are retired, and what is excluded.
+
+Releases before 1.0 made no such promise and frequently included breaking changes.  Read the release notes carefully when upgrading from a 0.x version.
+
+== What's Covered
+
+The compatibility promise applies to four surfaces:
+
+* *Configuration* - every documented key in the xref:configuration/index.adoc[configuration], including entity names such as `memcached` and the matching environment variables
+* *CLI* - the xref:commands/index.adoc[commands] and their documented flags
+* *Custom scripts* - the function signatures that xref:extensibility.adoc[custom] providers, authentication, and analytics are compiled against
+* *Core Server Behaviour* - the way the existing production routes behave for any reasonable client (small details like header order excluded)
+
+Minor releases may add to any of these.  A new optional configuration key, a new CLI flag, or a new field on a struct returned by a custom script are all compatible changes.  Removing or renaming any of these, or changing what an existing option does, only happens in a major release.
+
+== Deprecation
+
+When a feature needs to be replaced, it's deprecated first rather than removed whenever possible.  A deprecated feature:
+
+* Keeps working exactly as it did for the remainder of the major version
+* Logs a message at `warn` level on startup and on every reload for as long as it's used, naming the option and its replacement
+* Is marked as deprecated in the documentation, alongside its replacement
+* Is listed under a "Deprecations" heading in the release notes of the version that deprecated it
+
+The warning is logged at `warn` level so it shows up under the logging levels recommended in xref:howto/productionizing.adoc[Run in Production] and includes the targeted removal version.  It's recommended you check your logs for deprecation warnings after every upgrade, rather than waiting for the next major release.
+
+Setting both a deprecated option and its replacement is an error so you never have to guess which one takes effect.
+
+=== Security Exception
+
+If a vulnerability can only be fixed by changing or removing a feature, it may be changed in a minor or patch release.  The release notes call out the change under "Breaking Changes" with an explanation.
+
+=== Currently Deprecated
+
+[cols="1,1,1,3"]
+|===
+| Deprecated | Replacement | When | Where
+
+| `memcache`
+| `memcached`
+| 2.0
+| xref:configuration/cache/memcached.adoc[Memcached cache] and xref:configuration/datastores/memcached.adoc[datastore] name
+
+| `postgres`
+| `postgresql`
+| 2.0
+| xref:configuration/analytics/postgresql.adoc[PostgreSQL analytics] name
+
+| `algorithm`
+| `algorithms`
+| 2.0
+| xref:configuration/authentication/jwt.adoc[JWT authentication]
+|===
+
+== What's Not Covered
+
+The following are not guaranteed:
+
+* *Library API* - the exported types and functions under `pkg/` when xref:extensibility.adoc#_using_tilegroxy_as_a_library[using tilegroxy as a library]. We will try to call these changes out as Breaking Changes, but some small changes may occur in minor versions.
+* *Cache contents* - the format of tiles written to a cache has its own versioning system and new versions may be introduced at any point. Tilegroxy maintains backwards compatibility between these versions
+* *Seed progress files* - a progress file written by `seed` might not be resumable after an upgrade
+* *Log messages* - the wording, fields, and quantity of log messages, as described in xref:configuration/log.adoc[Log]
+* *Undocumented behavior* - any configuration key, flag, or behavior not described in this documentation, even if it happens to work
+* *The Helm chart* - values in the chart follow the chart's own version rather than tilegroxy's
+* *Everything under `internal/`* - including when used through a fork
+* *Unreleased builds* - such as the `edge` container image tag

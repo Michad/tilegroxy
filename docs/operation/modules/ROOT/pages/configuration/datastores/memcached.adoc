@@ -2,7 +2,7 @@
 
 Defines a connection to link:https://memcached.org/[memcached]. Utilizes link:https://github.com/bradfitz/gomemcache[gomemcache] under the hood.
 
-Currently used by the xref:configuration/cache/memcached.adoc[memcached cache].
+Used by the xref:configuration/cache/memcached.adoc[memcached cache].
 
 Name should be "memcached"
 

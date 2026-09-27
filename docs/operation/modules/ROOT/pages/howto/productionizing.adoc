@@ -15,4 +15,5 @@ Tilegroxy puts a lot of trust and responsibility in its operator to deploy it se
 * [ ] Ensure caching is configured against a distributed, high availability datastore
 * [ ] Consume telemetry data into an observability solution with trace sampling set at a level that won't overwhelm you
 * [ ] Configure the analytics dials and monitor the metrics to ensure usage data isn't dropped
+* [ ] Review the xref:compatibility.adoc[compatibility policy] and check logs for deprecation warnings after each upgrade
 * [ ] Verify tilegroxy will be restarted on the unfortunate event it crashes such as via Docker's restart=unless-stopped, Kubernete's restart policy, or SystemD's Restart=on-failure

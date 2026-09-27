@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/Michad/tilegroxy/internal/deprecation"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/bradfitz/gomemcache/memcache"
@@ -71,6 +72,11 @@ type MemcachedLegacyRegistration struct {
 
 func (s MemcachedLegacyRegistration) Name() string {
 	return "memcache"
+}
+
+func (s MemcachedLegacyRegistration) Initialize(configAny any, deps cache.CacheDeps) (cache.Cache, error) {
+	deprecation.WarnConfig(`cache name "memcache"`, `"memcached"`, deprecation.NextMajorVersion)
+	return s.MemcachedRegistration.Initialize(configAny, deps)
 }
 
 func (s MemcachedRegistration) Initialize(configAny any, deps cache.CacheDeps) (cache.Cache, error) {

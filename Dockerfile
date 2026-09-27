@@ -1,5 +1,5 @@
 
-FROM node:26-alpine3.23@sha256:996a99c9a50ceca8b2e362a02dc88749eb1b97ad4f652130a99e52de4549a1f3 AS docs_stage
+FROM node:26-alpine3.23@sha256:9dac39bfd053b458593c44a099d2667994c8fa9e1a8c10bc7ff2f3d97b62412d AS docs_stage
 
 
 WORKDIR /usr/app
@@ -18,7 +18,7 @@ RUN apk update && \
 
 
 
-FROM alpine:3.24.2@sha256:3cf95fe0816180395592b8373f3ec60663f076127617bbacb4eacf9667afe2e9
+FROM alpine:3.24.2@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
 
 ENV UID=1000
 ENV GID=1000

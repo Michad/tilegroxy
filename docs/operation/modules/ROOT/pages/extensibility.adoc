@@ -12,7 +12,7 @@ Your custom code must live within a single file for each provider/auth/analytics
 
 There is a performance cost of using a custom vs a built-in offering. The exact cost depends on the complexity of your code, however it is typically below 10 milliseconds while tile generation as a whole is usually more than an order of magnitude slower. With authentication especially tilegroxy utilizes caching to mitigate this impact.  However it is something you should keep in mind when deciding whether to implement a Custom provider/auth. Due to these being written in Go, it is easy to convert your custom code to a built-in equivalent if you find this overhead becomes a bottleneck.
 
-Custom caches are not currently possible. This is because it's most likely you would need/want to use an external library to talk to whatever cache, which isn't currently possible (limitation of Yaegi).
+Custom caches are not supported. A cache almost always needs an external library to talk to its backing store, which Yaegi cannot load.
 
 === Custom Providers
 

@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/Michad/tilegroxy/internal/deprecation"
 	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/bradfitz/gomemcache/memcache"
 )
@@ -72,6 +73,11 @@ type MemcachedWrapperLegacyRegistration struct {
 
 func (s MemcachedWrapperLegacyRegistration) Name() string {
 	return "memcache"
+}
+
+func (s MemcachedWrapperLegacyRegistration) Initialize(cfgAny any, deps datastore.DatastoreDeps) (datastore.DatastoreWrapper, error) {
+	deprecation.WarnConfig(`datastore name "memcache"`, `"memcached"`, deprecation.NextMajorVersion)
+	return s.MemcachedWrapperRegistration.Initialize(cfgAny, deps)
 }
 
 func (s MemcachedWrapperRegistration) Initialize(cfgAny any, deps datastore.DatastoreDeps) (datastore.DatastoreWrapper, error) {

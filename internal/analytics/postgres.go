@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Michad/tilegroxy/internal/deprecation"
 	"github.com/Michad/tilegroxy/pkg/entities/analytics"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -67,6 +68,11 @@ type PostgresLegacyRegistration struct {
 
 func (s PostgresLegacyRegistration) Name() string {
 	return "postgres"
+}
+
+func (s PostgresLegacyRegistration) Initialize(cfgAny any, deps analytics.AnalyticsDeps) (analytics.Analytics, error) {
+	deprecation.WarnConfig(`analytics name "postgres"`, `"postgresql"`, deprecation.NextMajorVersion)
+	return s.PostgresRegistration.Initialize(cfgAny, deps)
 }
 
 var postgresDefaultColumns = map[string]string{
