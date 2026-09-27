@@ -16,6 +16,7 @@ package providers
 
 import (
 	"bytes"
+	"context"
 	"image"
 	"testing"
 
@@ -209,4 +210,49 @@ func Test_Crop_ExecuteCropNoBounds(t *testing.T) {
 	img2, _, err := image.Decode(bytes.NewReader(*exp))
 	require.NoError(t, err)
 	assert.Equal(t, img1, img2)
+}
+
+type metadataOnlyProvider struct {
+	md layer.Description
+}
+
+func (p metadataOnlyProvider) PreAuth(_ context.Context, pc layer.ProviderContext) (layer.ProviderContext, error) {
+	return pc, nil
+}
+
+func (p metadataOnlyProvider) GenerateTile(_ context.Context, _ layer.ProviderContext, _ pkg.TileRequest) (*pkg.Image, error) {
+	return nil, nil
+}
+
+func (p metadataOnlyProvider) Metadata() layer.Description {
+	return p.md
+}
+
+func Test_Crop_ForwardsPrimaryMetadata(t *testing.T) {
+	md := layer.Description{TileJSONMetadata: config.TileJSONMetadata{Description: "from primary"}}
+
+	assert.Equal(t, md, Crop{Primary: metadataOnlyProvider{md: md}}.Metadata())
+}
+
+type closeRecordingProvider struct {
+	metadataOnlyProvider
+	closed *bool
+}
+
+func (p closeRecordingProvider) Close(_ context.Context) error {
+	*p.closed = true
+	return nil
+}
+
+func Test_Crop_ClosesChildren(t *testing.T) {
+	var primaryClosed, secondaryClosed bool
+
+	err := layer.CloseProvider(context.Background(), Crop{
+		Primary:   closeRecordingProvider{closed: &primaryClosed},
+		Secondary: closeRecordingProvider{closed: &secondaryClosed},
+	})
+
+	require.NoError(t, err)
+	assert.True(t, primaryClosed)
+	assert.True(t, secondaryClosed)
 }

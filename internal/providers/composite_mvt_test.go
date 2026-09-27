@@ -31,8 +31,6 @@ func Test_DataType_CompositeMVT(t *testing.T) {
 	assert.Equal(t, config.DataTypeMVT, CompositeMVTRegistration{}.DataType(CompositeMVTConfig{}))
 }
 
-// CompositeMVT holds its children directly, outside any layer, so they're unreachable through
-// LayerGroup.Close unless CompositeMVT forwards to them itself.
 func Test_CompositeMVTCloseClosesChildProviders(t *testing.T) {
 	p1 := &closableProvider{}
 	p2 := &closableProvider{}
@@ -40,7 +38,7 @@ func Test_CompositeMVTCloseClosesChildProviders(t *testing.T) {
 	// actually builds: the close has to survive both hops, not just the forwarding one
 	c := &CompositeMVT{providers: []layer.Provider{layer.ProviderWrapper{Name: "child", Provider: p1}, p2}}
 
-	require.NoError(t, c.Close(context.Background()))
+	require.NoError(t, layer.CloseProvider(context.Background(), c))
 
 	assert.True(t, p1.closed)
 	assert.True(t, p2.closed)

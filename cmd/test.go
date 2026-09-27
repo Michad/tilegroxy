@@ -29,7 +29,7 @@ var testCmd = &cobra.Command{
 	Short: "Test layers and cache work",
 	Long: `Tests that everything is working end-to-end for all or some layers including caching. This goes further than 'config check' and instead of just validating the configuration can be parsed it actually makes sample request(s) and populates the result in the cache. This is similar to running 'seed' for a single tile or standing up the server and making a cURL request for each layer. The output will list each layer and the status, with any error encountered if applicable.
 
-If you don't specify a tile coordinate with -z/-x/-y, one is picked automatically for each layer from its configured bounds and minzoom/maxzoom. A layer with neither bounds nor a zoom range configured falls back to a fixed default tile that might be outside the area your layer actually serves
+If you don't specify a tile coordinate with -z/-x/-y, one is picked automatically for each layer. A layer with a center configured uses the tile containing that point, at the center's zoom if it has one. Otherwise the tile comes from its configured bounds and minzoom/maxzoom. A layer with no center, bounds, or zoom range configured falls back to a fixed default tile that might be outside the area your layer actually serves
 
 A layer using a pattern is tested through its "examples" configurations if available. A pattern layer with no examples configured is skipped with a warning.
 

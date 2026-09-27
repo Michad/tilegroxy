@@ -30,9 +30,9 @@ Most of a TileJSON document is derived from configuration that already exists fo
 
 `tiles` URLs are built based on the path to reach each layer. The protocol/host are built from incoming headers (including `X-Forward-` headers if set). For protection against theoretical attacks, or bad reverse proxies, you can customize the URLs with the `BaseURLs` configuration. Configuring more than one entry populates the `tiles` array with one URL per entry, useful if tiles are reachable at multiple base URLs.
 
-`minzoom`, `maxzoom`, and `bounds` reflect the layer's actual xref:configuration/layer.adoc[zoom and bounds] restrictions. They default to `0`, `21`, and the whole world unless the layer sets them explicitly. 
+`minzoom`, `maxzoom`, and `bounds` reflect the layer's xref:configuration/layer.adoc#_metadata[metadata]. They default to `0`, `21`, and the whole world unless the layer sets them explicitly or a provider passes them through from a datasource that defines it. 
 
-`description` and `attribution` are only populated when explicitly configured on the layer; they have no derived fallback.
+`description`, `center`, `vector_layers`, and `attribution` are only populated when explicitly configured on the layer or through a provider that passes through metadata. They have no automatic value.
 
 == Example
 

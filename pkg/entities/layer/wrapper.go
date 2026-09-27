@@ -18,7 +18,7 @@ import (
 	"context"
 
 	"github.com/Michad/tilegroxy/pkg"
-	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"go.opentelemetry.io/otel/codes"
 )
 
@@ -26,6 +26,7 @@ import (
 type ProviderWrapper struct {
 	Name     string
 	Provider Provider
+	dataType config.DataType // As declared by the provider's registration
 }
 
 func (t ProviderWrapper) PreAuth(ctx context.Context, providerContext ProviderContext) (ProviderContext, error) {
@@ -56,9 +57,16 @@ func (t ProviderWrapper) GenerateTile(ctx context.Context, providerContext Provi
 	return img, err
 }
 
-// Close forwards to the wrapped provider. Every constructed provider is wrapped for tracing, so
-// without this a nesting provider like blend or fallback closing its children would never reach
-// the underlying Closer.
+// Close closes the whole tree beneath the wrapper, so the wrapper is deliberately not a Parent.
 func (t ProviderWrapper) Close(ctx context.Context) error {
-	return lifecycle.CloseIfCloser(ctx, t.Provider)
+	return CloseProvider(ctx, t.Provider)
+}
+
+func (t ProviderWrapper) Metadata() Description {
+	d := DescribeTree(t.Provider)
+	if isKnownDataType(t.dataType) {
+		d.DataType = t.dataType
+	}
+
+	return d
 }

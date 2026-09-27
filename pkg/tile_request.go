@@ -18,6 +18,7 @@ import (
 	"math"
 	"strconv"
 
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/mmcloughlin/geohash"
 )
 
@@ -129,6 +130,14 @@ type Bounds struct {
 	West  float64
 	East  float64
 	SRID  uint
+}
+
+func BoundsFromConfig(b config.BoundsConfig) Bounds {
+	return Bounds{South: b.South, North: b.North, West: b.West, East: b.East, SRID: SRIDWGS84}
+}
+
+func (b Bounds) ToConfig() config.BoundsConfig {
+	return config.BoundsConfig{South: b.South, North: b.North, West: b.West, East: b.East}
 }
 
 // preciseMaxLat is the Web Mercator latitude limit at full precision, atan(sinh(pi)) in degrees.

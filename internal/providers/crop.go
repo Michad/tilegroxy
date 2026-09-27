@@ -72,7 +72,7 @@ func (s CropRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer
 
 	secondaryCfg := cfg.Secondary
 	if secondaryCfg == nil {
-		secondaryCfg = map[string]interface{}{"name": "static", "color": "0000"}
+		secondaryCfg = defaultCropSecondary()
 	}
 
 	secondary, err := layer.ConstructProvider(secondaryCfg, deps)
@@ -224,4 +224,31 @@ func resizeImages(ctx context.Context, img image.Image, img2 image.Image) (image
 	}
 
 	return img, img2
+}
+
+// Only the default transparent secondary leaves the output limited to the primary within bounds.
+func (t Crop) Metadata() layer.Description {
+	primary := layer.DescribeTree(t.Primary)
+	if t.CropConfig.Secondary != nil {
+		return layer.Union(primary, layer.DescribeTree(t.Secondary))
+	}
+
+	return clipToCrop(primary, t.Bounds, t.BoundsFromAuth)
+}
+
+func (t Crop) Children() []layer.Provider {
+	return []layer.Provider{t.Primary, t.Secondary}
+}
+
+func (s CropRegistration) WrapBounds(inner layer.Provider, bounds pkg.Bounds, deps layer.ProviderDeps) (layer.Provider, error) {
+	secondary, err := layer.ConstructProvider(defaultCropSecondary(), deps)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Crop{CropConfig{Bounds: bounds}, inner, secondary, deps.ErrorMessages}, nil
+}
+
+func defaultCropSecondary() map[string]interface{} {
+	return map[string]interface{}{"name": "static", "color": "0000"}
 }

@@ -208,3 +208,4 @@ The following are supported:
  Timeout
  ParamRegex
  MustBeUnique
+ TileNotFound

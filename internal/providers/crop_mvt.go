@@ -135,3 +135,15 @@ func boundsToOrbBound(b pkg.Bounds) orb.Bound {
 		Max: orb.Point{b.East, b.North},
 	}
 }
+
+func (t CropMvt) Metadata() layer.Description {
+	return clipToCrop(layer.DescribeTree(t.Primary), t.Bounds, t.BoundsFromAuth)
+}
+
+func (t CropMvt) Children() []layer.Provider {
+	return []layer.Provider{t.Primary}
+}
+
+func (s CropMvtRegistration) WrapBounds(inner layer.Provider, bounds pkg.Bounds, deps layer.ProviderDeps) (layer.Provider, error) {
+	return &CropMvt{CropMvtConfig{Bounds: bounds}, inner, deps.ErrorMessages}, nil
+}

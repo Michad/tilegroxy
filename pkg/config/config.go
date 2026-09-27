@@ -247,6 +247,7 @@ type ErrorMessages struct {
 	Timeout                 string
 	ParamRegex              string
 	MustBeUnique            string
+	TileNotFound            string
 }
 
 // Default embedded image keys, mirrored as literals from internal/images.GetStaticImage since
@@ -336,19 +337,14 @@ type LogConfig struct {
 
 // Defines a layer to be served up by the application
 type LayerConfig struct {
-	ID             string              // A distinct identifier for this layer. If no pattern is defined this is used to match against the layer name. Also used
-	Pattern        string              // A pattern to match against for layer names in incoming requests. Includes placeholders from which values can be extracted when matching. Not regular expressions, placeholders are simply wrapped in curly braces
-	ParamValidator map[string]string   // A mapping of regular expressions to use for each value extracted from the pattern. Keys must match the placeholders in pattern. This is external from the pattern itself to keep parsing the pattern simple and less error prone. If a key of "*" is defined it applies to all placeholders
-	Provider       map[string]any      // Raw config parameters for the provider to use. Name determines the specific schema
-	SkipCache      bool                // If true, don't use the cache
-	SkipAnalytics  bool                // If true, successful requests for this layer don't produce analytics events
-	Client         *ClientConfig       // If specified, the default Client is overridden.
-	DataType       DataType            // Optional. Declares this layer's data type. Must not contradict the provider's own DataType(); required if Bounds is set and the provider's type is unknown
-	MinZoom        *int                // Optional. Requests below this zoom are rejected as out of bounds. nil means no lower limit
-	MaxZoom        *int                // Optional. Requests above this zoom are rejected as out of bounds. nil means no upper limit
-	Bounds         BoundsConfig        // Optional. Automatically wraps this layer's provider in crop/cropmvt, restricting it to this geographic area
-	Description    string              // Optional. Populates the `description` field of this layer's TileJSON document. Has no effect unless TileJSON is enabled
-	Attribution    string              // Optional. Populates the `attribution` field of this layer's TileJSON document. Has no effect unless TileJSON is enabled
+	ID             string            // A distinct identifier for this layer. If no pattern is defined this is used to match against the layer name. Also used
+	Pattern        string            // A pattern to match against for layer names in incoming requests. Includes placeholders from which values can be extracted when matching. Not regular expressions, placeholders are simply wrapped in curly braces
+	ParamValidator map[string]string // A mapping of regular expressions to use for each value extracted from the pattern. Keys must match the placeholders in pattern. This is external from the pattern itself to keep parsing the pattern simple and less error prone. If a key of "*" is defined it applies to all placeholders
+	Provider       map[string]any    // Raw config parameters for the provider to use. Name determines the specific schema
+	SkipCache      bool              // If true, don't use the cache
+	SkipAnalytics  bool              // If true, successful requests for this layer don't produce analytics events
+	Client         *ClientConfig     // If specified, the default Client is overridden.
+	LayerMetadata  `mapstructure:",squash" yaml:",inline"`
 	Examples       []string            // Optional. Concrete layer names used to generate TileJSON documents for a `pattern` layer. Has no effect on a layer identified by a plain id
 	CacheVersion   string              // Optional. Allows invalidating cache entries when changed. Prefixed into cache keys but not he actual layer name
 	Cache          string              // Optional. The id of a top-level cache to use instead of the default
@@ -424,16 +420,53 @@ func (c Config) Validate() error {
 	}
 
 	for i, l := range c.Layers {
-		if l.MinZoom != nil && l.MaxZoom != nil && *l.MinZoom > *l.MaxZoom {
-			errs = append(errs, fmt.Errorf(c.Error.Messages.InvalidParam, fmt.Sprintf("layers[%d].maxzoom", i), strconv.Itoa(*l.MaxZoom)))
-		}
-
-		if l.Bounds != (BoundsConfig{}) && (l.Bounds.South > l.Bounds.North || l.Bounds.West > l.Bounds.East) {
-			errs = append(errs, fmt.Errorf(c.Error.Messages.InvalidParam, fmt.Sprintf("layers[%d].bounds", i), fmt.Sprintf("%+v", l.Bounds)))
-		}
+		errs = c.validateLayer(l, errs, i)
 	}
 
 	return errors.Join(errs...)
+}
+
+func (c Config) validateLayer(l LayerConfig, errs []error, i int) []error {
+	if l.MinZoom != nil && l.MaxZoom != nil && *l.MinZoom > *l.MaxZoom {
+		errs = append(errs, fmt.Errorf(c.Error.Messages.InvalidParam, fmt.Sprintf("layers[%d].maxzoom", i), strconv.Itoa(*l.MaxZoom)))
+	}
+
+	if l.Bounds != (BoundsConfig{}) && (l.Bounds.South > l.Bounds.North || l.Bounds.West > l.Bounds.East) {
+		errs = append(errs, fmt.Errorf(c.Error.Messages.InvalidParam, fmt.Sprintf("layers[%d].bounds", i), fmt.Sprintf("%+v", l.Bounds)))
+	}
+
+	if l.Center != nil {
+		if len(l.Center) < 2 || len(l.Center) > 3 {
+			errs = append(errs, fmt.Errorf(c.Error.Messages.RangeError, fmt.Sprintf("layers[%d].center.size", i), 2, 3))
+		} else {
+			if len(l.Center) == 3 {
+				centerZoom := l.Center[2]
+				effMaxZoom := 21
+				if l.MaxZoom != nil && *l.MaxZoom < effMaxZoom {
+					effMaxZoom = *l.MaxZoom
+				}
+
+				effMinZoom := 0
+				if l.MinZoom != nil && *l.MinZoom > 0 {
+					effMinZoom = *l.MinZoom
+				}
+
+				if centerZoom < float64(effMinZoom) || centerZoom > float64(effMaxZoom) {
+					errs = append(errs, fmt.Errorf(c.Error.Messages.RangeError, fmt.Sprintf("layers[%d].center.zoom", i), effMinZoom, effMaxZoom))
+				}
+			}
+
+			if l.Bounds != (BoundsConfig{}) {
+				if l.Center[0] > l.Bounds.East || l.Center[0] < l.Bounds.West {
+					errs = append(errs, fmt.Errorf(c.Error.Messages.RangeError, fmt.Sprintf("layers[%d].center[0]", i), l.Bounds.West, l.Bounds.East))
+				}
+				if l.Center[1] > l.Bounds.North || l.Center[1] < l.Bounds.South {
+					errs = append(errs, fmt.Errorf(c.Error.Messages.RangeError, fmt.Sprintf("layers[%d].center[1]", i), l.Bounds.South, l.Bounds.North))
+				}
+			}
+		}
+	}
+	return errs
 }
 
 // normalize the top-level cache config into a list with IDs
@@ -598,6 +631,7 @@ func DefaultConfig() Config {
 				ParamRequired:           "Parameter %v is required",
 				ParamRegex:              "Invalid value supplied for parameter %v: %v. Value must conform to regex: %v ",
 				MustBeUnique:            "Invalid value supplied for parameter %v: %v. Value must be unique. ",
+				TileNotFound:            "Tile %v is not available",
 			},
 			Images: ErrorImages{
 				OutOfBounds:    defaultImageTransparent,
