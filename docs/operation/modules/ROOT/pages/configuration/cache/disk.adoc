@@ -25,7 +25,7 @@ Configuration options:
 | None
 
 | filemode
-| A https://pkg.go.dev/io/fs#FileMode[Go filemode] as an integer to use for all created files/directories. This might change in the future to support a more conventional unix permission notation
+| A https://pkg.go.dev/io/fs#FileMode[Go filemode] as an integer to use for all created files/directories
 | uint32
 | No
 | 0777
