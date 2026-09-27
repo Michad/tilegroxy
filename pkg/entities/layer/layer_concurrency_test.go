@@ -16,6 +16,7 @@ package layer
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -84,11 +85,12 @@ func Test_Layer_ConcurrentRenderTileNoCache_NoRace(t *testing.T) {
 }
 
 // reauthProvider fails GenerateTile with pkg.ProviderAuthError on the first call to prove the
-// re-auth path (errors.As matching against the value-typed ProviderAuthError) actually triggers.
+// re-auth path actually triggers.
 type reauthProvider struct {
 	preAuthCalls    atomic.Int32
 	generateCalls   atomic.Int32
 	failFirstNCalls int32
+	pointerError    bool
 }
 
 func (p *reauthProvider) PreAuth(_ context.Context, providerContext ProviderContext) (ProviderContext, error) {
@@ -100,6 +102,9 @@ func (p *reauthProvider) PreAuth(_ context.Context, providerContext ProviderCont
 func (p *reauthProvider) GenerateTile(_ context.Context, _ ProviderContext, _ pkg.TileRequest) (*pkg.Image, error) {
 	call := p.generateCalls.Add(1)
 	if call <= p.failFirstNCalls {
+		if p.pointerError {
+			return nil, &pkg.ProviderAuthError{Message: "token expired"}
+		}
 		return nil, pkg.ProviderAuthError{Message: "token expired"}
 	}
 	return &pkg.Image{}, nil
@@ -110,21 +115,25 @@ func (p *reauthProvider) DataType() config.DataType {
 }
 
 func Test_Layer_RenderTileNoCache_ReauthsOnProviderAuthError(t *testing.T) {
-	provider := &reauthProvider{failFirstNCalls: 1}
-	l := &Layer{
-		ID:       "test",
-		Pattern:  []layerSegment{{value: "test", placeholder: false}},
-		Provider: provider,
+	for _, pointerError := range []bool{false, true} {
+		t.Run(fmt.Sprintf("pointer=%v", pointerError), func(t *testing.T) {
+			provider := &reauthProvider{failFirstNCalls: 1, pointerError: pointerError}
+			l := &Layer{
+				ID:       "test",
+				Pattern:  []layerSegment{{value: "test", placeholder: false}},
+				Provider: provider,
+			}
+			l.tileAllCounter = noop.Int64Counter{}
+			l.tileAuthCounter = noop.Int64Counter{}
+			l.tileErrorCounter = noop.Int64Counter{}
+			l.tileSuccessCounter = noop.Int64Counter{}
+
+			img, err := l.RenderTileNoCache(context.Background(), pkg.TileRequest{LayerName: "test", Z: 1, X: 0, Y: 0})
+
+			require.NoError(t, err)
+			require.NotNil(t, img)
+			require.Equal(t, int32(2), provider.preAuthCalls.Load(), "expected an initial PreAuth plus one re-auth after ProviderAuthError")
+			require.Equal(t, int32(2), provider.generateCalls.Load())
+		})
 	}
-	l.tileAllCounter = noop.Int64Counter{}
-	l.tileAuthCounter = noop.Int64Counter{}
-	l.tileErrorCounter = noop.Int64Counter{}
-	l.tileSuccessCounter = noop.Int64Counter{}
-
-	img, err := l.RenderTileNoCache(context.Background(), pkg.TileRequest{LayerName: "test", Z: 1, X: 0, Y: 0})
-
-	require.NoError(t, err)
-	require.NotNil(t, img)
-	require.Equal(t, int32(2), provider.preAuthCalls.Load(), "expected an initial PreAuth plus one re-auth after ProviderAuthError")
-	require.Equal(t, int32(2), provider.generateCalls.Load())
 }

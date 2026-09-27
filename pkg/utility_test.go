@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
+	"fmt"
 	"math/rand/v2"
 	"net/http"
 	"net/http/httptest"
@@ -331,4 +332,25 @@ func Test_DecodeImage_V1(t *testing.T) {
 	assert.Equal(t, []byte("tiledata"), img.Content)
 	assert.Equal(t, "image/png", img.ContentType)
 	assert.Zero(t, img.CreatedAt)
+}
+
+func TestPointerErrorsMatchValueTargets(t *testing.T) {
+	var authErr ProviderAuthError
+	require.ErrorAs(t, fmt.Errorf("wrapped: %w", &ProviderAuthError{Message: "m"}), &authErr)
+	assert.Equal(t, "m", authErr.Message)
+
+	var remoteErr RemoteServerError
+	require.ErrorAs(t, error(&RemoteServerError{StatusCode: 503}), &remoteErr)
+	assert.Equal(t, 503, remoteErr.StatusCode)
+
+	var typeErr InvalidContentTypeError
+	require.ErrorAs(t, error(&InvalidContentTypeError{ContentType: "text/html"}), &typeErr)
+	assert.Equal(t, "text/html", typeErr.ContentType)
+
+	var lengthErr InvalidContentLengthError
+	require.ErrorAs(t, error(&InvalidContentLengthError{Length: -1}), &lengthErr)
+	assert.Equal(t, -1, lengthErr.Length)
+
+	assert.False(t, (&RemoteServerError{}).As(&authErr))
+	assert.False(t, (*RemoteServerError)(nil).As(&remoteErr))
 }

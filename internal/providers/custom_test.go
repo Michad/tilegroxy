@@ -183,3 +183,41 @@ func generateTile() {}
 	assert.Nil(t, c)
 	require.Error(t, err)
 }
+
+func Test_CustomProviderAuthErrorFormsAllMatch(t *testing.T) {
+	for name, ret := range map[string]string{
+		"value":   `tilegroxy.AuthError{Message: "expired"}`,
+		"pointer": `&tilegroxy.AuthError{Message: "expired"}`,
+		"wrapped": `fmt.Errorf("upstream: %w", &tilegroxy.AuthError{Message: "expired"})`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			script := `
+package custom
+
+import (
+	"fmt"
+
+	"tilegroxy/tilegroxy"
+)
+
+var _ = fmt.Sprint
+
+func preAuth(ctx tilegroxy.Context, providerContext tilegroxy.ProviderContext, params map[string]interface{}, clientConfig tilegroxy.ClientConfig, errorMessages tilegroxy.ErrorMessages) (tilegroxy.ProviderContext, error) {
+	return tilegroxy.ProviderContext{AuthBypass: true}, nil
+}
+
+func generateTile(ctx tilegroxy.Context, providerContext tilegroxy.ProviderContext, tileRequest tilegroxy.TileRequest, params map[string]interface{}, clientConfig tilegroxy.ClientConfig, errorMessages tilegroxy.ErrorMessages) (*tilegroxy.Image, error) {
+	return nil, ` + ret + `
+}
+`
+			c, err := CustomRegistration{}.Initialize(CustomConfig{Script: script}, layer.ProviderDeps{ClientConfig: testClientConfig, ErrorMessages: testErrMessages})
+			require.NoError(t, err)
+
+			_, err = c.GenerateTile(pkg.BackgroundContext(), layer.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 1, X: 0, Y: 0})
+
+			var authErr pkg.ProviderAuthError
+			require.ErrorAs(t, err, &authErr)
+			assert.Equal(t, "expired", authErr.Message)
+		})
+	}
+}

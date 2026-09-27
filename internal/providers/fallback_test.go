@@ -251,3 +251,37 @@ func Test_Fallback_CacheMode(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, img.ForceSkipCache)
 }
+
+type errorTestProvider struct {
+	err error
+}
+
+func (p errorTestProvider) PreAuth(_ context.Context, pc layer.ProviderContext) (layer.ProviderContext, error) {
+	return pc, nil
+}
+
+func (p errorTestProvider) GenerateTile(_ context.Context, _ layer.ProviderContext, _ pkg.TileRequest) (*pkg.Image, error) {
+	return nil, p.err
+}
+
+func Test_Fallback_PropagatesProviderAuthError(t *testing.T) {
+	p, s := makeFallbackProvidersFail()
+
+	for name, authErr := range map[string]error{
+		"value":   pkg.ProviderAuthError{Message: "expired"},
+		"pointer": &pkg.ProviderAuthError{Message: "expired"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			built, err := FallbackRegistration{}.Initialize(FallbackConfig{Primary: p, Secondary: s}, layer.ProviderDeps{ErrorMessages: testErrMessages})
+			require.NoError(t, err)
+
+			f := built.(*Fallback)
+			f.Primary = errorTestProvider{err: authErr}
+
+			img, err := f.GenerateTile(pkg.BackgroundContext(), layer.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 1, X: 0, Y: 0})
+
+			require.Nil(t, img)
+			require.ErrorAs(t, err, &pkg.ProviderAuthError{})
+		})
+	}
+}

@@ -68,10 +68,10 @@ The following types are available for custom providers:
 | A struct containing the resulting imagery in a byte array called Content. You can optionally also include a field called ContentType with the mime-type of the resulting imagery. Example for how to return data: `&tilegroxy.Image{Content:[]byte{0x01,0x02}}`
 
 | link:../pkg/entities/layer/provider.go[AuthError]
-| An Error type to indicate an upstream provider returned an auth error that should trigger a new call to preAuth
+| An Error type to indicate an upstream provider returned an auth error that should trigger a new call to preAuth. It can be returned as either a value (`tilegroxy.AuthError{}`) or a pointer (`&tilegroxy.AuthError{}`), and it still counts when wrapped with `fmt.Errorf("%w", ...)`
 
 | link:../pkg/utility.go[GetTile]
-| A utility method that performs an HTTP GET request to a given URL. Use this when possible to ensure all standard Client configurations are honored
+| A utility method that performs an HTTP GET request to a given URL. Use this when possible to ensure all standard Client configurations are honored.
 |===
 
 === Custom Authentication
