@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
@@ -37,9 +38,25 @@ const (
 
 var allDiskLayouts = []DiskLayout{DiskLayoutFlat, DiskLayoutCoordinate}
 
+// FileMode is a permission set written either as a number or as an octal string like "0644"
+type FileMode uint32
+
+func (m *FileMode) UnmarshalText(text []byte) error {
+	octal := strings.TrimPrefix(strings.ToLower(string(text)), "0o")
+
+	// A bit size of 9 limits the value to the rwx permission bits, 0777
+	v, err := strconv.ParseUint(octal, 8, 9)
+	if err != nil {
+		return fmt.Errorf("%q is not an octal file mode between 0 and 0777", text)
+	}
+
+	*m = FileMode(v)
+	return nil
+}
+
 type DiskConfig struct {
 	Path     string
-	FileMode uint32
+	FileMode FileMode
 	Layout   DiskLayout
 }
 

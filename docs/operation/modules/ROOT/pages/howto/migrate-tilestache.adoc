@@ -71,7 +71,7 @@ The following are the known incompatibilities with tilestache configurations:
 +++</li></ul><li>+++
  Disk cache:
 +++</li><ul style="margin-bottom:0"><li>+++
-  No `umode` parameter - Instead use `filemode` with Go numerics instead of unix numerics
+  No `umode` parameter - Instead use `filemode`, which takes the permissions to apply rather than a umask. For example a `umode` of `0022` becomes a `filemode` of `"0755"`
 +++</li><li>+++
   No `dirs` parameter - Instead use `layout`, which offers `flat` and `coordinate`. There is no equivalent to the `safe` or `quadtile` structures
 +++</li><li>+++
