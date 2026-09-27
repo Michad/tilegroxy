@@ -24,6 +24,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Michad/tilegroxy/internal/deprecation"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
@@ -175,6 +176,7 @@ func resolveAlgorithms(cfg JWTConfig, errorMessages config.ErrorMessages) ([]str
 
 	algorithms := cfg.Algorithms
 	if cfg.Algorithm != "" {
+		deprecation.WarnConfig("authentication.algorithm", "authentication.algorithms", deprecation.NextMajorVersion)
 		algorithms = []string{cfg.Algorithm}
 	}
 
