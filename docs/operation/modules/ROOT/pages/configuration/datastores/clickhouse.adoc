@@ -2,7 +2,7 @@
 
 Defines a connection pool to a link:https://clickhouse.com/[ClickHouse] database.  Utilizes link:https://github.com/ClickHouse/clickhouse-go[clickhouse-go] under the hood.
 
-Currently used by the xref:configuration/analytics/clickhouse.adoc[clickhouse analytics module].
+Used by the xref:configuration/analytics/clickhouse.adoc[clickhouse analytics module].
 
 Name should be "clickhouse"
 

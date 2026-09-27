@@ -8,7 +8,6 @@ Tilegroxy lives between your map and your mapping providers to deliver a consist
 🚀 Built in Go. +
 🔌 Features a flexible plugin system powered by https://github.com/traefik/yaegi[Yaegi]. +
 💡 Inspired by https://github.com/tilestache/tilestache[tilestache] +
-🛠️ This project is still a work in progress. Changes may occur prior to the 1.0 release.
 
 :leveloffset: 1
 
