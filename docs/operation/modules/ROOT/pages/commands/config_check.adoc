@@ -2,6 +2,8 @@
 
 Validates your supplied configuration.
 
+This runs the same validation as xref:commands/serve.adoc[serve], including server, logging, and health check settings. It doesn't bind ports or open log files, so problems such as a port already in use or an unwritable log path only appear when serving.
+
 Full, up-to-date usage information can be found with `tilegroxy config check -h`.
 
 ----
