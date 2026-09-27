@@ -26,11 +26,11 @@ import (
 )
 
 type previewHandler struct {
-	generationHolder
+	*generationHolder
 }
 
-func newPreviewHandler(gen *generation) *previewHandler {
-	return &previewHandler{generationHolder{current: gen}}
+func newPreviewHandler(gens *generationHolder) *previewHandler {
+	return &previewHandler{gens}
 }
 
 // previewTemplateData is what previewPageTemplate renders. Fields are exported only because html/template requires it

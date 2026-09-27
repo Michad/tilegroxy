@@ -49,7 +49,7 @@ var packageName = static.GetPackage()
 var version, ref, buildDate = static.GetVersionInformation()
 
 type tileHandler struct {
-	generationHolder
+	*generationHolder
 	tracer             trace.Tracer
 	meter              metric.Meter
 	tileAllCounter     metric.Int64Counter
@@ -58,7 +58,7 @@ type tileHandler struct {
 	tileSuccessCounter metric.Int64Counter
 }
 
-func newTileHandler(gen *generation) (tileHandler, error) {
+func newTileHandler(gens *generationHolder) (tileHandler, error) {
 	meter := otel.Meter(packageName)
 
 	tileAllCounter, err1 := meter.Int64Counter("tilegroxy.tiles.total.request", metric.WithDescription("Number of total tile requests"))
@@ -67,7 +67,7 @@ func newTileHandler(gen *generation) (tileHandler, error) {
 	tileSuccessCounter, err4 := meter.Int64Counter("tilegroxy.tiles.total.success", metric.WithDescription("Number of tile requests that result in a tile"))
 
 	return tileHandler{
-		generationHolder{current: gen},
+		gens,
 		otel.Tracer(packageName),
 		meter,
 		tileAllCounter,
@@ -75,12 +75,6 @@ func newTileHandler(gen *generation) (tileHandler, error) {
 		tileErrorCounter,
 		tileSuccessCounter,
 	}, errors.Join(err1, err2, err3, err4)
-}
-
-func (h *tileHandler) reload(gen *generation) {
-	slog.WarnContext(pkg.BackgroundContext(), "Requesting to refresh entities from configuration")
-	h.generationHolder.reload(gen)
-	slog.WarnContext(pkg.BackgroundContext(), "Completed refreshing entities from configuration")
 }
 
 func setServiceSpanAttributes(span trace.Span) {

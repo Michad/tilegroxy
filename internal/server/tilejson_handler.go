@@ -33,18 +33,16 @@ type tileJSONIndexEntry struct {
 	TileJSON string `json:"tilejson"`
 }
 
-// tileJSONHandler serves both TileJSON endpoints. It tracks entities and generations the same way
-// tileHandler does, as a separate instance rather than sharing tileHandler's, since the index and
-// per-layer routes are distinct http.Handler registrations.
+// tileJSONHandler serves both TileJSON endpoints.
 type tileJSONHandler struct {
-	generationHolder
+	*generationHolder
 	// index selects between the two endpoints sharing this handler: true serves the
 	// RootPath/IndexPath listing, false serves TilePath/{layer}.json for one layer.
 	index bool
 }
 
-func newTileJSONHandler(gen *generation, index bool) *tileJSONHandler {
-	return &tileJSONHandler{generationHolder{current: gen}, index}
+func newTileJSONHandler(gens *generationHolder, index bool) *tileJSONHandler {
+	return &tileJSONHandler{gens, index}
 }
 
 // tileJSONHandlers bundles the two TileJSON endpoints and their routes, letting setupHandlers
@@ -60,13 +58,13 @@ type tileJSONHandlers struct {
 
 // setupTileJSONHandlers builds the TileJSON handlers when enabled. Its zero value (TileJSON
 // disabled) is safe to use directly: every method below no-ops on nil handlers.
-func setupTileJSONHandlers(cfg *config.Config, gen *generation) *tileJSONHandlers {
+func setupTileJSONHandlers(cfg *config.Config, gens *generationHolder) *tileJSONHandlers {
 	if !cfg.Server.TileJSON.Enabled {
 		return &tileJSONHandlers{}
 	}
 
-	index := newTileJSONHandler(gen, true)
-	document := newTileJSONHandler(gen, false)
+	index := newTileJSONHandler(gens, true)
+	document := newTileJSONHandler(gens, false)
 
 	return &tileJSONHandlers{
 		index:        index,
@@ -74,17 +72,8 @@ func setupTileJSONHandlers(cfg *config.Config, gen *generation) *tileJSONHandler
 		indexHTTP:    index,
 		documentHTTP: document,
 		indexPath:    cfg.Server.RootPath + cfg.Server.TileJSON.IndexPath,
-		documentPath: gen.tilePathPrefix() + "/{layerjson}",
+		documentPath: cfg.Server.RootPath + cfg.Server.TilePath + "/{layerjson}",
 	}
-}
-
-func (t *tileJSONHandlers) reload(gen *generation) {
-	if t.index == nil {
-		return
-	}
-
-	t.index.reload(gen)
-	t.document.reload(gen)
 }
 
 func (t *tileJSONHandlers) wrapWithTelemetry() {

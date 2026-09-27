@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"net/http"
 	"path/filepath"
 	"runtime/debug"
@@ -750,6 +751,11 @@ func unmarshal(viper *viper.Viper) (Config, error) {
 
 	if cacheIsList {
 		c.Cache = rawCaches
+	}
+
+	// Larger values overflow once converted to a time.Duration
+	if c.Server.Timeout > math.MaxInt32 {
+		c.Server.Timeout = math.MaxInt32
 	}
 
 	return c, nil
