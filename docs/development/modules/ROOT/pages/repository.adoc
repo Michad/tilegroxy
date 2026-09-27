@@ -33,7 +33,7 @@ Contains a Helm chart for installing tilegroxy on kubernetes
 
 Code specific for defining the CLI interface of tilegroxy go in here.  We should try to keep these files minimal with just the necessary cobra scaffolding, the core logic should be placed in the internal packages with the cmd code being essentially just a CLI wrapper.
 
-`cmd.Execute` is the entry point for anyone building their own executable with tilegroxy as a library, so it is part of the public API alongside `pkg`.
+`cmd.Execute` and `cmd.ExecuteArgs` are the entry points for anyone building their own executable with tilegroxy as a library, so they are part of the public API alongside `pkg`.
 
 == docs
 

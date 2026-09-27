@@ -18,6 +18,7 @@ import (
 	"errors"
 	"flag"
 	"os"
+	"strings"
 
 	_ "github.com/Michad/tilegroxy/internal/authentications"
 	_ "github.com/Michad/tilegroxy/internal/caches"
@@ -26,6 +27,7 @@ import (
 	_ "github.com/Michad/tilegroxy/internal/secrets"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 const reloadFlag = "hot-reload"
@@ -46,6 +48,43 @@ func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
 		exit(1)
+	}
+}
+
+// ExecuteArgs runs one command from args rather than the process arguments, so a wrapper can run
+// several in sequence. Flags don't carry over between runs. As with Execute, a failing command
+// exits the process.
+func ExecuteArgs(args ...string) {
+	resetFlags(rootCmd)
+	rootCmd.SetArgs(args)
+	Execute()
+}
+
+func resetFlags(c *cobra.Command) {
+	reset := func(f *pflag.Flag) {
+		if !f.Changed {
+			return
+		}
+
+		if sv, ok := f.Value.(pflag.SliceValue); ok {
+			var defaults []string
+			if trimmed := strings.Trim(f.DefValue, "[]"); trimmed != "" {
+				defaults = strings.Split(trimmed, ",")
+			}
+
+			_ = sv.Replace(defaults)
+		} else {
+			_ = f.Value.Set(f.DefValue)
+		}
+
+		f.Changed = false
+	}
+
+	c.PersistentFlags().VisitAll(reset)
+	c.Flags().VisitAll(reset)
+
+	for _, sub := range c.Commands() {
+		resetFlags(sub)
 	}
 }
 

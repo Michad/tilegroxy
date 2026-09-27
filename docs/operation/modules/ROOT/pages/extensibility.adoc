@@ -162,6 +162,8 @@ func main() {
 }
 ----
 
+To run tilegroxy commands from your own code instead of the command line, call `cmd.ExecuteArgs` with the arguments you would otherwise type. It can be called more than once to run several commands in sequence, such as `test` followed by `serve`. A command that fails exits the process, the same as it would from the command line.
+
 Tilegroxy uses a registration system to find and construct its main entities.  As long as you supply a struct that implements the XXXRegistration interface you can call the RegisterXXX method on startup to allow the tilegroxy internal to locate the struct.  For example, here is a minimal Provider implemented in this way:
 
 ----
@@ -235,4 +237,4 @@ The link:https://github.com/Michad/tilegroxy/tree/main/pkg[pkg package] contains
 | The optional `Closer` interface for releasing resources on shutdown or reload
 |===
 
-Apart from `cmd.Execute`, everything else lives under `internal/` and cannot be imported.
+Apart from `cmd.Execute` and `cmd.ExecuteArgs`, everything else lives under `internal/` and cannot be imported.

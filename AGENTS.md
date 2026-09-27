@@ -57,7 +57,7 @@ panic or defer validation to request time.
   here is a breaking change. Keep it minimal: entity interfaces, `Deps` structs, registrations,
   and the types they reference. Construction, wrappers, and utility code belong in `internal/`.
 - `internal/` holds the majority of logic. Safe to change freely.
-- `cmd/` is Cobra scaffolding only. Logic belongs in `internal/`. `cmd.Execute` is public API for library users.
+- `cmd/` is Cobra scaffolding only. Logic belongs in `internal/`. `cmd.Execute` and `cmd.ExecuteArgs` are public API for library users.
 - Root holds only what must be there. `_scratch/` is gitignored, use it for throwaway files.
 
 Backwards compatibility covers four surfaces: the `pkg/` API, the configuration schema
