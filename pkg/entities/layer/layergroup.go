@@ -135,11 +135,6 @@ func resolveLayerCache(l config.LayerConfig, caches *cache.CacheRegistry, errorM
 	return layerCache, nil
 }
 
-func isNoopCache(c cache.Cache) bool {
-	wrapper, ok := c.(cache.CacheWrapper)
-	return ok && wrapper.Name == "none"
-}
-
 // recursively walk a raw provider config collecting the layer names that `ref` entries target.
 func findRefTargets(node any, targets *[]string) {
 	switch v := node.(type) {

@@ -104,6 +104,11 @@ func ConstructCache(rawConfig map[string]interface{}, deps CacheDeps) (Cache, er
 	name, ok := rawConfig["name"].(string)
 
 	if ok {
+		ref, refExplicit := rawConfig["id"].(string)
+		if !refExplicit || ref == "" {
+			ref, refExplicit = name, false
+		}
+
 		// An alias for the no-op cache, so fixtures can name an obviously-fake cache. It goes
 		// through the same construction path operator config does, so `cache: {name: test}` in
 		// production is a no-op cache rather than an error.
@@ -119,7 +124,7 @@ func ConstructCache(rawConfig map[string]interface{}, deps CacheDeps) (Cache, er
 				return nil, err
 			}
 			a, err := reg.Initialize(cfg, deps)
-			return CacheWrapper{Name: name, Cache: a}, err
+			return CacheWrapper{Name: name, Cache: a, ref: ref, refExplicit: refExplicit}, err
 		}
 	}
 
