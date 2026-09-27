@@ -232,8 +232,6 @@ func Test_Open_Rejects(t *testing.T) {
 	}{
 		"brotli tiles":     {func(o *archiveOptions) { o.tileCompression = CompressionBrotli }, errUnsupportedCompression},
 		"zstd internal":    {func(o *archiveOptions) { o.internalCompression = CompressionZstd }, errUnsupportedCompression},
-		"mlt tile type":    {func(o *archiveOptions) { o.tileType = TileTypeMLT }, errUnsupportedTT},
-		"unknown type":     {func(o *archiveOptions) { o.tileType = TileTypeUnknown }, errUnsupportedTT},
 		"invalid metadata": {func(o *archiveOptions) { o.metadata = `{not json` }, nil},
 	}
 
@@ -249,6 +247,22 @@ func Test_Open_Rejects(t *testing.T) {
 				require.ErrorIs(t, err, c.target)
 			}
 		})
+	}
+}
+
+func Test_Open_AcceptsAnyTileType(t *testing.T) {
+	for _, tt := range []TileType{TileTypeUnknown, TileTypeMLT, 99} {
+		src := &memSource{data: buildArchive(t, archiveOptions{
+			tiles:               []testTile{{z: 0, x: 0, y: 0, data: []byte("tile")}},
+			tileType:            tt,
+			internalCompression: CompressionNone,
+			tileCompression:     CompressionNone,
+			metadata:            `{}`,
+		})}
+
+		a, err := Open(context.Background(), src, testMaxLength)
+		require.NoError(t, err, "type %d", tt)
+		assert.Equal(t, tt, a.Header().TileType)
 	}
 }
 

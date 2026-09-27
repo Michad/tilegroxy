@@ -73,14 +73,25 @@ func (s PMTilesRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (la
 	}
 
 	header := archive.Header()
-	contentType, _ := header.TileType.ContentType()
 
-	dataType := config.DataTypeRaster
-	if header.TileType == pmtiles.TileTypeMVT {
-		dataType = config.DataTypeMVT
+	return &PMTiles{
+		archive:     archive,
+		contentType: header.TileType.ContentType(),
+		metadata:    pmtilesMetadata(archive, pmtilesDataType(header.TileType)),
+	}, nil
+}
+
+func pmtilesDataType(tileType pmtiles.TileType) config.DataType {
+	switch tileType {
+	case pmtiles.TileTypeMVT:
+		return config.DataTypeMVT
+	case pmtiles.TileTypePNG, pmtiles.TileTypeJPEG, pmtiles.TileTypeWebP, pmtiles.TileTypeAVIF:
+		return config.DataTypeRaster
+	case pmtiles.TileTypeUnknown, pmtiles.TileTypeMLT:
+		return config.DataTypeUnknown
+	default:
+		return config.DataTypeUnknown
 	}
-
-	return &PMTiles{archive: archive, contentType: contentType, metadata: pmtilesMetadata(archive, dataType)}, nil
 }
 
 // Local archives are operator-supplied, so the client MaxLength only guards remote reads.

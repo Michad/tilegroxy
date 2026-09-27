@@ -1,16 +1,16 @@
 = PMTiles
 
-Serves tiles out of a link:https://docs.protomaps.com/pmtiles/[PMTiles] archive. A PMTiles archive is a single file holding a whole tileset, addressed entirely by byte range. This provider works either with a local file or via HTTP(s).
-
-Archives containing MVT, PNG, JPEG, WebP, or AVIF tiles are supported. Archives of any other tile type, such as MLT, fail at startup. Brotli or zstd compression are *not* supported. The `Content-Type` of every tile comes from the tile type in the archive header.
+Serves tiles out of a link:https://docs.protomaps.com/pmtiles/[PMTiles] archive. A PMTiles archive contains a pre-rendered tileset. This provider works either with a local file or via HTTP(s) (using range requests).
 
 The archive is treated as immutable and static, the file and URL won't work with request-time parameters. Replacing the file underneath a running tilegroxy is not supported and will lead to undefined behavior.
 
-We pull minzoom, maxzoom, bounds, center, and datatype from the archive header, and description, attribution, version, and vector_layers from the archive's metadata. Setting these fields on the xref:configuration/layer.adoc[layer] overrides the values taken from the archive. If you set `bounds` on the layer you must also set `datatype`, since the layer decides how to crop before the archive is opened.
+Brotli or zstd compression are *not* supported. The `Content-Type` of every tile comes from the tile type in the archive header, falling back to `application/octet-stream` when the tile type is unknown. 
 
-When using a URL the xref:configuration/client.adoc[client] `MaxLength` limits the size of every section read from the archive and the size of each tile after decompression. Archives with dense vector tiles may need a higher limit. Local files have no such limit. The client `UserAgent`, `Headers`, and `Timeout` apply to each range request. The `StatusCodes`, `ContentTypes`, and `UnknownLength` checks don't apply; the server must answer each range request with a 206.
+We pull metadata fields (including zoom range, bounds, and datatype) from the archive and make them available as defaults for the xref:configuration/layer.adoc[layer]. If you set `bounds` on the layer you must also set `datatype`, since the layer decides how to crop before the archive is opened.
 
-Archives often leave out empty tiles, such as open ocean. A request for a tile that isn't in the archive is treated as out of bounds and returns the xref:configuration/error.adoc[out of bounds error]. Wrap this provider in a xref:configuration/provider/fallback.adoc[fallback] if you want another provider to fill those gaps. 
+When using a URL the xref:configuration/client.adoc[client] `MaxLength` limits the size of every section/tile after any decompression. Archives with dense vector tiles may need a higher limit, but be mindful that increasing the size too much could leave you vulnerable to supply-side attacks. Local files have no such limit as those are under your control. The client configured `StatusCodes`, `ContentTypes`, and `UnknownLength` checks aren't enforced for this provider due the peculiarities of HTTP range requests.
+
+A request for a tile that isn't in the archive is treated as out of bounds and returns the xref:configuration/error.adoc[out of bounds error]. Wrap this provider in a xref:configuration/provider/fallback.adoc[fallback] if you want another provider to fill those gaps. 
 
 Name should be "pmtiles"
 

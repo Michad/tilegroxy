@@ -35,7 +35,6 @@ const maxSupportedZoom = 31
 var (
 	errTruncated       = errors.New("pmtiles: archive is truncated")
 	errTooDeep         = errors.New("pmtiles: directory nesting exceeds the spec limit")
-	errUnsupportedTT   = errors.New("pmtiles: unsupported tile type, only mvt, png, jpeg, webp and avif are supported")
 	errInvalidOffset   = errors.New("pmtiles: invalid archive: entry offset overflows")
 	errSectionTooLarge = errors.New("pmtiles: section exceeds the configured byte limit")
 	errZoomUnsupported = fmt.Errorf("pmtiles: max zoom above %d is not supported, Hilbert IDs only cover 0-%d", maxSupportedZoom, maxSupportedZoom)
@@ -67,9 +66,6 @@ func Open(ctx context.Context, source Source, maxLength int) (*Archive, error) {
 
 	if !header.InternalCompression.supported() || !header.TileCompression.supported() {
 		return nil, errUnsupportedCompression
-	}
-	if _, ok := header.TileType.ContentType(); !ok {
-		return nil, errUnsupportedTT
 	}
 	if header.MaxZoom > maxSupportedZoom {
 		return nil, errZoomUnsupported

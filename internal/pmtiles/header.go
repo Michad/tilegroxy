@@ -47,11 +47,14 @@ var contentTypes = map[TileType]string{
 	TileTypeJPEG: "image/jpeg",
 	TileTypeWebP: "image/webp",
 	TileTypeAVIF: "image/avif",
+	TileTypeMLT:  "application/vnd.maplibre-vector-tile",
 }
 
-func (t TileType) ContentType() (string, bool) {
-	ct, ok := contentTypes[t]
-	return ct, ok
+func (t TileType) ContentType() string {
+	if ct, ok := contentTypes[t]; ok {
+		return ct
+	}
+	return "application/octet-stream"
 }
 
 var headerMagic = [7]byte{'P', 'M', 'T', 'i', 'l', 'e', 's'}

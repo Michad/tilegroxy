@@ -75,20 +75,16 @@ func Test_Header_Center(t *testing.T) {
 
 func Test_TileType_ContentType(t *testing.T) {
 	cases := map[TileType]string{
-		TileTypeMVT:  "application/vnd.mapbox-vector-tile",
-		TileTypePNG:  "image/png",
-		TileTypeJPEG: "image/jpeg",
-		TileTypeWebP: "image/webp",
-		TileTypeAVIF: "image/avif",
+		TileTypeMVT:     "application/vnd.mapbox-vector-tile",
+		TileTypePNG:     "image/png",
+		TileTypeJPEG:    "image/jpeg",
+		TileTypeWebP:    "image/webp",
+		TileTypeAVIF:    "image/avif",
+		TileTypeMLT:     "application/vnd.maplibre-vector-tile",
+		TileTypeUnknown: "application/octet-stream",
+		99:              "application/octet-stream",
 	}
 	for tt, want := range cases {
-		got, ok := tt.ContentType()
-		assert.True(t, ok)
-		assert.Equal(t, want, got)
-	}
-
-	for _, tt := range []TileType{TileTypeUnknown, TileTypeMLT, 99} {
-		_, ok := tt.ContentType()
-		assert.False(t, ok, "type %d", tt)
+		assert.Equal(t, want, tt.ContentType(), "type %d", tt)
 	}
 }

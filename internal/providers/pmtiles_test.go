@@ -59,6 +59,23 @@ func Test_DataType_PMTiles(t *testing.T) {
 	assert.Equal(t, config.DataTypeUnknown, PMTilesRegistration{}.DataType(PMTilesConfig{}))
 }
 
+func Test_PMTiles_DataTypeFromTileType(t *testing.T) {
+	cases := map[pmtiles.TileType]config.DataType{
+		pmtiles.TileTypeMVT:     config.DataTypeMVT,
+		pmtiles.TileTypePNG:     config.DataTypeRaster,
+		pmtiles.TileTypeJPEG:    config.DataTypeRaster,
+		pmtiles.TileTypeWebP:    config.DataTypeRaster,
+		pmtiles.TileTypeAVIF:    config.DataTypeRaster,
+		pmtiles.TileTypeMLT:     config.DataTypeUnknown,
+		pmtiles.TileTypeUnknown: config.DataTypeUnknown,
+		99:                      config.DataTypeUnknown,
+	}
+
+	for tt, want := range cases {
+		assert.Equal(t, want, pmtilesDataType(tt), "type %d", tt)
+	}
+}
+
 func Test_PMTiles_ConfigValidation(t *testing.T) {
 	cases := map[string]PMTilesConfig{
 		"neither":      {},
