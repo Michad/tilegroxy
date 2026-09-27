@@ -299,25 +299,9 @@ func testTileRequests(layerObjects *layer.LayerGroup, opts TestOptions, errCount
 	pkg.SetIdentity(ctx, opts.UserID, opts.TenantID)
 
 	for _, req := range myReqs {
-		layer := layerObjects.FindLayer(ctx, req.LayerName)
-		img, layerErr := layer.RenderTileNoCache(ctx, req)
-		var cacheWriteError error
-		var cacheReadError error
-
-		if !opts.NoCache && layerErr == nil {
-			cacheWriteError = layer.Cache.Save(ctx, req, img)
-			if cacheWriteError == nil {
-				var img2 *pkg.Image
-				img2, cacheReadError = layer.Cache.Lookup(ctx, req)
-				if cacheReadError == nil {
-					if img2 == nil {
-						cacheReadError = errors.New("no result from cache lookup")
-					} else if !slices.Equal(img.Content, img2.Content) {
-						cacheReadError = errors.New("cache result doesn't match what we put into cache")
-					}
-				}
-			}
-		}
+		var res testTileResult
+		testTileRequest(ctx, layerObjects.FindLayer(ctx, req.LayerName), req, opts.NoCache, &res)
+		layerErr, cacheWriteError, cacheReadError := res.layerErr, res.cacheWriteErr, res.cacheReadErr
 
 		layerFailure := layerErr
 		if layerFailure == nil {
@@ -355,4 +339,50 @@ func testTileRequests(layerObjects *layer.LayerGroup, opts TestOptions, errCount
 	}
 
 	wg.Done()
+}
+
+type testTileResult struct {
+	layerErr      error
+	cacheWriteErr error
+	cacheReadErr  error
+}
+
+// Recovering per request keeps one broken provider, script or cache from aborting the whole run.
+func testTileRequest(ctx context.Context, l *layer.Layer, req pkg.TileRequest, noCache bool, res *testTileResult) {
+	stage := &res.layerErr
+
+	defer func() {
+		if r := recover(); r != nil {
+			*stage = fmt.Errorf("panic: %v", r)
+		}
+	}()
+
+	img, err := l.RenderTileNoCache(ctx, req)
+	if err == nil && img == nil {
+		err = errors.New("provider returned no image and no error")
+	}
+
+	res.layerErr = err
+	if noCache || err != nil {
+		return
+	}
+
+	stage = &res.cacheWriteErr
+
+	res.cacheWriteErr = l.Cache.Save(ctx, req, img)
+	if res.cacheWriteErr != nil {
+		return
+	}
+
+	stage = &res.cacheReadErr
+
+	img2, err := l.Cache.Lookup(ctx, req)
+	switch {
+	case err != nil:
+		res.cacheReadErr = err
+	case img2 == nil:
+		res.cacheReadErr = errors.New("no result from cache lookup")
+	case !slices.Equal(img.Content, img2.Content):
+		res.cacheReadErr = errors.New("cache result doesn't match what we put into cache")
+	}
 }
