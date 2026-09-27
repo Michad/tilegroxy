@@ -80,6 +80,12 @@ func init() {
 
 func initServe() {
 	rootCmd.AddCommand(serveCmd)
-	serveCmd.Flags().Bool(reloadFlag, false, "Reload configuration upon file changes or SIGHUP")
+	serveCmd.Flags().Bool(reloadFlag, false, "Automatically reload configuration upon changes")
+	serveCmd.Flags().Bool(reloadOnSignalFlag, false, "Reload configuration upon receiving SIGHUP")
 	serveCmd.MarkFlagsMutuallyExclusive("raw-config", reloadFlag)
+	serveCmd.MarkFlagsMutuallyExclusive("remote-provider", reloadFlag)
+	serveCmd.MarkFlagsMutuallyExclusive("remote-endpoint", reloadFlag)
+	serveCmd.MarkFlagsMutuallyExclusive("remote-path", reloadFlag)
+	serveCmd.MarkFlagsMutuallyExclusive("remote-type", reloadFlag)
+	serveCmd.MarkFlagsMutuallyExclusive("raw-config", reloadOnSignalFlag)
 }

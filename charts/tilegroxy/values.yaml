@@ -59,12 +59,15 @@ existingConfigMap: ""
 configPath: /tilegroxy/config/tilegroxy.yml
 
 # Watch the config file and hot reload supported sections without a restart.
-# Also reloads when the container receives SIGHUP.
 # Off by default: ConfigMap updates land as an atomic symlink swap that fsnotify
 # does report, but core sections (server, telemetry) still need a restart, so a
 # rollout is the predictable path. See
 # https://tilegroxy.com/operation/reloading.html
 hotReload: false
+
+# Reload supported sections when the container receives SIGHUP, for example via
+# `kubectl exec <pod> -- kill -HUP 1`. Independent of hotReload.
+reloadOnSignal: false
 
 # Restart pods when the rendered config changes. Only meaningful when the chart
 # owns the ConfigMap (existingConfigMap unset).

@@ -33,6 +33,7 @@ func newConfigFlagsCommand(t *testing.T, args ...string) *cobra.Command {
 	c.Flags().String("remote-path", "/config/tilegroxy.yml", "")
 	c.Flags().String("remote-type", "yaml", "")
 	c.Flags().Bool(reloadFlag, false, "")
+	c.Flags().Bool(reloadOnSignalFlag, false, "")
 	require.NoError(t, c.ParseFlags(args))
 
 	return c
@@ -45,8 +46,16 @@ func Test_ReloadSource_NilWithoutReloadFlag(t *testing.T) {
 	assert.Nil(t, source)
 }
 
-func Test_ReloadSource_RereadsFile(t *testing.T) {
+// File watching and signal reload are independent opt-ins
+func Test_ReloadSource_NilWithOnlyHotReload(t *testing.T) {
 	source, err := reloadSourceFromCommand(newConfigFlagsCommand(t, "--config", "../examples/configurations/simple.json", "--"+reloadFlag))
+
+	require.NoError(t, err)
+	assert.Nil(t, source)
+}
+
+func Test_ReloadSource_RereadsFile(t *testing.T) {
+	source, err := reloadSourceFromCommand(newConfigFlagsCommand(t, "--config", "../examples/configurations/simple.json", "--"+reloadOnSignalFlag))
 	require.NoError(t, err)
 	require.NotNil(t, source)
 
@@ -57,7 +66,7 @@ func Test_ReloadSource_RereadsFile(t *testing.T) {
 }
 
 func Test_ReloadSource_RereadsRemote(t *testing.T) {
-	source, err := reloadSourceFromCommand(newConfigFlagsCommand(t, "--remote-provider", "not-a-provider", "--"+reloadFlag))
+	source, err := reloadSourceFromCommand(newConfigFlagsCommand(t, "--remote-provider", "not-a-provider", "--"+reloadOnSignalFlag))
 	require.NoError(t, err)
 	require.NotNil(t, source)
 
@@ -67,7 +76,7 @@ func Test_ReloadSource_RereadsRemote(t *testing.T) {
 
 func Test_ReloadSource_ErrorsWithoutConfigFlags(t *testing.T) {
 	c := &cobra.Command{}
-	c.Flags().Bool(reloadFlag, true, "")
+	c.Flags().Bool(reloadOnSignalFlag, true, "")
 
 	_, err := reloadSourceFromCommand(c)
 

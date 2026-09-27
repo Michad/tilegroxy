@@ -88,6 +88,9 @@ spec:
             {{- if .Values.hotReload }}
             - --hot-reload
             {{- end }}
+            {{- if .Values.reloadOnSignal }}
+            - --reload-on-signal
+            {{- end }}
             {{- with .Values.extraArgs }}
             {{- toYaml . | nindent 12 }}
             {{- end }}

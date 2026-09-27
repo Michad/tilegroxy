@@ -23,6 +23,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -53,15 +54,20 @@ func init() {
 	}
 }
 
-func coreServeTest(t *testing.T, cfg string, port int, url string) (*http.Response, func(), error) {
+// reloadArgs replaces the default --hot-reload for file configs
+func coreServeTest(t *testing.T, cfg string, port int, url string, reloadArgs ...string) (*http.Response, func(), error) {
 	exitStatus = -1
 	rootCmd.ResetFlags()
 	serveCmd.ResetFlags()
 	initRoot()
 	initServe()
 
+	if reloadArgs == nil {
+		reloadArgs = []string{"--hot-reload"}
+	}
+
 	if _, err := os.Stat(cfg); err == nil {
-		rootCmd.SetArgs([]string{"serve", "-c", cfg, "--hot-reload"})
+		rootCmd.SetArgs(append([]string{"serve", "-c", cfg}, reloadArgs...))
 	} else {
 		rootCmd.SetArgs([]string{"serve", "--raw-config", cfg})
 	}
@@ -332,6 +338,48 @@ layers:
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Equal(t, "image/png", resp.Header["Content-Type"][0])
 	resp.Body.Close()
+}
+
+// Without --hot-reload a file change is ignored until SIGHUP asks for it
+func Test_ServeCommand_ReloadOnSignal(t *testing.T) {
+	cfgFile := filepath.Join(t.TempDir(), "test_servecommand_reload_on_signal.yml")
+
+	cfg1 := `server:
+  port: 12347
+layers:
+  - id: color
+    provider:
+      name: static
+      color: "FFFFFF"
+`
+	cfg2 := strings.Replace(cfg1, "id: color", "id: color2", 1)
+
+	require.NoError(t, os.WriteFile(cfgFile, []byte(cfg1), 0600))
+
+	resp, postFunc, err := coreServeTest(t, cfgFile, 12347, "http://localhost:12347/tiles/color/8/12/32", "--reload-on-signal") //nolint:bodyclose // Linter doesn't detect this right
+	defer postFunc()
+
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	status := func(layer string) int {
+		req, err := http.NewRequest(http.MethodGet, "http://localhost:12347/tiles/"+layer+"/8/12/32", nil)
+		require.NoError(t, err)
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		resp.Body.Close()
+
+		return resp.StatusCode
+	}
+
+	require.NoError(t, os.WriteFile(cfgFile, []byte(cfg2), 0600))
+	time.Sleep(3 * time.Second)
+	assert.Equal(t, http.StatusOK, status("color"), "a file change alone must not reload")
+
+	require.NoError(t, syscall.Kill(syscall.Getpid(), syscall.SIGHUP))
+
+	assert.Eventually(t, func() bool { return status("color2") == http.StatusOK }, 10*time.Second, 100*time.Millisecond)
+	assert.Equal(t, http.StatusUnauthorized, status("color"))
 }
 
 func Test_ServeCommand_ExecuteNoContentRoute(t *testing.T) {

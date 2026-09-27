@@ -27,7 +27,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const reloadFlag = "hot-reload"
+const (
+	reloadFlag         = "hot-reload"
+	reloadOnSignalFlag = "reload-on-signal"
+)
 
 var rootCmd = &cobra.Command{
 	Use:   "tilegroxy",
@@ -81,6 +84,7 @@ type configFlags struct {
 	remotePath     string
 	remoteType     string
 	reload         bool
+	reloadOnSignal bool
 }
 
 func readConfigFlags(cmd *cobra.Command) (configFlags, error) {
@@ -94,12 +98,9 @@ func readConfigFlags(cmd *cobra.Command) (configFlags, error) {
 	f.remotePath, err5 = cmd.Flags().GetString("remote-path")
 	f.remoteType, err6 = cmd.Flags().GetString("remote-type")
 
-	reload, err := cmd.Flags().GetBool(reloadFlag)
-	if err != nil {
-		// This is only defined in the serve command so expect it to fail in commands that don't support reload
-		reload = false
-	}
-	f.reload = reload
+	// These are only defined in the serve command, so an error just means reloading isn't supported
+	f.reload, _ = cmd.Flags().GetBool(reloadFlag)
+	f.reloadOnSignal, _ = cmd.Flags().GetBool(reloadOnSignalFlag)
 
 	return f, errors.Join(err1, err2, err3, err4, err5, err6)
 }
@@ -133,10 +134,10 @@ func extractConfigFromCommand(cmd *cobra.Command, reloadFunc func(c config.Confi
 	return &cfg, nil
 }
 
-// Re-reads the configuration from wherever the command loaded it. Nil when reloading wasn't requested
+// Re-reads the configuration from wherever the command loaded it. Nil when signal reload wasn't requested
 func reloadSourceFromCommand(cmd *cobra.Command) (func() (config.Config, error), error) {
 	f, err := readConfigFlags(cmd)
-	if err != nil || !f.reload {
+	if err != nil || !f.reloadOnSignal {
 		return nil, err
 	}
 

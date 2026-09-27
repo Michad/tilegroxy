@@ -176,9 +176,10 @@ the pod template and triggers a normal rollout) is the more predictable path. Se
 [reloading documentation](https://tilegroxy.com/operation/reloading.html) for the
 caveats, particularly on NFS and other filesystems without change notification.
 
-With `hotReload` on, a reload can also be triggered on demand by sending `SIGHUP` to the
-container, for example `kubectl exec <pod> -- kill -HUP 1`. Only do this with `hotReload`
-enabled: otherwise `SIGHUP` terminates tilegroxy and the pod restarts.
+`reloadOnSignal` passes `--reload-on-signal`, which reloads only when you send `SIGHUP` to the
+container, for example `kubectl exec <pod> -- kill -HUP 1`. It can be used with or without
+`hotReload`. Only send the signal with `reloadOnSignal` enabled: otherwise `SIGHUP` terminates
+tilegroxy and the pod restarts.
 
 ## Values
 
@@ -188,6 +189,7 @@ enabled: otherwise `SIGHUP` terminates tilegroxy and the pod restarts.
 | `existingConfigMap` | `""` | Mount a ConfigMap you manage instead of rendering `config` |
 | `configPath` | `/tilegroxy/config/tilegroxy.yml` | Where the config is mounted |
 | `hotReload` | `false` | Pass `--hot-reload` |
+| `reloadOnSignal` | `false` | Pass `--reload-on-signal` |
 | `restartOnConfigChange` | `true` | Roll pods when the rendered config changes |
 | `configCheck.enabled` | `true` | Validate the config in an init container |
 | `image.repository` | `ghcr.io/michad/tilegroxy` | Image repository |

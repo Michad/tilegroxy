@@ -21,6 +21,7 @@
     "existingConfigMap": { "type": "string" },
     "configPath": { "type": "string", "pattern": "^/.*\\.(ya?ml|json)$" },
     "hotReload": { "type": "boolean" },
+    "reloadOnSignal": { "type": "boolean" },
     "restartOnConfigChange": { "type": "boolean" },
     "extraArgs": { "type": "array", "items": { "type": "string" } },
     "env": { "type": "object", "additionalProperties": { "type": ["string", "number", "boolean"] } },
