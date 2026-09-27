@@ -69,6 +69,7 @@
 * xref:preview.adoc[]
 * xref:reloading.adoc[]
 * xref:security.adoc[]
+* xref:compatibility.adoc[]
 * xref:telemetry.adoc[]
 * xref:howto/index.adoc[]
 ** xref:howto/productionizing.adoc[]
