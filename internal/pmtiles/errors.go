@@ -39,5 +39,5 @@ func (e MissingTileError) Type() pkg.TypeOfError {
 }
 
 func (e MissingTileError) External(messages config.ErrorMessages) string {
-	return fmt.Sprintf(messages.InvalidParam, "tile", e.coordinates())
+	return fmt.Sprintf(messages.TileNotFound, e.coordinates())
 }

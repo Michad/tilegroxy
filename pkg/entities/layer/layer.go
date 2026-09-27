@@ -528,8 +528,7 @@ func (l *Layer) IsPattern() bool {
 	return l.Config.Pattern != "" && l.Config.Pattern != l.Config.ID
 }
 
-// CheckZoomBounds rejects a request outside this layer's minzoom/maxzoom. Called before the cache
-// lookup so a cached tile can't bypass a zoom limit added after it was cached.
+// Checked before the cache lookup so a cached tile can't bypass a zoom limit added later.
 func (l *Layer) CheckZoomBounds(tileRequest pkg.TileRequest) error {
 	minZoom, maxZoom := l.zoomRange()
 

@@ -141,7 +141,6 @@ func Test_HTTPSource_RangeIgnored(t *testing.T) {
 	t.Cleanup(srv.Close)
 	src := NewHTTPSource(srv.URL, testClientConfig(nil))
 
-	// Offset 0 but body (10 bytes) longer than the requested range (3 bytes): still ignored.
 	_, err := src.ReadRange(context.Background(), 0, 3)
 
 	require.ErrorIs(t, err, errRangeIgnored)

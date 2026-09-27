@@ -247,6 +247,7 @@ type ErrorMessages struct {
 	Timeout                 string
 	ParamRegex              string
 	MustBeUnique            string
+	TileNotFound            string
 }
 
 // Default embedded image keys, mirrored as literals from internal/images.GetStaticImage since
@@ -630,6 +631,7 @@ func DefaultConfig() Config {
 				ParamRequired:           "Parameter %v is required",
 				ParamRegex:              "Invalid value supplied for parameter %v: %v. Value must conform to regex: %v ",
 				MustBeUnique:            "Invalid value supplied for parameter %v: %v. Value must be unique. ",
+				TileNotFound:            "Tile %v is not available",
 			},
 			Images: ErrorImages{
 				OutOfBounds:    defaultImageTransparent,

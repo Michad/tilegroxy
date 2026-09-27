@@ -56,7 +56,6 @@ func (v VectorLayer) MarshalJSON() ([]byte, error) {
 	return json.Marshal(plain(v))
 }
 
-// WithDefaults fills every field left unset in m from defaults.
 func (m LayerMetadata) WithDefaults(defaults LayerMetadata) LayerMetadata {
 	if m.DataType == "" || m.DataType == DataTypeUnknown {
 		m.DataType = cmp.Or(defaults.DataType, m.DataType)

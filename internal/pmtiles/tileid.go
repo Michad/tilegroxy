@@ -17,11 +17,10 @@ package pmtiles
 const (
 	// Zooms below z hold 4^0 + ... + 4^(z-1) = (4^z - 1) / lowerZoomDivisor tiles.
 	lowerZoomDivisor = 3
-	// The Hilbert quadrant index is (3*rx) XOR ry.
-	quadrantFactor = 3
+	quadrantFactor   = 3
 )
 
-// ZxyToID converts tile coordinates to the Hilbert curve tile ID used by PMTiles v3.
+// Hilbert curve tile ID used by PMTiles v3.
 func ZxyToID(z uint8, x, y uint32) uint64 {
 	acc := (uint64(1)<<(2*uint64(z)) - 1) / lowerZoomDivisor
 

@@ -47,14 +47,13 @@ type TestOptions struct {
 	TenantID       string
 }
 
-// the default tile used when a layer has no configured center/bounds/zoom to derive one from.
+// The default tile used when a layer has no configured center/bounds/zoom to derive one from.
 const (
 	defaultZ = 10
 	defaultX = 123
 	defaultY = 534
 )
 
-// center is longitude, latitude, then an optional zoom
 const (
 	centerLatIndex  = 1
 	centerZoomIndex = 2

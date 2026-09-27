@@ -155,6 +155,32 @@ func Test_PMTiles_URL(t *testing.T) {
 	assert.Equal(t, "secret", gotHeader)
 }
 
+func Test_PMTiles_FileIgnoresMaxLength(t *testing.T) {
+	client := config.DefaultConfig().Client
+	client.MaxLength = 1
+	p := initPMTiles(t, PMTilesConfig{File: pmtilesPNGFixture}, &client)
+
+	_, err := p.GenerateTile(context.Background(), layer.ProviderContext{}, pkg.TileRequest{Z: 2, X: 0, Y: 1})
+	require.NoError(t, err)
+}
+
+func Test_PMTiles_URLEnforcesMaxLength(t *testing.T) {
+	data, err := os.ReadFile(pmtilesPNGFixture)
+	require.NoError(t, err)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeContent(w, r, "a.pmtiles", time.Time{}, bytes.NewReader(data))
+	}))
+	t.Cleanup(srv.Close)
+
+	client := config.DefaultConfig().Client
+	client.MaxLength = 1
+	p := initPMTiles(t, PMTilesConfig{URL: srv.URL + "/a.pmtiles"}, &client)
+
+	_, err = p.GenerateTile(context.Background(), layer.ProviderContext{}, pkg.TileRequest{Z: 2, X: 0, Y: 1})
+	require.Error(t, err)
+}
+
 func Test_PMTiles_LayerUsesArchiveMetadata(t *testing.T) {
 	cfg := config.DefaultConfig()
 	rawConfig := config.LayerConfig{

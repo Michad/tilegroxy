@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/url"
 
 	"github.com/Michad/tilegroxy/internal/pmtiles"
@@ -59,13 +60,13 @@ func (s PMTilesRegistration) DataType(_ any) config.DataType {
 func (s PMTilesRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(PMTilesConfig)
 
-	source, err := openPMTilesSource(cfg, deps)
+	source, maxLength, err := openPMTilesSource(cfg, deps)
 	if err != nil {
 		return nil, err
 	}
 
 	// Initialize receives no context, and HTTP reads are bounded by the client timeout.
-	archive, err := pmtiles.Open(context.Background(), source, deps.ClientConfig.MaxLength)
+	archive, err := pmtiles.Open(context.Background(), source, maxLength)
 	if err != nil {
 		_ = source.Close()
 		return nil, err
@@ -82,20 +83,22 @@ func (s PMTilesRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (la
 	return &PMTiles{archive: archive, contentType: contentType, metadata: pmtilesMetadata(archive, dataType)}, nil
 }
 
-func openPMTilesSource(cfg PMTilesConfig, deps layer.ProviderDeps) (pmtiles.Source, error) {
+// Local archives are operator-supplied, so the client MaxLength only guards remote reads.
+func openPMTilesSource(cfg PMTilesConfig, deps layer.ProviderDeps) (pmtiles.Source, int, error) {
 	switch {
 	case cfg.File != "" && cfg.URL != "":
-		return nil, fmt.Errorf(deps.ErrorMessages.ParamsMutuallyExclusive, "provider.pmtiles.file", "provider.pmtiles.url")
+		return nil, 0, fmt.Errorf(deps.ErrorMessages.ParamsMutuallyExclusive, "provider.pmtiles.file", "provider.pmtiles.url")
 	case cfg.File != "":
-		return pmtiles.OpenFile(cfg.File)
+		source, err := pmtiles.OpenFile(cfg.File)
+		return source, math.MaxInt, err
 	case cfg.URL != "":
 		u, err := url.Parse(cfg.URL)
 		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
-			return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "provider.pmtiles.url", "")
+			return nil, 0, fmt.Errorf(deps.ErrorMessages.InvalidParam, "provider.pmtiles.url", "")
 		}
-		return pmtiles.NewHTTPSource(cfg.URL, deps.ClientConfig), nil
+		return pmtiles.NewHTTPSource(cfg.URL, deps.ClientConfig), deps.ClientConfig.MaxLength, nil
 	default:
-		return nil, fmt.Errorf(deps.ErrorMessages.OneOfRequired, []string{"provider.pmtiles.file", "provider.pmtiles.url"})
+		return nil, 0, fmt.Errorf(deps.ErrorMessages.OneOfRequired, []string{"provider.pmtiles.file", "provider.pmtiles.url"})
 	}
 }
 
@@ -109,12 +112,11 @@ func pmtilesMetadata(archive *pmtiles.Archive, dataType config.DataType) config.
 		MaxZoom:  &maxZoom,
 	}
 
-	// Archives without bounds leave them zeroed, which would otherwise read as a point at null island.
+	// Archives omitting bounds or center leave them zeroed, which would otherwise read as null island.
 	if bounds := header.Bounds(); bounds.West < bounds.East && bounds.South < bounds.North {
 		md.Bounds = bounds.ToConfig()
 	}
 
-	// Archives without a center leave it zeroed too, which would otherwise read as null island at zoom 0.
 	if center := header.Center(); center[0] != 0 || center[1] != 0 || center[2] != 0 {
 		md.Center = center
 	}

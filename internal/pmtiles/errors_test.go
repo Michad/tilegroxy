@@ -27,6 +27,6 @@ func Test_MissingTileError(t *testing.T) {
 
 	var typed pkg.TypedError = err
 	assert.Equal(t, pkg.TypeOfError(pkg.TypeOfErrorBounds), typed.Type())
-	assert.Equal(t, "invalid tile: 3/1/2", typed.External(config.ErrorMessages{InvalidParam: "invalid %v: %v"}))
+	assert.Equal(t, "missing 3/1/2", typed.External(config.ErrorMessages{TileNotFound: "missing %v"}))
 	assert.Contains(t, err.Error(), "3/1/2")
 }
