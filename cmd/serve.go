@@ -58,7 +58,14 @@ func runServe(cmd *cobra.Command, _ []string) {
 		return
 	}
 
-	err = tg.Serve(cfg, tg.ServeOptions{}, out, &reloadPtr)
+	reloadSource, err := reloadSourceFromCommand(cmd)
+	if err != nil {
+		fmt.Fprintf(out, "Error: %v\n", err.Error())
+		exit(1)
+		return
+	}
+
+	err = tg.Serve(cfg, tg.ServeOptions{ReloadConfig: reloadSource}, out, &reloadPtr)
 
 	if err != nil {
 		fmt.Fprintf(out, "Error: %v\n", err.Error())

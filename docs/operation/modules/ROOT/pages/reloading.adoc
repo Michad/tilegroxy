@@ -1,10 +1,17 @@
-= Reloading Configuration
+= Reloading
 
-Tilegroxy supports automatic hot-loading of configuration without a restart or downtime when running as a server. Reloading must be explicitly enabled via the CLI parameter `--hot-reload`.
+Tilegroxy supports automatic reloading without a restart or downtime when running as a server. 
 
-Reloading occurs automatically within a few seconds of the configuration changing on the filesystem. When reloading the configuration, the new configuration is stored side-by-side with the previous configuration and swapped atomically. The exact timing of that change cannot be controlled but should occur within several seconds of configuration being updated depending on the size of your configuration.  Requests that are already in-flight while this change occurs will continue operating against the old configuration while requests coming in after the swap completes will use the new configuration.
+Reloading can occur in a few different situations: 
+1. If `--hot-reload` is enabled via the CLI, any changes to configuration will be detected and the system will be reloaded with the new configuration. Hot reloading occurs automatically within a few seconds of the configuration changing on the filesystem. 
+2. If a xref:configuration/secret/index.adoc[Secret] configuration includes the `TTL` parameter, the system will be automatically reloaded **without any changes to configuration** when the TTL expires
+3. If a SIGHUP signal is received, the configuration will be read and the system reloaded with the changes.
 
-== Warnings
+== Configuration Changes
+
+When reloading with a new/modified configuration, the new configuration is stored side-by-side with the previous configuration and swapped atomically. The exact timing of that change cannot be controlled but should occur within several seconds of configuration being read depending on the size of your configuration.  Requests that are already in-flight while this change occurs will continue operating against the old configuration while requests coming in after the swap completes will use the new configuration.
+
+=== Warnings
 
 Configuration changes that affect the core functionality of the service (for example changing the port of the HTTP server) still require a restart of the executable.
 
@@ -14,9 +21,10 @@ Buffered xref:configuration/analytics/index.adoc[analytics] events are flushed b
 
 Tilegroxy uses link:https://github.com/fsnotify/fsnotify[fsnotify] to detect when configuration has changed. It is possible for the file change event to reach tilegroxy before the file has finished being written. Tilegroxy waits 1 second before applying changes to avoid this but if you are using a filesystem with especially slow writes it is possible tilegroxy will attempt to read the configuration too early. This will usually result in an invalid configuration which will be ignored but could result in operating against incorrect configuration.  It is therefore recommended to avoid using hot reload if you're at risk of slow writes, especially if using YAML configurations.
 
-Automatic configuration reloading will not work with remote providers (such as etcd) or certain file systems that do not support file notifications (such as NFS, SMB, or FUSE).
+Automatic configuration reloading will not work with remote providers (such as etcd) or certain file systems that do not support file notifications (such as NFS, SMB, or FUSE). Use a reload signal in those cases.
 
-== Supported Configuration
+
+=== Supported Configuration
 
 The following sections of the configuration can be reloaded:
 
@@ -33,11 +41,20 @@ Every other section, including xref:configuration/server.adoc[server], is fixed 
 
 == Secrets
 
-xref:configuration/secret/index.adoc[Secret] has a `watch` option that, when set, can trigger a reload using the same mechanism described here. One key exception is that when a secret changes, the configuration itself *will not* change, even if the configuration has changed on disk. If you are using both secret reloading and configuration reloading, you may want to consider the timing of your changes to avoid excessive reloads.
+xref:configuration/secret/index.adoc[Secret] has a `watch` option that, when set, can trigger a reload using the same mechanism described here. One key exception is that when a secret changes, the configuration itself *will not* change, even if the configuration has changed on disk or remotely. If you are using both secret reloading and configuration reloading, you may want to consider the timing of your changes to avoid excessive reloads.
+
+
+== Reload signal
+
+Sending tilegroxy the `SIGHUP` signal re-reads the configuration from its original source and reloads it the same way a file change does. You may want to consider this method, rather than hot-reload, if you'll be manually modifying configuration, to avoid reloading partially completed changes.
+
+Unlike `--hot-reload`, this works with configuration pulled from a remote provider and on file systems without change notifications. Obviously the configuration will never change on reload if you use `--raw-config`.
+
+Manual and hot reloads never run at the same time, they are queued up to run serially. Reload signals are only supported on Linux, macOS, and other Unix-like systems. 
 
 == Shutdown
 
-For cases where you need to terminate the tilegroxy instance (when changing a non-reloadable section of config, or cycling pods), tilegroxy supports graceful shutdown to ensure requests aren't lost
+For cases where you need to terminate the tilegroxy instance (when changing a non-reloadable section of config, or cycling pods), tilegroxy supports graceful shutdown to ensure requests aren't lost when properly orchestrated.
 
 === Shutdown behaviour
 
@@ -68,7 +85,7 @@ Your orchestrator's grace period must be longer than the shutdown sequence it's 
 preStop sleep (or DrainDelay)  <  ShutdownTimeout  <  termination grace period
 ----
 
-Be careful to preserve this order when adjusting these values.  Raising `ShutdownTimeout` without also raising the grace period means the process is killed before it finishes.
+Be careful to preserve this order when adjusting these values.  Raising `ShutdownTimeout` without also raising the grace period means the process might be killed prematurely.
 
 In Docker Compose the grace period is `stop_grace_period` which defaults to 10 seconds and therefore needs raising for the default budget.  In Kubernetes it's `terminationGracePeriodSeconds`.  The Helm chart included with tilegroxy sets both that and a preStop hook for you.
 
