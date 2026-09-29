@@ -29,6 +29,8 @@ type TileJSONDocument struct {
 	MinZoom  int       `json:"minzoom"`
 	MaxZoom  int       `json:"maxzoom"`
 	Bounds   []float64 `json:"bounds"`
+	// Not part of the TileJSON spec. MapLibre GL JS reads it to know a source serves MapLibre Tiles
+	Encoding string `json:"encoding,omitempty"`
 	config.TileJSONMetadata
 }
 
@@ -57,8 +59,14 @@ func (l *Layer) BuildTileJSON(name string, tilesURLs []string, allowedArea *pkg.
 		bounds = pkg.BoundsFromConfig(md.Bounds)
 	}
 
+	encoding := ""
+	if md.DataType == config.DataTypeMLT {
+		encoding = string(config.DataTypeMLT)
+	}
+
 	return TileJSONDocument{
 		TileJSON:         tileJSONVersion,
+		Encoding:         encoding,
 		Name:             name,
 		Tiles:            tilesURLs,
 		MinZoom:          minZoom,

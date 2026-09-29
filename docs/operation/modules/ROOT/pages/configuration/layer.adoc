@@ -94,8 +94,8 @@ Configuration options:
 | None
 
 | datatype
-| Declares what type of tiles this layer returns. This is inferred from the provider when possible, including through a xref:configuration/provider/ref.adoc[ref] to another layer. If this contradicts the provider (for example datatype is raster but the provider always produces vector tiles) startup fails. Required if it can't be inferred and a feature relying on it (such as bounds) is used. Also determines the data type of xref:configuration/error.adoc[error responses] for this layer
-| string, one of: raster, mvt
+| Declares what type of tiles this layer returns: raster images, Mapbox Vector Tiles (mvt), or MapLibre Tiles (mlt). This is inferred from the provider when possible, including through a xref:configuration/provider/ref.adoc[ref] to another layer. If this contradicts the provider (for example datatype is raster but the provider always produces vector tiles) startup fails. Required if it can't be inferred and a feature relying on it (such as bounds) is used. Also determines the data type of xref:configuration/error.adoc[error responses] for this layer
+| string, one of: raster, mvt, mlt
 | No
 | Taken from the provider
 
@@ -112,7 +112,7 @@ Configuration options:
 | No upper limit
 
 | bounds
-| Restricts this layer to a geographic area. When set, the layer's provider is automatically cropped (via xref:configuration/provider/crop.adoc[crop] or xref:configuration/provider/cropmvt.adoc[cropmvt]). This requires the layer's data type to be resolvable. See <<Metadata>>
+| Restricts this layer to a geographic area. When set, the layer's provider is automatically cropped (via xref:configuration/provider/crop.adoc[crop], xref:configuration/provider/cropmvt.adoc[cropmvt], or xref:configuration/provider/cropmlt.adoc[cropmlt]). This requires the layer's data type to be resolvable. See <<Metadata>>
 | Object with north, south, east, west
 | No
 | Whole world

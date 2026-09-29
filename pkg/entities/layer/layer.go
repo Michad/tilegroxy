@@ -216,8 +216,13 @@ type Layer struct {
 // The inner provider is built and described first so the right bounds wrapper can be picked from its data type.
 func wrapBounds(inner Provider, rawConfig config.LayerConfig, datatype config.DataType, deps ProviderDeps) (Provider, error) {
 	wrapperName := "cropmvt"
-	if datatype == config.DataTypeRaster {
+
+	switch datatype {
+	case config.DataTypeRaster:
 		wrapperName = "crop"
+	case config.DataTypeMLT:
+		wrapperName = "cropmlt"
+	case config.DataTypeMVT, config.DataTypeUnknown:
 	}
 
 	reg, ok := RegisteredProvider(wrapperName)

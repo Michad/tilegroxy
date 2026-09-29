@@ -1,0 +1,31 @@
+= Composite MLT
+
+Allows you to combine MapLibre Tiles (MLT). If given one child provider that returns an MLT with layer "a" and another that returns an MLT with layer "b", this will return an MLT with layers "a" and "b".  The contents of the MLTs are not changed in any way.
+
+This is the MLT equivalent of the xref:configuration/provider/compositemvt.adoc[compositemvt] provider. MVT and MLT can't be mixed in one tile, so a child known to produce MVT, such as xref:configuration/provider/postgismvt.adoc[postgismvt], is rejected when the configuration is loaded.
+
+Name should be "compositemlt"
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| providers
+| The providers to combine.
+| Provider[]
+| Yes
+| None
+
+|===
+
+Example:
+
+----
+provider:
+  name: compositemlt
+  providers:
+  - name: pmtiles
+    file: /data/basemap.pmtiles
+  - name: url_template
+    template: https://tiles.example.com/overlay/{z}/{x}/{y}.mlt
+----

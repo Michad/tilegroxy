@@ -253,6 +253,41 @@ func Test_ConstructLayer_Bounds_MVT_WrapsInCropMvt(t *testing.T) {
 	require.Equal(t, "cropmvt", wrapper.Name)
 }
 
+func Test_ConstructLayer_Bounds_MLT_WrapsInCropMlt(t *testing.T) {
+	RegisterProvider(wrapMarkerRegistration{name: "cropmlt"})
+	RegisterProvider(fixedTypeTestRegistration{name: "fixed-mlt-1", dt: config.DataTypeMLT})
+
+	rawConfig := config.LayerConfig{
+		ID:            "l8-mlt",
+		LayerMetadata: config.LayerMetadata{Bounds: config.BoundsConfig{South: -10, North: 10, West: -10, East: 10}},
+		Provider:      map[string]any{"name": "fixed-mlt-1"},
+	}
+
+	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil)
+
+	require.NoError(t, err)
+	require.NotNil(t, l)
+	assert.Equal(t, config.DataTypeMLT, l.DataType)
+	wrapper, ok := l.Provider.(ProviderWrapper)
+	require.True(t, ok)
+	require.Equal(t, "cropmlt", wrapper.Name)
+}
+
+// Both are vector tiles, but a client configured for one can't decode the other.
+func Test_ConstructLayer_DataType_MltContradictsMvt_Fails(t *testing.T) {
+	RegisterProvider(fixedTypeTestRegistration{name: "fixed-mlt-2", dt: config.DataTypeMLT})
+
+	rawConfig := config.LayerConfig{
+		ID:            "l8-mlt-mvt",
+		LayerMetadata: config.LayerMetadata{DataType: config.DataTypeMVT},
+		Provider:      map[string]any{"name": "fixed-mlt-2"},
+	}
+
+	_, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil)
+
+	require.Error(t, err)
+}
+
 func Test_ConstructLayer_NoBounds_NoWrapping(t *testing.T) {
 	RegisterProvider(fixedTypeTestRegistration{name: "fixed-raster-3", dt: config.DataTypeRaster})
 

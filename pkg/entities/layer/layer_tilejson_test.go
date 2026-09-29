@@ -129,6 +129,7 @@ func Test_Layer_BuildTileJSON_Defaults(t *testing.T) {
 	assert.Equal(t, pkg.MaxZoom, doc.MaxZoom)
 	assert.Empty(t, doc.Description)
 	assert.Empty(t, doc.Attribution)
+	assert.Empty(t, doc.Encoding)
 	require.Len(t, doc.Bounds, 4)
 
 	world := pkg.WorldBounds()
@@ -153,6 +154,19 @@ func Test_Layer_BuildTileJSON_ExplicitFields(t *testing.T) {
 	assert.Equal(t, "Aerial imagery", doc.Description)
 	assert.Equal(t, "(c) Example", doc.Attribution)
 	assert.Equal(t, []float64{-7, 51, 0.1, 63}, doc.Bounds)
+}
+
+// MapLibre GL JS reads encoding from TileJSON, so an MLT source configures itself from the document.
+func Test_Layer_BuildTileJSON_MltEncoding(t *testing.T) {
+	l := resolvedLayer(t, config.LayerConfig{ID: "l3", LayerMetadata: config.LayerMetadata{DataType: config.DataTypeMLT}}, Description{})
+
+	doc := l.BuildTileJSON("l3", []string{"https://example.com/tiles/l3/{z}/{x}/{y}"}, nil)
+	assert.Equal(t, "mlt", doc.Encoding)
+
+	l = resolvedLayer(t, config.LayerConfig{ID: "l3", LayerMetadata: config.LayerMetadata{DataType: config.DataTypeMVT}}, Description{})
+
+	doc = l.BuildTileJSON("l3", []string{"https://example.com/tiles/l3/{z}/{x}/{y}"}, nil)
+	assert.Empty(t, doc.Encoding)
 }
 
 func Test_Layer_BuildTileJSON_IntersectsAllowedArea(t *testing.T) {

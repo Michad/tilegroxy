@@ -36,7 +36,7 @@ func Test_CompositeMVTCloseClosesChildProviders(t *testing.T) {
 	p2 := &closableProvider{}
 	// ConstructProvider always wraps, so one child is wrapped here to match what production
 	// actually builds: the close has to survive both hops, not just the forwarding one
-	c := &CompositeMVT{providers: []layer.Provider{layer.ProviderWrapper{Name: "child", Provider: p1}, p2}}
+	c := &CompositeVector{providers: []layer.Provider{layer.ProviderWrapper{Name: "child", Provider: p1}, p2}, contentType: mvtContentType}
 
 	require.NoError(t, layer.CloseProvider(context.Background(), c))
 
@@ -94,7 +94,7 @@ func Test_Composite_ChildErrorDoesNotHang(t *testing.T) {
 			good, err := StaticRegistration{}.Initialize(StaticConfig{Image: "embedded:box.mvt"}, layer.ProviderDeps{ClientConfig: testClientConfig, ErrorMessages: testErrMessages})
 			require.NoError(t, err)
 
-			c := &CompositeMVT{providers: []layer.Provider{bad, good}, errorMessages: testErrMessages}
+			c := &CompositeVector{providers: []layer.Provider{bad, good}, errorMessages: testErrMessages, contentType: mvtContentType}
 
 			done := make(chan error, 1)
 			go func() {
@@ -114,7 +114,7 @@ func Test_Composite_ChildErrorDoesNotHang(t *testing.T) {
 
 // Both children failing means both errors need to make it back to the caller.
 func Test_Composite_AllChildrenFailJoinsErrors(t *testing.T) {
-	c := &CompositeMVT{providers: []layer.Provider{&Fail{FailConfig{Message: "first"}}, &Fail{FailConfig{Message: "second"}}}, errorMessages: testErrMessages}
+	c := &CompositeVector{providers: []layer.Provider{&Fail{FailConfig{Message: "first"}}, &Fail{FailConfig{Message: "second"}}}, errorMessages: testErrMessages, contentType: mvtContentType}
 
 	img, err := c.GenerateTile(pkg.BackgroundContext(), layer.ProviderContext{}, pkg.TileRequest{LayerName: "l", Z: 9, X: 23, Y: 32})
 

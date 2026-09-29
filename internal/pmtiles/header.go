@@ -47,7 +47,8 @@ var contentTypes = map[TileType]string{
 	TileTypeJPEG: "image/jpeg",
 	TileTypeWebP: "image/webp",
 	TileTypeAVIF: "image/avif",
-	TileTypeMLT:  "application/vnd.maplibre-vector-tile",
+	// The PMTiles spec names no type. This matches what MapLibre GL JS requests.
+	TileTypeMLT: "application/vnd.maplibre-tile",
 }
 
 func (t TileType) ContentType() string {
