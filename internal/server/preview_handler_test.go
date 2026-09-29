@@ -472,3 +472,42 @@ func Test_PreviewTemplate_CenterWithoutBounds(t *testing.T) {
 	assert.Contains(t, buf.String(), "var center = [12.5,41.9,6]")
 	assert.Contains(t, buf.String(), "var bounds = null")
 }
+
+func servePreviewBody(t *testing.T, dataType config.DataType) string {
+	t.Helper()
+
+	cfg := config.DefaultConfig()
+	cfg.Layers = []config.LayerConfig{
+		{ID: "vec", LayerMetadata: config.LayerMetadata{DataType: dataType}, Provider: map[string]interface{}{"name": "proxy", "url": "http://example.com/{z}/{x}/{y}"}},
+	}
+
+	h := newPreviewHandler(buildTileJSONTestServing(t, cfg))
+
+	req := httptest.NewRequest(http.MethodGet, "http://internal-host/preview/vec", nil).WithContext(pkg.BackgroundContext())
+	req.SetPathValue("layer", "vec")
+	w := httptest.NewRecorder()
+
+	h.ServeHTTP(w, req)
+
+	res := w.Result()
+	defer func() { require.NoError(t, res.Body.Close()) }()
+
+	body, err := io.ReadAll(res.Body)
+	require.NoError(t, err)
+
+	return string(body)
+}
+
+// MapLibre GL JS decodes a source as MVT unless told otherwise, and the probe has to read the matching format.
+func Test_PreviewHandler_MltLayer(t *testing.T) {
+	body := servePreviewBody(t, config.DataTypeMLT)
+
+	assert.Contains(t, body, `type: "vector"`)
+	assert.Contains(t, body, `encoding: "mlt"`)
+	assert.Contains(t, body, "return mltLayerNames(buf)")
+
+	body = servePreviewBody(t, config.DataTypeMVT)
+
+	assert.NotContains(t, body, `encoding: "mlt"`)
+	assert.Contains(t, body, "return mvtLayerNames(buf)")
+}

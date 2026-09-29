@@ -17,6 +17,8 @@ package providers
 import (
 	"context"
 	"fmt"
+	"path/filepath"
+	"strings"
 
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/Michad/tilegroxy/pkg"
@@ -49,8 +51,23 @@ func (s StaticRegistration) Name() string {
 	return "static"
 }
 
-func (s StaticRegistration) DataType(_ any) config.DataType {
-	return config.DataTypeRaster
+func (s StaticRegistration) DataType(cfgAny any) config.DataType {
+	cfg, _ := cfgAny.(StaticConfig)
+	dataType, _ := staticImageFormat(cfg.Image)
+
+	return dataType
+}
+
+// Vector tiles are recognized by their extension, embedded ones included. Everything else is a PNG.
+func staticImageFormat(image string) (config.DataType, string) {
+	switch strings.ToLower(filepath.Ext(image)) {
+	case ".mvt", ".pbf":
+		return config.DataTypeMVT, mvtContentType
+	case ".mlt":
+		return config.DataTypeMLT, mltContentType
+	default:
+		return config.DataTypeRaster, mimePng
+	}
 }
 
 func (s StaticRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
@@ -69,7 +86,9 @@ func (s StaticRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (lay
 		return nil, err
 	}
 
-	return &Static{cfg, &pkg.Image{Content: *img, ContentType: mimePng}}, nil
+	_, contentType := staticImageFormat(cfg.Image)
+
+	return &Static{cfg, &pkg.Image{Content: *img, ContentType: contentType}}, nil
 }
 
 func (t Static) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.ProviderContext, error) {

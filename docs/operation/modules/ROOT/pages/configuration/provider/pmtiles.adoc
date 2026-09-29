@@ -4,7 +4,7 @@ Serves tiles out of a link:https://docs.protomaps.com/pmtiles/[PMTiles] archive.
 
 The archive is treated as immutable and static, the file and URL won't work with request-time parameters. Replacing the file underneath a running tilegroxy is not supported and will lead to undefined behavior.
 
-Brotli or zstd compression are *not* supported. The `Content-Type` of every tile comes from the tile type in the archive header, falling back to `application/octet-stream` when the tile type is unknown. 
+Brotli or zstd compression are *not* supported. The `Content-Type` of every tile comes from the tile type in the archive header, falling back to `application/octet-stream` when the tile type is unknown. Archives of MapLibre Tiles (MLT) are served as `application/vnd.maplibre-tile` with the `mlt` datatype.
 
 We pull metadata fields (including zoom range, bounds, and datatype) from the archive and make them available as defaults for the xref:configuration/layer.adoc[layer]. If you set `bounds` on the layer you must also set `datatype`, since the layer decides how to crop before the archive is opened.
 

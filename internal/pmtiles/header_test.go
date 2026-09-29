@@ -80,7 +80,7 @@ func Test_TileType_ContentType(t *testing.T) {
 		TileTypeJPEG:    "image/jpeg",
 		TileTypeWebP:    "image/webp",
 		TileTypeAVIF:    "image/avif",
-		TileTypeMLT:     "application/vnd.maplibre-vector-tile",
+		TileTypeMLT:     "application/vnd.maplibre-tile",
 		TileTypeUnknown: "application/octet-stream",
 		99:              "application/octet-stream",
 	}

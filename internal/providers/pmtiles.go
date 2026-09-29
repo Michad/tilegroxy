@@ -85,9 +85,11 @@ func pmtilesDataType(tileType pmtiles.TileType) config.DataType {
 	switch tileType {
 	case pmtiles.TileTypeMVT:
 		return config.DataTypeMVT
+	case pmtiles.TileTypeMLT:
+		return config.DataTypeMLT
 	case pmtiles.TileTypePNG, pmtiles.TileTypeJPEG, pmtiles.TileTypeWebP, pmtiles.TileTypeAVIF:
 		return config.DataTypeRaster
-	case pmtiles.TileTypeUnknown, pmtiles.TileTypeMLT:
+	case pmtiles.TileTypeUnknown:
 		return config.DataTypeUnknown
 	default:
 		return config.DataTypeUnknown

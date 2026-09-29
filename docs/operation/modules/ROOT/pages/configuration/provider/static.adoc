@@ -2,6 +2,8 @@
 
 Generates the same exact image for every single tile. This is most useful when used with either the Fallback or Blend providers.
 
+The image's extension decides what kind of tile it is. Images ending in `.mvt` or `.pbf` are served as Mapbox Vector Tiles and images ending in `.mlt` as MapLibre Tiles, which also sets the layer's `datatype`. Anything else is served as a PNG.
+
 Name should be "static"
 
 Configuration options:

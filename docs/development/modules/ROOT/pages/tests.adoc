@@ -20,6 +20,16 @@ Set `TILEGROXY_E2E_TIMEOUT_SCALE` to a multiplier to stretch every deadline when
 
 It's recommended you write an in-process test whenever possible.  A test that can be written with `httptest` belongs beside the code it covers where it runs faster and counts towards coverage.  The end-to-end tests are for verifying the binary, the process, and the build.
 
+== MLT spec compliance tests
+
+The MapLibre Tile codec in `internal/mlt` is checked against the conformance fixtures published in the link:https://github.com/maplibre/maplibre-tile-spec[maplibre-tile-spec] repository.  The tests fetch the fixtures from GitHub, so they need `git` and network access.
+
+Run them with `make mltspec`.  They're excluded from `make test` and `make unit` by the `mltspec` build tag.  
+
+By default the tests check out the latest `main` into a temporary directory that's removed afterwards.  Set `MLT_SPEC_REF` to a branch, tag, or full commit hash to test against a specific revision instead.  Set `MLT_SPEC_DIR` to an existing checkout to skip fetching entirely.
+
+Set `MLT_REENCODE_OUT` to a directory to save each re-encoded tile alongside its expected JSON, which is useful for checking tilegroxy's output with another implementation's decoder.
+
 == Coverage
 
 Code coverage can be calculated using the Makefile:

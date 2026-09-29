@@ -38,6 +38,9 @@ const defaultImageSize = 512
 // MvtContentType is the Content-Type used for vector tile responses, including empty/error MVTs.
 const MvtContentType = "application/vnd.mapbox-vector-tile"
 
+// MltContentType is the Content-Type used for MapLibre Tile responses, matching what MapLibre GL JS requests.
+const MltContentType = "application/vnd.maplibre-tile"
+
 //go:embed error.png
 var imageError []byte
 
@@ -67,6 +70,16 @@ const KeyMvtEmpty = "embedded:empty.mvt"
 var mvtBox []byte
 
 const KeyMvtBox = "embedded:box.mvt"
+
+//go:embed empty.mlt
+var mltEmpty []byte
+
+const KeyMltEmpty = "embedded:empty.mlt"
+
+//go:embed box.mlt
+var mltBox []byte
+
+const KeyMltBox = "embedded:box.mlt"
 
 const KeyPrefixColor = "color:"
 
@@ -162,6 +175,14 @@ func GetStaticImage(path string) (*[]byte, error) {
 
 	if path == KeyMvtBox {
 		return &mvtBox, nil
+	}
+
+	if path == KeyMltEmpty {
+		return &mltEmpty, nil
+	}
+
+	if path == KeyMltBox {
+		return &mltBox, nil
 	}
 
 	if img, err, ok := lookupCachedImage(path); ok {
