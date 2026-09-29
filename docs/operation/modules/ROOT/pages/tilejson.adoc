@@ -34,6 +34,8 @@ Most of a TileJSON document is derived from configuration that already exists fo
 
 `description`, `center`, `vector_layers`, and `attribution` are only populated when explicitly configured on the layer or through a provider that passes through metadata. They have no automatic value.
 
+`encoding` is set to `mlt` for layers whose `datatype` is `mlt` and left out otherwise. It isn't part of the TileJSON spec, but MapLibre reads it to know that a source serves MapLibre Tiles rather than MVT, so a source pointed at the document needs no further configuration.
+
 == Example
 
 Given a pattern layer configured with `examples: [my_foo_v1, my_bar_v2]`, requesting `/tiles/my_foo_v1.json` returns something like:

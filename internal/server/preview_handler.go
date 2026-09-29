@@ -46,6 +46,7 @@ type previewTemplateData struct {
 	MinZoom            int
 	MaxZoom            int
 	IsVector           bool
+	IsMLT              bool
 	VectorSourceLayers []string
 	SourceLayerKnown   bool
 	FromMetadata       bool
@@ -149,7 +150,8 @@ func (h *previewHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		Center:             center,
 		MinZoom:            doc.MinZoom,
 		MaxZoom:            doc.MaxZoom,
-		IsVector:           l.DataType == config.DataTypeMVT,
+		IsVector:           l.DataType == config.DataTypeMVT || l.DataType == config.DataTypeMLT,
+		IsMLT:              l.DataType == config.DataTypeMLT,
 		VectorSourceLayers: sourceLayers,
 		SourceLayerKnown:   sourceLayerKnown,
 		FromMetadata:       fromMetadata,

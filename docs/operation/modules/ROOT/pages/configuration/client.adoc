@@ -30,7 +30,7 @@ Configuration options:
 | The content-types to allow remote servers to return. Anything else will be interpreted as an error. See xref:../content-type.adoc[Content Type] for details
 | string[]
 | No
-| image/png, image/jpg, image/jpeg, application/vnd.mapbox-vector-tile, application/x-protobuf
+| image/png, image/jpg, image/jpeg, application/vnd.mapbox-vector-tile, application/x-protobuf, application/vnd.maplibre-tile, application/vnd.maplibre-vector-tile
 
 | StatusCodes
 | The status codes from the remote server to consider successful
@@ -45,7 +45,7 @@ Configuration options:
 | None
 
 | RewriteContentTypes
-| Replaces ``Content-Type``s that match the key with the value. This is to handle servers returning a generic content type. Mapping to an empty string that will cause tilegroxy to intuit the Content-Type by inspecting the contents - this may be inaccurate for MVT. This only applies after the check that Content-Type is valid according to the `ContentTypes` parameter meaning your original Content-Type will need to be in both parameters to be used
+| Replaces ``Content-Type``s that match the key with the value. This is to handle servers returning a generic content type. Mapping to an empty string that will cause tilegroxy to intuit the Content-Type by inspecting the contents - this may be inaccurate for MVT and MLT. This only applies after the check that Content-Type is valid according to the `ContentTypes` parameter meaning your original Content-Type will need to be in both parameters to be used
 | map[string]string
 | No
 | {"application/octet-stream": ""}

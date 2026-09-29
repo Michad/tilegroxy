@@ -26,8 +26,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
 const mimePng = "image/png"
@@ -37,6 +39,7 @@ var ctxRegex = regexp.MustCompile(`{ctx\.[^{}}]*}`)
 var lyrRegex = regexp.MustCompile(`{layer\.[^{}}]*}`)
 
 const mvtContentType = "application/vnd.mapbox-vector-tile"
+const mltContentType = images.MltContentType
 
 // placeholderSource identifies where a replacement value originated so callers that splice the
 // value into something else (e.g. a URL) can decide whether it needs escaping.
@@ -238,4 +241,13 @@ func replacePlaceholdersInString(ctx context.Context, tileRequest pkg.TileReques
 // library consumers writing their own Go providers can call it too.
 func getTile(ctx context.Context, clientConfig config.ClientConfig, url string, authHeaders map[string]string) (*pkg.Image, error) {
 	return pkg.GetTile(ctx, clientConfig, url, authHeaders)
+}
+
+// Reports a child known to produce the given data type, which the caller can't process.
+func checkForInvalidDataType(providerToCheck layer.Provider, invalidType config.DataType, path string, errorMessages config.ErrorMessages) error {
+	if layer.DescribeTree(providerToCheck).DataType == invalidType {
+		return fmt.Errorf(errorMessages.InvalidParam, path, string(invalidType))
+	}
+
+	return nil
 }

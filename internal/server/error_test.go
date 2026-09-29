@@ -62,6 +62,23 @@ func Test_ErrorVals_Mvt(t *testing.T) {
 	}
 }
 
+func Test_ErrorVals_Mlt(t *testing.T) {
+	cfg := config.DefaultConfig()
+
+	for i := pkg.TypeOfErrorBounds; i <= pkg.TypeOfErrorTimeout; i++ {
+		if pkg.TypeOfError(i) == pkg.TypeOfErrorAuth {
+			continue
+		}
+		_, _, imgPath, contentType := errorVars(&cfg.Error, pkg.TypeOfError(i), config.DataTypeMLT)
+		assert.Equal(t, "embedded:empty.mlt", imgPath)
+		assert.Equal(t, "application/vnd.maplibre-tile", contentType)
+	}
+
+	_, _, imgPath, contentType := errorVars(&cfg.Error, pkg.TypeOfErrorAuth, config.DataTypeMLT)
+	assert.Equal(t, cfg.Error.Images.Authentication, imgPath)
+	assert.Equal(t, "image/png", contentType)
+}
+
 // Auth errors must never reveal a layer's data type to an unauthenticated caller, so they always
 // use the raster image and image/png content type even when the layer is mvt.
 func Test_ErrorVals_Mvt_AuthAlwaysPng(t *testing.T) {
@@ -108,6 +125,19 @@ func Test_WriteErrorMessage_Mvt(t *testing.T) {
 	r := rw.Result()
 	defer func() { require.NoError(t, r.Body.Close()) }()
 	assert.Equal(t, "application/vnd.mapbox-vector-tile", r.Header.Get("Content-Type"))
+}
+
+func Test_WriteErrorMessage_Mlt(t *testing.T) {
+	cfg := config.DefaultConfig()
+	ctx := pkg.BackgroundContext()
+
+	rw := httptest.NewRecorder()
+
+	cfg.Error.Mode = config.ModeErrorImage
+	writeErrorMessage(ctx, rw, &cfg.Error, pkg.TypeOfErrorProvider, "test", "test", nil, config.DataTypeMLT)
+	r := rw.Result()
+	defer func() { require.NoError(t, r.Body.Close()) }()
+	assert.Equal(t, "application/vnd.maplibre-tile", r.Header.Get("Content-Type"))
 }
 
 func Test_WriteErrorAuditsAuthFailures(t *testing.T) {

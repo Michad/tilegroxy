@@ -50,6 +50,7 @@ func Test_SingleChildProviders_PassThroughDescription(t *testing.T) {
 		"transform":              Transform{provider: child},
 		"crop without bounds":    Crop{Primary: child},
 		"cropmvt without bounds": CropMvt{Primary: child},
+		"cropmlt without bounds": CropMlt{Primary: child},
 	}
 
 	for name, wrapper := range wrappers {
@@ -171,7 +172,7 @@ func Test_NestingProviders_Describe(t *testing.T) {
 		},
 		{
 			name:     "compositemvt unions its children",
-			provider: CompositeMVT{providers: []layer.Provider{primary, secondary}},
+			provider: CompositeVector{providers: []layer.Provider{primary, secondary}},
 			want:     union,
 		},
 		{
@@ -192,6 +193,11 @@ func Test_NestingProviders_Describe(t *testing.T) {
 		{
 			name:     "cropmvt clips to its bounds",
 			provider: CropMvt{CropMvtConfig: CropMvtConfig{Bounds: cropBounds}, Primary: primary},
+			want:     clipped,
+		},
+		{
+			name:     "cropmlt clips to its bounds",
+			provider: CropMlt{CropMltConfig: CropMltConfig{Bounds: cropBounds}, Primary: primary},
 			want:     clipped,
 		},
 		{

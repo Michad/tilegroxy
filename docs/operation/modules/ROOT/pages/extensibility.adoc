@@ -177,7 +177,7 @@ func (s SampleRegistration) Name() string {
 	return "sample"
 }
 
-// Declares what kind of tile this provider produces. Return config.DataTypeRaster or config.DataTypeMVT if it's always one or the other, or config.DataTypeUnknown if it depends. A provider nesting others can return config.DataTypeUnknown and let its children report theirs
+// Declares what kind of tile this provider produces. Return config.DataTypeRaster, config.DataTypeMVT, or config.DataTypeMLT if it's always one of them, or config.DataTypeUnknown if it depends. A provider nesting others can return config.DataTypeUnknown and let its children report theirs
 func (s SampleRegistration) DataType(cfgAny any) config.DataType {
 	return config.DataTypeUnknown
 }
