@@ -15,10 +15,16 @@
 package caches
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
+	"encoding/gob"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
+	"mime"
+	"net/http"
 	"os"
 	"path/filepath"
 	"slices"
@@ -37,14 +43,20 @@ const (
 
 var allDiskLayouts = []DiskLayout{DiskLayoutFlat, DiskLayoutCoordinate}
 
+const diskGzipMaxSize = 128 << 20
+
+var gzipMagic = []byte{0x1f, 0x8b}
+
 type DiskConfig struct {
 	Path     string
 	FileMode uint32
 	Layout   DiskLayout
+	Gzip     []string // Content types to store gzip compressed
 }
 
 type Disk struct {
 	DiskConfig
+	gzipTypes []string
 }
 
 // For the "flat" layout - layer name and tile coordinates in one filename
@@ -95,12 +107,83 @@ func (s DiskRegistration) Initialize(configAny any, deps cache.CacheDeps) (cache
 		return nil, fmt.Errorf(deps.ErrorMessages.EnumError, "cache.disk.layout", config.Layout, allDiskLayouts)
 	}
 
+	gzipTypes := make([]string, 0, len(config.Gzip))
+	for _, ct := range config.Gzip {
+		mediaType, _, err := mime.ParseMediaType(ct)
+		if err != nil {
+			return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "cache.disk.gzip", ct)
+		}
+		gzipTypes = append(gzipTypes, mediaType)
+	}
+
 	err := os.MkdirAll(config.Path, fs.FileMode(config.FileMode))
 	if err != nil {
 		return nil, err
 	}
 
-	return &Disk{config}, nil
+	return &Disk{config, gzipTypes}, nil
+}
+
+func (c Disk) shouldGzip(img *pkg.Image) bool {
+	if len(c.gzipTypes) == 0 || bytes.HasPrefix(img.Content, gzipMagic) {
+		return false
+	}
+
+	contentType := img.ContentType
+	if contentType == "" {
+		contentType = http.DetectContentType(img.Content)
+	}
+
+	mediaType, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return false
+	}
+
+	return slices.Contains(c.gzipTypes, mediaType)
+}
+
+func gzipBytes(b []byte) ([]byte, error) {
+	var buf bytes.Buffer
+	w := gzip.NewWriter(&buf)
+
+	if _, err := w.Write(b); err != nil {
+		return nil, err
+	}
+
+	if err := w.Close(); err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
+// Entries always hold a gob payload, so gzip is only trusted when it decompresses into one.
+// Anything else is a legacy raw entry that merely starts with the gzip magic bytes.
+func gunzipEntry(b []byte) ([]byte, error) {
+	if !bytes.HasPrefix(b, gzipMagic) {
+		return b, nil
+	}
+
+	r, err := gzip.NewReader(bytes.NewReader(b))
+	if err != nil {
+		return b, nil
+	}
+	defer r.Close()
+
+	out, err := io.ReadAll(io.LimitReader(r, diskGzipMaxSize+1))
+	if err != nil {
+		return b, nil
+	}
+	if len(out) > diskGzipMaxSize {
+		return nil, fmt.Errorf("disk cache entry decompresses to more than %d bytes", diskGzipMaxSize)
+	}
+
+	var version string
+	if err = gob.NewDecoder(bytes.NewReader(out)).Decode(&version); err != nil || len(version) == 0 || version[0] != 'v' {
+		return b, nil
+	}
+
+	return out, nil
 }
 
 func (c Disk) Lookup(_ context.Context, t pkg.TileRequest) (*pkg.Image, error) {
@@ -115,6 +198,10 @@ func (c Disk) Lookup(_ context.Context, t pkg.TileRequest) (*pkg.Image, error) {
 		return nil, err
 	}
 
+	if b, err = gunzipEntry(b); err != nil {
+		return nil, err
+	}
+
 	return pkg.DecodeImage(b)
 }
 
@@ -124,6 +211,12 @@ func (c Disk) Save(_ context.Context, t pkg.TileRequest, img *pkg.Image) error {
 
 	if err != nil {
 		return err
+	}
+
+	if c.shouldGzip(img) {
+		if b, err = gzipBytes(b); err != nil {
+			return err
+		}
 	}
 
 	if dir != c.Path {
