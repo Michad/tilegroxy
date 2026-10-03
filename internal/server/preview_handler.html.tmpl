@@ -63,6 +63,7 @@
       sources: {
         tiles: {
           type: {{if .IsVector}}"vector"{{else}}"raster"{{end}},
+          {{if .IsMLT}}encoding: "mlt",{{end}}
           tiles: [tileURL],
           {{if not .IsVector}}tileSize: 256,{{end}}
           minzoom: minZoom,
@@ -86,7 +87,7 @@
   map.addControl(new maplibregl.NavigationControl());
 
   {{if .IsVector}}
-  // Best-effort: fetch one sample tile directly and scan its raw protobuf bytes for the layer
+  // Best-effort: fetch one sample tile directly and scan its raw bytes for the layer
   function readVarint(bytes, pos) {
     var result = 0, shift = 0, b;
     do {
@@ -142,6 +143,23 @@
     return names;
   }
 
+  // MLT tiles are runs of layers, each with a size and format tag. v1 layers start with their name.
+  function mltLayerNames(bytes) {
+    var names = [];
+    var pos = { i: 0 };
+    while (pos.i < bytes.length) {
+      var size = readVarint(bytes, pos);
+      var end = pos.i + size;
+      if (size > 0 && bytes[pos.i] === 1) {
+        var layerPos = { i: pos.i + 1 };
+        var len = readVarint(bytes, layerPos);
+        names.push(new TextDecoder().decode(bytes.subarray(layerPos.i, layerPos.i + len)));
+      }
+      pos.i = end;
+    }
+    return names;
+  }
+
   function lonLatToTile(lon, lat, z) {
     var n = Math.pow(2, z);
     var x = Math.floor((lon + 180) / 360 * n);
@@ -167,7 +185,7 @@
       buf = new Uint8Array(await ds.arrayBuffer());
     }
 
-    return mvtLayerNames(buf);
+    return {{if .IsMLT}}mltLayerNames(buf){{else}}mvtLayerNames(buf){{end}};
   }
 
   if (!sourceLayerKnown) decodeSampleTileLayers().then(function (names) {

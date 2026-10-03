@@ -124,7 +124,7 @@ materially changes which entity or page to read next.
    layer; add `pattern`/`paramValidator`/`examples` only when the layer needs
    placeholder-based matching (see `layer.adoc`).
 3. **Pick a provider per layer.** `proxy` (ZXY/TMS tile server) and `url_template` (WMS)
-   are the common leaves. `ref`, `fallback`, `blend`, `crop`/`cropmvt`, `transform`,
+   are the common leaves. `ref`, `fallback`, `blend`, `crop`/`cropmvt`/`cropmlt`, `transform`,
    `effect` wrap or combine other providers - see `provider/index.adoc` for the full list.
    Avoid deep nesting; it has a real performance cost.
 4. **Add authentication** if this isn't purely internal. `none` (default) accepts

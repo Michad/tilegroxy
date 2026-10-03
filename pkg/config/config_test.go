@@ -163,12 +163,14 @@ server:
 }
 
 // Proxying a vector tile source is a documented use case, so the default allowlist has to cover
-// the MVT content types and not just raster ones.
+// the MVT and MLT content types and not just raster ones.
 func TestDefaultConfig_ContentTypesIncludesVectorTileTypes(t *testing.T) {
 	c := DefaultConfig()
 
 	assert.Contains(t, c.Client.ContentTypes, "application/vnd.mapbox-vector-tile")
 	assert.Contains(t, c.Client.ContentTypes, "application/x-protobuf")
+	assert.Contains(t, c.Client.ContentTypes, "application/vnd.maplibre-tile")
+	assert.Contains(t, c.Client.ContentTypes, "application/vnd.maplibre-vector-tile")
 }
 
 func TestValidate_InvalidErrorMode(t *testing.T) {

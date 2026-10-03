@@ -46,23 +46,23 @@ func errorVars(cfg *config.ErrorConfig, errorType pkg.TypeOfError, dataType conf
 	case pkg.TypeOfErrorBounds:
 		level = slog.LevelDebug
 		status = http.StatusBadRequest
-		imgPath, contentType = errorImage(cfg.Images.OutOfBounds, cfg.Images.OutOfBoundsMvt, dataType)
+		imgPath, contentType = errorImage(cfg.Images.OutOfBounds, cfg.Images.OutOfBoundsMvt, cfg.Images.OutOfBoundsMlt, dataType)
 	case pkg.TypeOfErrorProvider:
 		level = slog.LevelInfo
 		status = http.StatusInternalServerError
-		imgPath, contentType = errorImage(cfg.Images.Provider, cfg.Images.ProviderMvt, dataType)
+		imgPath, contentType = errorImage(cfg.Images.Provider, cfg.Images.ProviderMvt, cfg.Images.ProviderMlt, dataType)
 	case pkg.TypeOfErrorBadRequest:
 		level = slog.LevelDebug
 		status = http.StatusBadRequest
-		imgPath, contentType = errorImage(cfg.Images.Other, cfg.Images.OtherMvt, dataType)
+		imgPath, contentType = errorImage(cfg.Images.Other, cfg.Images.OtherMvt, cfg.Images.OtherMlt, dataType)
 	case pkg.TypeOfErrorTimeout:
 		level = slog.LevelWarn
 		status = http.StatusServiceUnavailable
-		imgPath, contentType = errorImage(cfg.Images.Other, cfg.Images.OtherMvt, dataType)
+		imgPath, contentType = errorImage(cfg.Images.Other, cfg.Images.OtherMvt, cfg.Images.OtherMlt, dataType)
 	default:
 		level = slog.LevelWarn
 		status = http.StatusInternalServerError
-		imgPath, contentType = errorImage(cfg.Images.Other, cfg.Images.OtherMvt, dataType)
+		imgPath, contentType = errorImage(cfg.Images.Other, cfg.Images.OtherMvt, cfg.Images.OtherMlt, dataType)
 	}
 
 	if cfg.AlwaysOK {
@@ -75,9 +75,13 @@ func errorVars(cfg *config.ErrorConfig, errorType pkg.TypeOfError, dataType conf
 // errorImage picks the raster or vector error image, and its Content-Type, based on the
 // erroring layer's data type. A layer whose data type couldn't be determined keeps the
 // long-standing PNG behavior.
-func errorImage(rasterPath string, mvtPath string, dataType config.DataType) (string, string) {
-	if dataType == config.DataTypeMVT {
+func errorImage(rasterPath string, mvtPath string, mltPath string, dataType config.DataType) (string, string) {
+	switch dataType {
+	case config.DataTypeMVT:
 		return mvtPath, images.MvtContentType
+	case config.DataTypeMLT:
+		return mltPath, images.MltContentType
+	case config.DataTypeRaster, config.DataTypeUnknown:
 	}
 
 	return rasterPath, "image/png"

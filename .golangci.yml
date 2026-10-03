@@ -5,6 +5,7 @@ run:
   # setting it would hide their callers and report the functions they use as unused.
   build-tags:
     - e2e
+    - mltspec
     - viper_bind_struct
 linters:
   settings:

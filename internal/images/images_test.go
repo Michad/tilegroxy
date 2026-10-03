@@ -154,3 +154,15 @@ func TestRenderColorImageDoesntCache(t *testing.T) {
 	_, err = RenderColorImage(KeyPrefixColor + "nope")
 	require.Error(t, err)
 }
+
+func TestEmbeddedVectorTiles(t *testing.T) {
+	for _, key := range []string{KeyMvtEmpty, KeyMvtBox, KeyMltEmpty, KeyMltBox} {
+		img, err := GetStaticImage(key)
+		require.NoError(t, err, key)
+		assert.NotNil(t, img, key)
+	}
+
+	box, err := GetStaticImage(KeyMltBox)
+	require.NoError(t, err)
+	assert.NotEmpty(t, *box)
+}

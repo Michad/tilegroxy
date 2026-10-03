@@ -28,7 +28,7 @@ link:https://tilegroxy.com/operation/configuration/authentication/jwt.html[Restr
 +++</li><li>+++
 Create your own link:https://tilegroxy.com/operation/extensibility.html[custom provider] to pull in non-standard and proprietary imagery sources
 +++</li><li>+++
-Support for both raster and vector format tiles
+Support for raster tiles and both the Mapbox Vector Tile (MVT) and MapLibre Tile (MLT) vector formats
 +++</li><li>+++
 Tweak your raster layers with link:https://tilegroxy.com/operation/configuration/provider/effect.html[18 standard effects] or by providing your own link:https://tilegroxy.com/operation/configuration/provider/transform.html[pixel-level logic]
 +++</li><li>+++
@@ -107,7 +107,7 @@ See link:https://tilegroxy.com/development/tests.html[developer documentation] f
 
 Tilegroxy is available as a container image on the Github container repository.
 
-You can pull the most recent versioned release with the `latest` tag and the very latest (and maybe buggy) build with the `edge` tag. Tags are also available for version numbers.  https://github.com/Michad/tilegroxy/pkgs/container/tilegroxy[See here for a full list].
+You can pull the most recent versioned release with the `latest` tag and the very latest (and maybe buggy) build with the `edge` tag. Tags are also available for version numbers.  https://github.com/Michad/tilegroxy/pkgs/container/tilegroxy[See here for a full list].  Tags for just the major version, such as `1`, pick up new releases without crossing a breaking change as described in xref:compatibility.adoc[Compatibility].
 
 For example:
 

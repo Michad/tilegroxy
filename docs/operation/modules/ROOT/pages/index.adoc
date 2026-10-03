@@ -15,7 +15,7 @@ link:https://tilegroxy.com/operation/configuration/authentication/jwt.html[Restr
 +++</li><li>+++
 Create your own link:https://tilegroxy.com/operation/extensibility.html[custom provider] to pull in non-standard and proprietary imagery sources
 +++</li><li>+++
-Support for both raster and vector format tiles
+Support for raster tiles and both the Mapbox Vector Tile (MVT) and MapLibre Tile (MLT) vector formats
 +++</li><li>+++
 Tweak your raster layers with link:https://tilegroxy.com/operation/configuration/provider/effect.html[18 standard effects] or by providing your own link:https://tilegroxy.com/operation/configuration/provider/transform.html[pixel-level logic]
 +++</li><li>+++

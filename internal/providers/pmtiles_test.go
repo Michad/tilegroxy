@@ -66,7 +66,7 @@ func Test_PMTiles_DataTypeFromTileType(t *testing.T) {
 		pmtiles.TileTypeJPEG:    config.DataTypeRaster,
 		pmtiles.TileTypeWebP:    config.DataTypeRaster,
 		pmtiles.TileTypeAVIF:    config.DataTypeRaster,
-		pmtiles.TileTypeMLT:     config.DataTypeUnknown,
+		pmtiles.TileTypeMLT:     config.DataTypeMLT,
 		pmtiles.TileTypeUnknown: config.DataTypeUnknown,
 		99:                      config.DataTypeUnknown,
 	}

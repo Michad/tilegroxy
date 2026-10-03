@@ -63,6 +63,7 @@ type DataType string
 const (
 	DataTypeRaster  DataType = "raster"
 	DataTypeMVT     DataType = "mvt"
+	DataTypeMLT     DataType = "mlt"
 	DataTypeUnknown DataType = "unknown"
 )
 
@@ -257,6 +258,7 @@ const (
 	defaultImageTransparent  = "embedded:transparent.png"
 	defaultImageUnauthorized = "embedded:unauthorized.png"
 	defaultImageMvtEmpty     = "embedded:empty.mvt"
+	defaultImageMltEmpty     = "embedded:empty.mlt"
 )
 
 // Selects what image to return when various errors occur. These should either be an embedded:XXX value reflecting an image in `internal/images` or the path to an image in the runtime filesystem.
@@ -269,6 +271,10 @@ type ErrorImages struct {
 	OutOfBoundsMvt string // Vector-tile equivalent of OutOfBounds, used when the layer's data type is mvt
 	ProviderMvt    string // Vector-tile equivalent of Provider, used when the layer's data type is mvt
 	OtherMvt       string // Vector-tile equivalent of Other, used when the layer's data type is mvt
+
+	OutOfBoundsMlt string // MapLibre Tile equivalent of OutOfBounds, used when the layer's data type is mlt
+	ProviderMlt    string // MapLibre Tile equivalent of Provider, used when the layer's data type is mlt
+	OtherMlt       string // MapLibre Tile equivalent of Other, used when the layer's data type is mlt
 }
 
 type ErrorConfig struct {
@@ -585,7 +591,7 @@ func DefaultConfig() Config {
 			UserAgent:           "tilegroxy/" + version,
 			MaxLength:           1024 * 1024 * 10,
 			UnknownLength:       new(false),
-			ContentTypes:        []string{"image/png", "image/jpg", "image/jpeg", "application/vnd.mapbox-vector-tile", "application/x-protobuf"},
+			ContentTypes:        []string{"image/png", "image/jpg", "image/jpeg", "application/vnd.mapbox-vector-tile", "application/x-protobuf", "application/vnd.maplibre-tile", "application/vnd.maplibre-vector-tile"},
 			StatusCodes:         []int{http.StatusOK},
 			Headers:             map[string]string{},
 			Timeout:             10,
@@ -642,6 +648,10 @@ func DefaultConfig() Config {
 				OutOfBoundsMvt: defaultImageMvtEmpty,
 				ProviderMvt:    defaultImageMvtEmpty,
 				OtherMvt:       defaultImageMvtEmpty,
+
+				OutOfBoundsMlt: defaultImageMltEmpty,
+				ProviderMlt:    defaultImageMltEmpty,
+				OtherMlt:       defaultImageMltEmpty,
 			},
 			AlwaysOK: false,
 		},
