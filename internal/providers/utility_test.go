@@ -139,6 +139,22 @@ func Test_ReplaceURLPlaceholders_CtxValueNormalStillWorks(t *testing.T) {
 	require.Equal(t, "https://example.com/tiles/1/1/0.png?agent=my-agent", result)
 }
 
+// Auth state and repeated headers must render in {ctx.*} exactly as they did under the old string-keyed context.
+func Test_ReplaceURLPlaceholders_CtxStateAndRepeatedHeader(t *testing.T) {
+	req, err := http.NewRequest(http.MethodGet, "http://example.com", nil)
+	require.NoError(t, err)
+	req.Header.Add("X-Multi", "a")
+	req.Header.Add("X-Multi", "b")
+
+	ctx := pkg.NewRequestContext(req)
+	pkg.SetIdentity(ctx, "someone", "acme")
+
+	result, err := replaceURLPlaceholders(ctx, pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com/{ctx.tenant}/{z}/{x}/{y}.png?u={ctx.user}&m={ctx.X-Multi}", false, pkg.SRIDWGS84)
+
+	require.NoError(t, err)
+	require.Equal(t, "https://example.com/acme/1/1/0.png?u=someone&m=%5Ba+b%5D", result)
+}
+
 // A template combining a trusted {env.*} value with an untrusted {layer.*} value should escape
 // only the latter.
 func Test_ReplaceURLPlaceholders_MixedEnvAndLayerOnlyEscapesLayer(t *testing.T) {

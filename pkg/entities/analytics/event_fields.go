@@ -215,7 +215,6 @@ func resolveExtraField(ctx context.Context, spec string) (any, bool) {
 }
 
 func contextValue(ctx context.Context, key string) (any, bool) {
-	//nolint:staticcheck // The request context uses plain string keys
 	v := ctx.Value(key)
 	if v == nil {
 		return nil, false

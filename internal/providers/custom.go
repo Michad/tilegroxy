@@ -90,6 +90,9 @@ func (s CustomRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (lay
 			"Image":           reflect.ValueOf((*pkg.Image)(nil)),
 			"AuthError":       reflect.ValueOf((*pkg.ProviderAuthError)(nil)),
 			"GetTile":         reflect.ValueOf(getTile),
+
+			"RequestState":            reflect.ValueOf((*pkg.RequestState)(nil)),
+			"RequestStateFromContext": reflect.ValueOf(pkg.RequestStateFromContext),
 		}})
 	if err != nil {
 		return nil, err
