@@ -218,15 +218,110 @@ func Test_Decode_SkipsOtherLayerFormats(t *testing.T) {
 }
 
 // A tiny tile can claim billions of values through run lengths.
-func Test_Decode_RejectsExcessiveExpansion(t *testing.T) {
+func excessiveRunsLayer() []byte {
 	body := appendString(nil, "l")
 	body = append(body, 1, 1, codeGeometry, 2)
 	body = append(body, streamType(categoryLength, lengthVarBinary), logicalRle|physicalVarint, 2, 6, 1, 0xFF, 0xFF, 0xFF, 0xFF, 0x0F)
 	body = append(body, 0xFF, 0xFF, 0xFF, 0xFF, 0x0F, 0)
 	body = appendVertexStream(body, nil)
 
-	_, _, err := Decode(layerBytes(body))
-	require.ErrorIs(t, err, ErrUnsupported)
+	return layerBytes(body)
+}
+
+// Each use of a dictionary entry is charged, since encoding writes it out again.
+func repeatedDictionaryLayer() []byte {
+	entry := make([]byte, 1<<20)
+	codes := appendVarint(appendVarint(nil, 60), 0)
+
+	return withColumn([]byte{byte(ColumnString), 1, 's'}, []byte{3},
+		appendVarintStream(nil, categoryLength, lengthDictionary, []uint64{uint64(len(entry))}),
+		append(appendStreamHeader(nil, categoryOffset, offsetString, logicalRle|physicalVarint, 2, uint64(len(codes))), append([]byte{1, 60}, codes...)...),
+		appendRawStream(nil, categoryData, dataSingle, 1, entry))
+}
+
+// A short FSST corpus of long symbols expands enormously.
+func fsstBombLayer() []byte {
+	symbol := make([]byte, 1<<16)
+	corpus := make([]byte, 1000)
+
+	return withColumn([]byte{byte(ColumnString), 1, 's'}, []byte{4},
+		appendVarintStream(nil, categoryLength, lengthSymbol, []uint64{uint64(len(symbol))}),
+		appendRawStream(nil, categoryData, dataFSST, 1, symbol),
+		appendVarintStream(nil, categoryLength, lengthDictionary, []uint64{uint64(len(symbol) * len(corpus))}),
+		appendRawStream(nil, categoryData, dataSingle, 1, corpus))
+}
+
+func Test_Decode_SkipsLayersPastTheTileLimit(t *testing.T) {
+	small := Layer{Name: "small", Extent: 1, Geometries: []orb.Geometry{orb.Point{1, 1}}}
+	good, err := Encode([]Layer{small})
+	require.NoError(t, err)
+
+	tests := map[string][]byte{
+		"run lengths":         excessiveRunsLayer(),
+		"repeated dictionary": repeatedDictionaryLayer(),
+		"FSST expansion":      fsstBombLayer(),
+	}
+
+	for name, bad := range tests {
+		t.Run(name, func(t *testing.T) {
+			layers, skipped, err := Decode(append(append(append([]byte{}, good...), bad...), good...))
+			require.NoError(t, err)
+			assert.Equal(t, []Layer{small, small}, layers)
+			assert.Equal(t, 1, skipped)
+		})
+	}
+}
+
+func Test_Decode_DropsOversizedFeatures(t *testing.T) {
+	line := make(orb.LineString, maxFeatureBytes/pointBytes+1)
+	for i := range line {
+		line[i] = orb.Point{float64(i % 4096), float64(i / 4096)}
+	}
+
+	l := Layer{Name: "big", Extent: 4096,
+		Geometries: []orb.Geometry{orb.Point{1, 1}, line, orb.MultiLineString{{{0, 0}, {1, 1}}, line}, orb.Point{2, 2}},
+		Columns:    []Column{{Type: ColumnUint32, Name: "n", Values: []uint32{0, 1, 2, 3}}},
+	}
+
+	data, err := Encode([]Layer{l})
+	require.NoError(t, err)
+
+	layers, skipped, err := Decode(data)
+	require.NoError(t, err)
+	assert.Zero(t, skipped)
+	require.Len(t, layers, 1)
+	assert.Equal(t, []orb.Geometry{orb.Point{1, 1}, orb.Point{2, 2}}, layers[0].Geometries)
+	assert.Equal(t, []uint32{0, 3}, layers[0].Columns[0].Values)
+}
+
+func Test_DropOversized_CountsProperties(t *testing.T) {
+	huge := string(make([]byte, maxFeatureBytes))
+	l := Layer{Name: "l", Extent: 1,
+		ID:         &IDColumn{Values: []uint64{1, 2, 3}},
+		Geometries: []orb.Geometry{orb.Point{0, 0}, orb.Point{1, 1}, orb.Point{2, 2}},
+		Columns: []Column{
+			{Type: ColumnString, Name: "s", Values: []string{"a", huge, "c"}},
+			{Type: ColumnSharedDict, Name: "d", Children: []Column{{Type: ColumnString, Name: "x", Values: []string{huge, "b", "c"}}}},
+			{Type: ColumnBool, Name: "b", Values: []bool{true, false, true}},
+		},
+	}
+
+	kept := l.dropOversized([]int{pointBytes, pointBytes, pointBytes})
+	assert.Equal(t, []uint64{3}, kept.ID.Values)
+	assert.Equal(t, []string{"c"}, kept.Columns[0].Values)
+	assert.Equal(t, 1, l.dropOversized([]int{maxFeatureBytes, 0, 0}).FeatureCount(), "geometry and properties add up")
+}
+
+func Test_ExpandRuns_RejectsOverflowingRuns(t *testing.T) {
+	_, err := expandRuns(newReader(nil), []uint64{1, math.MaxUint64, 1, 7, 8, 9}, 3, 1)
+	require.ErrorIs(t, err, ErrMalformed)
+}
+
+func Test_FastPFOR_RejectsMoreExceptionsThanValues(t *testing.T) {
+	d := fastPFORDecoder{words: []uint32{fastPFORBlockSize + 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}
+
+	_, _, err := d.exceptionStreams(1<<1, 0, fastPFORBlockSize)
+	require.ErrorIs(t, err, ErrMalformed)
 }
 
 func layerBytes(body []byte) []byte {
@@ -357,6 +452,10 @@ func Test_Decode_RejectsMalformedGeometry(t *testing.T) {
 		"line without lengths":     withGeometry([]uint64{uint64(typeLineString)}, 2, vertices()),
 		"vertex offset":            withGeometry([]uint64{0}, 3, lengths(categoryOffset, offsetVertex, 3), vertices(1, 1)),
 		"tessellation only":        withGeometry([]uint64{uint64(typePolygon)}, 3, lengths(categoryOffset, offsetIndex, 0), vertices()),
+		"huge multi count": withGeometry([]uint64{uint64(typeMultiPoint)}, 3,
+			lengths(categoryLength, lengthGeometries, math.MaxInt32), vertices(1, 1)),
+		"huge ring count": withGeometry([]uint64{uint64(typePolygon)}, 4,
+			lengths(categoryLength, lengthParts, math.MaxInt32), lengths(categoryLength, lengthRings, 1), vertices(1, 1)),
 	})
 }
 

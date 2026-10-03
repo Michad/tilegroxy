@@ -16,12 +16,29 @@ package mlt
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math"
 )
 
-// Caps the values a single tile may decode to, since run lengths let a small tile claim a huge one.
-const maxDecodedValues = 1 << 24
+// Caps decoded memory, since run lengths and dictionaries let a small tile claim a huge one.
+const (
+	maxTileBytes    = 50 << 20
+	maxFeatureBytes = 10 << 20
+)
+
+// Approximate in-memory sizes of decoded items, for charging against the caps.
+const (
+	stringHeaderBytes = 16
+	sliceHeaderBytes  = 24
+	pointBytes        = 16
+	geometryBytes     = 16
+	// A string header is the widest value a column holds.
+	maxValueBytes = stringHeaderBytes
+)
+
+// Never escapes Decode, which drops the layer instead.
+var errTileTooLarge = errors.New("MLT tile decodes past the size limit")
 
 type reader struct {
 	buf    []byte
@@ -30,7 +47,7 @@ type reader struct {
 }
 
 func newReader(buf []byte) *reader {
-	budget := uint64(maxDecodedValues)
+	budget := uint64(maxTileBytes)
 	return &reader{buf: buf, budget: &budget}
 }
 
@@ -47,12 +64,13 @@ func (r *reader) remaining() int {
 	return len(r.buf) - r.pos
 }
 
-func (r *reader) spend(n uint64) error {
-	if n > *r.budget {
-		return fmt.Errorf("%w: tile decodes to more than %v values", ErrUnsupported, maxDecodedValues)
+// Charges count items of size bytes against the tile's budget.
+func (r *reader) spend(count, size uint64) error {
+	if size != 0 && count > *r.budget/size {
+		return errTileTooLarge
 	}
 
-	*r.budget -= n
+	*r.budget -= count * size
 
 	return nil
 }

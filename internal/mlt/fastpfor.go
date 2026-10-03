@@ -113,7 +113,7 @@ func (d *fastPFORDecoder) page(pos, outPos, size int) (int, error) {
 	}
 	meta = meta[:byteSize]
 
-	exceptions, next, err := d.exceptionStreams(bitmap, bitmapPos+1)
+	exceptions, next, err := d.exceptionStreams(bitmap, bitmapPos+1, size)
 	if err != nil {
 		return 0, err
 	}
@@ -132,9 +132,11 @@ func (d *fastPFORDecoder) page(pos, outPos, size int) (int, error) {
 	return next, nil
 }
 
-// The bitmap flags which exception bit widths have a packed stream of values.
-func (d *fastPFORDecoder) exceptionStreams(bitmap uint32, pos int) ([][]uint32, int, error) {
+// The bitmap flags which exception bit widths have a packed stream of values. A page can't
+// patch more values than it holds.
+func (d *fastPFORDecoder) exceptionStreams(bitmap uint32, pos int, pageSize int) ([][]uint32, int, error) {
 	exceptions := make([][]uint32, fastPFORMaxBits+1)
+	total := 0
 
 	for width := 2; width <= fastPFORMaxBits; width++ {
 		if bitmap>>(width-1)&1 == 0 {
@@ -146,6 +148,11 @@ func (d *fastPFORDecoder) exceptionStreams(bitmap uint32, pos int) ([][]uint32, 
 			return nil, 0, err
 		}
 		pos++
+
+		total += int(size)
+		if total > pageSize {
+			return nil, 0, fmt.Errorf("%w: more FastPFOR exceptions than values", ErrMalformed)
+		}
 
 		wordsNeeded := (int(size)*width + fastPFORMaxBits - 1) / fastPFORMaxBits
 		if pos+wordsNeeded > len(d.words) {

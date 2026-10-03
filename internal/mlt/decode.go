@@ -15,6 +15,7 @@
 package mlt
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"slices"
@@ -52,7 +53,8 @@ func (m columnMeta) nullable() bool {
 	return m.code&nullableFlag != 0
 }
 
-// Decode parses every v1 layer of a tile. Layers in any other format are skipped and counted.
+// Decode parses every v1 layer of a tile. Layers in any other format, or that would take the
+// tile past maxTileBytes, are skipped and counted. Features past maxFeatureBytes are dropped.
 func Decode(data []byte) ([]Layer, int, error) {
 	r := newReader(data)
 	layers := []Layer{}
@@ -84,6 +86,11 @@ func Decode(data []byte) ([]Layer, int, error) {
 		}
 
 		l, err := decodeLayer(r.sub(body))
+		if errors.Is(err, errTileTooLarge) {
+			skipped++
+			continue
+		}
+
 		if err != nil {
 			return nil, 0, err
 		}
@@ -115,15 +122,14 @@ func decodeLayer(r *reader) (Layer, error) {
 		return l, err
 	}
 
-	hasGeometry := false
+	var geometrySizes []int
 
 	for _, m := range metas {
 		switch m.base() {
 		case codeID, codeLongID:
 			l.ID, err = decodeIDColumn(r, m)
 		case codeGeometry:
-			hasGeometry = true
-			l.Geometries, err = decodeGeometryColumn(r)
+			l.Geometries, geometrySizes, err = decodeGeometryColumn(r)
 		default:
 			var c Column
 			c, err = decodePropertyColumn(r, m)
@@ -139,11 +145,62 @@ func decodeLayer(r *reader) (Layer, error) {
 		return l, fmt.Errorf("%w: %v unread bytes after the last column", ErrMalformed, r.remaining())
 	}
 
-	if !hasGeometry {
+	if geometrySizes == nil {
 		return l, fmt.Errorf("%w: layer %v has no geometry column", ErrMalformed, l.Name)
 	}
 
-	return l, l.validate()
+	if err = l.validate(); err != nil {
+		return l, err
+	}
+
+	return l.dropOversized(geometrySizes), nil
+}
+
+// Oversized geometries were never built, so they're left nil.
+func (l Layer) dropOversized(geometrySizes []int) Layer {
+	keep := make([]int, 0, len(l.Geometries))
+
+	for i, g := range l.Geometries {
+		if g != nil && geometrySizes[i]+l.propertyBytes(i) <= maxFeatureBytes {
+			keep = append(keep, i)
+		}
+	}
+
+	if len(keep) == len(l.Geometries) {
+		return l
+	}
+
+	return l.Select(keep)
+}
+
+func (l Layer) propertyBytes(feature int) int {
+	n := 0
+	if l.ID != nil {
+		n += word64Bytes
+	}
+
+	for _, c := range l.Columns {
+		n += c.rowBytes(feature)
+	}
+
+	return n
+}
+
+func (c Column) rowBytes(feature int) int {
+	n := 0
+
+	switch v := c.Values.(type) {
+	case nil:
+		for _, child := range c.Children {
+			n += child.rowBytes(feature)
+		}
+	case []string:
+		n = stringHeaderBytes + len(v[feature])
+	default:
+		n = word64Bytes
+	}
+
+	return n
 }
 
 func readColumnMetas(r *reader) ([]columnMeta, error) {
@@ -243,9 +300,13 @@ func readPresent(r *reader, nullable bool) ([]bool, error) {
 }
 
 // Streams hold only present values, so they're spread out to one per feature with gaps left zero.
-func expand[T any](present []bool, values []T) ([]T, error) {
+func expand[T any](r *reader, present []bool, values []T) ([]T, error) {
 	if present == nil {
 		return values, nil
+	}
+
+	if err := r.spend(uint64(len(present)), maxValueBytes); err != nil {
+		return nil, err
 	}
 
 	out := make([]T, len(present))
@@ -289,7 +350,7 @@ func decodeIDColumn(r *reader, m columnMeta) (*IDColumn, error) {
 		return nil, err
 	}
 
-	id.Values, err = expand(id.Present, values)
+	id.Values, err = expand(r, id.Present, values)
 
 	return id, err
 }
@@ -364,7 +425,7 @@ func decodeAndExpand[S, T any](present []bool, decode func(*reader) ([]S, error)
 		values[i] = convert(v)
 	}
 
-	return expand(present, values)
+	return expand(r, present, values)
 }
 
 func decodeStringColumn(r *reader, c *Column) error {
@@ -400,7 +461,7 @@ func decodeStringColumn(r *reader, c *Column) error {
 		return err
 	}
 
-	c.Values, err = expand(c.Present, values)
+	c.Values, err = expand(r, c.Present, values)
 
 	return err
 }
@@ -435,6 +496,10 @@ func plainStrings(r *reader, lengths stream, data stream) ([]string, error) {
 		return nil, err
 	}
 
+	if err = r.spend(uint64(len(data.data)), 1); err != nil {
+		return nil, err
+	}
+
 	return splitStrings(data.data, n)
 }
 
@@ -458,9 +523,14 @@ func splitStrings(data []byte, lengths []uint64) ([]string, error) {
 	return out, nil
 }
 
+// Entries share memory, but each use is charged since Encode may write every value out separately.
 func lookupDictionary(r *reader, codes stream, dict []string) ([]string, error) {
 	c, err := codes.unsigned(r, false)
 	if err != nil {
+		return nil, err
+	}
+
+	if err = r.spend(uint64(len(c)), stringHeaderBytes); err != nil {
 		return nil, err
 	}
 
@@ -468,6 +538,10 @@ func lookupDictionary(r *reader, codes stream, dict []string) ([]string, error) 
 	for i, code := range c {
 		if code >= uint64(len(dict)) {
 			return nil, fmt.Errorf("%w: dictionary code %v out of range", ErrMalformed, code)
+		}
+
+		if err = r.spend(uint64(len(dict[code])), 1); err != nil {
+			return nil, err
 		}
 
 		out[i] = dict[code]
@@ -488,25 +562,23 @@ func fsstStrings(r *reader, symbolLengths, symbolTable, lengths, corpus stream) 
 		return nil, err
 	}
 
-	var expandedCorpus []byte
+	size, err := fsstSize(corpus.data, symbols)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = r.spend(size, 1); err != nil {
+		return nil, err
+	}
+
+	expandedCorpus := make([]byte, 0, size)
 	for i := 0; i < len(corpus.data); i++ {
-		code := corpus.data[i]
-		if code == fsstEscape {
+		if code := corpus.data[i]; code == fsstEscape {
 			i++
-			if i >= len(corpus.data) {
-				return nil, fmt.Errorf("%w: FSST data ends in an escape", ErrMalformed)
-			}
-
 			expandedCorpus = append(expandedCorpus, corpus.data[i])
-
-			continue
+		} else {
+			expandedCorpus = append(expandedCorpus, symbols[code]...)
 		}
-
-		if int(code) >= len(symbols) {
-			return nil, fmt.Errorf("%w: FSST symbol %v out of range", ErrMalformed, code)
-		}
-
-		expandedCorpus = append(expandedCorpus, symbols[code]...)
 	}
 
 	n, err := lengths.unsigned(r, false)
@@ -518,6 +590,29 @@ func fsstStrings(r *reader, symbolLengths, symbolTable, lengths, corpus stream) 
 }
 
 const fsstEscape = 255
+
+// Long symbols let a short corpus expand enormously, so the size is checked before expanding.
+func fsstSize(corpus []byte, symbols [][]byte) (uint64, error) {
+	var size uint64
+
+	for i := 0; i < len(corpus); i++ {
+		code := corpus[i]
+
+		switch {
+		case code == fsstEscape && i+1 < len(corpus):
+			i++
+			size++
+		case code == fsstEscape:
+			return 0, fmt.Errorf("%w: FSST data ends in an escape", ErrMalformed)
+		case int(code) >= len(symbols):
+			return 0, fmt.Errorf("%w: FSST symbol %v out of range", ErrMalformed, code)
+		default:
+			size += uint64(len(symbols[code]))
+		}
+	}
+
+	return size, nil
+}
 
 func splitSymbols(table []byte, lengths []uint64) ([][]byte, error) {
 	if len(lengths) > fsstEscape {
@@ -625,7 +720,7 @@ func decodeSharedDictChild(r *reader, m columnMeta, dict []string) (Column, uint
 		return child, 0, err
 	}
 
-	child.Values, err = expand(child.Present, values)
+	child.Values, err = expand(r, child.Present, values)
 
 	return child, streams, err
 }

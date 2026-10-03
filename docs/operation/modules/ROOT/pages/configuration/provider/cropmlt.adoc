@@ -4,7 +4,7 @@ Crops MapLibre Tiles (MLT) from another provider to a specific bounds.
 
 This is the MLT equivalent of the xref:configuration/provider/cropmvt.adoc[cropmvt] provider. A child known to produce MVT is rejected when the configuration is loaded.
 
-Tiles entirely inside the bounds are returned unchanged. Tiles that cross the bounds are decoded, clipped, and encoded again using the simplest MLT encodings, so they can be somewhat larger than the original. Clipping also drops any pre-tessellated polygon data, which MapLibre rebuilds from the polygon outlines. Only version 1 MLT layers can be clipped, so layers in any other version are removed from tiles that cross the bounds.
+Tiles entirely inside the bounds are returned unchanged. Tiles that cross the bounds are decoded, clipped, and encoded again using the simplest MLT encodings, so they can be somewhat larger than the original. Clipping also drops any pre-tessellated polygon data, which MapLibre rebuilds from the polygon outlines. Only version 1 MLT layers can be clipped, so layers in any other version are removed from tiles that cross the bounds. To guard against malicious tiles, a layer is also removed if decoding it would take the tile past roughly 50 MiB of memory, and any feature over roughly 10 MiB is removed from its layer.
 
 Name should be "cropmlt"
 

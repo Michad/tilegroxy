@@ -86,7 +86,7 @@ func clipMlt(ctx context.Context, content []byte, boundsToCrop pkg.Bounds, tileR
 	}
 
 	if skipped > 0 {
-		slog.Log(ctx, slog.LevelDebug, fmt.Sprintf("Dropped %v MLT layers of an unsupported version while cropping", skipped))
+		slog.Log(ctx, slog.LevelDebug, fmt.Sprintf("Dropped %v MLT layers that were too large or of an unsupported version while cropping", skipped))
 	}
 
 	tile, err := tileRequest.GetBoundsProjection(pkg.SRIDPsuedoMercator)

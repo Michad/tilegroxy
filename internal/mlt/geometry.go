@@ -53,6 +53,10 @@ func (l *lengths) present() bool {
 	return l.values != nil
 }
 
+func (l *lengths) remaining() int {
+	return len(l.values) - l.pos
+}
+
 func (l *lengths) next() (int, error) {
 	if l.pos >= len(l.values) {
 		return 0, fmt.Errorf("%w: geometry topology runs out of lengths", ErrMalformed)
@@ -69,6 +73,7 @@ func (l *lengths) next() (int, error) {
 }
 
 type geometryStreams struct {
+	r                      *reader
 	types                  []uint64
 	geometries, parts      lengths
 	rings                  lengths
@@ -76,43 +81,46 @@ type geometryStreams struct {
 	vertexOffsets          []uint64
 	hasIndexBuffer         bool
 	vertexPos, vertexCount int
+	featureBytes           int
+	oversized              bool
 }
 
 // The first stream holds each feature's geometry type. The rest are identified by their stream type.
-func decodeGeometryColumn(r *reader) ([]orb.Geometry, error) {
+// Also returns each feature's approximate size, and leaves features over maxFeatureBytes nil.
+func decodeGeometryColumn(r *reader) ([]orb.Geometry, []int, error) {
 	count, err := r.varint32()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if count == 0 {
-		return nil, fmt.Errorf("%w: geometry column without streams", ErrMalformed)
+		return nil, nil, fmt.Errorf("%w: geometry column without streams", ErrMalformed)
 	}
 
-	var g geometryStreams
+	g := geometryStreams{r: r}
 
 	typeStream, err := readStream(r, false)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if g.types, err = typeStream.unsigned(r, false); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	for range count - 1 {
 		s, err := readStream(r, false)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		if err = g.read(r, s); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
 	if err = g.resolveVertices(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	return g.build()
@@ -154,6 +162,10 @@ func (g *geometryStreams) resolveVertices() error {
 		return nil
 	}
 
+	if err := g.r.spend(uint64(len(g.vertexOffsets)), word64Bytes); err != nil {
+		return err
+	}
+
 	dict := g.vertices
 	g.vertices = make([]int32, 2*len(g.vertexOffsets))
 
@@ -170,32 +182,43 @@ func (g *geometryStreams) resolveVertices() error {
 	return nil
 }
 
-func (g *geometryStreams) build() ([]orb.Geometry, error) {
+func (g *geometryStreams) build() ([]orb.Geometry, []int, error) {
 	if g.hasIndexBuffer && !g.parts.present() {
-		return nil, fmt.Errorf("%w: tessellated polygons without outlines", ErrUnsupported)
+		return nil, nil, fmt.Errorf("%w: tessellated polygons without outlines", ErrUnsupported)
+	}
+
+	if err := g.r.spend(uint64(len(g.types)), geometryBytes+word64Bytes); err != nil {
+		return nil, nil, err
 	}
 
 	out := make([]orb.Geometry, len(g.types))
+	sizes := make([]int, len(g.types))
+
 	for i, raw := range g.types {
 		if raw > uint64(typeMultiPolygon) {
-			return nil, fmt.Errorf("%w: unknown geometry type %v", ErrMalformed, raw)
+			return nil, nil, fmt.Errorf("%w: unknown geometry type %v", ErrMalformed, raw)
 		}
 
 		var err error
 		if out[i], err = g.feature(geometryType(raw)); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
+
+		sizes[i] = g.featureBytes
 	}
 
 	if g.vertexPos != g.vertexCount {
-		return nil, fmt.Errorf("%w: %v vertices left over", ErrMalformed, g.vertexCount-g.vertexPos)
+		return nil, nil, fmt.Errorf("%w: %v vertices left over", ErrMalformed, g.vertexCount-g.vertexPos)
 	}
 
-	return out, nil
+	return out, sizes, nil
 }
 
 // Which stream holds each count depends on the column's mix of types, per the spec's Length Stream Encoding Rules.
+// An oversized feature still walks its topology to keep the streams aligned, but builds nothing.
 func (g *geometryStreams) feature(t geometryType) (orb.Geometry, error) {
+	g.featureBytes, g.oversized = 0, false
+
 	count := 1
 	if t.isMulti() {
 		var err error
@@ -204,15 +227,56 @@ func (g *geometryStreams) feature(t geometryType) (orb.Geometry, error) {
 		}
 	}
 
-	parts := make([][][]orb.Point, count)
-	for i := range parts {
-		var err error
-		if parts[i], err = g.subGeometry(t); err != nil {
+	parts, err := allocate[[][]orb.Point](g, count)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range count {
+		sub, err := g.subGeometry(t)
+		if err != nil {
 			return nil, err
+		}
+
+		if parts != nil {
+			parts[i] = sub
 		}
 	}
 
+	if g.oversized {
+		return nil, nil
+	}
+
 	return assemble(t, parts), nil
+}
+
+// Every sub geometry or ring consumes at least one length or vertex, which bounds how many can exist.
+func (g *geometryStreams) remaining() int {
+	return g.vertexCount - g.vertexPos + g.geometries.remaining() + g.parts.remaining() + g.rings.remaining()
+}
+
+// Returns nil once the current feature has outgrown maxFeatureBytes.
+func allocate[T any](g *geometryStreams, n int) ([]T, error) {
+	if n > g.remaining() {
+		return nil, fmt.Errorf("%w: geometry count %v exceeds the data remaining", ErrMalformed, n)
+	}
+
+	if !g.reserve(n, sliceHeaderBytes) {
+		return nil, nil
+	}
+
+	if err := g.r.spend(uint64(n), sliceHeaderBytes); err != nil { // #nosec G115 -- counts are never negative
+		return nil, err
+	}
+
+	return make([]T, n), nil
+}
+
+func (g *geometryStreams) reserve(n, size int) bool {
+	g.featureBytes += n * size
+	g.oversized = g.oversized || g.featureBytes > maxFeatureBytes
+
+	return !g.oversized
 }
 
 // Without a geometries stream the count of a multi geometry is stored in the parts stream.
@@ -240,15 +304,24 @@ func (g *geometryStreams) subGeometry(t geometryType) ([][]orb.Point, error) {
 		}
 	}
 
-	out := make([][]orb.Point, ringCount)
-	for i := range out {
+	out, err := allocate[[]orb.Point](g, ringCount)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range ringCount {
 		n, err := g.vertexRunLength(t)
 		if err != nil {
 			return nil, err
 		}
 
-		if out[i], err = g.take(n); err != nil {
+		points, err := g.take(n)
+		if err != nil {
 			return nil, err
+		}
+
+		if out != nil {
+			out[i] = points
 		}
 	}
 
@@ -272,6 +345,15 @@ func (g *geometryStreams) vertexRunLength(t geometryType) (int, error) {
 func (g *geometryStreams) take(n int) ([]orb.Point, error) {
 	if n > g.vertexCount-g.vertexPos {
 		return nil, fmt.Errorf("%w: geometry needs more vertices than exist", ErrMalformed)
+	}
+
+	if !g.reserve(n, pointBytes) {
+		g.vertexPos += n
+		return nil, nil
+	}
+
+	if err := g.r.spend(uint64(n), pointBytes); err != nil { // #nosec G115 -- counts are never negative
+		return nil, err
 	}
 
 	out := make([]orb.Point, n)

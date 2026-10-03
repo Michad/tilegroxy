@@ -172,7 +172,7 @@ func (s *stream) readExtraHeader(r *reader, isBool bool) error {
 
 // Decodes the payload into unsigned words, 64 bit if wide and 32 bit otherwise.
 func (s stream) words(r *reader, wide bool) ([]uint64, error) {
-	if err := r.spend(uint64(s.numValues)); err != nil {
+	if err := r.spend(uint64(s.numValues), word64Bytes); err != nil {
 		return nil, err
 	}
 
@@ -295,17 +295,18 @@ func expandRuns(r *reader, w []uint64, runs uint32, total uint32) ([]uint64, err
 
 	var sum uint64
 	for _, n := range w[:runs] {
-		sum += n
-		if sum > uint64(total) {
-			break
+		if n > uint64(total)-sum {
+			return nil, fmt.Errorf("%w: runs exceed %v values", ErrMalformed, total)
 		}
+
+		sum += n
 	}
 
 	if sum != uint64(total) {
 		return nil, fmt.Errorf("%w: runs don't sum to %v values", ErrMalformed, total)
 	}
 
-	if err := r.spend(sum); err != nil {
+	if err := r.spend(sum, word64Bytes); err != nil {
 		return nil, err
 	}
 
@@ -367,7 +368,7 @@ func (s stream) bools(r *reader) ([]bool, error) {
 	n := s.numValues
 	nBytes := (uint64(n) + bitsPerByte - 1) / bitsPerByte
 
-	if err := r.spend(uint64(n)); err != nil {
+	if err := r.spend(uint64(n), 1); err != nil {
 		return nil, err
 	}
 
