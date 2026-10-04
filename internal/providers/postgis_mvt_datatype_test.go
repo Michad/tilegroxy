@@ -21,8 +21,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// PostgisMvtRegistration.DataType() needs no database, so it's kept out of postgis_mvt_test.go's
-// !unit build tag and runs as part of the regular unit suite.
+// Needs no database, so it's kept out of postgis_mvt_test.go's !unit build tag
 func Test_DataType_PostgisMvt(t *testing.T) {
 	assert.Equal(t, config.DataTypeMVT, PostgisMvtRegistration{}.DataType(PostgisMvtConfig{}))
 }

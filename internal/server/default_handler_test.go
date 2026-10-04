@@ -61,7 +61,7 @@ func Test_SucceededBy_AppliesNewEntities(t *testing.T) {
 	assert.Same(t, lg, next.layerGroup())
 }
 
-// Handlers must not reach the live config; a pointer would alias whatever a reload built.
+// Handlers must not reach the live config since a pointer would alias whatever a reload built
 func Test_Generation_HoldsNoConfigPointer(t *testing.T) {
 	banned := []reflect.Type{
 		reflect.TypeOf(&config.Config{}),

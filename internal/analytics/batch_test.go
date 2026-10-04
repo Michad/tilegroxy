@@ -28,11 +28,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// recorder collects the batches a Batcher flushes so tests can assert on both grouping and content.
 type recorder struct {
 	mutex   sync.Mutex
 	batches [][]analytics.Event
-	// When set, flush blocks until this channel is closed, letting a test hold up the workers.
+	// When set, flush blocks until closed so a test can hold up the workers
 	gate chan struct{}
 	err  error
 }
@@ -85,7 +84,7 @@ func Test_ApplyBatchDefaults(t *testing.T) {
 	assert.Equal(t, uint(batchDefaultWorkers), cfg.Workers)
 	assert.Equal(t, OnFullDrop, cfg.OnFull)
 
-	// Explicit values survive.
+	// Explicit values survive
 	cfg, err = ApplyBatchDefaults(BatchConfig{MaxSize: 5, MaxAge: 1, QueueSize: 7, Workers: 3, OnFull: OnFullBlock}, msgs)
 	require.NoError(t, err)
 	assert.Equal(t, uint(5), cfg.MaxSize)
@@ -100,7 +99,7 @@ func Test_Batcher_FlushesOnSize(t *testing.T) {
 
 	cfg := testBatchConfig()
 	cfg.MaxSize = 3
-	// Long enough that only the size trigger can fire during the test.
+	// Long enough that only the size trigger can fire
 	cfg.MaxAge = 600
 
 	b, err := NewBatcher("test", cfg, rec.flush)
@@ -122,7 +121,7 @@ func Test_Batcher_FlushesOnAge(t *testing.T) {
 	rec := &recorder{}
 
 	cfg := testBatchConfig()
-	// Far above what the test enqueues, so only the age trigger can fire.
+	// Far above what the test enqueues so only the age trigger can fire
 	cfg.MaxSize = 1000
 	cfg.MaxAge = 1
 
@@ -141,7 +140,7 @@ func Test_Batcher_CloseFlushesPartialBatch(t *testing.T) {
 	rec := &recorder{}
 
 	cfg := testBatchConfig()
-	// Neither trigger can fire on its own; only Close can produce a flush.
+	// Only Close can produce a flush
 	cfg.MaxSize = 1000
 	cfg.MaxAge = 600
 
@@ -175,14 +174,14 @@ func Test_Batcher_DropsWhenFullWithoutBlocking(t *testing.T) {
 
 	ctx := context.Background()
 
-	// The worker parks inside flush holding the gate, so the queue backs up and stays full.
+	// The worker parks inside flush so the queue backs up and stays full
 	done := make(chan struct{})
 
 	go func() {
 		defer close(done)
 
 		for range 100 {
-			// Must never block even though nothing is draining the queue.
+			// Must never block even though nothing drains the queue
 			_ = b.Add(ctx, analytics.Event{LayerID: "l"})
 		}
 	}()
@@ -214,8 +213,7 @@ func Test_Batcher_BlocksWhenFullUnderOnFullBlock(t *testing.T) {
 	b, err := NewBatcher("test", cfg, rec.flush)
 	require.NoError(t, err)
 
-	// A context that expires quickly stands in for a caller unwilling to wait forever; under
-	// backpressure Add should report that rather than silently dropping.
+	// Under backpressure Add should report the timeout rather than silently drop
 	ctx, cancel := context.WithTimeout(context.Background(), 250*time.Millisecond)
 	defer cancel()
 
@@ -248,8 +246,7 @@ func Test_Batcher_CloseRespectsDeadline(t *testing.T) {
 
 	require.NoError(t, b.Add(context.Background(), analytics.Event{LayerID: "l"}))
 
-	// The worker is stuck in flush, so Close cannot complete and must give up at its deadline
-	// rather than hanging shutdown forever.
+	// The worker is stuck in flush so Close must give up at its deadline
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 
@@ -271,7 +268,7 @@ func Test_Batcher_FlushErrorIsContained(t *testing.T) {
 
 	ctx := context.Background()
 
-	// A failing destination must not make Add fail: the tile was still served.
+	// A failing destination must not fail Add since the tile was still served
 	require.NoError(t, b.Add(ctx, analytics.Event{LayerID: "l"}))
 
 	require.Eventually(t, func() bool { return rec.batchCount() == 1 }, 5*time.Second, 10*time.Millisecond)
@@ -301,7 +298,7 @@ func Test_Batcher_FlushPanicIsContained(t *testing.T) {
 
 	ctx := context.Background()
 
-	// The first event triggers a flush that panics. The worker must survive it and keep processing.
+	// The first flush panics and the worker must keep going
 	require.NoError(t, b.Add(ctx, analytics.Event{LayerID: "first"}))
 	require.Eventually(t, func() bool { return rec.batchCount() == 1 }, 5*time.Second, 10*time.Millisecond)
 
@@ -347,7 +344,7 @@ func Test_Batcher_ConcurrentAdd(t *testing.T) {
 
 	require.NoError(t, b.Close(ctx))
 
-	// Every event must be accounted for: blocking mode plus a drain on Close means none are lost.
+	// Blocking mode plus the drain on Close means nothing is lost
 	assert.Equal(t, goroutines*perGoroutine, rec.count())
 }
 
@@ -360,10 +357,10 @@ func Test_Batcher_AddAfterCloseDoesNotPanic(t *testing.T) {
 	ctx := context.Background()
 	require.NoError(t, b.Close(ctx))
 
-	// A reload could race a request; Add must report rather than panic on a closed channel.
+	// A reload can race a request so Add must error instead of panicking on a closed channel
 	require.Error(t, b.Add(ctx, analytics.Event{LayerID: "l"}))
 
-	// Close is idempotent.
+	// Idempotent
 	require.NoError(t, b.Close(ctx))
 }
 
@@ -374,7 +371,7 @@ func Test_Batcher_ConcurrentAddRacingCloseLosesNothing(t *testing.T) {
 		rec := &recorder{}
 
 		cfg := testBatchConfig()
-		// Neither trigger can fire on its own so every event is accounted for by the drain on Close.
+		// Only the drain on Close can flush, so every event is accounted for
 		cfg.MaxSize = 1000
 		cfg.MaxAge = 600
 		cfg.Workers = 2
@@ -415,8 +412,7 @@ func Test_Batcher_ConcurrentAddRacingCloseLosesNothing(t *testing.T) {
 
 		require.NoError(t, b.Close(ctx))
 
-		// An event that Add accepted must end up either written or counted as dropped. Anything else is
-		// stranded in the queue where no metric would ever reveal it.
+		// Accepted events must be written or counted as dropped. Anything else is invisibly stranded
 		assert.Equal(t, accepted.Load(), int64(rec.count())+int64(b.dropped.Load()),
 			"every accepted event should be flushed or counted as dropped")
 	}
@@ -442,12 +438,12 @@ func Test_Batcher_CloseHonorsDeadlineWhileProducersBlock(t *testing.T) {
 		go func() { _ = b.Add(context.Background(), analytics.Event{LayerID: "l"}) }()
 	}
 
-	// Let the producers pile up against the full queue while the gated flush holds the worker.
+	// Let producers pile up against the full queue while the gated flush holds the worker
 	time.Sleep(200 * time.Millisecond)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()
 
-	// Close must give up on its deadline instead of waiting forever on producers it can't drain.
+	// Must give up at its deadline instead of waiting on producers it can't drain
 	require.Error(t, b.Close(ctx))
 }

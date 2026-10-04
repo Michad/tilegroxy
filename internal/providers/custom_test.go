@@ -27,8 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// existingRequiredFuncs supplies the minimum preAuth/generateTile a custom provider script needs to
-// initialize, so close-specific tests don't have to restate them.
+// The minimum script needed to initialize, so close-specific tests don't restate it
 const existingRequiredFuncs = `
 func preAuth(ctx tilegroxy.Context, providerContext tilegroxy.ProviderContext, params map[string]interface{}, cientConfig tilegroxy.ClientConfig, errorMessages tilegroxy.ErrorMessages,
 )  (tilegroxy.ProviderContext, error) {
@@ -136,7 +135,7 @@ func close(ctx context.Context) error {
 }
 
 func Test_CustomProviderCloseOptionalWhenAbsent(t *testing.T) {
-	// Scripts written before this existed must keep working untouched.
+	// Scripts written before close existed must keep working
 	p := buildCustomProviderFromScript(t, existingRequiredFuncs)
 
 	require.NoError(t, p.Close(pkg.BackgroundContext()))

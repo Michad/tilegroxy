@@ -50,12 +50,12 @@ func Test_LayerGroupClosesProviders(t *testing.T) {
 
 	require.NoError(t, lg.Close(context.Background()))
 
-	// A custom provider whose script defines a close hook is the case this exists for.
+	// A custom provider whose script defines close is why this exists
 	assert.True(t, prov.closed)
 }
 
 func Test_LayerGroupCloseIgnoresPlainProviders(t *testing.T) {
-	// Most providers hold nothing and must not be required to implement Close.
+	// Most providers hold nothing and mustn't be required to implement Close
 	lg := &LayerGroup{layers: []*Layer{{Provider: nil}}}
 
 	require.NoError(t, lg.Close(context.Background()))
@@ -73,8 +73,7 @@ func Test_LayerGroupCloseSkipsNilLayers(t *testing.T) {
 	require.NoError(t, lg.Close(context.Background()))
 }
 
-// ProviderWrapper wraps every constructed provider for tracing, so Close has to see through it to
-// the real provider or nothing nested inside blend/fallback/ref would ever be released.
+// Close must see through the tracing wrapper or nothing nested inside blend/fallback/ref is released
 func Test_LayerGroupClosesProviderThroughWrapper(t *testing.T) {
 	prov := &closableProvider{}
 	wrapped := ProviderWrapper{Name: "test", Provider: prov}
@@ -93,8 +92,7 @@ func staticProvider() map[string]any {
 	return map[string]any{"name": "static", "color": "FFF"}
 }
 
-// An unsanitized layer ID with a space produces an invalid OTEL instrument name, failing
-// Int64Counter construction, which is fatal at startup and silent on hot reload.
+// An unsanitized ID with a space fails OTEL instrument construction, fatally at startup and silently on hot reload
 func Test_ConstructLayerGroup_LayerIDWithSpaceDoesNotFailConstruction(t *testing.T) {
 	layer.RegisterProvider(sampleProviderRegistration{})
 
@@ -184,7 +182,7 @@ func Test_ValidateRefs_DanglingTargetSkippedWithPatternLayers(t *testing.T) {
 		{ID: "b", Pattern: "pattern_{x}", Provider: staticProvider()},
 	}
 
-	// Can't statically prove "maybe_pattern_match" doesn't match the pattern layer, so no error
+	// Can't statically prove "maybe_pattern_match" doesn't match the pattern layer
 	err := validateRefs(layers)
 	require.NoError(t, err)
 }
@@ -277,8 +275,7 @@ func Test_ConstructLayerGroup_UnknownLayerCacheErrors(t *testing.T) {
 	require.ErrorContains(t, err, "nonexistent")
 }
 
-// Coalescing defaults to on only when the layer actually caches. A layer overriding a noop default
-// with a real cache has to pick that up from its own cache, not the group's.
+// A layer overriding a noop default with a real cache must use its own cache to decide
 func Test_ConstructLayerGroup_CoalesceFollowsLayerCache(t *testing.T) {
 	cache.RegisterCache(namedStubCacheRegistration{name: "stub-layer-real"})
 
@@ -314,7 +311,7 @@ func (noopStubCacheRegistration) Initialize(_ any, _ cache.CacheDeps) (cache.Cac
 	return noopStubCache{}, nil
 }
 
-// nestingStubCache is a third-party wrapping cache, detected purely through the capability interfaces.
+// A third-party wrapping cache, detected purely through the capability interfaces
 type nestingStubCache struct {
 	inner cache.Cache
 	keyed bool
@@ -352,8 +349,7 @@ func (s nestingStubCacheRegistration) Initialize(configAny any, deps cache.Cache
 	return nestingStubCache{inner: inner, keyed: s.keyed}, nil
 }
 
-// A tenant cache means the provider's output varies by who asked, so coalescing - which hands
-// every waiter the leader's tile - must not turn itself on. Regression test for #942.
+// Regression test for #942: per-tenant output means coalescing, which shares the leader's tile, must stay off
 func Test_ConstructLayerGroup_CoalesceOffForTenantCache(t *testing.T) {
 	cache.RegisterCache(namedStubCacheRegistration{name: "stub-coalesce-inner"})
 	cache.RegisterCache(nestingStubCacheRegistration{name: "stub-tenant", keyed: true})
@@ -413,9 +409,7 @@ func Test_ConstructLayerGroup_CoalesceOffForBuiltinTenantCache(t *testing.T) {
 	assert.True(t, lg.layers[1].CacheControl.Uncacheable)
 }
 
-// A provider that builds its request out of the requester's identity returns different tiles to
-// different callers, so coalescing - which hands every waiter the leader's tile - must not turn
-// itself on. Regression test for #942.
+// Regression test for #942: identity-based requests return different tiles per caller, so coalescing must stay off
 func Test_UsesIdentityPlaceholder(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -445,8 +439,7 @@ func Test_UsesIdentityPlaceholder(t *testing.T) {
 	}
 }
 
-// urlStubProvider stands in for the real providers that interpolate placeholders into a URL; those
-// live in internal/providers, which this package can't import.
+// The real URL-interpolating providers live in internal/providers, which this package can't import
 type urlStubProvider struct{}
 
 func (urlStubProvider) PreAuth(_ context.Context, providerContext layer.ProviderContext) (layer.ProviderContext, error) {

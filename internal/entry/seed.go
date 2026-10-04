@@ -29,10 +29,10 @@ import (
 	"github.com/Michad/tilegroxy/pkg/config"
 )
 
-// how many tiles a run can cover before it needs to be confirmed with Force.
+// Tiles a run can cover before it must be confirmed with Force
 const warnCount = 10000
 
-// how often progress is written to disk
+// Tiles between progress writes
 const progressInterval = 100
 
 var ErrTooManyFailures = errors.New("too many tiles failed to seed")
@@ -107,7 +107,7 @@ func Seed(cfg *config.Config, opts SeedOptions, out io.Writer) error {
 		numThread = uint16(remaining) // #nosec G115 -- guarded by the comparison above
 	}
 
-	// A resumed run only renders what's left, so the default tracks the remaining tiles.
+	// A resumed run only renders what's left, so the default tracks the remaining tiles
 	maxFailures := opts.MaxFailures
 	if maxFailures == 0 {
 		maxFailures = seedJob.Count() - start
@@ -135,15 +135,12 @@ func Seed(cfg *config.Config, opts SeedOptions, out io.Writer) error {
 	return nil
 }
 
-// overrideLayerCache points the layer being seeded at a different cache, so a run can target one
-// specific cache by id. Any configured cache works, including one nested inside another, since
-// nested caches are registered under their own ids. Other layers are left alone; they aren't
-// being seeded.
+// Lets a run target one cache by id, including nested ones since they're registered under their own ids
 func overrideLayerCache(cfg config.Config, layerName, cacheID string) ([]config.LayerConfig, error) {
 	layerCfgs := make([]config.LayerConfig, len(cfg.Layers))
 	copy(layerCfgs, cfg.Layers)
 
-	// Matched the way a request is, so a pattern layer is seeded by a concrete name
+	// Matched like a request so a pattern layer is seeded by a concrete name
 	for i, l := range layerCfgs {
 		if layers.ConfigMatchesName(l, cfg.Error.Messages, layerName) {
 			layerCfgs[i].Cache = cacheID
@@ -157,7 +154,7 @@ func overrideLayerCache(cfg config.Config, layerName, cacheID string) ([]config.
 func checkSeedSize(seedJob *seed.SeedJob, opts SeedOptions, out io.Writer) error {
 	count := seedJob.Count()
 
-	// A purge makes no upstream requests, so the tile count only needs to stay addressable.
+	// A purge makes no upstream requests, so the tile count only needs to stay addressable
 	if opts.Purge {
 		if count >= math.MaxInt32 {
 			return fmt.Errorf("too many tiles to purge (%v > %v)", count, math.MaxInt32)
@@ -211,11 +208,10 @@ func seedTiles(seedJob *seed.SeedJob, opts SeedOptions, out io.Writer, layerGrou
 
 	var wg sync.WaitGroup
 
-	// Buffered per thread so a panicking thread never blocks on the send.
+	// Buffered per thread so a panicking thread never blocks on the send
 	errs := make(chan error, numThread)
 
-	// Closed once every thread has stopped, so the feed below doesn't block forever handing out
-	// tiles when the threads have all panicked and nothing is left to render them.
+	// Closed once every thread stops so the feed doesn't block forever if all threads panicked
 	abandoned := make(chan struct{})
 
 	var giveUpOnce sync.Once
@@ -241,7 +237,7 @@ func seedTiles(seedJob *seed.SeedJob, opts SeedOptions, out io.Writer, layerGrou
 		close(abandoned)
 	}()
 
-	// A single writer owns the progress file, so worker threads never touch it concurrently.
+	// A single writer owns the progress file so workers never touch it concurrently
 	var trackerWg sync.WaitGroup
 
 	trackerWg.Add(1)
@@ -271,7 +267,7 @@ feed:
 	trackerWg.Wait()
 	close(errs)
 
-	// A panicking thread skipped its tile.
+	// Each one means a panicking thread skipped its tile
 	var threadErrs []error
 	for err := range errs {
 		threadErrs = append(threadErrs, err)

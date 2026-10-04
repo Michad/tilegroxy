@@ -32,7 +32,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-// The DDL documented for the clickhouse analytics module. Kept in sync with clickhouse.adoc.
+// Must stay in sync with clickhouse.adoc
 const clickhouseDDL = `CREATE TABLE tile_events (
 	time      DateTime,
 	layer     LowCardinality(String),
@@ -49,8 +49,7 @@ func setupClickhouseContainer(ctx context.Context, t *testing.T) (string, int) {
 	req := testcontainers.ContainerRequest{
 		Image:        "clickhouse/clickhouse-server:24-alpine",
 		ExposedPorts: []string{"9000/tcp", "8123/tcp"},
-		// The server logs to files rather than stdout, so wait on the HTTP port answering /ping
-		// instead of scanning container output.
+		// The server logs to files rather than stdout, so wait on /ping instead
 		WaitingFor: wait.ForHTTP("/ping").WithPort("8123/tcp").WithStartupTimeout(3 * time.Minute),
 	}
 
@@ -59,8 +58,7 @@ func setupClickhouseContainer(ctx context.Context, t *testing.T) (string, int) {
 
 	t.Cleanup(func() { require.NoError(t, container.Terminate(context.Background())) })
 
-	// Ask for the native port specifically: the HTTP port is also exposed for the wait strategy,
-	// and an unqualified Endpoint would return whichever comes first.
+	// The HTTP port is also exposed, and an unqualified Endpoint would return whichever comes first
 	host, err := container.Host(ctx)
 	require.NoError(t, err)
 
@@ -105,7 +103,7 @@ func Test_Clickhouse_WritesEvents(t *testing.T) {
 	require.NoError(t, conn.Exec(ctx, clickhouseDDL))
 
 	cfg := ClickhouseConfig{Datastore: "test", Table: "tile_events"}
-	// Force the flush to come from Close so the test doesn't race the age trigger.
+	// Force the flush to come from Close so the test doesn't race the age trigger
 	cfg.Batch.MaxSize = 1000
 	cfg.Batch.MaxAge = 600
 
@@ -171,8 +169,7 @@ func Test_Clickhouse_WrongDatastoreType(t *testing.T) {
 	ctx := pkg.BackgroundContext()
 	msgs := config.DefaultConfig().Error.Messages
 
-	// Pointing the clickhouse module at a postgresql datastore is an easy config mistake; it must
-	// produce a clear error rather than a panic from the type assertion.
+	// An easy config mistake that must produce a clear error, not a type assertion panic
 	dsCfg := []map[string]interface{}{
 		{"name": "postgresql", "id": "pg", "host": "127.0.0.1", "port": 5432},
 	}

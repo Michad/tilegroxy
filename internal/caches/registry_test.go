@@ -52,8 +52,7 @@ func (s closableCacheRegistration) Initialize(_ any, _ cache.CacheDeps) (cache.C
 	return closableCache(s), nil
 }
 
-// The real caches live in internal/caches, which can't be imported here, so the registry tests
-// build against a stub registered locally.
+// The real caches can't be imported here, so tests use a locally registered stub
 func init() {
 	cache.RegisterCache(stubCacheRegistration{name: "stub-basic"})
 }
@@ -133,8 +132,7 @@ func Test_CacheRegistry_DuplicateIDErrors(t *testing.T) {
 	require.ErrorContains(t, err, "dupe")
 }
 
-// A cache appearing once in the registry must be closed exactly once, since a double close on a
-// pooled resource surfaces as errors on an unrelated shutdown path.
+// A double close on a pooled resource surfaces as errors on an unrelated shutdown path
 func Test_CacheRegistry_ClosesEachCacheOnce(t *testing.T) {
 	closed := 0
 	cache.RegisterCache(closableCacheRegistration{closed: &closed})
@@ -161,7 +159,7 @@ func Test_CacheRegistry_NilIsSafe(t *testing.T) {
 	assert.False(t, ok)
 }
 
-// A nil inner cache must not panic the walk looking for a TTL
+// A nil inner cache must not panic the TTL walk
 func Test_CacheTTL_UnwrappedExpiringIsFound(t *testing.T) {
 	ttl, ok := ExtractTTLFromCache(expiringCache{ttl: 90 * time.Second})
 
@@ -272,7 +270,7 @@ func (parentCacheRegistration) Initialize(cfgAny any, deps cache.CacheDeps) (cac
 	cfg := cfgAny.(parentCacheConfig)
 	built := make([]cache.Cache, 0, len(cfg.Children))
 
-	// Built in reverse so registration can't rely on configuration order.
+	// Built in reverse so registration can't rely on configuration order
 	for i := len(cfg.Children) - 1; i >= 0; i-- {
 		child, err := ConstructCache(cfg.Children[i], deps)
 		if err != nil {

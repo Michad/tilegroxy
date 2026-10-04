@@ -33,7 +33,7 @@ import (
 )
 
 func init() {
-	// This is a hack to help with vscode test execution. Put a .env in repo root w/ anything you need for test containers
+	// Lets vscode test runs pick up testcontainer settings from a .env in the repo root
 	if env, err := os.ReadFile("../../.env"); err == nil {
 		envs := strings.Split(string(env), "\n")
 		for _, e := range envs {
@@ -141,9 +141,7 @@ func TestMemcachedWithContainerDiffPrefix(t *testing.T) {
 	validateSaveAndLookup(t, r2)
 }
 
-// memcache.Get reports a miss as ErrCacheMiss. Surfacing that as a Lookup error logs a warning on
-// every miss and buries real cache failures, so a miss must be "no result, no error" as it is for
-// redis.
+// Reporting a miss as an error logs a warning on every miss and buries real failures
 func TestMemcachedWithContainerMissIsNotAnError(t *testing.T) {
 	ctx := context.Background()
 	memcachedC, cleanupF := setupMemcachedContainer(ctx, t)
@@ -200,15 +198,14 @@ func TestMemcachedWithContainerUsingDatastore(t *testing.T) {
 
 	validateSaveAndLookup(t, r)
 
-	// Closing the cache must not close the shared datastore connection out from under other consumers.
+	// Closing the cache must not close the shared datastore connection under other consumers
 	require.NoError(t, r.(interface {
 		Close(ctx context.Context) error
 	}).Close(ctx))
 	validateSaveAndLookup(t, r)
 }
 
-// The "memcache" name is kept working as an alias for "memcached" for backwards compatibility,
-// both for the cache itself and the datastore it can share a connection with.
+// "memcache" stays an alias for backwards compatibility, for both the cache and its datastore
 func TestMemcachedWithContainerLegacyMemcacheNameAlias(t *testing.T) {
 	ctx := context.Background()
 	memcachedC, cleanupF := setupMemcachedContainer(ctx, t)

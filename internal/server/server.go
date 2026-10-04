@@ -59,12 +59,12 @@ func handleNoContent(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// Signals that begin a graceful shutdown.
+// Begin a graceful shutdown
 var InterruptFlags = []os.Signal{os.Interrupt, syscall.SIGTERM}
 
 type reloadEntitiesFunc = func(*config.Config, *entities.Entities) error
 
-// handlerSetup is the HTTP side of the server: the root handler plus the generations it serves from
+// The root handler plus the generations it serves from
 type handlerSetup struct {
 	root           http.Handler
 	first          *generation
@@ -73,7 +73,7 @@ type handlerSetup struct {
 	closeAccessLog func() error
 }
 
-// The new config is deliberately ignored: every handler-visible section is non-reloadable
+// The new config is deliberately ignored since every handler-visible section is non-reloadable
 func (s handlerSetup) reload(_ *config.Config, ent *entities.Entities) error {
 	slog.WarnContext(pkg.BackgroundContext(), "Requesting to refresh entities from configuration")
 
@@ -218,7 +218,7 @@ func listenAndServeTLS(cfg *config.Config, srvErr chan error, srv *http.Server) 
 	}
 }
 
-// configureLogging brings up the two log streams ListenAndServe owns, returning their closers in the order shutdown needs them. The access log is already set up by setupHandlers
+// Returns closers in the order shutdown needs them. setupHandlers already sets up the access log
 func configureLogging(cfg *config.Config) (func() error, func() error, error) {
 	closeMainLog, err := configureMainLogging(cfg)
 
@@ -241,14 +241,13 @@ func newHTTPServer(rootCtx context.Context, cfg *config.Config, rootHandler http
 		BaseContext:       func(_ net.Listener) context.Context { return rootCtx },
 		Handler:           rootHandler,
 		ReadHeaderTimeout: time.Second,
-		// Backstop for clients that stop reading, which timeoutHandler can't bound because it
-		// never gets to write. Double Server.Timeout so it only ever fires after that has
+		// Backstop for clients that stop reading, which timeoutHandler can't bound. Doubled so it only fires after Server.Timeout
 		WriteTimeout: 2 * time.Duration(cfg.Server.Timeout) * time.Second, // #nosec G115 -- operator-supplied timeout in seconds, far below int64 overflow range
 		IdleTimeout:  2 * time.Duration(cfg.Server.Timeout) * time.Second, // #nosec G115 -- operator-supplied timeout in seconds, far below int64 overflow range
 	}
 }
 
-// onReady, when not nil, receives the reload function once the server can accept reloads
+// onReady, if set, receives the reload function once the server can accept reloads
 func ListenAndServe(cfg *config.Config, ent *entities.Entities, onReady func(reloadEntitiesFunc)) error {
 	if err := ValidateConfig(cfg); err != nil {
 		return err
@@ -266,9 +265,7 @@ func ListenAndServe(cfg *config.Config, ent *entities.Entities, onReady func(rel
 		return err
 	}
 
-	// Requests hang off the un-signalled root. Deriving them from the signal context instead would
-	// cancel every in-flight request the moment SIGTERM lands, which timeoutHandler turns into a
-	// 503, defeating both the drain delay and the server's own graceful shutdown
+	// Derived from the signal context, SIGTERM would cancel every in-flight request into a 503, defeating graceful drain
 	rootCtx := pkg.BackgroundContext()
 
 	ctx, stop := signal.NotifyContext(rootCtx, InterruptFlags...)
@@ -294,7 +291,6 @@ func ListenAndServe(cfg *config.Config, ent *entities.Entities, onReady func(rel
 	var otelShutdown func(context.Context) error
 
 	if cfg.Telemetry.Enabled {
-		// Set up OpenTelemetry.
 		otelShutdown, err = setupOTELSDK(ctx)
 		if err != nil {
 			return err
@@ -339,8 +335,7 @@ func ListenAndServe(cfg *config.Config, ent *entities.Entities, onReady func(rel
 	}))
 }
 
-// shutdownDeps is what the teardown phases need from ListenAndServe. Gathered into one struct so
-// the phase wiring can live outside that function
+// Gathered into one struct so the phase wiring can live outside ListenAndServe
 type shutdownDeps struct {
 	health         *healthSupervisor
 	srv            *http.Server

@@ -37,7 +37,7 @@ import (
 )
 
 func init() {
-	// This is a hack to help with vscode test execution. Put a .env in repo root w/ anything you need for test containers
+	// Lets vscode test runs pick up testcontainer settings from a .env in the repo root
 	if env, err := os.ReadFile("../../.env"); err == nil {
 		envs := strings.Split(string(env), "\n")
 		for _, e := range envs {
@@ -57,7 +57,7 @@ func extractHostAndPort(t *testing.T, endpoint string) (string, int) {
 	return split[0], port
 }
 
-// The DDL documented for the postgres analytics module. Kept in sync with postgres.adoc.
+// Must stay in sync with postgres.adoc
 const postgresDDL = `CREATE TABLE tilegroxy_analytics (
 	time        TIMESTAMPTZ NOT NULL,
 	layer       TEXT        NOT NULL,
@@ -136,7 +136,7 @@ func Test_Postgres_WritesEvents(t *testing.T) {
 	conn.Release()
 
 	cfg := PostgresConfig{Datastore: "test", Table: "tilegroxy_analytics"}
-	// Force the flush to come from Close so the test doesn't race the age trigger.
+	// Force the flush to come from Close so the test doesn't race the age trigger
 	cfg.Batch.MaxSize = 1000
 	cfg.Batch.MaxAge = 600
 
@@ -175,7 +175,7 @@ func Test_Postgres_WritesEvents(t *testing.T) {
 	assert.Equal(t, "user-1", userID)
 	assert.Contains(t, extra, "image/png")
 
-	// An anonymous event should still land, with empty rather than absent user.
+	// Anonymous events still land, with an empty rather than absent user
 	var anonUser string
 	require.NoError(t, pool.QueryRow(ctx, "SELECT user_id FROM tilegroxy_analytics WHERE layer = 'other'").Scan(&anonUser))
 	assert.Empty(t, anonUser)
@@ -184,7 +184,7 @@ func Test_Postgres_WritesEvents(t *testing.T) {
 func Test_Postgres_InvalidConfig(t *testing.T) {
 	msgs := config.DefaultConfig().Error.Messages
 
-	// An empty registry: the datastore lookup must fail cleanly rather than panic.
+	// The datastore lookup must fail cleanly rather than panic
 	empty, err := datastores.ConstructDatastoreRegistry(context.Background(), nil, nil, msgs)
 	require.NoError(t, err)
 

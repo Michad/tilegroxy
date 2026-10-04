@@ -34,8 +34,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// closeCountingProvider proves a real, layer-owned provider gets closed by Entities.Close, going
-// through the public LayerGroup constructor since the layer slice itself is unexported.
+// Uses the public LayerGroup constructor since the layer slice is unexported
 type closeCountingProvider struct {
 	closed *bool
 }
@@ -65,8 +64,7 @@ func (closeCountingRegistration) Initialize(_ any, _ layer.ProviderDeps) (layer.
 	return closeCountingProvider{closed: &closeCountingProviderClosed}, nil
 }
 
-// failingAnalytics implements analytics.Analytics and lifecycle.Closer, always failing to close,
-// to exercise the analytics-timeout path in Entities.Close.
+// Always fails to close, exercising the analytics timeout path
 type failingAnalytics struct{}
 
 func (failingAnalytics) Record(_ context.Context, _ analytics.Event) error {
@@ -83,8 +81,7 @@ func Test_Entities_CloseNil(t *testing.T) {
 	require.NoError(t, e.Close(context.Background()))
 }
 
-// Entities is exported and constructed directly, so a generation missing any given entity has to close
-// without panicking on the nil field.
+// Entities is exported and built directly, so a missing entity must close without a nil panic
 func Test_Entities_CloseWithUnsetEntities(t *testing.T) {
 	e := &Entities{}
 
@@ -100,9 +97,7 @@ func Test_Entities_CloseIsIdempotent(t *testing.T) {
 	require.NoError(t, e.Close(context.Background()))
 }
 
-// Providers close before analytics: they hold nothing the analytics flush depends on, and a CGI
-// child process is worth reaping early. Uses a LayerGroup constructed through the public
-// constructor since its provider-holding field is unexported outside the layer package.
+// Providers close before analytics since the flush doesn't depend on them and CGI children are worth reaping early
 func Test_Entities_ClosesLayerGroupProviders(t *testing.T) {
 	layer.RegisterProvider(closeCountingRegistration{})
 	cfg := config.DefaultConfig()
@@ -116,7 +111,7 @@ func Test_Entities_ClosesLayerGroupProviders(t *testing.T) {
 	assert.True(t, closeCountingProviderClosed)
 }
 
-// closableAuth stands in for a custom auth script that owns resources of its own
+// Stands in for a custom auth script that owns resources
 type closableAuth struct {
 	closed *bool
 }
@@ -147,9 +142,7 @@ func Test_Entities_ClosesAuthEvenWhenAnalyticsTimesOut(t *testing.T) {
 	assert.True(t, closed, "auth closes before the flush, so a stalled flush must not strand it")
 }
 
-// The analytics-timeout early return that leaves datastores open must survive the new LayerGroup
-// step being added ahead of it, and the LayerGroup step must still run even though analytics
-// times out - the two errors are independent and both get joined.
+// The analytics timeout and LayerGroup close errors are independent and both get joined, with datastores left open
 func Test_Entities_AnalyticsTimeoutStillLeavesDatastoresOpen(t *testing.T) {
 	e := &Entities{
 		LayerGroup: &layers.LayerGroup{},
@@ -161,8 +154,7 @@ func Test_Entities_AnalyticsTimeoutStillLeavesDatastoresOpen(t *testing.T) {
 	assert.Contains(t, err.Error(), "analytics did not finish flushing")
 }
 
-// deadlineRecordingAnalytics records how much of the shutdown budget was left when its flush ran,
-// so the ordering of the phases ahead of it becomes observable.
+// Records the remaining shutdown budget at flush time so earlier phases' ordering is observable
 type deadlineRecordingAnalytics struct {
 	remaining *time.Duration
 }
@@ -179,8 +171,7 @@ func (a deadlineRecordingAnalytics) Close(ctx context.Context) error {
 	return nil
 }
 
-// slowSaveCache holds its write open long enough that a drain waiting on it would visibly eat into
-// whatever phase runs after the wait.
+// Holds its write open long enough that a drain waiting on it visibly eats into the next phase
 type slowSaveCache struct{ delay time.Duration }
 
 func (slowSaveCache) Lookup(_ context.Context, _ pkg.TileRequest) (*pkg.Image, error) {
@@ -196,7 +187,7 @@ func (slowSaveCache) Remove(_ context.Context, _ pkg.TileRequest) (bool, error) 
 	return false, nil
 }
 
-// renderingProvider returns a real image so the render reaches the cache write path.
+// Returns a real image so the render reaches the cache write path
 type renderingProvider struct{}
 
 func (renderingProvider) PreAuth(_ context.Context, pc layer.ProviderContext) (layer.ProviderContext, error) {
@@ -225,9 +216,7 @@ func (slowSaveCacheRegistration) Initialize(_ any, _ cache.CacheDeps) (cache.Cac
 	return slowSaveCache{delay: 300 * time.Millisecond}, nil
 }
 
-// The analytics flush runs on a reserved slice of the shutdown budget. Waiting on background cache
-// writes ahead of it would spend that reserve on a slow cache backend and drop batched events, so
-// the wait belongs after the flush, next to the caches it actually guards.
+// Draining cache writes before the analytics flush would spend its reserved budget on a slow cache and drop events
 func Test_Entities_CacheWriteDrainDoesNotSpendTheAnalyticsReserve(t *testing.T) {
 	cache.RegisterCache(slowSaveCacheRegistration{})
 	layer.RegisterProvider(renderingRegistration{})
@@ -244,7 +233,7 @@ func Test_Entities_CacheWriteDrainDoesNotSpendTheAnalyticsReserve(t *testing.T) 
 	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches, nil, nil)
 	require.NoError(t, err)
 
-	// Leaves a cache write in flight for the drain to find.
+	// Leaves a cache write in flight for the drain to find
 	_, err = lg.RenderTile(pkg.BackgroundContext(), pkg.TileRequest{LayerName: "test", Z: 1, X: 0, Y: 0})
 	require.NoError(t, err)
 
@@ -262,12 +251,12 @@ func Test_Entities_CacheWriteDrainDoesNotSpendTheAnalyticsReserve(t *testing.T) 
 
 	require.NoError(t, e.Close(ctx))
 
-	// The 300ms write is still in flight when analytics flushes, so nearly the whole budget is left.
+	// The 300ms write is still in flight when analytics flushes, so nearly the whole budget remains
 	assert.Greater(t, remaining, budget-100*time.Millisecond,
 		"the analytics flush must not be charged for a slow cache write")
 }
 
-// closableSecreter stands in for a secret store that owns a cache or background goroutines
+// Stands in for a secret store that owns a cache or background goroutines
 type closableSecreter struct {
 	closed *bool
 }

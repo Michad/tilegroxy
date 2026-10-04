@@ -43,9 +43,7 @@ var CustomLogLevel = map[string]slog.Level{
 	"absurd": config.LevelAbsurd,
 }
 
-// Validate covers the fields entity construction doesn't touch: error.mode, logging levels, and
-// logging formats. Without this they'd only fail once the code path using them runs, letting
-// `config check` report "Valid" for a config that breaks as soon as it's served.
+// Covers fields entity construction doesn't touch, so `config check` can't report "Valid" for a config that breaks when served
 func Validate(c config.Config) error {
 	var errs []error
 
@@ -101,7 +99,7 @@ func Validate(c config.Config) error {
 	return errors.Join(errs...)
 }
 
-// A center is longitude, latitude, then an optional zoom.
+// Longitude, latitude, then an optional zoom
 const (
 	minCenterLen = 2
 	maxCenterLen = 3
@@ -150,7 +148,7 @@ func validateLayer(messages config.ErrorMessages, l config.LayerConfig, errs []e
 	return errs
 }
 
-// normalize the top-level cache config into a list with IDs
+// Normalizes the top-level cache config into a list with IDs
 func NormalizeCaches(raw interface{}, errorMessages config.ErrorMessages) ([]ConfigWithID, error) {
 	switch typed := raw.(type) {
 	case nil:
@@ -202,7 +200,7 @@ func NormalizeCaches(raw interface{}, errorMessages config.ErrorMessages) ([]Con
 	return result, nil
 }
 
-// toCacheEntryList coerces the array forms a YAML or JSON decoder can produce into a list of maps.
+// Coerces the array forms a YAML or JSON decoder can produce
 func toCacheEntryList(raw interface{}, errorMessages config.ErrorMessages) ([]map[string]interface{}, error) {
 	switch typed := raw.(type) {
 	case []map[string]interface{}:
@@ -225,12 +223,7 @@ func toCacheEntryList(raw interface{}, errorMessages config.ErrorMessages) ([]ma
 	return nil, fmt.Errorf(errorMessages.InvalidParam, "cache", fmt.Sprintf("%#v", raw))
 }
 
-// DecodeEntityConfig decodes a raw entity config map into the config struct returned by that
-// entity's InitializeConfig(). It errors on unknown keys so a typo'd field isn't silently ignored,
-// which for a security control means quietly reverting to its default. "name" is stripped first
-// since it selects the registration and no entity config declares it. "id" is left in place
-// because datastore does declare one. A string decodes into any field implementing
-// encoding.TextUnmarshaler.
+// Errors on unknown keys so a typo can't silently revert a security control. "id" stays since datastore declares it
 func DecodeEntityConfig(rawConfig map[string]interface{}, out any) error {
 	stripped := make(map[string]interface{}, len(rawConfig))
 	for k, v := range rawConfig {
@@ -259,13 +252,11 @@ func initViper() *viper.Viper {
 	return viper
 }
 
-// registerDefaults makes every scalar in DefaultConfig() addressable via SetDefault. AutomaticEnv
-// only looks up env vars for keys viper already knows, which without this means only the keys the
-// operator happened to write in the config file.
+// AutomaticEnv only reads env vars for keys viper already knows, which would otherwise be only those in the config file
 func registerDefaults(v *viper.Viper) {
 	b, err := json.Marshal(config.DefaultConfig())
 	if err != nil {
-		// DefaultConfig() is statically known, so a failure here is a programming error.
+		// DefaultConfig() is static, so a failure here is a programming error
 		panic(err)
 	}
 
@@ -295,15 +286,12 @@ func flattenDefaults(v *viper.Viper, prefix string, m map[string]interface{}) {
 func unmarshal(viper *viper.Viper) (config.Config, error) {
 	c := config.DefaultConfig()
 
-	// Viper merges a list of maps into a single map key-by-key, so an analytics section written as a list
-	// decodes without error into a silent mixture of its entries. Caught here because it's the shape
-	// analytics used during development and the failure is otherwise invisible
+	// Viper silently merges a list of maps into one map. Analytics used this shape during development, so reject it explicitly
 	if _, ok := viper.Get("analytics").([]interface{}); ok {
 		return c, errors.New("analytics must be a single entry, not a list. Remove the leading '- ' and unindent the parameters beneath it")
 	}
 
-	// Same merging problem, but a list is valid for cache, so the list is taken from the raw value
-	// before Unmarshal flattens it rather than rejected.
+	// Same merging problem, but lists are valid for cache, so take the raw value before Unmarshal flattens it
 	rawCaches, cacheIsList := viper.Get("cache").([]interface{})
 
 	err := viper.Unmarshal(&c, func(dc *mapstructure.DecoderConfig) {
@@ -396,9 +384,7 @@ func watchConfigFile(filename, configFile string, watcher *fsnotify.Watcher, onR
 				continue
 			}
 
-			// A remove/rename means the watch descriptor for this file is gone even though the
-			// directory watch survives. Re-adding is a no-op if the file already exists again and
-			// otherwise ensures we notice the recreate as soon as it happens.
+			// The file's watch descriptor dies on remove/rename. Re-adding ensures a recreate is noticed and is harmless otherwise
 			if event.Has(fsnotify.Remove) || event.Has(fsnotify.Rename) {
 				_ = watcher.Add(configDir)
 				continue
@@ -414,7 +400,7 @@ func watchConfigFile(filename, configFile string, watcher *fsnotify.Watcher, onR
 			}
 			lastConfigLoad = time.Now()
 
-			// Do the reload in a separate thread than the main notify thread to avoid the delay below interfering with the dedupe logic above
+			// Separate goroutine so the delay below doesn't interfere with the dedupe above
 			go func() {
 				defer func() {
 					if r := recover(); r != nil {
@@ -422,7 +408,7 @@ func watchConfigFile(filename, configFile string, watcher *fsnotify.Watcher, onR
 					}
 				}()
 
-				// fsnotify can send events before file has finished writing - give it a second to settle... this might need to be extended to a retry-with-exp-backoff in the future - https://github.com/spf13/viper/issues/1085
+				// fsnotify can fire before the write finishes. May need exponential backoff someday https://github.com/spf13/viper/issues/1085
 				time.Sleep(time.Second)
 
 				reloaded := initViper()

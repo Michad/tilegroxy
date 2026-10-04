@@ -78,7 +78,7 @@ func Test_ReloadSignal_ReloadsFromSource(t *testing.T) {
 	}
 }
 
-// Signals landing while a reload runs must neither overlap it nor queue one reload per signal
+// Signals during a reload must neither overlap it nor queue one reload each
 func Test_ReloadSignal_SerializesAndCoalesces(t *testing.T) {
 	started := make(chan struct{})
 	release := make(chan struct{})
@@ -119,7 +119,7 @@ func Test_ReloadSignal_SerializesAndCoalesces(t *testing.T) {
 		require.NoError(t, syscall.Kill(syscall.Getpid(), syscall.SIGHUP))
 	}
 
-	// Give the signals time to be delivered before the first reload finishes
+	// Give the signals time to arrive before the first reload finishes
 	time.Sleep(200 * time.Millisecond)
 	close(release)
 
@@ -183,7 +183,7 @@ func Test_ReloadSignal_ReloadErrorIsReported(t *testing.T) {
 	assert.Equal(t, "Error: swap rejected\n", out.String())
 }
 
-// A signal sent while the server is still starting must be held until it can apply, not dropped
+// A signal during startup must be held until it can apply, not dropped
 func Test_ReloadSignal_WaitsForReady(t *testing.T) {
 	ready := make(chan struct{})
 	reloads := make(chan struct{}, 1)
@@ -216,7 +216,7 @@ func Test_ReloadSignal_WaitsForReady(t *testing.T) {
 	}
 }
 
-// Stopping must not leave the goroutine blocked waiting for a server that never became ready
+// Must not leave the goroutine waiting for a server that never became ready
 func Test_ReloadSignal_StopWhileWaitingForReady(t *testing.T) {
 	stop := watchReloadSignal(
 		make(chan struct{}),

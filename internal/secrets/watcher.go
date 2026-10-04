@@ -27,7 +27,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
 )
 
-// Reasons a secret watch hands to ReloadFunc, recorded on the resulting audit event
+// Recorded on the resulting audit event
 const (
 	ReasonSecretRotation = "secret_rotation"
 	ReasonSecretTTL      = "secret_ttl"
@@ -35,7 +35,7 @@ const (
 
 const maxFailedReloads = 3
 
-// Records every resolved key so a background poll can notice a rotation and rebuild against fresh values
+// Records every resolved key so a background poll can notice a rotation and rebuild with fresh values
 type watchingSecreter struct {
 	backend   secret.Secreter
 	batchSize int
@@ -63,7 +63,7 @@ func newWatchingSecreter(backend secret.Secreter, _ secretWatchConfig, batchSize
 	}
 }
 
-// start launches the pollers. Separate from construction so tests can drive checkOnce directly
+// Separate from construction so tests can drive checkOnce directly
 func (w *watchingSecreter) start(cfg secretWatchConfig) {
 	w.wg.Add(1)
 	go w.runTicker(time.Duration(cfg.WatchInterval)*time.Second, func(ctx context.Context) {
@@ -95,7 +95,7 @@ func (w *watchingSecreter) runTicker(every time.Duration, tick func(context.Cont
 	}
 }
 
-// A panic in a poll must not take down the process or stop future polls
+// A panic in a poll must not crash the process or stop future polls
 func (w *watchingSecreter) safeTick(tick func(context.Context)) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -133,7 +133,7 @@ func (w *watchingSecreter) Check(ctx context.Context, keys []string) ([]string, 
 	return w.backend.Check(ctx, keys)
 }
 
-// checkOnce polls every watchable key and reloads once if any version moved
+// Reloads once if any watched version moved
 func (w *watchingSecreter) checkOnce(ctx context.Context) {
 	w.mu.Lock()
 	if w.closed {
@@ -149,7 +149,7 @@ func (w *watchingSecreter) checkOnce(ctx context.Context) {
 	keys := make([]string, 0, len(w.versions))
 	recorded := make(map[string]string, len(w.versions))
 	for k, v := range w.versions {
-		// An empty recorded version means the backend cannot version this key, so polling it is waste
+		// An empty recorded version means the backend can't version this key, so polling it is waste
 		if v == "" {
 			continue
 		}
@@ -180,7 +180,7 @@ func (w *watchingSecreter) checkOnce(ctx context.Context) {
 		}
 
 		for i, key := range batch {
-			// An empty version now means the backend stopped being able to tell, not that it changed
+			// An empty version now means the backend can no longer tell, not that it changed
 			if versions[i] == "" || versions[i] == recorded[key] {
 				continue
 			}
@@ -209,7 +209,7 @@ func (w *watchingSecreter) triggerReload(reason string) {
 	w.reload(reason)
 }
 
-// Close stops the pollers and releases the wrapped backend
+// Also releases the wrapped backend
 func (w *watchingSecreter) Close(ctx context.Context) error {
 	w.mu.Lock()
 	w.closed = true

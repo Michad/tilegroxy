@@ -30,7 +30,7 @@ type AnalyticsConfig struct {
 	Path string
 }
 
-// Analytics appends each event to a file as a line of JSON
+// Appends each event to a file as a line of JSON
 type Analytics struct {
 	mu   sync.Mutex
 	file *os.File
@@ -79,7 +79,7 @@ func (a *Analytics) Record(_ context.Context, event analytics.Event) error {
 	return err
 }
 
-// Close is called on shutdown and hot reload because Analytics implements lifecycle.Closer
+// Called on shutdown and hot reload because Analytics implements lifecycle.Closer
 func (a *Analytics) Close(_ context.Context) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()

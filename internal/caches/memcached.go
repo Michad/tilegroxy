@@ -32,7 +32,7 @@ const (
 	memcachedMaxTTL      = 30 * 60 * 60 * 24
 )
 
-// Note: inline connection info is intentionally undocumented, just left functional for compatibility
+// Inline connection info is intentionally undocumented, kept functional for compatibility
 type MemcachedConfig struct {
 	HostAndPort `mapstructure:",squash"`
 	Servers     []HostAndPort // The list of servers to use.
@@ -44,8 +44,7 @@ type MemcachedConfig struct {
 type Memcached struct {
 	MemcachedConfig
 	client *memcache.Client
-	// Whether client was created for this cache alone, and therefore should be closed with it.
-	// False when client came from a shared datastore, since the datastore registry owns closing it.
+	// False when the client came from a shared datastore, since the registry owns closing it
 	ownsClient bool
 }
 
@@ -65,7 +64,7 @@ func (s MemcachedRegistration) Name() string {
 	return "memcached"
 }
 
-// MemcachedLegacyRegistration is the deprecated "memcache" alias for MemcachedRegistration
+// Deprecated "memcache" alias for MemcachedRegistration
 type MemcachedLegacyRegistration struct {
 	MemcachedRegistration
 }
@@ -129,16 +128,14 @@ func (s MemcachedRegistration) Initialize(configAny any, deps cache.CacheDeps) (
 
 }
 
-// memcachedKey sanitizes LayerName (see safeLayerName) since memcached keys can't contain whitespace
-// or control characters, then bounds the total length, which KeyPrefix counts toward.
+// Memcached keys can't contain whitespace or control characters, and KeyPrefix counts toward the length limit
 func memcachedKey(prefix string, t pkg.TileRequest) string {
 	safe := t
 	safe.LayerName = safeLayerName(t.LayerName)
 	return safeMemcachedKey(prefix, safe.String())
 }
 
-// Close shuts down the memcached client, releasing its connection pool. Left alone when the client
-// came from a shared datastore, since the datastore registry owns closing it in that case.
+// Leaves a client from a shared datastore alone, since the registry owns closing it
 func (c Memcached) Close(_ context.Context) error {
 	if c.client == nil || !c.ownsClient {
 		return nil

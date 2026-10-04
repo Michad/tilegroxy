@@ -26,9 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// memCache is a minimal in-memory Cache used to test TTLCache without depending on any real
-// backend. It stores whatever *pkg.Image TTLCache hands it verbatim, the same way the real
-// backends store whatever bytes/Image they're given.
+// Stores whatever TTLCache hands it verbatim, like the real backends do
 type memCache struct {
 	entries map[string]*pkg.Image
 }
@@ -89,15 +87,14 @@ func Test_TTLCache_MissAfterExpiry(t *testing.T) {
 	req := testTileRequest()
 	require.NoError(t, c.Save(context.Background(), req, &pkg.Image{Content: []byte("data"), ContentType: "image/png"}))
 
-	// Past the TTL window: should be reported as a miss so the caller regenerates and overwrites it
+	// Past the TTL window, so it reads as a miss and the caller regenerates it
 	c.clock = func() time.Time { return now.Add(2 * time.Hour) }
 
 	img, err := c.Lookup(context.Background(), req)
 	require.NoError(t, err)
 	require.Nil(t, img)
 
-	// The underlying entry is still physically present - TTLCache never deletes, it just reports
-	// a miss so the normal request path overwrites it on next save.
+	// TTLCache never deletes on lookup. The next save overwrites it
 	require.NotNil(t, inner.entries[req.String()])
 }
 
@@ -105,8 +102,7 @@ func Test_TTLCache_OldFormatEntryIsSafeAndTreatedAsHit(t *testing.T) {
 	inner := newMemCache()
 	req := testTileRequest()
 
-	// Simulate data written before TTL support existed / by a path that doesn't go through
-	// TTLCache: raw bytes with no envelope at all.
+	// Simulates data predating TTL support: raw bytes with no envelope
 	inner.entries[req.String()] = &pkg.Image{Content: []byte("legacy-data"), ContentType: "image/png"}
 
 	c := NewTTLCache(inner, time.Second)

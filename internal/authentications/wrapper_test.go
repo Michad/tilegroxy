@@ -51,12 +51,11 @@ func Test_AuthWrapper_Close(t *testing.T) {
 	inner := &closableAuth{}
 	wrapper := AuthWrapper{Name: "test", Auth: inner}
 
-	// The shutdown path closes through lifecycle.CloseIfCloser, so the wrapper has to be a
-	// Closer itself or the inner auth is never reached.
+	// Shutdown closes via lifecycle.CloseIfCloser, so the wrapper must itself be a Closer
 	require.NoError(t, lifecycle.CloseIfCloser(ctx, wrapper))
 	assert.True(t, inner.closed)
 
-	// An auth holding no resources must be a silent no-op.
+	// An auth holding no resources must be a silent no-op
 	require.NoError(t, AuthWrapper{Name: "plain", Auth: plainAuth{}}.Close(ctx))
 
 	failing := &closableAuth{err: errors.New("could not release")}

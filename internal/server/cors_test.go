@@ -158,7 +158,7 @@ func Test_CORS_PreflightHeaderWildcardWithoutRequestedHeaders(t *testing.T) {
 	assert.Empty(t, w.Header().Get("Access-Control-Allow-Headers"))
 }
 
-// An OPTIONS without Access-Control-Request-Method is an ordinary request, not a preflight
+// Without Access-Control-Request-Method an OPTIONS is an ordinary request, not a preflight
 func Test_CORS_OptionsWithoutRequestMethodIsNotPreflight(t *testing.T) {
 	cfg := config.CORSConfig{Enabled: true, WildcardOrigin: true, Methods: []string{http.MethodGet}, MaxAge: 60}
 
@@ -224,7 +224,7 @@ func Test_CORS_AppliedAsMiddleware(t *testing.T) {
 	assert.Equal(t, "https://a.example.com", w.Header().Get("Access-Control-Allow-Origin"))
 }
 
-// Server.Headers is added by the handler partway through, so CORS has to win on the way out
+// The handler adds Server.Headers partway through, so CORS must win on the way out
 func Test_CORS_OverwritesStaticHeader(t *testing.T) {
 	cfg := config.CORSConfig{Enabled: true, Origins: []string{"https://a.example.com"}}
 
@@ -239,7 +239,7 @@ func Test_CORS_OverwritesStaticHeader(t *testing.T) {
 	assert.Equal(t, []string{"https://a.example.com"}, w.Header().Values("Access-Control-Allow-Origin"))
 }
 
-// A handler that writes a body without calling WriteHeader still has to get the headers
+// A body written without WriteHeader must still get the headers
 func Test_CORS_AppliedOnImplicitWrite(t *testing.T) {
 	cfg := config.CORSConfig{Enabled: true, WildcardOrigin: true}
 
@@ -298,7 +298,7 @@ func Test_CORS_OriginsMatchedAgainstList(t *testing.T) {
 	assert.Equal(t, "https://a.b.example.org", w.Header().Get("Access-Control-Allow-Origin"))
 }
 
-// Neither WildcardOrigin nor Origins means CORS never triggers
+// Without WildcardOrigin or Origins, CORS never triggers
 func Test_CORS_NoOriginsConfigured(t *testing.T) {
 	cfg := config.CORSConfig{Enabled: true}
 
@@ -338,7 +338,7 @@ func Test_CORS_SplitPort(t *testing.T) {
 	}
 }
 
-// A stale grant in Server.Headers must not survive for an origin this config declines
+// A stale grant in Server.Headers must not survive for a declined origin
 func Test_CORS_ClearsStaticHeaderForDisallowedOrigin(t *testing.T) {
 	cfg := config.CORSConfig{Enabled: true, Origins: []string{"https://a.example.com"}}
 
@@ -355,7 +355,7 @@ func Test_CORS_ClearsStaticHeaderForDisallowedOrigin(t *testing.T) {
 	assert.Empty(t, w.Header().Get("Access-Control-Allow-Credentials"))
 }
 
-// Likewise for headers this config simply doesn't set on an allowed origin
+// Likewise for headers this config doesn't set on an allowed origin
 func Test_CORS_ClearsStaticHeaderNotReplaced(t *testing.T) {
 	cfg := config.CORSConfig{Enabled: true, Origins: []string{"https://a.example.com"}}
 
@@ -371,15 +371,13 @@ func Test_CORS_ClearsStaticHeaderNotReplaced(t *testing.T) {
 	assert.Empty(t, w.Header().Get("Access-Control-Allow-Credentials"))
 }
 
-// CORS must wrap OUTSIDE the timeout handler. Inside it, a timed-out request loses its CORS
-// headers: the timeout path abandons the buffered headers and writes the error to the real
-// writer, so the browser reports an opaque CORS failure instead of the 503.
+// Inside the timeout handler, a timed-out response loses CORS headers so browsers report an opaque failure, not the 503
 func Test_SetupHandlers_CORSWrapsOutsideTimeout(t *testing.T) {
 	cfg := config.DefaultConfig()
 	cfg.Server.CORS.Enabled = true
 	cfg.Server.CORS.Origins = []string{"https://example.com"}
 	cfg.Layers = []config.LayerConfig{staticLayerConfig("main")}
-	// Access logging would otherwise wrap outermost and hide which of CORS/timeout is on top
+	// Access logging would otherwise wrap outermost and hide the CORS/timeout order
 	cfg.Logging.Access.Console = false
 
 	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(caches.Noop{}), nil, nil)
@@ -388,7 +386,6 @@ func Test_SetupHandlers_CORSWrapsOutsideTimeout(t *testing.T) {
 	rootHandler, err := setupTestRootHandler(&cfg, &entities.Entities{LayerGroup: lg, Auth: authentications.Noop{}})
 	require.NoError(t, err)
 
-	// CORS is the outermost wrapper. Anything else means it sank below the timeout handler and a
-	// timed-out response would arrive without CORS headers.
+	// Anything else means a timed-out response would arrive without CORS headers
 	require.IsType(t, corsHandler{}, rootHandler)
 }

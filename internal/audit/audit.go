@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package audit emits the security-relevant event stream: auth/authz failures and configuration reloads.
+// Package audit emits security-relevant events: auth/authz failures and configuration reloads
 package audit
 
 import (
@@ -22,24 +22,21 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 )
 
-// Event types. These are stable identifiers operators match on in their log pipeline, so treat a
-// change to one as a breaking change.
+// Operators match on these in their log pipelines, so changing one is a breaking change
 const (
 	EventAuthFailure  = "auth_failure"
 	EventConfigReload = "config_reload"
 )
 
-// Outcomes recorded on a config reload event.
+// Outcomes of a config reload
 const (
 	OutcomeSuccess = "success"
 	OutcomeFailure = "failure"
 )
 
-// ReasonConfigFile marks a reload the config file watcher triggered. Secret-driven reloads supply
-// their own reason from internal/secrets.
+// Secret-driven reloads supply their own reason from internal/secrets
 const ReasonConfigFile = "config_file"
 
-// ReasonSignal marks a reload triggered by the process receiving SIGHUP.
 const ReasonSignal = "signal"
 
 var logger *slog.Logger
@@ -70,7 +67,7 @@ func AuthFailure(ctx context.Context, reason string) {
 		slog.String("reason", reason),
 	}
 
-	// The user only resolves when auth got far enough to identify someone
+	// Only resolves when auth got far enough to identify someone
 	if u, ok := pkg.UserIDFromContext(ctx); ok && u != nil && *u != "" {
 		attrs = append(attrs, slog.String("user", *u))
 	}
@@ -82,8 +79,7 @@ func AuthFailure(ctx context.Context, reason string) {
 	log(ctx, "Authentication failure", attrs...)
 }
 
-// ConfigReload records a hot reload of the configuration. A reload that fails to apply is recorded
-// with the error that stopped it. reason is one of the Reason constants and says what triggered it.
+// Records a hot reload and the error that stopped it, if any. reason is one of the Reason constants
 func ConfigReload(ctx context.Context, reason string, err error) {
 	if !Enabled() {
 		return

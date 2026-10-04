@@ -33,32 +33,25 @@ import (
 )
 
 const (
-	// How long to wait for the failed health rebuild to be logged, which is the point after which
-	// the live generation has either survived or been torn down.
+	// By then the live generation has either survived or been torn down
 	healthFailureTimeout = 30 * time.Second
-	// How long to keep requesting tiles after the failed rebuild. Long enough to outlast the
-	// batcher's maxAge so a working batcher would have flushed at least once.
+	// Outlasts the batcher's maxAge so a working batcher would have flushed at least once
 	analyticsObserveWindow = 5 * time.Second
-	// The batcher writes on every event, so a single tile request after the reload is enough to
-	// prove whether the batcher is still accepting.
+	// One tile request after the reload proves whether the batcher still accepts
 	analyticsBatchMaxSize = 1
-	// How long to let a freshly started instance settle before rewriting its config. The watcher
-	// can miss a write that lands too close to startup.
+	// The watcher can miss a write landing too close to startup
 	watcherSettle = 2 * time.Second
-	// How long to wait for one config rewrite to be picked up before writing it again.
+	// Before rewriting the config again
 	rewriteRetryWindow = 5 * time.Second
 )
 
-// The log the wrapper emits when a request reaches a batcher that has already been closed. Its
-// presence on the generation still serving traffic is the symptom of #862.
+// On the generation still serving traffic, this is the symptom of #862
 const batcherClosedLog = "analytics batcher is closed"
 
-// The log healthReloader emits when the rebuild fails, which is what triggers the faulty close.
+// Emitted when the rebuild fails, which triggers the faulty close
 const healthRebuildFailedLog = "Failed to rebuild health subsystem on reload"
 
-// A custom analytics script is what makes the teardown observable from outside the process: it
-// owns a Batcher, and a closed Batcher rejects events with a log rather than failing silently the
-// way a static provider or a memory cache does.
+// A closed Batcher logs rejected events, unlike silent static providers or memory caches, making teardown observable
 const reloadAnalyticsScript = `package custom
 
 import (
@@ -85,10 +78,7 @@ func record(ctx tilegroxy.Context, events []tilegroxy.AnalyticsEvent, params map
 }
 `
 
-// reloadHealthFailureConfig renders the config for this scenario. The server port stays a template
-// placeholder so Start substitutes the port it allocated and waits on, while the health port is
-// written literally: the whole point is pointing it at a port the test itself holds, which is not
-// one the harness allocates.
+// The server port stays templated for Start, but the health port is literal since it's one the test itself holds
 func reloadHealthFailureConfig(healthPort string, scriptPath, eventPath string) string {
 	return fmt.Sprintf(`
 server:
@@ -114,9 +104,7 @@ layers:
 `, healthPort, scriptPath, eventPath, analyticsBatchMaxSize)
 }
 
-// occupyPort binds a port and holds it for the life of the test, so a reload pointing health at it
-// fails to bind. This is the trigger the issue identifies as the practical one, health failing to
-// claim its listener, as opposed to a bad check name which aborts before any swap.
+// Health failing to bind is the practical trigger, unlike a bad check name which aborts before any swap
 func occupyPort(t *testing.T) int {
 	t.Helper()
 
@@ -133,9 +121,7 @@ func occupyPort(t *testing.T) int {
 	return addr.Port
 }
 
-// rewriteUntilCondition rewrites the config and waits for cond, rewriting again if it has not held
-// by the end of a window. The config watcher occasionally misses a single write, which would
-// otherwise make these tests flaky rather than failing for the reason they are about.
+// The watcher occasionally misses a write, which would otherwise make these tests flaky
 func rewriteUntilCondition(t *testing.T, inst *Instance, raw, desc string, cond func() bool) {
 	t.Helper()
 
@@ -157,7 +143,7 @@ func rewriteUntilCondition(t *testing.T, inst *Instance, raw, desc string, cond 
 	t.Fatalf("config was rewritten repeatedly but never saw %s. Output:\n%s", desc, inst.Output())
 }
 
-// rewriteUntilReloaded is rewriteUntilCondition for the common case of waiting on a log line.
+// For the common case of waiting on a log line
 func rewriteUntilReloaded(t *testing.T, inst *Instance, raw, awaited string) {
 	t.Helper()
 
@@ -166,10 +152,7 @@ func rewriteUntilReloaded(t *testing.T, inst *Instance, raw, awaited string) {
 	})
 }
 
-// Reproduces #862. A reload whose health rebuild fails runs strictly after the handler swap has
-// already retired the old generation, so the error propagates to a close path that tears down the
-// entities now serving traffic. Tiles keep returning 200 throughout, which is why the assertion is
-// on analytics continuing to accept events rather than on the tile status.
+// Regression test for #862: a failed health rebuild closed the live generation. Tiles still 200, so analytics is what's asserted
 func Test_Reload_FailedHealthRebuildKeepsLiveEntitiesOpen(t *testing.T) {
 	dir := t.TempDir()
 	scriptPath := dir + "/analytics.go"
@@ -182,8 +165,7 @@ func Test_Reload_FailedHealthRebuildKeepsLiveEntitiesOpen(t *testing.T) {
 		HotReload: true,
 	})
 
-	// Confirm the baseline before disrupting anything, so a later absence of events means the
-	// reload broke analytics rather than analytics never having worked.
+	// A baseline so missing events later mean the reload broke analytics
 	inst.Get("/tiles/color/8/12/32").ExpectStatus(http.StatusOK)
 
 	Until(t, healthFailureTimeout, "the first analytics event to be written", func() bool {
@@ -199,21 +181,18 @@ func Test_Reload_FailedHealthRebuildKeepsLiveEntitiesOpen(t *testing.T) {
 
 	time.Sleep(watcherSettle) // Deliberately letting the watcher settle before rewriting.
 
-	// Only the health port changes. Everything the tile path depends on is identical, so any
-	// difference in analytics afterwards is attributable to the failed health rebuild alone.
+	// Only the health port changes, so any analytics difference is from the failed rebuild alone
 	rewriteUntilReloaded(t, inst,
 		reloadHealthFailureConfig(strconv.Itoa(blockedPort), scriptPath, eventPath), healthRebuildFailedLog)
 
-	// The server is expected to keep serving tiles. The bug is not an outage, it is the silent
-	// loss of everything else the live generation owns.
+	// The bug isn't an outage but the silent loss of everything else the live generation owns
 	deadline := time.Now().Add(Scale(analyticsObserveWindow))
 	for time.Now().Before(deadline) {
 		inst.Get("/tiles/color/8/12/32").ExpectStatus(http.StatusOK)
 		time.Sleep(pollInterval)
 	}
 
-	// Counted rather than asserted against the log itself, so a failure reports how many events
-	// were rejected instead of reprinting the entire captured output.
+	// Counted so a failure reports the number rejected instead of reprinting all output
 	rejected := strings.Count(inst.Output(), batcherClosedLog)
 
 	assert.Zerof(t, rejected,
@@ -228,8 +207,7 @@ func Test_Reload_FailedHealthRebuildKeepsLiveEntitiesOpen(t *testing.T) {
 		len(baseline), len(after))
 }
 
-// Recovery is part of the contract the issue documents: a later good config must bring health and
-// analytics back regardless of how the failed reload was handled.
+// A later good config must bring health and analytics back regardless of how the failure was handled
 func Test_Reload_RecoversAfterFailedHealthRebuild(t *testing.T) {
 	dir := t.TempDir()
 	scriptPath := dir + "/analytics.go"
@@ -249,8 +227,7 @@ func Test_Reload_RecoversAfterFailedHealthRebuild(t *testing.T) {
 	rewriteUntilReloaded(t, inst,
 		reloadHealthFailureConfig(strconv.Itoa(blockedPort), scriptPath, eventPath), healthRebuildFailedLog)
 
-	// Point health back at a port nothing holds. The health subsystem has to rebind and analytics
-	// has to record again.
+	// Health must rebind and analytics must record again
 	recoveredPort := testutil.FreePort(t)
 
 	rewriteUntilCondition(t, inst,
@@ -265,8 +242,7 @@ func Test_Reload_RecoversAfterFailedHealthRebuild(t *testing.T) {
 			return resp.StatusCode == http.StatusOK
 		})
 
-	// The file may not exist yet: no tile has necessarily been served in this test before now, and
-	// the script only creates it on its first batch.
+	// May not exist yet since the script creates it on its first batch
 	before, err := os.ReadFile(eventPath)
 	if err != nil {
 		require.ErrorIs(t, err, os.ErrNotExist)

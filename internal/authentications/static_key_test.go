@@ -22,8 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Without strict decoding a typo'd field name decodes to a zero-value config, which static_key.go
-// then fills with a random key, locking every client out of a config that validated cleanly.
+// Without strict decoding a typo gets a random key, locking every client out of a config that validated
 func Test_StaticKey_TypoedFieldNameErrors(t *testing.T) {
 	rawConfig := map[string]interface{}{
 		"name":      "static key",

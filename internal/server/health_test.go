@@ -74,7 +74,7 @@ func initialize(t *testing.T, fail bool) (config.Config, *layers.LayerGroup) {
 	return cfgAll, lg
 }
 
-// Make sure setup works and we get a callback that kills the server by ensuring we can do it twice
+// Calling the returned shutdown twice proves it really stops the server
 func Test_Health_Setup(t *testing.T) {
 	ctx := pkg.BackgroundContext()
 	cfg, lg := initialize(t, false)
@@ -144,16 +144,12 @@ func Test_HealthReportsUnreadyWhenDraining(t *testing.T) {
 	w2 := httptest.NewRecorder()
 	h.ServeHTTP(w2, req2)
 
-	// 503 takes the pod out of the Service before the drain starts, so no new tile requests
-	// arrive at a process that is about to stop accepting them.
+	// 503 takes the pod out of the Service before draining so no new tile requests arrive
 	assert.Equal(t, http.StatusServiceUnavailable, w2.Code)
 	assert.Contains(t, w2.Body.String(), "draining")
 }
 
-// Draining must only affect readiness (/health). Liveness (/) has to stay 200 so Kubernetes
-// lets the pod finish draining instead of killing it outright. Routed through the real mux
-// setupHealthEndpoints builds, not direct handler calls, so a future change that wires drain
-// state into the liveness path would actually be caught here.
+// Liveness must stay 200 so Kubernetes lets the pod drain. The real mux catches drain state wired into liveness
 func Test_HealthDrainingLeavesLivenessOK(t *testing.T) {
 	ctx := pkg.BackgroundContext()
 	drainPort := testutil.FreePort(t)

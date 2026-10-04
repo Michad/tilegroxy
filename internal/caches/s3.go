@@ -76,7 +76,7 @@ func (s S3Registration) Initialize(configAny any, deps cache.CacheDeps) (cache.C
 		return nil, fmt.Errorf(deps.ErrorMessages.ParamsBothOrNeither, "cache.s3.access", "cache.s3.secret")
 	}
 
-	// Ensure path doesn't start with / but does end with one
+	// Path must not start with / but must end with one
 	if strings.Index(config.Path, "/") == 0 && len(config.Path) > 0 {
 		config.Path = config.Path[1:]
 	}
@@ -129,14 +129,12 @@ func (s S3Registration) Initialize(configAny any, deps cache.CacheDeps) (cache.C
 	return &S3{config, client, transfer}, nil
 }
 
-// calcKey sanitizes LayerName (see safeLayerName) so a request can't smuggle "/" into the object
-// key and produce an unexpected hierarchy in the bucket. The path/layer/z/x/y shape is preserved
-// so lifecycle rules and prefix-scoped IAM policies keep working.
+// Sanitized so "/" can't be smuggled into the key. The path/layer/z/x/y shape keeps lifecycle rules and prefix IAM policies working
 func calcKey(config *S3, t *pkg.TileRequest) string {
 	return config.Path + safeLayerName(t.LayerName) + "/" + strconv.Itoa(t.Z) + "/" + strconv.Itoa(t.X) + "/" + strconv.Itoa(t.Y)
 }
 
-// Just for testing purposes
+// For tests
 func (c S3) makeBucket() error {
 	_, err := c.client.CreateBucket(pkg.BackgroundContext(), &s3.CreateBucketInput{Bucket: &c.Bucket})
 	return err
@@ -152,7 +150,6 @@ func (c S3) Lookup(ctx context.Context, t pkg.TileRequest) (*pkg.Image, error) {
 		var noSuchKey *types.NoSuchKey
 		var notFound *types.NotFound
 		if errors.As(err, &noSuchKey) || errors.As(err, &notFound) {
-			// Simple cache miss
 			return nil, nil
 		}
 
@@ -191,8 +188,7 @@ func (c S3) Save(ctx context.Context, t pkg.TileRequest, img *pkg.Image) error {
 func (c S3) Remove(ctx context.Context, t pkg.TileRequest) (bool, error) {
 	key := calcKey(&c, &t)
 
-	// DeleteObject succeeds identically whether or not the key was there, so reporting what was
-	// actually removed costs a HEAD first.
+	// DeleteObject succeeds whether or not the key existed, so reporting removal costs a HEAD first
 	_, err := c.client.HeadObject(ctx, &s3.HeadObjectInput{
 		Bucket: aws.String(c.Bucket),
 		Key:    aws.String(key),

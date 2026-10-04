@@ -35,8 +35,7 @@ func Test_ListenAndServe_Validate(t *testing.T) {
 }
 
 func Test_InterruptFlagsIncludesSigterm(t *testing.T) {
-	// Docker, Compose, and Kubernetes all stop containers with SIGTERM. Without it in this
-	// list the process dies on Go's default disposition and no teardown runs.
+	// Docker, Compose and Kubernetes stop containers with SIGTERM. Without it no teardown runs
 	assert.Contains(t, InterruptFlags, syscall.SIGTERM)
 	assert.Contains(t, InterruptFlags, os.Interrupt)
 }
@@ -47,9 +46,7 @@ func Test_NewHTTPServer_BoundsSlowClients(t *testing.T) {
 
 	srv := newHTTPServer(context.Background(), &cfg, http.NotFoundHandler())
 
-	// A client that stops reading the response would otherwise park the handler goroutine, and
-	// with it the refcount reload and shutdown wait on. Double Server.Timeout keeps this a
-	// backstop behind the timeout handler rather than a second deadline operators have to tune.
+	// A client that stops reading would park the handler and the refcount reload waits on. Doubled to stay a backstop
 	assert.Equal(t, 90*time.Second, srv.WriteTimeout)
 	assert.Equal(t, 90*time.Second, srv.IdleTimeout)
 }

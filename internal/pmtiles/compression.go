@@ -50,10 +50,10 @@ func decompress(data []byte, c Compression, maxLength uint64) ([]byte, error) {
 		}
 		defer r.Close()
 
-		// Clamp so int64(limit)+1 can't wrap even when callers pass a maxLength near uint64 max.
+		// Clamp so int64(limit)+1 can't wrap when maxLength is near uint64 max
 		limit := min(maxLength, math.MaxInt64-1)
 
-		// Reading one byte past the limit detects oversized output without buffering all of it.
+		// One byte past the limit detects oversized output without buffering all of it
 		out, err := io.ReadAll(io.LimitReader(r, int64(limit)+1)) // #nosec G115 -- limit is clamped below MaxInt64
 		if err != nil {
 			return nil, err

@@ -18,7 +18,7 @@ import (
 	"encoding/json"
 )
 
-// Describes a layer's tiles as configured by the operator. Zoom and bounds are enforced, the rest overrides what the provider reports.
+// A layer's tiles as configured by the operator. Zoom and bounds are enforced, the rest overrides what the provider reports
 type LayerMetadata struct {
 	DataType         DataType     // Optional. Declares this layer's data type. Must not contradict the type the provider reports; required if Bounds is set and the provider's type is unknown
 	MinZoom          *int         // Optional. Requests below this zoom are rejected as out of bounds. nil means no lower limit
@@ -27,7 +27,7 @@ type LayerMetadata struct {
 	TileJSONMetadata `mapstructure:",squash" yaml:",inline"`
 }
 
-// Fields copied as-is into a layer's TileJSON document. Have no effect unless TileJSON is enabled.
+// Copied as-is into a layer's TileJSON document. No effect unless TileJSON is enabled
 type TileJSONMetadata struct {
 	Description  string        `json:"description,omitempty"`   // Optional. Populates the `description` field
 	Attribution  string        `json:"attribution,omitempty"`   // Optional. Populates the `attribution` field
@@ -36,7 +36,7 @@ type TileJSONMetadata struct {
 	VectorLayers []VectorLayer `json:"vector_layers,omitempty"` // Optional. Populates the `vector_layers` field, describing the source layers in vector tiles
 }
 
-// Based off the TileJSON 3.0.0 vector_layers entry.
+// Per the TileJSON 3.0.0 vector_layers entry
 type VectorLayer struct {
 	ID          string            `json:"id"`
 	Fields      map[string]string `json:"fields"`
@@ -45,7 +45,7 @@ type VectorLayer struct {
 	MaxZoom     *int              `json:"maxzoom,omitempty"`
 }
 
-// The spec requires fields to be an object, so nil is written as {} rather than null.
+// The spec requires fields to be an object, so nil is written as {} rather than null
 func (v VectorLayer) MarshalJSON() ([]byte, error) {
 	type plain VectorLayer
 	if v.Fields == nil {

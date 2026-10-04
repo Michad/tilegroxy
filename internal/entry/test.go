@@ -48,7 +48,7 @@ type TestOptions struct {
 	TenantID       string
 }
 
-// The default tile used when a layer has no configured center/bounds/zoom to derive one from.
+// Used when a layer has no center, bounds or zoom to derive a tile from
 const (
 	defaultZ = 10
 	defaultX = 123
@@ -100,8 +100,7 @@ func pickTile(l *layers.Layer, layerName string) pkg.TileRequest {
 	return pkg.TileRequest{LayerName: layerName, Z: int(z), X: x, Y: y} // #nosec G115 -- z is 0-21, bounded well within int range
 }
 
-// the set of layer names tested when none are given. A pattern layer's ID
-// isn't a name, so it contributes its examples instead
+// A pattern layer's ID isn't a name, so it contributes its examples instead
 func defaultLayerNames(layerObjects *layers.LayerGroup) []string {
 	names := make([]string, 0, len(layerObjects.Layers()))
 
@@ -220,14 +219,12 @@ func Test(cfg *config.Config, opts TestOptions, out io.Writer) (uint32, error) {
 
 	reqSplit := splitForThreads(tileRequests, opts.NumThread)
 
-	// The live per-tile text table is written to stdout unless we're in JSON mode with no file to
-	// separately stream to - in that case stdout is reserved for the JSON summary alone.
+	// In JSON mode with no file, stdout is reserved for the JSON summary
 	tableOut := out
 	if opts.JSON && opts.FilePath == "" {
 		tableOut = io.Discard
 	}
 
-	// Start processing all the tile requests over N threads
 	var wg sync.WaitGroup
 	errCount := uint32(0)
 	var failuresMu sync.Mutex
@@ -256,8 +253,7 @@ func Test(cfg *config.Config, opts TestOptions, out io.Writer) (uint32, error) {
 	return errCount, nil
 }
 
-// writeSummary emits the run summary to --file (if set) and, when in JSON mode with no --file, to
-// out as well since that's the only output stdout gets in that case.
+// Also writes to out in JSON mode without --file, since that's stdout's only output then
 func writeSummary(out io.Writer, opts TestOptions, summary TestSummary) error {
 	if opts.FilePath != "" {
 		file, err := os.Create(opts.FilePath) // #nosec G304 -- operator-supplied path from the CLI, not user input
@@ -321,7 +317,6 @@ func testTileRequests(layerObjects *layers.LayerGroup, opts TestOptions, errCoun
 			failuresMu.Unlock()
 		}
 
-		// Output the result into the table
 		resultStr := strconv.Itoa(t) + "\t" + req.LayerName + "\t"
 		if layerErr != nil {
 			resultStr += "No\tN/A\tN/A\t\xff" + layerErr.Error() + "\xff\t"
@@ -343,7 +338,7 @@ func testTileRequests(layerObjects *layers.LayerGroup, opts TestOptions, errCoun
 	wg.Done()
 }
 
-// Recovering per request keeps one broken provider, script or cache from aborting the whole run.
+// Recovers per request so one broken provider, script or cache can't abort the whole run
 func testTileRequest(ctx context.Context, l *layers.Layer, req pkg.TileRequest, noCache bool) (error, error, error) {
 	var layerErr error
 	var cacheWriteErr error

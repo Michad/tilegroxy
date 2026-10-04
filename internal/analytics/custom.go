@@ -29,11 +29,11 @@ import (
 
 type CustomConfig struct {
 	CommonConfig `mapstructure:",squash"`
-	// Contains the go code to record events as a file.
+	// Path to a file with the go code that records events
 	File string
-	// Contains the go code to record events inline.
+	// Inline go code that records events
 	Script string
-	// Any other configuration parameters are passed through to the script.
+	// Passed through to the script
 	Params map[string]interface{} `mapstructure:",remain"`
 }
 
@@ -115,7 +115,7 @@ func (s CustomRegistration) Initialize(cfgAny any, deps analytics.AnalyticsDeps)
 		return nil, fmt.Errorf(deps.ErrorMessages.ScriptError, "analytics.custom", "record function has the wrong signature")
 	}
 
-	// close is optional so scripts written before it existed keep working unchanged.
+	// Optional so scripts written before it existed keep working
 	var closeFunc func(context.Context) error
 	if closeVal, closeErr := i.Eval("custom.close"); closeErr == nil {
 		fn, ok := closeVal.Interface().(func(context.Context) error)
@@ -151,14 +151,12 @@ func (c *Custom) Record(ctx context.Context, event analytics.Event) error {
 	return c.batcher.Add(ctx, event)
 }
 
-// flush invokes the script once per batch, not once per event. Yaegi calls carry meaningful overhead so
-// batching keeps that cost off the per-tile path
+// Invoked once per batch because yaegi calls carry meaningful overhead
 func (c *Custom) flush(ctx context.Context, events []analytics.Event) error {
 	return c.recordFunc(ctx, events, c.Params, c.errorMsgs)
 }
 
-// Close flushes the batcher and, if the script defines one, calls its close function. The symbol is
-// optional so scripts written before this existed keep working
+// The script's close function is optional so older scripts keep working
 func (c *Custom) Close(ctx context.Context) error {
 	batcherErr := c.batcher.Close(ctx)
 

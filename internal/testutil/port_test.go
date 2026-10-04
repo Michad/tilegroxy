@@ -32,7 +32,7 @@ func Test_FreePort_IsBindable(t *testing.T) {
 	require.NoError(t, l.Close())
 }
 
-// Enough calls that the kernel would hand back a recent port at least once without the dedupe.
+// Enough calls that the kernel would repeat a recent port without the dedupe
 func Test_FreePort_NeverRepeats(t *testing.T) {
 	const n = 500
 

@@ -25,11 +25,11 @@ import (
 
 type ClickhouseConfig struct {
 	CommonConfig `mapstructure:",squash"`
-	// The ID of a datastore with a name of "clickhouse"
+	// ID of a datastore named "clickhouse"
 	Datastore string
-	// The table to insert events into. Tilegroxy never creates it, see the docs for the recommended DDL
+	// Never created by tilegroxy. See the docs for the recommended DDL
 	Table string
-	// Overrides for the default column names, keyed by the logical field name
+	// Column name overrides keyed by logical field name
 	Columns map[string]string
 }
 
@@ -37,7 +37,7 @@ type Clickhouse struct {
 	ClickhouseConfig
 	conn    driver.Conn
 	columns map[string]string
-	// Precomputed INSERT statement since the column set is fixed at startup
+	// Precomputed since the column set is fixed at startup
 	statement string
 	batcher   *Batcher
 }
@@ -57,7 +57,7 @@ func (s ClickhouseRegistration) Name() string {
 	return "clickhouse"
 }
 
-// The logical fields written to columns. Extra fields all share a single map column
+// Extra fields all share a single map column
 var clickhouseDefaultColumns = map[string]string{
 	ColumnTime:  ColumnTime,
 	ColumnLayer: ColumnLayer,
@@ -126,15 +126,14 @@ func (s ClickhouseRegistration) Initialize(cfgAny any, deps analytics.AnalyticsD
 	return c, nil
 }
 
-// clickhouseStatement builds the INSERT used for every batch. Only operator-supplied identifiers are
-// interpolated, the values are appended as bound parameters by the driver
+// Only operator-supplied identifiers are interpolated. Values are bound by the driver
 func clickhouseStatement(table string, columns map[string]string) string {
 	ordered := clickhouseColumnOrder(columns)
 
 	return fmt.Sprintf("INSERT INTO %v (%v)", table, strings.Join(ordered, ", "))
 }
 
-// clickhouseColumnOrder fixes the column order so it matches the order values are appended in
+// Fixed so it matches the order values are appended in
 func clickhouseColumnOrder(columns map[string]string) []string {
 	keys := []string{ColumnTime, ColumnLayer, ColumnZ, ColumnX, ColumnY, ColumnUser, ColumnExtra}
 	ordered := make([]string, 0, len(keys))
@@ -169,8 +168,7 @@ func (c *Clickhouse) flush(ctx context.Context, events []analytics.Event) error 
 		)
 
 		if err != nil {
-			// Abort instead of sending a partial batch so a single malformed event doesn't leave half
-			// the batch committed and half lost
+			// Abort rather than commit half of the batch when one event is malformed
 			_ = batch.Abort()
 			return err
 		}
@@ -179,8 +177,7 @@ func (c *Clickhouse) flush(ctx context.Context, events []analytics.Event) error 
 	return batch.Send()
 }
 
-// stringifyFields flattens the resolved extra fields into the Map(String, String) column. Using a map
-// column keeps the table schema stable as operators change which fields they collect
+// A single map column keeps the table schema stable as operators change which fields they collect
 func stringifyFields(fields map[string]any) map[string]string {
 	out := make(map[string]string, len(fields))
 
@@ -192,6 +189,6 @@ func stringifyFields(fields map[string]any) map[string]string {
 }
 
 func (c *Clickhouse) Close(ctx context.Context) error {
-	// Only the batcher is closed here, the connection belongs to the datastore registry
+	// The connection belongs to the datastore registry
 	return c.batcher.Close(ctx)
 }

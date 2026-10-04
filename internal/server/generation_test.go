@@ -38,9 +38,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// blockingAnalytics is an analytics.Analytics whose Close blocks until told to proceed, or returns
-// a configured error, so tests can drive generation close behavior deterministically instead of
-// relying on sleeps
+// Close blocks until told to proceed or returns a configured error, avoiding sleeps
 type blockingAnalytics struct {
 	release  chan struct{}
 	closeErr error
@@ -62,8 +60,7 @@ func (b *blockingAnalytics) Close(ctx context.Context) error {
 	return b.closeErr
 }
 
-// entitiesWithAnalytics builds an *entities.Entities whose Close is driven entirely by the given
-// Analytics implementation, so a test can control blocking or errors deterministically
+// Close is driven entirely by the given Analytics so tests control blocking and errors
 func entitiesWithAnalytics(a analytics.Analytics) *entities.Entities {
 	return &entities.Entities{Analytics: &internalanalytics.AnalyticsWrapper{Name: "test", Analytics: a}}
 }
@@ -71,7 +68,7 @@ func entitiesWithAnalytics(a analytics.Analytics) *entities.Entities {
 func Test_GenerationClosesWhenIdle(t *testing.T) {
 	g := newGeneration(nil, &entities.Entities{})
 
-	// No in-flight requests, so marking it closing releases it after the floor.
+	// No in-flight requests, so it releases after the floor
 	g.markClosing(context.Background(), time.Millisecond)
 
 	require.Eventually(t, g.isClosed, time.Second, 10*time.Millisecond,
@@ -85,8 +82,7 @@ func Test_GenerationWaitsForInFlightRequest(t *testing.T) {
 
 	g.markClosing(context.Background(), time.Millisecond)
 
-	// The held request pins the generation; releasing it early would tear down connections
-	// underneath a request that is still using them.
+	// The held request pins the generation. Releasing early would tear down connections it's still using
 	time.Sleep(50 * time.Millisecond)
 	assert.False(t, g.isClosed(), "generation must stay open while a request holds it")
 	assert.Equal(t, 1, g.inFlight(), "the held request must still be counted")
@@ -135,8 +131,7 @@ func Test_GenerationConcurrentAcquireRelease(t *testing.T) {
 	assert.Equal(t, 1, g.closeCount())
 }
 
-// panickingAnalytics is an analytics.Analytics whose Close panics, so tests can verify that a
-// panicking close hook is contained rather than crashing the process.
+// Verifies a panicking close hook is contained rather than crashing the process
 type panickingAnalytics struct{}
 
 func (p panickingAnalytics) Record(_ context.Context, _ analytics.Event) error {
@@ -150,8 +145,7 @@ func (p panickingAnalytics) Close(_ context.Context) error {
 func Test_MarkClosingRecoversFromPanicInClose(t *testing.T) {
 	g := newGeneration(nil, entitiesWithAnalytics(panickingAnalytics{}))
 
-	// The floor goroutine runs detached from any request; a panic in the underlying Close must
-	// not be allowed to escape it and take down the whole process.
+	// The floor goroutine is detached from any request, so a Close panic must not escape it
 	require.NotPanics(t, func() {
 		g.markClosing(context.Background(), time.Millisecond)
 		time.Sleep(50 * time.Millisecond)
@@ -166,7 +160,7 @@ func Test_RegistryClosesEveryLiveGeneration(t *testing.T) {
 	reg.add(g1)
 	reg.add(g2)
 
-	// Shutdown must reach a generation a recent reload swapped out, not just the current one.
+	// Shutdown must reach a swapped-out generation, not just the current one
 	require.NoError(t, reg.closeAll(context.Background()))
 
 	assert.True(t, g1.isClosed())
@@ -213,7 +207,7 @@ func Test_CloseAllWaitsForInFlightRequest(t *testing.T) {
 		done <- reg.closeAll(ctx)
 	}()
 
-	// closeAll must not close a generation with a live reference out from under the request.
+	// closeAll must not close a generation with a live reference
 	time.Sleep(50 * time.Millisecond)
 	assert.False(t, g.isClosed(), "closeAll must wait rather than force-close while refs are held")
 
@@ -236,8 +230,7 @@ func Test_CloseAllJoinsInProgressClose(t *testing.T) {
 	g := newGeneration(nil, entitiesWithAnalytics(block))
 	reg.add(g)
 
-	// Start a close directly, as release() or the floor goroutine would, and have it block
-	// mid-drain so closeAll races an in-progress close rather than a fresh one.
+	// Block mid-drain so closeAll races an in-progress close rather than a fresh one
 	closeNowDone := make(chan struct{})
 	go func() {
 		_ = g.closeNow(context.Background())
@@ -253,7 +246,7 @@ func Test_CloseAllJoinsInProgressClose(t *testing.T) {
 		closeAllDone <- reg.closeAll(context.Background())
 	}()
 
-	// While the drain is blocked, closeAll must not have returned.
+	// closeAll must not return while the drain is blocked
 	time.Sleep(50 * time.Millisecond)
 	select {
 	case <-closeAllDone:
@@ -299,7 +292,7 @@ func Test_ReloadKeepsGenerationAliveForInFlightRequest(t *testing.T) {
 	handler, err := newTileHandler(newGenerationHolder(oldGen))
 	require.NoError(t, err)
 
-	// Simulate a request that read the pointer and is still running.
+	// A request that read the pointer and is still running
 	handler.mu.RLock()
 	inFlight := handler.current
 	inFlight.acquire()
@@ -319,9 +312,7 @@ func Test_ReloadKeepsGenerationAliveForInFlightRequest(t *testing.T) {
 	assert.False(t, newGen.isClosed(), "the serving generation must stay open")
 }
 
-// Test_ServeHTTPReleasesGenerationRef exercises the real acquire/release path end to end: a
-// request through ServeHTTP must not leave the generation's refcount pinned above zero once the
-// response has been written.
+// A request through ServeHTTP must not leave the refcount pinned once the response is written
 func Test_ServeHTTPReleasesGenerationRef(t *testing.T) {
 	cfg := config.DefaultConfig()
 	cfg.Layers = []config.LayerConfig{{ID: "main", Provider: map[string]interface{}{"name": "static", "color": "FFF"}}}
@@ -365,7 +356,7 @@ func Test_CurrentEntitiesFollowsReload(t *testing.T) {
 	reg.add(newGen)
 	handler.reload(newGen)
 
-	// Shutdown closes whatever this returns, so it must track the swap.
+	// Shutdown closes whatever this returns, so it must track the swap
 	assert.Same(t, newGen.all, handler.currentEntities())
 }
 
@@ -384,7 +375,7 @@ func Test_SetupHandlers_ReloadSwapsEveryHandlerAtOnce(t *testing.T) {
 	nextCfg.Layers = []config.LayerConfig{staticLayerConfig("next")}
 	require.NoError(t, routes.reload(&nextCfg, buildTileJSONTestServing(t, nextCfg).all))
 
-	// Every route must see the new layer as soon as reload returns, not just the tile route
+	// Every route must see the new layer as soon as reload returns
 	for _, path := range []string{"/tiles/next/8/12/32", "/tiles/next.json", "/preview/next"} {
 		w := httptest.NewRecorder()
 		routes.root.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "http://example.com"+path, nil).WithContext(pkg.BackgroundContext()))

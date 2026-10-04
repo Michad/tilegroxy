@@ -101,9 +101,7 @@ func setTileSpanAttributes(span trace.Span, tileReq pkg.TileRequest) {
 	)
 }
 
-// writeTile sends the rendered tile body, or a 304 when the request carries a matching
-// If-None-Match, recording the outcome on the span. A write failure still counts as a success
-// since the tile itself was generated.
+// Sends a 304 for a matching If-None-Match. A failed write still counts as success since the tile was generated
 func writeTile(ctx context.Context, w http.ResponseWriter, req *http.Request, span trace.Span, img *pkg.Image, cacheControl string) {
 	if cacheControl != "" {
 		w.Header().Set(cacheControlHeader, cacheControl)
@@ -165,10 +163,7 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Resolved on a best-effort basis so error responses for this layer's requests can pick a
-	// vector-tile error image instead of PNG. Unknown until proven otherwise: a layer that
-	// doesn't match yet, or whose data type can't be determined, keeps the long-standing PNG
-	// behavior.
+	// Best effort so errors can use a vector image. Unmatched or undetermined layers keep the long-standing PNG behavior
 	dataType := config.DataTypeUnknown
 	if l := cur.layerGroup().FindLayer(ctx, req.PathValue("layer")); l != nil {
 		dataType = l.DataType
@@ -216,18 +211,14 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	writeTile(ctx, w, req, span, img, cur.generateCacheControlForTile(ctx, tileReq, img))
 
-	// This isn't in the else clause because the tile was still generated successfully even though request errored
+	// Not in the else since the tile was still generated even though the request errored
 	h.tileSuccessCounter.Add(ctx, 1)
 
-	// Recorded after the response is written so analytics never sits on the latency path. Like the
-	// success counter above, a failed write still counts as usage: the tile was produced and, for
-	// operators tracking consumption of a paid upstream, the cost was incurred.
+	// After the response so analytics stays off the latency path. Failed writes still count since the upstream cost was incurred
 	cur.recordAnalytics(ctx, tileReq, img)
 }
 
-// recordAnalytics emits a usage event for a successfully served tile. It resolves the layer a
-// second time to get its configured ID and skip flag; FindLayer is a cheap in-memory match and
-// keeps this off RenderTile, which also runs for seeding, health checks and ref providers.
+// Re-resolves the layer for its ID and skip flag, keeping this off RenderTile, which seeding, health and ref also use
 func (s *generation) recordAnalytics(ctx context.Context, tileReq pkg.TileRequest, img *pkg.Image) {
 	if s.analytics().Empty() {
 		return
@@ -261,15 +252,13 @@ func (s *generation) recordAnalytics(ctx context.Context, tileReq pkg.TileReques
 	})
 }
 
-// etagFor produces a strong ETag from the tile content. The internal cache only saves the upstream
-// call; without a conditional request every byte still crosses the wire on every pan and zoom.
+// The internal cache only saves the upstream call. Without conditional requests every byte is resent on each pan and zoom
 func etagFor(content []byte) string {
 	sum := sha256.Sum256(content)
 	return `"` + hex.EncodeToString(sum[:]) + `"`
 }
 
-// requestETagMatches implements the If-None-Match precondition from RFC 9110 §13.1.2: a
-// comma-separated list of one or more entity tags, or "*" to match any current representation.
+// Per RFC 9110 §13.1.2: a comma-separated list of entity tags, or "*" to match anything
 func requestETagMatches(ifNoneMatch string, etag string) bool {
 	if ifNoneMatch == "" {
 		return false

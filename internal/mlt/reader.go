@@ -21,23 +21,23 @@ import (
 	"math"
 )
 
-// Caps decoded memory, since run lengths and dictionaries let a small tile claim a huge one.
+// Caps decoded memory, since run lengths and dictionaries let a small tile claim a huge one
 const (
 	maxTileBytes    = 50 << 20
 	maxFeatureBytes = 10 << 20
 )
 
-// Approximate in-memory sizes of decoded items, for charging against the caps.
+// Approximate in-memory sizes of decoded items, for charging against the caps
 const (
 	stringHeaderBytes = 16
 	sliceHeaderBytes  = 24
 	pointBytes        = 16
 	geometryBytes     = 16
-	// A string header is the widest value a column holds.
+	// A string header is the widest value a column holds
 	maxValueBytes = stringHeaderBytes
 )
 
-// Never escapes Decode, which drops the layer instead.
+// Never escapes Decode, which drops the layer instead
 var errTileTooLarge = errors.New("MLT tile decodes past the size limit")
 
 type reader struct {
@@ -51,7 +51,7 @@ func newReader(buf []byte) *reader {
 	return &reader{buf: buf, budget: &budget}
 }
 
-// The sub-reader shares the parent's budget.
+// Shares the parent's budget
 func (r *reader) sub(buf []byte) *reader {
 	return &reader{buf: buf, budget: r.budget}
 }
@@ -64,7 +64,7 @@ func (r *reader) remaining() int {
 	return len(r.buf) - r.pos
 }
 
-// Charges count items of size bytes against the tile's budget.
+// Charges count items of size bytes against the tile's budget
 func (r *reader) spend(count, size uint64) error {
 	if size != 0 && count > *r.budget/size {
 		return errTileTooLarge
@@ -110,7 +110,7 @@ func (r *reader) varint32() (uint32, error) {
 	return uint32(v), nil
 }
 
-// Reports whether n more bytes, or items of at least a byte each, could still be read.
+// Whether n more bytes, or items of at least a byte each, could still be read
 func (r *reader) fits(n uint32) bool {
 	return int64(n) <= int64(r.remaining())
 }

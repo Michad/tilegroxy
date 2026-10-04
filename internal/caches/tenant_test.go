@@ -61,7 +61,7 @@ func Test_TenantCache_NamespacesKeysByTenant(t *testing.T) {
 	require.NotNil(t, imgB)
 	require.Equal(t, []byte("b-data"), imgB.Content)
 
-	// The two tenants must not share the same underlying key
+	// The two tenants must not share an underlying key
 	require.Len(t, inner.entries, 2)
 }
 
@@ -85,8 +85,7 @@ func Test_TenantCache_MissingTenantOnContextFallsBackToUnnamespacedKey(t *testin
 	c := NewTenantCache(inner)
 	req := testTileRequest()
 
-	// A plain background context has no tenant ID value at all, unlike a request context which
-	// always seeds one (even if empty).
+	// Unlike a request context, which always seeds a tenant ID even if empty
 	ctx := context.Background()
 
 	require.NoError(t, c.Save(ctx, req, &pkg.Image{Content: []byte("data"), ContentType: "image/png"}))

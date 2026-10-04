@@ -34,24 +34,22 @@ import (
 const (
 	gaDefaultEndpoint  = "https://www.google-analytics.com/mp/collect"
 	gaDefaultEventName = "tile_request"
-	// The Measurement Protocol rejects payloads with more than 25 events so batches are capped here
+	// The Measurement Protocol rejects more than 25 events per payload
 	gaMaxEventsPerRequest = 25
 	gaDefaultTimeout      = 10
 )
 
 type GoogleAnalyticsConfig struct {
 	CommonConfig `mapstructure:",squash"`
-	// The GA4 measurement ID, in the form G-XXXXXXX
+	// In the form G-XXXXXXX
 	MeasurementID string
-	// The Measurement Protocol API secret. Expected to be supplied via env. or secret.
+	// Expected to be supplied via env. or secret.
 	APISecret string
-	// The event name recorded in GA
 	EventName string
-	// Overrides the collection endpoint. Point this at /debug/mp/collect to validate payloads
+	// Point this at /debug/mp/collect to validate payloads
 	Endpoint string
-	// How long (in seconds) a request to GA can be in flight
-	Timeout uint
-	// The user agent sent to GA
+	// Seconds
+	Timeout   uint
 	UserAgent string
 }
 
@@ -145,8 +143,7 @@ func (g *GoogleAnalytics) Record(ctx context.Context, event analytics.Event) err
 	return g.batcher.Add(ctx, event)
 }
 
-// gaPayload is one Measurement Protocol request. GA requires all events in a request to share a client_id
-// so events are grouped by client before being sent
+// GA requires every event in a request to share a client_id, so events are grouped by client
 type gaPayload struct {
 	ClientID string    `json:"client_id"`
 	UserID   string    `json:"user_id,omitempty"`
@@ -182,7 +179,6 @@ func (g *GoogleAnalytics) flush(ctx context.Context, events []analytics.Event) e
 	return nil
 }
 
-// chunkEvents splits events into groups no larger than size
 func chunkEvents(events []analytics.Event, size int) [][]analytics.Event {
 	chunks := make([][]analytics.Event, 0, (len(events)+size-1)/size)
 
@@ -194,8 +190,7 @@ func chunkEvents(events []analytics.Event, size int) [][]analytics.Event {
 	return chunks
 }
 
-// clientID derives the GA client identifier. GA requires one on every payload so anonymous requests fall
-// back to a hash of the source IP, which also means the raw address is never sent to Google
+// Anonymous requests fall back to a hash of the source IP so the raw address is never sent to Google
 func (g *GoogleAnalytics) clientID(e analytics.Event) string {
 	if e.UserID != "" {
 		return e.UserID
@@ -254,8 +249,7 @@ func (g *GoogleAnalytics) send(ctx context.Context, clientID string, events []an
 
 	defer resp.Body.Close() //nolint:errcheck // Nothing actionable if closing the body fails
 
-	// GA returns 204 on success and 2xx generally, anything else is reported so the batcher counts it as
-	// an error. The error never reaches the user
+	// Reported so the batcher counts it as an error. It never reaches the user
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return errors.New("google analytics returned status " + strconv.Itoa(resp.StatusCode))
 	}

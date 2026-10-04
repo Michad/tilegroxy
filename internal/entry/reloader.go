@@ -31,7 +31,7 @@ import (
 
 type swapFunc = func(*config.Config, *entities.Entities) error
 
-// Reloader applies hot reloads one at a time, holding any that arrive before the server is ready.
+// Applies hot reloads one at a time, holding any that arrive before the server is ready
 type Reloader struct {
 	// Held for a whole reload so reloads apply in order
 	run sync.Mutex
@@ -50,12 +50,12 @@ type pendingReload struct {
 	reason string
 }
 
-// NewReloader creates a Reloader to pass to a single call of Serve
+// Pass to a single call of Serve
 func NewReloader() *Reloader {
 	return &Reloader{}
 }
 
-// Reload applies cfg as a file change. Before the server is ready only the latest cfg is kept.
+// Applies cfg as a file change. Before the server is ready only the latest cfg is kept
 func (r *Reloader) Reload(cfg *config.Config) error {
 	return r.apply(cfg, audit.ReasonConfigFile)
 }
@@ -127,7 +127,7 @@ func (r *Reloader) schedule() {
 	go r.runPending()
 }
 
-// ready hands over the server's swap function and applies anything queued during startup
+// Hands over the server's swap function and applies anything queued during startup
 func (r *Reloader) ready(swap swapFunc) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

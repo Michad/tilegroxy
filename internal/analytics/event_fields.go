@@ -26,8 +26,7 @@ import (
 	"github.com/go-viper/mapstructure/v2"
 )
 
-// The recognized values for the `fields` parameter. Anything outside this set is rejected at startup so a
-// typo doesn't silently produce a column of nulls
+// Anything outside this set is rejected at startup so a typo doesn't silently produce a column of nulls
 const (
 	FieldLayerName   = "layername"
 	FieldLayerParams = "layerparams"
@@ -45,8 +44,6 @@ const (
 	FieldCached      = "cached"
 )
 
-// AllFields is the full set of names accepted by the `fields` parameter, used for validation and to render
-// the error message listing valid options
 var AllFields = []string{
 	FieldLayerName,
 	FieldLayerParams,
@@ -64,33 +61,27 @@ var AllFields = []string{
 	FieldCached,
 }
 
-// Prefixes recognized in `extraFields` values. Note `env.` and `secret.` are absent since those are already
-// handled generically before a module ever sees its configuration
+// `env.` and `secret.` are absent since they're resolved before a module sees its configuration
 const (
 	extraPrefixContext = "ctx."
 	extraPrefixHeader  = "hdr."
 )
 
-// FieldSource carries the request-scoped values that aren't available from the context alone. Populated by
-// the tile handler at the point of a successful response
+// Request-scoped values unavailable from the context alone. Populated by the tile handler on success
 type FieldSource struct {
-	// The layer name exactly as it appeared in the URL
-	LayerName string
-	// Size of the response body in bytes
-	Bytes int
-	// MIME type of the served tile
+	// Exactly as it appeared in the URL
+	LayerName   string
+	Bytes       int
 	ContentType string
 }
 
-// fieldResolver turns a module's Fields/ExtraFields configuration into a map of attributes for each event.
 // Built once at startup so per-request work is limited to reading values
 type fieldResolver struct {
 	fields      []string
 	extraFields map[string]string
 }
 
-// commonOnly is the subset of CommonConfig needed to build a resolver, decoded separately so the resolver
-// can be constructed from the raw config without knowing the module's own config type
+// Decoded separately so a resolver can be built without knowing the module's own config type
 type commonOnly struct {
 	Fields      []string
 	ExtraFields map[string]string
@@ -129,8 +120,7 @@ func isKnownField(name string) bool {
 	return false
 }
 
-// Resolve builds the attribute map for a single event. Returns nil when nothing is configured so modules
-// can distinguish "no extra fields" from "an empty set of them"
+// Nil when nothing is configured, distinguishing "no extra fields" from an empty set
 func (r *fieldResolver) Resolve(ctx context.Context, src FieldSource) map[string]any {
 	if r == nil || (len(r.fields) == 0 && len(r.extraFields) == 0) {
 		return nil
@@ -199,15 +189,14 @@ func resolveNamedField(ctx context.Context, name string, src FieldSource) (any, 
 	return nil, false
 }
 
-// resolveExtraField interprets a single `extraFields` value. Anything without a recognized prefix is used
-// as a literal constant
+// Values without a recognized prefix are literal constants
 func resolveExtraField(ctx context.Context, spec string) (any, bool) {
 	if after, found := strings.CutPrefix(spec, extraPrefixContext); found {
 		return contextValue(ctx, after)
 	}
 
 	if after, found := strings.CutPrefix(spec, extraPrefixHeader); found {
-		// Headers land in the context under their canonical form regardless of how the client cased them
+		// Headers are stored under their canonical form regardless of client casing
 		return contextValue(ctx, http.CanonicalHeaderKey(after))
 	}
 

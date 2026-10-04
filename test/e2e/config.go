@@ -24,11 +24,10 @@ import (
 	"text/template"
 )
 
-// Permissions for the generated config file, which only the test process needs to read.
+// Only the test process needs to read it
 const configFileMode = 0600
 
-// Config describes an instance to start. Raw is YAML which may reference {{.Port}} and
-// {{.HealthPort}}; the harness allocates both and substitutes them.
+// Raw YAML may reference {{.Port}} and {{.HealthPort}}, which the harness allocates and substitutes
 type Config struct {
 	Raw       string
 	Args      []string
@@ -49,7 +48,7 @@ func renderConfig(t *testing.T, raw string, p ports) string {
 		t.Fatalf("config template is not valid: %v", err)
 	}
 
-	// The template names the ports as the config keys spell them, not as the struct fields do.
+	// Named as the config keys spell them, not as the struct fields do
 	data := struct {
 		Port       int
 		HealthPort int

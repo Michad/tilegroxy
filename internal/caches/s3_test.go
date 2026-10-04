@@ -34,7 +34,7 @@ import (
 )
 
 func init() {
-	// This is a hack to help with vscode test execution. Put a .env in repo root w/ anything you need for test containers
+	// Lets vscode test runs pick up testcontainer settings from a .env in the repo root
 	if env, err := os.ReadFile("../../.env"); err == nil {
 		envs := strings.Split(string(env), "\n")
 		for _, e := range envs {
@@ -64,7 +64,7 @@ func Test_S3Validate(t *testing.T) {
 }
 
 func Test_S3ValidateProfile(t *testing.T) {
-	// Currently invalid profile fails when using it for the first time vs on construct. Would rather have it fail in constructor but not sure how to best validate that without potentially impacting s3-compatible use cases. For now leaving this test assuming the failure happens in one of two places
+	// An invalid profile fails on first use rather than construction, and validating earlier risks S3-compatible setups, so accept either
 	var err2 error
 	s3, err1 := S3Registration{}.Initialize(S3Config{Bucket: "test", Profile: "fakeyfake"}, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	if s3 != nil {

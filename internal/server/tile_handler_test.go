@@ -334,7 +334,7 @@ layers:
 	assert.Equal(t, http.StatusOK, resp2.StatusCode)
 }
 
-// Just make sure it starts up and rejects unauth for now.
+// Only checks it starts up and rejects unauthenticated requests for now
 func Test_TileHandler_ExecuteStaticRandomKey(t *testing.T) {
 
 	configRaw := `server:
@@ -418,8 +418,7 @@ layers:
 	assert.Equal(t, http.StatusOK, resp2.StatusCode)
 }
 
-// The internal cache only saves the upstream call. Without conditional request handling every
-// byte still crosses the wire and browsers re-fetch every tile on every pan and zoom.
+// Without conditional requests browsers re-fetch every tile on every pan and zoom
 func Test_TileHandler_ETagAndConditionalRequest(t *testing.T) {
 	configRaw := `server:
   port: 12348
@@ -555,8 +554,7 @@ layers:
 	assert.Equal(t, "no-store", resp.Header.Get("Cache-Control"), "error responses must never be cached, especially with AlwaysOK where the status alone can't signal failure to a CDN")
 }
 
-// Regression test for #768: an error for a layer whose data type is mvt must return the
-// vector-tile error image with a vector Content-Type, not the default PNG.
+// Regression test for #768: an mvt layer's errors must use the vector error image and Content-Type, not PNG
 func Test_TileHandler_ExecuteErrorImage_Mvt(t *testing.T) {
 	configRaw := `server:
   port: 12345
@@ -581,7 +579,7 @@ layers:
 	handler, err := newTileHandler(newGenerationHolder(testServing(&cfg, auth, lg)))
 	require.NoError(t, err)
 
-	// z8 exceeds the layer's maxzoom of 5, so this hits the bounds error path rather than auth.
+	// z8 exceeds the layer's maxzoom of 5, so this hits the bounds error path rather than auth
 	req1 := httptest.NewRequest(http.MethodGet, "http://localhost:12349/tiles/vector/8/12/32", nil).WithContext(pkg.BackgroundContext())
 	req1.SetPathValue("layer", "vector")
 	req1.SetPathValue("z", "8")
@@ -602,7 +600,7 @@ layers:
 	assert.Equal(t, "no-store", resp.Header.Get("Cache-Control"))
 }
 
-// An MLT layer needs MLT error tiles, since an MVT one wouldn't decode in a client expecting MLT.
+// A client expecting MLT can't decode an MVT error tile
 func Test_TileHandler_Mlt(t *testing.T) {
 	configRaw := `server:
   port: 12345
@@ -658,9 +656,7 @@ layers:
 	assert.Equal(t, "application/vnd.maplibre-tile", resp.Header.Get("Content-Type"))
 }
 
-// Regression test: auth failures must always return the PNG error image, even for an mvt layer,
-// since which image tilegroxy picked would itself leak the layer's data type to a caller who
-// hasn't authenticated yet.
+// The choice of image would leak the layer's data type to an unauthenticated caller, so auth failures are always PNG
 func Test_TileHandler_ExecuteErrorImage_Mvt_AuthAlwaysPng(t *testing.T) {
 	configRaw := `server:
   port: 12345

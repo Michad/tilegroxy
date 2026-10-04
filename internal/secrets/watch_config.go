@@ -25,7 +25,7 @@ import (
 
 const defaultWatchInterval = 300
 
-// Generic keys every backend shares, stripped before the backend decodes its own config
+// Shared by every backend and stripped before the backend decodes its own config
 var watchConfigKeys = []string{"watch", "watchinterval", "ttl"}
 
 type secretWatchConfig struct {
@@ -34,7 +34,7 @@ type secretWatchConfig struct {
 	TTL           int
 }
 
-// Backends decode with ErrorUnused, so the shared keys have to come out before they see the map
+// Backends decode with ErrorUnused, so the shared keys come out before they see the map
 func parseWatchConfig(rawConfig map[string]interface{}, batchSize int, errorMessages config.ErrorMessages) (secretWatchConfig, map[string]interface{}, error) {
 	generic := make(map[string]interface{})
 	stripped := make(map[string]interface{}, len(rawConfig))

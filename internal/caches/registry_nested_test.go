@@ -25,8 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// The nesting caches live in this package, so the registry's walk over them is exercised here
-// rather than beside the registry itself.
+// The nesting caches live in this package, so the registry's walk over them is tested here
 func nestedTestDeps() cache.CacheDeps {
 	return cache.CacheDeps{ErrorMessages: config.DefaultConfig().Error.Messages}
 }
@@ -57,8 +56,7 @@ func (s countingRegistration) Initialize(_ any, _ cache.CacheDeps) (cache.Cache,
 	return countingCache(s), nil
 }
 
-// Mirrors the arrangement in the cache configuration docs: a tenant cache wrapping a multi cache,
-// where a layer can reference the multi cache nested two levels down.
+// Mirrors the docs: a tenant cache wrapping a multi cache, with a layer referencing the multi two levels down
 func Test_Registry_ReferencesNestedCacheByID(t *testing.T) {
 	reg, err := ConstructCacheRegistry(context.Background(), []map[string]interface{}{
 		{
@@ -103,8 +101,7 @@ func Test_Registry_NestedIDCollidesWithTopLevel(t *testing.T) {
 	require.ErrorContains(t, err, "outer")
 }
 
-// A nested cache is closed by the parent that constructed it, so surfacing it in the registry must
-// not cause a second close.
+// The parent closes nested caches, so surfacing them in the registry must not close them twice
 func Test_Registry_ClosesNestedCacheOnce(t *testing.T) {
 	closed := 0
 	cache.RegisterCache(countingRegistration{closed: &closed})

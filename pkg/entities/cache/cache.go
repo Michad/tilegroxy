@@ -26,12 +26,11 @@ import (
 type Cache interface {
 	Lookup(ctx context.Context, t pkg.TileRequest) (*pkg.Image, error)
 	Save(ctx context.Context, t pkg.TileRequest, img *pkg.Image) error
-	// The bool reports whether an entry was actually there; a miss is not an error.
+	// Reports whether an entry was there. A miss isn't an error
 	Remove(ctx context.Context, t pkg.TileRequest) (bool, error)
 }
 
-// CacheDeps carries everything a cache is given at construction. New dependencies are added as fields so
-// the Initialize signature stays stable
+// New dependencies are added as fields so the Initialize signature stays stable
 type CacheDeps struct {
 	ErrorMessages config.ErrorMessages
 	Datastores    datastore.DatastoreRegistry
@@ -46,8 +45,7 @@ type CacheRegistration interface {
 var registrationsMu sync.RWMutex
 var registrations = make(map[string]CacheRegistration)
 
-// Registration is normally only done from init(), which Go serializes, but the mutex covers a
-// consumer that registers concurrently instead.
+// init() is serialized by Go, but the mutex covers consumers that register concurrently
 func RegisterCache(reg CacheRegistration) {
 	registrationsMu.Lock()
 	defer registrationsMu.Unlock()
@@ -71,7 +69,7 @@ func RegisteredCacheNames() []string {
 	return names
 }
 
-// CacheRegistry gives entities access to the caches configured by ID
+// Gives entities access to the caches configured by ID
 type CacheRegistry interface {
 	Get(id string) (Cache, bool)
 	IDs() []string

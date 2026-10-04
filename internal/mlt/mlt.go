@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package mlt reads and writes MapLibre Tiles (MLT), the columnar vector tile format specified at
-// https://github.com/maplibre/maplibre-tile-spec. Only the stable v1 layer format is supported.
+// Package mlt reads and writes MapLibre Tiles (https://github.com/maplibre/maplibre-tile-spec). Only the stable v1 layer format is supported
 package mlt
 
 import (
@@ -22,13 +21,13 @@ import (
 	"github.com/paulmach/orb"
 )
 
-// ErrMalformed is wrapped by every error caused by a tile that doesn't follow the specification.
+// Wrapped by every error caused by a tile that doesn't follow the specification
 var ErrMalformed = errors.New("malformed MLT tile")
 
-// ErrUnsupported is wrapped by errors for valid tile content this package can't process.
+// Wrapped by errors for valid tile content this package can't process
 var ErrUnsupported = errors.New("unsupported MLT content")
 
-// ColumnType is the type of a property column, without the nullable flag.
+// Without the nullable flag
 type ColumnType uint8
 
 const (
@@ -43,7 +42,7 @@ const (
 	ColumnSharedDict ColumnType = 30
 )
 
-// Layer is one decoded v1 layer. Every per-feature slice is indexed by feature.
+// Every per-feature slice is indexed by feature
 type Layer struct {
 	Name       string
 	Extent     uint32
@@ -52,7 +51,6 @@ type Layer struct {
 	Columns    []Column
 }
 
-// IDColumn holds feature ids.
 type IDColumn struct {
 	Long     bool     // Encoded as 64 bit rather than 32 bit ids
 	Nullable bool     // Some features may lack an id
@@ -60,24 +58,22 @@ type IDColumn struct {
 	Values   []uint64 // Zero where not present
 }
 
-// Column is a property column.
 type Column struct {
 	Type     ColumnType
 	Name     string
 	Nullable bool   // Some features may lack a value
 	Present  []bool // Only set when Nullable
-	// Per feature []bool, []int32, []uint32, []int64, []uint64, []float32, []float64 or []string matching Type. Zero where absent, nil for SharedDict
+	// Per feature slice of the Go type matching Type. Zero where absent, nil for SharedDict
 	Values any
-	// ColumnSharedDict only. String columns sharing one dictionary, named by appending their Name to the parent's
+	// ColumnSharedDict only. Columns sharing one dictionary, named by appending their Name to the parent's
 	Children []Column
 }
 
-// FeatureCount is the number of features in the layer.
 func (l Layer) FeatureCount() int {
 	return len(l.Geometries)
 }
 
-// Select returns the layer reduced to the features at the given indexes, in the order given.
+// Keeps only the features at the given indexes, in the order given
 func (l Layer) Select(keep []int) Layer {
 	out := l
 	out.Geometries = pick(l.Geometries, keep)

@@ -24,8 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// staticKeyAutoConfig omits authentication.key so tilegroxy generates one at startup and logs it,
-// which is the only way an operator (or this test) learns what it is.
+// No key, so one is generated and logged, the only way an operator or this test learns it
 const staticKeyAutoConfig = `
 server:
   port: {{.Port}}
@@ -42,8 +41,7 @@ layers:
 
 var generatedKeyPattern = regexp.MustCompile(`Generated authentication key: (\S+)`)
 
-// extractGeneratedKey scrapes the auto-generated static key out of the child's captured log
-// output, matching the exact message static_key.go emits via slog.
+// Matches the exact message static_key.go logs
 func extractGeneratedKey(t *testing.T, output string) string {
 	t.Helper()
 
@@ -66,8 +64,7 @@ func Test_StaticKeyAuth_GeneratedKeyFromLogsGrantsAccess(t *testing.T) {
 func Test_StaticKeyAuth_MissingOrWrongKeyIsUnauthorized(t *testing.T) {
 	inst := Start(t, Config{Raw: staticKeyAutoConfig})
 
-	// Confirm a key was actually generated, so a passing assertion below isn't accidentally
-	// exercising an auth scheme that let everything through regardless.
+	// Proves a key was generated, so passing below isn't an auth scheme letting everything through
 	extractGeneratedKey(t, inst.Output())
 
 	inst.Get("/tiles/color/8/12/32").ExpectStatus(http.StatusUnauthorized)

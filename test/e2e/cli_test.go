@@ -41,7 +41,7 @@ func Test_CLI_HelpExitsZero(t *testing.T) {
 	assert.Contains(t, out, "tilegroxy")
 }
 
-// Validation lives under the config command as `config check`, not a top-level `check`.
+// Validation lives under the config command as `config check`, not a top-level `check`
 func Test_CLI_CheckAcceptsValidConfig(t *testing.T) {
 	path := writeConfig(t, `
 server:
@@ -65,12 +65,11 @@ func Test_CLI_CheckRejectsInvalidConfig(t *testing.T) {
 	out, code := Run(t, "config", "check", "-c", path)
 
 	assert.NotEqual(t, 0, code)
-	// check reports "Invalid configuration", not the "Error" prefix that serve uses.
+	// Not the "Error" prefix serve uses
 	assert.Contains(t, out, "Invalid configuration")
 }
 
-// A container orchestrator sees only the exit code, so that is what these assert, rather than the
-// exitStatus package global the in-process tests read.
+// Orchestrators only see the exit code, unlike the in-process tests reading the exitStatus global
 func Test_CLI_MissingConfigExitsNonZero(t *testing.T) {
 	out, code := Run(t, "serve", "-c", filepath.Join(t.TempDir(), "nope.yml"))
 
@@ -87,8 +86,7 @@ func Test_CLI_MalformedConfigExitsNonZero(t *testing.T) {
 	assert.Contains(t, out, "Error")
 }
 
-// Errors go to stdout, not stderr: cmd/serve.go uses rootCmd.OutOrStdout() on every error path.
-// This pins that behavior so a future change to it is a deliberate decision.
+// cmd/serve.go writes every error to OutOrStdout. Pinned so any change is deliberate
 func Test_CLI_ErrorsAreWrittenToStdout(t *testing.T) {
 	path := writeConfig(t, "asfasfasfasflkasfjaslfjlasasfjlkafkf")
 
@@ -115,7 +113,7 @@ func Test_CLI_ErrorsAreWrittenToStdout(t *testing.T) {
 func Test_CLI_PortAlreadyInUseExitsNonZero(t *testing.T) {
 	inst := Start(t, Config{Raw: staticLayerConfig})
 
-	// Reuse the running instance's config, so the second process collides on its port.
+	// Reuses the running instance's config so the second process collides on its port
 	b, err := os.ReadFile(inst.ConfigPath)
 	require.NoError(t, err)
 

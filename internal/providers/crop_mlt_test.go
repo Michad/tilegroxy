@@ -56,7 +56,7 @@ func generateCropMlt(ctx context.Context, t *testing.T, cfg CropMltConfig, tile 
 	return img
 }
 
-// embedded:box.mlt, like box.mvt, fills the full 0-4096 extent of whatever tile it's served for.
+// embedded:box.mlt, like box.mvt, fills the full 0-4096 extent of whatever tile it's served for
 func cropMltBound(ctx context.Context, t *testing.T, cfg CropMltConfig, tile pkg.TileRequest) orb.Bound {
 	t.Helper()
 
@@ -74,7 +74,7 @@ func cropMltBound(ctx context.Context, t *testing.T, cfg CropMltConfig, tile pkg
 	return poly.Bound()
 }
 
-// The same cases as cropmvt, so the two formats are held to the same crop.
+// The same cases as cropmvt, so both formats are held to the same crop
 func Test_CropMlt_ExecuteCrop(t *testing.T) {
 	z0 := pkg.TileRequest{LayerName: "l", Z: 0, X: 0, Y: 0}
 	z1 := pkg.TileRequest{LayerName: "l", Z: 1, X: 0, Y: 0}
@@ -124,7 +124,7 @@ func (p fixedImageProvider) GenerateTile(_ context.Context, _ layer.ProviderCont
 	return &img, nil
 }
 
-// A layer clipped down to nothing is left out, as is a layer in a format that can't be clipped.
+// Layers clipped to nothing or in an unclippable format are left out
 func Test_CropMlt_ExecuteCropDropsLayers(t *testing.T) {
 	tile, err := mlt.Encode([]mlt.Layer{
 		{Name: "northwest", Extent: 4096, Geometries: []orb.Geometry{orb.Point{100, 100}}},
@@ -184,7 +184,7 @@ func Test_CropMlt_ExecutePrimaryFailure(t *testing.T) {
 	require.Error(t, err)
 }
 
-// Cropping one vector format with the other's provider fails on every partially covered tile.
+// Cropping one vector format with the other's provider fails on every partially covered tile
 func Test_Crop_RejectsOtherVectorFormat(t *testing.T) {
 	deps := layer.ProviderDeps{ErrorMessages: testErrMessages}
 

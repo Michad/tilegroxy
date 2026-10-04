@@ -16,27 +16,27 @@ package cache
 
 import "time"
 
-// Parent is implemented by caches that nest others. Children returns them in configuration order.
+// Caches that nest others. Children returns them in configuration order
 type Parent interface {
 	Children() []Cache
 }
 
-// Expiring is implemented by caches that stop returning a tile once it reaches a maximum age.
+// Caches that stop returning a tile once it reaches a maximum age
 type Expiring interface {
 	TTL() time.Duration
 }
 
-// PerIdentity is implemented by caches whose entries vary by who made the request.
+// Caches whose entries vary by requester
 type PerIdentity interface {
 	KeyedByIdentity() bool
 }
 
-// Noop is implemented by caches that never retain a tile.
+// Caches that never retain a tile
 type Noop interface {
 	IsNoop() bool
 }
 
-// Decorator is implemented by caches wrapping another without storing anything, so capability checks see through them.
+// Caches wrapping another without storing anything, so capability checks see through them
 type Decorator interface {
 	Unwrap() Cache
 }

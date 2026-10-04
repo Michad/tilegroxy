@@ -24,16 +24,10 @@ import (
 	"strings"
 )
 
-// Query parameter names whose values are masked before a URL is logged.
+// Values masked before a URL is logged
 var credentialQueryParams = []string{"key", "token", "apikey", "api_key", "access_token", "password", "secret", "signature", "sig"}
 
-// RedactURLForLog strips userinfo and masks credential-bearing query parameter values so a URL can
-// be written to logs. It accepts relative URIs as well as absolute URLs. A URL that won't parse is
-// replaced entirely, since we can't tell which part of it is sensitive.
-//
-// Providers that log an outgoing URL should route it through this. A {ctx.*} placeholder resolves
-// to a value taken off the incoming request, commonly an Authorization header or an API key, so a
-// debug log can otherwise end up holding a live credential.
+// A {ctx.*} placeholder can resolve to a live credential, so logged URLs must pass through this. Unparseable ones are replaced
 func RedactURLForLog(rawURL string) string {
 	parsed, err := neturl.Parse(rawURL)
 	if err != nil {
@@ -63,7 +57,7 @@ func Ternary[T any](cond bool, a T, b T) T {
 	return b
 }
 
-// Generates a random string with alphanumeric characters. Specifics are prone to change. Not guaranteed to have cryptographic security
+// Alphanumeric. Specifics may change and it isn't guaranteed to be cryptographically secure
 func RandomString() string {
 	const base = 36
 	const length = 16
@@ -71,11 +65,11 @@ func RandomString() string {
 	var i, i2 uint64
 	b := make([]byte, length)
 
-	// Try to use sRNG by default because why not
+	// Prefer the secure RNG
 	_, err := crand.Read(b)
 
 	if err != nil {
-		// Fallback on v2 rand since better that than a potentially unrecoverable error
+		// Better than a potentially unrecoverable error
 		i = rand.Uint64()  // #nosec G404
 		i2 = rand.Uint64() // #nosec G404
 	} else {

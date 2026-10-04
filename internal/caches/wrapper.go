@@ -24,11 +24,11 @@ import (
 	"go.opentelemetry.io/otel/codes"
 )
 
-// A struct that wraps all other caches in order to add in instrumentation, specifically child spans for tracing the requests to caches. This is used even when telemetry is disabled but OTEL handles no-op'ing in that case so performance impact is minimal
+// Adds tracing spans around every cache. Always used since OTEL no-ops when telemetry is disabled
 type CacheWrapper struct {
 	Name  string
 	Cache cache.Cache
-	// ref is the id a nested cache is registered under, falling back to its configured name.
+	// The id a nested cache is registered under, falling back to its configured name
 	ref         string
 	refExplicit bool
 }
@@ -51,8 +51,7 @@ func (w CacheWrapper) Lookup(ctx context.Context, t pkg.TileRequest) (*pkg.Image
 	return pc, err
 }
 
-// Close forwards to the wrapped cache when it holds resources needing release. Without this the
-// wrapper would hide the underlying cache's Closer implementation from the shutdown path.
+// Otherwise the wrapper would hide the inner cache's Closer from the shutdown path
 func (w CacheWrapper) Close(ctx context.Context) error {
 	return lifecycle.CloseIfCloser(ctx, w.Cache)
 }

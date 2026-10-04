@@ -36,7 +36,7 @@ type Source interface {
 
 var errRangeTooLarge = errors.New("pmtiles: requested range is too large")
 
-// Capping reads at MaxInt32 keeps allocations bounded and the int conversions below safe.
+// Capping at MaxInt32 keeps allocations bounded and the int conversions below safe
 func checkRange(offset, length uint64) error {
 	if offset > math.MaxInt64-math.MaxInt32 || length > math.MaxInt32 {
 		return errRangeTooLarge

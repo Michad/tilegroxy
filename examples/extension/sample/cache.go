@@ -27,7 +27,7 @@ type CacheConfig struct {
 	Datastore string
 }
 
-// Cache stores tiles in a sample datastore
+// Stores tiles in a sample datastore
 type Cache struct {
 	store *sync.Map
 }

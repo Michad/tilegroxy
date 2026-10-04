@@ -20,8 +20,7 @@ import (
 	"math"
 )
 
-// Encode writes layers as a v1 tile. Only the simplest encodings are used, favoring
-// compatibility with every decoder over size.
+// Writes a v1 tile using only the simplest encodings, favoring compatibility with every decoder over size
 func Encode(layers []Layer) ([]byte, error) {
 	out := []byte{}
 
@@ -51,7 +50,7 @@ func encodeLayer(l Layer) ([]byte, error) {
 	buf := appendString(nil, l.Name)
 	buf = appendVarint(buf, uint64(l.Extent))
 
-	// The id and geometry come first since some decoders need the feature count before the properties.
+	// id and geometry come first since some decoders need the feature count before the properties
 	count := uint64(1 + len(l.Columns))
 	if l.ID != nil {
 		count++
@@ -176,7 +175,7 @@ func appendFloatColumn[T any](buf []byte, c Column, values []T, appendValue func
 	return appendRawStream(buf, categoryData, dataNone, uint64(len(present)), payload)
 }
 
-// Written in the plain layout: a length per value, then the bytes of every value.
+// Plain layout: a length per value, then the bytes of every value
 func appendStringColumn(buf []byte, c Column, values []string) []byte {
 	streams := uint64(stringPlain)
 	if c.Nullable {
@@ -302,12 +301,12 @@ func appendVarintStream(buf []byte, category, subtype uint8, values []uint64) []
 }
 
 func appendRawStream(buf []byte, category, subtype uint8, numValues uint64, payload []byte) []byte {
-	// Raw bytes have no physical encoding, whose code is zero.
+	// Raw bytes have no physical encoding, whose code is zero
 	buf = appendStreamHeader(buf, category, subtype, logicalNone, numValues, uint64(len(payload)))
 	return append(buf, payload...)
 }
 
-// Booleans are always run length encoded, since some decoders don't accept a plain bitmap for presence.
+// Always run length encoded since some decoders don't accept a plain bitmap for presence
 func appendBoolStream(buf []byte, category, subtype uint8, values []bool) []byte {
 	bitmap := make([]byte, (len(values)+bitsPerByte-1)/bitsPerByte)
 	for i, v := range values {
@@ -354,7 +353,7 @@ func repeatsAt(src []byte, i int) bool {
 	return i+byteRleMinRepeat <= len(src) && src[i] == src[i+1] && src[i] == src[i+2]
 }
 
-// Vertices are written as zigzag coded deltas from the previous vertex, per axis.
+// Zigzag coded deltas from the previous vertex, per axis
 func appendVertexStream(buf []byte, vertices []int32) []byte {
 	var payload []byte
 

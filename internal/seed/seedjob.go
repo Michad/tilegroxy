@@ -48,7 +48,7 @@ func NewSeedJob(layerName string, bounds pkg.Bounds, zooms []uint) (*SeedJob, er
 	return e, nil
 }
 
-// Count is the total number of tiles the run covers
+// Total tiles the run covers
 func (e *SeedJob) Count() uint64 {
 	return e.count
 }
@@ -57,7 +57,7 @@ func (e *SeedJob) Bounds() pkg.Bounds {
 	return e.bounds
 }
 
-// In enumeration order.
+// In enumeration order
 func (e *SeedJob) Zooms() []uint {
 	zooms := make([]uint, 0, len(e.ranges))
 	for _, r := range e.ranges {
@@ -67,14 +67,12 @@ func (e *SeedJob) Zooms() []uint {
 	return zooms
 }
 
-// yields every tile in the run in a fixed order: ascending zoom, then ascending x, then
-// ascending y.
+// Ascending zoom, then x, then y
 func (e *SeedJob) All() iter.Seq2[uint64, pkg.TileRequest] {
 	return e.From(0)
 }
 
-// yields the tiles of the run starting at the given position in the sequence, skipping
-// everything before it.
+// Skips everything before start in the sequence
 func (e *SeedJob) From(start uint64) iter.Seq2[uint64, pkg.TileRequest] {
 	return func(yield func(uint64, pkg.TileRequest) bool) {
 		var i uint64

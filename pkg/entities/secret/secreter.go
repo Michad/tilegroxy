@@ -21,23 +21,19 @@ import (
 	"github.com/Michad/tilegroxy/pkg/config"
 )
 
-// Secreter resolves secret references in a configuration. An implementation holding resources may also
-// implement lifecycle.Closer, which is called when the configuration generation is released
+// Resolves secret references in configuration. Implementations holding resources may implement lifecycle.Closer
 type Secreter interface {
-	// Lookup resolves key into its value and an opaque version identifier. An implementation without
-	// change detection returns an empty version
+	// Returns the value and an opaque version, which is empty without change detection
 	Lookup(ctx context.Context, key string) (string, string, error)
 
-	// Check returns the current version of each key, positionally matching keys. An empty version
-	// means the key cannot be watched for changes
+	// Versions match keys positionally. An empty version means the key can't be watched
 	Check(ctx context.Context, keys []string) ([]string, error)
 }
 
-// SecreterDeps carries everything a secret module is given at construction. New dependencies are added as
-// fields so the Initialize signature stays stable
+// New dependencies are added as fields so the Initialize signature stays stable
 type SecreterDeps struct {
 	ErrorMessages config.ErrorMessages
-	// ReloadFunc rebuilds the entity generation when a watched secret rotates. Nil disables watching
+	// Rebuilds the entity generation when a watched secret rotates. Nil disables watching
 	ReloadFunc func(reason string)
 }
 
@@ -45,7 +41,7 @@ type SecreterRegistration interface {
 	Name() string
 	Initialize(config any, deps SecreterDeps) (Secreter, error)
 	InitializeConfig() any
-	// CheckBatchSize caps how many keys Check accepts at once. 0 means the backend cannot be watched
+	// Max keys per Check call. 0 means the backend can't be watched
 	CheckBatchSize() int
 }
 

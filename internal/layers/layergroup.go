@@ -44,9 +44,9 @@ type LayerGroup struct {
 	cacheHitCounter   metric.Int64Counter
 	cacheMissCounter  metric.Int64Counter
 	cacheWriteLimiter chan struct{}
-	// Counts the background writeCache goroutines so Close can wait for them.
+	// Lets Close wait for background writeCache goroutines
 	cacheWrites sync.WaitGroup
-	// combines concurrent provider fetches for the same tile, so a burst of requests for one tile results in a single upstream call
+	// A burst of requests for one tile results in a single upstream call
 	generateGroup singleflight.Group
 }
 
@@ -63,7 +63,7 @@ func ConstructLayerGroup(ctx context.Context, cfg config.Config, cacheRegistry *
 		return nil, err
 	}
 
-	// Populated as layers are built so a ref provider can describe a target built before it.
+	// Populated as layers are built so a ref provider can describe a target built before it
 	layerGroup.layers = layerObjects
 
 	for _, i := range buildOrder(cfg.Layers, cfg.Error.Messages) {
@@ -90,7 +90,7 @@ func ConstructLayerGroup(ctx context.Context, cfg config.Config, cacheRegistry *
 	return &layerGroup, errors.Join(err1, err2)
 }
 
-// Marking before recursing ends pattern-based cycles validateRefs can't see; that ref then describes nothing.
+// Marking before recursing ends pattern-based cycles validateRefs can't see; that ref then describes nothing
 func buildOrder(layers []config.LayerConfig, errorMessages config.ErrorMessages) []int {
 	order := make([]int, 0, len(layers))
 	visited := make([]bool, len(layers))
@@ -136,7 +136,7 @@ func resolveLayerCache(l config.LayerConfig, cacheRegistry *caches.CacheRegistry
 	return layerCache, nil
 }
 
-// recursively walk a raw provider config collecting the layer names that `ref` entries target.
+// Collects the layer names `ref` entries target
 func findRefTargets(node any, targets *[]string) {
 	switch v := node.(type) {
 	case map[string]any:
@@ -162,7 +162,7 @@ func findRefTargets(node any, targets *[]string) {
 	}
 }
 
-// error on refs pointing at a layer ID that doesn't statically exist, and on cycles
+// Rejects refs to layer IDs that don't statically exist, and cycles
 func validateRefs(layers []config.LayerConfig) error {
 	knownIDs := make(map[string]bool, len(layers))
 	hasPatternLayer := false
@@ -183,8 +183,7 @@ func validateRefs(layers []config.LayerConfig) error {
 		}
 	}
 
-	// With any pattern layer present, an unmatched target might still resolve to it at request
-	// time, so a dangling target can only be flagged when every layer is literal-ID-matched.
+	// An unmatched target might still resolve to a pattern layer at request time
 	if !hasPatternLayer {
 		for id, targets := range refsByLayer {
 			for _, target := range targets {
@@ -195,7 +194,7 @@ func validateRefs(layers []config.LayerConfig) error {
 		}
 	}
 
-	// DFS cycle detection over the ref graph (literal-ID-resolvable edges only)
+	// DFS cycle detection over literal-ID edges only
 	const (
 		white = 0
 		gray  = 1
@@ -314,7 +313,7 @@ func (lg *LayerGroup) RenderTile(ctx context.Context, tileRequest pkg.TileReques
 		if cached, ok := pkg.CachedFromContext(ctx); ok && cached != nil {
 			*cached = true
 		}
-		// A tile we have in hand shouldn't fail the request just because the cache also reported a problem.
+		// A tile in hand shouldn't fail the request just because the cache also reported a problem
 		if err != nil {
 			slog.WarnContext(ctx, fmt.Sprintf("Cache read error alongside hit %v\n", err))
 		}
@@ -360,8 +359,7 @@ func (lg *LayerGroup) RenderTile(ctx context.Context, tileRequest pkg.TileReques
 	return img, nil
 }
 
-// singleflightResult bundles what a coalesced generation call produces, so it can travel through
-// singleflight's `any` result value without a type assertion at every call site.
+// Travels through singleflight's `any` result without a type assertion at every call site
 type singleflightResult struct {
 	img   *pkg.Image
 	err   error
@@ -386,7 +384,7 @@ func (lg *LayerGroup) renderTileRecovered(ctx context.Context, tileRequest pkg.T
 	return *resultPtr
 }
 
-// disconnect from cancellation but leave deadline in place so downstream doesn't hang forever but we avoid a connection hiccup on request A preventing request B getting a result
+// Keeps the deadline so nothing hangs, but drops cancellation so request A's hiccup can't fail request B
 func leaderContext(ctx context.Context) (context.Context, context.CancelFunc) {
 	leaderCtx := context.WithoutCancel(ctx)
 	if deadline, ok := ctx.Deadline(); ok {
@@ -395,7 +393,6 @@ func leaderContext(ctx context.Context) (context.Context, context.CancelFunc) {
 	return leaderCtx, func() {}
 }
 
-// deduplicates concurrent provider fetches for the same tile.
 func (lg *LayerGroup) renderTileCoalesced(ctx context.Context, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	key := tileRequest.String()
 
@@ -419,17 +416,15 @@ func (lg *LayerGroup) renderTileCoalesced(ctx context.Context, tileRequest pkg.T
 }
 
 func writeCache(ctx context.Context, cache cache.Cache, tileRequest pkg.TileRequest, img *pkg.Image) {
-	// We need to make a new context to avoid the request finishing cancelling the ctx sent into the cache
+	// The request finishing must not cancel the cache write
 	newCtx := pkg.BackgroundContext()
 
 	pkg.CopyAuthRestrictions(ctx, newCtx)
 
-	// Copy span over from original context
 	span := trace.SpanFromContext(ctx)
 	newCtx = trace.ContextWithSpan(newCtx, span)
 
-	// This runs on its own goroutine, so a panic from a third-party Cache.Save would otherwise be
-	// unrecoverable and take down the process over a write no client is waiting on.
+	// On its own goroutine, an unrecovered panic from a third-party Cache.Save would crash the process
 	defer func() {
 		if r := recover(); r != nil {
 			slog.ErrorContext(newCtx, fmt.Sprintf("Recovered from panic in background cache write: %v", r))
@@ -483,7 +478,7 @@ func (*LayerGroup) checkPermission(ctx context.Context, l *Layer, tileRequest pk
 	return nil
 }
 
-// releases any layer provider holding resources, most notably custom providers
+// Most notably custom providers
 func (lg *LayerGroup) Close(ctx context.Context) error {
 	if lg == nil {
 		return nil
@@ -502,7 +497,6 @@ func (lg *LayerGroup) Close(ctx context.Context) error {
 	return errors.Join(errs...)
 }
 
-// blocks until the background cache writes finish
 func (lg *LayerGroup) WaitForCacheWrites(ctx context.Context) error {
 	if lg == nil {
 		return nil
@@ -523,7 +517,7 @@ func (lg *LayerGroup) WaitForCacheWrites(ctx context.Context) error {
 	}
 }
 
-// Resolves the layer and cacheversion like RenderTile so it removes the entry a render would read.
+// Resolves the layer and cacheversion like RenderTile so it removes the entry a render would read
 func (lg *LayerGroup) PurgeTile(ctx context.Context, tileRequest pkg.TileRequest) (bool, error) {
 	l := lg.FindLayer(ctx, tileRequest.LayerName)
 

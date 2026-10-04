@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// fake is a minimal Analytics so registrations have something to construct.
+// Gives registrations something to construct
 type fake struct{}
 
 func (f *fake) Record(_ context.Context, _ Event) error {
@@ -51,8 +51,7 @@ func Test_RegisteredAnalyticsNames(t *testing.T) {
 	assert.False(t, ok)
 }
 
-// namedFakeRegistration lets the concurrency test register distinct names, unlike fakeRegistration
-// which always registers as "testfake".
+// Registers distinct names, unlike fakeRegistration which is always "testfake"
 type namedFakeRegistration struct {
 	name string
 }

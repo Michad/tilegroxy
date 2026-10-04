@@ -65,7 +65,7 @@ func (s PMTilesRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (la
 		return nil, err
 	}
 
-	// Initialize receives no context, and HTTP reads are bounded by the client timeout.
+	// Initialize receives no context, and HTTP reads are bounded by the client timeout
 	archive, err := pmtiles.Open(context.Background(), source, maxLength)
 	if err != nil {
 		_ = source.Close()
@@ -96,7 +96,7 @@ func pmtilesDataType(tileType pmtiles.TileType) config.DataType {
 	}
 }
 
-// Local archives are operator-supplied, so the client MaxLength only guards remote reads.
+// Local archives are operator-supplied, so MaxLength only guards remote reads
 func openPMTilesSource(cfg PMTilesConfig, deps layer.ProviderDeps) (pmtiles.Source, int, error) {
 	switch {
 	case cfg.File != "" && cfg.URL != "":
@@ -125,7 +125,7 @@ func pmtilesMetadata(archive *pmtiles.Archive, dataType config.DataType) layer.D
 		MaxZoom:  &maxZoom,
 	}
 
-	// Archives omitting bounds or center leave them zeroed, which would otherwise read as null island.
+	// Omitted bounds or center are zeroed, which would otherwise read as null island
 	if bounds := header.Bounds(); bounds.West < bounds.East && bounds.South < bounds.North {
 		md.Bounds = bounds.ToConfig()
 	}
@@ -143,7 +143,7 @@ func pmtilesMetadata(archive *pmtiles.Archive, dataType config.DataType) layer.D
 	return md
 }
 
-// Entries that don't match the TileJSON spec, such as non-string field descriptions, drop only themselves.
+// Entries that don't match the TileJSON spec drop only themselves
 func pmtilesVectorLayers(raw any) []config.VectorLayer {
 	entries, _ := raw.([]any)
 	layers := make([]config.VectorLayer, 0, len(entries))
@@ -190,7 +190,7 @@ func (t *PMTiles) GenerateTile(ctx context.Context, _ layer.ProviderContext, til
 	return &pkg.Image{Content: data, ContentType: t.contentType}, nil
 }
 
-// The spec's Hilbert IDs only cover zoom 0 through 31.
+// The spec's Hilbert IDs only cover zoom 0 through 31
 func pmtilesCoordinates(r pkg.TileRequest) (uint8, uint32, uint32, bool) {
 	if r.Z < 0 || r.Z > 31 || r.X < 0 || r.Y < 0 {
 		return 0, 0, 0, false

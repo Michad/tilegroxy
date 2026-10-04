@@ -33,7 +33,7 @@ type CompositeMVTConfig struct {
 	Providers []map[string]interface{}
 }
 
-// CompositeVector concatenates the vector tiles of its children, which both MVT and MLT allow.
+// Concatenates its children's vector tiles, which both MVT and MLT allow
 type CompositeVector struct {
 	providers     []layer.Provider
 	errorMessages config.ErrorMessages
@@ -65,7 +65,7 @@ func (s CompositeMVTRegistration) Initialize(cfgAny any, deps layer.ProviderDeps
 	return newCompositeVector(cfg.Providers, deps, "provider.compositemvt.providers", config.DataTypeMLT, mvtContentType)
 }
 
-// Children that produce the other vector format are refused, since concatenating the two corrupts the tile.
+// Refuses children producing the other vector format since concatenating the two corrupts the tile
 func newCompositeVector(childConfigs []map[string]interface{}, deps layer.ProviderDeps, path string, rejected config.DataType, contentType string) (*CompositeVector, error) {
 	providers := make([]layer.Provider, 0, len(childConfigs))
 	errorSlice := make([]error, 0, len(childConfigs))
@@ -175,7 +175,7 @@ func callCompositingProvider(ctx context.Context, providerContext layer.Provider
 	}
 
 	if img == nil && err == nil {
-		// img and err are both nil -- that's not right
+		// Both nil shouldn't happen
 		err = errors.New("no image returned to compositor")
 	}
 

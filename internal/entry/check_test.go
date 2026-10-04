@@ -29,8 +29,7 @@ func validConfig() config.Config {
 	return cfg
 }
 
-// A caller who only wants pass/fail, not the "Valid" text or echoed config, has no other value to
-// pass, so a nil writer has to error rather than panic inside fmt.Fprintln.
+// Callers wanting only pass/fail have nothing else to pass, so nil must error rather than panic
 func Test_CheckConfig_NilWriterDoesNotPanic(t *testing.T) {
 	cfg := validConfig()
 

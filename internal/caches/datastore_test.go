@@ -119,7 +119,7 @@ func TestMemcachedDatastoreWrongType(t *testing.T) {
 	require.Error(t, err)
 }
 
-// Close must not close the datastore's shared client, since the registry owns its lifecycle.
+// The registry owns the shared client's lifecycle
 func TestMemcachedDatastoreCloseDoesNotCloseSharedClient(t *testing.T) {
 	client := memcache.New("127.0.0.1:11211")
 	reg := buildDatastoreRegistry(t, "mymemcache", "stub-memcache-close", client)

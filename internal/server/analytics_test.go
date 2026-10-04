@@ -38,7 +38,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// recordingAnalytics captures the events the tile handler emits.
+// Captures the events the tile handler emits
 type recordingAnalytics struct {
 	mutex  sync.Mutex
 	events []analytics.Event
@@ -74,8 +74,7 @@ func (s recordingRegistration) Initialize(_ any, _ analytics.AnalyticsDeps) (ana
 	return s.instance, nil
 }
 
-// setupAnalyticsHandler builds a tile handler serving a static layer, wired to a recording
-// analytics module. fields configures which extra attributes the module asks for.
+// Serves a static layer wired to a recording analytics module. fields selects the extra attributes
 func setupAnalyticsHandler(t *testing.T, layerCfgs []config.LayerConfig, fields []string) (*tileHandler, *recordingAnalytics) {
 	t.Helper()
 
@@ -113,8 +112,7 @@ func staticLayer(id string, skipAnalytics bool) config.LayerConfig {
 	}
 }
 
-// doTileRequest runs one tile request and returns just the status code. The body is closed here
-// rather than handed back, since no caller reads it
+// The body is closed here since no caller reads it
 func doTileRequest(t *testing.T, handler *tileHandler, layerName, z, x, y string) int {
 	t.Helper()
 
@@ -164,7 +162,7 @@ func Test_TileHandler_Analytics_SkipAnalyticsLayer(t *testing.T) {
 func Test_TileHandler_Analytics_NotEmittedOnError(t *testing.T) {
 	handler, rec := setupAnalyticsHandler(t, []config.LayerConfig{staticLayer("main", false)}, nil)
 
-	// A layer that doesn't exist fails before a tile is produced.
+	// A nonexistent layer fails before a tile is produced
 	status := doTileRequest(t, handler, "nonexistent", "8", "12", "32")
 	require.NotEqual(t, http.StatusOK, status)
 
@@ -201,8 +199,7 @@ func Test_TileHandler_Analytics_ResolvesConfiguredFields(t *testing.T) {
 }
 
 func Test_TileHandler_Analytics_PatternLayerRecordsID(t *testing.T) {
-	// With a pattern the URL name and the configured ID differ; analytics should record the ID so
-	// events line up with the per-layer telemetry metrics.
+	// The URL name differs from the ID, and recording the ID lines events up with per-layer metrics
 	layerCfg := config.LayerConfig{
 		ID:       "patterned",
 		Pattern:  "tile-{color}",
@@ -223,8 +220,7 @@ func Test_TileHandler_Analytics_PatternLayerRecordsID(t *testing.T) {
 }
 
 func Test_TileHandler_Analytics_NoModulesConfigured(t *testing.T) {
-	// The common case: no analytics section at all. The handler must take the fast path without
-	// tripping over a nil registry.
+	// The common case of no analytics section must take the fast path without a nil registry panic
 	cfg := config.DefaultConfig()
 	cfg.Layers = []config.LayerConfig{staticLayer("main", false)}
 
@@ -241,8 +237,7 @@ func Test_TileHandler_Analytics_NoModulesConfigured(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 }
 
-// closeTracker records how many times a generation was released so a reload can be checked for both
-// double-closing the old generation and abandoning the live one.
+// Catches a reload both double-closing the old generation and abandoning the live one
 type closeTracker struct {
 	closes atomic.Int64
 }
@@ -265,8 +260,7 @@ func (s closeTrackerRegistration) Initialize(_ any, _ analytics.AnalyticsDeps) (
 	return s.instance, nil
 }
 
-// generationFor builds an Entities holding whichever closeTracker was most recently registered, which
-// reports when that generation is closed.
+// Uses the most recently registered closeTracker, which reports when the generation is closed
 func generationFor(t *testing.T) (*config.Config, *entities.Entities) {
 	t.Helper()
 
@@ -311,16 +305,15 @@ func Test_TileHandler_ReloadReleasesOldGenerationOnce(t *testing.T) {
 
 	handler.reload(newGen)
 
-	// No in-flight requests hold the old generation, so it releases once markClosing's floor elapses.
+	// No in-flight requests hold the old generation, so it releases once markClosing's floor elapses
 	assert.Eventually(t, func() bool {
 		return oldTracker.closes.Load() == 1
 	}, 5*time.Second, 20*time.Millisecond, "the superseded generation should be released exactly once")
 
-	// The generation now serving must still be open.
+	// The generation now serving must still be open
 	require.Equal(t, int64(0), newTracker.closes.Load(), "the live generation must not be closed by a reload")
 
-	// Shutdown closes whatever is currently serving, which is the new generation, not the one the
-	// server was originally handed.
+	// Shutdown closes whatever is currently serving, not the generation the server was first handed
 	require.NoError(t, handler.currentEntities().Close(context.Background()))
 	assert.Equal(t, int64(1), newTracker.closes.Load())
 	assert.Equal(t, int64(1), oldTracker.closes.Load(), "the old generation must not be closed a second time")

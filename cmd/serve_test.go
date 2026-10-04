@@ -43,7 +43,7 @@ import (
 func init() {
 	server.InterruptFlags = append(server.InterruptFlags, syscall.SIGUSR1)
 
-	// This is a hack to help with vscode test execution. Put a .env in repo root w/ anything you need for test containers
+	// Lets vscode test runs pick up testcontainer settings from a .env in the repo root
 	if env, err := os.ReadFile("../.env"); err == nil {
 		envs := strings.Split(string(env), "\n")
 		for _, e := range envs {
@@ -72,7 +72,7 @@ func coreServeTest(t *testing.T, cfg string, port int, url string, hotReload boo
 		rootCmd.SetArgs([]string{"serve", "--raw-config", cfg})
 	}
 
-	// This isn't proper goroutine practice but done this way since we only care about errors that happen at startup of the server
+	// Only errors at server startup matter here, hence the shortcut
 	var mu sync.Mutex
 	var bindErr error
 	exited := false
@@ -87,8 +87,7 @@ func coreServeTest(t *testing.T, cfg string, port int, url string, hotReload boo
 		mu.Unlock()
 	}()
 
-	// waitForExit blocks until the server goroutine finishes so shared package state
-	// (rootCmd, exitStatus) isn't left racing against whatever test runs next.
+	// Keeps shared package state (rootCmd, exitStatus) from racing the next test
 	waitForExit := func() {
 		syscall.Kill(syscall.Getpid(), syscall.SIGUSR1) //nolint:errcheck
 		<-done
@@ -161,7 +160,7 @@ func coreServeTest(t *testing.T, cfg string, port int, url string, hotReload boo
 	}, err
 }
 
-// tileStatus reports 0 rather than failing so it can be polled while the server is mid-reload.
+// Returns 0 instead of failing so it can be polled mid-reload
 func tileStatus(url string) int {
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
 	if err != nil {
@@ -337,7 +336,7 @@ layers:
 	assert.Equal(t, "image/png", resp.Header["Content-Type"][0])
 	resp.Body.Close()
 
-	// Test that it keeps running on old config when given a broken config file to reload
+	// A broken config on reload should leave the old config running
 	err = os.WriteFile(cfgFile, []byte(cfgInvalid), 0600)
 	require.NoError(t, err)
 	time.Sleep(time.Second * 4) // Nothing signals a rejected reload, so give it time to wrongly take effect
@@ -572,7 +571,7 @@ layers:
 		select {
 		case <-done:
 		default:
-			// Signalling after the server exits would hit no handler and kill the test binary
+			// Signalling after exit would hit no handler and kill the test binary
 			require.NoError(t, syscall.Kill(syscall.Getpid(), syscall.SIGUSR1))
 			<-done
 		}

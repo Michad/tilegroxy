@@ -79,8 +79,7 @@ func Test_ErrorVals_Mlt(t *testing.T) {
 	assert.Equal(t, "image/png", contentType)
 }
 
-// Auth errors must never reveal a layer's data type to an unauthenticated caller, so they always
-// use the raster image and image/png content type even when the layer is mvt.
+// Auth errors must never reveal the data type to an unauthenticated caller, so they're always PNG
 func Test_ErrorVals_Mvt_AuthAlwaysPng(t *testing.T) {
 	cfg := config.DefaultConfig()
 

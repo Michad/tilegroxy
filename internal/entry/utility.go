@@ -88,9 +88,7 @@ func configToEntities(ctx context.Context, cfg config.Config, reloadFunc func(re
 	}
 	built.LayerGroup = layerGroup
 
-	// Constructed only to validate their config, then discarded; serve builds its own. Otherwise a
-	// bad check name would first surface when serve binds the health port, after `config check`
-	// already called the config Valid.
+	// Built only to validate, then discarded. Otherwise a bad check would first fail when serve binds the health port
 	for _, checkCfg := range cfg.Health.Checks {
 		if _, err := checks.ConstructHealthCheck(checkCfg, layerGroup, caches, &cfg); err != nil {
 			return nil, closeAndReturn(built, fmt.Errorf("error constructing health check: %w", err))
@@ -100,8 +98,7 @@ func configToEntities(ctx context.Context, cfg config.Config, reloadFunc func(re
 	return built, nil
 }
 
-// closeAndReturn releases every entity built before a construction failure and folds any error from
-// doing so into the one that's already failing the build.
+// Releases everything built before a construction failure, joining any close error into err
 func closeAndReturn(built *entities.Entities, err error) error {
 	if closeErr := built.Close(context.Background()); closeErr != nil {
 		return fmt.Errorf("%w (additionally failed to release already-constructed entities: %w)", err, closeErr)

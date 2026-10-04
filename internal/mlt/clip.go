@@ -22,10 +22,10 @@ import (
 	"github.com/paulmach/orb/clip"
 )
 
-// A closed ring needs three distinct vertices plus the closing one.
+// A closed ring needs three distinct vertices plus the closing one
 const minRingPoints = 4
 
-// Clip trims every geometry to a bound in tile coordinates, dropping features left with nothing.
+// Trims every geometry to a bound in tile coordinates, dropping features left empty
 func (l Layer) Clip(b orb.Bound) Layer {
 	geoms := make([]orb.Geometry, 0, len(l.Geometries))
 	keep := make([]int, 0, len(l.Geometries))
@@ -43,8 +43,7 @@ func (l Layer) Clip(b orb.Bound) Layer {
 	return out
 }
 
-// Clipping adds fractional intersections, so vertices are rounded back to the integer grid and
-// any part that collapses is removed.
+// Clipping adds fractional intersections, so vertices are rounded back to the grid and collapsed parts removed
 func snap(g orb.Geometry) orb.Geometry {
 	switch v := g.(type) {
 	case orb.Point:
@@ -115,7 +114,7 @@ func snapLine(l orb.LineString) orb.LineString {
 	return out
 }
 
-// A polygon whose outer ring collapses is dropped entirely, a collapsed hole just disappears.
+// A collapsed outer ring drops the polygon, while a collapsed hole just disappears
 func snapPolygon(p orb.Polygon) orb.Polygon {
 	var out orb.Polygon
 

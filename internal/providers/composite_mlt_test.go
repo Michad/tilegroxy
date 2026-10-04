@@ -30,7 +30,7 @@ func Test_DataType_CompositeMLT(t *testing.T) {
 	assert.Equal(t, config.DataTypeMLT, CompositeMLTRegistration{}.DataType(CompositeMLTConfig{}))
 }
 
-// MLT tiles are a run of layers, so joining two tiles gives one tile holding both.
+// MLT tiles are a run of layers, so joining two tiles gives one tile holding both
 func Test_CompositeMLT_ExecuteStatic(t *testing.T) {
 	child := map[string]interface{}{"name": "static", "image": "embedded:box.mlt"}
 
@@ -60,13 +60,13 @@ func Test_Composite_RejectsOtherVectorFormat(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "provider.compositemvt.providers.0")
 
-	// A child of unknown type, such as a proxy, may produce either format.
+	// A child of unknown type, such as a proxy, may produce either format
 	proxy := map[string]interface{}{"name": "proxy", "url": "http://example.com/{z}/{x}/{y}"}
 	_, err = CompositeMLTRegistration{}.Initialize(CompositeMLTConfig{Providers: []map[string]interface{}{proxy}}, deps)
 	require.NoError(t, err)
 }
 
-// Operators configure providers as maps, so the registrations must build from one.
+// Operators configure providers as maps, so registrations must build from one
 func Test_MLTProviders_ConstructFromConfig(t *testing.T) {
 	deps := layer.ProviderDeps{ClientConfig: testClientConfig, ErrorMessages: testErrMessages}
 	child := map[string]interface{}{"name": "static", "image": "embedded:box.mlt"}

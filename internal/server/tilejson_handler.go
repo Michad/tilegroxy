@@ -33,11 +33,10 @@ type tileJSONIndexEntry struct {
 	TileJSON string `json:"tilejson"`
 }
 
-// tileJSONHandler serves both TileJSON endpoints.
+// Serves both TileJSON endpoints
 type tileJSONHandler struct {
 	*generationHolder
-	// index selects between the two endpoints sharing this handler: true serves the
-	// RootPath/IndexPath listing, false serves TilePath/{layer}.json for one layer.
+	// True serves the RootPath/IndexPath listing, false serves TilePath/{layer}.json
 	index bool
 }
 
@@ -45,8 +44,7 @@ func newTileJSONHandler(gens *generationHolder, index bool) *tileJSONHandler {
 	return &tileJSONHandler{gens, index}
 }
 
-// tileJSONHandlers bundles the two TileJSON endpoints and their routes, letting setupHandlers
-// wire them in with a few calls regardless of whether TileJSON is enabled.
+// Lets setupHandlers wire both endpoints in a few calls whether or not TileJSON is enabled
 type tileJSONHandlers struct {
 	index        *tileJSONHandler
 	document     *tileJSONHandler
@@ -56,8 +54,7 @@ type tileJSONHandlers struct {
 	documentPath string
 }
 
-// setupTileJSONHandlers builds the TileJSON handlers when enabled. Its zero value (TileJSON
-// disabled) is safe to use directly: every method below no-ops on nil handlers.
+// The zero value, when disabled, is safe to use since every method no-ops on nil handlers
 func setupTileJSONHandlers(cfg *config.Config, gens *generationHolder) *tileJSONHandlers {
 	if !cfg.Server.TileJSON.Enabled {
 		return &tileJSONHandlers{}
@@ -94,14 +91,13 @@ func (t *tileJSONHandlers) registerRoutes(r *http.ServeMux) {
 	r.Handle(t.documentPath, t.documentHTTP)
 }
 
-// publicURLParts is the scheme, host, and path prefix TileJSON URLs are built from.
+// What TileJSON URLs are built from
 type publicURLParts struct {
 	scheme string
 	host   string
 	prefix string
 }
 
-// parsePublicURL splits a single configured base URL into its scheme, host, and path prefix.
 func parsePublicURL(baseURL string) publicURLParts {
 	trimmed := strings.TrimSuffix(baseURL, "/")
 	if idx := strings.Index(trimmed, "://"); idx >= 0 {
@@ -115,10 +111,7 @@ func parsePublicURL(baseURL string) publicURLParts {
 	return publicURLParts{scheme: "https", host: trimmed}
 }
 
-// resolvePublicURLs determines the scheme/host/path-prefix(es) tiles are reachable at from the
-// caller's perspective. BaseURLs, when configured, always wins, producing one entry per
-// configured URL; otherwise it's read from the standard reverse-proxy forwarding headers,
-// falling back to the request's own scheme and Host.
+// From the caller's perspective. BaseURLs wins when set, otherwise forwarding headers, then the request's own scheme and Host
 func resolvePublicURLs(req *http.Request, baseURLs []string) []publicURLParts {
 	if len(baseURLs) > 0 {
 		parts := make([]publicURLParts, len(baseURLs))
@@ -151,8 +144,7 @@ func (p publicURLParts) build(path string) string {
 	return p.scheme + "://" + p.host + p.prefix + path
 }
 
-// layerRestriction reads the auth-populated layer scope from context, mirroring the same
-// accessors layer.LayerGroup.checkPermission uses to gate tile requests.
+// Mirrors the accessors LayerGroup.checkPermission uses to gate tile requests
 func layerRestriction(ctx context.Context) (bool, []string) {
 	ctxLimitLayers, ok := pkg.LimitLayersFromContext(ctx)
 	limited := ok && ctxLimitLayers != nil && *ctxLimitLayers
@@ -166,8 +158,7 @@ func layerRestriction(ctx context.Context) (bool, []string) {
 	return limited, allowed
 }
 
-// areaRestriction reads the auth-populated geographic restriction from context. Returns nil when
-// the caller isn't restricted to a specific area.
+// Nil when the caller isn't restricted to an area
 func areaRestriction(ctx context.Context) *pkg.Bounds {
 	ctxAllowedArea, ok := pkg.AllowedAreaFromContext(ctx)
 	if !ok || ctxAllowedArea == nil || ctxAllowedArea.IsNullIsland() {
@@ -279,8 +270,7 @@ func serveDocument(ctx context.Context, w http.ResponseWriter, req *http.Request
 	writeJSON(w, http.StatusOK, doc)
 }
 
-// findTileJSONLayer finds the eligible layer whose ID or example list produces the given name,
-// returning the layer and the exact name it matched under.
+// Matches by ID or example list, returning the exact name it matched under
 func findTileJSONLayer(lg *layers.LayerGroup, name string) (*layers.Layer, string) {
 	for _, l := range lg.Layers() {
 		if !l.TileJSONEligible() {
@@ -297,9 +287,7 @@ func findTileJSONLayer(lg *layers.LayerGroup, name string) (*layers.Layer, strin
 	return nil, ""
 }
 
-// layerNameAllowed reports whether either the requested name or the layer's own ID appears in the
-// caller's allowed-layers list. A pattern layer's examples aren't themselves configured layer IDs,
-// so scope checks fall back to the layer's ID the way tile requests already do via MatchesName.
+// Pattern examples aren't layer IDs, so scope checks fall back to the ID like tile requests do via MatchesName
 func layerNameAllowed(name string, layerID string, allowed []string) bool {
 	for _, a := range allowed {
 		if a == name || a == layerID {

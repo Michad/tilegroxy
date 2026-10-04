@@ -19,7 +19,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
-// Auth bounds replace the configured bounds per request, so they aren't a reliable limit.
+// Auth bounds replace the configured bounds per request, so they aren't a reliable limit
 func clipToCrop(d layer.Description, bounds pkg.Bounds, boundsFromAuth bool) layer.Description {
 	if boundsFromAuth || bounds.IsNullIsland() {
 		return d

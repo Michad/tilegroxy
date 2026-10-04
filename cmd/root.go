@@ -51,9 +51,7 @@ func Execute() {
 	}
 }
 
-// ExecuteArgs runs one command from args rather than the process arguments, so a wrapper can run
-// several in sequence. Flags don't carry over between runs. As with Execute, a failing command
-// exits the process.
+// Runs one command from args instead of process arguments so a wrapper can chain several. Flags don't carry over
 func ExecuteArgs(args ...string) {
 	resetFlags(rootCmd)
 	rootCmd.SetArgs(args)
@@ -134,14 +132,13 @@ func readConfigFlags(cmd *cobra.Command) (configFlags, error) {
 	f.remotePath, err5 = cmd.Flags().GetString("remote-path")
 	f.remoteType, err6 = cmd.Flags().GetString("remote-type")
 
-	// Only defined in the serve command, so an error just means hot reloading isn't supported
+	// Only the serve command defines this flag
 	f.reload, _ = cmd.Flags().GetBool(reloadFlag)
 
 	return f, errors.Join(err1, err2, err3, err4, err5, err6)
 }
 
-// A common utility for use by multiple commands to bootstrap the core application config.
-// reloadFunc is optional if hot reloading is not supported in triggering command
+// Bootstraps the application config for any command. reloadFunc may be nil when the command doesn't support hot reloading
 func extractConfigFromCommand(cmd *cobra.Command, reloadFunc func(c config.Config, err error)) (*config.Config, error) {
 	f, err := readConfigFlags(cmd)
 	if err != nil {
@@ -169,7 +166,6 @@ func extractConfigFromCommand(cmd *cobra.Command, reloadFunc func(c config.Confi
 	return &cfg, nil
 }
 
-// Re-reads the configuration from wherever the command loaded it
 func reloadSourceFromCommand(cmd *cobra.Command) (func() (config.Config, error), error) {
 	f, err := readConfigFlags(cmd)
 	if err != nil {

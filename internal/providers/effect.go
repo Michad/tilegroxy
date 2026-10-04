@@ -35,7 +35,7 @@ import (
 	"github.com/anthonynsimon/bild/segment"
 )
 
-// Radii feed a (2r+1)^2 convolution kernel, so the ceiling keeps a typo from allocating gigabytes.
+// Radii feed a (2r+1)^2 convolution kernel, so the ceiling keeps a typo from allocating gigabytes
 const maxRadius = 100
 const maxGamma = 100
 

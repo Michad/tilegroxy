@@ -56,8 +56,7 @@ func Test_DataType_Blend(t *testing.T) {
 func Test_BlendCloseClosesChildProviders(t *testing.T) {
 	p1 := &closableProvider{}
 	p2 := &closableProvider{}
-	// ConstructProvider always wraps, so one child is wrapped here to match what production
-	// actually builds: the close has to survive both hops, not just the forwarding one
+	// ConstructProvider always wraps, so the close must survive both hops like production
 	b := &Blend{providers: []layer.Provider{layers.ProviderWrapper{Name: "child", Provider: p1}, p2}}
 
 	require.NoError(t, layer.CloseProvider(context.Background(), b))
@@ -91,9 +90,7 @@ func (p *panickingProvider) DataType() config.DataType {
 	return config.DataTypeUnknown
 }
 
-// A panic inside one child's PreAuth used to skip the acResults send but not the errs send,
-// which permanently wedged the caller since the consumer loop reads one value from each channel
-// per provider regardless of errors. See https://github.com/Michad/tilegroxy/issues/882.
+// Regression test for #882: a child PreAuth panic skipped one channel send but not the other, wedging the caller
 func Test_BlendPreAuthPanicDoesNotDeadlock(t *testing.T) {
 	b := &Blend{providers: []layer.Provider{&panickingProvider{}, &closableProvider{}}}
 
@@ -155,8 +152,6 @@ func Test_Blend_Layers(t *testing.T) {
 	bb := b.(*Blend)
 
 	assert.Len(t, bb.providers, 2)
-	// assert.Equal(t, &Ref{RefConfig{"something_hello_world"}, nil}, bb.providers[0])
-	// assert.Equal(t, &Ref{RefConfig{"something_goodbye_world"}, nil}, bb.providers[1])
 }
 
 func Test_BlendExecute_Add(t *testing.T) {

@@ -27,8 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// fixedDataTypeTestProvider is a minimal layer.Provider used to test nesting providers
-// (Fallback, Crop) that pass through their primary's data type.
+// For nesting providers (Fallback, Crop) that pass through their primary's data type
 type fixedDataTypeTestProvider struct {
 	dt config.DataType
 }
@@ -41,8 +40,7 @@ func (p fixedDataTypeTestProvider) GenerateTile(_ context.Context, _ layer.Provi
 	return nil, nil
 }
 
-// fixedDataTypeTestRegistration registers fixedDataTypeTestProvider under a config-supplied name,
-// so a raw provider config (e.g. Fallback.Primary) can be pointed at a provider of any data type.
+// Registered under a config-supplied name so a raw provider config can point at any data type
 type fixedDataTypeTestRegistration struct {
 	name string
 	dt   config.DataType

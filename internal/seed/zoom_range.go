@@ -27,7 +27,7 @@ const (
 	minLong = -180
 )
 
-// A range of tiles within a single zoom level
+// Tiles within a single zoom level
 type SingleZoomRange struct {
 	Z                      uint
 	XMin, XMax, YMin, YMax int
@@ -42,7 +42,7 @@ func NewSingleZoomRange(b pkg.Bounds, zoom uint) (SingleZoomRange, error) {
 		return SingleZoomRange{}, pkg.RangeError{ParamName: "z", MinValue: 0, MaxValue: pkg.MaxZoom}
 	}
 
-	// A bounds crossing the antimeridian would give an inverted x range, underflowing Count
+	// Bounds crossing the antimeridian would invert the x range, underflowing Count
 	if b.West > b.East {
 		return SingleZoomRange{}, pkg.RangeError{ParamName: "east", MinValue: b.West, MaxValue: maxLong}
 	}
@@ -69,7 +69,7 @@ func NewSingleZoomRange(b pkg.Bounds, zoom uint) (SingleZoomRange, error) {
 		lonMax -= (minLong - maxLong)
 	}
 
-	// Normalizing each edge independently loses the crossing, leaving an inverted x range
+	// Normalizing each edge independently loses the crossing, inverting the x range
 	if lonMin > lonMax {
 		return SingleZoomRange{}, pkg.RangeError{ParamName: "east", MinValue: lonMin, MaxValue: maxLong}
 	}

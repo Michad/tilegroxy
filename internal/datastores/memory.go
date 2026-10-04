@@ -62,8 +62,7 @@ func (s MemoryWrapperRegistration) Initialize(cfgAny any, _ datastore.DatastoreD
 	return NewMemoryWrapper(cfg)
 }
 
-// NewMemoryWrapper builds an in-process tile store. Also used by the memory cache to construct a
-// private, unregistered store when no datastore is named.
+// Also used by the memory cache for a private, unregistered store when no datastore is named
 func NewMemoryWrapper(cfg MemoryWrapperConfig) (*MemoryWrapper, error) {
 	if cfg.MaxSize < 1 {
 		cfg.MaxSize = MemoryDefaultMaxSize
@@ -94,7 +93,7 @@ func (w MemoryWrapper) Native() any {
 	return w.cache
 }
 
-// Close stops the otter maintenance goroutines backing the store.
+// Stops otter's maintenance goroutines
 func (w MemoryWrapper) Close(_ context.Context) error {
 	w.cache.Close()
 	return nil
