@@ -4,9 +4,9 @@ Records usage events to a destination in batches for tracking purposes.
 
 More details on Analytics capabilities can be found in xref:../analytics.adoc[Analytics].
 
-Like other entities, the analytics configuration uses a parameter called "name" to dictate the type of analytics tracking to use, but batching configuration below is used by all options. Analytics is disabled by default.
+Like other entities, the analytics configuration uses a parameter called "name" to dictate the type of analytics tracking to use, but the batching configuration below is shared by all options and goes under a `batch` parameter. Analytics is disabled by default.
 
-Configuration Options:
+Batch configuration options:
 
 [cols="1,3,1,1,1"]
 |===
