@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
+	"fmt"
 	"math/rand/v2"
 	"net/http"
 	"net/http/httptest"
@@ -114,4 +115,40 @@ func Test_DecodeImage_V1(t *testing.T) {
 	assert.Equal(t, []byte("tiledata"), img.Content)
 	assert.Equal(t, "image/png", img.ContentType)
 	assert.Zero(t, img.CreatedAt)
+}
+
+func Test_GetTile_ErrorsAreValues(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/status":
+			w.WriteHeader(http.StatusServiceUnavailable)
+		case "/type":
+			w.Header().Set("Content-Type", "text/html")
+		default:
+			w.Header().Set("Content-Type", "image/png")
+			_, _ = w.Write([]byte("too long"))
+		}
+	}))
+	defer server.Close()
+
+	clientConfig := config.ClientConfig{
+		StatusCodes:  []int{http.StatusOK},
+		ContentTypes: []string{"image/png"},
+		MaxLength:    2,
+		Timeout:      5,
+	}
+
+	_, err := GetTile(context.Background(), clientConfig, server.URL+"/status", nil)
+	var remoteErr RemoteServerError
+	require.ErrorAs(t, fmt.Errorf("wrapped: %w", err), &remoteErr)
+	assert.Equal(t, http.StatusServiceUnavailable, remoteErr.StatusCode)
+
+	_, err = GetTile(context.Background(), clientConfig, server.URL+"/type", nil)
+	var typeErr InvalidContentTypeError
+	require.ErrorAs(t, err, &typeErr)
+	assert.Equal(t, "text/html", typeErr.ContentType)
+
+	_, err = GetTile(context.Background(), clientConfig, server.URL+"/length", nil)
+	var lengthErr InvalidContentLengthError
+	require.ErrorAs(t, err, &lengthErr)
 }

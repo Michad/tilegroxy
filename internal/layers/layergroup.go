@@ -78,7 +78,6 @@ func ConstructLayerGroup(ctx context.Context, cfg config.Config, cacheRegistry *
 			return nil, errors.Join(fmt.Errorf("error constructing layer %v: %w", i, err), layerGroup.Close(ctx))
 		}
 
-		built.Cache = layerCache
 		layerObjects[i] = built
 	}
 

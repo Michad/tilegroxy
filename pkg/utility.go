@@ -178,13 +178,13 @@ func GetTile(ctx context.Context, clientConfig config.ClientConfig, url string, 
 	slog.DebugContext(ctx, fmt.Sprintf("Response status: %v", resp.StatusCode))
 
 	if !slices.Contains(clientConfig.StatusCodes, resp.StatusCode) {
-		return nil, &RemoteServerError{StatusCode: resp.StatusCode}
+		return nil, RemoteServerError{StatusCode: resp.StatusCode}
 	}
 
 	contentType := resp.Header.Get("Content-Type")
 
 	if !slices.Contains(clientConfig.ContentTypes, contentType) {
-		return nil, &InvalidContentTypeError{ContentType: contentType}
+		return nil, InvalidContentTypeError{ContentType: contentType}
 	}
 
 	if clientConfig.RewriteContentTypes != nil {
@@ -197,22 +197,22 @@ func GetTile(ctx context.Context, clientConfig config.ClientConfig, url string, 
 
 	if resp.ContentLength == -1 {
 		if clientConfig.UnknownLength == nil || !*clientConfig.UnknownLength {
-			return nil, &InvalidContentLengthError{Length: -1}
+			return nil, InvalidContentLengthError{Length: -1}
 		}
 	} else {
 		if resp.ContentLength > int64(clientConfig.MaxLength) {
-			return nil, &InvalidContentLengthError{Length: int(resp.ContentLength)}
+			return nil, InvalidContentLengthError{Length: int(resp.ContentLength)}
 		}
 	}
 
 	img, err := io.ReadAll(resp.Body)
 
 	if err != nil {
-		return nil, &RemoteServerError{StatusCode: resp.StatusCode}
+		return nil, RemoteServerError{StatusCode: resp.StatusCode}
 	}
 
 	if len(img) > clientConfig.MaxLength {
-		return nil, &InvalidContentLengthError{Length: len(img)}
+		return nil, InvalidContentLengthError{Length: len(img)}
 	}
 
 	return &Image{Content: img, ContentType: contentType}, nil

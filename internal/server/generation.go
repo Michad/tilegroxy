@@ -25,6 +25,7 @@ import (
 	"time"
 
 	internalanalytics "github.com/Michad/tilegroxy/internal/analytics"
+	"github.com/Michad/tilegroxy/internal/static"
 
 	"github.com/Michad/tilegroxy/internal/entities"
 	"github.com/Michad/tilegroxy/internal/layers"
@@ -127,6 +128,7 @@ func (g *generation) writeHeaders(w http.ResponseWriter) {
 	}
 
 	if !g.serverCfg.Production {
+		version, _, _ := static.GetVersionInformation()
 		w.Header().Add("X-Powered-By", "tilegroxy "+version)
 	}
 }
