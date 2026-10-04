@@ -178,7 +178,7 @@ func listenAndServeTLS(cfg *config.Config, srvErr chan error, srv *http.Server) 
 		if httpPort != 0 {
 			srv := &http.Server{
 				Addr:              httpHostPort,
-				Handler:           httpRedirectHandler{protoAndHost: "https://" + cfg.Server.Encrypt.Domain},
+				Handler:           httpRedirectHandler{host: cfg.Server.Encrypt.Domain},
 				ReadHeaderTimeout: time.Second,
 			}
 

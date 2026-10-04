@@ -17,6 +17,8 @@ package server
 import (
 	"context"
 	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"os"
 	"syscall"
 	"testing"
@@ -52,4 +54,29 @@ func Test_NewHTTPServer_BoundsSlowClients(t *testing.T) {
 	// backstop behind the timeout handler rather than a second deadline operators have to tune.
 	assert.Equal(t, 90*time.Second, srv.WriteTimeout)
 	assert.Equal(t, 90*time.Second, srv.IdleTimeout)
+}
+
+func Test_HTTPRedirectHandler_PinsHost(t *testing.T) {
+	h := httpRedirectHandler{host: "example.com"}
+
+	tests := map[string]string{
+		"/tiles/osm/1/2/3?key=abc": "https://example.com/tiles/osm/1/2/3?key=abc",
+		"http://evil.com/x?y=1":    "https://example.com/x?y=1",
+		"http:.evil.com":           "https://example.com",
+		"//evil.com/x":             "https://example.com//evil.com/x",
+	}
+
+	for target, expected := range tests {
+		t.Run(target, func(t *testing.T) {
+			u, err := url.ParseRequestURI(target)
+			require.NoError(t, err)
+
+			req := &http.Request{Method: http.MethodGet, URL: u, RequestURI: target, Header: http.Header{}}
+			rw := httptest.NewRecorder()
+			h.ServeHTTP(rw, req)
+
+			assert.Equal(t, http.StatusMovedPermanently, rw.Code)
+			assert.Equal(t, expected, rw.Header().Get("Location"))
+		})
+	}
 }
