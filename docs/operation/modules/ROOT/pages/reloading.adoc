@@ -11,6 +11,8 @@ Reloading can occur in a few different situations:
 
 When reloading with a new/modified configuration, the new configuration is stored side-by-side with the previous configuration and swapped atomically. The exact timing of that change cannot be controlled but should occur within several seconds of configuration being read depending on the size of your configuration.  Requests that are already in-flight while this change occurs will continue operating against the old configuration while requests coming in after the swap completes will use the new configuration.
 
+Reloads never run at the same time, whether they come from a configuration change, a reload signal, or a secret. They are queued up to run serially. A reload requested while tilegroxy is still starting up is held until the server is ready and then applied. If several arrive during startup only the most recent is applied.
+
 === Warnings
 
 Configuration changes that affect the core functionality of the service (for example changing the port of the HTTP server) still require a restart of the executable.
@@ -50,7 +52,7 @@ Sending tilegroxy the `SIGHUP` signal re-reads the configuration from its origin
 
 Unlike `--hot-reload`, this works with configuration pulled from a remote provider and on file systems without change notifications. Obviously the configuration will never change on reload if you use `--raw-config`.
 
-Manual and hot reloads never run at the same time, they are queued up to run serially. Reload signals are only supported on Linux, macOS, and other Unix-like systems. 
+Reload signals are only supported on Linux, macOS, and other Unix-like systems. 
 
 == Shutdown
 

@@ -122,19 +122,14 @@ func entitiesFor(lg *layers.LayerGroup) *entities.Entities {
 
 // startServer boots ListenAndServe in the background, waits until its health endpoint is live, and
 // returns the reload callback it published, registering cleanup that stops the server.
-//
-// ListenAndServe writes through reloadPtr on its own goroutine with no synchronization, so the
-// value is handed over through a channel from the onReady callback rather than read directly.
 func startServer(t *testing.T, cfg *config.Config, lg *layers.LayerGroup) reloadEntitiesFunc {
 	t.Helper()
-
-	var reloadFn reloadEntitiesFunc
 
 	published := make(chan reloadEntitiesFunc, 1)
 
 	done := make(chan error, 1)
 	go func() {
-		err := ListenAndServe(cfg, entitiesFor(lg), &reloadFn, func() { published <- reloadFn })
+		err := ListenAndServe(cfg, entitiesFor(lg), func(fn reloadEntitiesFunc) { published <- fn })
 		// Unblock the handoff if the server died before ever publishing.
 		select {
 		case published <- nil:
@@ -164,7 +159,7 @@ func startServer(t *testing.T, cfg *config.Config, lg *layers.LayerGroup) reload
 
 // Health check tickers close over the LayerGroup they were built against, so without a rebuild on
 // reload a layer that a reload fixes or breaks stays invisible to health checks. Driven through
-// ListenAndServe's own reloadPtr, keeping the layer ID and check config identical throughout.
+// the reload function ListenAndServe hands to onReady, keeping the layer ID and check config identical throughout.
 func Test_ListenAndServe_HealthChecksRebuildOnReload(t *testing.T) {
 	cfg1, healthPort := healthTestConfig(t)
 
