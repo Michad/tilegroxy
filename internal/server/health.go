@@ -338,3 +338,92 @@ func tickCheck(ctx context.Context, i int, check health.HealthCheck, ttl time.Du
 
 	checkResultCache.Store(i, result)
 }
+
+// Holding mu across teardown and rebuild stops concurrent reloads double-closing an instance or racing for the port
+type healthSupervisor struct {
+	mu         sync.Mutex
+	shutdownFn func(context.Context) error
+	drainFn    func()
+	// A rebuild after shutdown starts must come up already draining, not reopen readiness
+	draining bool
+	stopped  bool
+}
+
+func (s *healthSupervisor) Start(ctx context.Context, cfg *config.Config, ent *entities.Entities) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.build(ctx, cfg, ent)
+}
+
+func (s *healthSupervisor) Reload(ctx context.Context, cfg *config.Config, ent *entities.Entities) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Rebuilding now would bind a listener nothing is left to stop
+	if s.stopped {
+		return nil
+	}
+
+	// The old listener must close before the new one binds, since the host and port rarely change
+	if s.shutdownFn != nil {
+		if err := s.shutdownFn(context.Background()); err != nil {
+			slog.WarnContext(ctx, fmt.Sprintf("Error shutting down previous health generation: %v", err))
+		}
+	}
+
+	s.shutdownFn = nil
+	s.drainFn = nil
+
+	// The old instance isn't resurrected on failure, as it could fail the same way. The next good reload restores health
+	if err := s.build(ctx, cfg, ent); err != nil {
+		slog.ErrorContext(ctx, fmt.Sprintf("Failed to rebuild health subsystem on reload, reload aborted: %v", err))
+		return err
+	}
+
+	return nil
+}
+
+func (s *healthSupervisor) build(ctx context.Context, cfg *config.Config, ent *entities.Entities) error {
+	if !cfg.Health.Enabled {
+		return nil
+	}
+
+	// Kept even on error, since a partial failure returns a shutdown for whatever did start
+	shutdownFn, drainFn, err := SetupHealth(ctx, cfg, ent.LayerGroup, ent.Caches)
+	s.shutdownFn = shutdownFn
+	s.drainFn = drainFn
+
+	if s.draining && drainFn != nil {
+		drainFn()
+	}
+
+	return err
+}
+
+func (s *healthSupervisor) Drain() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.draining = true
+
+	if s.drainFn != nil {
+		s.drainFn()
+	}
+}
+
+func (s *healthSupervisor) Shutdown(ctx context.Context) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.stopped = true
+	shutdownFn := s.shutdownFn
+	s.shutdownFn = nil
+	s.drainFn = nil
+
+	if shutdownFn == nil {
+		return nil
+	}
+
+	return shutdownFn(ctx)
+}

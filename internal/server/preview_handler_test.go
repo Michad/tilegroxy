@@ -39,7 +39,7 @@ func Test_PreviewHandler_ValidLayer_ReturnsHTMLWithTileURL(t *testing.T) {
 	cfg.Layers = []config.LayerConfig{staticLayerConfig("main")}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	h := newPreviewHandler(ent)
+	h := newPreviewHandler(newGenerationHolder(ent))
 
 	req := httptest.NewRequest(http.MethodGet, "http://internal-host/preview/main", nil).WithContext(pkg.BackgroundContext())
 	req.SetPathValue("layer", "main")
@@ -75,7 +75,7 @@ func Test_PreviewHandler_PatternLayerWithHostileName_EscapesIntoTemplate(t *test
 	}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	h := newPreviewHandler(ent)
+	h := newPreviewHandler(newGenerationHolder(ent))
 
 	hostileName := `x"});</script><script>alert(1)</script>{L.tileLayer("x`
 	req := httptest.NewRequest(http.MethodGet, "http://internal-host/preview/"+hostileName, nil).WithContext(pkg.BackgroundContext())
@@ -101,7 +101,7 @@ func Test_PreviewHandler_UnknownLayer_Returns401(t *testing.T) {
 	cfg.Layers = []config.LayerConfig{staticLayerConfig("main")}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	h := newPreviewHandler(ent)
+	h := newPreviewHandler(newGenerationHolder(ent))
 
 	req := httptest.NewRequest(http.MethodGet, "http://internal-host/preview/doesnotexist", nil).WithContext(pkg.BackgroundContext())
 	req.SetPathValue("layer", "doesnotexist")
@@ -122,7 +122,7 @@ func Test_PreviewHandler_VectorLayer_NotesInBody(t *testing.T) {
 	}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	h := newPreviewHandler(ent)
+	h := newPreviewHandler(newGenerationHolder(ent))
 
 	req := httptest.NewRequest(http.MethodGet, "http://internal-host/preview/vec", nil).WithContext(pkg.BackgroundContext())
 	req.SetPathValue("layer", "vec")
@@ -147,7 +147,7 @@ func Test_PreviewHandler_VectorLayer_NameOverride_UsesQueryParam(t *testing.T) {
 	}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	h := newPreviewHandler(ent)
+	h := newPreviewHandler(newGenerationHolder(ent))
 
 	req := httptest.NewRequest(http.MethodGet, "http://internal-host/preview/vec?name=custom_layer", nil).WithContext(pkg.BackgroundContext())
 	req.SetPathValue("layer", "vec")
@@ -177,7 +177,7 @@ func Test_PreviewHandler_LayerWithBounds_UsesFitBounds(t *testing.T) {
 	}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	h := newPreviewHandler(ent)
+	h := newPreviewHandler(newGenerationHolder(ent))
 
 	req := httptest.NewRequest(http.MethodGet, "http://internal-host/preview/bounded", nil).WithContext(pkg.BackgroundContext())
 	req.SetPathValue("layer", "bounded")
@@ -201,7 +201,7 @@ func Test_PreviewHandler_AllowedArea_IntersectsBounds(t *testing.T) {
 	cfg.Layers = []config.LayerConfig{layerCfg}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	h := newPreviewHandler(ent)
+	h := newPreviewHandler(newGenerationHolder(ent))
 
 	ctx := pkg.BackgroundContext()
 	ctxAllowedArea, _ := pkg.AllowedAreaFromContext(ctx)
@@ -230,7 +230,7 @@ func Test_PreviewHandler_ReloadEntities_SwapsGenerationAndReleasesOld(t *testing
 	oldGen := newGeneration(&cfg, &entities.Entities{})
 	newGen := oldGen.succeededBy(&entities.Entities{})
 
-	h := newPreviewHandler(oldGen)
+	h := newPreviewHandler(newGenerationHolder(oldGen))
 
 	h.mu.RLock()
 	assert.Equal(t, oldGen, h.current)
@@ -248,7 +248,7 @@ func Test_PreviewHandler_LayerScope_RestrictsAccess(t *testing.T) {
 	cfg.Layers = []config.LayerConfig{staticLayerConfig("main"), staticLayerConfig("other")}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	h := newPreviewHandler(ent)
+	h := newPreviewHandler(newGenerationHolder(ent))
 
 	ctx := pkg.BackgroundContext()
 	limitLayers, _ := pkg.LimitLayersFromContext(ctx)
@@ -273,7 +273,7 @@ func Test_PreviewHandler_NonGetMethod_MethodNotAllowed(t *testing.T) {
 	cfg.Layers = []config.LayerConfig{staticLayerConfig("main")}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	h := newPreviewHandler(ent)
+	h := newPreviewHandler(newGenerationHolder(ent))
 
 	req := httptest.NewRequest(http.MethodPost, "http://internal-host/preview/main", nil).WithContext(pkg.BackgroundContext())
 	req.SetPathValue("layer", "main")
@@ -292,7 +292,7 @@ func Test_PreviewHandler_OptionsMethod_NoContent(t *testing.T) {
 	cfg.Layers = []config.LayerConfig{staticLayerConfig("main")}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	h := newPreviewHandler(ent)
+	h := newPreviewHandler(newGenerationHolder(ent))
 
 	req := httptest.NewRequest(http.MethodOptions, "http://internal-host/preview/main", nil).WithContext(pkg.BackgroundContext())
 	req.SetPathValue("layer", "main")
@@ -366,7 +366,7 @@ func Test_PreviewHandler_IgnoresReloadedServerConfig(t *testing.T) {
 	cfg.Layers = []config.LayerConfig{staticLayerConfig("main")}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	h := newPreviewHandler(ent)
+	h := newPreviewHandler(newGenerationHolder(ent))
 
 	h.reload(ent.succeededBy(&entities.Entities{LayerGroup: ent.layerGroup(), Auth: ent.auth()}))
 
@@ -394,7 +394,7 @@ func servePMTilesPreview(t *testing.T, target string) string {
 		{ID: "pm", Provider: map[string]interface{}{"name": "pmtiles", "file": "../pmtiles/testdata/vector.pmtiles"}},
 	}
 
-	h := newPreviewHandler(buildTileJSONTestServing(t, cfg))
+	h := newPreviewHandler(newGenerationHolder(buildTileJSONTestServing(t, cfg)))
 
 	req := httptest.NewRequest(http.MethodGet, target, nil).WithContext(pkg.BackgroundContext())
 	req.SetPathValue("layer", "pm")
@@ -436,7 +436,7 @@ func Test_PreviewHandler_NoMetadata_ProbesGuessedLayer(t *testing.T) {
 		{ID: "vec", LayerMetadata: config.LayerMetadata{DataType: config.DataTypeMVT}, Provider: map[string]interface{}{"name": "proxy", "url": "http://example.com/{z}/{x}/{y}"}},
 	}
 
-	h := newPreviewHandler(buildTileJSONTestServing(t, cfg))
+	h := newPreviewHandler(newGenerationHolder(buildTileJSONTestServing(t, cfg)))
 
 	req := httptest.NewRequest(http.MethodGet, "http://internal-host/preview/vec", nil).WithContext(pkg.BackgroundContext())
 	req.SetPathValue("layer", "vec")
@@ -481,7 +481,7 @@ func servePreviewBody(t *testing.T, dataType config.DataType) string {
 		{ID: "vec", LayerMetadata: config.LayerMetadata{DataType: dataType}, Provider: map[string]interface{}{"name": "proxy", "url": "http://example.com/{z}/{x}/{y}"}},
 	}
 
-	h := newPreviewHandler(buildTileJSONTestServing(t, cfg))
+	h := newPreviewHandler(newGenerationHolder(buildTileJSONTestServing(t, cfg)))
 
 	req := httptest.NewRequest(http.MethodGet, "http://internal-host/preview/vec", nil).WithContext(pkg.BackgroundContext())
 	req.SetPathValue("layer", "vec")
