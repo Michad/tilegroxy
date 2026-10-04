@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
 	"strings"
 	"time"
 
@@ -104,37 +103,22 @@ func (reg *CacheRegistry) Close(ctx context.Context) error {
 	return errors.Join(errs...)
 }
 
-// registerNested makes caches defined inside another cache referenceable by their own id, so a
-// layer can point at one tier of a multi cache. The built graph carries no ids, so the raw config
-// is walked alongside it. Nested entries are not added to owned: the parent closes them.
-func (reg *CacheRegistry) registerNested(rawConfig map[string]interface{}, built cache.Cache, errorMessages config.ErrorMessages) error {
-	for i, childConfig := range nestedCacheConfigs(rawConfig) {
-		childBuilt, ok := nestedCache(built, i)
-		if !ok {
-			continue
-		}
-
-		id, explicit := childConfig["id"].(string)
-		if !explicit || id == "" {
-			// Falling back to name is what makes the nested cache in the docs' example addressable
-			// without an explicit id. Two tiers of the same kind is legal config though, so a
-			// collision here only costs the ability to reference them; an explicit id is the fix.
-			id, _ = childConfig["name"].(string)
-			explicit = false
-		}
-
-		if id != "" {
-			if _, taken := reg.caches[id]; taken {
-				if explicit {
-					return fmt.Errorf(errorMessages.MustBeUnique, "cache.id", id)
+// Lets a layer reference one tier of a multi cache by id. Nested entries aren't owned: the parent closes them.
+func (reg *CacheRegistry) registerNested(built cache.Cache, errorMessages config.ErrorMessages) error {
+	for _, child := range children(built) {
+		if wrapper, ok := child.(CacheWrapper); ok && wrapper.ref != "" {
+			if _, taken := reg.caches[wrapper.ref]; taken {
+				// Same-kind tiers are legal, so a name collision just leaves them unreferenceable; an explicit id fixes that.
+				if wrapper.refExplicit {
+					return fmt.Errorf(errorMessages.MustBeUnique, "cache.id", wrapper.ref)
 				}
 			} else {
-				reg.caches[id] = childBuilt
-				reg.order = append(reg.order, id)
+				reg.caches[wrapper.ref] = child
+				reg.order = append(reg.order, wrapper.ref)
 			}
 		}
 
-		if err := reg.registerNested(childConfig, childBuilt, errorMessages); err != nil {
+		if err := reg.registerNested(child, errorMessages); err != nil {
 			return err
 		}
 	}
@@ -142,156 +126,37 @@ func (reg *CacheRegistry) registerNested(rawConfig map[string]interface{}, built
 	return nil
 }
 
+// ContainsCache reports whether a cache registered under name is anywhere in the tree. Prefer the capability interfaces.
 func ContainsCache(built cache.Cache, name string) bool {
-	if wrapper, ok := built.(CacheWrapper); ok {
-		if wrapper.Name == name {
-			return true
-		}
-	}
+	found := false
 
-	for i := 0; ; i++ {
-		child, ok := nestedCache(built, i)
-		if !ok {
-			return false
+	walk(built, func(node cache.Cache) {
+		if wrapper, ok := node.(CacheWrapper); ok && wrapper.Name == name {
+			found = true
 		}
+	})
 
-		if ContainsCache(child, name) {
-			return true
-		}
-	}
+	return found
 }
 
-// Finds the lifetime of a ttl cache anywhere in a chain. The shortest wins when several are nested
+// ExtractTTLFromCache finds the lifetime of any Expiring cache in the tree. The shortest wins when several are nested.
 func ExtractTTLFromCache(built cache.Cache) (time.Duration, bool) {
 	var shortest time.Duration
 	found := false
 
-	if wrapper, ok := built.(CacheWrapper); ok && wrapper.Name == "ttl" {
-		if ttl, ok := findTTLViaReflect(wrapper.Cache); ok {
-			shortest = ttl
-			found = true
-		}
-	}
-
-	for i := 0; ; i++ {
-		child, ok := nestedCache(built, i)
+	walk(built, func(node cache.Cache) {
+		e, ok := as[cache.Expiring](node)
 		if !ok {
-			return shortest, found
+			return
 		}
 
-		if ttl, ok := ExtractTTLFromCache(child); ok && (!found || ttl < shortest) {
+		if ttl := e.TTL(); ttl > 0 && (!found || ttl < shortest) {
 			shortest = ttl
 			found = true
 		}
-	}
-}
+	})
 
-// Reads an exported TTL field reflectively, the same way nested children are found.
-func findTTLViaReflect(built cache.Cache) (time.Duration, bool) {
-	value := reflect.ValueOf(unwrap(built))
-	for value.Kind() == reflect.Pointer {
-		if value.IsNil() {
-			return 0, false
-		}
-
-		value = value.Elem()
-	}
-
-	if value.Kind() != reflect.Struct {
-		return 0, false
-	}
-
-	field := value.FieldByName("TTL")
-	if !field.IsValid() || !field.CanInterface() {
-		return 0, false
-	}
-
-	ttl, ok := field.Interface().(time.Duration)
-
-	return ttl, ok && ttl > 0
-}
-
-// nestedCache pulls the i-th child out of a constructed cache by reading the exported Tiers/Cache
-// fields reflectively. Every nesting cache holds its children in one of those two shapes.
-func nestedCache(built cache.Cache, i int) (cache.Cache, bool) {
-	value := reflect.ValueOf(unwrap(built))
-	for value.Kind() == reflect.Pointer {
-		if value.IsNil() {
-			return nil, false
-		}
-
-		value = value.Elem()
-	}
-
-	if value.Kind() != reflect.Struct {
-		return nil, false
-	}
-
-	if tiers := value.FieldByName("Tiers"); tiers.IsValid() && tiers.Kind() == reflect.Slice {
-		if i >= tiers.Len() {
-			return nil, false
-		}
-
-		child, ok := tiers.Index(i).Interface().(cache.Cache)
-
-		return child, ok
-	}
-
-	if inner := value.FieldByName("Cache"); inner.IsValid() && i == 0 {
-		child, ok := inner.Interface().(cache.Cache)
-
-		return child, ok
-	}
-
-	return nil, false
-}
-
-// unwrap steps past the telemetry wrapper to the cache that actually holds the children.
-func unwrap(c cache.Cache) cache.Cache {
-	if wrapper, ok := c.(CacheWrapper); ok {
-		return wrapper.Cache
-	}
-
-	return c
-}
-
-// nestedCacheConfigs returns the child cache configs of a cache config, in the order the cache
-// itself constructs them. `tiers` covers multi, `cache` covers the single-child wrappers.
-func nestedCacheConfigs(rawConfig map[string]interface{}) []map[string]interface{} {
-	for key, value := range rawConfig {
-		switch strings.ToLower(key) {
-		case "tiers":
-			return toConfigList(value)
-		case "cache":
-			if child, ok := value.(map[string]interface{}); ok {
-				return []map[string]interface{}{child}
-			}
-		}
-	}
-
-	return nil
-}
-
-func toConfigList(value any) []map[string]interface{} {
-	switch typed := value.(type) {
-	case []map[string]interface{}:
-		return typed
-	case []interface{}:
-		result := make([]map[string]interface{}, 0, len(typed))
-
-		for _, entry := range typed {
-			child, ok := entry.(map[string]interface{})
-			if !ok {
-				return nil
-			}
-
-			result = append(result, child)
-		}
-
-		return result
-	}
-
-	return nil
+	return shortest, found
 }
 
 // NewUnknownCacheError reports a reference to a cache id that isn't configured, listing what is.
@@ -341,7 +206,7 @@ func ConstructCacheRegistry(ctx context.Context, rawConfig interface{}, defaultI
 		reg.order = append(reg.order, entry.ID)
 		reg.owned = append(reg.owned, entry.ID)
 
-		if err := reg.registerNested(cfg, built, deps.ErrorMessages); err != nil {
+		if err := reg.registerNested(built, deps.ErrorMessages); err != nil {
 			closeErr := reg.Close(context.Background())
 			return nil, errors.Join(err, closeErr)
 		}
@@ -392,6 +257,11 @@ func ConstructCache(rawConfig map[string]interface{}, deps cache.CacheDeps) (cac
 	name, ok := rawConfig["name"].(string)
 
 	if ok {
+		ref, refExplicit := rawConfig["id"].(string)
+		if !refExplicit || ref == "" {
+			ref, refExplicit = name, false
+		}
+
 		// An alias for the no-op cache, so fixtures can name an obviously-fake cache. It goes
 		// through the same construction path operator config does, so `cache: {name: test}` in
 		// production is a no-op cache rather than an error.
@@ -407,7 +277,7 @@ func ConstructCache(rawConfig map[string]interface{}, deps cache.CacheDeps) (cac
 				return nil, err
 			}
 			a, err := reg.Initialize(cfg, deps)
-			return CacheWrapper{Name: name, Cache: a}, err
+			return CacheWrapper{Name: name, Cache: a, ref: ref, refExplicit: refExplicit}, err
 		}
 	}
 

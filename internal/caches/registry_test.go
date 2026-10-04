@@ -162,50 +162,155 @@ func Test_CacheRegistry_NilIsSafe(t *testing.T) {
 }
 
 // A nil inner cache must not panic the walk looking for a TTL
-func Test_CacheTTL_NilCacheIsNotFound(t *testing.T) {
-	ttl, ok := ExtractTTLFromCache(CacheWrapper{Name: "ttl", Cache: (*nilInnerCache)(nil)})
-
-	assert.False(t, ok)
-	assert.Zero(t, ttl)
-}
-
-// The ttl cache is held by pointer, so the walk has to dereference to reach its field
-func Test_CacheTTL_ReadsThroughPointer(t *testing.T) {
-	ttl, ok := ExtractTTLFromCache(CacheWrapper{Name: "ttl", Cache: &nilInnerCache{TTL: 90 * time.Second}})
+func Test_CacheTTL_UnwrappedExpiringIsFound(t *testing.T) {
+	ttl, ok := ExtractTTLFromCache(expiringCache{ttl: 90 * time.Second})
 
 	assert.True(t, ok)
 	assert.Equal(t, 90*time.Second, ttl)
 }
 
-// A ttl cache with no TTL field at all, such as one that isn't a struct
-func Test_CacheTTL_NonStructIsNotFound(t *testing.T) {
-	ttl, ok := ExtractTTLFromCache(CacheWrapper{Name: "ttl", Cache: funcCache(nil)})
+func Test_CacheTTL_ZeroIsNotFound(t *testing.T) {
+	ttl, ok := ExtractTTLFromCache(CacheWrapper{Name: "third-party", Cache: expiringCache{}})
 
 	assert.False(t, ok)
 	assert.Zero(t, ttl)
 }
 
-// A ttl cache whose TTL field isn't a duration says nothing about freshness
-func Test_CacheTTL_NonDurationFieldIsNotFound(t *testing.T) {
-	ttl, ok := ExtractTTLFromCache(CacheWrapper{Name: "ttl", Cache: oddTTLCache{}})
+func Test_CacheTTL_ShortestNestedWins(t *testing.T) {
+	tree := parentCache{children: []cache.Cache{
+		expiringCache{ttl: time.Hour},
+		CacheWrapper{Name: "third-party", Cache: expiringCache{ttl: time.Minute}},
+		nil,
+	}}
+
+	ttl, ok := ExtractTTLFromCache(tree)
+
+	assert.True(t, ok)
+	assert.Equal(t, time.Minute, ttl)
+}
+
+func Test_CacheTTL_NoExpiringIsNotFound(t *testing.T) {
+	ttl, ok := ExtractTTLFromCache(CacheWrapper{Name: "stub", Cache: stubCache{}})
 
 	assert.False(t, ok)
 	assert.Zero(t, ttl)
 }
 
-type nilInnerCache struct{ TTL time.Duration }
+func Test_IsKeyedByIdentity_ThirdPartyAtAnyDepth(t *testing.T) {
+	keyed := CacheWrapper{Name: "third-party", Cache: identityCache{keyed: true}}
 
-func (*nilInnerCache) Lookup(_ context.Context, _ pkg.TileRequest) (*pkg.Image, error) {
-	return nil, nil
+	assert.True(t, IsKeyedByIdentity(keyed))
+	assert.True(t, IsKeyedByIdentity(parentCache{children: []cache.Cache{stubCache{}, keyed}}))
+	assert.False(t, IsKeyedByIdentity(parentCache{children: []cache.Cache{identityCache{keyed: false}}}))
+	assert.False(t, IsKeyedByIdentity(nil))
 }
-func (*nilInnerCache) Save(_ context.Context, _ pkg.TileRequest, _ *pkg.Image) error { return nil }
-func (*nilInnerCache) Remove(_ context.Context, _ pkg.TileRequest) (bool, error)     { return false, nil }
 
-type oddTTLCache struct{ TTL string }
+func Test_IsNoop_SeesThroughDecoratorsOnly(t *testing.T) {
+	noop := CacheWrapper{Name: "third-party", Cache: noopCache{}}
 
-func (oddTTLCache) Lookup(_ context.Context, _ pkg.TileRequest) (*pkg.Image, error) { return nil, nil }
-func (oddTTLCache) Save(_ context.Context, _ pkg.TileRequest, _ *pkg.Image) error   { return nil }
-func (oddTTLCache) Remove(_ context.Context, _ pkg.TileRequest) (bool, error)       { return false, nil }
+	assert.True(t, IsNoop(noop))
+	assert.False(t, IsNoop(parentCache{children: []cache.Cache{noop}}))
+	assert.False(t, IsNoop(stubCache{}))
+	assert.False(t, IsNoop(nil))
+}
+
+func Test_ContainsCache_MatchesRegistrationName(t *testing.T) {
+	tree := parentCache{children: []cache.Cache{CacheWrapper{Name: "wanted", Cache: stubCache{}}}}
+
+	assert.True(t, ContainsCache(tree, "wanted"))
+	assert.False(t, ContainsCache(tree, "other"))
+}
+
+func Test_ReflectedChildren_LegacyFieldsAreWalked(t *testing.T) {
+	keyed := identityCache{keyed: true}
+
+	assert.True(t, IsKeyedByIdentity(&legacySingle{Cache: keyed}))
+	assert.True(t, IsKeyedByIdentity(legacyTiers{Tiers: []cache.Cache{stubCache{}, keyed}}))
+	assert.False(t, IsKeyedByIdentity((*legacySingle)(nil)))
+	assert.False(t, IsKeyedByIdentity(funcCache(nil)))
+	assert.False(t, IsKeyedByIdentity(&legacySingle{}))
+}
+
+func Test_CacheRegistry_NestedThirdPartyParentIsReferenceable(t *testing.T) {
+	cache.RegisterCache(parentCacheRegistration{})
+
+	reg, err := ConstructCacheRegistry(context.Background(), []map[string]interface{}{
+		{
+			"id":   "outer",
+			"name": "stub-parent",
+			"children": []interface{}{
+				map[string]interface{}{"id": "second", "name": "stub-basic"},
+				map[string]interface{}{"name": "stub-basic"},
+			},
+		},
+	}, "", nil, testDeps())
+	require.NoError(t, err)
+
+	for _, id := range []string{"outer", "second", "stub-basic"} {
+		_, ok := reg.Get(id)
+		assert.True(t, ok, "expected cache %v to be referenceable", id)
+	}
+}
+
+type expiringCache struct {
+	stubCache
+	ttl time.Duration
+}
+
+func (c expiringCache) TTL() time.Duration { return c.ttl }
+
+type identityCache struct {
+	stubCache
+	keyed bool
+}
+
+func (c identityCache) KeyedByIdentity() bool { return c.keyed }
+
+type noopCache struct{ stubCache }
+
+func (noopCache) IsNoop() bool { return true }
+
+type parentCache struct {
+	stubCache
+	children []cache.Cache
+}
+
+func (c parentCache) Children() []cache.Cache { return c.children }
+
+type parentCacheConfig struct {
+	Children []map[string]interface{}
+}
+
+type parentCacheRegistration struct{}
+
+func (parentCacheRegistration) Name() string          { return "stub-parent" }
+func (parentCacheRegistration) InitializeConfig() any { return parentCacheConfig{} }
+func (parentCacheRegistration) Initialize(cfgAny any, deps cache.CacheDeps) (cache.Cache, error) {
+	cfg := cfgAny.(parentCacheConfig)
+	built := make([]cache.Cache, 0, len(cfg.Children))
+
+	// Built in reverse so registration can't rely on configuration order.
+	for i := len(cfg.Children) - 1; i >= 0; i-- {
+		child, err := ConstructCache(cfg.Children[i], deps)
+		if err != nil {
+			return nil, err
+		}
+
+		built = append(built, child)
+	}
+
+	return parentCache{children: built}, nil
+}
+
+type legacySingle struct {
+	stubCache
+	Cache cache.Cache
+}
+
+type legacyTiers struct {
+	stubCache
+	Tiers []cache.Cache
+}
 
 type funcCache func()
 

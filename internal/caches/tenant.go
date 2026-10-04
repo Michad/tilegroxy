@@ -92,6 +92,14 @@ func (c *TenantCache) Remove(ctx context.Context, t pkg.TileRequest) (bool, erro
 	return c.Cache.Remove(ctx, namespace(ctx, t))
 }
 
+func (c *TenantCache) KeyedByIdentity() bool {
+	return true
+}
+
+func (c *TenantCache) Children() []cache.Cache {
+	return []cache.Cache{c.Cache}
+}
+
 func (c *TenantCache) Close(ctx context.Context) error {
 	return lifecycle.CloseIfCloser(ctx, c.Cache)
 }
