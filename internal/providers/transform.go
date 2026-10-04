@@ -26,7 +26,9 @@ import (
 	"log/slog"
 	"math"
 	"os"
+	"runtime/debug"
 	"sync"
+	"sync/atomic"
 
 	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
@@ -179,6 +181,7 @@ func (t Transform) GenerateTile(ctx context.Context, providerContext layer.Provi
 	}
 
 	var wg sync.WaitGroup
+	var panicErr atomic.Pointer[error]
 	wg.Add(t.Threads)
 
 	for tid := range t.Threads {
@@ -187,7 +190,9 @@ func (t Transform) GenerateTile(ctx context.Context, providerContext layer.Provi
 		go func(iStart int, iEnd int) {
 			defer func() {
 				if r := recover(); r != nil {
-					slog.Error(fmt.Sprintf("unexpected transform error! %v", r))
+					slog.ErrorContext(ctx, "panic in transform script", "file", t.File, "panic", r, "stack", string(debug.Stack()))
+					err := fmt.Errorf(t.errorMessages.ScriptError, "provider.transform", r)
+					panicErr.CompareAndSwap(nil, &err)
 				}
 				wg.Done()
 			}()
@@ -208,6 +213,10 @@ func (t Transform) GenerateTile(ctx context.Context, providerContext layer.Provi
 	}
 
 	wg.Wait()
+
+	if err := panicErr.Load(); err != nil {
+		return nil, *err
+	}
 
 	var buf bytes.Buffer
 	writer := bufio.NewWriter(&buf)

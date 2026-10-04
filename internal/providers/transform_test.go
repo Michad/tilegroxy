@@ -139,3 +139,31 @@ func Test_Transform_SemiTransparentPixelKeepsItsChannels(t *testing.T) {
 
 	assert.Equal(t, color.NRGBA{R: 200, G: 100, B: 50, A: 128}, result)
 }
+
+func Test_Transform_PanicFailsTile(t *testing.T) {
+	src := image.NewNRGBA(image.Rect(0, 0, 16, 16))
+	for x := range 16 {
+		src.Set(x, 15, color.NRGBA{R: 255, A: 255})
+	}
+
+	path := filepath.Join(t.TempDir(), "src.png")
+	f, err := os.Create(path)
+	require.NoError(t, err)
+	require.NoError(t, png.Encode(f, src))
+	require.NoError(t, f.Close())
+
+	tr, err := TransformRegistration{}.Initialize(
+		TransformConfig{
+			Threads:  4,
+			Provider: map[string]interface{}{"name": "static", "image": path},
+			Formula:  `func transform(r, g, b, a uint8) (uint8, uint8, uint8, uint8) { if r > 200 { panic("boom") }; return r, g, b, a }`,
+		},
+		layer.ProviderDeps{ClientConfig: testClientConfig, ErrorMessages: testErrMessages})
+	require.NoError(t, err)
+
+	img, err := tr.GenerateTile(pkg.BackgroundContext(), layer.ProviderContext{}, pkg.TileRequest{LayerName: "l", Z: 9, X: 23, Y: 32})
+
+	assert.Nil(t, img)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "boom")
+}
