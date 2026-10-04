@@ -25,7 +25,6 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
-	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
 )
 
 type CacheMode string
@@ -68,9 +67,8 @@ func (s FallbackRegistration) Name() string {
 	return "fallback"
 }
 
-func (s FallbackRegistration) DataType(cfgAny any) config.DataType {
-	cfg := cfgAny.(FallbackConfig)
-	return layers.ExtractDataType(cfg.Primary)
+func (s FallbackRegistration) DataType(_ any) config.DataType {
+	return config.DataTypeUnknown
 }
 
 func (s FallbackRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
@@ -171,11 +169,6 @@ func (t Fallback) GenerateTile(ctx context.Context, providerContext layer.Provid
 	return img, err
 }
 
-// Close releases both child providers. Fallback holds them directly rather than through a Layer,
-// so they're unreachable from LayerGroup.Close without this.
-func (t Fallback) Close(ctx context.Context) error {
-	return errors.Join(
-		lifecycle.CloseIfCloser(ctx, t.Primary),
-		lifecycle.CloseIfCloser(ctx, t.Secondary),
-	)
+func (t Fallback) Children() []layer.Provider {
+	return []layer.Provider{t.Primary, t.Secondary}
 }

@@ -57,7 +57,7 @@ Configuration options:
 | false
 
 | allowcoalesce
-| Whether to allow concurrent requests for the same tile to be combined into one tile generation call. This includes requests triggered by different users. This helps avoid your upstream provider being spammed if, for whatever reason, your clients spam a single tile. However, if your tiles are customized per user/tenant, you will want to set this false. Left unset, we do our best to auto-detect when to coalesce and when not to. However it's strongly recommended to explicitly set this false when different users should receive different tiles.
+| Whether to allow concurrent requests for the same tile to be combined into one tile generation call. This includes requests triggered by different users. If your tiles are customized per user/tenant, you will want to set this false. See xref:../howto/user-dynamic.adoc#_coalesce[this how-to] for further information
 | bool
 | No
 | Auto (based on the layer's cache and provider)
@@ -70,37 +70,49 @@ Configuration options:
 
 
 | description
-| Populates the `description` field of this layer's xref:configuration/tilejson.adoc[TileJSON] document. Has no effect unless TileJSON is enabled
+| Defines a description of this layer for metadata purposes. Currently has no effect unless TileJSON is enabled. See <<Metadata>>
 | string
 | No
 | None
 
 | attribution
-| Populates the `attribution` field of this layer's xref:configuration/tilejson.adoc[TileJSON] document. Has no effect unless TileJSON is enabled
+| Defines an attribution of this layer for metadata purposes. Currently has no effect unless TileJSON is enabled. See <<Metadata>>
 | string
 | No
 | None
 
+| center
+| Specified as a triplet of longitude, latitude, zoom. Defines a center (or representative) point of this layer. Also used by the xref:commands/test.adoc[test command] to pick a default tile. See <<Metadata>>
+| float[]
+| No
+| None
+
+| vectorlayers
+| Only useful for vector data types. Defines the sub-layers inside the tiles matching the tilejson `vector_layers` format (`id`, `fields`, `description`, `minzoom`, and `maxzoom`). Currently only used for metadata purposes and has no effect unless TileJSON is enabled. See <<Metadata>>
+| Object[]
+| No
+| None
+
 | datatype
-| Declares what type of tiles this layer returns. This is inferred from the provider when possible. If this contradicts the provider (for example datatype is raster but the provider always produces vector tiles) startup fails. Required if it can't be inferred and a feature relying on it (such as bounds) is used. Also determines whether xref:configuration/error.adoc[error responses] for this layer use the raster or vector-tile error images
-| string, one of: raster, mvt
+| Declares what type of tiles this layer returns: raster images, Mapbox Vector Tiles (mvt), or MapLibre Tiles (mlt). This is inferred from the provider when possible, including through a xref:configuration/provider/ref.adoc[ref] to another layer. If this contradicts the provider (for example datatype is raster but the provider always produces vector tiles) startup fails. Required if it can't be inferred and a feature relying on it (such as bounds) is used. Also determines the data type of xref:configuration/error.adoc[error responses] for this layer
+| string, one of: raster, mvt, mlt
 | No
 | Taken from the provider
 
 | minzoom
-| Requests for a zoom level below this are rejected as out of bounds
+| Requests for a zoom level below this are rejected as out of bounds. See <<Metadata>>
 | int
 | No
 | No lower limit
 
 | maxzoom
-| Requests for a zoom level above this are rejected as out of bounds
+| Requests for a zoom level above this are rejected as out of bounds. See <<Metadata>>
 | int
 | No
 | No upper limit
 
 | bounds
-| Restricts this layer to a geographic area. When set, the layer's provider is automatically cropped (via xref:configuration/provider/crop.adoc[crop] or xref:configuration/provider/cropmvt.adoc[cropmvt]). This requires the layer's data type to be resolvable
+| Restricts this layer to a geographic area. When set, the layer's provider is automatically cropped (via xref:configuration/provider/crop.adoc[crop], xref:configuration/provider/cropmvt.adoc[cropmvt], or xref:configuration/provider/cropmlt.adoc[cropmlt]). This requires the layer's data type to be resolvable. See <<Metadata>>
 | Object with north, south, east, west
 | No
 | Whole world
@@ -123,6 +135,44 @@ Configuration options:
 | No
 | The default cache
 |===
+
+== Metadata
+
+Several options above describe the layer's tiles. Most of them can also come from the provider, for instance a provider reading an archive that records its own zoom range. Providers only describe, they never restrict. Only values set on the layer are enforced on requests.
+
+[cols="1,1,2,2"]
+|===
+| Option | Set by | Effect | Used by
+
+| minzoom, maxzoom
+| Layer or provider
+| Enforced when set on the layer. A provider's value is advertised only
+| Tile requests, TileJSON, preview, test command
+
+| bounds
+| Layer or provider
+| Enforced when set on the layer, by cropping tiles. A provider's value is advertised only, narrowed to the layer's bounds
+| Tile requests, TileJSON, preview, test command
+
+| datatype
+| Layer or provider
+| Must agree when both are known
+| Error responses, bounds cropping, preview
+
+| center
+| Layer or provider
+| Advertised
+| TileJSON, preview, test command
+
+| description, attribution, vectorlayers
+| Layer or provider
+| Advertised
+| TileJSON, preview
+|===
+
+A value set on the layer always replaces the provider's. A provider value that contradicts the layer, such as a minzoom above the layer's maxzoom or a center outside the layer's bounds, is ignored and logged as a warning. A provider's center zoom outside the zoom range is moved to the nearest zoom inside it.
+
+Nesting providers combine what their children report. A provider wrapping a single other provider, such as xref:configuration/provider/effect.adoc[effect], passes its child's values through. One with several children, such as xref:configuration/provider/fallback.adoc[fallback] or xref:configuration/provider/blend.adoc[blend], reports values covering all of them, leaving a value unset if any child doesn't report it. A xref:configuration/provider/ref.adoc[ref] reports the metadata of the layer it points to.
 
 Example:
 

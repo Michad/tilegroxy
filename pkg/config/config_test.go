@@ -15,18 +15,22 @@
 package config
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Proxying a vector tile source is a documented use case, so the default allowlist has to cover
-// the MVT content types and not just raster ones.
+// the MVT and MLT content types and not just raster ones.
 func TestDefaultConfig_ContentTypesIncludesVectorTileTypes(t *testing.T) {
 	c := DefaultConfig()
 
 	assert.Contains(t, c.Client.ContentTypes, "application/vnd.mapbox-vector-tile")
 	assert.Contains(t, c.Client.ContentTypes, "application/x-protobuf")
+	assert.Contains(t, c.Client.ContentTypes, "application/vnd.maplibre-tile")
+	assert.Contains(t, c.Client.ContentTypes, "application/vnd.maplibre-vector-tile")
 }
 
 func Test_DrainDelayDefaultsToFive(t *testing.T) {
@@ -39,10 +43,7 @@ func Test_LayerConfig_HasDataTypeZoomBoundsFields(t *testing.T) {
 	minZoom := 4
 	maxZoom := 18
 	cfg := LayerConfig{
-		DataType: DataTypeRaster,
-		MinZoom:  &minZoom,
-		MaxZoom:  &maxZoom,
-		Bounds:   BoundsConfig{South: -10, North: 10, West: -10, East: 10},
+		LayerMetadata: LayerMetadata{DataType: DataTypeRaster, MinZoom: &minZoom, MaxZoom: &maxZoom, Bounds: BoundsConfig{South: -10, North: 10, West: -10, East: 10}},
 	}
 
 	assert.Equal(t, DataTypeRaster, cfg.DataType)
@@ -55,4 +56,10 @@ func Test_DataType_Constants_Values(t *testing.T) {
 	assert.Equal(t, DataTypeRaster, DataType("raster"))
 	assert.Equal(t, DataTypeMVT, DataType("mvt"))
 	assert.Equal(t, DataTypeUnknown, DataType("unknown"))
+}
+
+func Test_VectorLayer_MarshalJSON_NilFieldsIsObject(t *testing.T) {
+	b, err := json.Marshal(VectorLayer{ID: "roads"})
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"id":"roads","fields":{}}`, string(b))
 }

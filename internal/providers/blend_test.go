@@ -53,8 +53,6 @@ func Test_DataType_Blend(t *testing.T) {
 	assert.Equal(t, config.DataTypeRaster, BlendRegistration{}.DataType(BlendConfig{}))
 }
 
-// Blend holds its children directly, outside any layer, so they're unreachable through
-// LayerGroup.Close unless Blend forwards to them itself.
 func Test_BlendCloseClosesChildProviders(t *testing.T) {
 	p1 := &closableProvider{}
 	p2 := &closableProvider{}
@@ -62,7 +60,7 @@ func Test_BlendCloseClosesChildProviders(t *testing.T) {
 	// actually builds: the close has to survive both hops, not just the forwarding one
 	b := &Blend{providers: []layer.Provider{layers.ProviderWrapper{Name: "child", Provider: p1}, p2}}
 
-	require.NoError(t, b.Close(context.Background()))
+	require.NoError(t, layer.CloseProvider(context.Background(), b))
 
 	assert.True(t, p1.closed)
 	assert.True(t, p2.closed)

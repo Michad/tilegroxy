@@ -1,0 +1,43 @@
+= PMTiles
+
+Serves tiles out of a link:https://docs.protomaps.com/pmtiles/[PMTiles] archive. A PMTiles archive contains a pre-rendered tileset. This provider works either with a local file or via HTTP(s) (using range requests).
+
+The archive is treated as immutable and static, the file and URL won't work with request-time parameters. Replacing the file underneath a running tilegroxy is not supported and will lead to undefined behavior.
+
+Brotli or zstd compression are *not* supported. The `Content-Type` of every tile comes from the tile type in the archive header, falling back to `application/octet-stream` when the tile type is unknown. Archives of MapLibre Tiles (MLT) are served as `application/vnd.maplibre-tile` with the `mlt` datatype.
+
+We pull metadata fields (including zoom range, bounds, and datatype) from the archive and make them available as defaults for the xref:configuration/layer.adoc[layer]. If you set `bounds` on the layer you must also set `datatype`, since the layer decides how to crop before the archive is opened.
+
+When using a URL the xref:configuration/client.adoc[client] `MaxLength` limits the size of every section/tile after any decompression. Archives with dense vector tiles may need a higher limit, but be mindful that increasing the size too much could leave you vulnerable to supply-side attacks. Local files have no such limit as those are under your control. The client configured `StatusCodes`, `ContentTypes`, and `UnknownLength` checks aren't enforced for this provider due the peculiarities of HTTP range requests.
+
+A request for a tile that isn't in the archive is treated as out of bounds and returns the xref:configuration/error.adoc[out of bounds error]. Wrap this provider in a xref:configuration/provider/fallback.adoc[fallback] if you want another provider to fill those gaps. 
+
+Name should be "pmtiles"
+
+Configuration options:
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| file
+| The path to a PMTiles archive on the local filesystem. Mutually exclusive with `url` and required if `url` is undefined
+| string
+| No
+| None
+
+| url
+| A URL pointing at a PMTiles archive. The server must support range requests. Mutually exclusive with `file` and required if `file` is undefined
+| string
+| No
+| None
+
+|===
+
+Example:
+
+----
+provider:
+  name: pmtiles
+  file: /data/tiles/overture.pmtiles
+----

@@ -27,17 +27,17 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
-	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
 )
 
 type CompositeMVTConfig struct {
 	Providers []map[string]interface{}
 }
 
-type CompositeMVT struct {
-	// CompositeMVTConfig
+// CompositeVector concatenates the vector tiles of its children, which both MVT and MLT allow.
+type CompositeVector struct {
 	providers     []layer.Provider
 	errorMessages config.ErrorMessages
+	contentType   string
 }
 
 func init() {
@@ -62,40 +62,47 @@ func (s CompositeMVTRegistration) DataType(_ any) config.DataType {
 func (s CompositeMVTRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(CompositeMVTConfig)
 
-	providers := make([]layer.Provider, 0, len(cfg.Providers))
-	errorSlice := make([]error, 0, len(cfg.Providers))
+	return newCompositeVector(cfg.Providers, deps, "provider.compositemvt.providers", config.DataTypeMLT, mvtContentType)
+}
 
-	for _, p := range cfg.Providers {
+// Children that produce the other vector format are refused, since concatenating the two corrupts the tile.
+func newCompositeVector(childConfigs []map[string]interface{}, deps layer.ProviderDeps, path string, rejected config.DataType, contentType string) (*CompositeVector, error) {
+	providers := make([]layer.Provider, 0, len(childConfigs))
+	errorSlice := make([]error, 0, len(childConfigs))
+
+	for i, p := range childConfigs {
 		provider, err := layers.ConstructProvider(p, deps)
+		if err == nil {
+			err = checkForInvalidDataType(provider, rejected, path+"."+strconv.Itoa(i), deps.ErrorMessages)
+		}
+
 		providers = append(providers, provider)
 		errorSlice = append(errorSlice, err)
 	}
 
 	errorsFlat := errors.Join(errorSlice...)
 	if errorsFlat != nil {
+		for _, p := range providers {
+			if p != nil {
+				errorsFlat = errors.Join(errorsFlat, layer.CloseProvider(context.Background(), p))
+			}
+		}
+
 		return nil, errorsFlat
 	}
 
-	return &CompositeMVT{providers: providers, errorMessages: deps.ErrorMessages}, nil
+	return &CompositeVector{providers: providers, errorMessages: deps.ErrorMessages, contentType: contentType}, nil
 }
 
-// Close releases the child providers. CompositeMVT holds them directly rather than through a
-// Layer, so they're unreachable from LayerGroup.Close without this.
-func (t CompositeMVT) Close(ctx context.Context) error {
-	errs := make([]error, 0, len(t.providers))
-
-	for _, p := range t.providers {
-		errs = append(errs, lifecycle.CloseIfCloser(ctx, p))
-	}
-
-	return errors.Join(errs...)
+func (t CompositeVector) Children() []layer.Provider {
+	return t.providers
 }
 
-func (t CompositeMVT) PreAuth(_ context.Context, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
+func (t CompositeVector) PreAuth(_ context.Context, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
 	return providerContext, nil
 }
 
-func (t CompositeMVT) GenerateTile(ctx context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+func (t CompositeVector) GenerateTile(ctx context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	slog.DebugContext(ctx, fmt.Sprintf("Compositing %v providers", len(t.providers)))
 
 	wg := sync.WaitGroup{}
@@ -122,7 +129,7 @@ func (t CompositeMVT) GenerateTile(ctx context.Context, providerContext layer.Pr
 		return nil, joinError
 	}
 
-	resultImg := pkg.Image{ContentType: mvtContentType, ForceSkipCache: false, Content: []byte{}}
+	resultImg := pkg.Image{ContentType: t.contentType, ForceSkipCache: false, Content: []byte{}}
 	for _, img := range imgSlice {
 		resultImg.Content = slices.Concat(resultImg.Content, img.Content)
 		if img.ForceSkipCache {

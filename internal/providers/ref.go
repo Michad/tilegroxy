@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
@@ -39,6 +40,7 @@ type RefConfig struct {
 type Ref struct {
 	RefConfig
 	layerGroup layer.LayerGroup
+	target     layer.Description
 }
 
 func init() {
@@ -62,7 +64,15 @@ func (s RefRegistration) DataType(_ any) config.DataType {
 
 func (s RefRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(RefConfig)
-	return &Ref{cfg, deps.LayerGroup}, nil
+	ref := &Ref{RefConfig: cfg, layerGroup: deps.LayerGroup}
+
+	if lg, ok := deps.LayerGroup.(*layers.LayerGroup); ok && lg != nil {
+		if target := lg.FindLayer(context.Background(), cfg.Layer); target != nil {
+			ref.target = target.Metadata().Advertised
+		}
+	}
+
+	return ref, nil
 }
 
 func (t Ref) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.ProviderContext, error) {
@@ -92,4 +102,9 @@ func (t Ref) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequ
 	newCtx = trace.ContextWithSpan(newCtx, span)
 
 	return t.layerGroup.RenderTile(newCtx, newRequest)
+}
+
+// Built before this layer, so the target's metadata is final.
+func (t Ref) Metadata() layer.Description {
+	return t.target
 }

@@ -23,6 +23,9 @@ extension:
 e2e: docs build extension
 	@go test ./test/... -count=1 -tags "e2e,viper_bind_struct"
 
+mltspec:
+	@go test ./internal/mlt/... -count=1 -run Spec -tags "mltspec,viper_bind_struct"
+
 cover:
 	@go install github.com/dave/courtney@latest
 	@courtney ./internal/... ./pkg/... ./cmd/...
@@ -70,4 +73,4 @@ clean:
 	-@rm ${OUT}
 	-@rm examples/extension/my_tg_wrapper
 
-.PHONY: build clean cover cover-out coverage docs e2e extension lint libyears readme test unit version
+.PHONY: build clean cover cover-out coverage docs e2e extension lint libyears mltspec readme test unit version

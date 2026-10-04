@@ -6,7 +6,7 @@ Every tile returned by tilegroxy carries a `Content-Type`, either received from 
 
 Providers that call an external HTTP server, such as xref:configuration/provider/proxy.adoc[proxy] and xref:configuration/provider/url_template.adoc[url template], use the `Content-Type` returned by that server after it passes validation.  The xref:configuration/provider/cgi.adoc[cgi] provider uses the `Content-Type` header written by the CGI application.
 
-Providers that generate imagery themselves set the content type unconditionally.  xref:configuration/provider/blend.adoc[blend], xref:configuration/provider/crop.adoc[crop], xref:configuration/provider/effect.adoc[effect], xref:configuration/provider/transform.adoc[transform], and xref:configuration/provider/static.adoc[static] always produce `image/png`.  xref:configuration/provider/postgismvt.adoc[postgis mvt] and xref:configuration/provider/compositemvt.adoc[composite mvt] always produce `application/vnd.mapbox-vector-tile`.
+Providers that generate imagery themselves set the content type unconditionally.  xref:configuration/provider/blend.adoc[blend], xref:configuration/provider/crop.adoc[crop], xref:configuration/provider/effect.adoc[effect], and xref:configuration/provider/transform.adoc[transform] always produce `image/png`.  xref:configuration/provider/static.adoc[static] produces `image/png` unless its image is a vector tile.  xref:configuration/provider/postgismvt.adoc[postgis mvt] and xref:configuration/provider/compositemvt.adoc[composite mvt] always produce `application/vnd.mapbox-vector-tile`, and xref:configuration/provider/compositemlt.adoc[composite mlt] always produces `application/vnd.maplibre-tile`.  xref:configuration/provider/pmtiles.adoc[PMTiles] uses the tile type declared in the archive header.
 
 Providers that wrap another provider, such as xref:configuration/provider/fallback.adoc[fallback] and xref:configuration/provider/ref.adoc[ref], pass through the content type of whichever provider produced the tile.
 
@@ -16,7 +16,7 @@ A xref:extensibility.adoc[custom provider] sets the `ContentType` field on the `
 
 Two xref:configuration/client.adoc[client] options control what an external server is allowed to return.
 
-`ContentTypes` is an allowlist.  A response with a `Content-Type` outside this list is treated as an error and no tile is returned, even if the status code indicates success.  The default allows `image/png`, `image/jpg`, `image/jpeg`, `application/vnd.mapbox-vector-tile`, and `application/x-protobuf`.  Matching is exact, so a server sending `image/png; charset=binary` requires that full string be added to the list.
+`ContentTypes` is an allowlist.  A response with a `Content-Type` outside this list is treated as an error and no tile is returned, even if the status code indicates success.  The default allows `image/png`, `image/jpg`, `image/jpeg`, `application/vnd.mapbox-vector-tile`, `application/x-protobuf`, `application/vnd.maplibre-tile`, and `application/vnd.maplibre-vector-tile`.  Matching is exact, so a server sending `image/png; charset=binary` requires that full string be added to the list.
 
 `RewriteContentTypes` replaces a content type after it passes the allowlist.  This is for servers that describe every tile with a generic type.  The default maps `application/octet-stream` to an empty string as described below.
 
@@ -24,7 +24,7 @@ Rewriting happens after validation, therefore the original content type must app
 
 == Empty content types
 
-An empty content type means tilegroxy sets no `Content-Type` header and lets Go determine one by inspecting the first bytes of the tile.  This is accurate for PNG and JPEG which have recognizable file signatures.  It is not accurate for vector tiles, which Go sees as arbitrary binary data and reports as `application/octet-stream`.  If your upstream server returns a generic content type for MVT, map it explicitly to `application/vnd.mapbox-vector-tile` rather than to an empty string.
+An empty content type means tilegroxy sets no `Content-Type` header and lets Go determine one by inspecting the first bytes of the tile.  This is accurate for PNG and JPEG which have recognizable file signatures.  It is not accurate for vector tiles, which Go sees as arbitrary binary data and reports as `application/octet-stream`.  If your upstream server returns a generic content type for vector tiles, map it explicitly to `application/vnd.mapbox-vector-tile` for MVT or `application/vnd.maplibre-tile` for MLT rather than to an empty string.
 
 == Caching and downstream use
 

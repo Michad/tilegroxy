@@ -95,16 +95,59 @@ func Validate(c config.Config) error {
 	}
 
 	for i, l := range c.Layers {
-		if l.MinZoom != nil && l.MaxZoom != nil && *l.MinZoom > *l.MaxZoom {
-			errs = append(errs, fmt.Errorf(c.Error.Messages.InvalidParam, fmt.Sprintf("layers[%d].maxzoom", i), strconv.Itoa(*l.MaxZoom)))
-		}
-
-		if l.Bounds != (config.BoundsConfig{}) && (l.Bounds.South > l.Bounds.North || l.Bounds.West > l.Bounds.East) {
-			errs = append(errs, fmt.Errorf(c.Error.Messages.InvalidParam, fmt.Sprintf("layers[%d].bounds", i), fmt.Sprintf("%+v", l.Bounds)))
-		}
+		errs = validateLayer(c.Error.Messages, l, errs, i)
 	}
 
 	return errors.Join(errs...)
+}
+
+// A center is longitude, latitude, then an optional zoom.
+const (
+	minCenterLen = 2
+	maxCenterLen = 3
+)
+
+func validateLayer(messages config.ErrorMessages, l config.LayerConfig, errs []error, i int) []error {
+	if l.MinZoom != nil && l.MaxZoom != nil && *l.MinZoom > *l.MaxZoom {
+		errs = append(errs, fmt.Errorf(messages.InvalidParam, fmt.Sprintf("layers[%d].maxzoom", i), strconv.Itoa(*l.MaxZoom)))
+	}
+
+	if l.Bounds != (config.BoundsConfig{}) && (l.Bounds.South > l.Bounds.North || l.Bounds.West > l.Bounds.East) {
+		errs = append(errs, fmt.Errorf(messages.InvalidParam, fmt.Sprintf("layers[%d].bounds", i), fmt.Sprintf("%+v", l.Bounds)))
+	}
+
+	if l.Center != nil {
+		if len(l.Center) < minCenterLen || len(l.Center) > maxCenterLen {
+			errs = append(errs, fmt.Errorf(messages.RangeError, fmt.Sprintf("layers[%d].center.size", i), minCenterLen, maxCenterLen))
+		} else {
+			if len(l.Center) == maxCenterLen {
+				centerZoom := l.Center[2]
+				effMaxZoom := 21
+				if l.MaxZoom != nil && *l.MaxZoom < effMaxZoom {
+					effMaxZoom = *l.MaxZoom
+				}
+
+				effMinZoom := 0
+				if l.MinZoom != nil && *l.MinZoom > 0 {
+					effMinZoom = *l.MinZoom
+				}
+
+				if centerZoom < float64(effMinZoom) || centerZoom > float64(effMaxZoom) {
+					errs = append(errs, fmt.Errorf(messages.RangeError, fmt.Sprintf("layers[%d].center.zoom", i), effMinZoom, effMaxZoom))
+				}
+			}
+
+			if l.Bounds != (config.BoundsConfig{}) {
+				if l.Center[0] > l.Bounds.East || l.Center[0] < l.Bounds.West {
+					errs = append(errs, fmt.Errorf(messages.RangeError, fmt.Sprintf("layers[%d].center[0]", i), l.Bounds.West, l.Bounds.East))
+				}
+				if l.Center[1] > l.Bounds.North || l.Center[1] < l.Bounds.South {
+					errs = append(errs, fmt.Errorf(messages.RangeError, fmt.Sprintf("layers[%d].center[1]", i), l.Bounds.South, l.Bounds.North))
+				}
+			}
+		}
+	}
+	return errs
 }
 
 // normalize the top-level cache config into a list with IDs

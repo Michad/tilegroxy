@@ -16,6 +16,7 @@ package providers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -62,7 +63,7 @@ func (s CropMvtRegistration) DataType(_ any) config.DataType {
 func (s CropMvtRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(CropMvtConfig)
 
-	primary, err := layers.ConstructProvider(cfg.Primary, deps)
+	primary, err := constructCropPrimary(cfg.Primary, deps, "provider.cropmvt.primary", config.DataTypeMLT)
 	if err != nil {
 		return nil, err
 	}
@@ -70,14 +71,60 @@ func (s CropMvtRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (la
 	return &CropMvt{cfg, primary, deps.ErrorMessages}, nil
 }
 
+// Clipping a tile of the other vector format would fail on every tile that isn't wholly inside the bounds.
+func constructCropPrimary(rawConfig map[string]interface{}, deps layer.ProviderDeps, path string, rejected config.DataType) (layer.Provider, error) {
+	primary, err := layers.ConstructProvider(rawConfig, deps)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = checkForInvalidDataType(primary, rejected, path, deps.ErrorMessages); err != nil {
+		return nil, errors.Join(err, layer.CloseProvider(context.Background(), primary))
+	}
+
+	return primary, nil
+}
+
 func (t CropMvt) PreAuth(ctx context.Context, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
 	return t.Primary.PreAuth(ctx, providerContext)
 }
 
 func (t CropMvt) GenerateTile(ctx context.Context, providerContext layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
-	boundsToCrop := t.Bounds
+	c := vectorCrop{t.Bounds, t.BoundsFromAuth, mvtContentType, "cropmvt.img", t.errorMessages}
 
-	if t.BoundsFromAuth {
+	return c.generate(ctx, t.Primary, providerContext, tileRequest, clipMvt)
+}
+
+func clipMvt(_ context.Context, content []byte, boundsToCrop pkg.Bounds, tileRequest pkg.TileRequest) ([]byte, error) {
+	collection, err := mvt.Unmarshal(content)
+	if err != nil {
+		return nil, err
+	}
+
+	tile := maptile.New(uint32(tileRequest.X), uint32(tileRequest.Y), maptile.Zoom(tileRequest.Z)) //#nosec G115 -- tileRequest coordinates are already range-checked by GetBounds before clipping
+
+	collection.ProjectToWGS84(tile)
+	collection.Clip(boundsToOrbBound(boundsToCrop))
+	collection.ProjectToTile(tile)
+
+	return mvt.Marshal(collection)
+}
+
+// vectorCrop is the part of cropping shared by every vector format, leaving only the clip itself to the format.
+type vectorCrop struct {
+	bounds         pkg.Bounds
+	boundsFromAuth bool
+	contentType    string
+	imgParam       string
+	errorMessages  config.ErrorMessages
+}
+
+type clipFunc func(ctx context.Context, content []byte, boundsToCrop pkg.Bounds, tileRequest pkg.TileRequest) ([]byte, error)
+
+func (c vectorCrop) generate(ctx context.Context, primary layer.Provider, providerContext layer.ProviderContext, tileRequest pkg.TileRequest, clip clipFunc) (*pkg.Image, error) {
+	boundsToCrop := c.bounds
+
+	if c.boundsFromAuth {
 		b, ok := pkg.AllowedAreaFromContext(ctx)
 		if ok && b != nil && !b.IsNullIsland() {
 			boundsToCrop = *b
@@ -91,15 +138,15 @@ func (t CropMvt) GenerateTile(ctx context.Context, providerContext layer.Provide
 
 	if !boundsToCrop.IsNullIsland() && !tileBounds.Intersects(boundsToCrop) {
 		slog.Log(ctx, slog.LevelDebug, "Tile fully outside crop bounds")
-		return &pkg.Image{Content: []byte{}, ContentType: mvtContentType, ForceSkipCache: true}, nil
+		return &pkg.Image{Content: []byte{}, ContentType: c.contentType, ForceSkipCache: true}, nil
 	}
 
-	img, err := t.Primary.GenerateTile(ctx, providerContext, tileRequest)
+	img, err := primary.GenerateTile(ctx, providerContext, tileRequest)
 	if err != nil {
 		return nil, err
 	}
 	if img == nil {
-		return nil, fmt.Errorf(t.errorMessages.ParamRequired, "cropmvt.img")
+		return nil, fmt.Errorf(c.errorMessages.ParamRequired, c.imgParam)
 	}
 
 	if boundsToCrop.IsNullIsland() {
@@ -111,23 +158,12 @@ func (t CropMvt) GenerateTile(ctx context.Context, providerContext layer.Provide
 		return img, nil
 	}
 
-	collection, err := mvt.Unmarshal(img.Content)
+	output, err := clip(ctx, img.Content, boundsToCrop, tileRequest)
 	if err != nil {
 		return nil, err
 	}
 
-	tile := maptile.New(uint32(tileRequest.X), uint32(tileRequest.Y), maptile.Zoom(tileRequest.Z)) //#nosec G115 -- tileRequest coordinates are already range-checked by GetBounds above
-
-	collection.ProjectToWGS84(tile)
-	collection.Clip(boundsToOrbBound(boundsToCrop))
-	collection.ProjectToTile(tile)
-
-	output, err := mvt.Marshal(collection)
-	if err != nil {
-		return nil, err
-	}
-
-	return &pkg.Image{Content: output, ContentType: mvtContentType, ForceSkipCache: img.ForceSkipCache}, nil
+	return &pkg.Image{Content: output, ContentType: c.contentType, ForceSkipCache: img.ForceSkipCache}, nil
 }
 
 func boundsToOrbBound(b pkg.Bounds) orb.Bound {
@@ -135,4 +171,16 @@ func boundsToOrbBound(b pkg.Bounds) orb.Bound {
 		Min: orb.Point{b.West, b.South},
 		Max: orb.Point{b.East, b.North},
 	}
+}
+
+func (t CropMvt) Metadata() layer.Description {
+	return clipToCrop(layer.DescribeTree(t.Primary), t.Bounds, t.BoundsFromAuth)
+}
+
+func (t CropMvt) Children() []layer.Provider {
+	return []layer.Provider{t.Primary}
+}
+
+func (s CropMvtRegistration) WrapBounds(inner layer.Provider, bounds pkg.Bounds, deps layer.ProviderDeps) (layer.Provider, error) {
+	return &CropMvt{CropMvtConfig{Bounds: bounds}, inner, deps.ErrorMessages}, nil
 }

@@ -199,7 +199,7 @@ func Test_LayerGroup_RenderTile_RejectsOutOfZoomRangeEvenOnCacheHit(t *testing.T
 		Pattern:  []layerSegment{{value: "test", placeholder: false}},
 		Provider: provider,
 		Cache:    c,
-		Config:   config.LayerConfig{MinZoom: &minZoom},
+		metadata: ResolvedMetadata{Limits: Limits{MinZoom: &minZoom}},
 	}
 	l.tileAllCounter = noop.Int64Counter{}
 	l.tileAuthCounter = noop.Int64Counter{}

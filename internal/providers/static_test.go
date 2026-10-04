@@ -17,10 +17,35 @@ package providers
 import (
 	"testing"
 
+	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_DataType_Static(t *testing.T) {
 	assert.Equal(t, config.DataTypeRaster, StaticRegistration{}.DataType(StaticConfig{}))
+	assert.Equal(t, config.DataTypeRaster, StaticRegistration{}.DataType(StaticConfig{Color: "F00"}))
+	assert.Equal(t, config.DataTypeMVT, StaticRegistration{}.DataType(StaticConfig{Image: "embedded:box.mvt"}))
+	assert.Equal(t, config.DataTypeMVT, StaticRegistration{}.DataType(StaticConfig{Image: "/tiles/blank.PBF"}))
+	assert.Equal(t, config.DataTypeMLT, StaticRegistration{}.DataType(StaticConfig{Image: "embedded:empty.mlt"}))
+}
+
+// Vector tiles have to carry their own content type, clients can't sniff them like a PNG.
+func Test_Static_ContentType(t *testing.T) {
+	tests := map[string]string{
+		"embedded:transparent.png": "image/png",
+		"embedded:box.mvt":         "application/vnd.mapbox-vector-tile",
+		"embedded:box.mlt":         "application/vnd.maplibre-tile",
+	}
+
+	for image, contentType := range tests {
+		p, err := StaticRegistration{}.Initialize(StaticConfig{Image: image}, layer.ProviderDeps{ErrorMessages: testErrMessages})
+		require.NoError(t, err)
+
+		img, err := p.GenerateTile(pkg.BackgroundContext(), layer.ProviderContext{}, pkg.TileRequest{LayerName: "l"})
+		require.NoError(t, err)
+		assert.Equal(t, contentType, img.ContentType, image)
+	}
 }

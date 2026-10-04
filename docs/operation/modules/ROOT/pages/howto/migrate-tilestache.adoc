@@ -13,7 +13,7 @@ The following are the known incompatibilities with tilestache configurations:
 +++</li><li>+++
   Vector
 +++</li><li>+++
-  MBTiles
+  MBTiles - consider converting the archive to PMTiles and using the xref:configuration/provider/pmtiles.adoc[pmtiles] provider
 +++</li><li>+++
   Mapnik Grid
 +++</li><li>+++

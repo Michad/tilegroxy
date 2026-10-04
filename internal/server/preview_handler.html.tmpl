@@ -16,7 +16,11 @@
 </head>
 <body>
 {{if .IsVector}}
-<div id="vector-notice">This is a vector tile layer. Styling using layer name "{{.VectorSourceLayer}}". If nothing is drawn, the layer name might be wrong. Override with ?name= to set it manually.</div>
+{{if .FromMetadata}}
+<div id="vector-notice">This is a vector tile layer. Styling layers {{range $i, $n := .VectorSourceLayers}}{{if $i}}, {{end}}"{{$n}}"{{end}} from the tile metadata. Override with ?name= to set a layer name manually.</div>
+{{else}}
+<div id="vector-notice">This is a vector tile layer. Styling using layer name "{{index .VectorSourceLayers 0}}". If nothing is drawn, the layer name might be wrong. Override with ?name= to set it manually.</div>
+{{end}}
 {{end}}
 <div id="map"></div>
 <script  type='module'>
@@ -24,8 +28,33 @@
   var bounds = {{if .HasBounds}}[[{{.West}}, {{.South}}], [{{.East}}, {{.North}}]]{{else}}null{{end}};
   var tileURL = "{{.TileURL}}";
   var minZoom = {{.MinZoom}};
-  var guessedSourceLayer = {{if .IsVector}}"{{.VectorSourceLayer}}"{{else}}null{{end}};
-  var sourceLayerForced = {{.SourceLayerForced}};
+  var center = {{if .Center}}{{.Center}}{{else}}null{{end}};
+  var sourceLayers = {{if .IsVector}}{{.VectorSourceLayers}}{{else}}[]{{end}};
+  var guessedSourceLayer = sourceLayers[0];
+  var sourceLayerKnown = {{.SourceLayerKnown}};
+  var palette = ["#3388ff", "#e6194b", "#3cb44b", "#f58231", "#911eb4", "#42d4f4", "#f032e6", "#9a6324"];
+
+  function vectorStyleLayers() {
+    var fills = [], lines = [];
+    sourceLayers.forEach(function (sourceLayer, i) {
+      var color = palette[i % palette.length];
+      fills.push({
+        id: "tiles-fill-" + i,
+        type: "fill",
+        source: "tiles",
+        "source-layer": sourceLayer,
+        paint: { "fill-color": color, "fill-opacity": 0.2 }
+      });
+      lines.push({
+        id: "tiles-line-" + i,
+        type: "line",
+        source: "tiles",
+        "source-layer": sourceLayer,
+        paint: { "line-color": color, "line-width": 1 }
+      });
+    });
+    return fills.concat(lines);
+  }
 
   var map = new maplibregl.Map({
     container: 'map',
@@ -34,6 +63,7 @@
       sources: {
         tiles: {
           type: {{if .IsVector}}"vector"{{else}}"raster"{{end}},
+          {{if .IsMLT}}encoding: "mlt",{{end}}
           tiles: [tileURL],
           {{if not .IsVector}}tileSize: 256,{{end}}
           minzoom: minZoom,
@@ -41,40 +71,23 @@
           attribution: {{.Attribution}}
         }
       },
-      layers: [
-        {{if .IsVector}}
-        {
-          id: "tiles-line",
-          type: "line",
-          source: "tiles",
-          "source-layer": guessedSourceLayer,
-          paint: { "line-color": "#3388ff", "line-width": 1 }
-        },
-        {
-          id: "tiles-fill",
-          type: "fill",
-          source: "tiles",
-          "source-layer": guessedSourceLayer,
-          paint: { "fill-color": "#3388ff", "fill-opacity": 0.2 }
-        }
-        {{else}}
+      layers: {{if .IsVector}}vectorStyleLayers(){{else}}[
         {
           id: "tiles-raster",
           type: "raster",
           source: "tiles"
         }
-        {{end}}
-      ]
+      ]{{end}}
     },
     bounds: bounds,
-    center: bounds ? undefined : [0, 0],
-    zoom: bounds ? undefined : minZoom
+    center: bounds ? undefined : (center ? [center[0], center[1]] : [0, 0]),
+    zoom: bounds ? undefined : (center && center.length > 2 ? center[2] : minZoom)
   });
 
   map.addControl(new maplibregl.NavigationControl());
 
   {{if .IsVector}}
-  // Best-effort: fetch one sample tile directly and scan its raw protobuf bytes for the layer
+  // Best-effort: fetch one sample tile directly and scan its raw bytes for the layer
   function readVarint(bytes, pos) {
     var result = 0, shift = 0, b;
     do {
@@ -130,6 +143,23 @@
     return names;
   }
 
+  // MLT tiles are runs of layers, each with a size and format tag. v1 layers start with their name.
+  function mltLayerNames(bytes) {
+    var names = [];
+    var pos = { i: 0 };
+    while (pos.i < bytes.length) {
+      var size = readVarint(bytes, pos);
+      var end = pos.i + size;
+      if (size > 0 && bytes[pos.i] === 1) {
+        var layerPos = { i: pos.i + 1 };
+        var len = readVarint(bytes, layerPos);
+        names.push(new TextDecoder().decode(bytes.subarray(layerPos.i, layerPos.i + len)));
+      }
+      pos.i = end;
+    }
+    return names;
+  }
+
   function lonLatToTile(lon, lat, z) {
     var n = Math.pow(2, z);
     var x = Math.floor((lon + 180) / 360 * n);
@@ -155,10 +185,10 @@
       buf = new Uint8Array(await ds.arrayBuffer());
     }
 
-    return mvtLayerNames(buf);
+    return {{if .IsMLT}}mltLayerNames(buf){{else}}mvtLayerNames(buf){{end}};
   }
 
-  if (!sourceLayerForced) decodeSampleTileLayers().then(function (names) {
+  if (!sourceLayerKnown) decodeSampleTileLayers().then(function (names) {
     if (!names || names.length === 0 || names.includes(guessedSourceLayer)) return;
 
     var actual = names[0];
@@ -173,7 +203,7 @@
 
     var notice = document.getElementById("vector-notice");
     if (notice) {
-          notice.textContent = 'This is a vector tile layer. Styling using layer name "' + actual + '". If nothing is drawn, the layer name might be wrong.Override with ?name= to set it manually.';
+          notice.textContent = 'This is a vector tile layer. Styling using layer name "' + actual + '". If nothing is drawn, the layer name might be wrong. Override with ?name= to set it manually.';
     }
   }).catch(function () {
     // Best-effort probe; leave the guessed source-layer and default notice in place on failure.

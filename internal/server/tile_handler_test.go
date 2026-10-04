@@ -602,6 +602,62 @@ layers:
 	assert.Equal(t, "no-store", resp.Header.Get("Cache-Control"))
 }
 
+// An MLT layer needs MLT error tiles, since an MVT one wouldn't decode in a client expecting MLT.
+func Test_TileHandler_Mlt(t *testing.T) {
+	configRaw := `server:
+  port: 12345
+Error:
+  mode: "image"
+authentication:
+  name: none
+layers:
+  - id: vector
+    maxzoom: 5
+    provider:
+      name: static
+      image: "embedded:box.mlt"
+`
+
+	cfg, err := configload.LoadConfig(configRaw)
+	require.NoError(t, err)
+	lg, auth, err := configToEntities(cfg)
+	require.NoError(t, err)
+	handler, err := newTileHandler(testServing(&cfg, auth, lg))
+	require.NoError(t, err)
+
+	request := func(z string) *http.Response {
+		req := httptest.NewRequest(http.MethodGet, "http://localhost:12349/tiles/vector/"+z+"/0/0", nil).WithContext(pkg.BackgroundContext())
+		req.SetPathValue("layer", "vector")
+		req.SetPathValue("z", z)
+		req.SetPathValue("x", "0")
+		req.SetPathValue("y", "0")
+
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+
+		return w.Result()
+	}
+
+	resp := request("2")
+	defer func() { require.NoError(t, resp.Body.Close()) }()
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	box, _ := images.GetStaticImage(images.KeyMltBox)
+
+	assert.Equal(t, 200, resp.StatusCode)
+	assert.Equal(t, *box, body)
+	assert.Equal(t, "application/vnd.maplibre-tile", resp.Header.Get("Content-Type"))
+
+	resp = request("8")
+	defer func() { require.NoError(t, resp.Body.Close()) }()
+	body, err = io.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	assert.Equal(t, 400, resp.StatusCode)
+	assert.Empty(t, body)
+	assert.Equal(t, "application/vnd.maplibre-tile", resp.Header.Get("Content-Type"))
+}
+
 // Regression test: auth failures must always return the PNG error image, even for an mvt layer,
 // since which image tilegroxy picked would itself leak the layer's data type to a caller who
 // hasn't authenticated yet.

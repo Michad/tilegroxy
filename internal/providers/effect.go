@@ -115,6 +115,10 @@ func (s EffectRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (lay
 	return &Effect{config, provider, deps.ErrorMessages}, nil
 }
 
+func (t Effect) Children() []layer.Provider {
+	return []layer.Provider{t.provider}
+}
+
 func (t Effect) PreAuth(ctx context.Context, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
 	return t.provider.PreAuth(ctx, providerContext)
 }

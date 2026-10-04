@@ -32,16 +32,14 @@ func Test_DataType_CompositeMVT(t *testing.T) {
 	assert.Equal(t, config.DataTypeMVT, CompositeMVTRegistration{}.DataType(CompositeMVTConfig{}))
 }
 
-// CompositeMVT holds its children directly, outside any layer, so they're unreachable through
-// LayerGroup.Close unless CompositeMVT forwards to them itself.
 func Test_CompositeMVTCloseClosesChildProviders(t *testing.T) {
 	p1 := &closableProvider{}
 	p2 := &closableProvider{}
 	// ConstructProvider always wraps, so one child is wrapped here to match what production
 	// actually builds: the close has to survive both hops, not just the forwarding one
-	c := &CompositeMVT{providers: []layer.Provider{layers.ProviderWrapper{Name: "child", Provider: p1}, p2}}
+	c := &CompositeVector{providers: []layer.Provider{layers.ProviderWrapper{Name: "child", Provider: p1}, p2}, contentType: mvtContentType}
 
-	require.NoError(t, c.Close(context.Background()))
+	require.NoError(t, layer.CloseProvider(context.Background(), c))
 
 	assert.True(t, p1.closed)
 	assert.True(t, p2.closed)
@@ -97,7 +95,7 @@ func Test_Composite_ChildErrorDoesNotHang(t *testing.T) {
 			good, err := StaticRegistration{}.Initialize(StaticConfig{Image: "embedded:box.mvt"}, layer.ProviderDeps{ClientConfig: testClientConfig, ErrorMessages: testErrMessages})
 			require.NoError(t, err)
 
-			c := &CompositeMVT{providers: []layer.Provider{bad, good}, errorMessages: testErrMessages}
+			c := &CompositeVector{providers: []layer.Provider{bad, good}, errorMessages: testErrMessages, contentType: mvtContentType}
 
 			done := make(chan error, 1)
 			go func() {
@@ -117,7 +115,7 @@ func Test_Composite_ChildErrorDoesNotHang(t *testing.T) {
 
 // Both children failing means both errors need to make it back to the caller.
 func Test_Composite_AllChildrenFailJoinsErrors(t *testing.T) {
-	c := &CompositeMVT{providers: []layer.Provider{&Fail{FailConfig{Message: "first"}}, &Fail{FailConfig{Message: "second"}}}, errorMessages: testErrMessages}
+	c := &CompositeVector{providers: []layer.Provider{&Fail{FailConfig{Message: "first"}}, &Fail{FailConfig{Message: "second"}}}, errorMessages: testErrMessages, contentType: mvtContentType}
 
 	img, err := c.GenerateTile(pkg.BackgroundContext(), layer.ProviderContext{}, pkg.TileRequest{LayerName: "l", Z: 9, X: 23, Y: 32})
 

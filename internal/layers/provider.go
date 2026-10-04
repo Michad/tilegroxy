@@ -18,7 +18,6 @@ import (
 	"fmt"
 
 	"github.com/Michad/tilegroxy/internal/configload"
-	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
@@ -39,35 +38,10 @@ func ConstructProvider(rawConfig map[string]interface{}, deps layer.ProviderDeps
 				return nil, err
 			}
 
-			return ProviderWrapper{Name: name, Provider: provider}, nil
+			return ProviderWrapper{Name: name, Provider: provider, dataType: reg.DataType(cfg)}, nil
 		}
 	}
 
 	nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
 	return nil, fmt.Errorf(deps.ErrorMessages.EnumError, "provider.name", nameCoerce, layer.RegisteredProviderNames())
-}
-
-func dataTypeFromRawConfig(rawConfig map[string]interface{}, errorMessages config.ErrorMessages) (config.DataType, error) {
-	name, ok := rawConfig["name"].(string)
-	if !ok {
-		nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
-		return config.DataTypeUnknown, fmt.Errorf(errorMessages.EnumError, "provider.name", nameCoerce, layer.RegisteredProviderNames())
-	}
-
-	reg, ok := layer.RegisteredProvider(name)
-	if !ok {
-		return config.DataTypeUnknown, fmt.Errorf(errorMessages.EnumError, "provider.name", name, layer.RegisteredProviderNames())
-	}
-
-	cfg := reg.InitializeConfig()
-	if err := configload.DecodeEntityConfig(rawConfig, &cfg); err != nil {
-		return config.DataTypeUnknown, err
-	}
-
-	return reg.DataType(cfg), nil
-}
-
-func ExtractDataType(rawConfig map[string]interface{}) config.DataType {
-	datatype, _ := dataTypeFromRawConfig(rawConfig, config.ErrorMessages{})
-	return datatype
 }

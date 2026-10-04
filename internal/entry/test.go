@@ -48,39 +48,42 @@ type TestOptions struct {
 	TenantID       string
 }
 
-// the default tile used when a layer has no configured bounds/zoom to derive one from.
+// The default tile used when a layer has no configured center/bounds/zoom to derive one from.
 const (
 	defaultZ = 10
 	defaultX = 123
 	defaultY = 534
 )
 
-func pickTile(l *layers.Layer, layerName string) pkg.TileRequest {
-	hasBounds := l.Config.Bounds != (config.BoundsConfig{})
-	hasZoom := l.Config.MinZoom != nil || l.Config.MaxZoom != nil
+const (
+	centerLatIndex  = 1
+	centerZoomIndex = 2
+)
 
-	if !hasBounds && !hasZoom {
+func pickTile(l *layers.Layer, layerName string) pkg.TileRequest {
+	md := l.Metadata().Advertised
+	hasBounds := md.Bounds != (config.BoundsConfig{})
+	hasZoom := md.MinZoom != nil || md.MaxZoom != nil
+	hasCenter := len(md.Center) > centerLatIndex
+
+	if !hasBounds && !hasZoom && !hasCenter {
 		return pkg.TileRequest{LayerName: layerName, Z: defaultZ, X: defaultX, Y: defaultY}
 	}
 
-	minZoom := 0
-	if l.Config.MinZoom != nil {
-		minZoom = *l.Config.MinZoom
-	}
-	maxZoom := pkg.MaxZoom
-	if l.Config.MaxZoom != nil {
-		maxZoom = *l.Config.MaxZoom
-	}
-
+	minZoom, maxZoom := md.ZoomRange()
 	z := uint((minZoom + maxZoom) / 2) // #nosec G115 -- min/maxZoom are bounded well within int range
 
 	bounds := pkg.WorldBounds()
 	if hasBounds {
-		bounds = pkg.Bounds{
-			South: l.Config.Bounds.South,
-			North: l.Config.Bounds.North,
-			West:  l.Config.Bounds.West,
-			East:  l.Config.Bounds.East,
+		bounds = pkg.BoundsFromConfig(md.Bounds)
+	}
+
+	if hasCenter {
+		lon, lat := md.Center[0], md.Center[centerLatIndex]
+		bounds = pkg.Bounds{South: lat, North: lat, West: lon, East: lon}
+
+		if len(md.Center) > centerZoomIndex {
+			z = uint(md.Center[centerZoomIndex]) // #nosec G115 -- resolved metadata keeps the center zoom within the layer's zoom range
 		}
 	}
 
@@ -89,10 +92,12 @@ func pickTile(l *layers.Layer, layerName string) pkg.TileRequest {
 		return pkg.TileRequest{LayerName: layerName, Z: defaultZ, X: defaultX, Y: defaultY}
 	}
 
-	x := (zoomRange.XMin + zoomRange.XMax - 1) / 2 //nolint:mnd // Midpoint of an exclusive-max range
-	y := (zoomRange.YMin + zoomRange.YMax - 1) / 2 //nolint:mnd // Midpoint of an exclusive-max range
+	// A point on the east or south edge of the world lands one past the last tile
+	lastTile := 1<<int(z) - 1                               // #nosec G115 -- z is at most MaxZoom
+	x := min((zoomRange.XMin+zoomRange.XMax-1)/2, lastTile) //nolint:mnd // Midpoint of an exclusive-max range
+	y := min((zoomRange.YMin+zoomRange.YMax-1)/2, lastTile) //nolint:mnd // Midpoint of an exclusive-max range
 
-	return pkg.TileRequest{LayerName: layerName, Z: int(z), X: x, Y: y} // #nosec G115 -- z is the midpoint of minZoom/maxZoom, bounded well within int range
+	return pkg.TileRequest{LayerName: layerName, Z: int(z), X: x, Y: y} // #nosec G115 -- z is 0-21, bounded well within int range
 }
 
 // the set of layer names tested when none are given. A pattern layer's ID

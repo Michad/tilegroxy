@@ -14,7 +14,7 @@ There are four primary operating modes:
 
 It is highly recommended you use the Image mode for production usage.  Returning an Image provides the most user friendly experience as it provides feedback to the user in the map they're looking at that something is wrong.  More importantly, it avoids exposing the specific error message to the end user, which could contain information you don't want exposed.  "Image with error" is useful for development workflows, it gives the same user experience but allows you to easily get to the error messages.
 
-Error responses set a `Content-Type` matching the mode: `text/plain; charset=utf-8` for Text and, for Image and Image with Header, `image/png` or `application/vnd.mapbox-vector-tile` depending on the erroring layer's data type as described below.  None mode returns no body and therefore no `Content-Type`.
+Error responses set a `Content-Type` matching the mode: `text/plain; charset=utf-8` for Text and, for Image and Image with Header, `image/png`, `application/vnd.mapbox-vector-tile`, or `application/vnd.maplibre-tile` depending on the erroring layer's data type as described below.  None mode returns no body and therefore no `Content-Type`.
 
 Every error response also sets `Cache-Control: no-store` regardless of mode.  This is most important when using `AlwaysOk` described below, since errors are then returned with a status of 200 like any other tile and a CDN or browser in front of tilegroxy would otherwise be free to cache them long after the underlying problem is resolved.
 
@@ -66,7 +66,7 @@ The following can be supplied as environment variables:
 
 When using the image or image+header modes you can configure the images you want to be returned to the user.  Either use a built-in image or an image provided yourself on the local filesystem via relative or absolute file path.
 
-Most error conditions have two fields: a raster one and an `Mvt`-suffixed vector one. We do our best to return the appropriate format based on the layer. It defaults to a PNG if the error happens early (like bad auth) or if we can't determine the layer's format (see layer datatype parameter).
+Most error conditions have three fields: a raster one, an `Mvt`-suffixed one for Mapbox Vector Tile layers, and an `Mlt`-suffixed one for MapLibre Tile layers. We do our best to return the appropriate format based on the layer. It defaults to a PNG if the error happens early (like bad auth) or if we can't determine the layer's format (see layer datatype parameter).
 
 Configuration options:
 
@@ -86,6 +86,12 @@ Configuration options:
 | No
 | embedded:empty.mvt
 
+| OutOfBoundsMlt
+| The vector tile to display for requests outside the extent of an mlt layer
+| string
+| No
+| embedded:empty.mlt
+
 | Authentication
 | The image to display for auth errors. Always this raster image, regardless of the layer's data type
 | string
@@ -104,6 +110,12 @@ Configuration options:
 | No
 | embedded:empty.mvt
 
+| ProviderMlt
+| The vector tile to display for errors returned by an mlt layer's provider
+| string
+| No
+| embedded:empty.mlt
+
 | Other
 | The raster image to display for all other errors
 | string
@@ -115,6 +127,12 @@ Configuration options:
 | string
 | No
 | embedded:empty.mvt
+
+| OtherMlt
+| The vector tile to display for all other errors on an mlt layer
+| string
+| No
+| embedded:empty.mlt
 |===
 
 The following can be supplied as environment variables:
@@ -129,6 +147,9 @@ The following can be supplied as environment variables:
 | OutOfBoundsMvt
 | ERROR_IMAGES_OUTOFBOUNDSMVT
 
+| OutOfBoundsMlt
+| ERROR_IMAGES_OUTOFBOUNDSMLT
+
 | Authentication
 | ERROR_IMAGES_AUTHENTICATION
 
@@ -138,11 +159,17 @@ The following can be supplied as environment variables:
 | ProviderMvt
 | ERROR_IMAGES_PROVIDERMVT
 
+| ProviderMlt
+| ERROR_IMAGES_PROVIDERMLT
+
 | Other
 | ERROR_IMAGES_OTHER
 
 | OtherMvt
 | ERROR_IMAGES_OTHERMVT
+
+| OtherMlt
+| ERROR_IMAGES_OTHERMLT
 |===
 
 === Image Options
@@ -171,7 +198,7 @@ There are 4 built-in raster images available:
 | image:unauthorized.png[]
 |===
 
-There are also 2 built-in vector tiles available, for use with the `Mvt`-suffixed fields above:
+There are also 4 built-in vector tiles available, the `.mvt` ones for use with the `Mvt`-suffixed fields above and the `.mlt` ones for the `Mlt`-suffixed fields:
 
 |===
 | Image name | Description
@@ -181,6 +208,12 @@ There are also 2 built-in vector tiles available, for use with the `Mvt`-suffixe
 
 | box.mvt
 | A vector tile with a single layer containing one polygon covering the tile's full extent
+
+| empty.mlt
+| The MapLibre Tile equivalent of empty.mvt
+
+| box.mlt
+| The MapLibre Tile equivalent of box.mvt
 |===
 
 To utilize them prepend "embedded:" before the name.  For example `embedded:transparent.png` or `embedded:empty.mvt`
@@ -208,3 +241,4 @@ The following are supported:
  Timeout
  ParamRegex
  MustBeUnique
+ TileNotFound

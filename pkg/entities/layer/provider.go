@@ -63,11 +63,13 @@ type ProviderRegistration interface {
 	Name() string
 	Initialize(config any, deps ProviderDeps) (Provider, error)
 	InitializeConfig() any
-	// Declares whether this provider produces raster or vector tiles, or config.DataTypeUnknown if it depends on
-	// upstream data. Given the already-decoded config so nesting providers (fallback, crop) can recurse into
-	// their primary's registration without constructing anything. Checked against a layer's datatype setting
-	// at startup, before any provider is initialized.
+	// Whether this provider itself produces raster or vector tiles. Nesting providers return config.DataTypeUnknown.
 	DataType(config any) config.DataType
+}
+
+// BoundsWrapper lets a ProviderRegistration restrict an already built provider to a layer's bounds.
+type BoundsWrapper interface {
+	WrapBounds(inner Provider, bounds pkg.Bounds, deps ProviderDeps) (Provider, error)
 }
 
 var registrationsMu sync.RWMutex

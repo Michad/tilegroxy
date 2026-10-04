@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/internal/seed"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -193,11 +194,9 @@ func Test_Test_PicksTileWithinLayerBoundsAndZoom(t *testing.T) {
 	cfg := config.DefaultConfig()
 	cfg.Layers = []config.LayerConfig{
 		{
-			ID:       "bounded_layer",
-			MinZoom:  &minZoom,
-			MaxZoom:  &maxZoom,
-			Bounds:   config.BoundsConfig{South: 40, North: 41, West: -74, East: -73},
-			Provider: map[string]interface{}{"name": "test-recording-provider"},
+			ID:            "bounded_layer",
+			LayerMetadata: config.LayerMetadata{MinZoom: &minZoom, MaxZoom: &maxZoom, Bounds: config.BoundsConfig{South: 40, North: 41, West: -74, East: -73}},
+			Provider:      map[string]interface{}{"name": "test-recording-provider"},
 		},
 	}
 
@@ -240,6 +239,64 @@ func Test_Test_FallsBackToDefaultTileWithoutBoundsOrZoom(t *testing.T) {
 	require.Equal(t, pkg.TileRequest{LayerName: "unrestricted_layer", Z: defaultZ, X: defaultX, Y: defaultY}, lastRecordedTileRequest)
 }
 
+// A configured center wins over the midpoint of the layer's bounds, including its zoom.
+func Test_Test_PicksTileFromCenter(t *testing.T) {
+	layer.RegisterProvider(testRecordingRegistration{})
+
+	minZoom := 4
+	maxZoom := 12
+	cfg := config.DefaultConfig()
+	cfg.Layers = []config.LayerConfig{
+		{
+			ID: "centered_layer",
+			LayerMetadata: config.LayerMetadata{
+				MinZoom:          &minZoom,
+				MaxZoom:          &maxZoom,
+				Bounds:           config.BoundsConfig{South: 30, North: 50, West: -100, East: -60},
+				TileJSONMetadata: config.TileJSONMetadata{Center: []float64{-73.5, 40.5, 10}},
+			},
+			Provider: map[string]interface{}{"name": "test-recording-provider"},
+		},
+	}
+
+	var out bytes.Buffer
+	errCount, err := Test(&cfg, TestOptions{NumThread: 1, NoCache: true}, &out)
+
+	require.NoError(t, err)
+	require.Equal(t, uint32(0), errCount)
+	require.Equal(t, pkg.TileRequest{LayerName: "centered_layer", Z: 10, X: 302, Y: 385}, lastRecordedTileRequest)
+}
+
+func Test_PickTile_Center(t *testing.T) {
+	layer.RegisterProvider(testRecordingRegistration{})
+
+	minZoom := 2
+	maxZoom := 6
+
+	tests := []struct {
+		name     string
+		metadata config.LayerMetadata
+		expected pkg.TileRequest
+	}{
+		{"no zoom uses zoom range midpoint", config.LayerMetadata{MinZoom: &minZoom, MaxZoom: &maxZoom, TileJSONMetadata: config.TileJSONMetadata{Center: []float64{-73.5, 40.5}}}, pkg.TileRequest{Z: 4, X: 4, Y: 6}},
+		{"no zoom or range", config.LayerMetadata{TileJSONMetadata: config.TileJSONMetadata{Center: []float64{0.5, 0.5}}}, pkg.TileRequest{Z: 10, X: 513, Y: 510}},
+		{"center zoom", config.LayerMetadata{MaxZoom: &maxZoom, TileJSONMetadata: config.TileJSONMetadata{Center: []float64{-73.5, 40.5, 5}}}, pkg.TileRequest{Z: 5, X: 9, Y: 12}},
+		{"east edge of the world", config.LayerMetadata{TileJSONMetadata: config.TileJSONMetadata{Center: []float64{180, -85.06, 1}}}, pkg.TileRequest{Z: 1, X: 1, Y: 1}},
+		{"lone longitude is ignored", config.LayerMetadata{TileJSONMetadata: config.TileJSONMetadata{Center: []float64{-73.5}}}, pkg.TileRequest{Z: defaultZ, X: defaultX, Y: defaultY}},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := config.LayerConfig{ID: "l", LayerMetadata: tc.metadata, Provider: map[string]interface{}{"name": "test-recording-provider"}}
+			l, err := layers.ConstructLayer(context.Background(), cfg, config.ClientConfig{}, nil, config.ErrorMessages{}, nil, nil, nil)
+			require.NoError(t, err)
+
+			tc.expected.LayerName = "l"
+			require.Equal(t, tc.expected, pickTile(l, "l"))
+		})
+	}
+}
+
 // Explicit coordinates take priority over bounds/zoom derived ones even when the layer has bounds
 // configured.
 func Test_Test_ExplicitCoordinatesOverrideAutoPick(t *testing.T) {
@@ -250,11 +307,9 @@ func Test_Test_ExplicitCoordinatesOverrideAutoPick(t *testing.T) {
 	cfg := config.DefaultConfig()
 	cfg.Layers = []config.LayerConfig{
 		{
-			ID:       "bounded_layer",
-			MinZoom:  &minZoom,
-			MaxZoom:  &maxZoom,
-			Bounds:   config.BoundsConfig{South: 40, North: 41, West: -74, East: -73},
-			Provider: map[string]interface{}{"name": "test-recording-provider"},
+			ID:            "bounded_layer",
+			LayerMetadata: config.LayerMetadata{MinZoom: &minZoom, MaxZoom: &maxZoom, Bounds: config.BoundsConfig{South: 40, North: 41, West: -74, East: -73}},
+			Provider:      map[string]interface{}{"name": "test-recording-provider"},
 		},
 	}
 

@@ -50,6 +50,7 @@ type DataType string
 const (
 	DataTypeRaster  DataType = "raster"
 	DataTypeMVT     DataType = "mvt"
+	DataTypeMLT     DataType = "mlt"
 	DataTypeUnknown DataType = "unknown"
 )
 
@@ -149,6 +150,7 @@ type ErrorMessages struct {
 	Timeout                 string
 	ParamRegex              string
 	MustBeUnique            string
+	TileNotFound            string
 }
 
 // Default embedded image keys, mirrored as literals from internal/images.GetStaticImage since
@@ -158,6 +160,7 @@ const (
 	defaultImageTransparent  = "embedded:transparent.png"
 	defaultImageUnauthorized = "embedded:unauthorized.png"
 	defaultImageMvtEmpty     = "embedded:empty.mvt"
+	defaultImageMltEmpty     = "embedded:empty.mlt"
 )
 
 // Selects what image to return when various errors occur. These should either be an embedded:XXX value reflecting an image in `internal/images` or the path to an image in the runtime filesystem.
@@ -170,6 +173,10 @@ type ErrorImages struct {
 	OutOfBoundsMvt string // Vector-tile equivalent of OutOfBounds, used when the layer's data type is mvt
 	ProviderMvt    string // Vector-tile equivalent of Provider, used when the layer's data type is mvt
 	OtherMvt       string // Vector-tile equivalent of Other, used when the layer's data type is mvt
+
+	OutOfBoundsMlt string // MapLibre Tile equivalent of OutOfBounds, used when the layer's data type is mlt
+	ProviderMlt    string // MapLibre Tile equivalent of Provider, used when the layer's data type is mlt
+	OtherMlt       string // MapLibre Tile equivalent of Other, used when the layer's data type is mlt
 }
 
 type ErrorConfig struct {
@@ -233,19 +240,14 @@ type LogConfig struct {
 
 // Defines a layer to be served up by the application
 type LayerConfig struct {
-	ID             string              // A distinct identifier for this layer. If no pattern is defined this is used to match against the layer name. Also used
-	Pattern        string              // A pattern to match against for layer names in incoming requests. Includes placeholders from which values can be extracted when matching. Not regular expressions, placeholders are simply wrapped in curly braces
-	ParamValidator map[string]string   // A mapping of regular expressions to use for each value extracted from the pattern. Keys must match the placeholders in pattern. This is external from the pattern itself to keep parsing the pattern simple and less error prone. If a key of "*" is defined it applies to all placeholders
-	Provider       map[string]any      // Raw config parameters for the provider to use. Name determines the specific schema
-	SkipCache      bool                // If true, don't use the cache
-	SkipAnalytics  bool                // If true, successful requests for this layer don't produce analytics events
-	Client         *ClientConfig       // If specified, the default Client is overridden.
-	DataType       DataType            // Optional. Declares this layer's data type. Must not contradict the provider's own DataType(); required if Bounds is set and the provider's type is unknown
-	MinZoom        *int                // Optional. Requests below this zoom are rejected as out of bounds. nil means no lower limit
-	MaxZoom        *int                // Optional. Requests above this zoom are rejected as out of bounds. nil means no upper limit
-	Bounds         BoundsConfig        // Optional. Automatically wraps this layer's provider in crop/cropmvt, restricting it to this geographic area
-	Description    string              // Optional. Populates the `description` field of this layer's TileJSON document. Has no effect unless TileJSON is enabled
-	Attribution    string              // Optional. Populates the `attribution` field of this layer's TileJSON document. Has no effect unless TileJSON is enabled
+	ID             string            // A distinct identifier for this layer. If no pattern is defined this is used to match against the layer name. Also used
+	Pattern        string            // A pattern to match against for layer names in incoming requests. Includes placeholders from which values can be extracted when matching. Not regular expressions, placeholders are simply wrapped in curly braces
+	ParamValidator map[string]string // A mapping of regular expressions to use for each value extracted from the pattern. Keys must match the placeholders in pattern. This is external from the pattern itself to keep parsing the pattern simple and less error prone. If a key of "*" is defined it applies to all placeholders
+	Provider       map[string]any    // Raw config parameters for the provider to use. Name determines the specific schema
+	SkipCache      bool              // If true, don't use the cache
+	SkipAnalytics  bool              // If true, successful requests for this layer don't produce analytics events
+	Client         *ClientConfig     // If specified, the default Client is overridden.
+	LayerMetadata  `mapstructure:",squash" yaml:",inline"`
 	Examples       []string            // Optional. Concrete layer names used to generate TileJSON documents for a `pattern` layer. Has no effect on a layer identified by a plain id
 	CacheVersion   string              // Optional. Allows invalidating cache entries when changed. Prefixed into cache keys but not he actual layer name
 	Cache          string              // Optional. The id of a top-level cache to use instead of the default
@@ -310,7 +312,7 @@ func DefaultConfig() Config {
 			UserAgent:           "tilegroxy/" + version,
 			MaxLength:           1024 * 1024 * 10,
 			UnknownLength:       new(false),
-			ContentTypes:        []string{"image/png", "image/jpg", "image/jpeg", "application/vnd.mapbox-vector-tile", "application/x-protobuf"},
+			ContentTypes:        []string{"image/png", "image/jpg", "image/jpeg", "application/vnd.mapbox-vector-tile", "application/x-protobuf", "application/vnd.maplibre-tile", "application/vnd.maplibre-vector-tile"},
 			StatusCodes:         []int{http.StatusOK},
 			Headers:             map[string]string{},
 			Timeout:             10,
@@ -356,6 +358,7 @@ func DefaultConfig() Config {
 				ParamRequired:           "Parameter %v is required",
 				ParamRegex:              "Invalid value supplied for parameter %v: %v. Value must conform to regex: %v ",
 				MustBeUnique:            "Invalid value supplied for parameter %v: %v. Value must be unique. ",
+				TileNotFound:            "Tile %v is not available",
 			},
 			Images: ErrorImages{
 				OutOfBounds:    defaultImageTransparent,
@@ -366,6 +369,10 @@ func DefaultConfig() Config {
 				OutOfBoundsMvt: defaultImageMvtEmpty,
 				ProviderMvt:    defaultImageMvtEmpty,
 				OtherMvt:       defaultImageMvtEmpty,
+
+				OutOfBoundsMlt: defaultImageMltEmpty,
+				ProviderMlt:    defaultImageMltEmpty,
+				OtherMlt:       defaultImageMltEmpty,
 			},
 			AlwaysOK: false,
 		},

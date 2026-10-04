@@ -25,8 +25,8 @@ import (
 
 func Test_ConstructLayer_Bounds_Raster_WrapsInRealCrop(t *testing.T) {
 	rawConfig := config.LayerConfig{
-		ID:     "real-crop-layer",
-		Bounds: config.BoundsConfig{South: -10, North: 10, West: -10, East: 10},
+		ID:            "real-crop-layer",
+		LayerMetadata: config.LayerMetadata{Bounds: config.BoundsConfig{South: -10, North: 10, West: -10, East: 10}},
 		Provider: map[string]any{
 			"name":  "static",
 			"color": "F00",
@@ -44,8 +44,8 @@ func Test_ConstructLayer_Bounds_Raster_WrapsInRealCrop(t *testing.T) {
 
 func Test_ConstructLayer_Bounds_MVT_WrapsInRealCropMvt(t *testing.T) {
 	rawConfig := config.LayerConfig{
-		ID:     "real-cropmvt-layer",
-		Bounds: config.BoundsConfig{South: -10, North: 10, West: -10, East: 10},
+		ID:            "real-cropmvt-layer",
+		LayerMetadata: config.LayerMetadata{Bounds: config.BoundsConfig{South: -10, North: 10, West: -10, East: 10}},
 		Provider: map[string]any{
 			"name":      "compositemvt",
 			"providers": []map[string]interface{}{},
@@ -59,4 +59,23 @@ func Test_ConstructLayer_Bounds_MVT_WrapsInRealCropMvt(t *testing.T) {
 	wrapper, ok := l.Provider.(layers.ProviderWrapper)
 	require.True(t, ok)
 	require.Equal(t, "cropmvt", wrapper.Name)
+}
+
+func Test_ConstructLayer_Bounds_MLT_WrapsInRealCropMlt(t *testing.T) {
+	rawConfig := config.LayerConfig{
+		ID:            "real-cropmlt-layer",
+		LayerMetadata: config.LayerMetadata{Bounds: config.BoundsConfig{South: -10, North: 10, West: -10, East: 10}},
+		Provider: map[string]any{
+			"name":  "static",
+			"image": "embedded:box.mlt",
+		},
+	}
+
+	l, err := layers.ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, testErrMessages, nil, nil, nil)
+
+	require.NoError(t, err)
+	require.NotNil(t, l)
+	wrapper, ok := l.Provider.(layers.ProviderWrapper)
+	require.True(t, ok)
+	require.Equal(t, "cropmlt", wrapper.Name)
 }
