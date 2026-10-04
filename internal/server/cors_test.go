@@ -200,7 +200,7 @@ func Test_ValidateCORS(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			err := ValidateCORS(test.cfg, msgs)
+			err := validateCORS(test.cfg, msgs)
 
 			if test.wantErr {
 				require.Error(t, err)

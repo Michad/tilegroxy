@@ -26,7 +26,7 @@ import (
 
 const corsWildcard = "*"
 
-func ValidateCORS(cfg config.CORSConfig, errorMessages config.ErrorMessages) error {
+func validateCORS(cfg config.CORSConfig, errorMessages config.ErrorMessages) error {
 	if !cfg.Enabled {
 		return nil
 	}
