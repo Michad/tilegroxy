@@ -229,7 +229,8 @@ func toCacheEntryList(raw interface{}, errorMessages config.ErrorMessages) ([]ma
 // entity's InitializeConfig(). It errors on unknown keys so a typo'd field isn't silently ignored,
 // which for a security control means quietly reverting to its default. "name" is stripped first
 // since it selects the registration and no entity config declares it. "id" is left in place
-// because datastore does declare one.
+// because datastore does declare one. A string decodes into any field implementing
+// encoding.TextUnmarshaler.
 func DecodeEntityConfig(rawConfig map[string]interface{}, out any) error {
 	stripped := make(map[string]interface{}, len(rawConfig))
 	for k, v := range rawConfig {
@@ -241,6 +242,7 @@ func DecodeEntityConfig(rawConfig map[string]interface{}, out any) error {
 
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 		ErrorUnused: true,
+		DecodeHook:  mapstructure.TextUnmarshallerHookFunc(),
 		Result:      out,
 	})
 	if err != nil {

@@ -17,6 +17,7 @@ package configload
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -146,6 +147,25 @@ func TestDecodeEntityConfig_IDPassesThroughWhenStructWantsIt(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "myid", out.ID)
 	assert.Equal(t, "value", out.Bar)
+}
+
+type upperText string
+
+func (u *upperText) UnmarshalText(text []byte) error {
+	*u = upperText(strings.ToUpper(string(text)))
+	return nil
+}
+
+func TestDecodeEntityConfig_StringUsesTextUnmarshaler(t *testing.T) {
+	type fooConfig struct {
+		Bar upperText
+	}
+
+	var out fooConfig
+	err := DecodeEntityConfig(map[string]interface{}{"bar": "value"}, &out)
+
+	require.NoError(t, err)
+	assert.Equal(t, upperText("VALUE"), out.Bar)
 }
 
 // AutomaticEnv resolves against viper's key set, so without defaults registered an env var only
