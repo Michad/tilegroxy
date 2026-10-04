@@ -23,9 +23,7 @@ import (
 	"testing"
 )
 
-// BinaryPath resolves the binary under test. TILEGROXY_E2E_BINARY points at an arbitrary build
-// (a release artifact, or one extracted from the Docker image); otherwise it is the repo-root
-// binary that `make build` produces.
+// TILEGROXY_E2E_BINARY can point at a release artifact or Docker build, otherwise the repo-root `make build` output
 func BinaryPath(t *testing.T) string {
 	t.Helper()
 
@@ -46,7 +44,7 @@ func BinaryPath(t *testing.T) string {
 	return path
 }
 
-// ExtensionBinaryPath resolves the example extension wrapper that `make extension` builds.
+// Built by `make extension`
 func ExtensionBinaryPath(t *testing.T) string {
 	t.Helper()
 
@@ -59,8 +57,7 @@ func ExtensionBinaryPath(t *testing.T) string {
 	return path
 }
 
-// repoRoot locates the repository root from this source file's own path, so tests do not depend on
-// the working directory the runner chose.
+// Uses this source file's path so tests don't depend on the runner's working directory
 func repoRoot(t *testing.T) string {
 	t.Helper()
 

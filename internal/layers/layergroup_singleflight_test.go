@@ -44,8 +44,7 @@ func newSingleflightTestLayerGroup(l *Layer, c *alwaysMissCache) *LayerGroup {
 	}
 }
 
-// N concurrent requests for the identical tile key must collapse into exactly one provider call,
-// with every caller receiving the same successful result.
+// Concurrent identical requests must collapse into one provider call with every caller getting the result
 func Test_LayerGroup_RenderTile_CoalescesConcurrentIdenticalRequests(t *testing.T) {
 	provider := &slowGenerateProvider{delay: 50 * time.Millisecond}
 	c := &alwaysMissCache{}
@@ -78,8 +77,7 @@ func Test_LayerGroup_RenderTile_CoalescesConcurrentIdenticalRequests(t *testing.
 	require.Equal(t, int32(1), provider.generateCalls.Load(), "concurrent requests for the same tile should only invoke the provider once")
 }
 
-// Requests for genuinely different tile keys must not be serialized against each other by the
-// dedup mechanism - only identical keys should share a single in-flight call.
+// Only identical keys should share an in-flight call
 func Test_LayerGroup_RenderTile_DoesNotCoalesceDifferentKeys(t *testing.T) {
 	provider := &slowGenerateProvider{delay: 100 * time.Millisecond}
 	c := &alwaysMissCache{}
@@ -110,14 +108,11 @@ func Test_LayerGroup_RenderTile_DoesNotCoalesceDifferentKeys(t *testing.T) {
 		require.NoError(t, errs[i])
 	}
 	require.Equal(t, int32(n), provider.generateCalls.Load(), "distinct tile keys must each invoke the provider independently")
-	// If distinct keys were serialized against each other this would take roughly n*delay. Allow
-	// generous headroom above a single delay to keep this robust under sandbox scheduling jitter.
+	// Serialized keys would take roughly n*delay. Generous headroom tolerates sandbox scheduling jitter
 	require.Less(t, elapsed, 5*time.Duration(n/2)*provider.delay, "requests for distinct tiles appear to be serialized rather than running concurrently")
 }
 
-// blockingUntilReleasedProvider blocks in GenerateTile until the test explicitly releases it,
-// so a test can deterministically keep a "leader" call in flight while a waiter's own context
-// expires.
+// Keeps a leader in flight deterministically while a waiter's context expires
 type blockingUntilReleasedProvider struct {
 	generateCalls atomic.Int32
 	started       chan struct{}
@@ -140,9 +135,7 @@ func (p *blockingUntilReleasedProvider) DataType() config.DataType {
 	return config.DataTypeUnknown
 }
 
-// A waiter's own context deadline must be able to expire independently while the leader is still
-// fetching - it must not block until the leader finishes, and it must not cancel the leader or
-// other waiters.
+// A waiter's deadline must expire independently, without waiting for or cancelling the leader or other waiters
 func Test_LayerGroup_RenderTile_WaiterContextExpiresIndependentlyOfLeader(t *testing.T) {
 	provider := &blockingUntilReleasedProvider{started: make(chan struct{}), release: make(chan struct{})}
 	c := &alwaysMissCache{}
@@ -156,7 +149,7 @@ func Test_LayerGroup_RenderTile_WaiterContextExpiresIndependentlyOfLeader(t *tes
 
 	tileRequest := pkg.TileRequest{LayerName: "test", Z: 5, X: 3, Y: 3}
 
-	// Leader: starts the fetch and blocks in the provider until released.
+	// Leader starts the fetch and blocks until released
 	leaderDone := make(chan struct{})
 	go func() {
 		defer close(leaderDone)
@@ -165,8 +158,7 @@ func Test_LayerGroup_RenderTile_WaiterContextExpiresIndependentlyOfLeader(t *tes
 
 	<-provider.started // leader is now inside GenerateTile, blocked on release
 
-	// Waiter: joins the same in-flight key but with a short deadline that will expire long before
-	// the leader is released.
+	// Waiter joins the same key with a deadline that expires long before release
 	waiterCtx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
 	defer cancel()
 
@@ -184,15 +176,13 @@ func Test_LayerGroup_RenderTile_WaiterContextExpiresIndependentlyOfLeader(t *tes
 	default:
 	}
 
-	// Release the leader and let it finish so the test cleans up without leaking goroutines.
+	// Let the leader finish so no goroutines leak
 	close(provider.release)
 	<-leaderDone
 	require.Equal(t, int32(1), provider.generateCalls.Load())
 }
 
-// ctxAwareProvider blocks in GenerateTile until its context is cancelled, and reports whether
-// that happened along with the context's error - so a test can prove the leader's fetch is
-// actually bounded by a deadline rather than running forever.
+// Blocks until cancelled and records the context's error, proving the leader's fetch is bounded
 type ctxAwareProvider struct {
 	generateCalls atomic.Int32
 	started       chan struct{}
@@ -216,10 +206,7 @@ func (p *ctxAwareProvider) DataType() config.DataType {
 	return config.DataTypeUnknown
 }
 
-// Regression test for #893: a coalesced leader's context must keep the original caller's
-// deadline even though it's detached from cancellation, so a hung underlying fetch (e.g. a slow
-// PostGIS query) is still bounded and its goroutine/connection reclaimed instead of pinned
-// forever once the triggering request's deadline passes.
+// Regression test for #893: a detached leader must keep the caller's deadline so a hung fetch is still reclaimed
 func Test_LayerGroup_RenderTile_LeaderContextKeepsDeadlineAfterCancellation(t *testing.T) {
 	provider := &ctxAwareProvider{started: make(chan struct{}), ctxDone: make(chan error, 1)}
 	c := &alwaysMissCache{}
@@ -248,8 +235,7 @@ func Test_LayerGroup_RenderTile_LeaderContextKeepsDeadlineAfterCancellation(t *t
 	}
 }
 
-// failNTimesProvider fails its first N calls then succeeds, so a test can verify an error result
-// isn't permanently cached/replayed by the dedup mechanism.
+// Fails its first N calls so a test can prove errors aren't replayed by the dedup mechanism
 type failNTimesProvider struct {
 	generateCalls atomic.Int32
 	failFirstN    int32
@@ -272,8 +258,7 @@ func (p *failNTimesProvider) DataType() config.DataType {
 	return config.DataTypeUnknown
 }
 
-// A failed generation must not be poisoned/replayed forever: a request after a failed one should
-// trigger a fresh provider call rather than instantly reusing the stale error.
+// A request after a failure must trigger a fresh provider call rather than reuse the stale error
 func Test_LayerGroup_RenderTile_ErrorIsNotPermanentlyCached(t *testing.T) {
 	provider := &failNTimesProvider{failFirstN: 1}
 	c := &alwaysMissCache{}
@@ -296,11 +281,7 @@ func Test_LayerGroup_RenderTile_ErrorIsNotPermanentlyCached(t *testing.T) {
 	require.Equal(t, int32(2), provider.generateCalls.Load(), "a request after a failure should trigger a fresh provider call, not replay the cached error")
 }
 
-// blockingUntilReleasedFailingProvider is like blockingUntilReleasedProvider but returns an error
-// once released instead of an image, so a test can deterministically gather every waiter onto one
-// in-flight call before it fails - a real race would let some late-arriving goroutines miss the
-// window and start their own (successful) call instead of joining, which isn't what this test
-// means to exercise.
+// Fails once released, so every waiter deterministically joins one call before it fails instead of racing to start its own
 type blockingUntilReleasedFailingProvider struct {
 	generateCalls atomic.Int32
 	started       chan struct{}
@@ -324,8 +305,7 @@ func (p *blockingUntilReleasedFailingProvider) DataType() config.DataType {
 	return config.DataTypeUnknown
 }
 
-// Concurrent waiters that join an in-flight call which ultimately fails must all observe the
-// error (not a subset succeeding), and none of them should trigger their own duplicate call.
+// Every waiter must see the error, and none may trigger a duplicate call
 func Test_LayerGroup_RenderTile_ConcurrentWaitersAllSeeSharedError(t *testing.T) {
 	failer := &blockingUntilReleasedFailingProvider{started: make(chan struct{}), release: make(chan struct{})}
 
@@ -352,7 +332,7 @@ func Test_LayerGroup_RenderTile_ConcurrentWaitersAllSeeSharedError(t *testing.T)
 	}
 
 	<-failer.started
-	// Every goroutine is past its cache miss, leaving only the few instructions before it joins the leader.
+	// Every goroutine is past its cache miss, leaving only a few instructions before it joins the leader
 	require.Eventually(t, func() bool { return c.lookupCalls.Load() == n }, 5*time.Second, time.Millisecond)
 	time.Sleep(20 * time.Millisecond)
 	close(failer.release)

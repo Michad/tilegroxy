@@ -28,8 +28,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// A script that appends every event's layer to a file, so the test can observe that the script ran
-// with the events it was given.
+// Appends each event's layer to a file so the test can see what the script received
 const workingScript = `
 package custom
 
@@ -64,7 +63,7 @@ func testCustomConfig(t *testing.T, script string, params map[string]interface{}
 
 	cfg := CustomConfig{Script: script}
 	cfg.Params = params
-	// Flush every event immediately so tests don't wait on the age trigger.
+	// Flush every event immediately so tests don't wait on the age trigger
 	cfg.Batch.MaxSize = 1
 	cfg.Batch.MaxAge = 1
 
@@ -95,7 +94,7 @@ func Test_Custom_BatchesEvents(t *testing.T) {
 	out := filepath.Join(t.TempDir(), "events.txt")
 
 	cfg := testCustomConfig(t, workingScript, map[string]interface{}{"path": out})
-	// Large enough that only Close triggers the flush, proving the script sees a whole batch.
+	// Only Close triggers the flush, proving the script sees a whole batch
 	cfg.Batch.MaxSize = 100
 	cfg.Batch.MaxAge = 600
 
@@ -222,7 +221,7 @@ func close(ctx context.Context) error {
 }
 
 func Test_Custom_CloseOptionalWhenAbsent(t *testing.T) {
-	// Scripts written before this existed must keep working untouched.
+	// Scripts written before close existed must keep working
 	msgs := config.DefaultConfig().Error.Messages
 
 	a, err := CustomRegistration{}.Initialize(testCustomConfig(t, workingScript, map[string]interface{}{"path": filepath.Join(t.TempDir(), "events.txt")}), analytics.AnalyticsDeps{ErrorMessages: msgs})
@@ -261,7 +260,7 @@ func close() {}
 func Test_Custom_ScriptErrorIsContained(t *testing.T) {
 	msgs := config.DefaultConfig().Error.Messages
 
-	// A script that always fails should not make Record fail: the tile was already served.
+	// Script failures must not fail Record since the tile was already served
 	failing := `
 package custom
 

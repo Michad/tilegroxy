@@ -165,7 +165,7 @@ func Test_HTTPSource_RangeIgnored_OffsetZeroBodyFits(t *testing.T) {
 	t.Cleanup(srv.Close)
 	src := NewHTTPSource(srv.URL, testClientConfig(nil))
 
-	// Accepting this would let Open pass on small archives, then fail every tile read.
+	// Accepting this would let Open pass on small archives, then fail every tile read
 	_, err := src.ReadRange(context.Background(), 0, uint64(len(sourceData)))
 
 	require.ErrorIs(t, err, errRangeIgnored)

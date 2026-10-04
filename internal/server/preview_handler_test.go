@@ -60,9 +60,7 @@ func Test_PreviewHandler_ValidLayer_ReturnsHTMLWithTileURL(t *testing.T) {
 	assert.Contains(t, string(body), "maplibre")
 }
 
-// A pattern layer's ParamValidator is operator-configured but can be as permissive as ".*", so the
-// matched layer name reaching this handler can contain attacker-chosen characters. This verifies
-// the tile URL - built from that name - can't break out of the JS string literal it's placed in.
+// A permissive ParamValidator like ".*" lets attackers pick the name, so the URL must not escape its JS string
 func Test_PreviewHandler_PatternLayerWithHostileName_EscapesIntoTemplate(t *testing.T) {
 	cfg := config.DefaultConfig()
 	cfg.Layers = []config.LayerConfig{
@@ -219,8 +217,7 @@ func Test_PreviewHandler_AllowedArea_IntersectsBounds(t *testing.T) {
 
 	body, err := io.ReadAll(res.Body)
 	require.NoError(t, err)
-	// The intersection of the layer's [-10,10]x[-10,10] bounds with the allowed [-5,5]x[-5,20]
-	// area narrows south/north to -5/5, so those should appear in the rendered bounds array.
+	// Intersecting [-10,10]x[-10,10] with the allowed [-5,5]x[-5,20] narrows south/north to -5/5
 	assert.Contains(t, string(body), "var bounds =")
 	assert.Contains(t, string(body), "-5")
 }
@@ -498,7 +495,7 @@ func servePreviewBody(t *testing.T, dataType config.DataType) string {
 	return string(body)
 }
 
-// MapLibre GL JS decodes a source as MVT unless told otherwise, and the probe has to read the matching format.
+// MapLibre GL JS decodes sources as MVT unless told otherwise, and the probe must read the matching format
 func Test_PreviewHandler_MltLayer(t *testing.T) {
 	body := servePreviewBody(t, config.DataTypeMLT)
 

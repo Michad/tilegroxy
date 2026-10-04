@@ -26,7 +26,6 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
 )
 
-// Registry holds every configured datastore by ID
 type Registry struct {
 	datastores map[string]datastore.DatastoreWrapper
 }
@@ -40,8 +39,7 @@ func (reg *Registry) Get(id string) (datastore.DatastoreWrapper, bool) {
 	return res, ok
 }
 
-// Close releases every datastore that holds resources, most notably connection pools. Called on
-// shutdown and after a hot reload swaps in a new generation of entities.
+// Called on shutdown and after a hot reload swaps in a new generation of entities
 func (reg *Registry) Close(ctx context.Context) error {
 	if reg == nil {
 		return nil

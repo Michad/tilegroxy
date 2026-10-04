@@ -85,8 +85,7 @@ type geometryStreams struct {
 	oversized              bool
 }
 
-// The first stream holds each feature's geometry type. The rest are identified by their stream type.
-// Also returns each feature's approximate size, and leaves features over maxFeatureBytes nil.
+// The first stream holds geometry types and the rest are identified by stream type. Oversized features are left nil
 func decodeGeometryColumn(r *reader) ([]orb.Geometry, []int, error) {
 	count, err := r.varint32()
 	if err != nil {
@@ -143,7 +142,7 @@ func (g *geometryStreams) read(r *reader, s stream) error {
 	case s.is(categoryData, dataVertex), s.is(categoryData, dataMorton):
 		g.vertices, err = s.vertices(r)
 	case s.is(categoryLength, lengthTriangles), s.category == categoryPresent:
-		// Pre-tessellated triangles are rebuilt by clients from the outlines, so they're dropped.
+		// Clients rebuild pre-tessellated triangles from the outlines, so they're dropped
 	default:
 		err = fmt.Errorf("%w: unexpected stream %v/%v in geometry column", ErrMalformed, s.category, s.subtype)
 	}
@@ -151,7 +150,7 @@ func (g *geometryStreams) read(r *reader, s stream) error {
 	return err
 }
 
-// A vertex dictionary lists distinct vertices once, with offsets naming the one used at each position.
+// Lists distinct vertices once, with offsets naming the one used at each position
 func (g *geometryStreams) resolveVertices() error {
 	if len(g.vertices)%2 != 0 {
 		return fmt.Errorf("%w: odd number of vertex coordinates", ErrMalformed)
@@ -214,8 +213,7 @@ func (g *geometryStreams) build() ([]orb.Geometry, []int, error) {
 	return out, sizes, nil
 }
 
-// Which stream holds each count depends on the column's mix of types, per the spec's Length Stream Encoding Rules.
-// An oversized feature still walks its topology to keep the streams aligned, but builds nothing.
+// Count streams depend on the column's type mix, per Length Stream Encoding Rules. Oversized features still walk to stay aligned
 func (g *geometryStreams) feature(t geometryType) (orb.Geometry, error) {
 	g.featureBytes, g.oversized = 0, false
 
@@ -250,12 +248,12 @@ func (g *geometryStreams) feature(t geometryType) (orb.Geometry, error) {
 	return assemble(t, parts), nil
 }
 
-// Every sub geometry or ring consumes at least one length or vertex, which bounds how many can exist.
+// Every sub geometry or ring consumes at least one length or vertex, bounding how many can exist
 func (g *geometryStreams) remaining() int {
 	return g.vertexCount - g.vertexPos + g.geometries.remaining() + g.parts.remaining() + g.rings.remaining()
 }
 
-// Returns nil once the current feature has outgrown maxFeatureBytes.
+// Returns nil once the current feature outgrows maxFeatureBytes
 func allocate[T any](g *geometryStreams, n int) ([]T, error) {
 	if n > g.remaining() {
 		return nil, fmt.Errorf("%w: geometry count %v exceeds the data remaining", ErrMalformed, n)
@@ -279,7 +277,7 @@ func (g *geometryStreams) reserve(n, size int) bool {
 	return !g.oversized
 }
 
-// Without a geometries stream the count of a multi geometry is stored in the parts stream.
+// Without a geometries stream the count is stored in the parts stream
 func (g *geometryStreams) multiCount() (int, error) {
 	if g.geometries.present() {
 		return g.geometries.next()
@@ -288,7 +286,7 @@ func (g *geometryStreams) multiCount() (int, error) {
 	return g.parts.next()
 }
 
-// Returns the rings or lines of one polygon, line or point.
+// Returns the rings or lines of one polygon, line or point
 func (g *geometryStreams) subGeometry(t geometryType) ([][]orb.Point, error) {
 	ringCount := 1
 	if t.isPolygon() {
@@ -328,7 +326,7 @@ func (g *geometryStreams) subGeometry(t geometryType) ([][]orb.Point, error) {
 	return out, nil
 }
 
-// Lines and rings take their vertex count from the rings stream when present, otherwise from parts.
+// From the rings stream when present, otherwise from parts
 func (g *geometryStreams) vertexRunLength(t geometryType) (int, error) {
 	switch {
 	case !t.isLine() && !t.isPolygon():
@@ -400,7 +398,7 @@ func assemble(t geometryType, parts [][][]orb.Point) orb.Geometry {
 	return mp
 }
 
-// MLT leaves rings open, orb closes them.
+// MLT leaves rings open, orb closes them
 func polygon(rings [][]orb.Point) orb.Polygon {
 	p := make(orb.Polygon, len(rings))
 	for i, ring := range rings {
@@ -450,7 +448,7 @@ func appendGeometryColumn(buf []byte, geoms []orb.Geometry) ([]byte, error) {
 	}
 
 	buf = appendVarint(buf, count)
-	// Types go in a VarBinary length stream, matching the reference encoders.
+	// Types go in a VarBinary length stream, matching the reference encoders
 	buf = appendVarintStream(buf, categoryLength, lengthVarBinary, e.types)
 
 	for i, s := range streams {
@@ -511,7 +509,7 @@ func (e *geometryEncoder) add(g orb.Geometry) error {
 	return nil
 }
 
-// A line's vertex count goes in rings when polygons share the column, otherwise in parts.
+// A line's vertex count goes in rings when polygons share the column, otherwise in parts
 func (e *geometryEncoder) addLine(l orb.LineString) error {
 	if e.hasPolygon {
 		e.rings = append(e.rings, uint64(len(l)))

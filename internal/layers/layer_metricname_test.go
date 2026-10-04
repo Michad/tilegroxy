@@ -61,8 +61,7 @@ func Test_SanitizeMetricName_TruncatesLongIDs(t *testing.T) {
 	require.Len(t, got, maxSanitizedMetricNameLen)
 }
 
-// The layer ID is embedded in the OTEL instrument name, so without sanitizing, an ID containing a
-// space or non-ASCII character makes Int64Counter construction fail, which is fatal at startup.
+// Unsanitized, a space or non-ASCII character in the ID fails OTEL instrument construction fatally at startup
 func Test_ConstructLayer_LayerIDWithSpaceDoesNotFailConstruction(t *testing.T) {
 	layer.RegisterProvider(sampleProviderRegistration{})
 

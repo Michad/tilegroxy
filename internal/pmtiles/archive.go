@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	// The spec guarantees the header and root directory fit in the first 16 KiB.
+	// The spec guarantees the header and root directory fit in the first 16 KiB
 	initialFetchLength = 16384
 	maxDirectoryDepth  = 4
 	leafCacheSize      = 256
@@ -94,7 +94,7 @@ func Open(ctx context.Context, source Source, maxLength int) (*Archive, error) {
 		if err := json.Unmarshal(raw, &a.metadata); err != nil {
 			return nil, fmt.Errorf("pmtiles: invalid metadata: %w", err)
 		}
-		// A literal `null` metadata document unmarshals to a nil map, breaking the never-nil contract.
+		// A literal `null` metadata document unmarshals to nil, breaking the never-nil contract
 		if a.metadata == nil {
 			a.metadata = map[string]any{}
 		}
@@ -126,7 +126,7 @@ func (a *Archive) Tile(ctx context.Context, z uint8, x, y uint32) ([]byte, bool,
 	if z < a.header.MinZoom || z > a.header.MaxZoom {
 		return nil, false, nil
 	}
-	// ZxyToID ignores bits beyond 1<<z, so out-of-range x/y would otherwise alias to a valid tile.
+	// ZxyToID ignores bits beyond 1<<z, so out-of-range x/y would alias to a valid tile
 	if z < 32 && (x >= uint32(1)<<z || y >= uint32(1)<<z) {
 		return nil, false, nil
 	}
@@ -197,7 +197,7 @@ func (a *Archive) directory(raw []byte) ([]entry, error) {
 	return deserializeEntries(data)
 }
 
-// Reuses the initial fetch when possible so small archives open with a single read.
+// Reuses the initial fetch when possible so small archives open with a single read
 func (a *Archive) section(ctx context.Context, head []byte, offset, length uint64) ([]byte, error) {
 	if offset <= uint64(len(head)) && length <= uint64(len(head))-offset {
 		return head[offset : offset+length], nil

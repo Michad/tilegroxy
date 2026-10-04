@@ -32,7 +32,7 @@ func Test_ShutdownBudgetSharesOneDeadline(t *testing.T) {
 
 	budget := newShutdownBudget(&cfg)
 
-	// An unset budget covers both phases that spend it: the drain wait plus a full-length request.
+	// Unset covers both the drain wait and a full-length request
 	assert.Equal(t, 35*time.Second, budget.effective())
 	assert.Equal(t, 5*time.Second, budget.drainDelay)
 
@@ -51,13 +51,12 @@ func Test_ShutdownBudgetExplicitOverridesTimeout(t *testing.T) {
 
 	budget := newShutdownBudget(&cfg)
 
-	// A long request timeout must not drag shutdown past the orchestrator grace period.
+	// A long request timeout must not drag shutdown past the orchestrator grace period
 	assert.Equal(t, 20*time.Second, budget.effective())
 }
 
 func Test_ShutdownBudgetReservesFlushSlice(t *testing.T) {
-	// A ShutdownTimeout well above flushReserveFloor*flushReserveFraction keeps the fraction, rather
-	// than the floor, driving the reserve, so the test stays valid if either constant changes.
+	// Well above the floor so the fraction drives the reserve, keeping the test valid if either constant changes
 	totalSeconds := uint(flushReserveFloor/time.Second)*flushReserveFraction*2 + 1 // #nosec G115 -- small test constant, no overflow risk
 
 	cfg := config.DefaultConfig()
@@ -94,8 +93,7 @@ func Test_ShutdownBudgetReserveFloorNeverExceedsTotal(t *testing.T) {
 
 	budget := newShutdownBudget(&cfg)
 
-	// A 1s total is below flushReserveFloor, so the reserve is capped to the total instead of pushing
-	// preFlushContext's deadline negative.
+	// Below flushReserveFloor, so the reserve is capped rather than pushing the pre-flush deadline negative
 	assert.Equal(t, 1*time.Second, budget.flushReserve)
 
 	preFlushCtx, preFlushCancel := budget.preFlushContext(context.Background())
@@ -130,15 +128,11 @@ func Test_ShutdownRunsPhasesInOrder(t *testing.T) {
 
 	require.NoError(t, runShutdown(context.Background(), newShutdownBudget(&cfg), phases))
 
-	// Readiness must fail before draining, health must stop before entities close so its check
-	// tickers can't hit a closed pool, and log handles close last so every prior phase can log.
+	// Readiness fails before draining, health stops before entities close, and logs close last so every phase can log
 	assert.Equal(t, []string{"drain", "server", "health", "generations", "otel", "logs"}, order)
 }
 
-// Health checks run on background tickers that call into caches and providers. If they are still
-// running when entities close they fire against a released pool, which surfaces as a recovered
-// panic logged on every clean container stop. This models that with a ticker of its own rather
-// than asserting phase names, so a reordering fails on the consequence and not just the label.
+// Health tickers firing after entities close hit a released pool and log a panic. Models the consequence, not phase names
 func Test_ShutdownStopsHealthChecksBeforeReleasingEntities(t *testing.T) {
 	cfg := config.DefaultConfig()
 	cfg.Server.Timeout = 5
@@ -181,7 +175,7 @@ func Test_ShutdownStopsHealthChecksBeforeReleasingEntities(t *testing.T) {
 			return nil
 		},
 		generations: func(context.Context) error {
-			// Give any still-running ticker a chance to observe the closed state.
+			// Give any still-running ticker a chance to observe the closed state
 			time.Sleep(20 * time.Millisecond)
 
 			mu.Lock()
@@ -233,9 +227,7 @@ func Test_ShutdownStopsWhenBudgetExpires(t *testing.T) {
 	assert.False(t, otelReached, "phases after generations are skipped when an earlier phase failed")
 }
 
-// Test_ShutdownStillFlushesAnalyticsWhenServerHangs models issue 885: a hung in-flight request can
-// exhaust the pre-flush deadline, but generations (which flushes batched analytics) must still get a
-// chance to run instead of being skipped along with every other phase after the expired one.
+// Regression test for #885: a hung request can exhaust the pre-flush deadline, but the analytics flush must still run
 func Test_ShutdownStillFlushesAnalyticsWhenServerHangs(t *testing.T) {
 	cfg := config.DefaultConfig()
 	cfg.Server.ShutdownTimeout = 4
@@ -279,6 +271,6 @@ func Test_ShutdownAlwaysClosesLogs(t *testing.T) {
 
 	_ = runShutdown(context.Background(), newShutdownBudget(&cfg), phases)
 
-	// Log handles are outside the budget: they cannot block and must outlive the other phases.
+	// Log handles are outside the budget: they can't block and must outlive the other phases
 	assert.True(t, logsClosed)
 }

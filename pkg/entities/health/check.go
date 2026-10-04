@@ -32,12 +32,11 @@ type HealthCheckConfig interface {
 	GetDelay() uint
 }
 
-// HealthCheckDeps carries everything a health check is given at construction. New dependencies are added
-// as fields so the Initialize signature stays stable
+// New dependencies are added as fields so the Initialize signature stays stable
 type HealthCheckDeps struct {
 	LayerGroup layer.LayerGroup
 	Caches     cache.CacheRegistry
-	// The full configuration, since a check may need to inspect settings outside its own block
+	// A check may need settings outside its own block
 	AllConfig *config.Config
 }
 

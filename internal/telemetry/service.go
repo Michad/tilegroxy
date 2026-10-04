@@ -31,7 +31,7 @@ var serviceAttributes = func() []attribute.KeyValue {
 	}
 }()
 
-// ServiceAttributes returns the service.* span attributes followed by extra.
+// The service.* span attributes followed by extra
 func ServiceAttributes(extra ...attribute.KeyValue) []attribute.KeyValue {
 	return append(slices.Clip(serviceAttributes), extra...)
 }

@@ -63,7 +63,7 @@ func Test_CopyAuthRestrictions(t *testing.T) {
 	assert.Equal(t, "acme-corp", *newTenant)
 }
 
-// Copying must not alias, so a later change to one context can't reach the other.
+// A later change to one context must not reach the other
 func Test_CopyAuthRestrictions_DoesNotAlias(t *testing.T) {
 	from := pkg.BackgroundContext()
 	to := pkg.BackgroundContext()
@@ -77,8 +77,7 @@ func Test_CopyAuthRestrictions_DoesNotAlias(t *testing.T) {
 	assert.Equal(t, pkg.Bounds{}, *fromArea)
 }
 
-// A context missing the auth values entirely, as happens for anything not built by
-// NewRequestContext, must be a no-op rather than a panic.
+// Contexts not built by NewRequestContext lack the auth values, and must be a no-op rather than panic
 func Test_CopyAuthRestrictions_MissingValues(t *testing.T) {
 	to := pkg.BackgroundContext()
 
@@ -86,8 +85,7 @@ func Test_CopyAuthRestrictions_MissingValues(t *testing.T) {
 	assert.NotPanics(t, func() { pkg.CopyAuthRestrictions(to, t.Context()) })
 }
 
-// A freshly built request context has an empty, non-nil tenant ID, mirroring UserIDFromContext's
-// default so field resolvers can treat "unset" and "empty string" the same way.
+// Mirrors UserIDFromContext's default so field resolvers treat unset and empty the same
 func Test_TenantIDFromContext_DefaultsToEmptyString(t *testing.T) {
 	ctx := pkg.BackgroundContext()
 
@@ -110,7 +108,7 @@ func Test_SetIdentity(t *testing.T) {
 	require.Equal(t, "acme-corp", *tenant)
 }
 
-// A library consumer can pass a plain stdlib context, which carries none of the identity pointers.
+// A plain stdlib context carries none of the identity pointers
 func Test_SetIdentity_PlainContext(t *testing.T) {
 	require.NotPanics(t, func() {
 		pkg.SetIdentity(context.Background(), "someone", "acme-corp")

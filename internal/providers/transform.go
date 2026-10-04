@@ -129,7 +129,7 @@ func (t Transform) PreAuth(ctx context.Context, providerContext layer.ProviderCo
 }
 
 func (t Transform) transform(ctx context.Context, col color.Color) color.Color {
-	// Scripts work with 8 bit non-premultiplied channels, but color.Color exposes 16 bit premultiplied ones.
+	// Scripts work with 8 bit non-premultiplied channels, but color.Color exposes 16 bit premultiplied ones
 	c1 := color.NRGBAModel.Convert(col).(color.NRGBA)
 
 	r2, g2, b2, a2 := t.transformFunc(c1.R, c1.G, c1.B, c1.A)
@@ -164,7 +164,6 @@ func (t Transform) GenerateTile(ctx context.Context, providerContext layer.Provi
 	size := maxBounds.Sub(minBounds)
 	pixelCount := size.X * size.Y
 
-	// Split up all the requests for N threads
 	numPixelPerThread := int(math.Floor(float64(pixelCount) / float64(t.Threads)))
 	pixelSplit := make([][]int, 0, t.Threads)
 

@@ -93,8 +93,7 @@ func recordedIdentities() []seenIdentity {
 	return append([]seenIdentity(nil), identitySeen...)
 }
 
-// A provider that varies its output per tenant needs the identity the seed runs as, since there's
-// no incoming request for auth to derive one from.
+// With no incoming request, the provider needs the identity the seed runs as
 func Test_Seed_PassesIdentityToProvider(t *testing.T) {
 	cfg := identityConfig()
 
@@ -165,8 +164,7 @@ func Test_Test_PassesIdentityToProvider(t *testing.T) {
 	}
 }
 
-// The tenant cache namespaces by tenant ID, so a seed run has to land in the namespace that same
-// tenant's requests read from.
+// A seed must land in the namespace the same tenant's requests read from
 func Test_Seed_TenantReachesCacheNamespace(t *testing.T) {
 	cacheDir := t.TempDir()
 
@@ -190,14 +188,14 @@ func Test_Seed_TenantReachesCacheNamespace(t *testing.T) {
 
 	require.NoError(t, err)
 
-	// Cache writes happen on their own goroutine that the seed doesn't wait on.
+	// Cache writes happen on a goroutine the seed doesn't wait on
 	var entries []os.DirEntry
 	require.Eventually(t, func() bool {
 		entries, err = os.ReadDir(cacheDir)
 		return err == nil && len(entries) > 0
 	}, 5*time.Second, 10*time.Millisecond)
 
-	// The disk cache re-sanitizes the tenant cache's "~" separator into "_" when building filenames.
+	// The disk cache re-sanitizes the tenant separator "~" into "_" in filenames
 	for _, entry := range entries {
 		require.True(t, strings.HasPrefix(entry.Name(), "tenant_a_identity_layer"), "cached tile %v isn't namespaced to the tenant", entry.Name())
 	}

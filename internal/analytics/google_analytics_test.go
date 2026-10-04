@@ -31,7 +31,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// gaCapture stands in for the Measurement Protocol endpoint.
+// Stands in for the Measurement Protocol endpoint
 type gaCapture struct {
 	mutex    sync.Mutex
 	payloads []gaPayload
@@ -183,7 +183,7 @@ func Test_GoogleAnalytics_ClampsBatchSize(t *testing.T) {
 	defer srv.Close()
 
 	a := newGA(t, srv.URL, func(cfg *GoogleAnalyticsConfig) {
-		// Well above the Measurement Protocol's 25 event ceiling.
+		// Well above the Measurement Protocol's 25 event ceiling
 		cfg.Batch.MaxSize = 500
 		cfg.Batch.MaxAge = 600
 	})
@@ -218,7 +218,7 @@ func Test_GoogleAnalytics_GroupsByClient(t *testing.T) {
 	closeGA(t, a)
 
 	payloads := capture.snapshot()
-	// GA requires one client_id per payload, so two users cannot share a request.
+	// GA requires one client_id per payload so two users can't share a request
 	require.Len(t, payloads, 2)
 
 	seen := map[string]bool{}
@@ -237,7 +237,7 @@ func Test_GoogleAnalytics_ServerErrorIsContained(t *testing.T) {
 
 	a := newGA(t, srv.URL, nil)
 
-	// A 500 from GA must not propagate; the batcher logs and counts it.
+	// The batcher logs and counts a 500 instead of propagating it
 	require.NoError(t, a.Record(pkg.BackgroundContext(), analytics.Event{LayerID: "main"}))
 	closeGA(t, a)
 

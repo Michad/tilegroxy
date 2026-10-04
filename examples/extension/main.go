@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// A custom tilegroxy executable. It registers the entities in ./sample, then checks every layer
-// with the test command and starts serving, always using the tilegroxy.yml beside the binary.
+// A custom tilegroxy executable that registers the entities in ./sample, tests every layer, then serves using the adjacent tilegroxy.yml
 package main
 
 import (

@@ -24,13 +24,13 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
-// A center is longitude, latitude, then an optional zoom.
+// Longitude, latitude, then an optional zoom
 const (
 	centerLatIndex  = 1
 	centerZoomIndex = 2
 )
 
-// An explicit datatype that disagrees with what the provider actually produces is a config error.
+// An explicit datatype that disagrees with the provider's is a config error
 func reconcileDataType(configured, reported config.DataType, errorMessages config.ErrorMessages) (config.DataType, error) {
 	if !isKnownDataType(configured) {
 		return cmp.Or(reported, configured, config.DataTypeUnknown), nil
@@ -43,7 +43,7 @@ func reconcileDataType(configured, reported config.DataType, errorMessages confi
 	return configured, nil
 }
 
-// Validated operator values can't conflict with each other, so any conflict is resolved by dropping the provider's value.
+// Validated operator values can't conflict with each other, so conflicts are resolved by dropping the provider's value
 func resolveMetadata(layerID string, cfg config.LayerMetadata, reported layer.Description, errorMessages config.ErrorMessages) (ResolvedMetadata, error) {
 	dataType, err := reconcileDataType(cfg.DataType, reported.DataType, errorMessages)
 	if err != nil {
@@ -76,20 +76,20 @@ func resolveMetadata(layerID string, cfg config.LayerMetadata, reported layer.De
 	return ResolvedMetadata{Limits: limits, Advertised: adv}, nil
 }
 
-// Limits are the operator's restrictions on a layer, the only metadata enforced on requests.
+// The operator's restrictions on a layer, and the only metadata enforced on requests
 type Limits struct {
 	MinZoom *int
 	MaxZoom *int
 	Bounds  config.BoundsConfig
 }
 
-// ResolvedMetadata is a layer's metadata, computed once at construction.
+// Computed once at construction
 type ResolvedMetadata struct {
 	Limits     Limits
 	Advertised layer.Description // Always within Limits
 }
 
-// ForRequest narrows the advertised metadata to the area a caller may access, if restricted.
+// Narrows the advertised metadata to the area a restricted caller may access
 func (r ResolvedMetadata) ForRequest(allowedArea *pkg.Bounds) layer.Description {
 	d := r.Advertised
 	if allowedArea == nil || allowedArea.IsNullIsland() {
@@ -156,7 +156,7 @@ func resolveBounds(limits Limits, reported layer.Description, w metadataWarner) 
 	return layer.Description{Bounds: b}.Clip(limits.Bounds).Bounds
 }
 
-// An operator-set center wins over provider-reported bounds and zoom that would exclude it.
+// An operator-set center wins over provider-reported bounds and zoom that would exclude it
 func keepOperatorCenter(adv layer.Description, cfg config.LayerMetadata, w metadataWarner) layer.Description {
 	if !centerWithin(adv.Center, adv.Bounds) {
 		w.warn("bounds", adv.Bounds, "excludes the layer's center")

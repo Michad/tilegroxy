@@ -25,8 +25,7 @@ type DatastoreConfig struct {
 	ID string
 }
 
-// Datastore shares an in-memory map with whichever entities reference its ID. A real datastore
-// would hold a connection pool here
+// An in-memory map shared by whichever entities reference its ID. A real datastore would hold a connection pool
 type Datastore struct {
 	DatastoreConfig
 	store *sync.Map

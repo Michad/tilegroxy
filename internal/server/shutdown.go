@@ -25,13 +25,13 @@ import (
 	"github.com/Michad/tilegroxy/pkg/config"
 )
 
-// how much of the total budget to set aside for flushing batched analytics.Represented as 1/percentage for integer compatibility
+// Share of the budget reserved for flushing batched analytics, as 1/fraction for integer math
 const flushReserveFraction = 5
 
-// limit above to a minimum of below, in case budget is problematically low
+// Minimum reserve in case the budget is very low
 const flushReserveFloor = 2 * time.Second
 
-// The deadline every teardown phase draws from.
+// The deadline every teardown phase draws from
 type shutdownBudget struct {
 	total        time.Duration
 	drainDelay   time.Duration
@@ -45,8 +45,7 @@ func newShutdownBudget(cfg *config.Config) shutdownBudget {
 	if reserve < flushReserveFloor {
 		reserve = flushReserveFloor
 	}
-	// Never reserve more than the total budget itself, otherwise the earlier phases would get a
-	// negative or zero deadline
+	// Otherwise earlier phases would get a zero or negative deadline
 	if reserve > total {
 		reserve = total
 	}
@@ -62,7 +61,7 @@ func (b shutdownBudget) effective() time.Duration {
 	return b.total
 }
 
-// context returns the deadline shared by every phase. Callers must cancel it
+// Shared by every phase. Callers must cancel it
 func (b shutdownBudget) context(parent context.Context) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(parent, b.total)
 }
@@ -75,8 +74,7 @@ func (b shutdownBudget) flushContext(parent context.Context) (context.Context, c
 	return context.WithTimeout(parent, b.flushReserve)
 }
 
-// shutdownPhases are the teardown steps in the order they run. Each is a separate field rather than a
-// slice so the ordering constraints stay readable at the call site
+// In run order. Separate fields rather than a slice keep the ordering constraints readable at the call site
 type shutdownPhases struct {
 	drain       func()
 	server      func(context.Context) error
@@ -86,7 +84,6 @@ type shutdownPhases struct {
 	logs        func()
 }
 
-// runShutdown executes the teardown phases against the shared budget.
 func runShutdown(parent context.Context, budget shutdownBudget, phases shutdownPhases) error {
 	ctx, cancel := budget.context(parent)
 	defer cancel()
@@ -107,8 +104,7 @@ func runShutdown(parent context.Context, budget shutdownBudget, phases shutdownP
 
 	var errs []error
 
-	// runStep reports whether the phase's context is still live, so the caller can decide whether to
-	// keep going. logCtx is only used for logging; each phase runs against its own deadline
+	// Reports whether the phase's context is still live. logCtx is only for logging; each phase has its own deadline
 	runStep := func(logCtx, stepCtx context.Context, name string, fn func(context.Context) error) bool {
 		start := time.Now()
 		err := fn(stepCtx)
@@ -132,15 +128,11 @@ func runShutdown(parent context.Context, budget shutdownBudget, phases shutdownP
 	preFlushCtx, preFlushCancel := budget.preFlushContext(parent)
 	defer preFlushCancel()
 
-	// Health goes before generations because its check tickers call into caches and providers. Left
-	// running they would fire against a closed pool and log a panic on every clean stop. Readiness has
-	// reported 503 since the drain phase, so the endpoint has no job left here
+	// Health stops before generations or its tickers would hit closed pools. Readiness has reported 503 since draining
 	okToContinue := runStep(ctx, preFlushCtx, "server", phases.server) &&
 		runStep(ctx, preFlushCtx, "health", phases.health)
 
-	// generations always runs, even when an earlier phase exhausted its share of the budget, because
-	// it's the only path that flushes batched analytics. It draws from its own reserve measured off
-	// parent rather than the expired preFlushCtx
+	// Always runs since it's the only path that flushes analytics. Uses its own reserve rather than the expired preFlushCtx
 	flushCtx, flushCancel := budget.flushContext(parent)
 	defer flushCancel()
 

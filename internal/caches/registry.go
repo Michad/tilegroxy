@@ -28,19 +28,16 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
 )
 
-// CacheRegistry holds every cache declared at the top level of the configuration, keyed by the id
-// layers reference. Each entry owns its own tree of nested caches, so no two entries share an
-// instance and closing them is unambiguous.
+// Top-level caches keyed by the id layers reference. Each entry owns its nested tree so closing is unambiguous
 type CacheRegistry struct {
 	caches map[string]cache.Cache
 	order  []string
-	// The ids of top-level entries, in declaration order. Nested caches are reachable through
-	// caches but are closed by the parent that built them, so they're excluded here.
+	// Top-level ids in declaration order. Nested caches are closed by their parent so they're excluded
 	owned     []string
 	defaultID string
 }
 
-// A helper for tests that creates a singleton registry with a single item
+// For tests
 func NewSingleCacheRegistry(c cache.Cache) *CacheRegistry {
 	ID := "test-single"
 	return &CacheRegistry{
@@ -61,7 +58,7 @@ func (reg *CacheRegistry) Get(id string) (cache.Cache, bool) {
 	return res, ok
 }
 
-// Default returns the cache used by layers that don't name one.
+// Used by layers that don't name a cache
 func (reg *CacheRegistry) Default() cache.Cache {
 	if reg == nil {
 		return nil
@@ -78,7 +75,7 @@ func (reg *CacheRegistry) DefaultID() string {
 	return reg.defaultID
 }
 
-// IDs lists the configured ids in declaration order, for error messages naming the valid choices.
+// Declaration order, for error messages naming the valid choices
 func (reg *CacheRegistry) IDs() []string {
 	if reg == nil {
 		return nil
@@ -87,8 +84,7 @@ func (reg *CacheRegistry) IDs() []string {
 	return reg.order
 }
 
-// Close releases every cache that holds resources. Called on shutdown and after a hot reload swaps
-// in a new generation of entities.
+// Called on shutdown and after a hot reload swaps in a new generation of entities
 func (reg *CacheRegistry) Close(ctx context.Context) error {
 	if reg == nil {
 		return nil
@@ -103,12 +99,12 @@ func (reg *CacheRegistry) Close(ctx context.Context) error {
 	return errors.Join(errs...)
 }
 
-// Lets a layer reference one tier of a multi cache by id. Nested entries aren't owned: the parent closes them.
+// Lets a layer reference one tier of a multi cache by id. Nested entries are closed by their parent
 func (reg *CacheRegistry) registerNested(built cache.Cache, errorMessages config.ErrorMessages) error {
 	for _, child := range children(built) {
 		if wrapper, ok := child.(CacheWrapper); ok && wrapper.ref != "" {
 			if _, taken := reg.caches[wrapper.ref]; taken {
-				// Same-kind tiers are legal, so a name collision just leaves them unreferenceable; an explicit id fixes that.
+				// Same-kind tiers are legal, so a name collision only leaves them unreferenceable until given explicit ids
 				if wrapper.refExplicit {
 					return fmt.Errorf(errorMessages.MustBeUnique, "cache.id", wrapper.ref)
 				}
@@ -126,7 +122,7 @@ func (reg *CacheRegistry) registerNested(built cache.Cache, errorMessages config
 	return nil
 }
 
-// ExtractTTLFromCache finds the lifetime of any Expiring cache in the tree. The shortest wins when several are nested.
+// The shortest TTL wins when several Expiring caches are nested
 func ExtractTTLFromCache(built cache.Cache) (time.Duration, bool) {
 	var shortest time.Duration
 	found := false
@@ -146,13 +142,12 @@ func ExtractTTLFromCache(built cache.Cache) (time.Duration, bool) {
 	return shortest, found
 }
 
-// NewUnknownCacheError reports a reference to a cache id that isn't configured, listing what is.
+// Lists the configured ids
 func NewUnknownCacheError(errorMessages config.ErrorMessages, param, id string, valid []string) error {
 	return fmt.Errorf(errorMessages.EnumError, param, id, valid)
 }
 
-// ConstructCacheRegistry builds every configured cache. rawConfig is either a single cache or an
-// array of them; defaultID names the entry layers fall back to and defaults to the first.
+// rawConfig is a single cache or an array. defaultID names the fallback entry and defaults to the first
 func ConstructCacheRegistry(ctx context.Context, rawConfig interface{}, defaultID string, secreter secret.Secreter, deps cache.CacheDeps) (*CacheRegistry, error) {
 	entries, err := configload.NormalizeCaches(rawConfig, deps.ErrorMessages)
 	if err != nil {
@@ -213,8 +208,7 @@ func ConstructCacheRegistry(ctx context.Context, rawConfig interface{}, defaultI
 	return &reg, nil
 }
 
-// withoutCacheID drops the id naming a top-level cache entry, which selects the cache the way name
-// selects its type. No cache config declares one, so leaving it in would fail the unknown-key check.
+// The id selects the cache like name selects its type, and would otherwise fail the unknown-key check
 func withoutCacheID(rawConfig map[string]interface{}) map[string]interface{} {
 	found := false
 
@@ -249,9 +243,7 @@ func ConstructCache(rawConfig map[string]interface{}, deps cache.CacheDeps) (cac
 			ref, refExplicit = name, false
 		}
 
-		// An alias for the no-op cache, so fixtures can name an obviously-fake cache. It goes
-		// through the same construction path operator config does, so `cache: {name: test}` in
-		// production is a no-op cache rather than an error.
+		// Lets fixtures name an obviously-fake cache. Goes through the operator config path, so it's valid in production too
 		if name == "test" || name == "Test" {
 			name = "none"
 		}

@@ -157,7 +157,7 @@ func Test_Layer_BuildTileJSON_ExplicitFields(t *testing.T) {
 	assert.Equal(t, []float64{-7, 51, 0.1, 63}, doc.Bounds)
 }
 
-// MapLibre GL JS reads encoding from TileJSON, so an MLT source configures itself from the document.
+// MapLibre GL JS reads encoding from TileJSON, so an MLT source configures itself from it
 func Test_Layer_BuildTileJSON_MltEncoding(t *testing.T) {
 	l := resolvedLayer(t, config.LayerConfig{ID: "l3", LayerMetadata: config.LayerMetadata{DataType: config.DataTypeMLT}}, layer.Description{})
 

@@ -42,7 +42,7 @@ import (
 
 const maxProviders = 100
 
-// Allow you to directly reference another layer that uses a pattern with multiple concrete values for the pattern
+// References a pattern layer with multiple concrete values for the pattern
 type BlendLayerConfig struct {
 	Pattern string
 	Values  []map[string]string
@@ -370,7 +370,7 @@ func callBlendingProvider(ctx context.Context, providerContext layer.ProviderCon
 			image.Image
 		}{i, realImage}
 	} else if err == nil {
-		// img and err are both nil -- that's not right
+		// Both nil shouldn't happen
 		err = errors.New("no image returned to blender")
 	}
 

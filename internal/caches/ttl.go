@@ -24,13 +24,11 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
 )
 
-// TTLCache wraps any Cache to enforce a uniform expiration, emulating it for backends with no
-// native notion of TTL. An expired entry is reported as a cache miss rather than deleted: the
-// normal request path then regenerates and overwrites it, which is all a per-layer TTL needs.
+// Emulates TTL for backends without one. Expired entries read as misses so the request path overwrites them
 type TTLCache struct {
 	Cache cache.Cache
 	ttl   time.Duration
-	// clock returns the current time. Overridden in tests, defaults to time.Now.
+	// Overridden in tests
 	clock func() time.Time
 }
 
@@ -86,8 +84,7 @@ func (c *TTLCache) Lookup(ctx context.Context, t pkg.TileRequest) (*pkg.Image, e
 		return img, err
 	}
 
-	// CreatedAt is zero for entries written before TTL support existed, or by a path that
-	// bypasses TTLCache. Treat those as always fresh rather than always expired.
+	// Zero for entries predating TTL support or written around TTLCache. Treat those as always fresh
 	if img.CreatedAt != 0 && c.now().Sub(time.Unix(img.CreatedAt, 0)) > c.ttl {
 		return nil, nil
 	}
@@ -100,7 +97,7 @@ func (c *TTLCache) Save(ctx context.Context, t pkg.TileRequest, img *pkg.Image) 
 	return c.Cache.Save(ctx, t, img)
 }
 
-// An entry past its TTL still occupies space, so it's removed rather than treated as already gone.
+// An expired entry still occupies space, so it's removed rather than treated as gone
 func (c *TTLCache) Remove(ctx context.Context, t pkg.TileRequest) (bool, error) {
 	return c.Cache.Remove(ctx, t)
 }

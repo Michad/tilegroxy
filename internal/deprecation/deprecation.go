@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package deprecation logs a uniform warning when an operator's configuration uses a deprecated option.
+// Package deprecation logs a uniform warning when configuration uses a deprecated option
 package deprecation
 
 import (
@@ -34,7 +34,7 @@ func WarnConfig(deprecated string, replacement string, removedIn string) {
 	slog.WarnContext(context.Background(), fmt.Sprintf("[deprecation warning]: %v is deprecated, use %v instead. Targeted removal: %v", deprecated, replacement, removedIn))
 }
 
-// Reset forgets which warnings were logged so tests can observe them again
+// Forgets logged warnings so tests can observe them again
 func Reset() {
 	warned.Clear()
 }

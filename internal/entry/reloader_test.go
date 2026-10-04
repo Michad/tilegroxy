@@ -44,7 +44,7 @@ func portConfig(port int) *config.Config {
 	return &cfg
 }
 
-// recordingSwap reports the port of every config it is handed
+// Reports the port of every config it's handed
 func recordingSwap() (swapFunc, chan int) {
 	seen := make(chan int, 64)
 
@@ -142,7 +142,7 @@ func Test_Reloader_SecretRequestBeforeReadyAppliesOnReady(t *testing.T) {
 	assert.Contains(t, buf.String(), secrets.ReasonSecretTTL)
 }
 
-// A file change queued during startup carries a newer config than the live one a secret would re-resolve
+// A file change queued during startup is newer than the live config a secret would re-resolve
 func Test_Reloader_SecretRequestKeepsQueuedFileReload(t *testing.T) {
 	r := NewReloader()
 	r.start(portConfig(1))
@@ -179,7 +179,7 @@ func Test_Reloader_QueuedReloadFailureIsAudited(t *testing.T) {
 	assert.Contains(t, buf.String(), audit.OutcomeFailure)
 }
 
-// Whichever of the queued and the fresh reload runs first, the fresh one must win
+// Whichever runs first, the fresh reload must win over the queued one
 func Test_Reloader_NewerReloadWinsOverQueued(t *testing.T) {
 	for range 20 {
 		r := NewReloader()

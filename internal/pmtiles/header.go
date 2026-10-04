@@ -47,7 +47,7 @@ var contentTypes = map[TileType]string{
 	TileTypeJPEG: "image/jpeg",
 	TileTypeWebP: "image/webp",
 	TileTypeAVIF: "image/avif",
-	// The PMTiles spec names no type. This matches what MapLibre GL JS requests.
+	// The PMTiles spec names no type. Matches what MapLibre GL JS requests
 	TileTypeMLT: "application/vnd.maplibre-tile",
 }
 
@@ -60,7 +60,7 @@ func (t TileType) ContentType() string {
 
 var headerMagic = [7]byte{'P', 'M', 'T', 'i', 'l', 'e', 's'}
 
-// Field order and sizes mirror the v3 spec's byte layout so binary.Read can decode it directly.
+// Mirrors the v3 spec's byte layout so binary.Read can decode it directly
 type Header struct {
 	Magic               [7]byte
 	Version             uint8

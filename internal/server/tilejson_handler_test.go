@@ -80,7 +80,7 @@ func Test_TileJSONHandlers_Disabled_NoOp(t *testing.T) {
 
 	th := setupTileJSONHandlers(&cfg, newGenerationHolder(newGeneration(&cfg, nil)))
 
-	// Must not panic even though TileJSON is disabled and no handlers were built.
+	// Must not panic even though TileJSON is disabled and no handlers were built
 	th.wrapWithTelemetry()
 
 	mux := &http.ServeMux{}
@@ -255,7 +255,7 @@ func Test_TileJSONHandler_LayerScope_RestrictsIndexAndDocument(t *testing.T) {
 	require.Len(t, entries, 1)
 	assert.Equal(t, "main", entries[0].Name)
 
-	// Requesting the disallowed layer's document directly returns 401
+	// The disallowed layer's document returns 401
 	req2 := httptest.NewRequest(http.MethodGet, "http://example.com/tiles/other.json", nil).WithContext(ctx)
 	req2.SetPathValue("layerjson", "other.json")
 	w2 := httptest.NewRecorder()
@@ -264,7 +264,7 @@ func Test_TileJSONHandler_LayerScope_RestrictsIndexAndDocument(t *testing.T) {
 	defer func() { require.NoError(t, res2.Body.Close()) }()
 	assert.Equal(t, http.StatusUnauthorized, res2.StatusCode)
 
-	// Requesting the allowed layer's document succeeds
+	// The allowed layer's document succeeds
 	req3 := httptest.NewRequest(http.MethodGet, "http://example.com/tiles/main.json", nil).WithContext(ctx)
 	req3.SetPathValue("layerjson", "main.json")
 	w3 := httptest.NewRecorder()
@@ -379,8 +379,7 @@ func Test_TileJSONHandler_ForwardedHeaders(t *testing.T) {
 	assert.Equal(t, "https://public.example.com/maps/tiles/main/{z}/{x}/{y}", doc.Tiles[0])
 }
 
-// setupTestRootHandler builds the full mux via setupHandlers, discarding the reload/shutdown
-// plumbing tests here don't exercise.
+// Discards the reload and shutdown plumbing these tests don't exercise
 func setupTestRootHandler(cfg *config.Config, ent *entities.Entities) (http.Handler, error) {
 	routes, err := setupHandlers(cfg, ent)
 
@@ -449,8 +448,7 @@ func Test_SetupHandlers_TileJSON_Disabled_RoutesNotRegistered(t *testing.T) {
 	assert.NotEqual(t, http.StatusOK, res.StatusCode, "TileJSON index should not be served when disabled")
 }
 
-// Regression test for issue 920: the tile route is registered once at startup, so advertising a
-// reloaded tilepath would hand consumers URLs that 404
+// Regression test for #920: the tile route is registered at startup, so a reloaded tilepath would advertise URLs that 404
 func Test_TileJSONHandler_Document_IgnoresReloadedServerConfig(t *testing.T) {
 	cfg := config.DefaultConfig()
 	cfg.Server.TileJSON.Enabled = true

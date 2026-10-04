@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// scriptedSecreter lets a test drive versions and count backend calls
+// Lets a test drive versions and count backend calls
 type scriptedSecreter struct {
 	mu           sync.Mutex
 	version      string
@@ -80,7 +80,7 @@ func (s *scriptedSecreter) counts() (int, int) {
 	return s.lookupCalls, s.checkCalls
 }
 
-// newTestWatcher builds a wrapper with its tickers disabled so tests drive checkOnce directly
+// Tickers are disabled so tests drive checkOnce directly
 func newTestWatcher(t *testing.T, backend secret.Secreter, batchSize int, reload func(reason string)) *watchingSecreter {
 	t.Helper()
 	return newWatchingSecreter(backend, secretWatchConfig{Watch: true, WatchInterval: defaultWatchInterval}, batchSize, reload)
@@ -162,7 +162,7 @@ func Test_Watcher_BatchSizeOneCallsCheckPerKey(t *testing.T) {
 	assert.Equal(t, 2, checks)
 }
 
-// A key the backend cannot version is dead weight on every poll, so it is never sent to Check
+// A key the backend can't version is dead weight, so it's never sent to Check
 func Test_Watcher_EmptyRecordedVersionIsNeverChecked(t *testing.T) {
 	backend := &scriptedSecreter{version: ""}
 	var reloads int
@@ -202,7 +202,7 @@ func Test_Watcher_CheckErrorLeavesVersionsIntactAndSkipsReload(t *testing.T) {
 	assert.Equal(t, 1, reloads, "the recorded version survived the failure, so the change is still caught")
 }
 
-// A backend degrading into "cannot tell" must not reload forever
+// A backend degrading into "can't tell" must not reload forever
 func Test_Watcher_VersionGoingEmptyTriggersNoReload(t *testing.T) {
 	backend := &scriptedSecreter{version: "v1"}
 	var reloads int
@@ -245,8 +245,7 @@ func Test_Watcher_CheckIsForwardedToBackendVerbatim(t *testing.T) {
 	assert.Equal(t, []string{"v1", "v1"}, versions)
 }
 
-// The TTL ticker is the safety net for a backend whose versions never move, so it must reload
-// without any version having changed
+// The TTL ticker is the safety net for backends whose versions never move, so it reloads regardless
 func Test_Watcher_TTLTickerReloadsWithoutVersionChange(t *testing.T) {
 	backend := &scriptedSecreter{version: "v1"}
 	var mu sync.Mutex

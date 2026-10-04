@@ -84,8 +84,7 @@ func Test_ParseWatchConfig_NegativeTTLErrors(t *testing.T) {
 	assert.Contains(t, err.Error(), "secret.ttl")
 }
 
-// A backend reporting no batch capacity has no change detection at all, so asking to watch it is a
-// config error rather than a silent no-op
+// A backend with no batch capacity can't detect changes, so watching it is a config error, not a no-op
 func Test_ParseWatchConfig_WatchOnUnwatchableBackendErrors(t *testing.T) {
 	_, _, err := parseWatchConfig(map[string]interface{}{"watch": true}, 0, testErrorMessages())
 	require.Error(t, err)

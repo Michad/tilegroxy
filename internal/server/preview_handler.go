@@ -33,7 +33,7 @@ func newPreviewHandler(gens *generationHolder) *previewHandler {
 	return &previewHandler{gens}
 }
 
-// previewTemplateData is what previewPageTemplate renders. Fields are exported only because html/template requires it
+// Fields are exported only because html/template requires it
 type previewTemplateData struct {
 	LayerName          string
 	TileURL            string
@@ -121,7 +121,7 @@ func (h *previewHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	doc := l.BuildTileJSON(name, nil, areaRestriction(ctx))
 	hasBounds, bounds := previewBounds(doc)
 
-	// Without ?name= or metadata, guess postgis_mvt's default source-layer; the page probes a tile to verify.
+	// Without ?name= or metadata, guess postgis_mvt's default source-layer; the page probes a tile to verify
 	sourceLayers := []string{name}
 	sourceLayerKnown := false
 	fromMetadata := false

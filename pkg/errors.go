@@ -20,32 +20,32 @@ import (
 	"github.com/Michad/tilegroxy/pkg/config"
 )
 
-// Indicates high level categories of errors, used to decide the HTTP status code to return and the level of logging to use for such an error
+// Decides the HTTP status code and log level for an error
 type TypeOfError int
 
 const (
-	// Indicates an error with the geographic extent or tile coordinates requested. Generally a 400
+	// Bad geographic extent or tile coordinates. Generally a 400
 	TypeOfErrorBounds = iota
-	// Indicates an authentication related issue - note this is incoming auth, not outgoing auth. Generally a 401
+	// Incoming auth, not outgoing. Generally a 401
 	TypeOfErrorAuth
-	// Indicates a provider did something unexpected. Maybe the API we're calling is down. Generally a 500
+	// A provider misbehaved, maybe because its upstream is down. Generally a 500
 	TypeOfErrorProvider
-	// Indicates something wrong with the incoming request besides what's covered in bounds
+	// Problems with the request besides bounds
 	TypeOfErrorBadRequest
-	// Indicates something that doesn't fall into the above categories. This is usually a real problem that the operator needs to be aware of. Generally a 500
+	// Usually a real problem the operator needs to know about. Generally a 500
 	TypeOfErrorOther
-	// Indicates the request was cancelled because it exceeded the configured server timeout. Generally a 503
+	// Exceeded the configured server timeout. Generally a 503
 	TypeOfErrorTimeout
 )
 
-// The main interface for errors returned through the application. Indicates the type or category of the error and separates the error message that should be reported externally (with localization using the configurable error messages) from the internal error for logs (which uses the traditional Error() interface)
+// Separates the localized external message from the internal Error() text used for logs
 type TypedError interface {
 	error
 	Type() TypeOfError
 	External(errorMessages config.ErrorMessages) string
 }
 
-// General error for incoming auth issues. Avoids returning specifics through the API so as not to help attackers.
+// Avoids returning specifics through the API so as not to help attackers
 type UnauthorizedError struct {
 	Message string
 }
@@ -65,7 +65,7 @@ func (e UnauthorizedError) External(messages config.ErrorMessages) string {
 	return messages.NotAuthorized
 }
 
-// The error used when a provider has an auth error. This special error is used by the application to indicate that a re-auth needs to occur. If the same error is passed back on that re-auth then it's treated as a normal error and returned back through API - therefore this is a provider error type, not an auth one
+// Triggers a re-auth. If re-auth returns it again it's a normal provider error, not an auth one
 type ProviderAuthError struct {
 	Message string
 }
@@ -85,7 +85,7 @@ func (e ProviderAuthError) External(_ config.ErrorMessages) string {
 	return e.Error()
 }
 
-// Indicates the provider returned an unacceptable content length based on the configuration
+// The provider returned a content length the configuration doesn't allow
 type InvalidContentLengthError struct {
 	Length int
 }
@@ -105,7 +105,7 @@ func (e InvalidContentLengthError) External(messages config.ErrorMessages) strin
 	return messages.ProviderError
 }
 
-// Indicates the provider returned an unacceptable content type based on the configuration
+// The provider returned a content type the configuration doesn't allow
 type InvalidContentTypeError struct {
 	ContentType string
 }
@@ -125,7 +125,7 @@ func (e InvalidContentTypeError) External(messages config.ErrorMessages) string 
 	return messages.ProviderError
 }
 
-// Indicates the provider returned an unacceptable status code based on the configuration
+// The provider returned a status code the configuration doesn't allow
 type RemoteServerError struct {
 	StatusCode int
 }
@@ -164,7 +164,7 @@ func (e InvalidSridError) External(messages config.ErrorMessages) string {
 	return fmt.Sprintf(messages.EnumError, "provider.url template.srid", e.srid, []int{SRIDPsuedoMercator, SRIDWGS84})
 }
 
-// Indicates an input from the user is outside the valid range allowed for a numeric parameter - primarily tile coordinates
+// A numeric User input, primarily a tile coordinate, is outside its valid range
 type RangeError struct {
 	ParamName string
 	MinValue  float64
@@ -186,7 +186,7 @@ func (e RangeError) External(messages config.ErrorMessages) string {
 	return fmt.Sprintf(messages.RangeError, e.ParamName, e.MinValue, e.MaxValue)
 }
 
-// Indicates generally a bad input from the user
+// General bad input from the User
 type InvalidArgumentError struct {
 	Name  string
 	Value any
@@ -207,7 +207,7 @@ func (e InvalidArgumentError) External(messages config.ErrorMessages) string {
 	return fmt.Sprintf(messages.InvalidParam, e.Name, e.Value)
 }
 
-// Indicates a request was cancelled because it ran longer than the configured server timeout
+// The request ran longer than the configured server timeout
 type TimeoutError struct{}
 
 func (e TimeoutError) Error() string {

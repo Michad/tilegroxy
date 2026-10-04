@@ -161,7 +161,7 @@ func Test_NestingProviders_Describe(t *testing.T) {
 		want     layer.Description
 	}{
 		{
-			// Advertising only the primary's zoom range made the layer reject zooms the secondary serves.
+			// Advertising only the primary's zoom range made the layer reject zooms the secondary serves
 			name:     "fallback unions both children",
 			provider: Fallback{Primary: primary, Secondary: secondary},
 			want:     union,

@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-//note: JWTs here will expire in the year 2065. They will need to be updated on the off-chance this is still used 40 years from now
+// These JWTs expire in 2065 and will need regenerating if this is somehow still used then
 
 func TestFailMissingArgs(t *testing.T) {
 	jwtConfig := JWTConfig{}
@@ -195,9 +195,7 @@ func TestGoodJwtScopeLimit(t *testing.T) {
 	assert.Equal(t, "John Doe", *ctxUserID)
 }
 
-// With CacheSize > 0, a cache hit that only checks expiration leaves limitLayers/allowedLayers/
-// userID at their unrestricted defaults, so a repeat request with a scope-limited token would
-// escalate to full layer access.
+// A cache hit that only checked expiration would escalate a scope-limited token to full layer access
 func TestGoodJwtScopeLimit_CacheHitPreservesAuthorization(t *testing.T) {
 	jwtConfig := JWTConfig{
 		Algorithm:     "HS256",
@@ -217,7 +215,7 @@ func TestGoodJwtScopeLimit_CacheHitPreservesAuthorization(t *testing.T) {
 	require.NoError(t, err)
 	req.Header["Authorization"] = []string{"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhdWRpZW5jZSIsImV4cCI6NDI5NDk2NzI5NSwiaWF0IjoxNTE2MjM5MDIyLCJpc3MiOiJpc3N1ZXIiLCJuYW1lIjoiSm9obiBEb2UiLCJzY29wZSI6InRpbGUvdGVzdCIsInN1YiI6InN1YmplY3QiLCJ0aWQiOiJhY21lLWNvcnAifQ.p2yraK0p8aMnikjWJJ1Ljv_dwxD7YvdOW5KLC-sxCUQ"} // Valid JWT with scope=tile/test and tid=acme-corp
 
-	// Request 1: cache miss, does the full validation.
+	// Cache miss, full validation
 	ctx1 := pkg.BackgroundContext()
 	require.True(t, jwtAuth.CheckAuthentication(ctx1, req))
 
@@ -230,7 +228,7 @@ func TestGoodJwtScopeLimit_CacheHitPreservesAuthorization(t *testing.T) {
 	tenantID1, _ := pkg.TenantIDFromContext(ctx1)
 	require.Equal(t, "acme-corp", *tenantID1)
 
-	// Request 2: same token, now served from cache. Must produce the identical restrictions.
+	// Cache hit must produce identical restrictions
 	ctx2 := pkg.BackgroundContext()
 	require.True(t, jwtAuth.CheckAuthentication(ctx2, req))
 
@@ -521,8 +519,7 @@ func Test_JWT_ConfigValidation(t *testing.T) {
 }
 
 func Test_JWT_DeprecatedAlgorithmStillWorks(t *testing.T) {
-	// Operators have this in production YAML; it stays functional even though it is no longer
-	// documented.
+	// Undocumented but still in production YAML, so it must keep working
 	auth, err := JWTRegistration{}.Initialize(JWTConfig{
 		Algorithm: "HS256",
 		Key:       "hunter2",
@@ -543,7 +540,7 @@ func Test_JWT_AlgorithmsListAccepted(t *testing.T) {
 }
 
 func Test_JWT_AlgorithmsListAccepted_MixedRSAFamily(t *testing.T) {
-	// RS and PS both parse as an RSA PEM public key, so mixing them is not a family conflict.
+	// RS and PS both parse as RSA PEM public keys, so they aren't a family conflict
 	auth, err := JWTRegistration{}.Initialize(JWTConfig{
 		Algorithms: []string{"RS256", "PS256"},
 		Key:        "hunter2",
@@ -554,12 +551,7 @@ func Test_JWT_AlgorithmsListAccepted_MixedRSAFamily(t *testing.T) {
 }
 
 func Test_JWT_AlgorithmsListAccepted_JWKSMixedFamilies(t *testing.T) {
-	// The mixed-family restriction only applies to static keys; a remote JWKS legitimately
-	// carries keys of different families and keyFor picks per key. The goal is only to prove
-	// Initialize gets past the mixed-family check, not to reach a real JWKS endpoint, so a local
-	// TLS server with an untrusted cert is used: the fetch fails fast and deterministically
-	// (rejected by cert verification) instead of waiting on a real network timeout, and
-	// AllowStartupFailure keeps that failure from being fatal.
+	// JWKS may mix families. The untrusted TLS cert fails the fetch fast and AllowStartupFailure makes that non-fatal
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -574,7 +566,7 @@ func Test_JWT_AlgorithmsListAccepted_JWKSMixedFamilies(t *testing.T) {
 }
 
 func Test_JWT_Close_StaticKeyModeIsNoop(t *testing.T) {
-	// Static-key mode has no keys field, so Close relies on keySet.Close's nil-receiver safety.
+	// Static-key mode has no keys, so Close relies on keySet.Close being nil-safe
 	auth, err := JWTRegistration{}.Initialize(JWTConfig{
 		Algorithm: "HS256",
 		Key:       "hunter2",

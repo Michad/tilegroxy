@@ -52,7 +52,7 @@ func (p *slowGenerateProvider) DataType() config.DataType {
 	return config.DataTypeUnknown
 }
 
-// alwaysMissCache always reports a miss and records how many times Lookup and Save are called.
+// Records how many times Lookup and Save are called
 type alwaysMissCache struct {
 	lookupCalls atomic.Int32
 	saveCalls   atomic.Int32
@@ -72,9 +72,7 @@ func (c *alwaysMissCache) Remove(_ context.Context, _ pkg.TileRequest) (bool, er
 	return false, nil
 }
 
-// RenderTile is exported API, so a library consumer can call it with a plain stdlib context
-// rather than one from pkg.NewRequestContext. A context carrying no restriction info has to be
-// treated as unrestricted instead of dereferencing the nil pointers that come back.
+// Exported, so library callers may pass a plain stdlib context. Missing restriction info must mean unrestricted, not a nil dereference
 func Test_LayerGroup_RenderTile_PlainContextBackgroundDoesNotPanic(t *testing.T) {
 	provider := &slowGenerateProvider{delay: 0}
 	c := &alwaysMissCache{}
@@ -105,8 +103,7 @@ func Test_LayerGroup_RenderTile_PlainContextBackgroundDoesNotPanic(t *testing.T)
 	require.NotNil(t, img)
 }
 
-// blockingCache never returns from Save until the test releases it, so background cache writes
-// pile up and the limiter's bound becomes observable.
+// Never returns from Save until released, so the limiter's bound becomes observable
 type blockingCache struct {
 	inFlight atomic.Int32
 	maxSeen  atomic.Int32
@@ -134,8 +131,7 @@ func (c *blockingCache) Remove(_ context.Context, _ pkg.TileRequest) (bool, erro
 	return false, nil
 }
 
-// Without a bound, a slow cache backend plus sustained misses accumulates goroutines and the
-// images they pin. The tiles are distinct so singleflight doesn't collapse the misses.
+// Without a bound, a slow cache plus sustained misses piles up goroutines. Distinct tiles avoid singleflight collapsing them
 func Test_LayerGroup_RenderTile_BoundsConcurrentCacheWrites(t *testing.T) {
 	provider := &slowGenerateProvider{delay: 0}
 	c := &blockingCache{unblock: make(chan struct{})}
@@ -173,7 +169,6 @@ func Test_LayerGroup_RenderTile_BoundsConcurrentCacheWrites(t *testing.T) {
 	require.LessOrEqual(t, int(c.maxSeen.Load()), maxConcurrentCacheWrites)
 }
 
-// alwaysHitCache returns a canned tile on every lookup, regardless of the request.
 type alwaysHitCache struct{}
 
 func (alwaysHitCache) Lookup(_ context.Context, _ pkg.TileRequest) (*pkg.Image, error) {
@@ -188,9 +183,7 @@ func (alwaysHitCache) Remove(_ context.Context, _ pkg.TileRequest) (bool, error)
 	return false, nil
 }
 
-// A zoom limit added after a tile was cached (or a tile seeded outside the layer's configured
-// range) must still be enforced on a cache hit, not just on the miss path that reaches the
-// provider.
+// A zoom limit added after caching, or a tile seeded outside the range, must be enforced on a hit too
 func Test_LayerGroup_RenderTile_RejectsOutOfZoomRangeEvenOnCacheHit(t *testing.T) {
 	provider := &slowGenerateProvider{delay: 0}
 	c := alwaysHitCache{}
@@ -222,7 +215,7 @@ func Test_LayerGroup_RenderTile_RejectsOutOfZoomRangeEvenOnCacheHit(t *testing.T
 	require.Equal(t, int32(0), provider.generateCalls.Load())
 }
 
-// A cache hit must be reflected in the request context so analytics can report `cached: true`.
+// Lets analytics report `cached: true`
 func Test_LayerGroup_RenderTile_CacheHitSetsContextFlag(t *testing.T) {
 	provider := &slowGenerateProvider{delay: 0}
 	c := alwaysHitCache{}
@@ -256,8 +249,7 @@ func Test_LayerGroup_RenderTile_CacheHitSetsContextFlag(t *testing.T) {
 	require.True(t, *cached)
 }
 
-// A cache miss, whether rendered directly or via the coalesced/singleflight path, must leave the
-// context flag false so analytics reports `cached: false`.
+// Both the direct and coalesced paths must leave the flag false so analytics reports `cached: false`
 func Test_LayerGroup_RenderTile_CacheMissLeavesContextFlagFalse(t *testing.T) {
 	provider := &slowGenerateProvider{delay: 0}
 	c := &alwaysMissCache{}
@@ -292,7 +284,7 @@ func Test_LayerGroup_RenderTile_CacheMissLeavesContextFlagFalse(t *testing.T) {
 	require.False(t, *cached)
 }
 
-// A skipCache layer never touches the cache at all, so it must always report a miss.
+// A skipCache layer never touches the cache, so it always reports a miss
 func Test_LayerGroup_RenderTile_SkipCacheLeavesContextFlagFalse(t *testing.T) {
 	provider := &slowGenerateProvider{delay: 0}
 	c := alwaysHitCache{}
@@ -341,15 +333,14 @@ func (panicOnSaveCache) Remove(_ context.Context, _ pkg.TileRequest) (bool, erro
 	return false, nil
 }
 
-// writeCache runs on its own goroutine after a cache miss, so an unrecovered panic from a
-// third-party cache would take down the process over a write no client is waiting on.
+// On its own goroutine, an unrecovered panic from a third-party cache would crash the process
 func Test_WriteCache_RecoversFromPanic(t *testing.T) {
 	require.NotPanics(t, func() {
 		writeCache(context.Background(), panicOnSaveCache{}, pkg.TileRequest{LayerName: "test", Z: 1, X: 0, Y: 0}, &pkg.Image{Content: []byte("x")})
 	})
 }
 
-// recordingIdentityCache captures the tenant ID that Save sees on its context.
+// Captures the tenant ID Save sees on its context
 type recordingIdentityCache struct {
 	saved   chan string
 	lookups chan string
@@ -377,9 +368,7 @@ func tenantOf(ctx context.Context) string {
 	return ""
 }
 
-// The cache write runs on a fresh context so the request finishing can't cancel it. A cache that
-// keys off the tenant, like the tenant cache, would then save under a different key than the
-// lookup used and never register a hit.
+// The write runs on a fresh context, so a tenant-keyed cache could save under a different key than the lookup
 func Test_LayerGroup_RenderTile_CacheWriteSeesTenant(t *testing.T) {
 	provider := &slowGenerateProvider{delay: 0}
 	c := &recordingIdentityCache{saved: make(chan string, 1), lookups: make(chan string, 1)}
@@ -418,8 +407,7 @@ func Test_LayerGroup_RenderTile_CacheWriteSeesTenant(t *testing.T) {
 	}
 }
 
-// slowSaveCache finishes its write only after a delay, so a Close that didn't wait would return
-// while the tile was still unwritten.
+// Finishes its write only after a delay, so a Close that didn't wait would return early
 type slowSaveCache struct {
 	saved atomic.Int32
 	delay time.Duration
@@ -439,8 +427,7 @@ func (c *slowSaveCache) Remove(_ context.Context, _ pkg.TileRequest) (bool, erro
 	return false, nil
 }
 
-// Cache writes run in the background, so a seed run that finished without waiting would report
-// tiles it never actually cached, and would close the cache out from under the write.
+// Otherwise a seed would report tiles it never cached and close the cache under the write
 func Test_LayerGroup_WaitForCacheWrites_WaitsForInFlightWrites(t *testing.T) {
 	c := &slowSaveCache{delay: 50 * time.Millisecond}
 	lg := newCacheWriteTestGroup(c)
@@ -452,7 +439,7 @@ func Test_LayerGroup_WaitForCacheWrites_WaitsForInFlightWrites(t *testing.T) {
 	require.Equal(t, int32(1), c.saved.Load())
 }
 
-// Waiting forever on a wedged cache backend would hang shutdown, so the caller's deadline wins.
+// Waiting forever on a wedged cache would hang shutdown, so the caller's deadline wins
 func Test_LayerGroup_WaitForCacheWrites_GivesUpWhenContextEnds(t *testing.T) {
 	c := &blockingCache{unblock: make(chan struct{})}
 	defer close(c.unblock)
@@ -488,8 +475,7 @@ func newCacheWriteTestGroup(c cache.Cache) *LayerGroup {
 	}
 }
 
-// hitWithErrorCache returns the pair a multi tier cache used to return: a usable tile plus the error
-// from a degraded tier.
+// Returns what a multi tier cache used to: a usable tile plus a degraded tier's error
 type hitWithErrorCache struct {
 	img *pkg.Image
 }
@@ -506,8 +492,7 @@ func (hitWithErrorCache) Remove(_ context.Context, _ pkg.TileRequest) (bool, err
 	return false, nil
 }
 
-// A tile we already have shouldn't turn into an error response just because the cache also reported
-// a problem finding it.
+// A tile in hand shouldn't become an error response because the cache also reported a problem
 func Test_LayerGroup_RenderTile_CacheHitWithErrorStillServesTile(t *testing.T) {
 	img := pkg.Image{Content: []byte("cached")}
 

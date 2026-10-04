@@ -42,23 +42,20 @@ var lyrRegex = regexp.MustCompile(`{layer\.[^{}}]*}`)
 const mvtContentType = "application/vnd.mapbox-vector-tile"
 const mltContentType = images.MltContentType
 
-// placeholderSource identifies where a replacement value originated so callers that splice the
-// value into something else (e.g. a URL) can decide whether it needs escaping.
+// Lets callers splicing a value into something else, like a URL, decide whether it needs escaping
 type placeholderSource int
 
 const (
-	// Operator-controlled, so trusted.
+	// Operator-controlled, so trusted
 	sourceEnv placeholderSource = iota
-	// Request-derived (HTTP headers), so User input.
+	// From HTTP headers, so User input
 	sourceCtx
-	// Request-derived (pattern matches against the request path), so User input.
+	// From pattern matches against the request path, so User input
 	sourceLayer
 )
 
 func replaceURLPlaceholders(ctx context.Context, tileRequest pkg.TileRequest, rawURL string, invertY bool, srid uint) (string, error) {
-	// replacePlaceholdersInString assigns $N in a fixed source order, so counting each category up
-	// front is enough to classify each $N afterwards. It keeps returning plain values because
-	// postgis uses it for SQL params, where the source tag is meaningless.
+	// $N is assigned in a fixed source order, so counts are enough to classify each. postgis needs only plain values
 	envCount := len(envRegex.FindAllString(rawURL, -1))
 	ctxCount := len(ctxRegex.FindAllString(rawURL, -1))
 
@@ -79,11 +76,7 @@ func replaceURLPlaceholders(ctx context.Context, tileRequest pkg.TileRequest, ra
 		}
 	}
 
-	// A single left-to-right scan, so substituted text is never re-examined. Repeated ReplaceAll
-	// passes would be unsafe at any ordering: a request-derived value containing a literal "$0"
-	// survives escaping ("$" is escaped by neither PathEscape nor QueryEscape) and a later pass
-	// would then splice the operator's unescaped {env.*} value, typically a secret, into the
-	// outbound URL and the debug log. One scan makes inserted text inert by construction.
+	// One scan so substituted text is never re-examined. Repeated passes could splice a "$0" from User input into a secret
 	var out strings.Builder
 	queryStart := strings.Index(rawURL, "?")
 
@@ -94,8 +87,7 @@ func replaceURLPlaceholders(ctx context.Context, tileRequest pkg.TileRequest, ra
 			continue
 		}
 
-		// Take the longest run of digits after '$' so "$10" reads as index 10, not index 1
-		// followed by a literal "0".
+		// Longest digit run so "$10" is index 10, not index 1 then "0"
 		j := i + 1
 		for j < len(rawURL) && rawURL[j] >= '0' && rawURL[j] <= '9' {
 			j++
@@ -103,8 +95,7 @@ func replaceURLPlaceholders(ctx context.Context, tileRequest pkg.TileRequest, ra
 
 		idx, err := strconv.Atoi(rawURL[i+1 : j])
 		if j == i+1 || err != nil || idx >= len(replacements) {
-			// Not a placeholder this call produced (a literal "$", or an index out of range):
-			// emit it untouched.
+			// A literal "$" or an out of range index passes through untouched
 			out.WriteByte(rawURL[i])
 			i++
 			continue
@@ -112,16 +103,11 @@ func replaceURLPlaceholders(ctx context.Context, tileRequest pkg.TileRequest, ra
 
 		value := fmt.Sprint(replacements[idx])
 
-		// {env.*} must be allowed to carry a scheme, host, and slashes, since injecting a whole
-		// base URL is the documented use for it. The request-derived sources are escaped: an
-		// unescaped "?", "#", or "/" would let a User inject query parameters, truncate the path,
-		// or traverse it.
+		// {env.*} may inject a whole base URL. Request-derived values are escaped so "?", "#" or "/" can't alter the URL
 		if sourceFor(idx) == sourceEnv {
 			out.WriteString(value)
 		} else {
-			// Escape for the position the value lands in. Positions are measured against the
-			// template, since an {env.*} value substituted in this same scan could contain a "?"
-			// and must not retroactively change how later values are escaped.
+			// Measured against the template so a "?" inside an {env.*} value can't change how later values are escaped
 			if queryStart >= 0 && i > queryStart {
 				out.WriteString(url.QueryEscape(value))
 			} else {
@@ -135,11 +121,7 @@ func replaceURLPlaceholders(ctx context.Context, tileRequest pkg.TileRequest, ra
 	return out.String(), nil
 }
 
-// Replaces arbitrary application specific placeholders in an arbitrary string with more generic prepared statement style placeholders and returns a mapping of those final placeholders to the real values.  e.g. "blah {env.foo} blah" -> "blah $1 blah" and {"$1": "bar"}
-// Values that are guaranteed to be safe (such as tile coordinates) are replaced directly in the string.
-// {env.*} matches are processed first, then {ctx.*}, then {layer.*}, each assigning $N in that
-// order starting at startParamIndex. replaceURLPlaceholders depends on that fixed ordering to tell
-// which source a given $N came from.
+// E.g. "a {env.foo}" -> "a $1" with {"$1": "bar"}. Coordinates are inlined. $N follows env, ctx, then layer order
 func replacePlaceholdersInString(ctx context.Context, tileRequest pkg.TileRequest, str string, startParamIndex int, invertY bool, srid uint) (string, []any, error) {
 	b, err := tileRequest.GetBoundsProjection(srid)
 
@@ -238,13 +220,12 @@ func replacePlaceholdersInString(ctx context.Context, tileRequest pkg.TileReques
 	return str, replacements, nil
 }
 
-// getTile is an alias for the call sites in this package. The implementation lives in pkg so
-// library consumers writing their own Go providers can call it too.
+// Lives in pkg so library consumers writing Go providers can call it too
 func getTile(ctx context.Context, clientConfig config.ClientConfig, url string, authHeaders map[string]string) (*pkg.Image, error) {
 	return pkg.GetTile(ctx, clientConfig, url, authHeaders)
 }
 
-// Turns a string indicating a range of zoom levels into an explicit array of the zoom levels. Format `<zoom>|<zoom>-<zoom>[,<range>]` e.g. `4` or `1-5` or `1-3,6`
+// Format `<zoom>|<zoom>-<zoom>[,<range>]`, e.g. `4`, `1-5` or `1-3,6`
 func ParseZoomString(str string) ([]int, error) {
 	const errorMessage = "could not parse zoom %v"
 
@@ -294,7 +275,7 @@ func ParseZoomString(str string) ([]int, error) {
 	return result, nil
 }
 
-// Reports a child known to produce the given data type, which the caller can't process.
+// Rejects a child known to produce a data type the caller can't process
 func checkForInvalidDataType(providerToCheck layer.Provider, invalidType config.DataType, path string, errorMessages config.ErrorMessages) error {
 	if layer.DescribeTree(providerToCheck).DataType == invalidType {
 		return fmt.Errorf(errorMessages.InvalidParam, path, string(invalidType))

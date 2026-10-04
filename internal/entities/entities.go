@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package entities groups the pluggable entities constructed from a configuration into a single generation that can be swapped and released as a unit
+// Package entities groups the entities built from a configuration into a generation that's swapped and released as a unit
 package entities
 
 import (
@@ -30,7 +30,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
 )
 
-// One fully constructed generation of the pluggable entities described by a configuration. Hot reload builds a second generation and swaps it in, so grouping them gives the old one a single place to be released
+// One generation of entities. Hot reload swaps in a new one, giving the old a single place to be released
 type Entities struct {
 	LayerGroup *layers.LayerGroup
 	Auth       authentication.Authentication
@@ -40,7 +40,6 @@ type Entities struct {
 	Secreter   secret.Secreter
 }
 
-// Close releases every entity holding resources.
 func (e *Entities) Close(ctx context.Context) error {
 	if e == nil {
 		return nil

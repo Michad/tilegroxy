@@ -37,7 +37,7 @@ func layerWithFacts(facts layers.CacheControlFacts, cfg *config.CacheControlConf
 	}
 }
 
-// A tile generated the given number of seconds before the reference time
+// Generated the given seconds before the reference time
 func tileAged(seconds int) *pkg.Image {
 	return &pkg.Image{CreatedAt: cacheControlNow.Add(-time.Duration(seconds) * time.Second).Unix()}
 }
@@ -49,7 +49,7 @@ func Test_CacheControl_DisabledReturnsNothing(t *testing.T) {
 	assert.Empty(t, generateCacheControlValue(cfg, l, tileAged(0), cacheControlNow))
 }
 
-// The documented example: a one hour TTL, a tile generated 50 minutes ago
+// The documented example: a one hour TTL and a tile generated 50 minutes ago
 func Test_CacheControl_DerivesRemainingLifetime(t *testing.T) {
 	cfg := config.CacheControlConfig{Enabled: new(true)}
 	l := layerWithFacts(layers.CacheControlFacts{TTL: time.Hour}, nil)
@@ -64,7 +64,7 @@ func Test_CacheControl_ExpiredTileFloorsAtZero(t *testing.T) {
 	assert.Equal(t, "public, max-age=0", generateCacheControlValue(cfg, l, tileAged(7200), cacheControlNow))
 }
 
-// An entry written by a path that bypasses the TTL cache is treated as fresh, not as 1970
+// Entries written around the TTL cache are treated as fresh, not as from 1970
 func Test_CacheControl_UnknownAgeGetsFullTTL(t *testing.T) {
 	cfg := config.CacheControlConfig{Enabled: new(true)}
 	l := layerWithFacts(layers.CacheControlFacts{TTL: time.Hour}, nil)
@@ -118,7 +118,7 @@ func Test_CacheControl_ExplicitMaxAgeReplacesDerivedLifetime(t *testing.T) {
 	assert.Equal(t, "public, max-age=86400", generateCacheControlValue(cfg, l, tileAged(3000), cacheControlNow))
 }
 
-// Zero is a set value, not an unset one, so it revalidates every time rather than deriving
+// Zero is set, not unset, so it revalidates every time rather than deriving
 func Test_CacheControl_ZeroMaxAgeIsDistinctFromUnset(t *testing.T) {
 	cfg := config.CacheControlConfig{Enabled: new(true), MaxAge: new(uint(0))}
 	l := layerWithFacts(layers.CacheControlFacts{TTL: time.Hour}, nil)
@@ -259,7 +259,7 @@ func Test_CacheControl_ValidateAllowsNoStoreAlone(t *testing.T) {
 	require.NoError(t, ValidateCacheControl(cfg, "server.cachecontrol", config.DefaultConfig().Error.Messages))
 }
 
-// A layer's block is validated merged with the server's, so the conflict is caught across the two
+// Layer blocks are validated merged with the server's, so conflicts across the two are caught
 func Test_CacheControl_ValidateAllCatchesMergedLayerConflict(t *testing.T) {
 	cfg := config.DefaultConfig()
 	cfg.Server.CacheControl = config.CacheControlConfig{Enabled: new(true), MaxAge: new(uint(60))}
@@ -326,7 +326,7 @@ func Test_CacheControl_HandlerOmitsHeaderWhenDisabled(t *testing.T) {
 	assert.Empty(t, r.Header.Get("Cache-Control"))
 }
 
-// A 304 saves the body but still has to tell the browser how long it may hold the tile
+// A 304 skips the body but must still say how long the browser may hold the tile
 func Test_CacheControl_HandlerReturnsHeaderOnNotModified(t *testing.T) {
 	first := cacheControlHandlerRequest(t, cacheControlTestConfig(t), "")
 	require.NoError(t, first.Body.Close())

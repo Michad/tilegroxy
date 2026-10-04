@@ -21,7 +21,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg/config"
 )
 
-// Sparse archives omit empty tiles, so this is a routine outcome and reported as a bounds error.
+// Sparse archives omit empty tiles, so this is routine and reported as a bounds error
 type MissingTileError struct {
 	Z, X, Y int
 }

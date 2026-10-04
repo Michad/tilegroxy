@@ -25,10 +25,7 @@ import (
 
 const tenantKeySeparator = "~"
 
-// TenantCache wraps any Cache to namespace keys by the tenant ID found on the request context,
-// so a multi-tenant deployment where a provider varies its output per tenant doesn't poison the
-// cache across tenants. A request with no tenant ID falls back to the un-namespaced key, matching
-// prior behavior for single-tenant deployments.
+// Namespaces keys by tenant so per-tenant provider output can't poison other tenants. No tenant uses the plain key
 type TenantCache struct {
 	Cache cache.Cache
 }
@@ -67,9 +64,7 @@ func (s TenantRegistration) Initialize(configAny any, deps cache.CacheDeps) (cac
 	return NewTenantCache(inner), nil
 }
 
-// namespace prefixes the request's LayerName with the tenant ID from context, if any. Tenant ID
-// is User input (it comes from an auth token on the incoming request), so it's sanitized the same
-// way LayerName itself is before being used as part of a cache key.
+// Tenant ID comes from a User's auth token, so it's sanitized like LayerName before joining the key
 func namespace(ctx context.Context, t pkg.TileRequest) pkg.TileRequest {
 	tenantID, ok := pkg.TenantIDFromContext(ctx)
 	if !ok || tenantID == nil || *tenantID == "" {

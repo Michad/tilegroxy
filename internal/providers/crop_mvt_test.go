@@ -38,11 +38,10 @@ func makeCropMvtProviderConfig() map[string]interface{} {
 	}
 }
 
-// The maximum latitude representable in web mercator, the north/south edge of the z0 tile.
+// The north/south edge of the z0 tile
 const maxMercatorLat = 85.0511287798066
 
-// embedded:box.mvt holds a single polygon filling the full 0-4096 extent of whatever tile it's
-// served for, so the bound of the output polygon shows exactly what the crop kept.
+// embedded:box.mvt fills the tile's full 0-4096 extent, so the output polygon's bound shows exactly what was kept
 func cropMvtBound(t *testing.T, bounds pkg.Bounds, tile pkg.TileRequest) orb.Bound {
 	t.Helper()
 
@@ -68,8 +67,7 @@ func cropMvtBound(t *testing.T, bounds pkg.Bounds, tile pkg.TileRequest) orb.Bou
 	return poly.Bound()
 }
 
-// Projects a latitude into the y coordinate of a tile's 0-4096 extent, so expectations follow
-// the same web mercator math as the code rather than a hand computed constant. Y grows southward.
+// Uses the same web mercator math as the code rather than hand computed constants. Y grows southward
 func latToTileY(t *testing.T, lat float64, z, y int) float64 {
 	t.Helper()
 
@@ -144,7 +142,7 @@ func Test_CropMvt_ExecuteNoBounds(t *testing.T) {
 
 func Test_CropMvt_ExecuteCropHalf(t *testing.T) {
 	p := makeCropMvtProviderConfig()
-	// Crops the west half of the world, which is also the west half of tile z0/x0/y0
+	// The west half of the world, which is also the west half of z0/x0/y0
 	f, err := CropMvtRegistration{}.Initialize(CropMvtConfig{Bounds: pkg.Bounds{South: -90, North: 90, West: -180, East: 0}, Primary: p}, layer.ProviderDeps{ErrorMessages: testErrMessages})
 
 	assert.NotNil(t, f)
@@ -167,13 +165,13 @@ func Test_CropMvt_ExecuteCropHalf(t *testing.T) {
 	poly, ok := geo.(orb.Polygon)
 	require.True(t, ok, "expected a polygon, got %T", geo)
 
-	// The west half of the world keeps x 0-2048 and the full y range
+	// The west half keeps x 0-2048 and the full y range
 	assertBound(t, 0, 0, 2048, 4096, poly.Bound())
 }
 
 func Test_CropMvt_ExecuteCropOutside(t *testing.T) {
 	p := makeCropMvtProviderConfig()
-	// Bounds fully outside tile z0/x0/y0, which covers the whole world
+	// Fully outside z0/x0/y0, which covers the whole world
 	f, err := CropMvtRegistration{}.Initialize(CropMvtConfig{Bounds: pkg.Bounds{South: -1, North: 1, West: -1, East: 1}, Primary: p}, layer.ProviderDeps{ErrorMessages: testErrMessages})
 
 	assert.NotNil(t, f)
@@ -189,51 +187,45 @@ func Test_CropMvt_ExecuteCropOutside(t *testing.T) {
 	assert.Empty(t, img.Content)
 }
 
-// The latitude falling on the 25%/75% lines of a z0 tile, atan(sinh(pi/2)) in degrees. Latitude
-// is not linear in the y axis under web mercator, so this is not 45.
+// The 25%/75% lines of a z0 tile. Latitude isn't linear in y under web mercator, so this isn't 45
 const quarterMercatorLat = 66.51326044311186
 
-// Crop bounds (A) strictly inside the tile bounds (B), which cover the whole world at z0/x0/y0.
-// Longitude +-90 is a quarter in from each side on x, and the latitude above matches that on y.
+// Crop bounds (A) strictly inside the z0 tile bounds (B). ±90 longitude is a quarter in from each side
 func Test_CropMvt_ExecuteCropBoundsInsideTile(t *testing.T) {
 	b := cropMvtBound(t, pkg.Bounds{South: -quarterMercatorLat, North: quarterMercatorLat, West: -90, East: 90}, pkg.TileRequest{LayerName: "l", Z: 0, X: 0, Y: 0})
 
 	assertBound(t, 1024, 1024, 3072, 3072, b)
 }
 
-// Tile bounds (B) at z1/x0/y0 strictly inside the crop bounds (A), which cover the whole world.
-// Nothing is clipped away, so the full extent survives.
+// Tile bounds (B) at z1/x0/y0 strictly inside world crop bounds (A), so the full extent survives
 func Test_CropMvt_ExecuteTileInsideCropBounds(t *testing.T) {
 	b := cropMvtBound(t, pkg.Bounds{South: -90, North: 90, West: -180, East: 180}, pkg.TileRequest{LayerName: "l", Z: 1, X: 0, Y: 0})
 
 	assertBound(t, 0, 0, 4096, 4096, b)
 }
 
-// Crop bounds (A) exactly equal the tile bounds (B) at z1/x0/y0, so the whole tile survives.
+// Crop bounds (A) equal tile bounds (B) at z1/x0/y0, so the whole tile survives
 func Test_CropMvt_ExecuteCropBoundsEqualsTileBounds(t *testing.T) {
 	b := cropMvtBound(t, pkg.Bounds{South: 0, North: maxMercatorLat, West: -180, East: 0}, pkg.TileRequest{LayerName: "l", Z: 1, X: 0, Y: 0})
 
 	assertBound(t, 0, 0, 4096, 4096, b)
 }
 
-// Crop bounds (A) overlap only the northeast quadrant of tile z0/x0/y0, keeping the east half
-// on x and the north half on y. MVT y grows southward, so north is the low half.
+// Overlapping only the northeast quadrant keeps the east and north halves. MVT y grows southward, so north is low
 func Test_CropMvt_ExecuteCropPartialOverlapCorner(t *testing.T) {
 	b := cropMvtBound(t, pkg.Bounds{South: 0, North: 90, West: 0, East: 180}, pkg.TileRequest{LayerName: "l", Z: 0, X: 0, Y: 0})
 
 	assertBound(t, 2048, 0, 4096, 2048, b)
 }
 
-// A crop that trims only longitude must still apply when its latitude range sits at or inside
-// the web mercator limit rather than being treated as covering the tile.
+// A longitude-only crop must still apply when its latitude range is within the mercator limit
 func Test_CropMvt_ExecuteCropLongitudeOnlyWithinMercatorLimit(t *testing.T) {
 	b := cropMvtBound(t, pkg.Bounds{South: -maxMercatorLat, North: maxMercatorLat, West: -90, East: 90}, pkg.TileRequest{LayerName: "l", Z: 0, X: 0, Y: 0})
 
 	assertBound(t, 1024, 0, 3072, 4096, b)
 }
 
-// The west half of the north-west quadrant tile, using a crop well inside the mercator limit.
-// The z1 tile spans the equator to the mercator limit, so latitude 45 lands partway down it.
+// The z1 tile spans the equator to the mercator limit, so latitude 45 lands partway down it
 func Test_CropMvt_ExecuteCropWestHalfOfQuadrantTile(t *testing.T) {
 	b := cropMvtBound(t, pkg.Bounds{South: 0, North: 45, West: -180, East: -90}, pkg.TileRequest{LayerName: "l", Z: 1, X: 0, Y: 0})
 
@@ -266,7 +258,7 @@ func Test_CropMvt_ExecuteCropWithAuth(t *testing.T) {
 
 	poly, ok := outLayers[0].Features[0].Geometry.(orb.Polygon)
 	require.True(t, ok, "expected a polygon, got %T", outLayers[0].Features[0].Geometry)
-	// The bounds from auth crop to the west half of the world
+	// The auth bounds crop to the west half of the world
 	assertBound(t, 0, 0, 2048, 4096, poly.Bound())
 }
 

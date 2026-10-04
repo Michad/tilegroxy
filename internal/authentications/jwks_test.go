@@ -35,8 +35,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// jwksServer serves a keyset that tests can swap mid-run to simulate rotation, and can be made
-// to fail to simulate an issuer outage.
+// Tests can swap the keyset to simulate rotation or make it fail to simulate an outage
 type jwksServer struct {
 	*httptest.Server
 	mu       sync.Mutex
@@ -60,7 +59,7 @@ func newJWKSServer(t *testing.T, body string) *jwksServer {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		// No-store keeps the cache from serving a stale HTTP-cached copy across a rotation.
+		// Keeps the cache from serving a stale HTTP-cached copy across a rotation
 		w.Header().Set("Cache-Control", "no-store")
 		_, _ = w.Write([]byte(s.body))
 	}))
@@ -87,7 +86,6 @@ func (s *jwksServer) requestCount() int {
 	return s.requests
 }
 
-// rsaJWKS generates an RSA key and returns it alongside a single-key JWKS document.
 func rsaJWKS(t *testing.T, kid, alg string) (*rsa.PrivateKey, string) {
 	t.Helper()
 
@@ -138,7 +136,7 @@ func Test_NewKeySet_FetchesAtStartup(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotNil(t, ks)
-	// A blocking first fetch is what makes a bad URL a startup failure rather than a 401 later.
+	// The blocking first fetch is what makes a bad URL a startup failure
 	assert.Positive(t, server.requestCount())
 }
 
@@ -158,8 +156,7 @@ func Test_NewKeySet_StartupFailureTolerated(t *testing.T) {
 
 	ks, err := testKeySet(t, JWKSConfig{URL: server.URL, RequestTimeout: 1, AllowStartupFailure: true}, []string{"RS256"})
 
-	// Tolerating the failure has to yield a usable keySet, not a nil one, or every later request
-	// panics instead of returning 401.
+	// A nil keySet would make later requests panic instead of returning 401
 	require.NoError(t, err)
 	require.NotNil(t, ks)
 }
@@ -222,8 +219,7 @@ func Test_KeyFor_UnknownKeyIDRateLimitsRefresh(t *testing.T) {
 
 	requestsAfterStartup := server.requestCount()
 
-	// A flood of distinct bogus key IDs must collapse into at most one real outbound fetch,
-	// since RefreshMinInterval hasn't elapsed between them.
+	// Distinct bogus kids within RefreshMinInterval must collapse into at most one fetch
 	for i := range 20 {
 		_, err = ks.keyFor(context.Background(), fmt.Sprintf("bogus-%d", i))
 		require.Error(t, err)
@@ -236,14 +232,14 @@ func Test_KeyFor_RotationRefetches(t *testing.T) {
 	_, doc := rsaJWKS(t, "key-1", "RS256")
 	server := newJWKSServer(t, doc)
 
-	// RefreshMinInterval of 1 second keeps the test fast while still exercising the rate limit.
+	// Short enough to keep the test fast while still exercising the rate limit
 	ks, err := testKeySet(t, JWKSConfig{URL: server.URL, RefreshMinInterval: 1}, []string{"RS256"})
 	require.NoError(t, err)
 
 	newKey, newDoc := rsaJWKS(t, "key-2", "RS256")
 	server.setBody(newDoc)
 
-	// The rate limit floor has to elapse before a forced refresh is allowed through.
+	// The rate limit floor must elapse before a forced refresh goes through
 	time.Sleep(1100 * time.Millisecond)
 
 	pub, err := ks.keyFor(context.Background(), "key-2")
@@ -255,7 +251,7 @@ func Test_KeyFor_RotationRefetches(t *testing.T) {
 }
 
 func Test_KeyFor_AlgorithmNotAllowed(t *testing.T) {
-	// The served key advertises RS512 but the operator only permits RS256.
+	// The served key advertises RS512 but only RS256 is permitted
 	_, doc := rsaJWKS(t, "key-1", "RS512")
 	server := newJWKSServer(t, doc)
 
@@ -269,8 +265,7 @@ func Test_KeyFor_AlgorithmNotAllowed(t *testing.T) {
 }
 
 func Test_KeyFor_RejectsSymmetricKey(t *testing.T) {
-	// A remote keyset handing back an HMAC key is the classic algorithm-confusion bypass: the
-	// attacker signs a token using the public key as the shared secret.
+	// Classic algorithm confusion: the attacker signs using the public key as the HMAC secret
 	doc := jwksDocument(t, map[string]any{
 		"kty": "oct",
 		"kid": "key-1",
@@ -295,7 +290,7 @@ func Test_KeyFor_NoKeyIDSingleKey(t *testing.T) {
 	ks, err := testKeySet(t, JWKSConfig{URL: server.URL}, []string{"RS256"})
 	require.NoError(t, err)
 
-	// A token with no kid is only unambiguous when the keyset holds exactly one usable key.
+	// Unambiguous only when the keyset holds exactly one usable key
 	pub, err := ks.keyFor(context.Background(), "")
 
 	require.NoError(t, err)
@@ -326,7 +321,7 @@ func Test_KeyFor_NoKeyIDMultipleKeys(t *testing.T) {
 }
 
 func Test_KeyFor_RejectsKeyWithoutAlgorithm(t *testing.T) {
-	// alg is optional per RFC 7517; omitting it must still be rejected as the safe default.
+	// alg is optional per RFC 7517, and omitting it must be rejected as the safe default
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err)
 
@@ -348,8 +343,7 @@ func Test_KeyFor_RejectsKeyWithoutAlgorithm(t *testing.T) {
 }
 
 func Test_KeyFor_ExportsPublicHalfOfPrivateKey(t *testing.T) {
-	// A well-behaved issuer never publishes private material, but keyFor must not be capable of
-	// handing back a private key if a keyset ever contains one.
+	// keyFor must never hand back private material even if an issuer publishes it
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err)
 
@@ -388,15 +382,14 @@ func Test_KeyFor_ServesStaleWhenIssuerDown(t *testing.T) {
 
 	server.setFailing(true)
 
-	// Keys fetched before the outage keep verifying; only genuinely new key IDs fail.
+	// Keys fetched before the outage keep verifying. Only new kids fail
 	pub, err := ks.keyFor(context.Background(), "key-1")
 
 	require.NoError(t, err)
 	assert.NotNil(t, pub)
 }
 
-// jwksJWT assembles a JWT authentication pointed at the test server, bypassing Initialize's
-// https requirement since httptest serves over http.
+// Bypasses Initialize's https requirement since httptest serves over http
 func jwksJWT(t *testing.T, serverURL string) *JWT {
 	t.Helper()
 
@@ -445,8 +438,7 @@ func Test_JWT_VerifiesTokenAgainstJWKS(t *testing.T) {
 
 	auth := jwksJWT(t, server.URL)
 
-	// CheckAuthentication needs a request-scoped context, not context.Background(), since it
-	// writes results (like userID) through pointers the request context provides.
+	// Results like userID are written through pointers only a request-scoped context provides
 	assert.True(t, auth.CheckAuthentication(pkg.BackgroundContext(), authRequest(t, signedToken(t, key, "key-1"))))
 }
 
@@ -456,7 +448,7 @@ func Test_JWT_RejectsTokenSignedByUnknownKey(t *testing.T) {
 
 	auth := jwksJWT(t, server.URL)
 
-	// Signed by a key the issuer never published, but claiming a kid the issuer does publish.
+	// Signed by an unpublished key but claiming a published kid
 	attacker, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err)
 
@@ -464,8 +456,7 @@ func Test_JWT_RejectsTokenSignedByUnknownKey(t *testing.T) {
 }
 
 func Test_JWT_Close_ReleasesJWKSCache(t *testing.T) {
-	// This is what the shutdown path (AuthWrapper.Close via lifecycle.CloseIfCloser) reaches
-	// for a JWKS-mode JWT auth.
+	// The shutdown path reaches this via AuthWrapper.Close and lifecycle.CloseIfCloser
 	_, doc := rsaJWKS(t, "key-1", "RS256")
 	server := newJWKSServer(t, doc)
 

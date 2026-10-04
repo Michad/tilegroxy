@@ -33,10 +33,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// spyCache is a no-op Cache that counts Close calls, registered through the same entry point
-// operator-supplied caches use. It's the only way to observe whether the reload callback actually
-// released a generation's resources, since configToEntities builds the real thing and nothing in
-// serve.go can be swapped out for a mock.
+// Counts closes. Registered like operator caches since that's the only way to observe whether a reload released a generation
 type spyCache struct {
 	closes *atomic.Int32
 }
@@ -59,8 +56,7 @@ func (r spyCacheRegistration) Initialize(_ any, _ cache.CacheDeps) (cache.Cache,
 	return spyCache(r), nil
 }
 
-// spyCacheConfig returns a DefaultConfig wired to a freshly registered spy cache so each test gets
-// its own independent close counter.
+// Each test gets its own spy registration and close counter
 func spyCacheConfig(t *testing.T) (config.Config, *atomic.Int32) {
 	t.Helper()
 
@@ -73,14 +69,13 @@ func spyCacheConfig(t *testing.T) (config.Config, *atomic.Int32) {
 	return cfg, closes
 }
 
-// A generation that's built but never wins the swap has no handler to release it later, so the
-// reload callback must close it itself rather than leaking its connection pools.
+// A generation that loses the swap has no other owner, so the callback must close it or leak its pools
 func Test_ReloadClosesGenerationWhenSwapFails(t *testing.T) {
 	cfg, closes := spyCacheConfig(t)
 
 	swapErr := errors.New("swap rejected")
 
-	// Stand in for the server's reload callback, which can fail after entities are built.
+	// Stands in for the server's reload callback, which can fail after entities are built
 	var nextReload = func(_ *config.Config, _ *entities.Entities) error {
 		return swapErr
 	}
@@ -93,8 +88,7 @@ func Test_ReloadClosesGenerationWhenSwapFails(t *testing.T) {
 	assert.Equal(t, int32(1), closes.Load(), "a generation that never started serving must have its cache closed")
 }
 
-// A successful swap hands the generation to its new owner, so the reload callback must not also
-// close it out from under that owner.
+// A successful swap transfers ownership, so the callback must not also close the generation
 func Test_ReloadDoesNotCloseGenerationWhenSwapSucceeds(t *testing.T) {
 	cfg, closes := spyCacheConfig(t)
 
@@ -110,8 +104,7 @@ func Test_ReloadDoesNotCloseGenerationWhenSwapSucceeds(t *testing.T) {
 	assert.Equal(t, int32(0), closes.Load(), "a generation that is now serving must not be closed")
 }
 
-// configToEntities failing on config validation happens before anything is constructed, so there
-// is nothing to close and swap must not run at all.
+// Validation fails before anything is constructed, so nothing is closed and swap never runs
 func Test_ReloadDoesNotCloseWhenBuildFails(t *testing.T) {
 	cfg := config.DefaultConfig()
 	cfg.Error.Mode = "not-a-real-mode"
@@ -130,9 +123,7 @@ func Test_ReloadDoesNotCloseWhenBuildFails(t *testing.T) {
 	assert.False(t, swapCalled, "swap must not run when the generation never got built")
 }
 
-// configToEntities failing after the cache was already constructed - because a later entity like
-// auth has an invalid config - must close the cache it already built rather than leaking it, since
-// nothing else will ever get a chance to release it.
+// A later entity failing must close the already-built cache since nothing else can release it
 func Test_ReloadClosesAlreadyBuiltEntitiesWhenBuildFailsPartway(t *testing.T) {
 	cfg, closes := spyCacheConfig(t)
 	cfg.Authentication = map[string]interface{}{"name": "not-a-real-auth-provider"}
@@ -152,10 +143,7 @@ func Test_ReloadClosesAlreadyBuiltEntitiesWhenBuildFailsPartway(t *testing.T) {
 	assert.Equal(t, int32(1), closes.Load(), "the cache built before the later failure must still be closed")
 }
 
-// Reloader.Reload is the public hot-reload entrypoint, so it can be invoked from a goroutine this package doesn't control
-// (a caller-supplied watch mechanism rather than the built-in file watcher, which recovers on its
-// own). A panic anywhere in the reload - here simulated in the swap step - must come back as an
-// error instead of crashing an otherwise-healthy server.
+// Reload is public and may run on a caller's goroutine, so panics must return as errors instead of crashing
 func Test_ReloadCallback_RecoversPanic(t *testing.T) {
 	cfg := config.DefaultConfig()
 
@@ -187,8 +175,7 @@ func Test_ReloadAuditsSuccess(t *testing.T) {
 	assert.Contains(t, out, audit.OutcomeSuccess)
 }
 
-// A reload that never gets built and one that fails to swap both have to leave a trail, otherwise
-// the audit log would imply the new config took effect.
+// Otherwise the audit log would imply the new config took effect
 func Test_ReloadAuditsBuildFailure(t *testing.T) {
 	var buf bytes.Buffer
 	audit.SetAuditLoggerOnStartup(slog.New(slog.NewJSONHandler(&buf, nil)))
@@ -233,13 +220,12 @@ func Test_ConfigToEntities_PassesReloadFuncToSecreter(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = ent.Close(context.Background()) })
 
-	// "none" cannot be watched, so no wrapper and no callback, but construction must still succeed
+	// "none" can't be watched, so there's no wrapper or callback, but construction must still succeed
 	assert.False(t, called)
 	require.NotNil(t, ent.Secreter)
 }
 
-// A secret rotation after a file hot-reload must re-resolve the config the operator just applied,
-// not the one the process started with.
+// Secret rotation after a file reload must re-resolve the newly applied config, not the startup one
 func Test_SecretReloadUsesLatestConfigAfterFileReload(t *testing.T) {
 	startupCfg, _ := spyCacheConfig(t)
 	newCfg := startupCfg
@@ -268,8 +254,7 @@ func Test_SecretReloadUsesLatestConfigAfterFileReload(t *testing.T) {
 	settle(t, reloader)
 }
 
-// The audit trail has to say what triggered a reload, otherwise a rotation and a file edit are
-// indistinguishable after the fact.
+// Otherwise a rotation and a file edit are indistinguishable after the fact
 func Test_ReloadAuditsSecretRotationReason(t *testing.T) {
 	var buf bytes.Buffer
 	audit.SetAuditLoggerOnStartup(slog.New(slog.NewJSONHandler(&buf, nil)))

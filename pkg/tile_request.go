@@ -101,7 +101,7 @@ func (t TileRequest) IntersectsBounds(b Bounds) (bool, error) {
 }
 
 func (t TileRequest) IntersectsBoundsProjection(b Bounds, srid uint) (bool, error) {
-	// Treat null-island only bounds as everything
+	// Null island bounds mean everything
 	if b.IsNullIsland() {
 		return true, nil
 	}
@@ -114,12 +114,11 @@ func (t TileRequest) IntersectsBoundsProjection(b Bounds, srid uint) (bool, erro
 	return b2.Intersects(b), nil
 }
 
-// Generates a string representation of the tile request with slash separators between values
+// Slash separated
 func (t TileRequest) String() string {
 	return t.StringWithSeparator("/")
 }
 
-// Generates a string representation of the tile request with an arbitrary separator between values
 func (t TileRequest) StringWithSeparator(sep string) string {
 	return t.LayerName + sep + strconv.Itoa(t.Z) + sep + strconv.Itoa(t.X) + sep + strconv.Itoa(t.Y)
 }
@@ -140,19 +139,14 @@ func (b Bounds) ToConfig() config.BoundsConfig {
 	return config.BoundsConfig{South: b.South, North: b.North, West: b.West, East: b.East}
 }
 
-// preciseMaxLat is the Web Mercator latitude limit at full precision, atan(sinh(pi)) in degrees.
-// maxLat/minLat above are truncated to 4 decimals, fine for the tile-grid clamping they're used
-// for, but not precise enough for a reported extent like WorldBounds.
+// atan(sinh(pi)) at full precision. maxLat/minLat are truncated, which suits grid clamping but not reported extents
 const preciseMaxLat = 85.0511287798066
 
-// WorldBounds is the whole-world extent in WGS84, clipped to the latitude range the Web Mercator
-// tile grid actually covers. Used as the default reported extent for anything unbounded, such as
-// a layer with no configured bounds.
+// The whole world clipped to the Web Mercator grid's latitude range. The default extent for anything unbounded
 func WorldBounds() Bounds {
 	return Bounds{South: -preciseMaxLat, North: preciseMaxLat, West: -maxLong, East: maxLong, SRID: SRIDWGS84}
 }
 
-// Generates a bounding box representation of a given geohash
 func NewBoundsFromGeohash(hashStr string) (Bounds, error) {
 	err := geohash.Validate(hashStr)
 	if err != nil {
@@ -164,24 +158,22 @@ func NewBoundsFromGeohash(hashStr string) (Bounds, error) {
 	return Bounds{South: bbox.MinLat, North: bbox.MaxLat, West: bbox.MinLng, East: bbox.MaxLng, SRID: SRIDWGS84}, nil
 }
 
-// This bounds just has the default values (all coords are 0)
+// All coordinates are zero
 func (b Bounds) IsNullIsland() bool {
 	return b.East == 0 && b.North == 0 && b.West == 0 && b.South == 0
 }
 
-// Any part of this bounds and the bounds passed in touch
+// Any part of the two bounds touch
 func (b Bounds) Intersects(b2 Bounds) bool {
 	return b2.North > b.South && b2.South < b.North && b2.East > b.West && b2.West < b.East
 }
 
-// The bounds passed in is fully contained by this bounds
+// b2 is fully contained by b
 func (b Bounds) Contains(b2 Bounds) bool {
 	return b2.South+delta >= b.South && b2.North <= b.North+delta && b2.West+delta >= b.West && b2.East <= b.East+delta
 }
 
-// IntersectionWith returns the overlapping rectangle between this bounds and b2. Only meaningful
-// when the two actually intersect; a non-overlapping pair still produces a result but with South >
-// North or West > East.
+// Only meaningful when the two intersect. Otherwise South > North or West > East
 func (b Bounds) IntersectionWith(b2 Bounds) Bounds {
 	return Bounds{
 		South: math.Max(b.South, b2.South),

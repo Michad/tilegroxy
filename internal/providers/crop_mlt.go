@@ -78,7 +78,7 @@ func (t CropMlt) GenerateTile(ctx context.Context, providerContext layer.Provide
 	return c.generate(ctx, t.Primary, providerContext, tileRequest, clipMlt)
 }
 
-// Layers newer than MLT v1 can't be clipped, so they're dropped rather than leak data outside the bounds.
+// Layers newer than MLT v1 can't be clipped, so they're dropped rather than leak data outside the bounds
 func clipMlt(ctx context.Context, content []byte, boundsToCrop pkg.Bounds, tileRequest pkg.TileRequest) ([]byte, error) {
 	layers, skipped, err := mlt.Decode(content)
 	if err != nil {
@@ -107,7 +107,7 @@ func clipMlt(ctx context.Context, content []byte, boundsToCrop pkg.Bounds, tileR
 	return mlt.Encode(kept)
 }
 
-// Converts web mercator bounds into a tile's own coordinates, where y grows southward from the tile's north edge.
+// Into the tile's own coordinates, where y grows southward from the north edge
 func tileSpaceBound(b pkg.Bounds, tile pkg.Bounds, extent float64) orb.Bound {
 	scaleX := extent / (tile.East - tile.West)
 	scaleY := extent / (tile.North - tile.South)

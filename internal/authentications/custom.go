@@ -50,7 +50,7 @@ type CustomConfig struct {
 type Custom struct {
 	CustomConfig
 	cache *otter.Cache[string, authentication.ValidationResult]
-	// Only used when cache is used to avoid multiple calls to the validation func for the same token at once
+	// Only used with the cache, to avoid concurrent validation calls for the same token
 	locks          keymutex.KeyMutex
 	validationFunc func(string) authentication.ValidationResult
 	closeFunc      func(context.Context) error
@@ -98,7 +98,7 @@ func extractToken(ctx context.Context, req *http.Request, tokenExtract map[strin
 
 		lastVal := pathSplit[len(pathSplit)-1]
 
-		// This is a little hacky, make sure we're getting a suffix and not just the last tile coordinate. Surely the token won't be an integer
+		// Hacky: assumes the token is never an integer, so a suffix can be told apart from the y coordinate
 		yVal := req.PathValue("y")
 		if yVal != lastVal {
 			return lastVal, true
@@ -177,7 +177,7 @@ func (s CustomRegistration) Initialize(cfgAny any, deps authentication.Authentic
 		return nil, fmt.Errorf(deps.ErrorMessages.ScriptError, "auth.custom", validationVal)
 	}
 
-	// close is optional so scripts written before it existed keep working unchanged.
+	// Optional so scripts written before it existed keep working
 	var closeFunc func(context.Context) error
 	if closeVal, closeErr := i.Eval("custom.close"); closeErr == nil {
 		fn, ok := closeVal.Interface().(func(context.Context) error)
@@ -261,8 +261,7 @@ func (c Custom) CheckAuthentication(ctx context.Context, req *http.Request) bool
 	return false
 }
 
-// Close calls the script's close function when it defines one. The symbol is optional so scripts written
-// before this existed keep working
+// The script's close function is optional so older scripts keep working
 func (c Custom) Close(ctx context.Context) error {
 	if c.closeFunc == nil {
 		return nil

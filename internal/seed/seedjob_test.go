@@ -48,8 +48,7 @@ func Test_SeedJob_Zoom0(t *testing.T) {
 	assert.Equal(t, []pkg.TileRequest{{LayerName: "test", Z: 0, X: 0, Y: 0}}, tiles)
 }
 
-// The count has to come from the bounds rather than from enumerating, since that's what the size
-// guard is based on for runs far too big to enumerate.
+// The size guard relies on Count for runs far too big to enumerate
 func Test_SeedJob_CountMatchesWhatIsYielded(t *testing.T) {
 	e, err := NewSeedJob("test", world(), []uint{0, 1, 2, 3})
 	require.NoError(t, err)
@@ -60,8 +59,7 @@ func Test_SeedJob_CountMatchesWhatIsYielded(t *testing.T) {
 	assert.Len(t, tiles, int(e.Count()))
 }
 
-// Resuming from a position is only meaningful if the same arguments always produce the same
-// sequence, including when the zoom flags are given out of order or repeated.
+// Resuming needs a deterministic sequence, even with zoom flags out of order or repeated
 func Test_SeedJob_OrderIsDeterministic(t *testing.T) {
 	e, err := NewSeedJob("test", world(), []uint{0, 1, 2})
 	require.NoError(t, err)
@@ -94,14 +92,13 @@ func Test_SeedJob_RestrictiveBounds(t *testing.T) {
 	_, tiles := collect(e, 0)
 	assert.Equal(t, []pkg.TileRequest{{LayerName: "test", Z: 8, X: 132, Y: 85}}, tiles)
 
-	// The same area at a coarser zoom is still a subset of the whole world.
+	// The same area at a coarser zoom is still a subset of the whole world
 	coarse, err := NewSeedJob("test", pkg.Bounds{South: 51, North: 51.6, West: 5.7, East: 7.0, SRID: pkg.SRIDWGS84}, []uint{4})
 	require.NoError(t, err)
 	assert.Less(t, coarse.Count(), uint64(256))
 }
 
-// From is what makes resuming work, so its first tile has to be exactly the one at the given
-// position, not one either side of it.
+// The first tile must be exactly the one at the given position
 func Test_SeedJob_FromResumesAtExactPosition(t *testing.T) {
 	e, err := NewSeedJob("test", world(), []uint{0, 1, 2})
 	require.NoError(t, err)
@@ -125,8 +122,7 @@ func Test_SeedJob_FromAtEndYieldsNothing(t *testing.T) {
 	assert.Empty(t, tiles)
 }
 
-// Whole zoom levels below the resume point are skipped without walking each tile, so the skipping
-// has to leave the index aligned with the full sequence.
+// Whole zoom levels are skipped without walking, which must keep the index aligned with the full sequence
 func Test_SeedJob_FromSkipsWholeZoomLevels(t *testing.T) {
 	e, err := NewSeedJob("test", world(), []uint{0, 1, 2})
 	require.NoError(t, err)

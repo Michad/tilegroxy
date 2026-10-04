@@ -28,7 +28,7 @@ import (
 	"go.opentelemetry.io/otel/metric/noop"
 )
 
-// countingProvider records how many times PreAuth is called and always authenticates for a long time.
+// Counts PreAuth calls and always authenticates for a long time
 type countingProvider struct {
 	preAuthCalls atomic.Int32
 }
@@ -47,8 +47,7 @@ func (p *countingProvider) DataType() config.DataType {
 	return config.DataTypeUnknown
 }
 
-// Many goroutines rendering on a freshly constructed layer all see the zero AuthExpiration at
-// once, so this covers both the race on Layer.providerContext and PreAuth running only once.
+// Every goroutine sees the zero AuthExpiration at once, covering both the providerContext race and single PreAuth
 func Test_Layer_ConcurrentRenderTileNoCache_NoRace(t *testing.T) {
 	provider := &countingProvider{}
 	l := &Layer{
@@ -64,8 +63,7 @@ func Test_Layer_ConcurrentRenderTileNoCache_NoRace(t *testing.T) {
 	const n = 50
 	var wg sync.WaitGroup
 	wg.Add(n)
-	// Asserting in a goroutine would hang the test rather than fail it: require.* calls
-	// runtime.Goexit, skipping the wg.Done.
+	// require.* in a goroutine calls runtime.Goexit, skipping wg.Done and hanging the test
 	errs := make(chan error, n)
 	for range n {
 		go func() {
@@ -84,8 +82,7 @@ func Test_Layer_ConcurrentRenderTileNoCache_NoRace(t *testing.T) {
 	require.Equal(t, int32(1), provider.preAuthCalls.Load(), "PreAuth should only be called once for concurrent requests on a freshly constructed layer")
 }
 
-// reauthProvider fails GenerateTile with pkg.ProviderAuthError on the first call to prove the
-// re-auth path (errors.As matching against the value-typed ProviderAuthError) actually triggers.
+// Fails the first call so errors.As against the value-typed ProviderAuthError is proven to trigger re-auth
 type reauthProvider struct {
 	preAuthCalls    atomic.Int32
 	generateCalls   atomic.Int32

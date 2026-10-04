@@ -23,7 +23,7 @@ import (
 
 const tagV1 = 1
 
-// Column type codes that aren't property columns. The low bit of every code marks it nullable.
+// Column type codes that aren't property columns. The low bit of every code marks it nullable
 const (
 	codeID       uint8 = 0
 	codeLongID   uint8 = 2
@@ -31,7 +31,7 @@ const (
 	nullableFlag uint8 = 1
 )
 
-// The number of streams in each string column layout, not counting a present stream.
+// Streams in each string column layout, not counting a present stream
 const (
 	stringPlain = 2 + iota
 	stringDictionary
@@ -53,8 +53,7 @@ func (m columnMeta) nullable() bool {
 	return m.code&nullableFlag != 0
 }
 
-// Decode parses every v1 layer of a tile. Layers in any other format, or that would take the
-// tile past maxTileBytes, are skipped and counted. Features past maxFeatureBytes are dropped.
+// Parses every v1 layer. Other formats or layers past maxTileBytes are skipped and counted. Features past maxFeatureBytes are dropped
 func Decode(data []byte) ([]Layer, int, error) {
 	r := newReader(data)
 	layers := []Layer{}
@@ -156,7 +155,7 @@ func decodeLayer(r *reader) (Layer, error) {
 	return l.dropOversized(geometrySizes), nil
 }
 
-// Oversized geometries were never built, so they're left nil.
+// Oversized geometries were never built, so they're left nil
 func (l Layer) dropOversized(geometrySizes []int) Layer {
 	keep := make([]int, 0, len(l.Geometries))
 
@@ -299,7 +298,7 @@ func readPresent(r *reader, nullable bool) ([]bool, error) {
 	return s.bools(r)
 }
 
-// Streams hold only present values, so they're spread out to one per feature with gaps left zero.
+// Streams hold only present values, so they're spread to one per feature with gaps left zero
 func expand[T any](r *reader, present []bool, values []T) ([]T, error) {
 	if present == nil {
 		return values, nil
@@ -466,7 +465,7 @@ func decodeStringColumn(r *reader, c *Column) error {
 	return err
 }
 
-// The layouts are told apart by stream count: plain, dictionary, FSST, then FSST dictionary.
+// Layouts are told apart by stream count: plain, dictionary, FSST, then FSST dictionary
 func decodeStrings(r *reader, s []stream) ([]string, error) {
 	switch len(s) {
 	case stringPlain:
@@ -523,7 +522,7 @@ func splitStrings(data []byte, lengths []uint64) ([]string, error) {
 	return out, nil
 }
 
-// Entries share memory, but each use is charged since Encode may write every value out separately.
+// Entries share memory, but each use is charged since Encode may write every value separately
 func lookupDictionary(r *reader, codes stream, dict []string) ([]string, error) {
 	c, err := codes.unsigned(r, false)
 	if err != nil {
@@ -550,7 +549,7 @@ func lookupDictionary(r *reader, codes stream, dict []string) ([]string, error) 
 	return out, nil
 }
 
-// FSST replaces common byte sequences with one byte codes into a symbol table. Code 255 escapes a literal byte.
+// FSST replaces common byte sequences with one byte codes into a symbol table. Code 255 escapes a literal byte
 func fsstStrings(r *reader, symbolLengths, symbolTable, lengths, corpus stream) ([]string, error) {
 	symLens, err := symbolLengths.unsigned(r, false)
 	if err != nil {
@@ -591,7 +590,7 @@ func fsstStrings(r *reader, symbolLengths, symbolTable, lengths, corpus stream) 
 
 const fsstEscape = 255
 
-// Long symbols let a short corpus expand enormously, so the size is checked before expanding.
+// Long symbols let a short corpus expand enormously, so the size is checked before expanding
 func fsstSize(corpus []byte, symbols [][]byte) (uint64, error) {
 	var size uint64
 
@@ -634,7 +633,7 @@ func splitSymbols(table []byte, lengths []uint64) ([][]byte, error) {
 	return out, nil
 }
 
-// The dictionary streams end with its data stream, then each child has its own present and code streams.
+// The dictionary streams end with its data stream, then each child has its own present and code streams
 func decodeSharedDictColumn(r *reader, c *Column, children []columnMeta) error {
 	count, err := r.varint32()
 	if err != nil {
@@ -681,7 +680,7 @@ func decodeSharedDictColumn(r *reader, c *Column, children []columnMeta) error {
 		c.Children = append(c.Children, child)
 	}
 
-	// Older encoders wrote a stream count one too high.
+	// Older encoders wrote a stream count one too high
 	if uint64(count) != expected && uint64(count) != expected+1 {
 		return fmt.Errorf("%w: shared dictionary %v declares %v streams but has %v", ErrMalformed, c.Name, count, expected)
 	}
@@ -725,7 +724,7 @@ func decodeSharedDictChild(r *reader, m columnMeta, dict []string) (Column, uint
 	return child, streams, err
 }
 
-// Every column must describe the same features as the geometry column.
+// Every column must describe the same features as the geometry column
 func (l Layer) validate() error {
 	n := l.FeatureCount()
 

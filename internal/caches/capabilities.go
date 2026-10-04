@@ -18,7 +18,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 )
 
-// IsKeyedByIdentity reports whether any cache in the tree keys its entries by the requester.
+// True when any cache in the tree keys entries by the requester
 func IsKeyedByIdentity(c cache.Cache) bool {
 	found := false
 
@@ -31,13 +31,13 @@ func IsKeyedByIdentity(c cache.Cache) bool {
 	return found
 }
 
-// IsNoop reports whether the cache never retains a tile. A Parent of noop caches is not itself a noop.
+// True when the cache never retains a tile. A Parent of noop caches isn't itself a noop
 func IsNoop(c cache.Cache) bool {
 	n, ok := as[cache.Noop](c)
 	return ok && n.IsNoop()
 }
 
-// as finds the first cache implementing T, starting at c and following Decorators inward.
+// Finds the first cache implementing T, starting at c and following Decorators inward
 func as[T any](c cache.Cache) (T, bool) {
 	for c != nil {
 		if found, ok := c.(T); ok {
@@ -57,7 +57,7 @@ func as[T any](c cache.Cache) (T, bool) {
 	return zero, false
 }
 
-// walk calls visit on c and every cache nested below it, depth first in configuration order.
+// Depth first in configuration order
 func walk(c cache.Cache, visit func(cache.Cache)) {
 	if c == nil {
 		return

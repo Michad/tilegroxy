@@ -71,7 +71,7 @@ func (s CropMvtRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (la
 	return &CropMvt{cfg, primary, deps.ErrorMessages}, nil
 }
 
-// Clipping a tile of the other vector format would fail on every tile that isn't wholly inside the bounds.
+// Clipping the other vector format would fail on every tile not wholly inside the bounds
 func constructCropPrimary(rawConfig map[string]interface{}, deps layer.ProviderDeps, path string, rejected config.DataType) (layer.Provider, error) {
 	primary, err := layers.ConstructProvider(rawConfig, deps)
 	if err != nil {
@@ -110,7 +110,7 @@ func clipMvt(_ context.Context, content []byte, boundsToCrop pkg.Bounds, tileReq
 	return mvt.Marshal(collection)
 }
 
-// vectorCrop is the part of cropping shared by every vector format, leaving only the clip itself to the format.
+// Shared by every vector format, leaving only the clip itself to the format
 type vectorCrop struct {
 	bounds         pkg.Bounds
 	boundsFromAuth bool

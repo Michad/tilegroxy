@@ -30,16 +30,16 @@ import (
 )
 
 type ServeOptions struct {
-	// Rereads the configuration from its original source.
+	// Rereads the configuration from its original source
 	ReloadConfig func() (config.Config, error)
-	// Receives hot reloads. One is created when nil.
+	// Created when nil
 	Reloader *Reloader
 }
 
 // Windows never delivers SIGHUP, so signal-driven reload is Unix only
 var reloadSignals = []os.Signal{syscall.SIGHUP}
 
-// Serve runs until interrupted
+// Runs until interrupted
 func Serve(cfg *config.Config, opts ServeOptions, out io.Writer) error {
 	reloader := opts.Reloader
 	if reloader == nil {
@@ -67,7 +67,7 @@ func Serve(cfg *config.Config, opts ServeOptions, out io.Writer) error {
 	})
 }
 
-// Signals received before the server is ready wait for it, then collapse with any others into one reload
+// Signals before the server is ready wait for it, then collapse with any others into one reload
 func watchReloadSignal(ready <-chan struct{}, load func() (config.Config, error), reload func(*config.Config, string) error, out io.Writer) func() {
 	sigs := make(chan os.Signal, 1)
 	done := make(chan struct{})

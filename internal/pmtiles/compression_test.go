@@ -56,7 +56,7 @@ func Test_Decompress_Unsupported(t *testing.T) {
 }
 
 func Test_Decompress_MaxLengthNearUint64Max_NoOverflowPanic(t *testing.T) {
-	// maxLength beyond MaxInt64 must not wrap the read limit.
+	// maxLength beyond MaxInt64 must not wrap the read limit
 	got, err := decompress(gzipBytes(t, []byte("hello")), CompressionGzip, math.MaxUint64)
 
 	require.NoError(t, err)

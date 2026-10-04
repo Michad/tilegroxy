@@ -46,7 +46,7 @@ func (h slogContextHandler) Handle(ctx context.Context, r slog.Record) error {
 	return h.Handler.Handle(ctx, r)
 }
 
-// slogSkipEmptyContextHandler is slogContextHandler for records that may not have a request behind
+// For records that may not have a request behind them
 type slogSkipEmptyContextHandler struct {
 	slog.Handler
 	keys []string
@@ -91,7 +91,7 @@ func configureMainLogging(cfg *config.Config) (func() error, error) {
 		return noopClose, nil
 	}
 
-	// Validate format and level before opening files to avoid leaks on validation errors.
+	// Validate before opening files so validation errors can't leak them
 	var level slog.Level
 	custLogLevel, ok := configload.CustomLogLevel[strings.ToLower(cfg.Logging.Main.Level)]
 
@@ -106,7 +106,7 @@ func configureMainLogging(cfg *config.Config) (func() error, error) {
 
 	switch cfg.Logging.Main.Format {
 	case config.MainFormatPlain, config.MainFormatJSON:
-		// Valid formats; continue to file opening and handler setup.
+		// Valid, continue to file opening
 	default:
 		return nil, fmt.Errorf(cfg.Error.Messages.InvalidParam, "logging.main.format", cfg.Logging.Main.Format)
 	}
@@ -185,7 +185,7 @@ func configureAuditLogging(cfg config.AuditConfig, errorMessages config.ErrorMes
 		return noopClose, nil
 	}
 
-	// Validate the format before opening files to avoid leaks on validation errors.
+	// Validate before opening files so validation errors can't leak them
 	switch cfg.Format {
 	case config.AuditFormatPlain, config.AuditFormatJSON:
 	default:
@@ -232,7 +232,7 @@ func configureAccessLogging(cfg config.AccessConfig, errorMessages config.ErrorM
 	closeLog := func() error { return nil }
 
 	if cfg.Console || len(cfg.Path) > 0 {
-		// Pick the handler before opening anything, so an invalid format can't strand a file
+		// Picked before opening anything so an invalid format can't strand a file
 		var wrap func(io.Writer, http.Handler) http.Handler
 
 		switch cfg.Format {

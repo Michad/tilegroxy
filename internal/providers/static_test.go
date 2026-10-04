@@ -32,7 +32,7 @@ func Test_DataType_Static(t *testing.T) {
 	assert.Equal(t, config.DataTypeMLT, StaticRegistration{}.DataType(StaticConfig{Image: "embedded:empty.mlt"}))
 }
 
-// Vector tiles have to carry their own content type, clients can't sniff them like a PNG.
+// Clients can't sniff vector tiles like a PNG
 func Test_Static_ContentType(t *testing.T) {
 	tests := map[string]string{
 		"embedded:transparent.png": "image/png",

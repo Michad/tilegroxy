@@ -42,8 +42,7 @@ func Test_CloseIfCloser(t *testing.T) {
 	require.NoError(t, CloseIfCloser(ctx, c))
 	assert.True(t, c.closed)
 
-	// The majority of entities don't hold resources; those must be a silent no-op rather than an
-	// error, since every call site closes indiscriminately.
+	// Every call site closes indiscriminately, so resource-free entities must be a silent no-op
 	require.NoError(t, CloseIfCloser(ctx, notClosable{}))
 	require.NoError(t, CloseIfCloser(ctx, nil))
 

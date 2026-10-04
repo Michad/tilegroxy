@@ -35,7 +35,7 @@ var cacheReq = pkg.TileRequest{LayerName: "___hc___", Z: 0, X: 0, Y: 0}
 
 type CacheCheckConfig struct {
 	Delay uint
-	// The ids of the caches to probe. Empty means every configured cache
+	// Empty means every configured cache
 	Caches []string
 }
 
@@ -122,8 +122,7 @@ func makeImage() (pkg.Image, error) {
 		col = strings.Repeat("0", numColorDigits-len(col)) + col
 	}
 
-	// Rendered rather than fetched: each tick uses a new random color, which GetStaticImage would
-	// cache permanently.
+	// Rendered rather than fetched since GetStaticImage would permanently cache each random color
 	img, err := images.RenderColorImage(images.KeyPrefixColor + col)
 
 	if err != nil {

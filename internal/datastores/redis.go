@@ -160,7 +160,6 @@ func (w RedisWrapper) Native() any {
 	return w.client
 }
 
-// Close shuts down the underlying redis client, releasing its connection pool.
 func (w RedisWrapper) Close(_ context.Context) error {
 	if w.client == nil {
 		return nil

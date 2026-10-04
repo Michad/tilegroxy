@@ -39,7 +39,7 @@ func deserializeEntries(data []byte) ([]entry, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", errInvalidDirectory, err)
 	}
-	// Every entry needs at least four bytes, so a larger count means a corrupt archive.
+	// Every entry needs at least four bytes, so a larger count means corruption
 	if count > uint64(len(data))/4 {
 		return nil, fmt.Errorf("%w: %d entries in %d bytes", errInvalidDirectory, count, len(data))
 	}
@@ -103,7 +103,7 @@ func readUint32(r *bytes.Reader) (uint32, error) {
 	return uint32(v), nil // #nosec G115 -- range checked above
 }
 
-// A run length of zero marks a leaf directory covering every ID from its TileID up to the next entry.
+// A zero run length marks a leaf directory covering every ID from its TileID to the next entry
 func findTile(entries []entry, tileID uint64) (entry, bool) {
 	i := sort.Search(len(entries), func(k int) bool { return entries[k].TileID > tileID })
 	if i == 0 {

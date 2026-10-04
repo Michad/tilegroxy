@@ -21,7 +21,6 @@ import (
 	"strconv"
 )
 
-// Utility type used in a couple caches
 type HostAndPort struct {
 	Host string
 	Port uint16
@@ -43,22 +42,15 @@ func HostAndPortArrayToStringArray(servers []HostAndPort) []string {
 
 var unsafeChar = regexp.MustCompile(`[^A-Za-z0-9\-.]`)
 
-// Dots are safe individually but a run of them is a traversal segment.
+// Dots are safe individually but a run of them is a traversal segment
 var dotRun = regexp.MustCompile(`\.{2,}`)
 
-// safeLayerName sanitizes a tile request's LayerName for use as part of a cache key, filename, or
-// object key. LayerName is User input for pattern layers, so it can't be used verbatim: it could
-// otherwise escape the disk cache directory, smuggle "/" into an S3 object key, or violate a
-// backend's key charset limits.
-//
-// Substituting rather than hashing keeps keys human-readable, which S3 lifecycle rules and
-// prefix-scoped IAM policies depend on. The tradeoff is that the mapping is many-to-one: "a/b" and
-// "a b" both become "a_b" and then share cache entries.
+// LayerName is User input. Substituting rather than hashing keeps keys readable, but "a/b" and "a b" collide
 func safeLayerName(name string) string {
 	replaced := unsafeChar.ReplaceAllString(name, "_")
 	replaced = dotRun.ReplaceAllString(replaced, "_")
 
-	// A name that is only "." still resolves to a directory when used as a path component.
+	// "." alone still resolves to a directory as a path component
 	if replaced == "." {
 		replaced = "_"
 	}
@@ -66,14 +58,12 @@ func safeLayerName(name string) string {
 	return replaced
 }
 
-// memcached's hard key length limit, in bytes.
+// In bytes
 const memcachedMaxKeyLength = 250
 
 const hashSuffixLength = 16
 
-// safeMemcachedKey builds a memcached key from a prefix and an already-sanitized body. A long but
-// otherwise safe layer name can still overflow the length limit, so an oversized key is truncated
-// with a hash suffix appended to keep it unique.
+// Long but safe layer names can still overflow the limit, so oversized keys are truncated with a hash suffix
 func safeMemcachedKey(prefix, body string) string {
 	key := prefix + body
 
@@ -84,7 +74,7 @@ func safeMemcachedKey(prefix, body string) string {
 	sum := sha256.Sum256([]byte(key))
 	suffix := "_" + hex.EncodeToString(sum[:])[:hashSuffixLength]
 
-	// An operator could set a prefix long enough that prefix+suffix alone exceeds the limit.
+	// An operator could set a prefix long enough that prefix plus suffix alone exceeds the limit
 	maxPrefixLen := len(prefix)
 	if maxPrefixLen > memcachedMaxKeyLength-len(suffix) {
 		maxPrefixLen = memcachedMaxKeyLength - len(suffix)

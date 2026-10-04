@@ -54,7 +54,7 @@ func validateCORS(cfg config.CORSConfig, errorMessages config.ErrorMessages) err
 	return nil
 }
 
-// Confirms if an origin should be allowed. Returns (origin to use in header, allowed)
+// Returns the origin to put in the header and whether it's allowed
 func checkAllowedOrigin(cfg config.CORSConfig, origin string) (string, bool) {
 	if origin == "" {
 		return "", false
@@ -73,7 +73,7 @@ func checkAllowedOrigin(cfg config.CORSConfig, origin string) (string, bool) {
 	return "", false
 }
 
-// Compares origin pattern against origin. Scheme and port are optional in the pattern, wildcards allowed
+// Scheme and port are optional in the pattern, and wildcards are allowed
 func originMatchesPattern(pattern, origin string) bool {
 	patternScheme, patternRest := splitScheme(pattern)
 	originScheme, originRest := splitScheme(origin)
@@ -103,14 +103,14 @@ func splitScheme(s string) (string, string) {
 func splitPort(s string) (string, string) {
 	host, port, err := net.SplitHostPort(s)
 	if err != nil {
-		// Assuming this is because there's no explicit port - just strip ipv6 brackets
+		// Presumably no explicit port, so just strip IPv6 brackets
 		return strings.Trim(s, "[]"), ""
 	}
 
 	return host, port
 }
 
-// Evaluate that a host (no scheme/port) matches a pattern. Supporting * and **
+// Host has no scheme or port. Supports * and **
 func hostMatchesPattern(pattern, host string) bool {
 	if pattern == "" {
 		return false
@@ -125,7 +125,7 @@ func hostMatchRecursive(pattern, host []string) bool {
 	}
 
 	if pattern[0] == "**" {
-		// Greedy but bounded: try consuming one label at a time until the rest of the pattern fits
+		// Greedy but bounded: consume one label at a time until the rest of the pattern fits
 		for i := 1; i <= len(host); i++ {
 			if hostMatchRecursive(pattern[1:], host[i:]) {
 				return true
@@ -209,7 +209,7 @@ func writeAllowHeaders(cfg config.CORSConfig, w http.ResponseWriter, req *http.R
 	}
 }
 
-// The headers CORS owns once enabled
+// Owned by CORS once enabled
 var corsOwnedHeaders = []string{
 	"Access-Control-Allow-Origin",
 	"Access-Control-Allow-Credentials",
@@ -273,7 +273,7 @@ func (w *corsResponseWriter) applyCORS() {
 	writeCORSHeaders(w.cfg, w.ResponseWriter, w.req)
 }
 
-// Preserved so the gzip and timeout layers can still detect flushing support through this wrapper
+// Lets the gzip and timeout layers detect flushing support through this wrapper
 func (w *corsResponseWriter) Flush() {
 	w.applyCORS()
 

@@ -58,7 +58,7 @@ func Test_CacheControlFacts_ReadsTTLFromCache(t *testing.T) {
 	assert.NotNil(t, l.Cache)
 }
 
-// The TTL can sit anywhere in the chain, so the whole tree is walked to find it
+// The TTL can sit anywhere in the chain
 func Test_CacheControlFacts_FindsNestedTTL(t *testing.T) {
 	l := constructWithCache(t,
 		map[string]any{"name": "tenant", "cache": map[string]any{"name": "ttl", "ttl": 120, "cache": map[string]any{"name": "memory"}}},
@@ -122,7 +122,7 @@ func Test_CacheControlFacts_IdentityPlaceholderIsPerIdentity(t *testing.T) {
 	}
 }
 
-// The documented limit of the detection: another way of varying per caller isn't seen
+// The documented limit of detection: other ways of varying per caller aren't seen
 func Test_CacheControlFacts_UndetectedPerCallerVariationStaysPublic(t *testing.T) {
 	l := constructWithCache(t,
 		map[string]any{"name": "memory"},

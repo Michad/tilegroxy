@@ -29,8 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// GetTile is exported from pkg so a library consumer writing their own Go provider gets the same
-// MaxLength/ContentTypes/StatusCodes enforcement as the built-in ones without reimplementing it.
+// Library consumers writing Go providers get the same enforcement as the built-in ones
 func Test_GetTile(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "image/png")
@@ -78,7 +77,7 @@ func Fuzz_EncodeDecodeImage(f *testing.F) {
 		assert.Equal(t, img1.Content, img2.Content)
 		assert.Equal(t, img1.CreatedAt, img2.CreatedAt)
 
-		// Test backwards compatibility
+		// Backwards compatibility
 		img3, err := DecodeImage(img1.Content)
 		require.NoError(t, err)
 
@@ -91,7 +90,7 @@ func Fuzz_EncodeDecodeImage(f *testing.F) {
 	})
 }
 
-// A truncated or empty payload must read as a cache miss, not a successful empty tile.
+// A truncated or empty payload must read as a cache miss, not an empty tile
 func Test_DecodeImage_Empty(t *testing.T) {
 	for _, b := range [][]byte{nil, {}} {
 		img, err := DecodeImage(b)
@@ -100,7 +99,7 @@ func Test_DecodeImage_Empty(t *testing.T) {
 	}
 }
 
-// v1 payloads (Content + ContentType, no CreatedAt) must still decode after v2 was introduced.
+// v1 payloads without CreatedAt must still decode
 func Test_DecodeImage_V1(t *testing.T) {
 	b := bytes.Buffer{}
 	e := gob.NewEncoder(&b)

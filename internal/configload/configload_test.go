@@ -168,8 +168,7 @@ func TestDecodeEntityConfig_StringUsesTextUnmarshaler(t *testing.T) {
 	assert.Equal(t, upperText("VALUE"), out.Bar)
 }
 
-// AutomaticEnv resolves against viper's key set, so without defaults registered an env var only
-// takes effect for a key the config file already contains.
+// Without registered defaults an env var only applies to keys already in the config file
 func TestLoadConfig_EnvOverrideWorksForKeyAbsentFromFile(t *testing.T) {
 	t.Setenv("SERVER_PORT", "9999")
 
@@ -279,8 +278,7 @@ func TestAnalyticsYml(t *testing.T) {
 }
 
 func TestAnalyticsAsListRejected(t *testing.T) {
-	// Viper merges the entries of a list of maps into one map, so without an explicit check this decodes
-	// into a silent mixture of the two entries instead of an error.
+	// Viper merges a list of maps into one map, silently mixing the entries without an explicit check
 	_, err := LoadConfig("analytics:\n  - name: clickhouse\n    table: t\n  - name: none\n")
 
 	require.Error(t, err)
@@ -328,7 +326,7 @@ func TestMergeDefaultsFrom(t *testing.T) {
 func TestMergeDefaultsFrom_UnknownLength(t *testing.T) {
 	defaults := config.ClientConfig{UnknownLength: new(true)}
 
-	// A layer explicitly tightening the limit keeps its false.
+	// A layer explicitly tightening the limit keeps its false
 	explicitFalse := config.ClientConfig{UnknownLength: new(false), Timeout: 5}
 	MergeClientDefaults(&explicitFalse, defaults)
 	assert.False(t, *explicitFalse.UnknownLength, "an explicit layer-level false must not be overridden by a permissive global default")
@@ -337,7 +335,7 @@ func TestMergeDefaultsFrom_UnknownLength(t *testing.T) {
 	MergeClientDefaults(&unset, defaults)
 	assert.True(t, *unset.UnknownLength, "should inherit default")
 
-	// Unrelated fields still inherit normally.
+	// Unrelated fields still inherit normally
 	assert.Equal(t, uint(0), unset.Timeout)
 	assert.Equal(t, uint(5), explicitFalse.Timeout)
 }
@@ -350,14 +348,12 @@ func Test_ShutdownTimeoutDerivesFromItsPhases(t *testing.T) {
 
 	require.NoError(t, Validate(c))
 
-	// Unset covers both phases that spend it, so the budget always fits a full-length request
-	// plus the drain wait.
+	// Unset covers both phases so the budget always fits a full-length request plus the drain wait
 	assert.Equal(t, uint(50), EffectiveShutdownTimeout(c.Server))
 }
 
 func Test_ShutdownTimeoutFitsShortRequestTimeouts(t *testing.T) {
-	// A short request timeout with the default drain delay used to be rejected outright, which
-	// broke configs that were valid before the drain delay existed.
+	// Used to be rejected, which broke configs that were valid before the drain delay existed
 	c := config.DefaultConfig()
 	c.Server.Timeout = 1
 
@@ -376,7 +372,7 @@ func Test_ShutdownTimeoutExplicitWins(t *testing.T) {
 }
 
 func Test_DrainDelayZeroIsValid(t *testing.T) {
-	// Zero is meaningful: it means a preStop hook already covered endpoint propagation.
+	// Zero means a preStop hook already covered endpoint propagation
 	c := config.DefaultConfig()
 	c.Server.DrainDelay = 0
 
@@ -388,7 +384,7 @@ func Test_DrainDelayCannotConsumeWholeBudget(t *testing.T) {
 	c.Server.ShutdownTimeout = 5
 	c.Server.DrainDelay = 5
 
-	// A drain delay at or above the budget leaves no time to actually drain or flush.
+	// A drain delay at or above the budget leaves no time to drain or flush
 	require.Error(t, Validate(c))
 }
 
@@ -414,10 +410,7 @@ func TestLoadAndWatchConfigFromFile_ReloadsOnWrite(t *testing.T) {
 	}
 }
 
-// Regression test for a bug where deleting and recreating the config file (the atomic-save
-// pattern used by many editors, `mv`, and Kubernetes ConfigMap symlink swaps) permanently and
-// silently killed hot-reload: the underlying fsnotify watch died on the Remove event and was
-// never re-armed, so every subsequent save was ignored with no error surfaced anywhere.
+// Atomic saves (editors, mv, ConfigMap symlink swaps) used to kill the fsnotify watch, silently disabling hot reload
 func TestLoadAndWatchConfigFromFile_SurvivesDeleteAndRecreate(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "tilegroxy.yml")
@@ -441,9 +434,7 @@ func TestLoadAndWatchConfigFromFile_SurvivesDeleteAndRecreate(t *testing.T) {
 	}
 }
 
-// A panic anywhere in the watch or reload goroutines (including inside a caller-supplied
-// onReload) must be recovered and reported through onReload rather than crashing the process,
-// since these goroutines have no other supervisor.
+// These goroutines have no supervisor, so panics, even in onReload, must be reported through onReload
 func TestLoadAndWatchConfigFromFile_PanicInOnReloadDoesNotCrash(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "tilegroxy.yml")
@@ -494,8 +485,7 @@ func TestNormalizeCaches_Absent(t *testing.T) {
 	assert.Equal(t, "none", entries[0].Config["name"])
 }
 
-// A config decoded from YAML or JSON produces []interface{} rather than the []map[string]interface{}
-// a Go-built config uses, so both have to normalize the same way.
+// Decoded YAML or JSON yields []interface{} rather than []map[string]interface{}, and both must normalize the same
 func TestNormalizeCaches_ArrayForms(t *testing.T) {
 	expected := []ConfigWithID{
 		{ID: "a", Config: map[string]interface{}{"id": "a", "name": "memory"}},
@@ -556,8 +546,7 @@ func TestNormalizeCaches_Errors(t *testing.T) {
 	require.ErrorContains(t, err, "cache")
 }
 
-// Viper merges a list of maps into one map key by key, so the cache list has to be recovered from
-// the raw value. Without that, two caches silently decode into a single mixed-up entry.
+// Without recovering the raw list, viper merges two caches into a single mixed-up entry
 func TestLoadConfig_CacheListSurvivesViperMerge(t *testing.T) {
 	c, err := LoadConfig(`
 cache:
@@ -628,6 +617,6 @@ layers:
 	assert.Equal(t, "roads", md.VectorLayers[0].ID)
 	assert.Equal(t, "Roads", md.VectorLayers[0].Description)
 	assert.Equal(t, 2, *md.VectorLayers[0].MinZoom)
-	// Viper lowercases every map key, including field names.
+	// Viper lowercases every map key, including field names
 	assert.Equal(t, map[string]string{"name": "String"}, md.VectorLayers[0].Fields)
 }

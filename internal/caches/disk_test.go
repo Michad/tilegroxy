@@ -58,7 +58,7 @@ func TestDisk_CoordinateLayout(t *testing.T) {
 	_, err = os.Stat(filepath.Join(dir, "layer", "1", "2", "3"))
 	require.NoError(t, err, "tile should be written to layer/z/x/y")
 
-	// No stray temp files should survive alongside the tile.
+	// No stray temp files should survive beside the tile
 	entries, err := os.ReadDir(filepath.Join(dir, "layer", "1", "2"))
 	require.NoError(t, err)
 	require.Len(t, entries, 1)
@@ -77,7 +77,7 @@ func TestDisk_CoordinateLayout(t *testing.T) {
 	require.Nil(t, result)
 }
 
-// The two layouts use different paths, so an entry written by one must not be found by the other.
+// Each layout uses different paths so an entry written by one must not be found by the other
 func TestDisk_LayoutsDoNotShareEntries(t *testing.T) {
 	dir, err := os.MkdirTemp("", "tilegroxy-test-disk")
 	defer os.RemoveAll(dir)
@@ -97,7 +97,7 @@ func TestDisk_LayoutsDoNotShareEntries(t *testing.T) {
 	require.Nil(t, result)
 }
 
-// LayerName is User input, so a traversal sequence must not escape the tree in coordinate layout either.
+// LayerName is User input, so traversal must not escape the tree in coordinate layout either
 func TestDisk_CoordinateLayoutPathTraversalIsContained(t *testing.T) {
 	dir, err := os.MkdirTemp("", "tilegroxy-test-disk")
 	defer os.RemoveAll(dir)
@@ -134,8 +134,7 @@ func TestDisk_InvalidLayout(t *testing.T) {
 	require.Error(t, err)
 }
 
-// LayerName is User input for pattern layers, so a traversal sequence in it must not let
-// Save/Lookup reach outside the configured cache directory.
+// LayerName is User input for pattern layers, so traversal must not escape the cache directory
 func TestDisk_LayerNamePathTraversalIsContained(t *testing.T) {
 	dir, err := os.MkdirTemp("", "tilegroxy-test-disk")
 	defer os.RemoveAll(dir)
@@ -152,7 +151,6 @@ func TestDisk_LayerNamePathTraversalIsContained(t *testing.T) {
 	err = c.Save(context.Background(), maliciousTile, &img)
 	require.NoError(t, err)
 
-	// Nothing should have been written outside the cache directory.
 	_, statErr := os.Stat(filepath.Join(filepath.Dir(filepath.Dir(dir)), "escaped"))
 	require.True(t, os.IsNotExist(statErr), "traversal payload escaped the cache directory")
 
@@ -166,7 +164,7 @@ func TestDisk_LayerNamePathTraversalIsContained(t *testing.T) {
 	require.Equal(t, img.Content, result.Content)
 }
 
-// A 0-byte file left by an interrupted write must read as a miss rather than an empty tile.
+// A 0-byte file from an interrupted write must read as a miss, not an empty tile
 func TestDisk_TruncatedFileIsAMiss(t *testing.T) {
 	dir, err := os.MkdirTemp("", "tilegroxy-test-disk")
 	defer os.RemoveAll(dir)
@@ -183,7 +181,7 @@ func TestDisk_TruncatedFileIsAMiss(t *testing.T) {
 	require.NoError(t, err)
 	require.Nil(t, result)
 
-	// The miss lets a subsequent save replace the truncated entry.
+	// The miss lets a later save replace the truncated entry
 	img := pkg.Image{Content: []byte("payload")}
 	require.NoError(t, c.Save(context.Background(), tile, &img))
 

@@ -27,8 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// existingRequiredFuncs supplies the minimum validate a custom auth script needs to initialize, so
-// close-specific tests don't have to restate it.
+// The minimum script needed to initialize, so close-specific tests don't restate it
 const existingRequiredFuncs = `
 func validate(token string) tilegroxy.ValidationResult {
 	return tilegroxy.ValidationResult{Pass: true, Expiration: time.Now().Add(time.Hour), UserID: "user"}
@@ -84,7 +83,7 @@ func close(ctx context.Context) error {
 }
 
 func Test_CustomAuthCloseOptionalWhenAbsent(t *testing.T) {
-	// Scripts written before this existed must keep working untouched.
+	// Scripts written before close existed must keep working
 	a := buildCustomAuthFromScript(t, existingRequiredFuncs)
 
 	require.NoError(t, a.Close(pkg.BackgroundContext()))
@@ -125,8 +124,7 @@ func validate(token string) tilegroxy.ValidationResult {
 }
 
 func Test_CustomAuthValidate_TenantOptional(t *testing.T) {
-	// A script that never sets TenantID must leave the context's tenant at its default, not panic
-	// or write a zero-value placeholder that reads as "authenticated but tenantless" incorrectly.
+	// The tenant must stay at its default rather than panic or read as "authenticated but tenantless"
 	script := `
 func validate(token string) tilegroxy.ValidationResult {
 	return tilegroxy.ValidationResult{Pass: true, Expiration: time.Now().Add(time.Hour), UserID: "user-1"}
@@ -146,8 +144,7 @@ func validate(token string) tilegroxy.ValidationResult {
 }
 
 func Test_CustomAuthValidate_WrongSignatureFailsAtInitialize(t *testing.T) {
-	// The old tuple-return signature is no longer accepted; it must fail at startup with a clear
-	// error rather than silently miscompiling or panicking at request time.
+	// The old tuple-return signature must fail clearly at startup, not miscompile or panic per request
 	script := `
 func validate(token string) (bool, time.Time, string, []string) {
 	return true, time.Now().Add(time.Hour), "user", nil

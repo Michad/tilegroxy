@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// A batch size above 0 is what marks a backend as watchable
+// A batch size above 0 marks a backend as watchable
 func Test_AWSSecretsManager_ReportsWatchableBatchSize(t *testing.T) {
 	assert.Positive(t, AWSSecretsManagerSecreter{}.CheckBatchSize())
 }

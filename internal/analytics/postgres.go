@@ -28,11 +28,11 @@ import (
 
 type PostgresConfig struct {
 	CommonConfig `mapstructure:",squash"`
-	// The ID of a datastore with a name of "postgresql"
+	// ID of a datastore named "postgresql"
 	Datastore string
-	// The table to insert events into. Tilegroxy never creates it, see the docs for the recommended DDL
+	// Never created by tilegroxy. See the docs for the recommended DDL
 	Table string
-	// Overrides for the default column names, keyed by the logical field name
+	// Column name overrides keyed by logical field name
 	Columns map[string]string
 }
 
@@ -40,7 +40,7 @@ type Postgres struct {
 	PostgresConfig
 	pool    *pgxpool.Pool
 	columns map[string]string
-	// The identifier used by CopyFrom, split so a schema-qualified table works
+	// Split so a schema-qualified table works with CopyFrom
 	tableIdent pgx.Identifier
 	batcher    *Batcher
 }
@@ -61,7 +61,7 @@ func (s PostgresRegistration) Name() string {
 	return "postgresql"
 }
 
-// PostgresLegacyRegistration is the deprecated "postgres" alias for PostgresRegistration
+// Deprecated "postgres" alias for PostgresRegistration
 type PostgresLegacyRegistration struct {
 	PostgresRegistration
 }
@@ -166,14 +166,13 @@ func (p *Postgres) flush(ctx context.Context, events []analytics.Event) error {
 		rows = append(rows, []any{e.Time, e.LayerID, e.Z, e.X, e.Y, e.UserID, extra})
 	}
 
-	// CopyFrom uses the binary COPY protocol which is substantially faster than a multi-row INSERT
+	// Binary COPY is substantially faster than a multi-row INSERT
 	_, err := p.pool.CopyFrom(ctx, p.tableIdent, columnNames, pgx.CopyFromRows(rows))
 
 	return err
 }
 
-// marshalFields renders the extra fields as JSON for the jsonb column. A nil map becomes an empty JSON
-// object instead of SQL NULL so queries don't have to special-case it
+// Nil becomes an empty JSON object rather than SQL NULL so queries needn't special-case it
 func marshalFields(fields map[string]any) ([]byte, error) {
 	if fields == nil {
 		return []byte("{}"), nil
@@ -183,6 +182,6 @@ func marshalFields(fields map[string]any) ([]byte, error) {
 }
 
 func (p *Postgres) Close(ctx context.Context) error {
-	// The pool belongs to the datastore registry which closes it separately
+	// The pool belongs to the datastore registry, which closes it separately
 	return p.batcher.Close(ctx)
 }

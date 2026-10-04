@@ -38,13 +38,13 @@ const (
 
 var allDiskLayouts = []DiskLayout{DiskLayoutFlat, DiskLayoutCoordinate}
 
-// FileMode is a permission set written either as a number or as an octal string like "0644"
+// Written either as a number or an octal string like "0644"
 type FileMode uint32
 
 func (m *FileMode) UnmarshalText(text []byte) error {
 	octal := strings.TrimPrefix(strings.ToLower(string(text)), "0o")
 
-	// A bit size of 9 limits the value to the rwx permission bits, 0777
+	// Bit size 9 limits the value to the rwx bits, 0777
 	v, err := strconv.ParseUint(octal, 8, 9)
 	if err != nil {
 		return fmt.Errorf("%q is not an octal file mode between 0 and 0777", text)
@@ -64,14 +64,14 @@ type Disk struct {
 	DiskConfig
 }
 
-// For the "flat" layout - layer name and tile coordinates in one filename
+// For the "flat" layout: layer name and coordinates in one filename
 func requestToFilename(t pkg.TileRequest) string {
 	safe := t
 	safe.LayerName = safeLayerName(t.LayerName)
 	return safe.StringWithSeparator("_")
 }
 
-// Returns the directory holding the tile and the tile's filename within it, both relative to Path. For the "coordinate" layout
+// For the "coordinate" layout. Returns the directory and filename, both relative to Path
 func (c Disk) requestToPath(t pkg.TileRequest) (string, string) {
 	if c.Layout == DiskLayoutCoordinate {
 		dir := filepath.Join(safeLayerName(t.LayerName), strconv.Itoa(t.Z), strconv.Itoa(t.X))
@@ -160,7 +160,7 @@ func (c Disk) Save(_ context.Context, t pkg.TileRequest, img *pkg.Image) error {
 
 	tmpName := tmp.Name()
 
-	// Both fail in the success path: the rename already consumed the temp file and closed it.
+	// Both fail on success since the rename already consumed and closed the temp file
 	defer func() {
 		_ = tmp.Close()
 		_ = os.Remove(tmpName)

@@ -30,7 +30,7 @@ type AuthenticationConfig struct {
 	UserID string // Recorded as the user for every request that passes
 }
 
-// Authentication accepts requests carrying a fixed key in a header
+// Accepts requests carrying a fixed key in a header
 type Authentication struct {
 	AuthenticationConfig
 }

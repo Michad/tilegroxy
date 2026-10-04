@@ -32,7 +32,7 @@ func (c CheckConfig) GetDelay() uint {
 	return c.Delay
 }
 
-// Check reports healthy while a layer can still render a tile, bypassing the cache
+// Healthy while a layer can still render a tile, bypassing the cache
 type Check struct {
 	CheckConfig
 	layers layer.LayerGroup
