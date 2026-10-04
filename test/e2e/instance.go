@@ -28,6 +28,8 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/Michad/tilegroxy/internal/testutil"
 )
 
 const (
@@ -80,7 +82,7 @@ func (l *lockedBuffer) String() string {
 func Start(t *testing.T, c Config) *Instance {
 	t.Helper()
 
-	p := ports{Server: freePort(t), Health: freePort(t)}
+	p := ports{Server: testutil.FreePort(t), Health: testutil.FreePort(t)}
 	path := writeConfig(t, renderConfig(t, c.Raw, p))
 
 	args := []string{"serve", "-c", path}

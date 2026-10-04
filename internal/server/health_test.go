@@ -27,13 +27,12 @@ import (
 	"time"
 
 	"github.com/Michad/tilegroxy/internal/layers"
+	"github.com/Michad/tilegroxy/internal/testutil"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-const port = 3456
 
 func initialize(t *testing.T, fail bool) (config.Config, *layers.LayerGroup) {
 	cfgAll := config.DefaultConfig()
@@ -59,7 +58,7 @@ func initialize(t *testing.T, fail bool) (config.Config, *layers.LayerGroup) {
 	}
 
 	cfgAll.Health.Enabled = true
-	cfgAll.Health.Port = port
+	cfgAll.Health.Port = testutil.FreePort(t)
 	cfgAll.Health.Checks = []map[string]any{
 		{
 			"name":  "tile",
@@ -99,7 +98,7 @@ func Test_Health_Success(t *testing.T) {
 	require.NoError(t, err)
 	time.Sleep(1 * time.Second)
 
-	baseURL := "http://127.0.0.1:" + strconv.Itoa(port)
+	baseURL := "http://127.0.0.1:" + strconv.Itoa(cfg.Health.Port)
 	resp, err := http.DefaultClient.Get(baseURL)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusNoContent, resp.StatusCode)
@@ -157,7 +156,7 @@ func Test_HealthReportsUnreadyWhenDraining(t *testing.T) {
 // state into the liveness path would actually be caught here.
 func Test_HealthDrainingLeavesLivenessOK(t *testing.T) {
 	ctx := pkg.BackgroundContext()
-	drainPort := port + 1
+	drainPort := testutil.FreePort(t)
 	h := config.HealthConfig{Host: "127.0.0.1", Port: drainPort}
 
 	shutdown, startDraining, err := setupHealthEndpoints(ctx, h, nil, &sync.Map{})
@@ -193,7 +192,7 @@ func Test_Health_Fail(t *testing.T) {
 	callback, _, err := SetupHealth(ctx, &cfg, lg, nil)
 	require.NoError(t, err)
 
-	baseURL := "http://127.0.0.1:" + strconv.Itoa(port)
+	baseURL := "http://127.0.0.1:" + strconv.Itoa(cfg.Health.Port)
 
 	resp, err := http.DefaultClient.Get(baseURL + "/health")
 	require.NoError(t, err)

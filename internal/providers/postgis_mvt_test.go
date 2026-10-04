@@ -152,7 +152,7 @@ func Test_GenerateTile(t *testing.T) {
 
 	var conn *pgxpool.Conn
 
-	for i := range []int{0, 1, 2, 4, 8} {
+	for _, i := range []int{0, 1, 2, 4, 8} {
 		time.Sleep(time.Duration(i) * time.Second)
 		conn, err = pg.Acquire(ctx)
 		if err == nil {

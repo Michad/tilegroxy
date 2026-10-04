@@ -28,6 +28,7 @@ import (
 
 	"github.com/Michad/tilegroxy/internal/entities"
 	"github.com/Michad/tilegroxy/internal/layers"
+	"github.com/Michad/tilegroxy/internal/testutil"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/stretchr/testify/require"
 )
@@ -36,19 +37,6 @@ const reloadTestSignal = syscall.SIGUSR2
 
 func init() {
 	InterruptFlags = append(InterruptFlags, reloadTestSignal)
-}
-
-// freePort asks the kernel for an unused TCP port and immediately releases it. The gap before the
-// server binds is racy, but less so than hardcoded ports colliding with anything else in CI.
-func freePort(t *testing.T) int {
-	t.Helper()
-
-	l, err := net.Listen("tcp", "127.0.0.1:0")
-	require.NoError(t, err)
-	port := l.Addr().(*net.TCPAddr).Port
-	require.NoError(t, l.Close())
-
-	return port
 }
 
 func dialPort(port int) bool {
@@ -109,10 +97,10 @@ func waitForHealthStatus(t *testing.T, port int, want string) {
 func healthTestConfig(t *testing.T) (config.Config, int) {
 	t.Helper()
 
-	healthPort := freePort(t)
+	healthPort := testutil.FreePort(t)
 
 	cfg := config.DefaultConfig()
-	cfg.Server.Port = freePort(t)
+	cfg.Server.Port = testutil.FreePort(t)
 	cfg.Health.Enabled = true
 	cfg.Health.Port = healthPort
 	cfg.Health.Host = "127.0.0.1"

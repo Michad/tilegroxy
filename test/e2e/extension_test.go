@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Michad/tilegroxy/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -33,7 +34,7 @@ import (
 // The example in examples/extension builds only against pkg and cmd, so a breaking change to either
 // fails `make extension` or this test before it reaches a release.
 func Test_Extension_TestsThenServesEverySampleEntity(t *testing.T) {
-	p := ports{Server: freePort(t), Health: freePort(t)}
+	p := ports{Server: testutil.FreePort(t), Health: testutil.FreePort(t)}
 	dir := t.TempDir()
 	env := []string{
 		"SERVER_PORT=" + strconv.Itoa(p.Server),
