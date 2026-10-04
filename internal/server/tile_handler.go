@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/Michad/tilegroxy/internal/static"
+	"github.com/Michad/tilegroxy/internal/telemetry"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/analytics"
@@ -46,7 +47,6 @@ import (
 )
 
 var packageName = static.GetPackage()
-var version, ref, buildDate = static.GetVersionInformation()
 
 type tileHandler struct {
 	*generationHolder
@@ -82,13 +82,10 @@ func setServiceSpanAttributes(span trace.Span) {
 		return
 	}
 
-	span.SetAttributes(
-		attribute.String("service.name", "tilegroxy"),
-		attribute.String("service.version", version+"-"+ref),
-		attribute.String("service.build", buildDate),
+	span.SetAttributes(telemetry.ServiceAttributes(
 		attribute.String("code.namespace", static.GetPackage()+"/internal/server/tile_handler.go"),
 		attribute.String("code.function", "ServeHTTP"),
-	)
+	)...)
 }
 
 func setTileSpanAttributes(span trace.Span, tileReq pkg.TileRequest) {
