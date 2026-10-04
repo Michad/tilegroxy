@@ -26,20 +26,21 @@ import (
 
 	"github.com/Michad/tilegroxy/internal/authentications"
 	"github.com/Michad/tilegroxy/internal/caches"
+	"github.com/Michad/tilegroxy/internal/configload"
 	"github.com/Michad/tilegroxy/internal/images"
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
-	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func configToEntities(cfg config.Config) (*layer.LayerGroup, authentication.Authentication, error) {
-	caches, err1 := cache.ConstructCacheRegistry(context.Background(), cfg.Cache, cfg.DefaultCache, nil, cache.CacheDeps{ErrorMessages: cfg.Error.Messages})
-	auth, err2 := authentication.ConstructAuth(cfg.Authentication, authentication.AuthenticationDeps{ErrorMessages: cfg.Error.Messages})
-	layerGroup, err3 := layer.ConstructLayerGroup(context.Background(), cfg, caches, nil, nil)
+func configToEntities(cfg config.Config) (*layers.LayerGroup, authentication.Authentication, error) {
+	caches, err1 := caches.ConstructCacheRegistry(context.Background(), cfg.Cache, cfg.DefaultCache, nil, cache.CacheDeps{ErrorMessages: cfg.Error.Messages})
+	auth, err2 := authentications.ConstructAuth(cfg.Authentication, authentication.AuthenticationDeps{ErrorMessages: cfg.Error.Messages})
+	layerGroup, err3 := layers.ConstructLayerGroup(context.Background(), cfg, caches, nil, nil)
 
 	return layerGroup, auth, errors.Join(err1, err2, err3)
 }
@@ -54,7 +55,7 @@ func Test_TileHandler_AllowedArea(t *testing.T) {
 	var tileCache cache.Cache
 	auth = authentications.Noop{}
 	tileCache = caches.Noop{}
-	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, cache.NewSingleCacheRegistry(tileCache), nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(tileCache), nil, nil)
 	require.NoError(t, err)
 
 	handler, err := newTileHandler(testServing(&cfg, auth, lg))
@@ -118,7 +119,7 @@ func Test_TileHandler_Proxy(t *testing.T) {
 	var tileCache cache.Cache
 	auth = authentications.Noop{}
 	tileCache = caches.Noop{}
-	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, cache.NewSingleCacheRegistry(tileCache), nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(tileCache), nil, nil)
 	require.NoError(t, err)
 
 	handler, err := newTileHandler(testServing(&cfg, auth, lg))
@@ -159,7 +160,7 @@ func Test_TileHandler_RefToStatic(t *testing.T) {
 	var tileCache cache.Cache
 	auth = authentications.Noop{}
 	tileCache = caches.Noop{}
-	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, cache.NewSingleCacheRegistry(tileCache), nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(tileCache), nil, nil)
 	require.NoError(t, err)
 
 	handler, err := newTileHandler(testServing(&cfg, auth, lg))
@@ -232,10 +233,10 @@ func Test_TileHandler_ExecuteCustom(t *testing.T) {
     }`
 
 	tileCache := caches.Noop{}
-	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, cache.NewSingleCacheRegistry(tileCache), nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(tileCache), nil, nil)
 	require.NoError(t, err)
 
-	authO, err := authentication.ConstructAuth(auth, authentication.AuthenticationDeps{ErrorMessages: cfg.Error.Messages})
+	authO, err := authentications.ConstructAuth(auth, authentication.AuthenticationDeps{ErrorMessages: cfg.Error.Messages})
 	require.NoError(t, err)
 
 	handler, err := newTileHandler(testServing(&cfg, authO, lg))
@@ -298,7 +299,7 @@ layers:
       name: static
       color: "FFFFFF"
 `
-	cfg, err := config.LoadConfig(configRaw)
+	cfg, err := configload.LoadConfig(configRaw)
 	require.NoError(t, err)
 	lg, auth, err := configToEntities(cfg)
 	require.NoError(t, err)
@@ -347,7 +348,7 @@ layers:
       color: "FFFFFF"
 `
 
-	cfg, err := config.LoadConfig(configRaw)
+	cfg, err := configload.LoadConfig(configRaw)
 	require.NoError(t, err)
 	lg, auth, err := configToEntities(cfg)
 	require.NoError(t, err)
@@ -382,7 +383,7 @@ layers:
       color: "FFFFFF"
 `
 
-	cfg, err := config.LoadConfig(configRaw)
+	cfg, err := configload.LoadConfig(configRaw)
 	require.NoError(t, err)
 	lg, auth, err := configToEntities(cfg)
 	require.NoError(t, err)
@@ -429,7 +430,7 @@ layers:
       color: "FFFFFF"
 `
 
-	cfg, err := config.LoadConfig(configRaw)
+	cfg, err := configload.LoadConfig(configRaw)
 	require.NoError(t, err)
 	lg, auth, err := configToEntities(cfg)
 	require.NoError(t, err)
@@ -483,7 +484,7 @@ layers:
       color: "FFFFFF"
 `
 
-	cfg, err := config.LoadConfig(configRaw)
+	cfg, err := configload.LoadConfig(configRaw)
 	require.NoError(t, err)
 	lg, auth, err := configToEntities(cfg)
 	require.NoError(t, err)
@@ -525,7 +526,7 @@ layers:
       color: "FFFFFF"
 `
 
-	cfg, err := config.LoadConfig(configRaw)
+	cfg, err := configload.LoadConfig(configRaw)
 	require.NoError(t, err)
 	lg, auth, err := configToEntities(cfg)
 	require.NoError(t, err)
@@ -573,7 +574,7 @@ layers:
           image: "embedded:box.mvt"
 `
 
-	cfg, err := config.LoadConfig(configRaw)
+	cfg, err := configload.LoadConfig(configRaw)
 	require.NoError(t, err)
 	lg, auth, err := configToEntities(cfg)
 	require.NoError(t, err)
@@ -617,7 +618,7 @@ layers:
       image: "embedded:box.mlt"
 `
 
-	cfg, err := config.LoadConfig(configRaw)
+	cfg, err := configload.LoadConfig(configRaw)
 	require.NoError(t, err)
 	lg, auth, err := configToEntities(cfg)
 	require.NoError(t, err)
@@ -676,7 +677,7 @@ layers:
           image: "embedded:box.mvt"
 `
 
-	cfg, err := config.LoadConfig(configRaw)
+	cfg, err := configload.LoadConfig(configRaw)
 	require.NoError(t, err)
 	lg, auth, err := configToEntities(cfg)
 	require.NoError(t, err)
@@ -716,7 +717,7 @@ layers:
       color: "FFFFFF"
 `
 
-	cfg, err := config.LoadConfig(configRaw)
+	cfg, err := configload.LoadConfig(configRaw)
 	require.NoError(t, err)
 	lg, auth, err := configToEntities(cfg)
 	require.NoError(t, err)

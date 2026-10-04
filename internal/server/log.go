@@ -26,8 +26,9 @@ import (
 	"strings"
 
 	"github.com/Michad/tilegroxy/internal/audit"
+	"github.com/Michad/tilegroxy/internal/configload"
+	"github.com/Michad/tilegroxy/internal/static"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/static"
 	"github.com/gorilla/handlers"
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 )
@@ -92,7 +93,7 @@ func configureMainLogging(cfg *config.Config) (func() error, error) {
 
 	// Validate format and level before opening files to avoid leaks on validation errors.
 	var level slog.Level
-	custLogLevel, ok := config.CustomLogLevel[strings.ToLower(cfg.Logging.Main.Level)]
+	custLogLevel, ok := configload.CustomLogLevel[strings.ToLower(cfg.Logging.Main.Level)]
 
 	if ok {
 		level = custLogLevel

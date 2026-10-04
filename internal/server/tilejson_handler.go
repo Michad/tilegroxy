@@ -21,9 +21,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/layer"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
@@ -292,7 +292,7 @@ func serveDocument(ctx context.Context, w http.ResponseWriter, req *http.Request
 
 // findTileJSONLayer finds the eligible layer whose ID or example list produces the given name,
 // returning the layer and the exact name it matched under.
-func findTileJSONLayer(lg *layer.LayerGroup, name string) (*layer.Layer, string) {
+func findTileJSONLayer(lg *layers.LayerGroup, name string) (*layers.Layer, string) {
 	for _, l := range lg.Layers() {
 		if !l.TileJSONEligible() {
 			continue

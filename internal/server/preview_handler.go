@@ -20,9 +20,9 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
 type previewHandler struct {
@@ -58,7 +58,7 @@ var previewPageHTML string
 
 var previewPageTemplate = template.Must(template.New("preview").Parse(previewPageHTML))
 
-func previewBounds(doc layer.TileJSONDocument) (bool, pkg.Bounds) {
+func previewBounds(doc layers.TileJSONDocument) (bool, pkg.Bounds) {
 	bounds := pkg.Bounds{West: doc.Bounds[0], South: doc.Bounds[1], East: doc.Bounds[2], North: doc.Bounds[3], SRID: pkg.SRIDWGS84}
 
 	return bounds != pkg.WorldBounds(), bounds

@@ -30,12 +30,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	_ "github.com/Michad/tilegroxy/internal/checks"
+	"github.com/Michad/tilegroxy/internal/caches"
+	"github.com/Michad/tilegroxy/internal/checks"
+	"github.com/Michad/tilegroxy/internal/layers"
+	"github.com/Michad/tilegroxy/internal/static"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/Michad/tilegroxy/pkg/entities/health"
-	"github.com/Michad/tilegroxy/pkg/entities/layer"
-	"github.com/Michad/tilegroxy/pkg/static"
 )
 
 var startupWaitTime = 100 * time.Millisecond
@@ -169,7 +169,7 @@ func (h healthHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func SetupHealth(ctx context.Context, cfg *config.Config, layerGroup *layer.LayerGroup, caches *cache.CacheRegistry) (func(context.Context) error, func(), error) {
+func SetupHealth(ctx context.Context, cfg *config.Config, layerGroup *layers.LayerGroup, caches *caches.CacheRegistry) (func(context.Context) error, func(), error) {
 	h := cfg.Health
 
 	slog.InfoContext(ctx, fmt.Sprintf("Initializing health subsystem with %v checks on %v:%v", len(h.Checks), h.Host, h.Port))
@@ -240,21 +240,21 @@ func setupHealthEndpoints(ctx context.Context, h config.HealthConfig, checks []h
 	return srv.Shutdown, func() { draining.Store(true) }, err
 }
 
-func setupCheckRoutines(ctx context.Context, h config.HealthConfig, layerGroup *layer.LayerGroup, caches *cache.CacheRegistry, cfg *config.Config, checkResultCache *sync.Map) ([]health.HealthCheck, func(context.Context) error, error) {
-	checks := make([]health.HealthCheck, 0, len(h.Checks))
+func setupCheckRoutines(ctx context.Context, h config.HealthConfig, layerGroup *layers.LayerGroup, cacheRegistry *caches.CacheRegistry, cfg *config.Config, checkResultCache *sync.Map) ([]health.HealthCheck, func(context.Context) error, error) {
+	built := make([]health.HealthCheck, 0, len(h.Checks))
 	var callback func(context.Context) error
 	tickers := make([]*time.Ticker, 0, len(h.Checks))
 	exitChannels := make([]chan struct{}, 0, len(h.Checks))
 
 	for _, checkCfg := range h.Checks {
-		hc, err := health.ConstructHealthCheck(checkCfg, layerGroup, caches, cfg)
+		hc, err := checks.ConstructHealthCheck(checkCfg, layerGroup, cacheRegistry, cfg)
 		if err != nil {
 			return nil, nil, err
 		}
-		checks = append(checks, hc)
+		built = append(built, hc)
 	}
 
-	for i, check := range checks {
+	for i, check := range built {
 		delay := check.GetDelay()
 
 		if delay > math.MaxInt32 {
@@ -301,7 +301,7 @@ func setupCheckRoutines(ctx context.Context, h config.HealthConfig, layerGroup *
 		return nil
 	}
 
-	return checks, callback, nil
+	return built, callback, nil
 }
 
 func tickCheck(ctx context.Context, i int, check health.HealthCheck, ttl time.Duration, checkResultCache *sync.Map) {

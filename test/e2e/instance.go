@@ -90,12 +90,20 @@ func Start(t *testing.T, c Config) *Instance {
 
 	args = append(args, c.Args...)
 
-	// The context is a backstop that outlives Start and is released by stop, so graceful shutdown
+	return launch(t, BinaryPath(t), args, c.Env, "", p, path)
+}
+
+// launch starts binary and blocks until it binds p.Server. An empty dir keeps the test's working directory.
+func launch(t *testing.T, binary string, args []string, env []string, dir string, p ports, configPath string) *Instance {
+	t.Helper()
+
+	// The context is a backstop that outlives launch and is released by stop, so graceful shutdown
 	// stays the harness's job rather than being pre-empted by a cancelled context.
 	ctx, cancel := context.WithCancel(context.Background())
 
-	cmd := exec.CommandContext(ctx, BinaryPath(t), args...)
-	cmd.Env = append(os.Environ(), c.Env...)
+	cmd := exec.CommandContext(ctx, binary, args...)
+	cmd.Env = append(os.Environ(), env...)
+	cmd.Dir = dir
 
 	buf := &lockedBuffer{}
 	cmd.Stdout = buf
@@ -106,7 +114,7 @@ func Start(t *testing.T, c Config) *Instance {
 		t.Fatalf("cannot start tilegroxy: %v", err)
 	}
 
-	inst := &Instance{ConfigPath: path, t: t, cmd: cmd, cancel: cancel, ports: p, out: buf}
+	inst := &Instance{ConfigPath: configPath, t: t, cmd: cmd, cancel: cancel, ports: p, out: buf}
 
 	t.Cleanup(inst.stop)
 

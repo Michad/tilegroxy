@@ -1,0 +1,554 @@
+// Copyright 2024 Michael Davis
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package layers
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"regexp"
+	"slices"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/Michad/tilegroxy/internal/caches"
+	"github.com/Michad/tilegroxy/internal/configload"
+	"github.com/Michad/tilegroxy/internal/datastores"
+	"github.com/Michad/tilegroxy/internal/static"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/cache"
+	"github.com/Michad/tilegroxy/pkg/entities/layer"
+	"github.com/Michad/tilegroxy/pkg/entities/secret"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
+)
+
+var packageName = static.GetPackage()
+
+var metricNameSafeChars = regexp.MustCompile(`[^A-Za-z0-9_-]`)
+
+// Leaves room for the "tilegroxy.tiles.layer." prefix and the longest suffix within OTEL's 255
+// character limit.
+const maxSanitizedMetricNameLen = 200
+
+// sanitizeMetricName makes a layer ID safe to embed inside an OTEL instrument name. Such names
+// must start with a letter and may only contain ASCII letters, digits, '_', '.', '-', and '/', so
+// an unsanitized ID makes Int64Counter construction fail, which is fatal at startup. '.' and '/'
+// are replaced too even though OTEL permits them, since the ID sits mid-name and shouldn't be able
+// to inject extra segments.
+func sanitizeMetricName(id string) string {
+	sanitized := metricNameSafeChars.ReplaceAllString(id, "_")
+
+	if len(sanitized) > maxSanitizedMetricNameLen {
+		sanitized = sanitized[:maxSanitizedMetricNameLen]
+	}
+
+	return sanitized
+}
+
+type layerSegment struct {
+	value       string
+	placeholder bool
+}
+
+// Utility method that prepends with checking for dupe segments and propagating errors along
+func prependLayerSegment(existingSegments []layerSegment, newSegment layerSegment, errs error) ([]layerSegment, error) {
+	if newSegment.placeholder {
+		if len(existingSegments) > 0 && existingSegments[0].placeholder {
+			errs = errors.Join(errs, errors.New("placeholders without separators"))
+		}
+
+		for _, cur := range existingSegments {
+			if cur.placeholder && newSegment.value == cur.value {
+				errs = errors.Join(errs, errors.New("dupe: "+newSegment.value))
+			}
+		}
+	}
+
+	return slices.Concat([]layerSegment{newSegment}, existingSegments), errs
+}
+
+// Breaks a pattern string into a series of segments, each of which is either a placeholder or a literal string value
+func parsePattern(pattern string) ([]layerSegment, error) {
+	if pattern == "" {
+		return []layerSegment{}, nil
+	}
+
+	firstOpening := strings.Index(pattern, "{")
+	firstClosing := strings.Index(pattern, "}")
+
+	if firstOpening > 0 {
+		seg := layerSegment{value: pattern[0:firstOpening], placeholder: false}
+		next, err := parsePattern(pattern[firstOpening:])
+		return prependLayerSegment(next, seg, err)
+	} else if firstOpening == 0 {
+		if firstClosing > 0 {
+			seg := layerSegment{value: pattern[1:firstClosing], placeholder: true}
+			next, err := parsePattern(pattern[firstClosing+1:])
+			return prependLayerSegment(next, seg, err)
+		}
+
+		return []layerSegment{{value: pattern[1:], placeholder: true}}, errors.New("missing }")
+	}
+
+	return []layerSegment{{value: pattern, placeholder: false}}, nil
+}
+
+func match(segments []layerSegment, str string) (bool, map[string]string) {
+	matches := make(map[string]string)
+	var lastSeg *layerSegment
+	strLoc := 0
+	for _, seg := range segments {
+		if seg.placeholder {
+			lastSeg = &seg
+		} else {
+			matchLoc := strings.Index(str[strLoc:], seg.value)
+			if matchLoc >= 0 {
+				if lastSeg != nil {
+					matches[lastSeg.value] = str[strLoc : matchLoc+strLoc]
+				} else if matchLoc > 0 {
+					return false, matches
+				}
+				strLoc = matchLoc + strLoc + len(seg.value)
+			} else {
+				return false, matches
+			}
+			lastSeg = nil
+		}
+	}
+	if lastSeg != nil {
+		matches[lastSeg.value] = str[strLoc:]
+	} else if strLoc < len(str) {
+		return false, matches
+	}
+
+	return true, matches
+}
+
+func constructValidation(raw map[string]string, errorMessages config.ErrorMessages) (map[string]*regexp.Regexp, error) {
+	if raw == nil {
+		return nil, nil
+	}
+
+	res := make(map[string]*regexp.Regexp)
+	errs := make([]error, 0)
+
+	for k, v := range raw {
+		var err error
+
+		if v == "" {
+			errs = append(errs, fmt.Errorf(errorMessages.InvalidParam, "layer.paramValidator."+k, v))
+			continue
+		}
+
+		if v[0] != '^' {
+			v = "^" + v
+		}
+		if v[len(v)-1] != '$' {
+			v += "$"
+		}
+
+		res[k], err = regexp.Compile(v)
+
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func validateParamMatches(values map[string]string, regexp map[string]*regexp.Regexp) bool {
+	if regexp == nil {
+		return true
+	}
+
+	for k, r := range regexp {
+		if k == "*" {
+			for _, v := range values {
+				if !r.MatchString(v) {
+					return false
+				}
+			}
+		} else if !r.MatchString(values[k]) {
+			return false
+		}
+	}
+
+	return true
+}
+
+type Layer struct {
+	ID                 string
+	Pattern            []layerSegment
+	ParamValidator     map[string]*regexp.Regexp
+	Config             config.LayerConfig
+	Provider           layer.Provider
+	Cache              cache.Cache
+	ErrorMessages      config.ErrorMessages
+	DataType           config.DataType // The version from the config with auto-resolution applied
+	providerContext    layer.ProviderContext
+	authMutex          sync.Mutex
+	allowCoalesce      bool              // The version from config with auto-resolution applied
+	CacheControl       CacheControlFacts // What this layer's cache and provider say about caching its tiles downstream
+	tileAllCounter     metric.Int64Counter
+	tileAuthCounter    metric.Int64Counter
+	tileErrorCounter   metric.Int64Counter
+	tileSuccessCounter metric.Int64Counter
+	metadata           ResolvedMetadata
+}
+
+// The inner provider is built and described first so the right bounds wrapper can be picked from its data type.
+func wrapBounds(inner layer.Provider, rawConfig config.LayerConfig, datatype config.DataType, deps layer.ProviderDeps) (layer.Provider, error) {
+	wrapperName := "cropmvt"
+
+	switch datatype {
+	case config.DataTypeRaster:
+		wrapperName = "crop"
+	case config.DataTypeMLT:
+		wrapperName = "cropmlt"
+	case config.DataTypeMVT, config.DataTypeUnknown:
+	}
+
+	reg, ok := layer.RegisteredProvider(wrapperName)
+	wrapper, isWrapper := reg.(layer.BoundsWrapper)
+	if !ok || !isWrapper {
+		return nil, fmt.Errorf(deps.ErrorMessages.EnumError, "provider.name", wrapperName, layer.RegisteredProviderNames())
+	}
+
+	p, err := wrapper.WrapBounds(inner, pkg.BoundsFromConfig(rawConfig.Bounds), deps)
+	if err != nil {
+		return nil, err
+	}
+
+	return ProviderWrapper{Name: wrapperName, Provider: p, dataType: datatype}, nil
+}
+
+// The placeholders a provider uses to interpolate the requester's identity into a URL, query, or
+// body. A provider config mentioning either produces per-identity tiles.
+var identityPlaceholders = []string{"{ctx.user}", "{ctx.tenant}"}
+
+// usesIdentityPlaceholder reports whether a raw provider config interpolates the requester's
+// identity anywhere. Nesting providers (ref, fallback, blend) hide configs inside themselves, and
+// a placeholder can sit in a map key as readily as a value, so the whole tree is walked.
+func usesIdentityPlaceholder(node any) bool {
+	switch v := node.(type) {
+	case string:
+		return slices.ContainsFunc(identityPlaceholders, func(placeholder string) bool {
+			return strings.Contains(v, placeholder)
+		})
+	case map[string]any:
+		for key, val := range v {
+			if usesIdentityPlaceholder(key) || usesIdentityPlaceholder(val) {
+				return true
+			}
+		}
+	case []any:
+		return slices.ContainsFunc(v, usesIdentityPlaceholder)
+	}
+
+	return false
+}
+
+// Coalescing serves every waiter the leader's tile, so it defaults on only where that's safe: the
+// layer caches (otherwise there's little to gain), its cache isn't keyed by identity, and the
+// provider doesn't build its request out of who asked. A tenant cache or an identity placeholder
+// says the tile varies per requester.
+func resolveAllowCoalesce(rawConfig config.LayerConfig, layerCache cache.Cache) bool {
+	if rawConfig.AllowCoalesce != nil {
+		return *rawConfig.AllowCoalesce
+	}
+
+	if rawConfig.SkipCache {
+		return false
+	}
+
+	if caches.ContainsCache(layerCache, "tenant") {
+		return false
+	}
+
+	if usesIdentityPlaceholder(rawConfig.Provider) {
+		return false
+	}
+
+	return !isNoopCache(layerCache)
+}
+
+// CacheControlFacts is what a layer's own configuration says about how its tiles may be cached
+// downstream, resolved once at construction. The server turns these into header directives.
+type CacheControlFacts struct {
+	// Uncacheable is true when the layer keeps no tiles of its own, which argues against anything
+	// downstream keeping them either.
+	Uncacheable bool
+	// PerIdentity is true when the tiles appear to vary by who asked, so a shared cache must not
+	// hand one caller's tile to the next.
+	PerIdentity bool
+	// TTL is the lifetime the layer's cache enforces, if any. Zero means nothing to go on.
+	TTL time.Duration
+}
+
+func resolveCacheControlFacts(rawConfig config.LayerConfig, layerCache cache.Cache) CacheControlFacts {
+	facts := CacheControlFacts{
+		Uncacheable: rawConfig.SkipCache || isNoopCache(layerCache),
+		PerIdentity: caches.ContainsCache(layerCache, "tenant") || usesIdentityPlaceholder(rawConfig.Provider),
+	}
+
+	if !facts.Uncacheable {
+		if ttl, ok := caches.ExtractTTLFromCache(layerCache); ok {
+			facts.TTL = ttl
+		}
+	}
+
+	return facts
+}
+
+func resolvePatternAndValidator(rawConfig config.LayerConfig, errorMessages config.ErrorMessages) ([]layerSegment, map[string]*regexp.Regexp, error) {
+	isPattern := rawConfig.Pattern != "" && rawConfig.Pattern != rawConfig.ID
+
+	var segments []layerSegment
+	var err error
+	if isPattern {
+		segments, err = parsePattern(rawConfig.Pattern)
+		if err != nil {
+			return nil, nil, fmt.Errorf(errorMessages.InvalidParam, "layer.pattern", rawConfig.Pattern)
+		}
+	} else {
+		segments = []layerSegment{{value: rawConfig.ID, placeholder: false}}
+	}
+
+	var validator map[string]*regexp.Regexp
+	if isPattern && rawConfig.ParamValidator != nil {
+		validator, err = constructValidation(rawConfig.ParamValidator, errorMessages)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	for _, example := range rawConfig.Examples {
+		if !isPattern {
+			return nil, nil, fmt.Errorf(errorMessages.InvalidParam, "layer.examples", example)
+		}
+
+		if doesMatch, matches := match(segments, example); !doesMatch || !validateParamMatches(matches, validator) {
+			return nil, nil, fmt.Errorf(errorMessages.InvalidParam, "layer.examples", example)
+		}
+	}
+
+	return segments, validator, nil
+}
+
+func constructLayerCounters(layerID string) (metric.Int64Counter, metric.Int64Counter, metric.Int64Counter, metric.Int64Counter, error) {
+	meter := otel.Meter(packageName)
+	sanitizedID := sanitizeMetricName(layerID)
+
+	tileAllCounter, err1 := meter.Int64Counter("tilegroxy.tiles.layer."+sanitizedID+".request", metric.WithDescription("Number of tile requests for "+layerID))
+	tileAuthCounter, err2 := meter.Int64Counter("tilegroxy.tiles.layer."+sanitizedID+".auth", metric.WithDescription("Number of outgoing authentication checks for "+layerID))
+	tileErrorCounter, err3 := meter.Int64Counter("tilegroxy.tiles.layer."+sanitizedID+".error", metric.WithDescription("Number of tile requests that error during generation for "+layerID))
+	tileSuccessCounter, err4 := meter.Int64Counter("tilegroxy.tiles.layer."+sanitizedID+".success", metric.WithDescription("Number of tile requests that result in a tile for "+layerID))
+
+	return tileAllCounter, tileAuthCounter, tileErrorCounter, tileSuccessCounter, errors.Join(err1, err2, err3, err4)
+}
+
+func ConstructLayer(ctx context.Context, rawConfig config.LayerConfig, defaultClientConfig config.ClientConfig, layerCache cache.Cache, errorMessages config.ErrorMessages, layerGroup *LayerGroup, secreter secret.Secreter, datastoreRegistry *datastores.Registry) (*Layer, error) {
+	var err error
+	if rawConfig.Client == nil {
+		rawConfig.Client = &defaultClientConfig
+	} else {
+		configload.MergeClientDefaults(rawConfig.Client, defaultClientConfig)
+
+	}
+
+	rawConfig.Provider = configload.ReplaceEnv(rawConfig.Provider)
+	if secreter != nil {
+		rawConfig.Provider, err = configload.ReplaceConfigValues(rawConfig.Provider, "secret", func(k string) (string, error) {
+			v, _, lookupErr := secreter.Lookup(ctx, k)
+			return v, lookupErr
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	segments, validator, err := resolvePatternAndValidator(rawConfig, errorMessages)
+	if err != nil {
+		return nil, err
+	}
+
+	deps := layer.ProviderDeps{
+		ClientConfig:  *rawConfig.Client,
+		ErrorMessages: errorMessages,
+		LayerGroup:    layerGroup,
+		Datastores:    datastoreRegistry,
+	}
+
+	provider, err := ConstructProvider(rawConfig.Provider, deps)
+	if err != nil {
+		return nil, err
+	}
+
+	metadata, err := resolveMetadata(rawConfig.ID, rawConfig.LayerMetadata, layer.DescribeTree(provider), errorMessages)
+	if err != nil {
+		return nil, errors.Join(err, layer.CloseProvider(ctx, provider))
+	}
+
+	datatype := metadata.Advertised.DataType
+
+	if rawConfig.Bounds != (config.BoundsConfig{}) {
+		if !isKnownDataType(datatype) {
+			return nil, errors.Join(fmt.Errorf(errorMessages.ParamRequired, "layer.datatype"), layer.CloseProvider(ctx, provider))
+		}
+
+		wrapped, err := wrapBounds(provider, rawConfig, datatype, deps)
+		if err != nil {
+			return nil, errors.Join(err, layer.CloseProvider(ctx, provider))
+		}
+		provider = wrapped
+	}
+
+	allowCoalesce := resolveAllowCoalesce(rawConfig, layerCache)
+
+	tileAllCounter, tileAuthCounter, tileErrorCounter, tileSuccessCounter, err := constructLayerCounters(rawConfig.ID)
+	if err != nil {
+		return nil, errors.Join(err, layer.CloseProvider(ctx, provider))
+	}
+
+	return &Layer{rawConfig.ID, segments, validator, rawConfig, provider, nil, errorMessages, datatype, layer.ProviderContext{}, sync.Mutex{}, allowCoalesce, resolveCacheControlFacts(rawConfig, layerCache), tileAllCounter, tileAuthCounter, tileErrorCounter, tileSuccessCounter, metadata}, nil
+}
+
+// getProviderContext returns a snapshot of the current provider context, re-authenticating
+// first if needed. The mutex is held for the full read-check-write sequence so concurrent
+// requests can't observe a torn or stale value.
+func (l *Layer) getProviderContext(ctx context.Context) (layer.ProviderContext, error) {
+	var err error
+
+	l.authMutex.Lock()
+	defer l.authMutex.Unlock()
+
+	if !l.providerContext.AuthBypass && l.providerContext.AuthExpiration.Before(time.Now()) {
+		l.tileAuthCounter.Add(ctx, 1)
+		l.providerContext, err = l.Provider.PreAuth(ctx, l.providerContext)
+	}
+
+	return l.providerContext, err
+}
+
+// forceReauth discards the current provider context's expiration so the next getProviderContext
+// call re-authenticates, then returns the refreshed context.
+func (l *Layer) forceReauth(ctx context.Context) (layer.ProviderContext, error) {
+	l.authMutex.Lock()
+	l.providerContext.AuthExpiration = time.Time{}
+	l.authMutex.Unlock()
+
+	return l.getProviderContext(ctx)
+}
+
+func (l *Layer) MatchesName(ctx context.Context, layerName string) bool {
+
+	if doesMatch, matches := match(l.Pattern, layerName); doesMatch {
+		if validateParamMatches(matches, l.ParamValidator) {
+			layerPatternMatches, _ := pkg.LayerPatternMatchesFromContext(ctx)
+			if layerPatternMatches != nil {
+				*layerPatternMatches = matches
+			}
+			return true
+		}
+	}
+
+	return false
+}
+
+// ConfigMatchesName reports whether a layer config would answer to the given name, including when
+// the layer is defined by a pattern. For callers working from raw config before the layers
+// themselves are built, so it resolves the pattern the same way construction does. A config whose
+// pattern doesn't parse matches nothing; construction reports that error.
+func ConfigMatchesName(rawConfig config.LayerConfig, errorMessages config.ErrorMessages, layerName string) bool {
+	segments, validator, err := resolvePatternAndValidator(rawConfig, errorMessages)
+	if err != nil {
+		return false
+	}
+
+	doesMatch, matches := match(segments, layerName)
+
+	return doesMatch && validateParamMatches(matches, validator)
+}
+
+// IsPattern reports whether this layer was defined with a pattern distinct from its ID, meaning
+// it has no single concrete tile URL and needs Config.Examples to produce TileJSON documents.
+func (l *Layer) IsPattern() bool {
+	return l.Config.Pattern != "" && l.Config.Pattern != l.Config.ID
+}
+
+// CheckZoomBounds rejects a request outside this layer's configured minzoom/maxzoom. Called before the
+// cache lookup so a cached tile can't bypass a zoom limit added after it was cached.
+func (l *Layer) CheckZoomBounds(tileRequest pkg.TileRequest) error {
+	minZoom, maxZoom := zoomRange(l.metadata.Limits.MinZoom, l.metadata.Limits.MaxZoom)
+
+	if tileRequest.Z < minZoom || tileRequest.Z > maxZoom {
+		return pkg.RangeError{ParamName: "z", MinValue: float64(minZoom), MaxValue: float64(maxZoom)}
+	}
+
+	return nil
+}
+
+func (l *Layer) Metadata() ResolvedMetadata {
+	return l.metadata
+}
+
+func (l *Layer) RenderTileNoCache(ctx context.Context, tileRequest pkg.TileRequest) (*pkg.Image, error) {
+	var img *pkg.Image
+	var err error
+
+	if err := l.CheckZoomBounds(tileRequest); err != nil {
+		return nil, err
+	}
+
+	l.tileAllCounter.Add(ctx, 1)
+
+	providerContext, err := l.getProviderContext(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	img, err = l.Provider.GenerateTile(ctx, providerContext, tileRequest)
+
+	var authError pkg.ProviderAuthError
+	if errors.As(err, &authError) {
+		providerContext, err = l.forceReauth(ctx)
+
+		if err != nil {
+			return nil, err
+		}
+
+		img, err = l.Provider.GenerateTile(ctx, providerContext, tileRequest)
+
+		if err != nil {
+			l.tileErrorCounter.Add(ctx, 1)
+			return nil, err
+		}
+	} else if err != nil {
+		l.tileErrorCounter.Add(ctx, 1)
+		return nil, err
+	}
+
+	l.tileSuccessCounter.Add(ctx, 1)
+	return img, nil
+}

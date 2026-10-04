@@ -18,6 +18,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/Michad/tilegroxy/internal/tracing"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/jackc/pgx/v5"
@@ -138,7 +139,7 @@ type Tracer struct {
 }
 
 func (t Tracer) traceStart(ctx context.Context, myKey key, query, host string) context.Context {
-	ctx, span := pkg.MakeChildSpan(ctx, nil, "Postgresql", string(myKey), string(myKey))
+	ctx, span := tracing.MakeChildSpan(ctx, nil, "Postgresql", string(myKey), string(myKey))
 	ctx = context.WithValue(ctx, myKey, span)
 
 	att := make([]attribute.KeyValue, 0)

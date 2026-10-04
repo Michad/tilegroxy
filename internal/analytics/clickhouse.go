@@ -24,7 +24,7 @@ import (
 )
 
 type ClickhouseConfig struct {
-	analytics.CommonConfig `mapstructure:",squash"`
+	CommonConfig `mapstructure:",squash"`
 	// The ID of a datastore with a name of "clickhouse"
 	Datastore string
 	// The table to insert events into. Tilegroxy never creates it, see the docs for the recommended DDL
@@ -39,7 +39,7 @@ type Clickhouse struct {
 	columns map[string]string
 	// Precomputed INSERT statement since the column set is fixed at startup
 	statement string
-	batcher   *analytics.Batcher
+	batcher   *Batcher
 }
 
 func init() {
@@ -99,7 +99,7 @@ func (s ClickhouseRegistration) Initialize(cfgAny any, deps analytics.AnalyticsD
 		return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "analytics.clickhouse.datastore", cfg.Datastore)
 	}
 
-	batchCfg, err := analytics.ApplyBatchDefaults(cfg.Batch, deps.ErrorMessages)
+	batchCfg, err := ApplyBatchDefaults(cfg.Batch, deps.ErrorMessages)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +116,7 @@ func (s ClickhouseRegistration) Initialize(cfgAny any, deps analytics.AnalyticsD
 		statement:        clickhouseStatement(cfg.Table, columns),
 	}
 
-	batcher, err := analytics.NewBatcher(id, batchCfg, c.flush)
+	batcher, err := NewBatcher(id, batchCfg, c.flush)
 	if err != nil {
 		return nil, err
 	}

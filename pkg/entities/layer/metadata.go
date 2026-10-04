@@ -36,19 +36,6 @@ type Description struct {
 	config.TileJSONMetadata
 }
 
-// Limits are the operator's restrictions on a layer, the only metadata enforced on requests.
-type Limits struct {
-	MinZoom *int
-	MaxZoom *int
-	Bounds  config.BoundsConfig
-}
-
-// ResolvedMetadata is a layer's metadata, computed once at construction.
-type ResolvedMetadata struct {
-	Limits     Limits
-	Advertised Description // Always within Limits
-}
-
 // MetadataProvider is optionally implemented by providers that can describe their own tiles.
 type MetadataProvider interface {
 	Metadata() Description
@@ -133,26 +120,6 @@ func (d Description) Clip(bounds config.BoundsConfig) Description {
 	return d
 }
 
-// ForRequest narrows the advertised metadata to the area a caller may access, if restricted.
-func (r ResolvedMetadata) ForRequest(allowedArea *pkg.Bounds) Description {
-	d := r.Advertised
-	if allowedArea == nil || allowedArea.IsNullIsland() {
-		return d
-	}
-
-	bounds := pkg.WorldBounds()
-	if d.Bounds != (config.BoundsConfig{}) {
-		bounds = pkg.BoundsFromConfig(d.Bounds)
-	}
-	d.Bounds = bounds.IntersectionWith(*allowedArea).ToConfig()
-
-	if !centerWithin(d.Center, d.Bounds) {
-		d.Center = nil
-	}
-
-	return d
-}
-
 // ZoomRange returns the advertised zoom levels with unset ends filled in.
 func (d Description) ZoomRange() (int, int) {
 	return zoomRange(d.MinZoom, d.MaxZoom)
@@ -183,6 +150,9 @@ func CloseProvider(ctx context.Context, p Provider) error {
 
 	return errors.Join(errs...)
 }
+
+// A center is longitude, latitude, then an optional zoom.
+const centerLatIndex = 1
 
 func centerWithin(center []float64, bounds config.BoundsConfig) bool {
 	if len(center) <= centerLatIndex || bounds == (config.BoundsConfig{}) {

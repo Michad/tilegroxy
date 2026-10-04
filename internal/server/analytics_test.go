@@ -23,15 +23,17 @@ import (
 	"testing"
 	"time"
 
+	internalanalytics "github.com/Michad/tilegroxy/internal/analytics"
+
 	"github.com/Michad/tilegroxy/internal/authentications"
 	"github.com/Michad/tilegroxy/internal/caches"
+	"github.com/Michad/tilegroxy/internal/entities"
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
 	"github.com/Michad/tilegroxy/pkg/entities/analytics"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
-	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -65,7 +67,7 @@ type recordingRegistration struct {
 	instance *recordingAnalytics
 }
 
-func (s recordingRegistration) InitializeConfig() any { return analytics.CommonConfig{} }
+func (s recordingRegistration) InitializeConfig() any { return internalanalytics.CommonConfig{} }
 func (s recordingRegistration) Name() string          { return "servertestrecorder" }
 
 func (s recordingRegistration) Initialize(_ any, _ analytics.AnalyticsDeps) (analytics.Analytics, error) {
@@ -74,19 +76,19 @@ func (s recordingRegistration) Initialize(_ any, _ analytics.AnalyticsDeps) (ana
 
 // setupAnalyticsHandler builds a tile handler serving a static layer, wired to a recording
 // analytics module. fields configures which extra attributes the module asks for.
-func setupAnalyticsHandler(t *testing.T, layers []config.LayerConfig, fields []string) (*tileHandler, *recordingAnalytics) {
+func setupAnalyticsHandler(t *testing.T, layerCfgs []config.LayerConfig, fields []string) (*tileHandler, *recordingAnalytics) {
 	t.Helper()
 
 	rec := &recordingAnalytics{}
 	analytics.RegisterAnalytics(recordingRegistration{instance: rec})
 
 	cfg := config.DefaultConfig()
-	cfg.Layers = layers
+	cfg.Layers = layerCfgs
 
 	var auth authentication.Authentication = authentications.Noop{}
 	var c cache.Cache = caches.Noop{}
 
-	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, cache.NewSingleCacheRegistry(c), nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(c), nil, nil)
 	require.NoError(t, err)
 
 	moduleCfg := map[string]interface{}{"name": "servertestrecorder"}
@@ -94,7 +96,7 @@ func setupAnalyticsHandler(t *testing.T, layers []config.LayerConfig, fields []s
 		moduleCfg["fields"] = fields
 	}
 
-	a, err := analytics.ConstructAnalytics(context.Background(), moduleCfg, nil, analytics.AnalyticsDeps{ErrorMessages: cfg.Error.Messages})
+	a, err := internalanalytics.ConstructAnalytics(context.Background(), moduleCfg, nil, analytics.AnalyticsDeps{ErrorMessages: cfg.Error.Messages})
 	require.NoError(t, err)
 
 	handler, err := newTileHandler(testServingWithAnalytics(&cfg, auth, lg, a))
@@ -229,7 +231,7 @@ func Test_TileHandler_Analytics_NoModulesConfigured(t *testing.T) {
 	var auth authentication.Authentication = authentications.Noop{}
 	var c cache.Cache = caches.Noop{}
 
-	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, cache.NewSingleCacheRegistry(c), nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(c), nil, nil)
 	require.NoError(t, err)
 
 	handler, err := newTileHandler(testServing(&cfg, auth, lg))
@@ -256,7 +258,7 @@ type closeTrackerRegistration struct {
 	instance *closeTracker
 }
 
-func (s closeTrackerRegistration) InitializeConfig() any { return analytics.CommonConfig{} }
+func (s closeTrackerRegistration) InitializeConfig() any { return internalanalytics.CommonConfig{} }
 func (s closeTrackerRegistration) Name() string          { return "servertestcloser" }
 
 func (s closeTrackerRegistration) Initialize(_ any, _ analytics.AnalyticsDeps) (analytics.Analytics, error) {
@@ -273,10 +275,10 @@ func generationFor(t *testing.T) (*config.Config, *entities.Entities) {
 
 	var c cache.Cache = caches.Noop{}
 
-	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, cache.NewSingleCacheRegistry(c), nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(c), nil, nil)
 	require.NoError(t, err)
 
-	a, err := analytics.ConstructAnalytics(context.Background(),
+	a, err := internalanalytics.ConstructAnalytics(context.Background(),
 		map[string]interface{}{"name": "servertestcloser"}, nil, analytics.AnalyticsDeps{ErrorMessages: cfg.Error.Messages})
 	require.NoError(t, err)
 
@@ -284,7 +286,7 @@ func generationFor(t *testing.T) (*config.Config, *entities.Entities) {
 		LayerGroup: lg,
 		Auth:       authentications.Noop{},
 		Analytics:  a,
-		Caches:     cache.NewSingleCacheRegistry(c),
+		Caches:     caches.NewSingleCacheRegistry(c),
 	}
 }
 

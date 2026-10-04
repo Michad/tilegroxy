@@ -20,9 +20,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type stubAuthConfig struct {
@@ -48,31 +46,6 @@ func (stubAuthRegistration) Initialize(cfgAny any, _ AuthenticationDeps) (Authen
 
 func init() {
 	RegisterAuthentication(stubAuthRegistration{})
-}
-
-func Test_ConstructAuth_UnknownNameErrors(t *testing.T) {
-	_, err := ConstructAuth(map[string]interface{}{"name": "not-a-real-auth"}, AuthenticationDeps{ErrorMessages: config.ErrorMessages{EnumError: "%v %v %v"}})
-	require.Error(t, err)
-}
-
-func Test_ConstructAuth_ConstructsRegisteredAuth(t *testing.T) {
-	auth, err := ConstructAuth(map[string]interface{}{"name": "stub-auth", "allow": true}, AuthenticationDeps{ErrorMessages: config.ErrorMessages{}})
-	require.NoError(t, err)
-	require.NotNil(t, auth)
-
-	req, err := http.NewRequest(http.MethodGet, "http://example.com", nil)
-	require.NoError(t, err)
-
-	assert.True(t, auth.CheckAuthentication(context.Background(), req))
-}
-
-func Test_ConstructAuth_WrapsWithName(t *testing.T) {
-	auth, err := ConstructAuth(map[string]interface{}{"name": "stub-auth", "allow": false}, AuthenticationDeps{ErrorMessages: config.ErrorMessages{}})
-	require.NoError(t, err)
-
-	wrapper, ok := auth.(AuthWrapper)
-	require.True(t, ok)
-	assert.Equal(t, "stub-auth", wrapper.Name)
 }
 
 func Test_RegisteredAuthenticationNames_IncludesRegistered(t *testing.T) {

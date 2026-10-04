@@ -17,7 +17,7 @@ package cmd
 import (
 	"fmt"
 
-	tg "github.com/Michad/tilegroxy/pkg/entry"
+	"github.com/Michad/tilegroxy/internal/entry"
 	"github.com/spf13/cobra"
 )
 
@@ -39,7 +39,7 @@ func runCheck(cmd *cobra.Command, _ []string) {
 		return
 	}
 
-	err = tg.CheckConfig(cfg, tg.CheckOptions{Echo: echo}, out)
+	err = entry.CheckConfig(cfg, entry.CheckOptions{Echo: echo}, out)
 
 	if err != nil {
 		fmt.Fprintf(out, "Invalid configuration: %v\n", err.Error())

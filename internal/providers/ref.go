@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
@@ -38,7 +39,7 @@ type RefConfig struct {
 
 type Ref struct {
 	RefConfig
-	layerGroup *layer.LayerGroup
+	layerGroup layer.LayerGroup
 	target     layer.Description
 }
 
@@ -65,8 +66,8 @@ func (s RefRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.
 	cfg := cfgAny.(RefConfig)
 	ref := &Ref{RefConfig: cfg, layerGroup: deps.LayerGroup}
 
-	if deps.LayerGroup != nil {
-		if target := deps.LayerGroup.FindLayer(context.Background(), cfg.Layer); target != nil {
+	if lg, ok := deps.LayerGroup.(*layers.LayerGroup); ok && lg != nil {
+		if target := lg.FindLayer(context.Background(), cfg.Layer); target != nil {
 			ref.target = target.Metadata().Advertised
 		}
 	}

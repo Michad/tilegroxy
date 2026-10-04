@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/Michad/tilegroxy/internal/images"
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
@@ -68,7 +69,7 @@ func Test_DataType_Fallback_ComesFromChildren(t *testing.T) {
 
 	assert.Equal(t, config.DataTypeUnknown, FallbackRegistration{}.DataType(FallbackConfig{}))
 
-	p, err := layer.ConstructProvider(map[string]any{
+	p, err := layers.ConstructProvider(map[string]any{
 		"name":      "fallback",
 		"primary":   map[string]any{"name": "fixed-mvt-fallback-test"},
 		"secondary": map[string]any{"name": "proxy", "url": "http://example.com/{z}/{x}/{y}"},
@@ -81,7 +82,7 @@ func Test_FallbackCloseClosesChildProviders(t *testing.T) {
 	primary := &closableProvider{}
 	secondary := &closableProvider{}
 	// Wrapped to match production, where ConstructProvider hands Fallback wrapped children
-	f := &Fallback{Primary: layer.ProviderWrapper{Name: "primary", Provider: primary}, Secondary: secondary}
+	f := &Fallback{Primary: layers.ProviderWrapper{Name: "primary", Provider: primary}, Secondary: secondary}
 
 	require.NoError(t, layer.CloseProvider(context.Background(), f))
 

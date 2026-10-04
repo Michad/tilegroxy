@@ -23,6 +23,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
@@ -238,7 +239,7 @@ func Test_CropWrapBounds_WrapsBuiltProvider(t *testing.T) {
 	assert.Equal(t, bounds, cropMvt.Bounds)
 }
 
-func refFallbackLayerGroup(t *testing.T) *layer.LayerGroup {
+func refFallbackLayerGroup(t *testing.T) *layers.LayerGroup {
 	t.Helper()
 
 	cfg := config.DefaultConfig()
@@ -269,7 +270,7 @@ func refFallbackLayerGroup(t *testing.T) *layer.LayerGroup {
 		},
 	}
 
-	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = lg.Close(context.Background()) })
 
@@ -296,7 +297,7 @@ func Test_LayerGroup_RefWithBounds_InfersDataTypeFromTarget(t *testing.T) {
 	assert.Equal(t, config.DataTypeRaster, view.DataType)
 	assert.Equal(t, 10, *view.Metadata().Advertised.MaxZoom)
 
-	wrapper, ok := view.Provider.(layer.ProviderWrapper)
+	wrapper, ok := view.Provider.(layers.ProviderWrapper)
 	require.True(t, ok)
 	assert.Equal(t, "crop", wrapper.Name)
 }

@@ -65,7 +65,7 @@ func (s TTLRegistration) Initialize(configAny any, deps cache.CacheDeps) (cache.
 		return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "cache.ttl.ttl", config.TTL)
 	}
 
-	inner, err := cache.ConstructCache(config.Cache, deps)
+	inner, err := ConstructCache(config.Cache, deps)
 	if err != nil {
 		return nil, err
 	}

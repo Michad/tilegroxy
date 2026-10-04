@@ -19,10 +19,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type stubHealthCheckConfig struct {
@@ -58,29 +55,6 @@ func (stubHealthCheckRegistration) Initialize(cfg HealthCheckConfig, _ HealthChe
 
 func init() {
 	RegisterHealthCheck(stubHealthCheckRegistration{})
-}
-
-func testLayerGroup(t *testing.T) *layer.LayerGroup {
-	t.Helper()
-	lg, err := layer.ConstructLayerGroup(context.Background(), config.Config{}, nil, nil, nil)
-	require.NoError(t, err)
-	return lg
-}
-
-func Test_ConstructHealthCheck_UnknownNameErrors(t *testing.T) {
-	cfg := config.DefaultConfig()
-	_, err := ConstructHealthCheck(map[string]interface{}{"name": "not-a-real-check"}, testLayerGroup(t), nil, &cfg)
-	require.Error(t, err)
-}
-
-func Test_ConstructHealthCheck_ConstructsRegisteredCheck(t *testing.T) {
-	cfg := config.DefaultConfig()
-	hc, err := ConstructHealthCheck(map[string]interface{}{"name": "stub-check", "delay": 5}, testLayerGroup(t), nil, &cfg)
-	require.NoError(t, err)
-	require.NotNil(t, hc)
-
-	assert.Equal(t, uint(5), hc.GetDelay())
-	assert.NoError(t, hc.Check(context.Background()))
 }
 
 func Test_RegisteredHealthCheckNames_IncludesRegistered(t *testing.T) {

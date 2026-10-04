@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Michad/tilegroxy/internal/datastores"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/Michad/tilegroxy/pkg/entities/datastore"
@@ -71,10 +72,10 @@ func TestTtl(t *testing.T) {
 
 // We intentionally don't test the maxsize property as the otter library doesn't offer guarantees on how capacity settings are honored.  See https://github.com/maypok86/otter/issues/88 for more details
 
-func memoryDatastoreRegistry(t *testing.T, id string) *datastore.DatastoreRegistry {
+func memoryDatastoreRegistry(t *testing.T, id string) *datastores.Registry {
 	t.Helper()
 
-	reg, err := datastore.ConstructDatastoreRegistry(context.Background(), []map[string]interface{}{{"name": "memory", "id": id}}, nil, config.ErrorMessages{})
+	reg, err := datastores.ConstructDatastoreRegistry(context.Background(), []map[string]interface{}{{"name": "memory", "id": id}}, nil, config.ErrorMessages{})
 	require.NoError(t, err)
 
 	return reg
@@ -129,7 +130,7 @@ func TestMemoryDatastoreNotFound(t *testing.T) {
 }
 
 func TestMemoryDatastoreWrongType(t *testing.T) {
-	reg, err := datastore.ConstructDatastoreRegistry(context.Background(), []map[string]interface{}{{"name": "stub-memory-wrongtype", "id": "wrong"}}, nil, config.ErrorMessages{})
+	reg, err := datastores.ConstructDatastoreRegistry(context.Background(), []map[string]interface{}{{"name": "stub-memory-wrongtype", "id": "wrong"}}, nil, config.ErrorMessages{})
 	require.NoError(t, err)
 
 	deps := cache.CacheDeps{ErrorMessages: config.DefaultConfig().Error.Messages, Datastores: reg}

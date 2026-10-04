@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
@@ -70,7 +71,7 @@ func newCompositeVector(childConfigs []map[string]interface{}, deps layer.Provid
 	errorSlice := make([]error, 0, len(childConfigs))
 
 	for i, p := range childConfigs {
-		provider, err := layer.ConstructProvider(p, deps)
+		provider, err := layers.ConstructProvider(p, deps)
 		if err == nil {
 			err = checkForInvalidDataType(provider, rejected, path+"."+strconv.Itoa(i), deps.ErrorMessages)
 		}

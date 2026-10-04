@@ -24,12 +24,12 @@ import (
 
 	"github.com/Michad/tilegroxy/internal/authentications"
 	"github.com/Michad/tilegroxy/internal/caches"
+	"github.com/Michad/tilegroxy/internal/entities"
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
-	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -39,7 +39,7 @@ func buildTileJSONTestServing(t *testing.T, cfg config.Config) *generation {
 
 	var auth authentication.Authentication = authentications.Noop{}
 	var c cache.Cache = caches.Noop{}
-	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, cache.NewSingleCacheRegistry(c), nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(c), nil, nil)
 	require.NoError(t, err)
 
 	return testServing(&cfg, auth, lg)
@@ -177,7 +177,7 @@ func Test_TileJSONHandler_Document_PlainLayer(t *testing.T) {
 	defer func() { require.NoError(t, res.Body.Close()) }()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
-	var doc layer.TileJSONDocument
+	var doc layers.TileJSONDocument
 	require.NoError(t, json.NewDecoder(res.Body).Decode(&doc))
 
 	assert.Equal(t, "main", doc.Name)
@@ -301,7 +301,7 @@ func Test_TileJSONHandler_AllowedArea_IntersectsBounds(t *testing.T) {
 	defer func() { require.NoError(t, res.Body.Close()) }()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
-	var doc layer.TileJSONDocument
+	var doc layers.TileJSONDocument
 	require.NoError(t, json.NewDecoder(res.Body).Decode(&doc))
 	assert.Equal(t, []float64{-5, -5, 10, 5}, doc.Bounds)
 }
@@ -324,7 +324,7 @@ func Test_TileJSONHandler_BaseURLs_Override(t *testing.T) {
 	res := w.Result()
 	defer func() { require.NoError(t, res.Body.Close()) }()
 
-	var doc layer.TileJSONDocument
+	var doc layers.TileJSONDocument
 	require.NoError(t, json.NewDecoder(res.Body).Decode(&doc))
 	require.Len(t, doc.Tiles, 1)
 	assert.Equal(t, "https://tiles.example.com/maps/tiles/main/{z}/{x}/{y}", doc.Tiles[0])
@@ -348,7 +348,7 @@ func Test_TileJSONHandler_BaseURLs_Multiple(t *testing.T) {
 	res := w.Result()
 	defer func() { require.NoError(t, res.Body.Close()) }()
 
-	var doc layer.TileJSONDocument
+	var doc layers.TileJSONDocument
 	require.NoError(t, json.NewDecoder(res.Body).Decode(&doc))
 	require.Len(t, doc.Tiles, 2)
 	assert.Equal(t, "https://tiles-a.example.com/tiles/main/{z}/{x}/{y}", doc.Tiles[0])
@@ -375,7 +375,7 @@ func Test_TileJSONHandler_ForwardedHeaders(t *testing.T) {
 	res := w.Result()
 	defer func() { require.NoError(t, res.Body.Close()) }()
 
-	var doc layer.TileJSONDocument
+	var doc layers.TileJSONDocument
 	require.NoError(t, json.NewDecoder(res.Body).Decode(&doc))
 	require.Len(t, doc.Tiles, 1)
 	assert.Equal(t, "https://public.example.com/maps/tiles/main/{z}/{x}/{y}", doc.Tiles[0])
@@ -399,7 +399,7 @@ func Test_SetupHandlers_TileJSON_RoutesRegistered(t *testing.T) {
 
 	var auth authentication.Authentication = authentications.Noop{}
 	var c cache.Cache = caches.Noop{}
-	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, cache.NewSingleCacheRegistry(c), nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(c), nil, nil)
 	require.NoError(t, err)
 
 	ent := &entities.Entities{LayerGroup: lg, Auth: auth}
@@ -425,7 +425,7 @@ func Test_SetupHandlers_TileJSON_RoutesRegistered(t *testing.T) {
 	defer func() { require.NoError(t, resDoc.Body.Close()) }()
 	assert.Equal(t, http.StatusOK, resDoc.StatusCode)
 
-	var doc layer.TileJSONDocument
+	var doc layers.TileJSONDocument
 	require.NoError(t, json.NewDecoder(resDoc.Body).Decode(&doc))
 	assert.Equal(t, "main", doc.Name)
 }
@@ -436,7 +436,7 @@ func Test_SetupHandlers_TileJSON_Disabled_RoutesNotRegistered(t *testing.T) {
 
 	var auth authentication.Authentication = authentications.Noop{}
 	var c cache.Cache = caches.Noop{}
-	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, cache.NewSingleCacheRegistry(c), nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(c), nil, nil)
 	require.NoError(t, err)
 
 	ent := &entities.Entities{LayerGroup: lg, Auth: auth}
@@ -476,7 +476,7 @@ func Test_TileJSONHandler_Document_IgnoresReloadedServerConfig(t *testing.T) {
 	defer func() { require.NoError(t, res.Body.Close()) }()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
-	var doc layer.TileJSONDocument
+	var doc layers.TileJSONDocument
 	require.NoError(t, json.NewDecoder(res.Body).Decode(&doc))
 	require.Len(t, doc.Tiles, 1)
 	assert.Equal(t, "http://example.com/tiles/main/{z}/{x}/{y}", doc.Tiles[0])

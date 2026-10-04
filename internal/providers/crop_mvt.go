@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
@@ -72,7 +73,7 @@ func (s CropMvtRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (la
 
 // Clipping a tile of the other vector format would fail on every tile that isn't wholly inside the bounds.
 func constructCropPrimary(rawConfig map[string]interface{}, deps layer.ProviderDeps, path string, rejected config.DataType) (layer.Provider, error) {
-	primary, err := layer.ConstructProvider(rawConfig, deps)
+	primary, err := layers.ConstructProvider(rawConfig, deps)
 	if err != nil {
 		return nil, err
 	}
@@ -95,18 +96,18 @@ func (t CropMvt) GenerateTile(ctx context.Context, providerContext layer.Provide
 }
 
 func clipMvt(_ context.Context, content []byte, boundsToCrop pkg.Bounds, tileRequest pkg.TileRequest) ([]byte, error) {
-	layers, err := mvt.Unmarshal(content)
+	collection, err := mvt.Unmarshal(content)
 	if err != nil {
 		return nil, err
 	}
 
 	tile := maptile.New(uint32(tileRequest.X), uint32(tileRequest.Y), maptile.Zoom(tileRequest.Z)) //#nosec G115 -- tileRequest coordinates are already range-checked by GetBounds before clipping
 
-	layers.ProjectToWGS84(tile)
-	layers.Clip(boundsToOrbBound(boundsToCrop))
-	layers.ProjectToTile(tile)
+	collection.ProjectToWGS84(tile)
+	collection.Clip(boundsToOrbBound(boundsToCrop))
+	collection.ProjectToTile(tile)
 
-	return mvt.Marshal(layers)
+	return mvt.Marshal(collection)
 }
 
 // vectorCrop is the part of cropping shared by every vector format, leaving only the clip itself to the format.

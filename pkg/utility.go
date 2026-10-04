@@ -16,35 +16,20 @@ package pkg
 import (
 	"bytes"
 	"context"
-	crand "crypto/rand"
-	"encoding/binary"
 	"encoding/gob"
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"math"
-	"math/rand/v2"
 	"net/http"
-	neturl "net/url"
-	"os"
-	"reflect"
 	"slices"
-	"strconv"
-	"strings"
 	"time"
 
+	"github.com/Michad/tilegroxy/internal/static"
+	"github.com/Michad/tilegroxy/internal/util"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/static"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/trace"
 )
-
-var packageName = static.GetPackage()
-var version, ref, buildDate = static.GetVersionInformation()
-var tracer trace.Tracer = otel.Tracer(packageName)
 
 // The main result type for tiles. Can include a result of any content type - primarily either raster or vector imagery type.
 type Image struct {
@@ -152,171 +137,12 @@ func DecodeImage(b []byte) (*Image, error) {
 	return &i, nil
 }
 
-// Turns a string indicating a range of zoom levels into an explicit array of the zoom levels. Format `<zoom>|<zoom>-<zoom>[,<range>]` e.g. `4` or `1-5` or `1-3,6`
-func ParseZoomString(str string) ([]int, error) {
-	const errorMessage = "could not parse zoom %v"
-
-	commaSplit := strings.Split(str, ",")
-
-	var result []int
-
-	for _, entry := range commaSplit {
-		dashSplit := strings.Split(entry, "-")
-
-		switch len(dashSplit) {
-		case 1:
-			singleZoom, err := strconv.Atoi(dashSplit[0])
-
-			if singleZoom < 0 || singleZoom > MaxZoom {
-				return nil, errors.New("zoom out of range")
-			}
-
-			if err == nil {
-				result = append(result, singleZoom)
-			} else {
-				return nil, fmt.Errorf(errorMessage, entry)
-			}
-		case 2:
-			start, err := strconv.Atoi(dashSplit[0])
-			end, err2 := strconv.Atoi(dashSplit[1])
-			if err != nil || err2 != nil {
-				return nil, errors.Join(err, err2)
-			}
-
-			if end < start {
-				return nil, errors.New("zoom range must start before it ends")
-			}
-
-			if start < 0 || end > MaxZoom {
-				return nil, errors.New("zoom out of range")
-			}
-
-			for i := start; i <= end; i++ {
-				result = append(result, i)
-			}
-		default:
-			return nil, fmt.Errorf(errorMessage, entry)
-		}
-	}
-
-	return result, nil
-}
-
-// Find any string values that start with `keyTag.keyName` and replace it with replacer(keyName). Replaces the full value. Used for avoiding secrets in config so your configuration can be placed in source control
-func ReplaceConfigValues(rawConfig map[string]interface{}, keyTag string, replacer func(string) (string, error)) (map[string]interface{}, error) {
-	result, err := replaceConfigValuesAny(rawConfig, keyTag, replacer)
-	if err != nil {
-		return nil, err
-	}
-
-	return result.(map[string]interface{}), nil
-}
-
-// replaceConfigValuesAny recursively walks arbitrary config values looking for strings tagged
-// "keyTag.keyName" to replace. It recurses by reflect.Kind rather than by concrete type because
-// config values arrive in more shapes than a type switch can enumerate: mapstructure-decoded
-// fields like ClientConfig.Headers are map[string]string, not map[string]interface{}.
-func replaceConfigValuesAny(v any, keyTag string, replacer func(string) (string, error)) (any, error) {
-	if v == nil {
-		return nil, nil
-	}
-
-	if vStr, ok := v.(string); ok {
-		if strings.Index(vStr, keyTag+".") == 0 {
-			varName := vStr[len(keyTag)+1:]
-			slog.Debug("Replacing " + keyTag + " var " + varName)
-			return replacer(varName)
-		}
-		return vStr, nil
-	}
-
-	rv := reflect.ValueOf(v)
-
-	switch rv.Kind() { //nolint:exhaustive // the default arm handles all remaining kinds
-	case reflect.Map:
-		result := reflect.MakeMap(rv.Type())
-		for _, key := range rv.MapKeys() {
-			original := rv.MapIndex(key)
-			replaced, err := replaceConfigValuesAny(original.Interface(), keyTag, replacer)
-			if err != nil {
-				return nil, err
-			}
-			// A nil replacement means the original was nil, as a YAML key written with no value
-			// (`ttl:`) parses to. Convert would panic on the zero Value it produces.
-			if replaced == nil {
-				result.SetMapIndex(key, original)
-				continue
-			}
-			result.SetMapIndex(key, reflect.ValueOf(replaced).Convert(rv.Type().Elem()))
-		}
-		return result.Interface(), nil
-	case reflect.Slice, reflect.Array:
-		// Arrays come back as slices. Config parsed from YAML/JSON never contains arrays, so this
-		// only affects hand-constructed input.
-		result := reflect.MakeSlice(reflect.SliceOf(rv.Type().Elem()), rv.Len(), rv.Len())
-		for i := range rv.Len() {
-			original := rv.Index(i)
-			replaced, err := replaceConfigValuesAny(original.Interface(), keyTag, replacer)
-			if err != nil {
-				return nil, err
-			}
-			// See the nil note in the Map branch above.
-			if replaced == nil {
-				result.Index(i).Set(original)
-				continue
-			}
-			result.Index(i).Set(reflect.ValueOf(replaced).Convert(rv.Type().Elem()))
-		}
-		return result.Interface(), nil
-	default:
-		return v, nil
-	}
-}
-
-// Find any string values that start with `env.` and interpret the rest as an environment variable. Replaces the full value with the contents of the respective environment variable. Useful for avoiding secrets in config so your configuration can be placed in source control
-func ReplaceEnv(rawConfig map[string]interface{}) map[string]interface{} {
-	result, _ := ReplaceConfigValues(rawConfig, "env", func(s string) (string, error) { return os.Getenv(s), nil })
-
-	return result
-}
-
-// Query parameter names whose values are masked before a URL is logged.
-var credentialQueryParams = []string{"key", "token", "apikey", "api_key", "access_token", "password", "secret", "signature", "sig"}
-
-// RedactURLForLog strips userinfo and masks credential-bearing query parameter values so a URL can
-// be written to logs. It accepts relative URIs as well as absolute URLs. A URL that won't parse is
-// replaced entirely, since we can't tell which part of it is sensitive.
-//
-// Providers that log an outgoing URL should route it through this. A {ctx.*} placeholder resolves
-// to a value taken off the incoming request, commonly an Authorization header or an API key, so a
-// debug log can otherwise end up holding a live credential.
-func RedactURLForLog(rawURL string) string {
-	parsed, err := neturl.Parse(rawURL)
-	if err != nil {
-		return "(unparseable url)"
-	}
-
-	if parsed.User != nil {
-		parsed.User = neturl.User("redacted")
-	}
-
-	query := parsed.Query()
-	for name := range query {
-		if slices.Contains(credentialQueryParams, strings.ToLower(name)) {
-			query.Set(name, "redacted")
-		}
-	}
-	parsed.RawQuery = query.Encode()
-
-	return parsed.Redacted()
-}
-
 // GetTile performs a GET operation against a given URL and applies the standard Client
 // configuration options (headers, timeout, status code / content-type allowlists, content-type
 // rewriting, and length limits). Providers should call this instead of making their own HTTP
 // requests, so custom Go providers get the same enforcement as the built-in ones.
 func GetTile(ctx context.Context, clientConfig config.ClientConfig, url string, authHeaders map[string]string) (*Image, error) {
-	slog.DebugContext(ctx, fmt.Sprintf("Calling url %v\n", RedactURLForLog(url)))
+	slog.DebugContext(ctx, fmt.Sprintf("Calling url %v\n", util.RedactURLForLog(url)))
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -390,66 +216,4 @@ func GetTile(ctx context.Context, clientConfig config.ClientConfig, url string, 
 	}
 
 	return &Image{Content: img, ContentType: contentType}, nil
-}
-
-// cond ? a : b
-func Ternary[T any](cond bool, a T, b T) T {
-	if cond {
-		return a
-	}
-	return b
-}
-
-// Generates a random string with alphanumeric characters. Specifics are prone to change. Not guaranteed to have cryptographic security
-func RandomString() string {
-	const base = 36
-	const length = 16
-
-	var i, i2 uint64
-	b := make([]byte, length)
-
-	// Try to use sRNG by default because why not
-	_, err := crand.Read(b)
-
-	if err != nil {
-		// Fallback on v2 rand since better that than a potentially unrecoverable error
-		i = rand.Uint64()  // #nosec G404
-		i2 = rand.Uint64() // #nosec G404
-	} else {
-		i = binary.BigEndian.Uint64(b[0:(length / 2)])
-		i2 = binary.BigEndian.Uint64(b[(length / 2):length])
-	}
-
-	return strconv.FormatUint(i, base) + strconv.FormatUint(i2, base)
-}
-
-// Handles making a new context and span for entity wrappers to break down request flow. Make sure to End the span that is returned
-func MakeChildSpan(ctx context.Context, newRequest *TileRequest, providerName string, childSpanName string, functionName string) (context.Context, trace.Span) {
-	spanName := providerName
-
-	if childSpanName != "" {
-		spanName += "-" + childSpanName
-	}
-
-	newCtx, span := tracer.Start(ctx, spanName, trace.WithSpanKind(trace.SpanKindInternal))
-
-	if span.IsRecording() {
-		span.SetAttributes(
-			attribute.String("service.name", "tilegroxy"),
-			attribute.String("service.version", version+"-"+ref),
-			attribute.String("service.build", buildDate),
-			attribute.String("code.function", functionName),
-		)
-
-		if newRequest != nil {
-			span.SetAttributes(
-				attribute.String("tilegroxy.layer.name", newRequest.LayerName),
-				attribute.Int("tilegroxy.coordinate.x", newRequest.X),
-				attribute.Int("tilegroxy.coordinate.y", newRequest.Y),
-				attribute.Int("tilegroxy.coordinate.z", newRequest.Z),
-			)
-		}
-	}
-
-	return newCtx, span
 }

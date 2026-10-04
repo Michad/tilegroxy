@@ -16,6 +16,7 @@ package providers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"math"
@@ -241,6 +242,56 @@ func replacePlaceholdersInString(ctx context.Context, tileRequest pkg.TileReques
 // library consumers writing their own Go providers can call it too.
 func getTile(ctx context.Context, clientConfig config.ClientConfig, url string, authHeaders map[string]string) (*pkg.Image, error) {
 	return pkg.GetTile(ctx, clientConfig, url, authHeaders)
+}
+
+// Turns a string indicating a range of zoom levels into an explicit array of the zoom levels. Format `<zoom>|<zoom>-<zoom>[,<range>]` e.g. `4` or `1-5` or `1-3,6`
+func ParseZoomString(str string) ([]int, error) {
+	const errorMessage = "could not parse zoom %v"
+
+	commaSplit := strings.Split(str, ",")
+
+	var result []int
+
+	for _, entry := range commaSplit {
+		dashSplit := strings.Split(entry, "-")
+
+		switch len(dashSplit) {
+		case 1:
+			singleZoom, err := strconv.Atoi(dashSplit[0])
+
+			if singleZoom < 0 || singleZoom > pkg.MaxZoom {
+				return nil, errors.New("zoom out of range")
+			}
+
+			if err == nil {
+				result = append(result, singleZoom)
+			} else {
+				return nil, fmt.Errorf(errorMessage, entry)
+			}
+		case 2:
+			start, err := strconv.Atoi(dashSplit[0])
+			end, err2 := strconv.Atoi(dashSplit[1])
+			if err != nil || err2 != nil {
+				return nil, errors.Join(err, err2)
+			}
+
+			if end < start {
+				return nil, errors.New("zoom range must start before it ends")
+			}
+
+			if start < 0 || end > pkg.MaxZoom {
+				return nil, errors.New("zoom out of range")
+			}
+
+			for i := start; i <= end; i++ {
+				result = append(result, i)
+			}
+		default:
+			return nil, fmt.Errorf(errorMessage, entry)
+		}
+	}
+
+	return result, nil
 }
 
 // Reports a child known to produce the given data type, which the caller can't process.

@@ -18,8 +18,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,11 +33,11 @@ func Test_ConstructLayer_Bounds_Raster_WrapsInRealCrop(t *testing.T) {
 		},
 	}
 
-	l, err := layer.ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, testErrMessages, nil, nil, nil)
+	l, err := layers.ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, testErrMessages, nil, nil, nil)
 
 	require.NoError(t, err)
 	require.NotNil(t, l)
-	wrapper, ok := l.Provider.(layer.ProviderWrapper)
+	wrapper, ok := l.Provider.(layers.ProviderWrapper)
 	require.True(t, ok)
 	require.Equal(t, "crop", wrapper.Name)
 }
@@ -52,11 +52,11 @@ func Test_ConstructLayer_Bounds_MVT_WrapsInRealCropMvt(t *testing.T) {
 		},
 	}
 
-	l, err := layer.ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, testErrMessages, nil, nil, nil)
+	l, err := layers.ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, testErrMessages, nil, nil, nil)
 
 	require.NoError(t, err)
 	require.NotNil(t, l)
-	wrapper, ok := l.Provider.(layer.ProviderWrapper)
+	wrapper, ok := l.Provider.(layers.ProviderWrapper)
 	require.True(t, ok)
 	require.Equal(t, "cropmvt", wrapper.Name)
 }
@@ -71,11 +71,11 @@ func Test_ConstructLayer_Bounds_MLT_WrapsInRealCropMlt(t *testing.T) {
 		},
 	}
 
-	l, err := layer.ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, testErrMessages, nil, nil, nil)
+	l, err := layers.ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, testErrMessages, nil, nil, nil)
 
 	require.NoError(t, err)
 	require.NotNil(t, l)
-	wrapper, ok := l.Provider.(layer.ProviderWrapper)
+	wrapper, ok := l.Provider.(layers.ProviderWrapper)
 	require.True(t, ok)
 	require.Equal(t, "cropmlt", wrapper.Name)
 }

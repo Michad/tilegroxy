@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/internal/pmtiles"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -205,9 +206,9 @@ func Test_PMTiles_LayerUsesArchiveMetadata(t *testing.T) {
 		Provider: map[string]any{"name": "pmtiles", "file": pmtilesMVTFixture},
 	}
 
-	l, err := layer.ConstructLayer(context.Background(), rawConfig, cfg.Client, nil, cfg.Error.Messages, nil, nil, nil)
+	l, err := layers.ConstructLayer(context.Background(), rawConfig, cfg.Client, nil, cfg.Error.Messages, nil, nil, nil)
 	require.NoError(t, err)
-	t.Cleanup(func() { _ = l.Provider.(layer.ProviderWrapper).Close(context.Background()) })
+	t.Cleanup(func() { _ = l.Provider.(layers.ProviderWrapper).Close(context.Background()) })
 
 	assert.Equal(t, config.DataTypeMVT, l.DataType)
 	// The archive's zoom range is advertised but not enforced, since the layer sets no limits of its own.
@@ -225,9 +226,9 @@ func Test_PMTiles_LayerBoundsKeepsArchiveMetadata(t *testing.T) {
 		Provider:      map[string]any{"name": "pmtiles", "file": pmtilesPNGFixture},
 	}
 
-	l, err := layer.ConstructLayer(context.Background(), rawConfig, cfg.Client, nil, cfg.Error.Messages, nil, nil, nil)
+	l, err := layers.ConstructLayer(context.Background(), rawConfig, cfg.Client, nil, cfg.Error.Messages, nil, nil, nil)
 	require.NoError(t, err)
-	t.Cleanup(func() { _ = l.Provider.(layer.ProviderWrapper).Close(context.Background()) })
+	t.Cleanup(func() { _ = l.Provider.(layers.ProviderWrapper).Close(context.Background()) })
 
 	require.NoError(t, l.CheckZoomBounds(pkg.TileRequest{Z: 1}))
 	require.NoError(t, l.CheckZoomBounds(pkg.TileRequest{Z: 2}))

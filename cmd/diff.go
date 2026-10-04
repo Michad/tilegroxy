@@ -18,8 +18,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Michad/tilegroxy/pkg/config"
-	tg "github.com/Michad/tilegroxy/pkg/entry"
+	"github.com/Michad/tilegroxy/internal/configload"
+	"github.com/Michad/tilegroxy/internal/entry"
 	"github.com/spf13/cobra"
 )
 
@@ -52,17 +52,17 @@ func runDiff(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	format := tg.DiffFormatText
+	format := entry.DiffFormatText
 
 	switch {
 	case asJSON:
-		format = tg.DiffFormatJSON
+		format = entry.DiffFormatJSON
 	case asYAML:
-		format = tg.DiffFormatYAML
+		format = entry.DiffFormatYAML
 	case asTable:
-		format = tg.DiffFormatTable
+		format = entry.DiffFormatTable
 	case asMarkdown:
-		format = tg.DiffFormatMarkdown
+		format = entry.DiffFormatMarkdown
 	}
 
 	oldCfg, err := extractConfigFromCommand(cmd, nil)
@@ -72,14 +72,14 @@ func runDiff(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	newCfg, err := config.LoadConfigFromFile(args[0])
+	newCfg, err := configload.LoadConfigFromFile(args[0])
 	if err != nil {
 		fmt.Fprintf(out, "Invalid configuration %v: %v\n", args[0], err.Error())
 		exit(1)
 		return
 	}
 
-	different, err := tg.DiffConfig(oldCfg, &newCfg, tg.DiffOptions{Format: format, Color: !noColor}, out)
+	different, err := entry.DiffConfig(oldCfg, &newCfg, entry.DiffOptions{Format: format, Color: !noColor}, out)
 	if err != nil {
 		fmt.Fprintf(out, "Error: %v\n", err)
 		exit(1)

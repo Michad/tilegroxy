@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
@@ -52,7 +53,7 @@ func Test_Ref_CycleViaPattern_HitsDepthBackstop(t *testing.T) {
 		{ID: "loop", Pattern: "loop_{n}", Provider: provider, Client: &cfg.Client, SkipCache: true},
 	}
 
-	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
 	require.NoError(t, err)
 
 	ctx := pkg.BackgroundContext()
@@ -65,7 +66,7 @@ func Test_Ref_CycleViaPattern_HitsDepthBackstop(t *testing.T) {
 
 // buildRefChain builds a chain of n ref layers ("chain0" -> "chain1" -> ... -> "chain{n-1}")
 // terminating in a static provider, and returns the resulting LayerGroup.
-func buildRefChain(t *testing.T, n int) *layer.LayerGroup {
+func buildRefChain(t *testing.T, n int) *layers.LayerGroup {
 	t.Helper()
 
 	cfg := config.DefaultConfig()
@@ -82,7 +83,7 @@ func buildRefChain(t *testing.T, n int) *layer.LayerGroup {
 
 	cfg.Layers = append(cfg.Layers, config.LayerConfig{ID: "chainEnd", Provider: map[string]any{"name": "static", "color": "FFF0"}, Client: &cfg.Client, SkipCache: true})
 
-	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
 	require.NoError(t, err)
 
 	return lg
@@ -117,7 +118,7 @@ func Test_Ref_PropagatesAuthRestrictions(t *testing.T) {
 		}},
 	}
 
-	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
 	require.NoError(t, err)
 
 	ctx := pkg.BackgroundContext()
@@ -141,13 +142,13 @@ func Test_Ref_PropagatesAuthRestrictions(t *testing.T) {
 	assert.Equal(t, direct.Content, img.Content, "tile behind a ref must be cropped to the same auth bounds as one requested directly")
 }
 
-func constructPMTilesRefGroup(t *testing.T, layers ...config.LayerConfig) *layer.LayerGroup {
+func constructPMTilesRefGroup(t *testing.T, layerConfigs ...config.LayerConfig) *layers.LayerGroup {
 	t.Helper()
 
 	cfg := config.DefaultConfig()
-	cfg.Layers = layers
+	cfg.Layers = layerConfigs
 
-	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = lg.Close(context.Background()) })
 
@@ -209,7 +210,7 @@ func Test_Ref_Metadata_ContradictingDataTypeFails(t *testing.T) {
 		pmtilesLayer("target"),
 	}
 
-	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
 
 	require.Error(t, err)
 	assert.Nil(t, lg)

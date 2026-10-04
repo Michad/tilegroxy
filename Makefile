@@ -9,7 +9,7 @@ all: clean test docs build version
 lint: golangci sec
 
 build:
-	go build -v -o ${OUT} -ldflags="-X \"${PKG}/pkg/static.tilegroxyVersion=${VERSION}\" -X \"${PKG}/pkg/static.tilegroxyBuildRef=${REF}\" -X \"${PKG}/pkg/static.tilegroxyBuildDate=${DATE}\"" -tags viper_bind_struct
+	go build -v -o ${OUT} -ldflags="-X \"${PKG}/internal/static.tilegroxyVersion=${VERSION}\" -X \"${PKG}/internal/static.tilegroxyBuildRef=${REF}\" -X \"${PKG}/internal/static.tilegroxyBuildDate=${DATE}\"" -tags viper_bind_struct
 
 test:
 	@go test ./internal/... ./pkg/... ./cmd/... -count=1 -tags viper_bind_struct
@@ -17,7 +17,10 @@ test:
 unit:
 	@go test ./internal/... ${PKGPKGS} ./cmd/... -v -count=1 -tags "unit,viper_bind_struct"
 
-e2e: docs build
+extension:
+	cd examples/extension && go build -o my_tg_wrapper -tags viper_bind_struct .
+
+e2e: docs build extension
 	@go test ./test/... -count=1 -tags "e2e,viper_bind_struct"
 
 mltspec:
@@ -47,6 +50,7 @@ docs:
 	@node_modules/antora/bin/antora antora-playbook.yml
 	@mkdir -p build/site/examples/
 	@cp -r examples/* build/site/examples/
+	@rm -f build/site/examples/extension/my_tg_wrapper
 	@cp -r docs/skills build/site/
 	@cp -r build/site/* internal/website/resources/
 
@@ -67,5 +71,6 @@ install:
 clean:
 	@go clean
 	-@rm ${OUT}
+	-@rm examples/extension/my_tg_wrapper
 
-.PHONY: build clean cover cover-out coverage docs e2e lint libyears mltspec readme test unit version
+.PHONY: build clean cover cover-out coverage docs e2e extension lint libyears mltspec readme test unit version

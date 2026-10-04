@@ -1,0 +1,63 @@
+// Copyright 2024 Michael Davis
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package entry
+
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+
+	"github.com/Michad/tilegroxy/internal/server"
+	"github.com/Michad/tilegroxy/pkg"
+	"github.com/Michad/tilegroxy/pkg/config"
+)
+
+type CheckOptions struct {
+	Echo bool
+}
+
+func CheckConfig(cfg *config.Config, opts CheckOptions, out io.Writer) error {
+	if out == nil {
+		out = io.Discard
+	}
+
+	if err := server.ValidateCORS(cfg.Server.CORS, cfg.Error.Messages); err != nil {
+		return err
+	}
+
+	ent, err := configToEntities(pkg.BackgroundContext(), *cfg, nil)
+
+	if err != nil {
+		return err
+	}
+
+	// Checking the config establishes real connections, so release them instead of relying on
+	// process exit.
+	defer ent.Close(pkg.BackgroundContext()) //nolint:errcheck // Nothing actionable during a config check
+
+	if cfg != nil && opts.Echo {
+		enc := json.NewEncoder(out)
+		enc.SetIndent(" ", "  ")
+		err := enc.Encode(cfg)
+
+		if err != nil {
+			return err
+		}
+	} else {
+		fmt.Fprintln(out, "Valid")
+	}
+
+	return nil
+}

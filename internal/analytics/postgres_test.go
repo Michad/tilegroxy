@@ -25,11 +25,10 @@ import (
 	"testing"
 	"time"
 
-	_ "github.com/Michad/tilegroxy/internal/datastores"
+	"github.com/Michad/tilegroxy/internal/datastores"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/analytics"
-	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -114,7 +113,7 @@ func Test_Postgres_WritesEvents(t *testing.T) {
 		},
 	}
 
-	datastores, err := datastore.ConstructDatastoreRegistry(context.Background(), dsCfg, nil, msgs)
+	datastores, err := datastores.ConstructDatastoreRegistry(context.Background(), dsCfg, nil, msgs)
 	require.NoError(t, err)
 
 	wrapper, ok := datastores.Get("test")
@@ -186,7 +185,7 @@ func Test_Postgres_InvalidConfig(t *testing.T) {
 	msgs := config.DefaultConfig().Error.Messages
 
 	// An empty registry: the datastore lookup must fail cleanly rather than panic.
-	empty, err := datastore.ConstructDatastoreRegistry(context.Background(), nil, nil, msgs)
+	empty, err := datastores.ConstructDatastoreRegistry(context.Background(), nil, nil, msgs)
 	require.NoError(t, err)
 
 	_, err = PostgresRegistration{}.Initialize(PostgresConfig{Table: "t"}, analytics.AnalyticsDeps{Datastores: empty, ErrorMessages: msgs})

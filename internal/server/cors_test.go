@@ -22,10 +22,9 @@ import (
 
 	"github.com/Michad/tilegroxy/internal/authentications"
 	"github.com/Michad/tilegroxy/internal/caches"
+	"github.com/Michad/tilegroxy/internal/entities"
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
-	"github.com/Michad/tilegroxy/pkg/entities/cache"
-	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -383,7 +382,7 @@ func Test_SetupHandlers_CORSWrapsOutsideTimeout(t *testing.T) {
 	// Access logging would otherwise wrap outermost and hide which of CORS/timeout is on top
 	cfg.Logging.Access.Console = false
 
-	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, cache.NewSingleCacheRegistry(caches.Noop{}), nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(caches.Noop{}), nil, nil)
 	require.NoError(t, err)
 
 	rootHandler, err := setupTestRootHandler(&cfg, &entities.Entities{LayerGroup: lg, Auth: authentications.Noop{}})

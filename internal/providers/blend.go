@@ -31,6 +31,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
@@ -106,7 +107,7 @@ func (s BlendRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (laye
 				layerName = strings.ReplaceAll(layerName, "{"+k+"}", v)
 			}
 
-			ref, err = layer.ConstructProvider(map[string]interface{}{"name": "ref", "layer": layerName}, deps)
+			ref, err = layers.ConstructProvider(map[string]interface{}{"name": "ref", "layer": layerName}, deps)
 			if err != nil {
 				return nil, err
 			}
@@ -117,7 +118,7 @@ func (s BlendRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (laye
 		errorSlice := make([]error, 0)
 
 		for _, p := range cfg.Providers {
-			provider, err := layer.ConstructProvider(p, deps)
+			provider, err := layers.ConstructProvider(p, deps)
 			providers = append(providers, provider) //nolint:makezero //Linter is easily confused if initialized before the make
 			errorSlice = append(errorSlice, err)
 		}

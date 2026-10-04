@@ -23,15 +23,17 @@ import (
 	"testing"
 	"time"
 
+	internalanalytics "github.com/Michad/tilegroxy/internal/analytics"
+
 	"github.com/Michad/tilegroxy/internal/authentications"
 	"github.com/Michad/tilegroxy/internal/caches"
+	"github.com/Michad/tilegroxy/internal/entities"
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
-	"github.com/Michad/tilegroxy/pkg/entities"
 	"github.com/Michad/tilegroxy/pkg/entities/analytics"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
-	"github.com/Michad/tilegroxy/pkg/entities/layer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -63,7 +65,7 @@ func (b *blockingAnalytics) Close(ctx context.Context) error {
 // entitiesWithAnalytics builds an *entities.Entities whose Close is driven entirely by the given
 // Analytics implementation, so a test can control blocking or errors deterministically
 func entitiesWithAnalytics(a analytics.Analytics) *entities.Entities {
-	return &entities.Entities{Analytics: &analytics.AnalyticsWrapper{Name: "test", Analytics: a}}
+	return &entities.Entities{Analytics: &internalanalytics.AnalyticsWrapper{Name: "test", Analytics: a}}
 }
 
 func Test_GenerationClosesWhenIdle(t *testing.T) {
@@ -327,10 +329,10 @@ func Test_ServeHTTPReleasesGenerationRef(t *testing.T) {
 	var auth authentication.Authentication = authentications.Noop{}
 	var c cache.Cache = caches.Noop{}
 
-	lg, err := layer.ConstructLayerGroup(context.Background(), cfg, cache.NewSingleCacheRegistry(c), nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(c), nil, nil)
 	require.NoError(t, err)
 
-	gen := newGeneration(&cfg, &entities.Entities{LayerGroup: lg, Auth: auth, Caches: cache.NewSingleCacheRegistry(c)})
+	gen := newGeneration(&cfg, &entities.Entities{LayerGroup: lg, Auth: auth, Caches: caches.NewSingleCacheRegistry(c)})
 
 	handler, err := newTileHandler(gen)
 	require.NoError(t, err)

@@ -16,10 +16,8 @@ package secret
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
-	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 )
 
@@ -75,42 +73,4 @@ func RegisteredSecreterNames() []string {
 		names = append(names, n)
 	}
 	return names
-}
-
-func ConstructSecreter(rawConfig map[string]interface{}, deps SecreterDeps) (Secreter, error) {
-	rawConfig = pkg.ReplaceEnv(rawConfig)
-
-	name, ok := rawConfig["name"].(string)
-
-	if ok {
-		reg, ok := RegisteredSecreter(name)
-		if ok {
-			watchCfg, stripped, err := parseWatchConfig(rawConfig, reg.CheckBatchSize(), deps.ErrorMessages)
-			if err != nil {
-				return nil, err
-			}
-
-			cfg := reg.InitializeConfig()
-			if err := config.DecodeEntityConfig(stripped, &cfg); err != nil {
-				return nil, err
-			}
-
-			built, err := reg.Initialize(cfg, deps)
-			if err != nil {
-				return nil, err
-			}
-
-			if !watchCfg.Watch || deps.ReloadFunc == nil {
-				return built, nil
-			}
-
-			w := newWatchingSecreter(built, watchCfg, reg.CheckBatchSize(), deps.ReloadFunc)
-			w.start(watchCfg)
-
-			return w, nil
-		}
-	}
-
-	nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
-	return nil, fmt.Errorf(deps.ErrorMessages.EnumError, "secret.name", nameCoerce, RegisteredSecreterNames())
 }

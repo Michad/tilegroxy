@@ -17,6 +17,7 @@ package providers
 import (
 	"testing"
 
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/internal/mlt"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -70,11 +71,11 @@ func Test_MLTProviders_ConstructFromConfig(t *testing.T) {
 	deps := layer.ProviderDeps{ClientConfig: testClientConfig, ErrorMessages: testErrMessages}
 	child := map[string]interface{}{"name": "static", "image": "embedded:box.mlt"}
 
-	composite, err := layer.ConstructProvider(map[string]interface{}{"name": "compositemlt", "providers": []map[string]interface{}{child}}, deps)
+	composite, err := layers.ConstructProvider(map[string]interface{}{"name": "compositemlt", "providers": []map[string]interface{}{child}}, deps)
 	require.NoError(t, err)
 	assert.Equal(t, config.DataTypeMLT, layer.DescribeTree(composite).DataType)
 
-	crop, err := layer.ConstructProvider(map[string]interface{}{"name": "cropmlt", "primary": child, "bounds": map[string]interface{}{"north": 10, "south": -10, "east": 10, "west": -10}}, deps)
+	crop, err := layers.ConstructProvider(map[string]interface{}{"name": "cropmlt", "primary": child, "bounds": map[string]interface{}{"north": 10, "south": -10, "east": 10, "west": -10}}, deps)
 	require.NoError(t, err)
 	assert.Equal(t, config.DataTypeMLT, layer.DescribeTree(crop).DataType)
 }

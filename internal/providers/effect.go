@@ -25,6 +25,7 @@ import (
 	"maps"
 	"slices"
 
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
@@ -106,7 +107,7 @@ func (s EffectRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (lay
 		return nil, fmt.Errorf(deps.ErrorMessages.RangeError, "provider.effect.intensity", r.min, r.max)
 	}
 
-	provider, err := layer.ConstructProvider(config.Provider, deps)
+	provider, err := layers.ConstructProvider(config.Provider, deps)
 	if err != nil {
 		return nil, err
 	}
