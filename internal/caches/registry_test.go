@@ -284,19 +284,3 @@ func (parentCacheRegistration) Initialize(cfgAny any, deps cache.CacheDeps) (cac
 
 	return parentCache{children: built}, nil
 }
-
-type legacySingle struct {
-	stubCache
-	Cache cache.Cache
-}
-
-type legacyTiers struct {
-	stubCache
-	Tiers []cache.Cache
-}
-
-type funcCache func()
-
-func (funcCache) Lookup(_ context.Context, _ pkg.TileRequest) (*pkg.Image, error) { return nil, nil }
-func (funcCache) Save(_ context.Context, _ pkg.TileRequest, _ *pkg.Image) error   { return nil }
-func (funcCache) Remove(_ context.Context, _ pkg.TileRequest) (bool, error)       { return false, nil }

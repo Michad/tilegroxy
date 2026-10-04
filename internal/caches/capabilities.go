@@ -77,14 +77,3 @@ func children(c cache.Cache) []cache.Cache {
 
 	return nil
 }
-
-func innermost(c cache.Cache) cache.Cache {
-	for {
-		d, ok := c.(cache.Decorator)
-		if !ok {
-			return c
-		}
-
-		c = d.Unwrap()
-	}
-}
