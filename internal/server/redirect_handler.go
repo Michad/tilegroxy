@@ -14,12 +14,16 @@
 
 package server
 
-import "net/http"
+import (
+	"net/http"
+	"net/url"
+)
 
 type httpRedirectHandler struct {
-	protoAndHost string
+	host string
 }
 
 func (h httpRedirectHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	http.Redirect(w, req, h.protoAndHost+req.RequestURI, http.StatusMovedPermanently)
+	target := url.URL{Scheme: "https", Host: h.host, Path: req.URL.Path, RawQuery: req.URL.RawQuery}
+	http.Redirect(w, req, target.String(), http.StatusMovedPermanently)
 }
