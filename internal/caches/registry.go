@@ -126,19 +126,6 @@ func (reg *CacheRegistry) registerNested(built cache.Cache, errorMessages config
 	return nil
 }
 
-// ContainsCache reports whether a cache registered under name is anywhere in the tree. Prefer the capability interfaces.
-func ContainsCache(built cache.Cache, name string) bool {
-	found := false
-
-	walk(built, func(node cache.Cache) {
-		if wrapper, ok := node.(CacheWrapper); ok && wrapper.Name == name {
-			found = true
-		}
-	})
-
-	return found
-}
-
 // ExtractTTLFromCache finds the lifetime of any Expiring cache in the tree. The shortest wins when several are nested.
 func ExtractTTLFromCache(built cache.Cache) (time.Duration, bool) {
 	var shortest time.Duration

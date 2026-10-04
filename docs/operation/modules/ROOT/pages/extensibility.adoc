@@ -219,8 +219,6 @@ func (t Sample) GenerateTile(ctx context.Context, providerContext layer.Provider
 
 A provider that can describe its own tiles can also implement the optional `layer.MetadataProvider` interface, returning a `layer.Description`. Providers describe, they never restrict. See xref:configuration/layer.adoc#_metadata[layer metadata] for how the layer uses it. A provider that nests other providers should implement `layer.Parent` so its children are described and closed along with it.
 
-A custom cache can tell tilegroxy about itself through optional interfaces in the `cache` package. A cache that nests other caches should implement `cache.Parent`, returning the caches it nests, so nested caches with an `id` can be referenced by layers and the rest of these interfaces are found at any depth. A cache that separates entries by who made the request should implement `cache.PerIdentity`, which turns off coalescing by default and makes xref:configuration/cache_control.adoc[Cache-Control] private. A cache that expires tiles should implement `cache.Expiring` so Cache-Control can derive a max age, and a cache that never stores anything should implement `cache.Noop`. A cache that only decorates another, such as to add logging, should implement `cache.Decorator` so these checks see through it.
-
 From here, implementing the provider is the same as implementing a Custom provider.  The other entities can be specified in the same way.
 
 A complete project implementing every entity type, along with a wrapper executable that tests its configuration before serving it, can be found in link:/examples/extension/README.md[examples/extension].

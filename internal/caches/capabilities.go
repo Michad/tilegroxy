@@ -15,8 +15,6 @@
 package caches
 
 import (
-	"reflect"
-
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 )
 
@@ -77,7 +75,7 @@ func children(c cache.Cache) []cache.Cache {
 		return p.Children()
 	}
 
-	return reflectedChildren(innermost(c))
+	return nil
 }
 
 func innermost(c cache.Cache) cache.Cache {
@@ -89,40 +87,4 @@ func innermost(c cache.Cache) cache.Cache {
 
 		c = d.Unwrap()
 	}
-}
-
-// Keeps nesting caches written before Parent existed discoverable, notably ones wrapping a tenant cache.
-func reflectedChildren(c cache.Cache) []cache.Cache {
-	value := reflect.ValueOf(c)
-	for value.Kind() == reflect.Pointer {
-		if value.IsNil() {
-			return nil
-		}
-
-		value = value.Elem()
-	}
-
-	if value.Kind() != reflect.Struct {
-		return nil
-	}
-
-	if tiers := value.FieldByName("Tiers"); tiers.IsValid() && tiers.Kind() == reflect.Slice && tiers.CanInterface() {
-		result := make([]cache.Cache, 0, tiers.Len())
-
-		for i := range tiers.Len() {
-			if child, ok := tiers.Index(i).Interface().(cache.Cache); ok {
-				result = append(result, child)
-			}
-		}
-
-		return result
-	}
-
-	if inner := value.FieldByName("Cache"); inner.IsValid() && inner.CanInterface() {
-		if child, ok := inner.Interface().(cache.Cache); ok {
-			return []cache.Cache{child}
-		}
-	}
-
-	return nil
 }

@@ -214,23 +214,6 @@ func Test_IsNoop_SeesThroughDecoratorsOnly(t *testing.T) {
 	assert.False(t, IsNoop(nil))
 }
 
-func Test_ContainsCache_MatchesRegistrationName(t *testing.T) {
-	tree := parentCache{children: []cache.Cache{CacheWrapper{Name: "wanted", Cache: stubCache{}}}}
-
-	assert.True(t, ContainsCache(tree, "wanted"))
-	assert.False(t, ContainsCache(tree, "other"))
-}
-
-func Test_ReflectedChildren_LegacyFieldsAreWalked(t *testing.T) {
-	keyed := identityCache{keyed: true}
-
-	assert.True(t, IsKeyedByIdentity(&legacySingle{Cache: keyed}))
-	assert.True(t, IsKeyedByIdentity(legacyTiers{Tiers: []cache.Cache{stubCache{}, keyed}}))
-	assert.False(t, IsKeyedByIdentity((*legacySingle)(nil)))
-	assert.False(t, IsKeyedByIdentity(funcCache(nil)))
-	assert.False(t, IsKeyedByIdentity(&legacySingle{}))
-}
-
 func Test_CacheRegistry_NestedThirdPartyParentIsReferenceable(t *testing.T) {
 	cache.RegisterCache(parentCacheRegistration{})
 
