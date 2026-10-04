@@ -25,19 +25,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_FreePort_ReturnsUsablePort(t *testing.T) {
-	p := freePort(t)
-	assert.Greater(t, p, 1024)
-	assert.Less(t, p, 65536)
-}
-
-func Test_FreePort_DoesNotRepeat(t *testing.T) {
-	first := freePort(t)
-	second := freePort(t)
-
-	assert.NotEqual(t, first, second)
-}
-
 func Test_RenderConfig_SubstitutesPorts(t *testing.T) {
 	out := renderConfig(t, "server:\n  port: {{.Port}}\n  health:\n    port: {{.HealthPort}}\n", ports{Server: 1111, Health: 2222})
 

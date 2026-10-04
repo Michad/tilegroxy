@@ -94,7 +94,7 @@ func Test_Clickhouse_WritesEvents(t *testing.T) {
 	require.True(t, ok)
 	conn := wrapper.Native().(driver.Conn)
 
-	for i := range []int{0, 1, 2, 4, 8} {
+	for _, i := range []int{0, 1, 2, 4, 8} {
 		time.Sleep(time.Duration(i) * time.Second)
 		if err = conn.Ping(ctx); err == nil {
 			break

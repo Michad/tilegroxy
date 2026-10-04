@@ -351,7 +351,9 @@ func Test_LayerGroup_RenderTile_ConcurrentWaitersAllSeeSharedError(t *testing.T)
 		}(i)
 	}
 
-	<-failer.started // the leader is now blocked in GenerateTile; every waiter has had time to queue behind it
+	<-failer.started
+	// Every goroutine is past its cache miss, leaving only the few instructions before it joins the leader.
+	require.Eventually(t, func() bool { return c.lookupCalls.Load() == n }, 5*time.Second, time.Millisecond)
 	time.Sleep(20 * time.Millisecond)
 	close(failer.release)
 

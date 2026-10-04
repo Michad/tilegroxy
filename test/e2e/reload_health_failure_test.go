@@ -27,6 +27,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Michad/tilegroxy/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -250,7 +251,7 @@ func Test_Reload_RecoversAfterFailedHealthRebuild(t *testing.T) {
 
 	// Point health back at a port nothing holds. The health subsystem has to rebind and analytics
 	// has to record again.
-	recoveredPort := freePort(t)
+	recoveredPort := testutil.FreePort(t)
 
 	rewriteUntilCondition(t, inst,
 		reloadHealthFailureConfig(strconv.Itoa(recoveredPort), scriptPath, eventPath),

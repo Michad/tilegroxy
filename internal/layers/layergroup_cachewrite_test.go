@@ -52,12 +52,14 @@ func (p *slowGenerateProvider) DataType() config.DataType {
 	return config.DataTypeUnknown
 }
 
-// alwaysMissCache always reports a miss and records how many times Save is called.
+// alwaysMissCache always reports a miss and records how many times Lookup and Save are called.
 type alwaysMissCache struct {
-	saveCalls atomic.Int32
+	lookupCalls atomic.Int32
+	saveCalls   atomic.Int32
 }
 
 func (c *alwaysMissCache) Lookup(_ context.Context, _ pkg.TileRequest) (*pkg.Image, error) {
+	c.lookupCalls.Add(1)
 	return nil, nil
 }
 
