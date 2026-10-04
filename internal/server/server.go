@@ -40,27 +40,28 @@ import (
 	"github.com/gorilla/handlers"
 )
 
+func ValidateConfig(cfg *config.Config) error {
+	if cfg.Server.Encrypt != nil && cfg.Server.Encrypt.Domain == "" {
+		return fmt.Errorf(cfg.Error.Messages.ParamRequired, "server.encrypt.domain")
+	}
+
+	if err := validateCORS(cfg.Server.CORS, cfg.Error.Messages); err != nil {
+		return err
+	}
+
+	return validateAllCacheControl(cfg)
+}
+
 func handleNoContent(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// Signals that begin a graceful shutdown. SIGTERM is what container runtimes send on stop;
-// without it the process dies on Go's default disposition and nothing gets flushed. Tests
-// override this to send a signal they control.
+// Signals that begin a graceful shutdown.
 var InterruptFlags = []os.Signal{os.Interrupt, syscall.SIGTERM}
 
-// reloadEntitiesFunc names the reload callback shape so it can be spelled out inside
-// ListenAndServe's body, where the "config" parameter name shadows the config package.
 type reloadEntitiesFunc = func(*config.Config, *entities.Entities) error
 
-// healthReloader tears down the current health subsystem generation and builds a fresh one against
-// the new generation's LayerGroup. Declared at package level rather than as a closure inside
-// ListenAndServe so its parameter types can name *config.Config, which that function's own
-// "config" parameter shadows.
-//
-// The mutex is held across the whole teardown-then-rebuild rather than just around the pointer.
-// internal/configload dispatches each config-change event on its own goroutine, so two concurrent reloads
-// would otherwise both tear down the same generation and race to bind the health port.
+// tears down the current health subsystem generation and builds a fresh one against the new generation's LayerGroup.
 func healthReloader(ctx context.Context, cfg *config.Config, ent *entities.Entities, healthMutex *sync.Mutex, healthShutdown *func(context.Context) error, healthDrain *func(), draining *bool) error {
 	healthMutex.Lock()
 	defer healthMutex.Unlock()
@@ -108,9 +109,6 @@ func healthReloader(ctx context.Context, cfg *config.Config, ent *entities.Entit
 	return nil
 }
 
-// build the reload callback ListenAndServe hands back to its caller: it
-// swaps the tile handlers to the new entities, then rebuilds the health subsystem against that
-// same generation so health checks aren't left pinned to the LayerGroup from startup.
 func makeCombinedReloadFunc(ctx context.Context, handlerReloadFunc reloadEntitiesFunc, healthMutex *sync.Mutex, healthShutdown *func(context.Context) error, healthDrain *func(), draining *bool) reloadEntitiesFunc {
 	return func(cfg2 *config.Config, ent2 *entities.Entities) error {
 		if err := healthReloader(ctx, cfg2, ent2, healthMutex, healthShutdown, healthDrain, draining); err != nil {
@@ -126,14 +124,6 @@ func makeCombinedReloadFunc(ctx context.Context, handlerReloadFunc reloadEntitie
 //
 //nolint:maintidx
 func setupHandlers(cfg *config.Config, ent *entities.Entities) (http.Handler, reloadEntitiesFunc, func() *entities.Entities, *generationRegistry, func() error, error) {
-	if err := ValidateCORS(cfg.Server.CORS, cfg.Error.Messages); err != nil {
-		return nil, nil, nil, nil, nil, err
-	}
-
-	if err := validateAllCacheControl(cfg); err != nil {
-		return nil, nil, nil, nil, nil, err
-	}
-
 	r := http.ServeMux{}
 
 	var myRootHandler http.Handler
@@ -324,8 +314,8 @@ func newHTTPServer(rootCtx context.Context, config *config.Config, rootHandler h
 
 // onReady, when not nil, runs once reloadPtr is published, giving another goroutine a happens-before edge for reading it
 func ListenAndServe(config *config.Config, ent *entities.Entities, reloadPtr *func(*config.Config, *entities.Entities) error, onReady func()) error {
-	if config.Server.Encrypt != nil && config.Server.Encrypt.Domain == "" {
-		return fmt.Errorf(config.Error.Messages.ParamRequired, "server.encrypt.domain")
+	if err := ValidateConfig(config); err != nil {
+		return err
 	}
 
 	rootHandler, handlerReloadFunc, _, registry, closeAccessLog, err := setupHandlers(config, ent)

@@ -32,6 +32,7 @@ import (
 
 	"github.com/Michad/tilegroxy/internal/caches"
 	"github.com/Michad/tilegroxy/internal/checks"
+	"github.com/Michad/tilegroxy/internal/entities"
 	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/internal/static"
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -52,6 +53,20 @@ type healthHandler struct {
 	checkResultCache *sync.Map
 	// Set when shutdown begins so readiness fails before the server starts draining
 	draining *atomic.Bool
+}
+
+func ValidateHealthChecks(cfg *config.Config, ent *entities.Entities) error {
+	if !cfg.Health.Enabled {
+		return nil
+	}
+
+	for _, checkCfg := range cfg.Health.Checks {
+		if _, err := checks.ConstructHealthCheck(checkCfg, ent.LayerGroup, ent.Caches, cfg); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // checkDetail builds the per-check entry of the health response, reporting whether that check is
