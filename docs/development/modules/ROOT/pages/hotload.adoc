@@ -11,3 +11,7 @@ Each generation carries a reference count.  A tile request takes a hold on the g
 The reference is taken inside the same lock that reads the generation pointer to avoid a race with the swap.  A request either increments before the swap occurs and is visible to the outgoing generation, or it blocks and reads the new pointer instead.  Taking the reference after releasing the lock would leave a window where a reload sees a count of zero and closes a generation that a request is about to use.
 
 A registry holds every live generation so shutdown can release all of them rather than only the one currently serving.  Without it, a reload landing shortly before shutdown would leave the previous generation's analytics batcher draining with nothing waiting on it.
+
+A single `Reloader` in `internal/entry` owns every reload, whatever triggered it.  It holds one lock for the whole of a reload, from building the new generation through the swap, so two reloads can't finish out of order.  Reloads requested before `ListenAndServe` hands over its swap function are queued rather than dropped, and the latest one is applied once the server is ready.
+
+Secret watches request a reload without waiting for it.  Closing a generation waits for its secret pollers to stop, so a poller blocked on the reload lock could deadlock a reload that is closing that same generation.  Requests that arrive while one is already queued collapse into it, since the queued reload re-resolves every secret anyway.

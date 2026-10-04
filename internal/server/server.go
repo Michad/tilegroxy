@@ -248,8 +248,8 @@ func newHTTPServer(rootCtx context.Context, cfg *config.Config, rootHandler http
 	}
 }
 
-// onReady, when not nil, runs once reloadPtr is published, giving another goroutine a happens-before edge for reading it
-func ListenAndServe(cfg *config.Config, ent *entities.Entities, reloadPtr *func(*config.Config, *entities.Entities) error, onReady func()) error {
+// onReady, when not nil, receives the reload function once the server can accept reloads
+func ListenAndServe(cfg *config.Config, ent *entities.Entities, onReady func(reloadEntitiesFunc)) error {
 	if err := ValidateConfig(cfg); err != nil {
 		return err
 	}
@@ -280,19 +280,15 @@ func ListenAndServe(cfg *config.Config, ent *entities.Entities, reloadPtr *func(
 		return err
 	}
 
-	if reloadPtr != nil {
+	if onReady != nil {
 		// Health rebuilds against the same entities so its checks aren't pinned to the startup LayerGroup
-		*reloadPtr = func(newCfg *config.Config, newEnt *entities.Entities) error {
+		onReady(func(newCfg *config.Config, newEnt *entities.Entities) error {
 			if err := health.Reload(ctx, newCfg, newEnt); err != nil {
 				return err
 			}
 
 			return routes.reload(newCfg, newEnt)
-		}
-	}
-
-	if onReady != nil {
-		onReady()
+		})
 	}
 
 	var otelShutdown func(context.Context) error
