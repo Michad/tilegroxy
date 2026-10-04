@@ -20,7 +20,7 @@ unit:
 extension:
 	cd examples/extension && go build -o my_tg_wrapper -tags viper_bind_struct .
 
-e2e: docs build
+e2e: docs build extension
 	@go test ./test/... -count=1 -tags "e2e,viper_bind_struct"
 
 mltspec:
