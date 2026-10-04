@@ -18,8 +18,10 @@ package e2e
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
+	"net/http/httptrace"
 	"strings"
 	"sync"
 	"time"
@@ -81,7 +83,11 @@ func (i *Instance) StartLoad(path string, workers int) *Load {
 }
 
 func (l *Load) once(ctx context.Context, client *http.Client, url string) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	var reused bool
+
+	trace := &httptrace.ClientTrace{GotConn: func(info httptrace.GotConnInfo) { reused = info.Reused }}
+
+	req, err := http.NewRequestWithContext(httptrace.WithClientTrace(ctx, trace), http.MethodGet, url, nil)
 	if err != nil {
 		return
 	}
@@ -112,7 +118,7 @@ func (l *Load) once(ctx context.Context, client *http.Client, url string) {
 	if err != nil {
 		l.result.TransportErrors++
 
-		if isRefused(err) {
+		if isRefused(err) || (!reused && isBacklogReset(err)) {
 			l.result.RefusedErrors++
 		}
 
@@ -130,6 +136,14 @@ func isRefused(err error) bool {
 	msg := err.Error()
 
 	return strings.Contains(msg, "connection refused") || strings.Contains(msg, "no such host")
+}
+
+// Closing a listener resets connections the kernel completed but nothing accepted yet. On a fresh
+// connection that is a refusal in practice, since no handler ever saw the request.
+func isBacklogReset(err error) bool {
+	msg := err.Error()
+
+	return errors.Is(err, io.EOF) || strings.Contains(msg, "connection reset by peer") || strings.Contains(msg, "broken pipe")
 }
 
 // Stop cancels the workers and returns what they observed. In-flight requests are cancelled rather
