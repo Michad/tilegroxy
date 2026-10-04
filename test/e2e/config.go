@@ -17,8 +17,6 @@
 package e2e
 
 import (
-	"context"
-	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -41,32 +39,6 @@ type Config struct {
 type ports struct {
 	Server int
 	Health int
-}
-
-// freePort asks the kernel for an unused port. Binding :0 and closing leaves a brief window before
-// the server claims it, which is why every test gets its own port instead of a fixed one.
-func freePort(t *testing.T) int {
-	t.Helper()
-
-	var lc net.ListenConfig
-
-	l, err := lc.Listen(context.Background(), "tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("cannot allocate a port: %v", err)
-	}
-
-	addr, ok := l.Addr().(*net.TCPAddr)
-	if !ok {
-		t.Fatalf("listener address is %T, not a TCP address", l.Addr())
-	}
-
-	port := addr.Port
-
-	if err := l.Close(); err != nil {
-		t.Fatalf("cannot release allocated port: %v", err)
-	}
-
-	return port
 }
 
 func renderConfig(t *testing.T, raw string, p ports) string {
