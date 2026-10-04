@@ -66,6 +66,10 @@ func (s MultiRegistration) Initialize(configAny any, deps cache.CacheDeps) (cach
 	return Multi{tierCaches}, nil
 }
 
+func (c Multi) Children() []cache.Cache {
+	return c.Tiers
+}
+
 // Close releases every tier that holds resources. Tiers are constructed by this cache so nothing
 // else is in a position to shut them down.
 func (c Multi) Close(ctx context.Context) error {

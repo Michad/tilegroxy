@@ -48,6 +48,10 @@ func (s NoopRegistration) Initialize(configAny any, _ cache.CacheDeps) (cache.Ca
 	return Noop{config}, nil
 }
 
+func (c Noop) IsNoop() bool {
+	return true
+}
+
 func (c Noop) Lookup(_ context.Context, _ pkg.TileRequest) (*pkg.Image, error) {
 	return nil, nil
 }
