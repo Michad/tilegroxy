@@ -131,11 +131,16 @@ func (g *generation) writeHeaders(w http.ResponseWriter) {
 	}
 }
 
-// This mutex guards which generation is installed, the generation's own guards its refcount.
-// Lock order is always this one first
+// Every handler shares one holder so a reload swaps and retires each generation exactly once. This
+// mutex guards which generation is installed, the generation's own guards its refcount. Lock order
+// is always this one first
 type generationHolder struct {
 	current *generation
 	mu      sync.RWMutex
+}
+
+func newGenerationHolder(gen *generation) *generationHolder {
+	return &generationHolder{current: gen}
 }
 
 func (h *generationHolder) reload(gen *generation) {

@@ -20,7 +20,7 @@ import (
 )
 
 type defaultHandler struct {
-	*generation
+	*generationHolder
 }
 
 func (h *defaultHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -29,8 +29,11 @@ func (h *defaultHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	slog.DebugContext(ctx, "server: default handler started")
 	defer slog.DebugContext(ctx, "server: default handler ended")
 
-	if h.serverCfg.DocsPath != "" {
-		w.Header().Add("Location", h.serverCfg.RootPath+h.serverCfg.DocsPath)
+	cur, release := h.acquire()
+	defer release()
+
+	if cur.serverCfg.DocsPath != "" {
+		w.Header().Add("Location", cur.serverCfg.RootPath+cur.serverCfg.DocsPath)
 		w.WriteHeader(http.StatusTemporaryRedirect)
 	} else {
 		w.WriteHeader(http.StatusNoContent)
