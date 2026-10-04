@@ -300,39 +300,24 @@ func testTileRequests(layerObjects *layers.LayerGroup, opts TestOptions, errCoun
 	pkg.SetIdentity(ctx, opts.UserID, opts.TenantID)
 
 	for _, req := range myReqs {
+		var layerErr error
+		var cacheWriteErr error
+		var cacheReadErr error
 		layer := layerObjects.FindLayer(ctx, req.LayerName)
-		img, layerErr := layer.RenderTileNoCache(ctx, req)
-		var cacheWriteError error
-		var cacheReadError error
 
-		if !opts.NoCache && layerErr == nil {
-			cacheWriteError = layer.Cache.Save(ctx, req, img)
-			if cacheWriteError == nil {
-				var img2 *pkg.Image
-				img2, cacheReadError = layer.Cache.Lookup(ctx, req)
-				if cacheReadError == nil {
-					if img2 == nil {
-						cacheReadError = errors.New("no result from cache lookup")
-					} else if !slices.Equal(img.Content, img2.Content) {
-						cacheReadError = errors.New("cache result doesn't match what we put into cache")
-					}
-				}
-			}
+		if layer == nil {
+			layerErr = fmt.Errorf("layer %v unexpectedly not found", req.LayerName)
+		} else {
+			layerErr, cacheWriteErr, cacheReadErr = testTileRequest(ctx, layer, req, opts.NoCache)
 		}
 
-		layerFailure := layerErr
-		if layerFailure == nil {
-			layerFailure = cacheWriteError
-		}
-		if layerFailure == nil {
-			layerFailure = cacheReadError
-		}
+		allErrors := errors.Join(layerErr, cacheWriteErr, cacheReadErr)
 
-		if layerFailure != nil {
+		if allErrors != nil {
 			atomic.AddUint32(errCount, 1)
 
 			failuresMu.Lock()
-			*failures = append(*failures, TestFailure{LayerName: req.LayerName, Error: layerFailure.Error()})
+			*failures = append(*failures, TestFailure{LayerName: req.LayerName, Error: allErrors.Error()})
 			failuresMu.Unlock()
 		}
 
@@ -343,10 +328,10 @@ func testTileRequests(layerObjects *layers.LayerGroup, opts TestOptions, errCoun
 		} else {
 			if opts.NoCache { //nolint:gocritic
 				resultStr += "Yes\tN/A\tN/A\tNone\t"
-			} else if cacheWriteError != nil {
-				resultStr += "Yes\tNo\tN/A\t\xff" + cacheWriteError.Error() + "\xff\t"
-			} else if cacheReadError != nil {
-				resultStr += "Yes\tYes\tNo\t\xff" + cacheReadError.Error() + "\xff\t"
+			} else if cacheWriteErr != nil {
+				resultStr += "Yes\tNo\tN/A\t\xff" + cacheWriteErr.Error() + "\xff\t"
+			} else if cacheReadErr != nil {
+				resultStr += "Yes\tYes\tNo\t\xff" + cacheReadErr.Error() + "\xff\t"
 			} else {
 				resultStr += "Yes\tYes\tYes\tNone\t"
 			}
@@ -356,4 +341,47 @@ func testTileRequests(layerObjects *layers.LayerGroup, opts TestOptions, errCoun
 	}
 
 	wg.Done()
+}
+
+// Recovering per request keeps one broken provider, script or cache from aborting the whole run.
+func testTileRequest(ctx context.Context, l *layers.Layer, req pkg.TileRequest, noCache bool) (error, error, error) {
+	var layerErr error
+	var cacheWriteErr error
+	var cacheReadErr error
+
+	stage := &layerErr
+
+	defer func() {
+		if r := recover(); r != nil {
+			*stage = fmt.Errorf("panic: %v", r)
+		}
+	}()
+
+	img, err := l.RenderTileNoCache(ctx, req)
+	if err == nil && img == nil {
+		err = errors.New("provider returned no image and no error")
+	}
+
+	layerErr = err
+	if !noCache && err == nil {
+		stage = &cacheWriteErr
+
+		cacheWriteErr = l.Cache.Save(ctx, req, img)
+		if cacheWriteErr == nil {
+
+			stage = &cacheReadErr
+
+			img2, err := l.Cache.Lookup(ctx, req)
+			switch {
+			case err != nil:
+				cacheReadErr = err
+			case img2 == nil:
+				cacheReadErr = errors.New("no result from cache lookup")
+			case !slices.Equal(img.Content, img2.Content):
+				cacheReadErr = errors.New("cache result doesn't match what we put into cache")
+			}
+		}
+	}
+
+	return layerErr, cacheWriteErr, cacheReadErr
 }
