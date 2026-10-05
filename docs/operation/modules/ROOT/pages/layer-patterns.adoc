@@ -1,0 +1,143 @@
+= Layer Patterns
+
+Layers in tilegroxy can be matched to incoming requests in one of two ways. The default method is to match the incoming layer name (from the URL) with the layer's configured `id`. A layer can instead define a `pattern`, which lets one layer configuration answer for many layer names. Parts of the name become placeholder values that providers can use, for instance to pick which upstream layer to proxy to.
+
+This page explains how patterns behave. See xref:configuration/layer.adoc[Layer] for the full list of layer options.
+
+== Matching a layer name
+
+Incoming tile requests look like `+/tiles/{layerName}/{z}/{x}/{y}+`. Tilegroxy checks each configured layer in the order they appear in the configuration and uses the first one that matches `layerName`:
+
+* A layer without a `pattern` matches when `layerName` equals its `id`.
+* A layer with a `pattern` matches when `layerName` fits the pattern and every placeholder value passes its `paramValidator` expression. The `id` itself is not checked.
+
+Because the first match wins, put specific layers above broad patterns that could also match their names. A request that matches nothing is rejected as an unknown layer.
+
+A pattern layer still needs a unique `id`. It's used for the layer's identity elsewhere, such as the xref:commands/test.adoc[test command] `--layer` flag and the TileJSON `name`. 
+
+The xref:configuration/provider/ref.adoc[ref] provider resolves its `layer` the same way as an incoming request, so a ref can point at a name that fits a pattern.
+
+== Placeholder syntax
+
+A placeholder is a name wrapped in curly braces. Everything outside the braces is literal text that must appear in the layer name exactly.
+
+[,yaml]
+----
+pattern: my_{name}_{version}
+----
+
+Given a request for `my_first_v2`, `name` is `first` and `version` is `v2`.
+
+Placeholders must be "non-subsequent", meaning two placeholders can't sit directly next to each other. There must be some literal text between them, because that text is how tilegroxy knows where one value ends and the next begins. A pattern such as `+a_{x}{y}+` fails at startup. The same placeholder name also can't be used twice in one pattern.
+
+Matching is simple. Each value runs until the first occurrence of the literal text that follows it. With the pattern above, `my_a_b_v2` matches with `name` as `a` and `version` as `b_v2`. Keep this in mind when a value could contain your separator, and use `paramValidator` to reject names that would split in an unexpected way. Without a validator a placeholder can also match an empty string.
+
+== Validating values
+
+`paramValidator` maps a placeholder name to a https://pkg.go.dev/regexp/syntax[regular expression] that its value must match. Expressions are anchored automatically, so they must match the whole value rather than just part of it. Use the key `*` to apply an expression to every placeholder. A name with any value failing its expression doesn't match the layer at all, so the request moves on to later layers and is rejected if nothing else matches.
+
+[,yaml]
+----
+pattern: my_{name}_{version}
+paramValidator:
+  "*": "[a-zA-Z0-9]+"
+  version: "v[0-9]{1,3}"
+----
+
+`paramValidator` only applies to layers that have a pattern.
+
+== Using values in providers
+
+Providers reference a placeholder value as `+{layer.NAME}+`, where `NAME` is the placeholder name from the pattern. The following providers support it:
+
+* xref:configuration/provider/proxy.adoc[Proxy] in `url`. Values are percent-encoded, so a `/` in a value becomes `%2F` rather than a path separator.
+* xref:configuration/provider/cgi.adoc[CGI] in `uri`, with the same escaping as Proxy.
+* xref:configuration/provider/postgismvt.adoc[PostGIS MVT] in `filter`. Values are passed as prepared statement parameters, not pasted into the SQL.
+
+If a placeholder can't be resolved, such as a typo in the name, a warning is logged and the request continues. It's recommended to xref:commands/test.adoc[test] to detect issues such as this.
+
+Placeholder values are also available to xref:analytics.adoc[analytics] as the `layerparams` field.
+
+== Examples
+
+A pattern layer has no single name, so features that need one use the `examples` list instead. This is currently used in a couple ways:
+
+* xref:tilejson.adoc[TileJSON] lists one entry per example. Without examples the layer is left out of the listing.
+* xref:commands/test.adoc[`tilegroxy test`] tests each example. Without examples the layer is skipped with a warning.
+
+== Caching
+
+Tiles are cached under the layer name from the request, not the `id`. Every distinct set of placeholder values gets its own cache entries, which is usually what you want since they produce different tiles. It also means a pattern that accepts many values can fill a cache with many variations.
+
+The xref:configuration/cache/disk.adoc[disk], xref:configuration/cache/s3.adoc[S3], and xref:configuration/cache/memcached.adoc[memcached] caches replace any character other than letters, digits, `-`, and `.` with `_` before using the name in a key. This keeps a request from escaping the cache directory or adding path segments to an object key. The tradeoff is that names differing only in those characters share entries: `a b` and `a/b` both become `a_b`. A tight `paramValidator` avoids this.
+
+== Security
+
+Placeholder values come straight from the request, so they are User input and should be treated as hostile. Escaping in Proxy and CGI and prepared statements in PostGIS protect against the most direct injection, but they don't stop a User from asking your upstream for something you didn't intend to serve.
+
+Always configure `paramValidator` on a pattern layer whose values reach a provider, and make the expressions as tight as you can. Alphanumeric values of a known length are a good default. Never let a placeholder control the hostname of an upstream URL. See xref:security.adoc[Security] for more.
+
+== Worked example
+
+The link:/examples/configurations/noaa_post_storm.yml[NOAA post-storm example] serves NOAA's post-storm aerial imagery. NOAA publishes each flight as a separate tile set with a date and letter in the URL, such as `20230902a`. Rather than one layer per flight, a single pattern layer covers them all:
+
+[,yaml]
+----
+- id: noaa_poststorm_imagery_in_parts
+  pattern: noaa_poststorm_{version}
+  paramValidator:
+    version: "[0-9]{8}[ab]"
+  examples:
+    - noaa_poststorm_20230902a
+    - noaa_poststorm_20230901b
+  client:
+    contenttypes:
+      - binary/octet-stream
+      - image/png
+    timeout: 2
+  provider:
+    name: fallback
+    primary:
+      name: proxy
+      url: https://stormscdn.ngs.noaa.gov/{layer.version}-rgb/{z}/{x}/{y}
+    secondary:
+      name: static
+      color: FFF0
+----
+
+A request for `/tiles/noaa_poststorm_20230902a/16/18020/27142` matches the pattern with `version` set to `20230902a`. That value is exactly eight digits and an `a`, so it passes the validator. The proxy then requests `+https://stormscdn.ngs.noaa.gov/20230902a-rgb/16/18020/27142+`. Flights only cover a small area, so the fallback returns a transparent tile wherever NOAA has none.
+
+A request for `noaa_poststorm_latest` fails the validator and is rejected. So is `noaa_poststorm_imagery_in_parts`, since the `id` isn't matched once a pattern is set.
+
+The `examples` let `tilegroxy test` and TileJSON work with two real flights.
+
+Other layers in the same file reuse the pattern layer to combine all flights for a storm into one layer:
+
+[,yaml]
+----
+- id: noaa_2023_lee
+  provider:
+    name: blend
+    mode: normal
+    providers:
+      - name: ref
+        layer: noaa_poststorm_20230917a
+      - name: ref
+        layer: noaa_poststorm_20230917b
+- id: noaa_2023_idalia
+  provider:
+    name: blend
+    mode: normal
+    layer:
+      pattern: noaa_poststorm_{v}
+      values:
+        - v: 20230902a
+        - v: 20230901b
+        - v: 20230901a
+        - v: 20230831b
+        - v: 20230831a
+----
+
+`noaa_2023_lee` uses ref providers that name concrete flights. `noaa_2023_idalia` does the same with less repetition using blend's `layer` option. Here `+{v}+` belongs to blend, not to a layer pattern, so it uses the bare placeholder name rather than `+{layer.v}+`.
+
+Each referenced flight is cached separately under its own name, so a request for `noaa_2023_idalia` also warms the cache for the individual flights.

@@ -3,3 +3,85 @@
 A provider represents the underlying functionality that "provides" the tiles that make up the mapping layer.  This is most commonly an external HTTP(s) endpoint using either the "proxy" or "URL template" providers. Custom providers can be created to extract tiles from other sources.
 
 When supplying a provider ensure you include the `name` parameter. Some providers require nested providers; be aware that repeated nesting has a performance cost.
+
+== Choosing a provider
+
+[cols="2,1,1,3"]
+|===
+| Goal | Provider | Output | Notes
+
+| Proxy an upstream ZXY, TMS, WMTS, or WMS server
+| xref:configuration/provider/proxy.adoc[Proxy]
+| Any
+| Placeholders for tile coordinates or a bounding box. Use `inverty` for TMS
+
+| Proxy a WMS server with `$xmin` style placeholders
+| xref:configuration/provider/url_template.adoc[URL Template]
+| Any
+| Kept for compatibility. Converted to a Proxy internally, adding fixed `$width`, `$height`, and `$srs` values. Prefer Proxy
+
+| Read a PMTiles archive
+| xref:configuration/provider/pmtiles.adoc[PMTiles]
+| Any
+| Local file or HTTP(s) range requests. Output type comes from the archive header
+
+| Generate vector tiles from PostGIS
+| xref:configuration/provider/postgismvt.adoc[Postgis Vector]
+| MVT
+| Reads one table or view. Use a dedicated server for custom queries
+
+| Run a CGI renderer such as MapServer
+| xref:configuration/provider/cgi.adoc[CGI]
+| Any
+| Output is whatever the executable returns
+
+| Return the same tile every time
+| xref:configuration/provider/static.adoc[Static]
+| Raster, MVT, or MLT
+| Decided by the image's extension. Mostly used inside Fallback or Blend
+
+| Reuse another layer
+| xref:configuration/provider/ref.adoc[Ref]
+| Any
+| Same output as the referenced layer. Recursion limit of 10
+
+| Try a backup source on error or outside a zoom or bounds
+| xref:configuration/provider/fallback.adoc[Fallback]
+| Any
+| Bounds are checked per tile, so the edge shifts as you zoom
+
+| Merge raster layers
+| xref:configuration/provider/blend.adoc[Blend]
+| Raster
+| JPEG or PNG input only. Output is PNG. Children are called in parallel
+
+| Merge vector layers
+| xref:configuration/provider/compositemvt.adoc[Composite MVT], xref:configuration/provider/compositemlt.adoc[Composite MLT]
+| MVT, MLT
+| Combines the layers of each child unchanged. MVT and MLT can't be mixed
+
+| Limit raster tiles to a geographic area
+| xref:configuration/provider/crop.adoc[Crop]
+| Raster
+| Exact edge at every zoom. Optional secondary provider fills the rest
+
+| Limit vector tiles to a geographic area
+| xref:configuration/provider/cropmvt.adoc[Crop MVT], xref:configuration/provider/cropmlt.adoc[Crop MLT]
+| MVT, MLT
+| Clips geometry to the bounds. No secondary provider
+
+| Adjust raster appearance with a preset effect
+| xref:configuration/provider/effect.adoc[Effect]
+| Raster
+| Built-in modes such as grayscale, blur, or contrast. Output is PNG
+
+| Adjust raster appearance with your own per-pixel logic
+| xref:configuration/provider/transform.adoc[Transform]
+| Raster
+| A single Go function interpreted with Yaegi. Output is PNG
+
+| Anything else
+| xref:configuration/provider/custom.adoc[Custom]
+| Any
+| Your own Go code interpreted with Yaegi. See xref:extensibility.adoc[Extensibility]
+|===

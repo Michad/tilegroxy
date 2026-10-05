@@ -1,0 +1,55 @@
+= Concepts
+
+Tilegroxy has a few important concepts that are important to understand to utilize it effectively. 
+
+== Operators and Users
+
+Tilegroxy distinguishes between two sources of input:
+
+* The *Operator* (probably you) writes the configuration. It's trusted, much like code. Tilegroxy prevents foot-guns but makes no attempt to stop deliberately harmful configuration.
+* The *User* makes tile requests. Anything on a request, including the layer name, pattern placeholder values, coordinates, headers, query string, and tokens, is treated as potentially hostile.
+
+Keep this in mind whenever configuration passes something from a request into a provider, such as placeholder values in a URL or SQL query. Restrict placeholders with `paramValidator` as tightly as you can. See xref:security.adoc[Security] for the full set of considerations.
+
+== Layers
+
+A xref:configuration/layer.adoc[layer] is a map layer a client can request tiles from. Everything else in the configuration exists to serve layers. Each layer has an `id`, optionally a `pattern` with placeholders, and a provider that produces its tiles.
+
+Clients request tiles by layer name, which is matched against each layer's pattern (or its `id` when there's no pattern). Layers are checked in the order they appear in your configuration and the first match wins. Values captured by placeholders can be checked with `paramValidator` and used by some providers.
+
+== Providers
+
+A xref:configuration/provider/index.adoc[provider] is what actually produces a tile for a layer. Some providers fetch or render data themselves, such as xref:configuration/provider/proxy.adoc[proxy]. Others wrap one or more child providers, such as xref:configuration/provider/fallback.adoc[fallback].
+
+Every level of nesting costs some performance, especially the image processing ones.
+
+== Caches
+
+A xref:configuration/cache/index.adoc[cache] stores generated tiles so the provider doesn't have to run again. If you don't configure one, nothing is cached.
+
+The top-level `cache` can be a single cache or a list of them. The first one in the list is the default for every layer unless you set `defaultcache` to the ID of another. A layer can pick a different cache with its own `cache` parameter or opt out entirely with `skipcache`.
+
+Some caches wrap others. xref:configuration/cache/multi.adoc[multi] chains several tiers together, xref:configuration/cache/ttl.adoc[ttl] stops serving old entries, and xref:configuration/cache/tenant.adoc[tenant] keeps each tenant's tiles separate.
+
+== Datastores
+
+xref:configuration/datastores/index.adoc[Datastores] are shared connections, mostly to databases, defined once with an ID. Providers, caches, and analytics refer to them by that ID, usually through a `datastore` parameter. This avoids opening a separate connection pool, or other resources, for every entity that needs one.
+
+== Authentication
+
+xref:configuration/authentication/index.adoc[Authentication] defines rules to restrict incoming tile requests. Beyond pure authentication, some schemes (JWT and custom) can provide basic authorization checks by restricting to certain layers or a geographic area. 
+
+See xref:howto/user-dynamic.adoc[User Dynamic Layers] if your tiles vary by user.
+
+== Analytics
+
+xref:configuration/analytics/index.adoc[Analytics] records a usage event for each tile served and writes them out in batches. It's disabled by default and individual layers can opt out with `skipanalytics`. See xref:analytics.adoc[Analytics] for how events are recorded.
+
+== Secrets
+
+A xref:configuration/secret/index.adoc[secret] source lets any entity's string parameters say `secret.NAME` instead of containing the value itself, the same way `env.NAME` reads an environment variable. Secrets are resolved at startup and on every xref:reloading.adoc[reload].
+
+== Custom
+
+Several of the entities described above have a special type available called "Custom."  This Custom provider/authentication/analytics allows the operator to write their own code to implement the entity without needing to recompile tilegroxy, making it much easier to handle trickier, non-standard map layers, or to customize how tilegroxy fits into a broader application. Custom always translates to a Yaegi interpreted Go script that has to follow a specific interface. Full details are in xref:extensibility.adoc#_custom[Extensibility]
+

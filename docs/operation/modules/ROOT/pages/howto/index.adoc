@@ -4,4 +4,8 @@ The rest of this documentation describes what each option does.  These pages ins
 
 * xref:howto/productionizing.adoc[] for taking a development deployment to production.
 * xref:howto/user-dynamic.adoc[] for serving tiles that differ depending on who asked for them.
+* xref:howto/hide-api-keys.adoc[] for keeping a tile vendor's API key out of the browser.
+* xref:howto/pmtiles.adoc[] for serving a PMTiles archive on its own.
+* xref:howto/restrict-access.adoc[] for limiting which layers and areas a token can see.
+* xref:howto/multi-tenant.adoc[] for serving several organizations from one deployment.
 * xref:howto/migrate-tilestache.adoc[] for moving an existing tilestache configuration over.

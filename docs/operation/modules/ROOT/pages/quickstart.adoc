@@ -1,0 +1,117 @@
+= Quickstart
+
+To start with, make sure you either have the tilegeroxy binary or the container image as described in xref:get-it.adoc[How to get it].
+
+This example proxies tiles from OpenStreetMap. Do be mindful of their https://operations.osmfoundation.org/policies/tiles/[tile usage policy] and don't abuse them.
+
+== Write a configuration
+
+Create a file named `tilegroxy.yml` in your working directory:
+
+[,yaml]
+----
+server:
+  production: false
+layers:
+  - id: osm
+    provider:
+      name: proxy
+      url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+----
+
+This defines a single layer called `osm` that fetches each tile from OpenStreetMap. `layers` is the only required top-level key. `server.production` defaults to `true`, which turns off the preview page used below, so it's set to `false` here.
+
+Before going further, confirm tilegroxy can read it:
+
+----
+tilegroxy config check
+----
+
+It prints `Valid` if all is well, otherwise it tells you what's wrong. Tilegroxy looks for `./tilegroxy.yml` by default; use `-c` to point at a different file.
+
+== Start the server
+
+----
+tilegroxy serve
+----
+
+The server listens on `127.0.0.1:8080` by default and runs in the foreground until you stop it with Ctrl+C. See xref:configuration/server.adoc[Server] to change the host or port.
+
+If you're using the container image instead, mount the configuration into `/tilegroxy` and bind to all interfaces so the port is reachable from outside the container:
+
+----
+docker run --rm -p 8080:8080 -e SERVER_BINDHOST=0.0.0.0 -v ./tilegroxy.yml:/tilegroxy/tilegroxy.yml:Z ghcr.io/michad/tilegroxy serve
+----
+
+== Request a tile
+
+Tiles are served at `+/tiles/{layer}/{z}/{x}/{y}+`. From another terminal, grab the single tile that covers the whole world:
+
+----
+curl -o tile.png http://127.0.0.1:8080/tiles/osm/0/0/0
+----
+
+Open `tile.png` and you should see a map of the world.
+
+== Preview the layer
+
+Point your browser at http://127.0.0.1:8080/preview/osm to see the layer on a pannable map. This is the xref:preview.adoc[layer preview] page. It only exists while `server.production` is `false`, so remember to turn that back on before deploying.
+
+== Add a cache and a second layer
+
+Right now every request goes to OpenStreetMap. Add a cache so tiles are stored after the first fetch, and a second layer that reuses the first:
+
+[,yaml]
+----
+server:
+  production: false
+cache:
+  name: disk
+  path: ./tile_cache
+layers:
+  - id: osm
+    provider:
+      name: proxy
+      url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+  - id: osm_gray
+    provider:
+      name: effect
+      mode: grayscale
+      provider:
+        name: ref
+        layer: osm
+----
+
+The xref:configuration/cache/disk.adoc[disk] cache writes tiles as files under `./tile_cache`. If you'd rather not touch the filesystem, the xref:configuration/cache/memory.adoc[memory] cache works too:
+
+[,yaml]
+----
+cache:
+  name: memory
+----
+
+The new `osm_gray` layer uses the xref:configuration/provider/ref.adoc[ref] provider to pull tiles from the `osm` layer and the xref:configuration/provider/effect.adoc[effect] provider to turn them grayscale. Providers nest like this to build up more involved layers without repeating yourself.
+
+Stop the server and run:
+
+----
+tilegroxy test
+----
+
+xref:commands/test.adoc[Test] goes further than `config check`. It actually generates a tile for each layer and confirms it can be written to and read back from the cache, printing a row per layer:
+
+----
+Thread    Layer       Generated    Cache Write    Cache Read    Error
+0         osm         Yes          Yes            Yes           None
+0         osm_gray    Yes          Yes            Yes           None
+Completed with 0 failures
+----
+
+Start `tilegroxy serve` again and try http://127.0.0.1:8080/preview/osm_gray. Running `serve` with `--hot-reload` picks up later config changes without a restart, see xref:reloading.adoc[Reloading].
+
+== Next steps
+
+* xref:concepts.adoc[Concepts] for how layers, providers, and caches fit together
+* xref:configuration/index.adoc[Configuration] for every available option
+* xref:howto/index.adoc[How To] for common tasks
+* xref:howto/productionizing.adoc[Run in Production] before exposing tilegroxy to the internet

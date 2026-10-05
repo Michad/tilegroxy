@@ -38,6 +38,12 @@ Configuration options:
 | No
 | 200
 
+| Timeout
+| How long (in seconds) to wait for a remote server to respond, including reading the body, before giving up and returning an error. 0 disables the timeout, in which case only the server `Timeout` applies
+| int
+| No
+| 10
+
 | Headers
 | Include these headers in requests
 | map[string]string
@@ -71,4 +77,7 @@ The following can be supplied as environment variables:
 
 | StatusCodes
 | CLIENT_STATUSCODES
+
+| Timeout
+| CLIENT_TIMEOUT
 |===
