@@ -162,7 +162,7 @@ func GetTile(ctx context.Context, clientConfig config.ClientConfig, url string, 
 	}
 
 	if err != nil {
-		return nil, err
+		return nil, remoteConnectionError(ctx, err)
 	}
 
 	slog.DebugContext(ctx, fmt.Sprintf("Response status: %v", resp.StatusCode))
@@ -206,4 +206,17 @@ func GetTile(ctx context.Context, clientConfig config.ClientConfig, url string, 
 	}
 
 	return &Image{Content: img, ContentType: contentType}, nil
+}
+
+// The *url.Error from http.Client embeds the URL, which can hold an operator's API key.
+func remoteConnectionError(ctx context.Context, err error) error {
+	failure := util.DescribeClientError(err)
+
+	slog.DebugContext(ctx, failure.Detail)
+
+	if failure.Canceled {
+		return context.Canceled
+	}
+
+	return RemoteConnectionError{Cause: failure.Cause, Timeout: failure.Timeout}
 }

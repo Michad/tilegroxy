@@ -28,6 +28,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Michad/tilegroxy/internal/util"
 	"github.com/Michad/tilegroxy/pkg/entities/analytics"
 )
 
@@ -244,7 +245,8 @@ func (g *GoogleAnalytics) send(ctx context.Context, clientID string, events []an
 
 	resp, err := g.client.Do(req)
 	if err != nil {
-		return err
+		// The URL carries the api_secret
+		return errors.New("google analytics request failed: " + util.DescribeClientError(err).Cause)
 	}
 
 	defer resp.Body.Close() //nolint:errcheck // Nothing actionable if closing the body fails

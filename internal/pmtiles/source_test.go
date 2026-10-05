@@ -197,9 +197,23 @@ func Test_HTTPSource_BodyLongerThanRange(t *testing.T) {
 }
 
 func Test_HTTPSource_Unreachable(t *testing.T) {
-	src := NewHTTPSource("http://127.0.0.1:1", testClientConfig(nil))
+	src := NewHTTPSource("http://127.0.0.1:1/a.pmtiles?key=SECRETKEY", testClientConfig(nil))
 
 	_, err := src.ReadRange(context.Background(), 0, 3)
 
-	require.Error(t, err)
+	var connErr pkg.RemoteConnectionError
+	require.ErrorAs(t, err, &connErr)
+	assert.NotContains(t, err.Error(), "SECRETKEY")
+	assert.NotContains(t, err.Error(), "127.0.0.1")
+}
+
+func Test_HTTPSource_Canceled(t *testing.T) {
+	src := NewHTTPSource("http://127.0.0.1:1/a.pmtiles?key=SECRETKEY", testClientConfig(nil))
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := src.ReadRange(ctx, 0, 3)
+
+	require.ErrorIs(t, err, context.Canceled)
+	assert.NotContains(t, err.Error(), "SECRETKEY")
 }

@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -738,6 +739,51 @@ layers:
 	assert.Equal(t, 401, resp.StatusCode)
 	assert.Equal(t, *img, body)
 	assert.NotNil(t, resp.Header["X-Error-Message"])
+}
+
+// The *url.Error from an unreachable upstream used to reach the response with the API key in it.
+func Test_TileHandler_UnreachableUpstreamOmitsURL(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	addr := listener.Addr().String()
+	require.NoError(t, listener.Close())
+
+	for _, mode := range []string{config.ModeErrorPlainText, config.ModeErrorImageHeader} {
+		t.Run(mode, func(t *testing.T) {
+			cfg := config.DefaultConfig()
+			cfg.Error.Mode = mode
+			cfg.Layers = append(cfg.Layers, config.LayerConfig{ID: "main", Provider: map[string]interface{}{
+				"name": "proxy",
+				"url":  "http://" + addr + "/{z}/{x}/{y}.png?key=SECRETKEY",
+			}})
+			lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(caches.Noop{}), nil, nil)
+			require.NoError(t, err)
+			handler, err := newTileHandler(newGenerationHolder(testServing(&cfg, authentications.Noop{}, lg)))
+			require.NoError(t, err)
+
+			req := httptest.NewRequest(http.MethodGet, "http://example.com/tiles/main/1/1/1", nil).WithContext(pkg.BackgroundContext())
+			req.SetPathValue("layer", "main")
+			req.SetPathValue("z", "1")
+			req.SetPathValue("x", "1")
+			req.SetPathValue("y", "1")
+
+			w := httptest.NewRecorder()
+			handler.ServeHTTP(w, req)
+			resp := w.Result()
+			defer func() { require.NoError(t, resp.Body.Close()) }()
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+
+			assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+			assert.NotContains(t, string(body), "SECRETKEY")
+			assert.NotContains(t, resp.Header.Get("X-Error-Message"), "SECRETKEY")
+			if mode == config.ModeErrorPlainText {
+				assert.Equal(t, cfg.Error.Messages.ProviderError, string(body))
+			} else {
+				assert.Equal(t, cfg.Error.Messages.ProviderError, resp.Header.Get("X-Error-Message"))
+			}
+		})
+	}
 }
 
 func Test_EtagFor_Deterministic(t *testing.T) {

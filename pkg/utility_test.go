@@ -19,9 +19,11 @@ import (
 	"encoding/gob"
 	"fmt"
 	"math/rand/v2"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/Michad/tilegroxy/internal/util"
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -51,6 +53,68 @@ func Test_GetTile(t *testing.T) {
 	require.NotNil(t, img)
 	assert.Equal(t, []byte("tiledata"), img.Content)
 	assert.Equal(t, "image/png", img.ContentType)
+}
+
+func closedPortURL(t *testing.T) string {
+	t.Helper()
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	addr := listener.Addr().String()
+	require.NoError(t, listener.Close())
+
+	return "http://" + addr + "/1/2/3.png?key=SECRETKEY"
+}
+
+// http.Client errors embed the full URL, which can carry the operator's API key.
+func Test_GetTile_ConnectionErrorOmitsURL(t *testing.T) {
+	url := closedPortURL(t)
+
+	_, err := GetTile(context.Background(), config.ClientConfig{Timeout: 5}, url, nil)
+
+	var connErr RemoteConnectionError
+	require.ErrorAs(t, err, &connErr)
+	assert.False(t, connErr.Timeout)
+	assert.Equal(t, TypeOfError(TypeOfErrorProvider), connErr.Type())
+	assert.Contains(t, err.Error(), "connection refused")
+	assert.NotContains(t, err.Error(), "SECRETKEY")
+	assert.NotContains(t, err.Error(), "127.0.0.1")
+
+	messages := config.DefaultConfig().Error.Messages
+	assert.Equal(t, messages.ProviderError, connErr.External(messages))
+}
+
+func Test_GetTile_TimeoutOmitsURL(t *testing.T) {
+	block := make(chan struct{})
+	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
+		<-block
+	}))
+	defer server.Close()
+	defer close(block)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	_, err := GetTile(ctx, config.ClientConfig{Timeout: 5}, server.URL+"/tile?key=SECRETKEY", nil)
+
+	var connErr RemoteConnectionError
+	require.ErrorAs(t, err, &connErr)
+	assert.True(t, connErr.Timeout)
+	assert.Equal(t, TypeOfError(TypeOfErrorTimeout), connErr.Type())
+	assert.Equal(t, "Remote server request timed out: context deadline exceeded", err.Error())
+
+	messages := config.DefaultConfig().Error.Messages
+	assert.Equal(t, messages.Timeout, connErr.External(messages))
+}
+
+func Test_GetTile_CanceledStaysCanceled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := GetTile(ctx, config.ClientConfig{Timeout: 5}, closedPortURL(t), nil)
+
+	require.ErrorIs(t, err, context.Canceled)
+	assert.NotContains(t, err.Error(), "SECRETKEY")
 }
 
 func Fuzz_EncodeDecodeImage(f *testing.F) {
