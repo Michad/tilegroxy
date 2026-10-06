@@ -22,7 +22,7 @@ import (
 
 	"github.com/Michad/tilegroxy/cmd"
 
-	_ "example.com/my_tg_wrapper/sample"
+	_ "github.com/Michad/tilegroxy/examples/extension/sample"
 )
 
 func main() {

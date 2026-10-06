@@ -18,7 +18,9 @@ unit:
 	@go test ./internal/... ${PKGPKGS} ./cmd/... -v -count=1 -tags "unit,viper_bind_struct"
 
 extension:
-	cd examples/extension && go build -o my_tg_wrapper -tags viper_bind_struct .
+	cd examples/extension && rm -f go.mod go.sum && go mod init ${PKG}/examples/extension \
+		&& go mod edit -require=${PKG}@v0.0.0 -replace=${PKG}=../.. \
+		&& go mod tidy && go build -o my_tg_wrapper -tags viper_bind_struct .
 
 e2e: docs build extension
 	@go test ./test/... -count=1 -tags "e2e,viper_bind_struct"
@@ -50,7 +52,7 @@ docs:
 	@node_modules/antora/bin/antora antora-playbook.yml
 	@mkdir -p build/site/examples/
 	@cp -r examples/* build/site/examples/
-	@rm -f build/site/examples/extension/my_tg_wrapper
+	@rm -f build/site/examples/extension/my_tg_wrapper build/site/examples/extension/go.mod build/site/examples/extension/go.sum
 	@cp -r docs/skills build/site/
 	@cp -r build/site/* internal/website/resources/
 
@@ -71,6 +73,6 @@ install:
 clean:
 	@go clean
 	-@rm ${OUT}
-	-@rm examples/extension/my_tg_wrapper
+	-@rm -f examples/extension/my_tg_wrapper examples/extension/go.mod examples/extension/go.sum
 
 .PHONY: build clean cover cover-out coverage docs e2e extension lint libyears mltspec readme test unit version
