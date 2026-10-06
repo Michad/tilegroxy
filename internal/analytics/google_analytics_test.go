@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -264,4 +265,20 @@ func Test_ChunkEvents(t *testing.T) {
 	assert.Len(t, chunks[2], 1)
 
 	assert.Empty(t, chunkEvents(nil, 3))
+}
+
+// The endpoint URL carries the api_secret, which a raw *url.Error would put in the warn log.
+func Test_GoogleAnalytics_ConnectionErrorOmitsSecret(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	addr := listener.Addr().String()
+	require.NoError(t, listener.Close())
+
+	a := newGA(t, "http://"+addr+"/mp/collect", nil)
+	defer closeGA(t, a)
+
+	err = a.(*GoogleAnalytics).send(context.Background(), "client", []analytics.Event{{LayerID: "main"}})
+
+	require.Error(t, err)
+	assert.Equal(t, "google analytics request failed: dial tcp: connection refused", err.Error())
 }

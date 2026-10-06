@@ -224,3 +224,34 @@ func (e TimeoutError) External(messages config.ErrorMessages) string {
 	// notest
 	return messages.Timeout
 }
+
+// Indicates the request to a remote server failed without a response, such as a DNS failure, refused connection, or timeout.
+// Never includes the URL or hostname since either can hold an operator's credentials.
+type RemoteConnectionError struct {
+	Cause   string
+	Timeout bool
+}
+
+func (e RemoteConnectionError) Error() string {
+	if e.Timeout {
+		return "Remote server request timed out: " + e.Cause
+	}
+
+	return "Remote server request failed: " + e.Cause
+}
+
+func (e RemoteConnectionError) Type() TypeOfError {
+	if e.Timeout {
+		return TypeOfErrorTimeout
+	}
+
+	return TypeOfErrorProvider
+}
+
+func (e RemoteConnectionError) External(messages config.ErrorMessages) string {
+	if e.Timeout {
+		return messages.Timeout
+	}
+
+	return messages.ProviderError
+}

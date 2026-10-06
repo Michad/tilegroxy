@@ -19,11 +19,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"math"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/Michad/tilegroxy/internal/util"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -121,7 +123,7 @@ func (s *HTTPSource) ReadRange(ctx context.Context, offset, length uint64) ([]by
 
 	resp, err := s.client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, remoteConnectionError(ctx, err)
 	}
 	defer resp.Body.Close()
 
@@ -147,4 +149,17 @@ func (s *HTTPSource) ReadRange(ctx context.Context, offset, length uint64) ([]by
 func (s *HTTPSource) Close() error {
 	s.client.CloseIdleConnections()
 	return nil
+}
+
+// The *url.Error from http.Client embeds the URL, which can hold an operator's API key.
+func remoteConnectionError(ctx context.Context, err error) error {
+	failure := util.DescribeClientError(err)
+
+	slog.DebugContext(ctx, failure.Detail)
+
+	if failure.Canceled {
+		return context.Canceled
+	}
+
+	return pkg.RemoteConnectionError{Cause: failure.Cause, Timeout: failure.Timeout}
 }
