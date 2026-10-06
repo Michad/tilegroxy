@@ -2,7 +2,7 @@
 
 The cache configuration defines the datastores where tiles should be stored/retrieved. We recommended you use a `multi`-tiered cache with a smaller, faster "near" cache first followed by a larger, slower "far" cache.
 
-There is no universal mechanism for expiring cache entries. Some cache options include built-in mechanisms for applying an TTL and maximum size, however some require an external cleanup mechanism if desired. Be mindful of this as some options may incur their own costs if allowed to grow unchecked. To delete entries covering a specific area, use xref:commands/seed.adoc[the seed command] with `--purge`.
+Some cache options include built-in mechanisms for applying a TTL and maximum size. Any cache can be wrapped in the xref:configuration/cache/ttl.adoc[ttl] cache to stop serving old entries, however that doesn't delete them, so some options require an external cleanup mechanism if desired. Be mindful of this as some options may incur their own costs if allowed to grow unchecked. To delete entries covering a specific area, use xref:commands/seed.adoc[the seed command] with `--purge`.
 
 When specifying a cache ensure you include the `name` parameter.
 

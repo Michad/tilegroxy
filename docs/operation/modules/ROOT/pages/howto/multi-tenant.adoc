@@ -1,0 +1,123 @@
+= Serve Multiple Tenants
+
+A tilegroxy deployment can be set up with first class support for serving multiple tenants (also called "organizations" or "realms"). In this setup, requests gets tagged with a tenant ID taken from the user's credentials, and that ID can drive which imagery is fetched, how it's cached, and how usage is attributed.
+
+CAUTION: Serving different tiles to different tenants means a tile can leak to the wrong tenant through caching or coalescing. Read xref:howto/user-dynamic.adoc[] before deploying this.
+
+== Getting a tenant ID
+
+The tenant ID comes from xref:configuration/authentication/index.adoc[authentication]. Not every option sets one:
+
+[cols="1,3"]
+|===
+| Authentication | Tenant ID
+
+| xref:configuration/authentication/jwt.adoc[jwt]
+| The claim named by `tenantId`, which defaults to `tid`. The user ID comes from `userId`, which defaults to `sub`
+
+| xref:configuration/authentication/custom.adoc[custom]
+| The `TenantID` field your `validate` function returns. See xref:extensibility.adoc#_custom_authentication[Extensibility]
+
+|===
+
+Tilegroxy does not require a tenant ID to be present. A token that passes validation but lacks the claim is served with an empty tenant ID, which the features below treat as "no tenant". Make sure your issuer always includes it.
+
+If you only have individual users and no grouping, use the user ID claim for `tenantId` as well.
+
+== Layers that vary by tenant
+
+The xref:configuration/provider/proxy.adoc[proxy] provider can put the tenant ID into the upstream URL with the `{ctx.tenant}` placeholder. `{ctx.user}` does the same for the user ID. Both are percent-encoded before being inserted. For example a `url` of `+https://imagery.example.com/{ctx.tenant}/{z}/{x}/{y}.png+` fetches each tenant's tiles from their own path.
+
+A xref:configuration/provider/custom.adoc[custom] provider receives the same request context and can use the tenant ID however it likes.
+
+CAUTION: Never use a layer `pattern` to pick the tenant, such as `+imagery_{org}+`, as that is easily spoofed.
+
+NOTE: To give tenants access to different sets of layers, use the JWT `layerScope` option or `AllowedLayers` in custom authentication. 
+
+== Caching
+
+Wrap the cache for tenant-specific layers in the xref:configuration/cache/tenant.adoc[tenant] cache. It adds the tenant ID to every cache key so each tenant gets its own entries.
+
+Layers that look the same for every tenant, like a basemap, don't need this. Give them a separate, plain cache so the tiles are stored once instead of once per tenant. Both caches can share a single xref:configuration/datastores/index.adoc[datastore].
+
+== Analytics
+
+Every xref:analytics.adoc[analytics] event records the user ID. To also record the tenant, add `tenantid` to the analytics `fields`. With the xref:configuration/analytics/postgresql.adoc[postgresql] and xref:configuration/analytics/clickhouse.adoc[clickhouse] destinations it lands in the `extra` column.
+
+== Seeding
+
+The xref:commands/seed.adoc[seed] command has no incoming request, so it has no tenant ID unless you pass one with `--tenant`. That sets both the cache namespace and the `{ctx.tenant}` placeholder. Seed each tenant separately:
+
+----
+tilegroxy seed -c tilegroxy.yml -l customer_imagery -z 0 -z 1 -z 2 --tenant acme
+tilegroxy seed -c tilegroxy.yml -l customer_imagery -z 0 -z 1 -z 2 --tenant globex
+----
+
+The same `--tenant` flag is available on the xref:commands/test.adoc[test] command.
+
+== Example
+
+Tokens come from an OIDC issuer with the organization in an `org_id` claim. `basemap` is shared and cached once. `customer_imagery` fetches from a per-tenant path and is cached per tenant.
+
+[,yaml]
+----
+authentication:
+  name: jwt
+  algorithms:
+    - RS256
+  jwks:
+    url: https://login.example.com/.well-known/jwks.json
+  expectedIssuer: https://login.example.com/
+  expectedAudience: tilegroxy
+  tenantId: org_id
+datastores:
+  - name: redis
+    id: tiles
+    host: redis.example.com
+  - name: postgresql
+    id: analytics
+    host: pg.example.com
+    user: tilegroxy
+    password: env.PGPASSWORD
+    database: analytics
+cache:
+  - id: shared
+    name: redis
+    datastore: tiles
+  - id: per_tenant
+    name: tenant
+    cache:
+      name: redis
+      datastore: tiles
+defaultcache: shared
+layers:
+  - id: basemap
+    provider:
+      name: proxy
+      url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+  - id: customer_imagery
+    cache: per_tenant
+    allowcoalesce: false
+    provider:
+      name: proxy
+      url: https://imagery.example.com/{ctx.tenant}/{z}/{x}/{y}.png
+analytics:
+  name: postgresql
+  datastore: analytics
+  table: tilegroxy_analytics
+  fields:
+    - tenantid
+----
+
+A token for this deployment looks like:
+
+[,json]
+----
+{
+  "iss": "https://login.example.com/",
+  "aud": "tilegroxy",
+  "sub": "alice@acme.example",
+  "org_id": "acme",
+  "exp": 1798761600
+}
+----

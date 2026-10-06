@@ -2,7 +2,27 @@
 
 Is tilegroxy's out of the box capabilities not sufficing for your use-case?  Luckily tilegroxy is designed to be highly extensible so you can add whatever functionality yourself!  If possible, please consider contributing back whatever functionality you add if it has generic usefulness.
 
-There are two ways to extend tilegroxy. One is to use the various "custom" options to provide interpreted Go code to implement a provider, authentication scheme, or analytics destination. The other is to use tilegroxy as a library and create your own executable with whatever tweaks you need.
+There are three ways to extend tilegroxy. The first is to use the various "custom" options to provide interpreted Go code to implement a provider, authentication scheme, or analytics destination. The second is to use tilegroxy as a library and create your own executable with whatever tweaks you need. The last is to fork the repository and change the code directly.
+
+[cols="1,2,2,2"]
+|===
+| Option | Capabilities | Limitations | Compatibility
+
+| <<"Custom",Custom>>
+| Providers, authentication, and analytics written in a single Go file per entity. No build step, the code is interpreted from your configuration
+| Only the standard library and the `tilegroxy/tilegroxy` package can be imported. No custom caches, datastores, secrets, or health checks. Small performance cost per call
+| Covered by the xref:compatibility.adoc[compatibility promise]. Function signatures only change in a major release
+
+| <<Using tilegroxy as a library,Library>>
+| Every entity type, including caches, datastores, secret sources, and health checks. Any third party library can be used
+| You build and release your own executable. Only `pkg/` and `cmd.Execute`/`cmd.ExecuteArgs` are available, `internal/` cannot be imported
+| Best effort. Changes to `pkg/` are called out as breaking changes where possible, but small changes may occur in minor versions
+
+| Forking
+| Anything, including the core request flow, built-in entities, and commands
+| No support. You maintain the fork yourself and merge upstream changes on your own
+| None. Everything under `internal/` can change in any release
+|===
 
 == "Custom"
 

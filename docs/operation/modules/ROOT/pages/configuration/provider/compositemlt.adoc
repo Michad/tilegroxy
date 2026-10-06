@@ -26,6 +26,6 @@ provider:
   providers:
   - name: pmtiles
     file: /data/basemap.pmtiles
-  - name: url_template
-    template: https://tiles.example.com/overlay/{z}/{x}/{y}.mlt
+  - name: proxy
+    url: https://tiles.example.com/overlay/{z}/{x}/{y}.mlt
 ----
