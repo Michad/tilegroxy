@@ -4,11 +4,10 @@ Crops vector tiles from another provider to a specific bounds.
 
 This is the vector tile equivalent of the xref:configuration/provider/crop.adoc[crop] provider, except without the secondary provider (combine this with xref:configuration/provider/compositemvt.adoc[compositemvt] for the same effect).
 
-Name should be "cropmvt"
+Name should be `cropmvt`
 
-Configuration options:
-
-[cols="1,3,1,1,1"]
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -32,8 +31,8 @@ Configuration options:
 
 |===
 
-Example:
-
+.Example
+[,yaml]
 ----
 provider:
   name: cropmvt

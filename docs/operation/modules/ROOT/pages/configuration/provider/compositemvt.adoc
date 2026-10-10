@@ -2,9 +2,10 @@
 
 Allows you to combine MVTs. If given one child provider that returns an MVT with layer "a" and another that returns an MVT with layer "b", this will return an MVT with layers "a" and "b".  The contents of the MVTs are not changed in any way.
 
-Name should be "compositemvt"
+Name should be `compositemvt`
 
-[cols="1,3,1,1,1"]
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -16,8 +17,8 @@ Name should be "compositemvt"
 
 |===
 
-Example:
-
+.Example
+[,yaml]
 ----
 provider:
   name: compositemvt

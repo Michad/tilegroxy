@@ -4,18 +4,17 @@ Allows you to specify your own logic controlling how auth tokens should be extra
 
 To help mitigate the performance impact of calling the interpreted `validate` method, a cache is utilized by default. In turn, to avoid concurrent requests that utilize the same token from causing repetitive calls to `validate`, a pool of locks are utilized when the cache is enabled. The size of the lock pool is equal to the number of CPUs.
 
-For more details on implementing the code for a custom authentication, see link:./extensibility.md#custom-authentication[Extensibility]
+For more details on implementing the code for a custom authentication, see xref:extensibility.adoc#custom-authentication[Extensibility]
 
-Name should be "custom"
+Name should be `custom`
 
-Configuration options:
-
-[cols="1,3,1,1,1"]
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
 | token
-| How to extract the auth token from the request. Each Key/Value should be one of the options in the table above
+| How to extract the auth token from the request. Each key/value should be one of the xref:extensibility.adoc#custom-authentication[token extraction modes]
 | map[string]string
 | Yes
 | None
@@ -33,8 +32,8 @@ Configuration options:
 | None
 |===
 
-Example:
-
+.Example
+[,yaml]
 ----
 authentication:
   name: custom

@@ -2,16 +2,17 @@
 
 Tilegroxy supports utilizing https://opentelemetry.io/[OpenTelemetry (OTEL)] to provide portable observability.  This allows you to monitor and "observe" your tilegroxy deployment in tools such as Fluent Bit, CloudWatch, NewRelic, Dynatrace, https://opentelemetry.io/ecosystem/vendors/[etc.]
 
-The supported telemetry data includes metrics, logs, and traces. These are disabled by default and can by turned on by setting `telemetry: enabled: true` in your configuration or `TELEMETRY_ENABLED=true` via environment variable.  Tilegroxy only supports the HTTP exporter, not STDOUT or GRPC.  Once telemetry is enabled you will need to use https://opentelemetry.io/docs/languages/sdk-configuration/otlp-exporter/[standard OTEL environment variables] to point the HTTP exporter to your collector.  For example: `+OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4318"+`.
+The supported telemetry data includes metrics, logs, and traces. These are disabled by default and can be turned on by setting `telemetry.enabled` to `true` in your configuration or `TELEMETRY_ENABLED=true` via environment variable.  Tilegroxy only supports the HTTP exporter, not STDOUT or GRPC.  Once telemetry is enabled you will need to use https://opentelemetry.io/docs/languages/sdk-configuration/otlp-exporter/[standard OTEL environment variables] to point the HTTP exporter to your collector.  For example: `+OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4318"+`.
 
 == Logs
 
-The "main" application logs will be shipped to OTEL in addition to the destinations link:./configuration.md#log[specified in the configuration]. Access logs are not shipped to OTEL.
+The "main" application logs will be shipped to OTEL in addition to the destinations xref:configuration/log.adoc#main-logs[specified in the configuration]. Access logs are not shipped to OTEL.
 
 == Metrics
 
 Metrics are available for cache hit/miss and the number of tile requests broken down by status. The full list of metrics:
 
+[cols="2m,3"]
 |===
 | Metric | Description
 
@@ -83,6 +84,5 @@ The `tilegroxy.analytics.*` metrics are meant to help monitor the health of xref
 
 Traces are generated for all incoming requests into tilegroxy.  For tile requests we include a parent span named "tilegroxy" that then includes child spans for providers, authentication, and cache.  Additionally child spans are generated for outgoing HTTP requests.  Utilizing these spans allows you to see a breakdown of where time is spent for a given request and where errors occur, this is especially useful for complicated layer setups.
 
-An example trace (display depends on the vendor):
-
-image::example_trace_in_aws.png[example_trace_in_aws.png]
+.An example trace (display depends on the vendor)
+image::example_trace_in_aws.png[Example trace in AWS]

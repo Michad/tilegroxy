@@ -4,6 +4,8 @@ Tests your layers and cache are correctly configured and working by performing e
 
 Full, up-to-date usage information can be found with `tilegroxy test -h`.
 
+.Output of `tilegroxy test -h`
+[,text]
 ----
 Tests that everything is working end-to-end for all or some layers including caching. This goes further than 'config check' and instead of just validating the configuration can be parsed it actually makes sample request(s) and populates the result in the cache. This is similar to running 'seed' for a single tile or standing up the server and making a cURL request for each layer. The output will list each layer and the status, with any error encountered if applicable.
 

@@ -16,7 +16,7 @@ The tenant ID comes from xref:configuration/authentication/index.adoc[authentica
 | The claim named by `tenantId`, which defaults to `tid`. The user ID comes from `userId`, which defaults to `sub`
 
 | xref:configuration/authentication/custom.adoc[custom]
-| The `TenantID` field your `validate` function returns. See xref:extensibility.adoc#_custom_authentication[Extensibility]
+| The `TenantID` field your `validate` function returns. See xref:extensibility.adoc#custom-authentication[Extensibility]
 
 |===
 
@@ -48,6 +48,7 @@ Every xref:analytics.adoc[analytics] event records the user ID. To also record t
 
 The xref:commands/seed.adoc[seed] command has no incoming request, so it has no tenant ID unless you pass one with `--tenant`. That sets both the cache namespace and the `{ctx.tenant}` placeholder. Seed each tenant separately:
 
+[,shell]
 ----
 tilegroxy seed -c tilegroxy.yml -l customer_imagery -z 0 -z 1 -z 2 --tenant acme
 tilegroxy seed -c tilegroxy.yml -l customer_imagery -z 0 -z 1 -z 2 --tenant globex

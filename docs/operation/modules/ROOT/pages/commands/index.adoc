@@ -4,6 +4,7 @@ The `tilegroxy` executable is a standard https://github.com/spf13/cobra[cobra] p
 
 The following global flags are available for supplying your configuration:
 
+[,text]
 ----
   -c, --config string            A file path to the configuration file to use.
                                  The file should have an extension of either

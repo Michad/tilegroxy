@@ -2,7 +2,7 @@
 
 Tilegroxy can generate a standalone HTML page previewing a single layer on a https://maplibre.org/maplibre-gl-js/docs/[MapLibre] map, so you can visually confirm that a layer works without a separate GIS client.
 
-The preview page is a development aid and is only available when xref:configuration/server.adoc[Server.Production] is `false`. 
+NOTE: The preview page is a development aid and is only available when xref:configuration/server.adoc[Server.Production] is `false`.
 
 == Endpoint
 
@@ -16,6 +16,6 @@ A vector layer is rendered with a plain outline style. Layers with the `mlt` dat
 
 == Security
 
-The preview won't likely work with authentication enabled as we don't pass along the incoming authentication to subsequent tile requests. This is really just meant as a dev tool before you get to that level.
+The preview likely won't work with authentication enabled as we don't pass along the incoming authentication to subsequent tile requests. This is really just meant as a dev tool before you get to that level.
 
 The preview endpoint itself does go through the same xref:configuration/authentication/index.adoc[authentication] check as a tile request, and respects the same authorization controls as a tile request. So if you do accidentally leave this on, it won't meaningfully expose you.

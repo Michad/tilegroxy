@@ -4,11 +4,10 @@ Defines a connection to link:https://memcached.org/[memcached]. Utilizes link:ht
 
 Used by the xref:configuration/cache/memcached.adoc[memcached cache].
 
-Name should be "memcached"
+Name should be `memcached`
 
-Configuration options:
-
-[cols="1,3,1,1,1"]
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -37,8 +36,7 @@ Configuration options:
 | host and port
 |===
 
-Example:
-
+.Example
 [,yaml]
 ----
 datastores:

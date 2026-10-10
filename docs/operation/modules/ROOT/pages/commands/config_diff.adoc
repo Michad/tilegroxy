@@ -4,6 +4,8 @@ Compares two configurations and reports what changed between them.
 
 Full, up-to-date usage information can be found with `tilegroxy config diff -h`.
 
+.Output of `tilegroxy config diff -h`
+[,text]
 ----
 Compares your current configuration against a new configuration, 
 outputting what changed and whether serve --hot-reload can apply 

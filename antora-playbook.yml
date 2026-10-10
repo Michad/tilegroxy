@@ -22,6 +22,8 @@ asciidoc:
     idprefix: ''
     idseparator: '-'
     page-pagination: ''
+    table-caption: false
+    url-repo: https://github.com/Michad/tilegroxy
 
 ui:
   bundle:

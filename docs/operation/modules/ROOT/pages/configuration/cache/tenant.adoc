@@ -6,13 +6,12 @@ The tenant ID is populated by xref:configuration/authentication/index.adoc[authe
 
 The xref:commands/seed.adoc[seed] and xref:commands/test.adoc[test] commands have no incoming request to take a tenant from, so pass one with their `--tenant` flag. Without it they act on the un-namespaced key rather than any tenant's.
 
-Do note that tenant ID will be subject to the same sanitization as layer names. That is, non-alphanumeric characters will be replaced with an underscore in some cases. If your tenant IDs differ by only special characters, rethink your tenant IDs. 
+NOTE: Tenant IDs are subject to the same sanitization as layer names. That is, non-alphanumeric characters will be replaced with an underscore in some cases. If your tenant IDs differ by only special characters, rethink your tenant IDs. 
 
-Name should be "tenant"
+Name should be `tenant`
 
-Configuration options:
-
-[cols="1,3,1,1,1"]
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -23,8 +22,7 @@ Configuration options:
 | None
 |===
 
-Example:
-
+.Example
 [,yaml]
 ----
 cache:

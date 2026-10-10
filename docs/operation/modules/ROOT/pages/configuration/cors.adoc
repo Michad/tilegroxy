@@ -10,9 +10,8 @@ NOTE: While `WildcardOrigin` will cause the Access-Control-Allow-Origin header t
 
 `Vary: Origin` is always included so a shared cache in front of tilegroxy doesn't serve one origin's response to another. Preflight (`OPTIONS`) requests are answered with a 204 and the negotiated methods, headers and max age.
 
-Configuration options:
-
-[cols="1,3,1,1,1"]
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -65,9 +64,8 @@ Configuration options:
 | 0
 |===
 
-The following can be supplied as environment variables:
-
-[cols="1,3"]
+.Environment variables
+[cols="1m,3m"]
 |===
 | Configuration Parameter | Environment Variable
 
@@ -81,8 +79,8 @@ The following can be supplied as environment variables:
 | SERVER_CORS_MAXAGE
 |===
 
-Example:
-
+.Example
+[,yaml]
 ----
 server:
   cors:

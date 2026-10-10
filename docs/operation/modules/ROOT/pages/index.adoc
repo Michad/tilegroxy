@@ -30,7 +30,7 @@ Run as link:https://tilegroxy.com/operation/configuration/encryption.html[HTTPS]
 Configurable via file or etcd with link:https://tilegroxy.com/operation/configuration/index.html[environment variable] override, 
 link:https://tilegroxy.com/operation/configuration/secret/index.html[externalizable secrets], and link:https://tilegroxy.com/operation/reloading.html[zero-downtime reload]
 +++</li><li>+++
-link:#docker[Container deployment]
+link:https://tilegroxy.com/operation/get-it.html#docker[Container deployment]
 +++</li><li>+++
 Minimal HTTP footprint to decrease security exposure
 +++</li><li>+++

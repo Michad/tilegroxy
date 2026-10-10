@@ -4,9 +4,8 @@ Requires incoming requests include a https://jwt.io/[JSON Web Token (JWT)]. The 
 
 The verification key can either be a single key stored in configuration or supplied via environment variable, or a set of keys fetched from a remote https://datatracker.ietf.org/doc/html/rfc7517[JWKS] endpoint. See <<JWKS>>.
 
-The following claims are supported/enforced:
-
-[cols="1,4"]
+.Supported claims
+[cols="1m,4"]
 |===
 | Claim | Implementation
 
@@ -29,22 +28,21 @@ The following claims are supported/enforced:
 | Validate the current tile being requested is partially contained in https://en.wikipedia.org/wiki/Geohash[the geohash]. See the xref:configuration/provider/crop.adoc[crop provider] to limit raster imagery layers to precise areas
 |===
 
-Name should be "jwt"
+Name should be `jwt`
 
-Configuration options:
-
-[cols="1,3,1,1,1"]
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
 | Key
-| The key for verifying the signature. The public key if using asymmetric signing. If the value starts with "env." the remainder is interpreted as the name of the Environment Variable to use to retrieve the verification key. Required unless JWKS is supplied
+| The key for verifying the signature. The public key if using asymmetric signing. If the value starts with `env.` the remainder is interpreted as the name of the Environment Variable to use to retrieve the verification key. Required unless JWKS is supplied
 | string
 | No
 | None
 
 | Algorithms
-| Algorithms to allow for JWT signatures. One or more of: "HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "EdDSA". When Key is used instead of JWKS, all listed algorithms must belong to the same key family since only one key is supplied - RS and PS count as the same family
+| Algorithms to allow for JWT signatures. One or more of: `HS256`, `HS384`, `HS512`, `RS256`, `RS384`, `RS512`, `ES256`, `ES384`, `ES512`, `PS256`, `PS384`, `PS512`, `EdDSA`. When Key is used instead of JWKS, all listed algorithms must belong to the same key family since only one key is supplied - RS and PS count as the same family
 | string[]
 | Yes
 | None
@@ -56,7 +54,7 @@ Configuration options:
 | None
 
 | HeaderName
-| The header to extract the JWT from. If this is "Authorization" it removes "Bearer " from the start. Make sure this is in "canonical case" e.g. X-Header - auth will always fail otherwise
+| The header to extract the JWT from. If this is `Authorization` it removes the `Bearer` prefix. Make sure this is in "canonical case" e.g. `X-Header`, otherwise auth will always fail
 | string
 | No
 | Authorization
@@ -68,37 +66,37 @@ Configuration options:
 | 1 day
 
 | ExpectedAudience
-| Require the "aud" claim to be this string
+| Require the `aud` claim to be this string
 | string
 | No
 | None
 
 | ExpectedSubject
-| Require the "sub" claim to be this string
+| Require the `sub` claim to be this string
 | string
 | No
 | None
 
 | ExpectedIssuer
-| Require the "iss" claim to be this string
+| Require the `iss` claim to be this string
 | string
 | No
 | None
 
 | ExpectedScope
-| Require the "scope" claim to contain this string
+| Require the `scope` claim to contain this string
 | string
 | No
 | None
 
 | LayerScope
-| If true the "scope" claim is used to whitelist access to layers
+| If true the `scope` claim is used to whitelist access to layers
 | bool
 | No
 | false
 
 | ScopePrefix
-| If true this prefix indicates scopes to use. For example a prefix of "tile/" will mean a scope of "tile/test" grants access to "test". Doesn't impact ExpectedScope
+| If true this prefix indicates scopes to use. For example a prefix of `tile/` will mean a scope of `tile/test` grants access to `test`. Doesn't impact ExpectedScope
 | string
 | No
 | Empty string
@@ -116,8 +114,8 @@ Configuration options:
 | tid
 |===
 
-Example:
-
+.Example
+[,yaml]
 ----
 authentication:
   name: jwt
@@ -132,9 +130,8 @@ Instead of a single static Key, verification keys can be fetched from a remote h
 
 If a token references a key ID that isn't in the currently cached keyset then the keyset is refreshed, rate limited by `RefreshMinInterval`.  This allows an issuer to rotate its keys without any action from the Operator.  If the issuer becomes unreachable the last successfully fetched keyset continues to be used, so existing keys still verify and only tokens signed with a new key ID fail while the endpoint is down.
 
-Configuration options:
-
-[cols="1,3,1,1,1"]
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -169,9 +166,8 @@ Configuration options:
 | false
 |===
 
-
-Example:
-
+.Example
+[,yaml]
 ----
 authentication:
   name: jwt

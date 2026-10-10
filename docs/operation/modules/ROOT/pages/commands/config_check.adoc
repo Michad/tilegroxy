@@ -4,6 +4,8 @@ Validates your supplied configuration.
 
 Full, up-to-date usage information can be found with `tilegroxy config check -h`.
 
+.Output of `tilegroxy config check -h`
+[,text]
 ----
 Checks the validity of the configuration you supplied and then exits. If
 everything is valid the program displays "Valid" and exits with a code of

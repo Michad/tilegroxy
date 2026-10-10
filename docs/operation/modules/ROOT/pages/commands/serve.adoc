@@ -4,6 +4,8 @@ The main operating mode of tilegroxy. Starts up an HTTP server and responds to i
 
 Full, up-to-date usage information can be found with `tilegroxy serve -h`.
 
+.Output of `tilegroxy serve -h`
+[,text]
 ----
 Creates an HTTP server that listens for requests for tiles and serves
 them up in accordance with the configuration.
@@ -19,10 +21,11 @@ Flags:
       --hot-reload         Automatically reload configuration upon changes
 ----
 
+.Example
+[,shell]
 ----
 tilegroxy serve -c /path/to/tilegroxy.yml
 ----
-
 
 == Endpoints
 
@@ -45,7 +48,7 @@ There are three primary endpoints (paths are all relative to the `RootPath` conf
 | Redirects to the documentation, or returns 204 if the documentation is disabled
 |===
 
-The `Production` configuration controls which endpoints are available.It's recommended you turn that on for anything internet facing.
+The `Production` configuration controls which endpoints are available. It's recommended you turn that on for anything internet facing.
 
 xref:configuration/health.adoc[Health] checks, if enabled, listen on their own port separate from the port serving tiles.
 
@@ -57,6 +60,6 @@ Use xref:commands/config_check.adoc[config check] to validate the configuration 
 
 == Reloading and shutdown
 
-The `--hot-reload` flag watches the configuration file and applies changes without a restart. It requires a file, therefore it cannot be combined with `--raw-config` or the `--remote-*` flags. Independent of that flag, the SIGHUP signal always reloads the configuration from wherever it was originally loaded, including the `--remote-*` flags. See xref:reloading.adoc[Reloading Configuration] for details.
+The `--hot-reload` flag watches the configuration file and applies changes without a restart. It requires a file, therefore it cannot be combined with `--raw-config` or the `--remote-*` flags. Independent of that flag, the `SIGHUP` signal always reloads the configuration from wherever it was originally loaded, including the `--remote-*` flags. See xref:reloading.adoc[Reloading Configuration] for details.
 
-The SIGINT or SIGTERM signals cause the server to gracefully shut down, allowing in-flight requests to finish and buffered analytics to flush. See xref:reloading.adoc[Shutdown] for more on that.
+The `SIGINT` or `SIGTERM` signals cause the server to gracefully shut down, allowing in-flight requests to finish and buffered analytics to flush. See xref:reloading.adoc[Shutdown] for more on that.

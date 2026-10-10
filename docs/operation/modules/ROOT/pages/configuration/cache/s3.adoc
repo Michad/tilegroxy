@@ -2,17 +2,18 @@
 
 Cache tiles as objects in an AWS S3 bucket, or some other S3 compatible object storage.
 
-== AWS Specific Notes
+== AWS specific notes
 
-Ensure the user you're using has proper permissions for reading and writing objects in the bucket.  The permissions required are the minimal set you'd expect: GetObject and PutObject.  It's highly recommended to also grant ListBucket permissions, otherwise the log will contain misleading 403 error messages for every cache miss.  Also ensure the user has access to the KMS key if using bucket encryption.
+Ensure the user you're using has proper permissions for reading and writing objects in the bucket.  The permissions required are the minimal set you'd expect: `s3:GetObject` and `s3:PutObject`.  Also ensure the user has access to the KMS key if using bucket encryption.
 
-== 
+TIP: It's highly recommended to also grant `s3:ListBucket` permissions, otherwise the log will contain misleading 403 error messages for every cache miss.
 
-Name should be "s3"
+== Configuration
 
-Configuration options:
+Name should be `s3`
 
-[cols="1,3,1,1,1"]
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -71,8 +72,7 @@ Configuration options:
 | false
 |===
 
-S3 Example:
-
+.S3 example
 [,yaml]
 ----
 cache:
@@ -84,8 +84,7 @@ cache:
   profile: tilegroxy_s3_user
 ----
 
-R2 Example:
-
+.R2 example
 [,yaml]
 ----
 cache:

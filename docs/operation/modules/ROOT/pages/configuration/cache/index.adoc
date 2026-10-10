@@ -16,7 +16,7 @@ The first cache in the list will be used as the default cache. Any layers you wa
 
 If you don't want to use the first cache in the list as your default, you can specify a `defaultcache` parameter at the very top-level of your configuration.  This parameter takes the ID of the cache to use as your default. 
 
-Be aware: there is no deduplication of cache configurations. That means if you have two identical `memory` caches defined, each will be a totally separate cache with their own memory allocations and capacity. This goes for all other cache types. If you need to define a cache multiple times (for example to be used under different `multi`, `ttl`, or `tenant` setups) it's recommended you utilize xref:configuration/datastores/index.adoc[datastores].
+NOTE: There is no deduplication of cache configurations. That means if you have two identical `memory` caches defined, each will be a totally separate cache with their own memory allocations and capacity. This goes for all other cache types. If you need to define a cache multiple times (for example to be used under different `multi`, `ttl`, or `tenant` setups) it's recommended you utilize xref:configuration/datastores/index.adoc[datastores].
 
 === Example
 
@@ -58,4 +58,4 @@ In this example, the `public` layer (and all layers by default) will use a `mult
 
 The `per-user` layer overrides the cache to use the `tenanted` cache, which means it will still use that same cache methodology, but the entries in the cache will be segregated by tenant.
 
-The `uncached` layer meanwhile won't be cached as it will use the no-op `none` cache.  Note, alternatively you could use the `skipcache` parameter to avoid needing to explicitly define a `none` cache at the top level.
+The `uncached` layer meanwhile won't be cached as it will use the no-op `none` cache.  Alternatively, you could use the `skipcache` parameter to avoid needing to explicitly define a `none` cache at the top level.

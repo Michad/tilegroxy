@@ -4,6 +4,8 @@ Outputs a valid configuration value containing all default values. Provided as a
 
 Full, up-to-date usage information can be found with `tilegroxy config create -h`.
 
+.Output of `tilegroxy config create -h`
+[,text]
 ----
 Creates either a JSON or YAML configuration with a skeleton containing all default values. 
 	

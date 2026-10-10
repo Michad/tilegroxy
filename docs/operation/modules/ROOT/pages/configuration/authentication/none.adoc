@@ -1,5 +1,7 @@
 = None
 
-No incoming authentication, all requests are allowed. Ensure you have an external authentication solution before exposing this to the internet.
+No incoming authentication, all requests are allowed.
 
-Name should be "none"
+WARNING: Ensure you have an external authentication solution before exposing this to the internet.
+
+Name should be `none`

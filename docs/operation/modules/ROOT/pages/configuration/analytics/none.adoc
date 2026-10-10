@@ -2,14 +2,14 @@
 
 Disables analytics.  Since analytics is off by default this is mainly useful for temporarily disabling a destination without removing its configuration.
 
-Name should be "none"
+Name should be `none`
 
 Configuration options:
 
 None of its own.  The `id`, `fields`, `extraFields` and `batch` parameters common to every analytics module are still accepted and validated but have no effect.
 
-Example:
-
+.Example
+[,yaml]
 ----
 analytics:
   name: none

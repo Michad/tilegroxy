@@ -2,9 +2,8 @@
 
 Configures how the HTTP client should operate for tile requests that require calling an external HTTP(s) server.
 
-Configuration options:
-
-[cols="1,3,1,1,1"]
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -27,7 +26,7 @@ Configuration options:
 | false
 
 | ContentTypes
-| The content-types to allow remote servers to return. Anything else will be interpreted as an error. See xref:../content-type.adoc[Content Type] for details
+| The content-types to allow remote servers to return. Anything else will be interpreted as an error. See xref:content-type.adoc[Content Type] for details
 | string[]
 | No
 | image/png, image/jpg, image/jpeg, application/vnd.mapbox-vector-tile, application/x-protobuf, application/vnd.maplibre-tile, application/vnd.maplibre-vector-tile
@@ -57,9 +56,8 @@ Configuration options:
 | {"application/octet-stream": ""}
 |===
 
-The following can be supplied as environment variables:
-
-[cols="1,2"]
+.Environment variables
+[cols="1m,2m"]
 |===
 | Configuration Parameter | Environment Variable
 

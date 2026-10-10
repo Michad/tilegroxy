@@ -4,7 +4,7 @@ Writes events to a link:https://www.postgresql.org/[PostgreSQL] table.  This is 
 
 Requires a xref:configuration/datastores/postgresql.adoc[postgresql datastore] to supply the connection.  
 
-Name should be "postgresql"
+Name should be `postgresql`
 
 == Table Setup
 
@@ -31,16 +31,15 @@ The `extra` column receives everything selected via `fields` and `extraFields` a
 
 Tilegroxy does not expire events so this table grows unbounded.  It is recommended you partition it by time and drop old partitions on a schedule.
 
-Configuration options:
+Also accepts the xref:configuration/analytics/index.adoc[batching parameters] shared by every analytics module.
 
-Also accepts the batching parameters described in xref:configuration/analytics/index.adoc[Analytics].
-
-[cols="1,3,1,1,1"]
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
 | Datastore
-| The ID of the datastore to use. The datastore must have a type of "postgresql".  Also see the xref:configuration/datastores/index.adoc[Datastores] documentation.
+| The ID of the datastore to use. The datastore must have a type of `postgresql`.  Also see the xref:configuration/datastores/index.adoc[Datastores] documentation.
 | string
 | Yes
 | None
@@ -76,8 +75,8 @@ Also accepts the batching parameters described in xref:configuration/analytics/i
 | None
 |===
 
-Example:
-
+.Example
+[,yaml]
 ----
 datastores:
   - name: postgresql

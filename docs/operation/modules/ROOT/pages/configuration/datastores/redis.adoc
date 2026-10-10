@@ -4,11 +4,10 @@ Defines a connection to link:https://redis.io/[redis] or another redis-compatibl
 
 Used by the xref:configuration/cache/redis.adoc[redis cache].
 
-Name should be "redis"
+Name should be `redis`
 
-Configuration options:
-
-[cols="1,3,1,1,1"]
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -61,8 +60,7 @@ Configuration options:
 | host and port
 |===
 
-Example:
-
+.Example
 [,yaml]
 ----
 datastores:

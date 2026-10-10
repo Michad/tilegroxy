@@ -10,11 +10,20 @@ A link:/skills/generating-tilegroxy-config/SKILL.md[Skill] is available to help 
 
 How to install it depends on your agent:
 
-* *Claude Code*: Copy the skill file into `.claude/skills/generating-tilegroxy-config` in your project (or `~/.claude/skills/` to make it available everywhere).
-* https://docs.openclaw.ai/tools/skills[*OpenClaw*]: Run `openclaw skills install git:Michad/tilegroxy@main --as generating-tilegroxy-config` (add `--global` to make it available to all agents), or install to a workspace/project skills directory as documented.
-* *ChatGPT*: Go to Skills, select Create, then Upload from your computer, and upload the skill's directory (or a `.zip` containing it as a single top-level folder).
-* *Other agents supporting the https://agentskills.io/specification[agent skills specification]*: Copy the skill's directory wherever your agent looks for skills; consult your agent's documentation for the exact location.
-* *Agents without skill support*: Paste the contents of `SKILL.md` into your prompt or system instructions, or point the agent at its raw URL.
+Claude Code::
+Copy the skill file into `.claude/skills/generating-tilegroxy-config` in your project (or `~/.claude/skills/` to make it available everywhere).
+
+https://docs.openclaw.ai/tools/skills[OpenClaw]::
+Run `openclaw skills install git:Michad/tilegroxy@main --as generating-tilegroxy-config` (add `--global` to make it available to all agents), or install to a workspace/project skills directory as documented.
+
+ChatGPT::
+Go to *Skills*, select btn:[Create], then btn:[Upload from your computer], and upload the skill's directory (or a `.zip` containing it as a single top-level folder).
+
+Other agents supporting the https://agentskills.io/specification[agent skills specification]::
+Copy the skill's directory wherever your agent looks for skills; consult your agent's documentation for the exact location.
+
+Agents without skill support::
+Paste the contents of `SKILL.md` into your prompt or system instructions, or point the agent at its raw URL.
 
 == Conventions
 
@@ -36,22 +45,36 @@ Since these entities are too dynamic to have fixed environment variables and fre
 
 == Structure
 
-The following is the top-level configuration structure. All top-level keys are optional besides layers:
+The following is the top-level configuration structure. All top-level keys are optional besides `layers`:
 
-____
-xref:configuration/server.adoc[server]:  ... +
-xref:configuration/health.adoc[health]:  ... +
-xref:configuration/client.adoc[client]:  ... +
-xref:configuration/log.adoc[logging]:  ... +
-xref:configuration/telemetry.adoc[telemetry]: ... +
-xref:configuration/error.adoc[error]:  ... +
-xref:configuration/secret/index.adoc[secret]: ... +
-xref:configuration/authentication/index.adoc[authentication]:  ... +
-xref:configuration/cache/index.adoc[cache]:  ... +
-xref:configuration/cache/index.adoc[defaultcache]:  "some-id" +
-xref:configuration/datastores/index.adoc[datastores]: +
-   - ... +
-xref:configuration/analytics/index.adoc[analytics]: ... +
-xref:configuration/layer.adoc[layers]:  +
-   - ... +
-____
+[,yaml]
+----
+server: ... # <1>
+health: ... # <2>
+client: ... # <3>
+logging: ... # <4>
+telemetry: ... # <5>
+error: ... # <6>
+secret: ... # <7>
+authentication: ... # <8>
+cache: ... # <9>
+defaultcache: some-id # <10>
+datastores: # <11>
+  - ...
+analytics: ... # <12>
+layers: # <13>
+  - ...
+----
+<1> xref:configuration/server.adoc[Server]: how the HTTP server operates
+<2> xref:configuration/health.adoc[Health]: health check endpoints served on a separate port
+<3> xref:configuration/client.adoc[Client]: how requests to upstream HTTP servers are made
+<4> xref:configuration/log.adoc[Log]: application, access, and audit logs
+<5> xref:configuration/telemetry.adoc[Telemetry]: OpenTelemetry metrics, logs, and traces
+<6> xref:configuration/error.adoc[Error]: how errors are returned to users
+<7> xref:configuration/secret/index.adoc[Secret]: an external store for sensitive values
+<8> xref:configuration/authentication/index.adoc[Authentication]: how incoming requests are authenticated
+<9> xref:configuration/cache/index.adoc[Cache]: where tiles are stored, either a single cache or a list of them
+<10> xref:configuration/cache/index.adoc#overridable-caches[Default cache]: the ID of the cache layers use unless they specify another
+<11> xref:configuration/datastores/index.adoc[Datastores]: shared connections used by caches, providers, and analytics
+<12> xref:configuration/analytics/index.adoc[Analytics]: where usage events are recorded
+<13> xref:configuration/layer.adoc[Layers]: the layers to serve

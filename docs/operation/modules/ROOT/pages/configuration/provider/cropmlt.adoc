@@ -6,11 +6,10 @@ This is the MLT equivalent of the xref:configuration/provider/cropmvt.adoc[cropm
 
 Tiles entirely inside the bounds are returned unchanged. Tiles that cross the bounds are decoded, clipped, and encoded again using the simplest MLT encodings, so they can be somewhat larger than the original. Clipping also drops any pre-tessellated polygon data, which MapLibre rebuilds from the polygon outlines. Only version 1 MLT layers can be clipped, so layers in any other version are removed from tiles that cross the bounds. To guard against malicious tiles, a layer is also removed if decoding it would take the tile past roughly 50 MiB of memory, and any feature over roughly 10 MiB is removed from its layer.
 
-Name should be "cropmlt"
+Name should be `cropmlt`
 
-Configuration options:
-
-[cols="1,3,1,1,1"]
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -34,8 +33,8 @@ Configuration options:
 
 |===
 
-Example:
-
+.Example
+[,yaml]
 ----
 provider:
   name: cropmlt

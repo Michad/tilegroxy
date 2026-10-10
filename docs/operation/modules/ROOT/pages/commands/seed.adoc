@@ -6,6 +6,8 @@ The same command can also remove cached tiles with the `--purge` flag. A purge w
 
 Full, up-to-date usage information can be found with `tilegroxy seed -h`.
 
+.Output of `tilegroxy seed -h`
+[,text]
 ----
 Pre-populates the cache for a given layer for a given area (bounding box)
 for a range of zoom levels.
@@ -74,4 +76,3 @@ Flags:
   -z, --zoom uints              The zoom level(s) to seed (default [0,1,2,
                                 3,4,5])
 ----
-

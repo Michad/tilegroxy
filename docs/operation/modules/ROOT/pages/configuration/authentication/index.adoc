@@ -1,5 +1,3 @@
-
-
 = Authentication
 
 Implements incoming auth schemes. This is primarily meant for authentication but does include some authorization by limiting access to specific layers via JWT or custom schemes.

@@ -8,7 +8,7 @@ Contains only files/folders that need to be in the root directory or that don't 
 
 == pkg
 
-Any code that should be exposed for consumers of tilegroxy as detailed in the `extensibility` documentation.  
+Any code that should be exposed for consumers of tilegroxy as detailed in the xref:operation::extensibility.adoc[extensibility] documentation.  
 
 Any deletion/rename/signature changes to code in this folder constitutes a breaking change. As such we should keep the code in this folder to the minimum necessary to be able to have a reasonable custom deployment of tilegroxy.  Utility code should generally be left out of here.
 
@@ -39,7 +39,7 @@ Code specific for defining the CLI interface of tilegroxy go in here.  We should
 
 Documentation lives here structured in Antora modules split into three separate sources: operation manual (user docs), development manual (these docs), and decisions (ADR record)
 
-== Examples
+== examples
 
 Contains dedicated files that provide examples of how tilegroxy can be used.  
 

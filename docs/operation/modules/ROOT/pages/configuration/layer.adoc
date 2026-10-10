@@ -2,15 +2,19 @@
 
 A layer represents a distinct mapping layer as would be displayed in a typical web map application.  Each layer can be accessed independently from other map layers. The main thing that needs to be configured for a layer is the provider described below.
 
-The URLs of incoming requests follow a format like: `+/tiles/{layerName}/{z}/{x}/{y}+` the layer name can be one of two things: 1) the ID of the layer or 2) A string that matches a pattern.  A pattern should include non-subsequent placeholder values wrapped in curly braces. Those placeholder values can be used in certain providers, such as the Proxy provider where they can be forwarded along to the upstream map layer. See xref:layer-patterns.adoc[Layer Patterns] for a walkthrough of how to utilize them
+The URLs of incoming requests follow a format like `+/tiles/{layerName}/{z}/{x}/{y}+`. The layer name can be one of two things:
+
+. The ID of the layer
+. A string that matches a pattern
+
+A pattern should include non-subsequent placeholder values wrapped in curly braces. Those placeholder values can be used in certain providers, such as the Proxy provider where they can be forwarded along to the upstream map layer. See xref:layer-patterns.adoc[Layer Patterns] for a walkthrough of how to utilize them
 
 When using a pattern you can include https://regex101.com/[Regular Expressions] to validate the values that match against the placeholder.
 
-It is highly recommended that layer names be alphanumeric plus underscores. While other characters aren't forbidden, several mechanisms (some caches and telemetry) replace potentially dangerous characters with underscores. This can lead to collisions if you have layer names that differ only by special characters.
+TIP: It is highly recommended that layer names be alphanumeric plus underscores. While other characters aren't forbidden, several mechanisms (some caches and telemetry) replace potentially dangerous characters with underscores. This can lead to collisions if you have layer names that differ only by special characters.
 
-Configuration options:
-
-[cols="1,3,1,1,1"]
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -57,7 +61,7 @@ Configuration options:
 | false
 
 | allowcoalesce
-| Whether to allow concurrent requests for the same tile to be combined into one tile generation call. This includes requests triggered by different users. If your tiles are customized per user/tenant, you will want to set this false. See xref:../howto/user-dynamic.adoc#_coalesce[this how-to] for further information
+| Whether to allow concurrent requests for the same tile to be combined into one tile generation call. This includes requests triggered by different users. If your tiles are customized per user/tenant, you will want to set this false. See xref:howto/user-dynamic.adoc#coalesce[this how-to] for further information
 | bool
 | No
 | Auto (based on the layer's cache and provider)
@@ -140,7 +144,7 @@ Configuration options:
 
 Several options above describe the layer's tiles. Most of them can also come from the provider, for instance a provider reading an archive that records its own zoom range. Providers only describe, they never restrict. Only values set on the layer are enforced on requests.
 
-[cols="1,1,2,2"]
+[cols="1m,1,2,2"]
 |===
 | Option | Set by | Effect | Used by
 
@@ -174,8 +178,8 @@ A value set on the layer always replaces the provider's. A provider value that c
 
 Nesting providers combine what their children report. A provider wrapping a single other provider, such as xref:configuration/provider/effect.adoc[effect], passes its child's values through. One with several children, such as xref:configuration/provider/fallback.adoc[fallback] or xref:configuration/provider/blend.adoc[blend], reports values covering all of them, leaving a value unset if any child doesn't report it. A xref:configuration/provider/ref.adoc[ref] reports the metadata of the layer it points to.
 
-Example:
-
+.Example
+[,yaml]
 ----
 layer:
   id: my_layer

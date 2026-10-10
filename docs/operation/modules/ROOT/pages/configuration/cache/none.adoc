@@ -2,4 +2,4 @@
 
 Disables the cache.
 
-Name should be "none" or "test"
+Name should be `none` or `test`

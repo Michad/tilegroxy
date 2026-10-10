@@ -2,9 +2,8 @@
 
 Configuration for serving xref:tilejson.adoc[TileJSON] documents describing configured layers. See that page for a full description of the endpoints, what goes into a document, and how authentication applies, including how a caller's own layer or geographic restrictions carry through to what's returned.
 
-Configuration options:
-
-[cols="1,3,1,1,1"]
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -27,9 +26,8 @@ Configuration options:
 | Built from header inspection
 |===
 
-The following can be supplied as environment variables:
-
-[cols="1,3"]
+.Environment variables
+[cols="1m,3m"]
 |===
 | Configuration Parameter | Environment Variable
 
@@ -43,8 +41,8 @@ The following can be supplied as environment variables:
 | SERVER_TILEJSON_BASEURLS
 |===
 
-Example:
-
+.Example
+[,yaml]
 ----
 server:
   tilejson:
@@ -57,8 +55,8 @@ server:
 
 
 
-Example:
-
+.Example
+[,yaml]
 ----
 layer:
   id: my_layer
@@ -76,8 +74,8 @@ layer:
     ...
 ----
 
-Example with a pattern layer:
-
+.Example with a pattern layer
+[,yaml]
 ----
 layer:
   id: my_layer

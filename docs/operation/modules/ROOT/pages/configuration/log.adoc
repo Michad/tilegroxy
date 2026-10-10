@@ -2,10 +2,10 @@
 
 Configures how the application should log during operation.
 
-The `Logging` section supports three keys: `main`, `access` and `audit` which are objects described respectively below.
+The `logging` section supports three keys: <<main-logs,`main`>>, <<access-logs,`access`>> and <<audit-logs,`audit`>>, which are objects described below.
 
-Example:
-
+.Example
+[,yaml]
 ----
 logging:
   access:
@@ -26,20 +26,19 @@ Configures application log messages.
 
 These log messages output in a structured log format, either with Key=Value attributes in plain (text) mode or as JSON.  In either mode attributes are available driven by the HTTP request that is being processed.  We try to avoid plain mode logs being overly verbose for readability, which means if you want all the attributes you'll need to explicitly enable them.  In JSON mode we assume you're ingesting them into a system that handles formatting so include more attributes by default.
 
-In order to avoid logging secrets you need to specify the headers to log. If you're including auth information via the URL (not recommended) you should make sure Request is false to avoid logging those.
+IMPORTANT: In order to avoid logging secrets you need to specify the headers to log. If you're including auth information via the URL (not recommended) you should make sure Request is false to avoid logging those.
 
 Level controls the verbosity of logs. There is no guarantee as to the specific log messages that will be outputted so you might see more or fewer log messages between versions of the application, especially at higher verbosity levels.  Here are the general rules of what to expect for each level (from least to most verbose):
 
-* *error*: Only messages for things that are definitely a problem with your setup or the application itself. It's recommended to configure alerts/notifications for error logs and if the issue is not User Error, please open a ticket for it: https://github.com/Michad/tilegroxy/issues
-* *warn*: Includes messages for things that _might_ be an issue but isn't critical to the core functioning of the system.  For example an issue talking to your configured cache will come through as a warning.
-* *info*: Includes messages that allow you to see what's happening in real time but without being overwhelmed with minutiae. Expect one or two log messages per request, including messages indicating requests with something unusual.
-* *debug*: Includes messages to help understand what's happening for a given request execution. Expect a few log messages per request. This is more than you probably want in prod but can be useful when first integrating with the system.
-* *trace*: Includes messages for every level of the application as a request flows between layers. Expect several log messages per request, more for complex setups/layers. Very noisy but shouldn't be a _huge_ performance impact.
-* *absurd*: Includes more information than you will probably ever need. In some cases this can produce thousands of messages per request and will have a substantial performance cost.
+`error`:: Only messages for things that are definitely a problem with your setup or the application itself. It's recommended to configure alerts/notifications for error logs and if the issue is not User Error, please {url-repo}/issues[open a ticket] for it.
+`warn`:: Includes messages for things that _might_ be an issue but isn't critical to the core functioning of the system.  For example an issue talking to your configured cache will come through as a warning.
+`info`:: Includes messages that allow you to see what's happening in real time but without being overwhelmed with minutiae. Expect one or two log messages per request, including messages indicating requests with something unusual.
+`debug`:: Includes messages to help understand what's happening for a given request execution. Expect a few log messages per request. This is more than you probably want in prod but can be useful when first integrating with the system.
+`trace`:: Includes messages for every level of the application as a request flows between layers. Expect several log messages per request, more for complex setups/layers. Very noisy but shouldn't be a _huge_ performance impact.
+`absurd`:: Includes more information than you will probably ever need. In some cases this can produce thousands of messages per request and will have a substantial performance cost.
 
-Configuration options:
-
-[cols="1,3,1,1,1"]
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -56,13 +55,13 @@ Configuration options:
 | None
 
 | Format
-| The format to output application logs in. Applies to both standard out and file out. Possible values: plain, json
+| The format to output application logs in. Applies to both standard out and file out. Possible values: `plain`, `json`
 | string
 | No
 | plain
 
 | Level
-| The most-detailed log level that should be included. Possible values: debug, info, warn, error, trace, absurd
+| The most-detailed log level that should be included. Possible values: `debug`, `info`, `warn`, `error`, `trace`, `absurd`
 | string
 | No
 | info
@@ -80,9 +79,8 @@ Configuration options:
 | None
 |===
 
-The following can be supplied as environment variables:
-
-[cols="1,3"]
+.Environment variables
+[cols="1m,3m"]
 |===
 | Configuration Parameter | Environment Variable
 
@@ -109,9 +107,8 @@ The following can be supplied as environment variables:
 
 Configures logs for incoming HTTP requests. Primarily outputs in standard Apache Access Log formats.
 
-Configuration options:
-
-[cols="1,3,1,1,1"]
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -128,15 +125,14 @@ Configuration options:
 | None
 
 | Format
-| The format to output access logs in. Applies to both standard out and file out. Possible values: common, combined
+| The format to output access logs in. Applies to both standard out and file out. Possible values: `common`, `combined`
 | string
 | No
 | combined
 |===
 
-The following can be supplied as environment variables:
-
-[cols="1,3"]
+.Environment variables
+[cols="1m,3m"]
 |===
 | Configuration Parameter | Environment Variable
 
@@ -156,12 +152,11 @@ Configures a log containing only security relevant events. Auditing is off by de
 
 Two kinds of event are emitted, each identified by an `event` attribute:
 
-* *auth_failure*: A request was rejected for an authentication or authorization reason. This covers a failed check by the configured xref:configuration/authentication/index.adoc[authentication], a request for a layer the caller isn't allowed, and a request for a tile outside the caller's allowed geographic area. The `reason` attribute names which of these occurred. Standard request fields are always included (URI, path, protocol, IP, method, host, and user agent) and, when possible, `user` and `tenant` are included as well.
-* *config_reload*: The configuration was reloaded, which happens when xref:reloading.adoc[hot reloading] is enabled or when a watched xref:configuration/secret/index.adoc[secret] rotates. The `outcome` attribute is either `success` or `failure`, and a failure carries the `error` that stopped it. The `reason` attribute says what triggered the reload: `config_file` for a change to the configuration file, `signal` for a `SIGHUP` reload signal, `secret_rotation` for a watched secret whose value changed, and `secret_ttl` for the periodic reload a secret `ttl` schedules.
+`auth_failure`:: A request was rejected for an authentication or authorization reason. This covers a failed check by the configured xref:configuration/authentication/index.adoc[authentication], a request for a layer the caller isn't allowed, and a request for a tile outside the caller's allowed geographic area. The `reason` attribute names which of these occurred. Standard request fields are always included (URI, path, protocol, IP, method, host, and user agent) and, when possible, `user` and `tenant` are included as well.
+`config_reload`:: The configuration was reloaded, which happens when xref:reloading.adoc[hot reloading] is enabled or when a watched xref:configuration/secret/index.adoc[secret] rotates. The `outcome` attribute is either `success` or `failure`, and a failure carries the `error` that stopped it. The `reason` attribute says what triggered the reload: `config_file` for a change to the configuration file, `signal` for a `SIGHUP` reload signal, `secret_rotation` for a watched secret whose value changed, and `secret_ttl` for the periodic reload a secret `ttl` schedules.
 
-Configuration options:
-
-[cols="1,3,1,1,1"]
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -184,7 +179,7 @@ Configuration options:
 | None
 
 | Format
-| The format to output audit events in. Applies to both standard out and file out. Possible values: plain, json
+| The format to output audit events in. Applies to both standard out and file out. Possible values: `plain`, `json`
 | string
 | No
 | json
@@ -196,9 +191,8 @@ Configuration options:
 | None
 |===
 
-The following can be supplied as environment variables:
-
-[cols="1,3"]
+.Environment variables
+[cols="1m,3m"]
 |===
 | Configuration Parameter | Environment Variable
 

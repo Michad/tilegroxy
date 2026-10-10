@@ -4,13 +4,12 @@ Defines an in-process store of tiles held in the memory of the tilegroxy daemon 
 
 Only used by the xref:configuration/cache/memory.adoc[memory cache].
 
-*This is not recommended for production use.* The same caveats as the xref:configuration/cache/memory.adoc[memory cache] apply.
+WARNING: This is not recommended for production use. The same caveats as the xref:configuration/cache/memory.adoc[memory cache] apply.
 
-Name should be "memory"
+Name should be `memory`
 
-Configuration options:
-
-[cols="1,3,1,1,1"]
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -33,8 +32,7 @@ Configuration options:
 | 3600
 |===
 
-Example:
-
+.Example
 [,yaml]
 ----
 datastores:

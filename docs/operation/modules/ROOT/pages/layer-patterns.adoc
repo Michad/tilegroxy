@@ -75,7 +75,9 @@ The xref:configuration/cache/disk.adoc[disk], xref:configuration/cache/s3.adoc[S
 
 Placeholder values come straight from the request, so they are User input and should be treated as hostile. Escaping in Proxy and CGI and prepared statements in PostGIS protect against the most direct injection, but they don't stop a User from asking your upstream for something you didn't intend to serve.
 
-Always configure `paramValidator` on a pattern layer whose values reach a provider, and make the expressions as tight as you can. Alphanumeric values of a known length are a good default. Never let a placeholder control the hostname of an upstream URL. See xref:security.adoc[Security] for more.
+IMPORTANT: Always configure `paramValidator` on a pattern layer whose values reach a provider, and make the expressions as tight as you can. Alphanumeric values of a known length are a good default. Never let a placeholder control the hostname of an upstream URL.
+
+See xref:security.adoc[Security] for more.
 
 == Worked example
 
