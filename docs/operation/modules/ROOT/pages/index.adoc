@@ -9,7 +9,7 @@ link:https://tilegroxy.com/operation/configuration/provider/proxy.html[Proxy] to
 +++</li><li>+++
 Cache tiles in link:https://tilegroxy.com/operation/configuration/cache/disk.html[disk], link:https://tilegroxy.com/operation/configuration/cache/memory.html[memory], link:https://tilegroxy.com/operation/configuration/cache/s3.html[s3], link:https://tilegroxy.com/operation/configuration/cache/redis.html[redis], and/or link:https://tilegroxy.com/operation/configuration/cache/memcached.html[memcached]
 +++</li><li>+++
-Require authentication using link:https://tilegroxy.com/operation/configuration/authentication/static_key.html[static key], link:https://tilegroxy.com/operation/configuration/authentication/jwt.html[JWT], or link:https://tilegroxy.com/operation/configuration/authentication/custom.html[custom] logic
+Require authentication using link:https://tilegroxy.com/operation/configuration/authentication/static_key.html[static key], link:https://tilegroxy.com/operation/configuration/authentication/jwt.html[JWT], link:https://tilegroxy.com/operation/configuration/authentication/bearer.html[API keys stored in a database], or link:https://tilegroxy.com/operation/configuration/authentication/custom.html[custom] logic
 +++</li><li>+++
 link:https://tilegroxy.com/operation/configuration/authentication/jwt.html[Restrict access] to a given layer and/or geographic region based on auth token
 +++</li><li>+++

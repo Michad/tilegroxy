@@ -105,7 +105,7 @@ doc page to read:
 - Where should tiles be cached, if at all - none, local disk/memory, or a shared store
   like Redis/S3/Memcached? Any expiration requirements?
 - Does the server need to authenticate incoming requests, and if so how (open
-  internally, a static bearer token, or JWT/OIDC)?
+  internally, a static bearer token, API keys stored in PostgreSQL/Redis, or JWT/OIDC)?
 - Is this for local development/testing or a production deployment? (affects
   `server.production`, error mode, logging verbosity, and which cache/auth options are
   appropriate)
@@ -129,12 +129,14 @@ materially changes which entity or page to read next.
    Avoid deep nesting; it has a real performance cost.
 4. **Add authentication** if this isn't purely internal. `none` (default) accepts
    everything; `static_key` is a casual deterrent only; `jwt` is the real option, and
-   supports either a static key or a JWKS endpoint.
+   supports either a static key or a JWKS endpoint. `bearer` validates API keys by looking
+   them up in a `postgresql` or `redis` datastore.
 5. **Add error handling** for production: `error.mode: image` (default) or
    `image+header` so failures render as a map tile instead of leaking a raw error to
    end users.
 6. **Add secret/analytics/datastores** only as needed. `datastores` are named and
-   referenced by id from `analytics` blocks that write to a database.
+   referenced by id from `analytics` blocks that write to a database and from `bearer`
+   authentication.
 
 ## Validating
 

@@ -2,7 +2,7 @@
 
 Defines a connection to link:https://redis.io/[redis] or another redis-compatible key-value store. Utilizes link:https://github.com/redis/go-redis[go-redis] under the hood.
 
-Used by the xref:configuration/cache/redis.adoc[redis cache].
+Used by the xref:configuration/cache/redis.adoc[redis cache] and xref:configuration/authentication/bearer.adoc[bearer authentication].
 
 Name should be "redis"
 

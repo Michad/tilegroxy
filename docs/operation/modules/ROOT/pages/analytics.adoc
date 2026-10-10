@@ -31,7 +31,7 @@ Every event always includes the following:
 | The tile coordinates
 
 | user
-| The authenticated user, or empty when the request was anonymous. Only the xref:configuration/authentication/jwt.adoc[jwt] and xref:configuration/authentication/custom.adoc[custom] authentication modules establish a user identity
+| The authenticated user, or empty when the request was anonymous. 
 |===
 
 The following can be included via `fields`:

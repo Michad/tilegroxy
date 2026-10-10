@@ -35,6 +35,7 @@
 *** xref:configuration/authentication/none.adoc[]
 *** xref:configuration/authentication/static_key.adoc[]
 *** xref:configuration/authentication/jwt.adoc[]
+*** xref:configuration/authentication/bearer.adoc[]
 *** xref:configuration/authentication/custom.adoc[]
 ** xref:configuration/analytics/index.adoc[]
 *** xref:configuration/analytics/none.adoc[]

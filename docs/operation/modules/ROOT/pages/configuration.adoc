@@ -38,6 +38,7 @@ include::configuration/authentication/index.adoc[leveloffset=1]
 include::configuration/authentication/none.adoc[leveloffset=2]
 include::configuration/authentication/static_key.adoc[leveloffset=2]
 include::configuration/authentication/jwt.adoc[leveloffset=2]
+include::configuration/authentication/bearer.adoc[leveloffset=2]
 include::configuration/authentication/custom.adoc[leveloffset=2]
 
 include::configuration/analytics/index.adoc[leveloffset=1]

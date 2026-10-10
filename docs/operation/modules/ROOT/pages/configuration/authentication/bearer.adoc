@@ -1,0 +1,157 @@
+= Bearer Lookup
+
+Requires incoming requests include an API token that is looked up in a xref:configuration/datastores/index.adoc[datastore]. Requests without a token, or with a token not in the datastore, are rejected. This lets you validate API keys you already manage in your own database.
+
+This authentication method can allow associating a user ID and tenant ID to the request, but does not support authorization options (allowed layers or bounding box).
+
+The following datastores are supported:
+
+.Postgres
+====
+
+When using a postgresql datasource, the `postgresql.query` parameter is executed as a query.  The auth token is passed in as the `$1` bind parameter. The query must be a SELECT that returns zero or one rows. If zero or more than one rows are returned, authentication fails. 
+
+The rows returned by the query should have a mix of the following columns: `valid`, `user_id`, and `tenant_id` - any other columns are ignored. Any columns that are present but return the wrong data type will result in a warning being logged and authentication failing.
+
+If `valid` is present, it is used as an additional check for whether authentication passes. The column must be a boolean, true if authentication passes and false or NULL if it should fail. 
+
+If `user_id` is present and non-null, it is used as the user identifier. The column must be a string. 
+
+If `tenant_id` is present and non-null, it is used as the tenant identifier. The column must be a string. See xref:../../howto/multi-tenant.adoc[How to: Serve Multiple Tenants] for more information on using a tenant ID
+====
+
+.Redis
+====
+When using redis, we assume the auth token is used as a key with some prefix.  Authentication is allowed if the key exists. 
+
+Setting a user ID and tenant ID requires that the entry be a Hash data type. The field to use in the hash is configurable.
+====
+
+Lookup results can be optionally cached in memory to decrease database load. Use this with caution as this means a revoked token can keep working past expiration. While authentication rejections are also cached, outright errors (such as inability to connect to the database) are not.
+
+Name should be "bearer"
+
+Configuration options:
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| Datastore
+| The ID of the datastore to use
+| string
+| Yes
+| None
+
+| HeaderName
+| The header to extract the token from. If this is "Authorization" the value must start with "Bearer " which is removed. Make sure this is in "canonical case" e.g. X-Api-Key - auth will always fail otherwise
+| string
+| No
+| Authorization
+
+| TokenEncoding
+| An encoding to apply to the token before looking it up. Can be base64, base64urlsafe, base36. base64urlsafe omits the trailing "=" padding
+| string
+| No
+| none
+
+| CacheSize
+| How many lookup results to keep in memory. Set to -1 to disable
+| int
+| No
+| -1
+
+| CacheTTL
+| How many seconds a lookup result is reused before the datastore is checked again
+| uint32
+| No
+| 600
+
+| Postgresql
+| Options for a postgresql datastore. Must not be set for a redis datastore. See <<bearer-postgresql,PostgreSQL>>
+| Postgresql
+| With postgresql
+| None
+
+| Redis
+| Options for a redis datastore. Must not be set for a postgresql datastore. See <<bearer-redis,Redis>>
+| Redis
+| No
+| None
+|===
+
+
+[#bearer-postgresql]
+== PostgreSQL
+
+Configuration options:
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| Query
+| The SQL to look up the token. Must reference the token as `$1`
+| string
+| Yes
+| None
+|===
+
+[#bearer-redis]
+== Redis
+
+Configuration options:
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| KeyPrefix
+| Prepended to the token to form the key
+| string
+| No
+| Empty string
+
+| UserField
+| The hash field containing the user ID
+| string
+| No
+| user
+
+| TenantField
+| The hash field containing the tenant ID
+| string
+| No
+| tenant
+|===
+
+Example using PostgreSQL:
+
+----
+datastores:
+  - name: postgresql
+    id: auth_db
+    host: pg.example.com
+    user: tilegroxy
+    password: env.PGPASSWORD
+    database: accounts
+authentication:
+  name: bearer
+  datastore: auth_db
+  postgresql:
+    query: SELECT user_id, tenant_id FROM api_keys WHERE token_hash = $1 AND revoked = false
+----
+
+Example using Redis, where a token is created with `HSET apikey:abc123 user alice tenant acme`:
+
+----
+datastores:
+  - name: redis
+    id: auth_redis
+    host: redis.example.com
+authentication:
+  name: bearer
+  datastore: auth_redis
+  redis:
+    keyPrefix: "apikey:"
+----
