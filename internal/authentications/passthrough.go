@@ -20,10 +20,12 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"math"
+	"mime"
 	"net/http"
 	"net/url"
 	"slices"
@@ -74,6 +76,7 @@ type passthroughForward struct {
 
 type Passthrough struct {
 	PassthroughConfig
+	endpoint     *url.URL
 	clientConfig config.ClientConfig
 	httpClient   *http.Client
 	userPath     *xpath.Expr
@@ -121,11 +124,23 @@ func (s PassthroughRegistration) Initialize(cfgAny any, deps authentication.Auth
 		return nil, fmt.Errorf(errorMessages.OneOfRequired, []string{"authentication.headers", "authentication.cookies", "authentication.queryparams"})
 	}
 
+	headers := make([]string, len(cfg.Headers))
+	for i, h := range cfg.Headers {
+		headers[i] = http.CanonicalHeaderKey(h)
+	}
+	cfg.Headers = headers
+
+	for _, name := range cfg.QueryParams {
+		if endpoint.Query().Has(name) {
+			return nil, fmt.Errorf(errorMessages.InvalidParam, "authentication.queryparams", name)
+		}
+	}
+
 	if cfg.CacheTTL == 0 {
 		cfg.CacheTTL = passthroughDefaultCacheTTL
 	}
 
-	p := Passthrough{PassthroughConfig: cfg}
+	p := Passthrough{PassthroughConfig: cfg, endpoint: endpoint}
 
 	if p.userPath, err = parsePassthroughPath(cfg.UserID, "authentication.userid", errorMessages); err != nil {
 		return nil, err
@@ -144,6 +159,11 @@ func (s PassthroughRegistration) Initialize(cfgAny any, deps authentication.Auth
 	if cfg.Client != nil {
 		p.clientConfig = *cfg.Client
 		configload.MergeClientDefaults(&p.clientConfig, deps.ClientConfig)
+	}
+
+	// The default content types are all imagery, which would fail every request at runtime
+	if p.readsBody() && !slices.ContainsFunc(p.clientConfig.ContentTypes, isPassthroughBodyType) {
+		return nil, fmt.Errorf(errorMessages.InvalidParam, "authentication.client.contenttypes", p.clientConfig.ContentTypes)
 	}
 
 	p.httpClient = &http.Client{
@@ -173,6 +193,22 @@ func parsePassthroughPath(expr string, param string, errorMessages config.ErrorM
 	}
 
 	return path, nil
+}
+
+func isPassthroughBodyType(contentType string) bool {
+	mediaType, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return false
+	}
+
+	_, subtype, _ := strings.Cut(mediaType, "/")
+	for _, format := range []string{"json", "xml"} {
+		if subtype == format || strings.HasSuffix(subtype, "+"+format) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (p Passthrough) readsBody() bool {
@@ -260,26 +296,23 @@ func (p Passthrough) collect(req *http.Request) (passthroughForward, bool) {
 }
 
 func (p Passthrough) call(ctx context.Context, fwd passthroughForward) (passthroughResult, error) {
-	target := p.URL
+	target := *p.endpoint
 	if len(fwd.query) > 0 {
-		sep := "?"
-		if strings.Contains(target, "?") {
-			sep = "&"
-		}
-		target += sep + fwd.query.Encode()
+		target.RawQuery = strings.TrimPrefix(target.RawQuery+"&"+fwd.query.Encode(), "&")
 	}
 
-	outReq, err := http.NewRequestWithContext(ctx, p.Method, target, nil)
+	outReq, err := http.NewRequestWithContext(ctx, p.Method, target.String(), nil)
 	if err != nil {
 		return passthroughResult{}, err
 	}
 
+	for h, v := range fwd.headers {
+		outReq.Header[h] = v
+	}
+	// Operator values win over anything forwarded from the user
 	outReq.Header.Set("User-Agent", p.clientConfig.UserAgent)
 	for h, v := range p.clientConfig.Headers {
 		outReq.Header.Set(h, v)
-	}
-	for h, v := range fwd.headers {
-		outReq.Header[h] = v
 	}
 	for _, c := range fwd.cookies {
 		outReq.AddCookie(c)
@@ -287,6 +320,10 @@ func (p Passthrough) call(ctx context.Context, fwd passthroughForward) (passthro
 
 	resp, err := p.httpClient.Do(outReq)
 	if err != nil {
+		// Forwarded query values are user credentials that the generic redaction doesn't know about
+		if urlErr, ok := errors.AsType[*url.Error](err); ok {
+			urlErr.URL = p.URL
+		}
 		failure := util.DescribeClientError(err)
 		slog.DebugContext(ctx, failure.Detail)
 		if failure.Canceled {

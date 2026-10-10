@@ -8,7 +8,7 @@ Only the values named in `Headers`, `Cookies`, and `QueryParams` are forwarded, 
 
 The request is made using the top-level xref:configuration/client.adoc[client] configuration. A `Client` can be supplied inside this authentication to override it, following the same rules as a layer's client: each parameter set here replaces the top-level value and any parameter left unset is inherited.
 
-`UserAgent`, `Headers`, `Timeout`, and `StatusCodes` always apply. The response body is only read when `UserId` or `TenantId` is configured, and only then do `ContentTypes`, `MaxLength`, and `UnknownLength` apply. The default `ContentTypes` only allow imagery, so add the content type your endpoint returns when using either. A response that fails those checks is treated as an error.
+`UserAgent`, `Headers`, `Timeout`, and `StatusCodes` always apply. If a forwarded header has the same name as `UserAgent` or one of the client's `Headers`, the client's value is sent instead. The response body is only read when `UserId` or `TenantId` is configured, and only then do `ContentTypes`, `MaxLength`, and `UnknownLength` apply. The default `ContentTypes` only allow imagery, so `ContentTypes` must include a JSON or XML type when using either. A response that fails those checks is treated as an error.
 
 Redirects are not followed. A redirect, such as one to a login page, is a rejection unless its status code is in `StatusCodes`.
 
@@ -38,7 +38,7 @@ Configuration options:
 | Parameter | Description | Type | Required | Default
 
 | URL
-| The URL of the endpoint to call. Forwarded query parameters are added to any query string already in the URL
+| The URL of the endpoint to call. Forwarded query parameters are added to any query string already in the URL. A parameter can't be both in the URL and in `QueryParams`
 | string
 | Yes
 | None
@@ -50,7 +50,7 @@ Configuration options:
 | GET
 
 | Headers
-| The headers to forward from the incoming request. Make sure these are in "canonical case" e.g. X-Api-Key - auth will always fail otherwise
+| The headers to forward from the incoming request. Names are case-insensitive
 | string[]
 | No
 | None

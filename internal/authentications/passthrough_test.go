@@ -15,7 +15,9 @@
 package authentications
 
 import (
+	"bytes"
 	"context"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -124,6 +126,9 @@ func Test_Passthrough_InitializeValidation(t *testing.T) {
 		{"head with user", map[string]interface{}{"url": "http://example.com", "method": "HEAD", "headers": []string{"X-Api-Key"}, "userid": "/id"}, "authentication.userid"},
 		{"head with tenant", map[string]interface{}{"url": "http://example.com", "method": "HEAD", "headers": []string{"X-Api-Key"}, "tenantid": "/id"}, "authentication.tenantid"},
 		{"unknown key", map[string]interface{}{"url": "http://example.com", "headers": []string{"X-Api-Key"}, "header": "X-Api-Key"}, "header"},
+		{"query param in url", map[string]interface{}{"url": "http://example.com?key=fixed", "queryparams": []string{"key"}}, "authentication.queryparams"},
+		{"user without body content type", map[string]interface{}{"url": "http://example.com", "headers": []string{"X-Api-Key"}, "userid": "/id", "client": map[string]interface{}{"contenttypes": []string{"image/png", "not a type"}}}, "authentication.client.contenttypes"},
+		{"tenant without body content type", map[string]interface{}{"url": "http://example.com", "headers": []string{"X-Api-Key"}, "tenantid": "/id", "client": map[string]interface{}{"contenttypes": []string{"application/jsonp"}}}, "authentication.client.contenttypes"},
 	}
 
 	for _, tc := range tests {
@@ -133,6 +138,13 @@ func Test_Passthrough_InitializeValidation(t *testing.T) {
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), tc.err)
 		})
+	}
+}
+
+func Test_Passthrough_BodyContentTypesAccepted(t *testing.T) {
+	for _, ct := range []string{"application/json", "text/xml", "application/problem+json", "application/atom+xml; charset=utf-8"} {
+		p := newTestPassthrough(t, map[string]interface{}{"url": "http://example.com", "headers": []string{"X-Api-Key"}, "userid": "/id", "client": map[string]interface{}{"contenttypes": []string{"image/png", ct}}})
+		assert.NotNil(t, p, ct)
 	}
 }
 
@@ -195,6 +207,46 @@ func Test_Passthrough_ForwardsOnlyNamedValues(t *testing.T) {
 	assert.Equal(t, "session=abc", call.header.Get("Cookie"))
 	assert.Empty(t, call.header.Get("X-Other"))
 	assert.Empty(t, call.header.Get("X-Missing"))
+}
+
+func Test_Passthrough_HeaderNamesCanonicalized(t *testing.T) {
+	srv := newPassthroughServer(t, passthroughStatus(http.StatusOK))
+	p := newTestPassthrough(t, map[string]interface{}{"url": srv.URL, "headers": []string{"x-api-key"}})
+
+	require.True(t, p.CheckAuthentication(pkg.BackgroundContext(), passthroughRequest(t, "http://tiles/a", map[string]string{"X-Api-Key": "k"}, nil)))
+	assert.Equal(t, []string{"k"}, srv.last.Load().header["X-Api-Key"])
+}
+
+func Test_Passthrough_OperatorHeadersWin(t *testing.T) {
+	srv := newPassthroughServer(t, passthroughStatus(http.StatusOK))
+	p := newTestPassthrough(t, map[string]interface{}{
+		"url":     srv.URL,
+		"headers": []string{"Authorization", "User-Agent", "X-Api-Key"},
+		"client":  map[string]interface{}{"headers": map[string]string{"Authorization": "Bearer operator"}},
+	})
+
+	req := passthroughRequest(t, "http://tiles/a", map[string]string{"Authorization": "Bearer user", "User-Agent": "user-agent", "X-Api-Key": "k"}, nil)
+	require.True(t, p.CheckAuthentication(pkg.BackgroundContext(), req))
+
+	call := srv.last.Load()
+	assert.Equal(t, []string{"Bearer operator"}, call.header["Authorization"])
+	assert.Equal(t, passthroughDeps().ClientConfig.UserAgent, call.header.Get("User-Agent"))
+	assert.Equal(t, []string{"k"}, call.header["X-Api-Key"])
+}
+
+func Test_Passthrough_ConnectionErrorDoesNotLogForwardedQuery(t *testing.T) {
+	var logs bytes.Buffer
+	prev := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelDebug})))
+	t.Cleanup(func() { slog.SetDefault(prev) })
+
+	srv := newPassthroughServer(t, passthroughStatus(http.StatusOK))
+	p := newTestPassthrough(t, map[string]interface{}{"url": srv.URL + "/check", "queryparams": []string{"session_id"}})
+	srv.Close()
+
+	assert.False(t, p.CheckAuthentication(pkg.BackgroundContext(), passthroughRequest(t, "http://tiles/a?session_id=supersecret", nil, nil)))
+	assert.Contains(t, logs.String(), "/check")
+	assert.NotContains(t, logs.String(), "supersecret")
 }
 
 func Test_Passthrough_QueryParamsWithoutExistingQuery(t *testing.T) {
