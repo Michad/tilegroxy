@@ -1,6 +1,6 @@
 = Configuration
 
-Tilegroxy is a configuration driven application. This documentation describes the various configuration options available. Configuration can be supplied as either YAML or JSON format. Documentation is primarily in YAML format however advanced YAML features are avoided to make it easy to convert to JSON.
+Tilegroxy is a configuration driven application. This documentation describes the various configuration options available. Configuration can be supplied as either YAML or JSON format. Examples are shown in both YAML and JSON, and advanced YAML features are avoided to make it easy to convert between them.
 
 link:https://github.com/Michad/tilegroxy/tree/main/examples/configurations[Complete examples are available here.]
 

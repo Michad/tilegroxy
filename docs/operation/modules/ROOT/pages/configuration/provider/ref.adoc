@@ -21,9 +21,26 @@ Name should be `ref`
 |===
 
 .Example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 provider:
   name: ref
   layer: something_else
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "provider": {
+    "name": "ref",
+    "layer": "something_else"
+  }
+}
+----
+====

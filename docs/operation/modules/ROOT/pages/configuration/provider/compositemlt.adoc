@@ -20,6 +20,10 @@ Name should be `compositemlt`
 |===
 
 .Example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 provider:
@@ -30,3 +34,25 @@ provider:
   - name: proxy
     url: https://tiles.example.com/overlay/{z}/{x}/{y}.mlt
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "provider": {
+    "name": "compositemlt",
+    "providers": [
+      {
+        "name": "pmtiles",
+        "file": "/data/basemap.pmtiles"
+      },
+      {
+        "name": "proxy",
+        "url": "https://tiles.example.com/overlay/{z}/{x}/{y}.mlt"
+      }
+    ]
+  }
+}
+----
+====

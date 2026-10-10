@@ -78,9 +78,26 @@ Also see the `paramValidator` option in the xref:configuration/layer.adoc[Layer]
 ====
 
 .Example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 provider:
   name: proxy
   url: https://tile.openstreetmap.org/{z}/{x}/{y}.png?key={env.key}&agent={ctx.User-Agent}
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "provider": {
+    "name": "proxy",
+    "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png?key={env.key}&agent={ctx.User-Agent}"
+  }
+}
+----
+====

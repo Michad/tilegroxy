@@ -5,6 +5,10 @@ Configures how the application should log during operation.
 The `logging` section supports three keys: <<main-logs,`main`>>, <<access-logs,`access`>> and <<audit-logs,`audit`>>, which are objects described below.
 
 .Example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 logging:
@@ -19,6 +23,30 @@ logging:
     console: false
     path: audit.log
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "logging": {
+    "access": {
+      "console": false,
+      "path": "access.log"
+    },
+    "main": {
+      "level": "debug",
+      "format": "json"
+    },
+    "audit": {
+      "enabled": true,
+      "console": false,
+      "path": "audit.log"
+    }
+  }
+}
+----
+====
 
 == Main Logs
 

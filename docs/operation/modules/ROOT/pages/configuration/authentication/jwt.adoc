@@ -115,6 +115,10 @@ Name should be `jwt`
 |===
 
 .Example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 authentication:
@@ -123,6 +127,22 @@ authentication:
   algorithms:
     - HS256
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "authentication": {
+    "name": "jwt",
+    "key": "env.JWT_KEY",
+    "algorithms": [
+      "HS256"
+    ]
+  }
+}
+----
+====
 
 == JWKS
 
@@ -167,6 +187,10 @@ If a token references a key ID that isn't in the currently cached keyset then th
 |===
 
 .Example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 authentication:
@@ -178,3 +202,23 @@ authentication:
   expectedIssuer: https://issuer.example.com/
   expectedAudience: tilegroxy
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "authentication": {
+    "name": "jwt",
+    "algorithms": [
+      "RS256"
+    ],
+    "jwks": {
+      "url": "https://issuer.example.com/.well-known/jwks.json"
+    },
+    "expectedIssuer": "https://issuer.example.com/",
+    "expectedAudience": "tilegroxy"
+  }
+}
+----
+====

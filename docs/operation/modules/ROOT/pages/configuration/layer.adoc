@@ -179,6 +179,10 @@ A value set on the layer always replaces the provider's. A provider value that c
 Nesting providers combine what their children report. A provider wrapping a single other provider, such as xref:configuration/provider/effect.adoc[effect], passes its child's values through. One with several children, such as xref:configuration/provider/fallback.adoc[fallback] or xref:configuration/provider/blend.adoc[blend], reports values covering all of them, leaving a value unset if any child doesn't report it. A xref:configuration/provider/ref.adoc[ref] reports the metadata of the layer it points to.
 
 .Example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 layer:
@@ -203,3 +207,37 @@ layer:
   provider:
     ...
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "layer": {
+    "id": "my_layer",
+    "pattern": "my_{name}_{version}",
+    "examples": [
+      "my_first_v2",
+      "my_second_v9"
+    ],
+    "paramValidator": {
+      "*": "^[a-zA-Z0-9]+$",
+      "version": "v[0-9]{1,3}"
+    },
+    "skipCache": true,
+    "client": {
+      "userAgent": "my_app/1.0"
+    },
+    "minzoom": 4,
+    "maxzoom": 18,
+    "bounds": {
+      "south": 51,
+      "north": 63,
+      "west": -7,
+      "east": 0.1
+    },
+    "provider": { ... }
+  }
+}
+----
+====

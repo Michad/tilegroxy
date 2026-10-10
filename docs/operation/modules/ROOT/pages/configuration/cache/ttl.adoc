@@ -27,6 +27,10 @@ Name should be `ttl`
 |===
 
 .Example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 cache:
@@ -36,3 +40,20 @@ cache:
     name: disk
     path: "./disk_tile_cache"
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "cache": {
+    "name": "ttl",
+    "ttl": 3600,
+    "cache": {
+      "name": "disk",
+      "path": "./disk_tile_cache"
+    }
+  }
+}
+----
+====

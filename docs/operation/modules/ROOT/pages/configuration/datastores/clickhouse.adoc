@@ -79,6 +79,10 @@ Name should be `clickhouse`
 |===
 
 .Example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 datastores:
@@ -89,3 +93,22 @@ datastores:
     user: tilegroxy
     password: env.CLICKHOUSE_PASSWORD
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "datastores": [
+    {
+      "name": "clickhouse",
+      "id": "ch-0",
+      "host": "clickhouse.internal",
+      "database": "analytics",
+      "user": "tilegroxy",
+      "password": "env.CLICKHOUSE_PASSWORD"
+    }
+  ]
+}
+----
+====

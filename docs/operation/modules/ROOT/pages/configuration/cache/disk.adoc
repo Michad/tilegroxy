@@ -37,10 +37,26 @@ Name should be `disk`
 |===
 
 .Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+cache:
+  name: disk
+  path: ./disk_tile_cache
+----
+
+JSON::
++
 [,json]
 ----
-"cache": {
-  "name": "disk",
-  "path": "./disk_tile_cache"
+{
+  "cache": {
+    "name": "disk",
+    "path": "./disk_tile_cache"
+  }
 }
 ----
+====

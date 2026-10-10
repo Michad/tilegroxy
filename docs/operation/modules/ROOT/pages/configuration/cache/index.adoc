@@ -20,6 +20,10 @@ NOTE: There is no deduplication of cache configurations. That means if you have 
 
 === Example
 
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 cache:
@@ -53,6 +57,64 @@ layers:
       url: https://example.com/live/{z}/{x}/{y}.png
 datastores: ...
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "cache": [
+    {
+      "id": "tenanted",
+      "name": "tenant",
+      "cache": {
+        "name": "multi",
+        "tiers": [
+          {
+            "name": "memory",
+            "datastore": "tiles"
+          },
+          {
+            "name": "s3",
+            "bucket": "my-tile-cache"
+          }
+        ]
+      }
+    },
+    {
+      "name": "none"
+    }
+  ],
+  "defaultcache": "multi",
+  "layers": [
+    {
+      "id": "public",
+      "provider": {
+        "name": "proxy",
+        "url": "https://example.com/{z}/{x}/{y}.png"
+      }
+    },
+    {
+      "id": "per-user",
+      "cache": "tenanted",
+      "provider": {
+        "name": "proxy",
+        "url": "https://example.com/private/{z}/{x}/{y}.png"
+      }
+    },
+    {
+      "id": "uncached",
+      "cache": "none",
+      "provider": {
+        "name": "proxy",
+        "url": "https://example.com/live/{z}/{x}/{y}.png"
+      }
+    }
+  ],
+  "datastores": [ ... ]
+}
+----
+====
 
 In this example, the `public` layer (and all layers by default) will use a `multi` cache that caches in-memory first and then falls back on an S3 bucket. 
 

@@ -38,6 +38,10 @@ Tilegroxy has a degree of "smarts" to control when to coalesce or not based on w
 
 Here is an example of a layer that would be dynamic and cached per-tenant.
 
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 authentication:
@@ -62,3 +66,44 @@ layers:
       name: proxy
       url: https://imagery.example.com/{ctx.tenant}/{z}/{x}/{y}.png
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "authentication": {
+    "name": "jwt",
+    "key": "env.JWT_KEY",
+    "algorithms": [
+      "RS256"
+    ],
+    "tenantid": "org_id"
+  },
+  "datastores": [
+    {
+      "name": "redis",
+      "id": "tiles",
+      "host": "redis.example.com"
+    }
+  ],
+  "cache": {
+    "name": "tenant",
+    "cache": {
+      "name": "redis",
+      "datastore": "tiles"
+    }
+  },
+  "layers": [
+    {
+      "id": "tenant_imagery",
+      "allowcoalesce": false,
+      "provider": {
+        "name": "proxy",
+        "url": "https://imagery.example.com/{ctx.tenant}/{z}/{x}/{y}.png"
+      }
+    }
+  ]
+}
+----
+====

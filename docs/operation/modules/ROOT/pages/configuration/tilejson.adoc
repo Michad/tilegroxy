@@ -42,6 +42,10 @@ Configuration for serving xref:tilejson.adoc[TileJSON] documents describing conf
 |===
 
 .Example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 server:
@@ -53,9 +57,32 @@ server:
       - https://tiles-b.example.com/maps
 ----
 
+JSON::
++
+[,json]
+----
+{
+  "server": {
+    "tilejson": {
+      "enabled": true,
+      "indexpath": "tilejson.json",
+      "baseurls": [
+        "https://tiles-a.example.com/maps",
+        "https://tiles-b.example.com/maps"
+      ]
+    }
+  }
+}
+----
+====
+
 
 
 .Example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 layer:
@@ -74,7 +101,35 @@ layer:
     ...
 ----
 
+JSON::
++
+[,json]
+----
+{
+  "layer": {
+    "id": "my_layer",
+    "description": "Aerial imagery from 2023",
+    "attribution": "© Example Imagery Co",
+    "datatype": "raster",
+    "minzoom": 4,
+    "maxzoom": 16,
+    "bounds": {
+      "south": 51,
+      "north": 63,
+      "west": -7,
+      "east": 0.1
+    },
+    "provider": { ... }
+  }
+}
+----
+====
+
 .Example with a pattern layer
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 layer:
@@ -89,3 +144,25 @@ layer:
   provider:
     ...
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "layer": {
+    "id": "my_layer",
+    "pattern": "my_{name}_{version}",
+    "paramValidator": {
+      "*": "^[a-zA-Z0-9]+$",
+      "version": "v[0-9]{1,3}"
+    },
+    "examples": [
+      "my_foo_v1",
+      "my_bar_v2"
+    ],
+    "provider": { ... }
+  }
+}
+----
+====

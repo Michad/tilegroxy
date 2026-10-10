@@ -33,6 +33,10 @@ Name should be `memory`
 |===
 
 .Example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 datastores:
@@ -41,3 +45,20 @@ datastores:
     maxsize: 1000
     ttl: 1000
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "datastores": [
+    {
+      "name": "memory",
+      "id": "tiles",
+      "maxsize": 1000,
+      "ttl": 1000
+    }
+  ]
+}
+----
+====

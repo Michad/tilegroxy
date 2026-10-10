@@ -37,6 +37,10 @@ Name should be `memcached`
 |===
 
 .Example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 datastores:
@@ -45,3 +49,20 @@ datastores:
     host: 127.0.0.1
     port: 11211
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "datastores": [
+    {
+      "name": "memcached",
+      "id": "memcached-0",
+      "host": "127.0.0.1",
+      "port": 11211
+    }
+  ]
+}
+----
+====

@@ -60,6 +60,10 @@ The same `--tenant` flag is available on the xref:commands/test.adoc[test] comma
 
 Tokens come from an OIDC issuer with the organization in an `org_id` claim. `basemap` is shared and cached once. `customer_imagery` fetches from a per-tenant path and is cached per tenant.
 
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 authentication:
@@ -109,6 +113,84 @@ analytics:
   fields:
     - tenantid
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "authentication": {
+    "name": "jwt",
+    "algorithms": [
+      "RS256"
+    ],
+    "jwks": {
+      "url": "https://login.example.com/.well-known/jwks.json"
+    },
+    "expectedIssuer": "https://login.example.com/",
+    "expectedAudience": "tilegroxy",
+    "tenantId": "org_id"
+  },
+  "datastores": [
+    {
+      "name": "redis",
+      "id": "tiles",
+      "host": "redis.example.com"
+    },
+    {
+      "name": "postgresql",
+      "id": "analytics",
+      "host": "pg.example.com",
+      "user": "tilegroxy",
+      "password": "env.PGPASSWORD",
+      "database": "analytics"
+    }
+  ],
+  "cache": [
+    {
+      "id": "shared",
+      "name": "redis",
+      "datastore": "tiles"
+    },
+    {
+      "id": "per_tenant",
+      "name": "tenant",
+      "cache": {
+        "name": "redis",
+        "datastore": "tiles"
+      }
+    }
+  ],
+  "defaultcache": "shared",
+  "layers": [
+    {
+      "id": "basemap",
+      "provider": {
+        "name": "proxy",
+        "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+      }
+    },
+    {
+      "id": "customer_imagery",
+      "cache": "per_tenant",
+      "allowcoalesce": false,
+      "provider": {
+        "name": "proxy",
+        "url": "https://imagery.example.com/{ctx.tenant}/{z}/{x}/{y}.png"
+      }
+    }
+  ],
+  "analytics": {
+    "name": "postgresql",
+    "datastore": "analytics",
+    "table": "tilegroxy_analytics",
+    "fields": [
+      "tenantid"
+    ]
+  }
+}
+----
+====
 
 A token for this deployment looks like:
 

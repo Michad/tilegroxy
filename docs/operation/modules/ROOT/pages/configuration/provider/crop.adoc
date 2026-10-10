@@ -38,6 +38,10 @@ Name should be `crop`
 |===
 
 .Example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 provider:
@@ -54,3 +58,29 @@ provider:
     name: static
     color: "0000"
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "provider": {
+    "name": "crop",
+    "bounds": {
+      "south": 51,
+      "north": 63,
+      "west": -7,
+      "east": 0.1
+    },
+    "primary": {
+      "name": "proxy",
+      "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+    },
+    "secondary": {
+      "name": "static",
+      "color": "0000"
+    }
+  }
+}
+----
+====

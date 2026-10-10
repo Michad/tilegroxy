@@ -76,6 +76,10 @@ Also accepts the xref:configuration/analytics/index.adoc[batching parameters] sh
 |===
 
 .Example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 datastores:
@@ -96,3 +100,34 @@ analytics:
   extraFields:
     environment: production
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "datastores": [
+    {
+      "name": "postgresql",
+      "id": "pg-analytics",
+      "host": "localhost",
+      "user": "tilegroxy",
+      "password": "env.PGPASSWORD",
+      "database": "analytics"
+    }
+  ],
+  "analytics": {
+    "name": "postgresql",
+    "datastore": "pg-analytics",
+    "table": "tilegroxy_analytics",
+    "fields": [
+      "duration",
+      "contenttype"
+    ],
+    "extraFields": {
+      "environment": "production"
+    }
+  }
+}
+----
+====

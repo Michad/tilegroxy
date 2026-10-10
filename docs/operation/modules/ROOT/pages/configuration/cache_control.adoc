@@ -111,6 +111,10 @@ CAUTION: This heuristic is not comprehensive and cannot detect all cases. For ex
 
 Turning the header on for every layer and letting each one derive its own value from its cache:
 
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 server:
@@ -125,6 +129,28 @@ cache:
     path: "./disk_tile_cache"
 ----
 
+JSON::
++
+[,json]
+----
+{
+  "server": {
+    "cachecontrol": {
+      "enabled": true
+    }
+  },
+  "cache": {
+    "name": "ttl",
+    "ttl": 3600,
+    "cache": {
+      "name": "disk",
+      "path": "./disk_tile_cache"
+    }
+  }
+}
+----
+====
+
 Returns, for a tile generated 50 minutes ago:
 
 [,http]
@@ -134,6 +160,10 @@ Cache-Control: public, max-age=600
 
 Adding a CDN lifetime and a stale window on top of the derived freshness, neither of which is derived:
 
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 server:
@@ -142,6 +172,22 @@ server:
     sharedmaxage: 86400
     stalewhilerevalidate: 60
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "server": {
+    "cachecontrol": {
+      "enabled": true,
+      "sharedmaxage": 86400,
+      "stalewhilerevalidate": 60
+    }
+  }
+}
+----
+====
 
 Returns, for that same tile:
 
@@ -152,6 +198,10 @@ Cache-Control: public, max-age=600, s-maxage=86400, stale-while-revalidate=60
 
 A layer opting out of derivation entirely and stating its own header:
 
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 layers:
@@ -167,6 +217,32 @@ layers:
       url: https://example.com/basemap/{z}/{x}/{y}.png
 ----
 
+JSON::
++
+[,json]
+----
+{
+  "layers": [
+    {
+      "id": "basemap",
+      "cachecontrol": {
+        "auto": false,
+        "visibility": "public",
+        "maxage": 86400,
+        "extra": [
+          "immutable"
+        ]
+      },
+      "provider": {
+        "name": "proxy",
+        "url": "https://example.com/basemap/{z}/{x}/{y}.png"
+      }
+    }
+  ]
+}
+----
+====
+
 Returns:
 
 [,http]
@@ -176,6 +252,10 @@ Cache-Control: public, max-age=86400, immutable
 
 A layer opting out of the header the server turned on, leaving every other layer unaffected:
 
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 server:
@@ -190,5 +270,31 @@ layers:
       name: proxy
       url: https://example.com/preview/{z}/{x}/{y}.png
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "server": {
+    "cachecontrol": {
+      "enabled": true
+    }
+  },
+  "layers": [
+    {
+      "id": "preview",
+      "cachecontrol": {
+        "enabled": false
+      },
+      "provider": {
+        "name": "proxy",
+        "url": "https://example.com/preview/{z}/{x}/{y}.png"
+      }
+    }
+  ]
+}
+----
+====
 
 Returns no `Cache-Control` header at all for `preview`.

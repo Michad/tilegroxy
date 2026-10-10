@@ -44,6 +44,10 @@ Name should be `transform`
 |===
 
 .Example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 provider:
@@ -57,3 +61,21 @@ provider:
     name: proxy
     url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "provider": {
+    "name": "transform",
+    "threads": 8,
+    "formula": "func transform(r, g, b, a uint8) (uint8, uint8, uint8, uint8) {\n  return g,b,r,a\n}\n",
+    "provider": {
+      "name": "proxy",
+      "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+    }
+  }
+}
+----
+====

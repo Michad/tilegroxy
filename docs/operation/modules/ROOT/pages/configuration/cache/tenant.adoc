@@ -23,6 +23,10 @@ Name should be `tenant`
 |===
 
 .Example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 cache:
@@ -31,3 +35,19 @@ cache:
     name: disk
     path: "./disk_tile_cache"
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "cache": {
+    "name": "tenant",
+    "cache": {
+      "name": "disk",
+      "path": "./disk_tile_cache"
+    }
+  }
+}
+----
+====

@@ -83,6 +83,10 @@ Also accepts the xref:configuration/analytics/index.adoc[batching parameters] sh
 One of File or Script is required.
 
 .Example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 analytics:
@@ -95,5 +99,26 @@ analytics:
     maxSize: 100
     maxAge: 60
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "analytics": {
+    "name": "custom",
+    "file": "examples/analytics/custom_webhook.go",
+    "url": "https://example.com/usage",
+    "fields": [
+      "duration"
+    ],
+    "batch": {
+      "maxSize": 100,
+      "maxAge": 60
+    }
+  }
+}
+----
+====
 
 A complete working script is available in link:/examples/analytics/custom_webhook.go[examples/analytics/custom_webhook.go].

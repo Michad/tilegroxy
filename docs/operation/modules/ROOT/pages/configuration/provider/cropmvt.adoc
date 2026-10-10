@@ -32,6 +32,10 @@ Name should be `cropmvt`
 |===
 
 .Example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 provider:
@@ -46,3 +50,26 @@ provider:
     datastore: mydb
     table: roads
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "provider": {
+    "name": "cropmvt",
+    "bounds": {
+      "south": 51,
+      "north": 63,
+      "west": -7,
+      "east": 0.1
+    },
+    "primary": {
+      "name": "postgismvt",
+      "datastore": "mydb",
+      "table": "roads"
+    }
+  }
+}
+----
+====

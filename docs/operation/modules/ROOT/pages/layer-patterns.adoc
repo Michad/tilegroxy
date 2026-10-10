@@ -83,6 +83,10 @@ See xref:security.adoc[Security] for more.
 
 The link:/examples/configurations/noaa_post_storm.yml[NOAA post-storm example] serves NOAA's post-storm aerial imagery. NOAA publishes each flight as a separate tile set with a date and letter in the URL, such as `20230902a`. Rather than one layer per flight, a single pattern layer covers them all:
 
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 - id: noaa_poststorm_imagery_in_parts
@@ -107,6 +111,44 @@ The link:/examples/configurations/noaa_post_storm.yml[NOAA post-storm example] s
       color: FFF0
 ----
 
+JSON::
++
+[,json]
+----
+[
+  {
+    "id": "noaa_poststorm_imagery_in_parts",
+    "pattern": "noaa_poststorm_{version}",
+    "paramValidator": {
+      "version": "[0-9]{8}[ab]"
+    },
+    "examples": [
+      "noaa_poststorm_20230902a",
+      "noaa_poststorm_20230901b"
+    ],
+    "client": {
+      "contenttypes": [
+        "binary/octet-stream",
+        "image/png"
+      ],
+      "timeout": 2
+    },
+    "provider": {
+      "name": "fallback",
+      "primary": {
+        "name": "proxy",
+        "url": "https://stormscdn.ngs.noaa.gov/{layer.version}-rgb/{z}/{x}/{y}"
+      },
+      "secondary": {
+        "name": "static",
+        "color": "FFF0"
+      }
+    }
+  }
+]
+----
+====
+
 A request for `/tiles/noaa_poststorm_20230902a/16/18020/27142` matches the pattern with `version` set to `20230902a`. That value is exactly eight digits and an `a`, so it passes the validator. The proxy then requests `+https://stormscdn.ngs.noaa.gov/20230902a-rgb/16/18020/27142+`. Flights only cover a small area, so the fallback returns a transparent tile wherever NOAA has none.
 
 A request for `noaa_poststorm_latest` fails the validator and is rejected. So is `noaa_poststorm_imagery_in_parts`, since the `id` isn't matched once a pattern is set.
@@ -115,6 +157,10 @@ The `examples` let `tilegroxy test` and TileJSON work with two real flights.
 
 Other layers in the same file reuse the pattern layer to combine all flights for a storm into one layer:
 
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 - id: noaa_2023_lee
@@ -139,6 +185,59 @@ Other layers in the same file reuse the pattern layer to combine all flights for
         - v: 20230831b
         - v: 20230831a
 ----
+
+JSON::
++
+[,json]
+----
+[
+  {
+    "id": "noaa_2023_lee",
+    "provider": {
+      "name": "blend",
+      "mode": "normal",
+      "providers": [
+        {
+          "name": "ref",
+          "layer": "noaa_poststorm_20230917a"
+        },
+        {
+          "name": "ref",
+          "layer": "noaa_poststorm_20230917b"
+        }
+      ]
+    }
+  },
+  {
+    "id": "noaa_2023_idalia",
+    "provider": {
+      "name": "blend",
+      "mode": "normal",
+      "layer": {
+        "pattern": "noaa_poststorm_{v}",
+        "values": [
+          {
+            "v": "20230902a"
+          },
+          {
+            "v": "20230901b"
+          },
+          {
+            "v": "20230901a"
+          },
+          {
+            "v": "20230831b"
+          },
+          {
+            "v": "20230831a"
+          }
+        ]
+      }
+    }
+  }
+]
+----
+====
 
 `noaa_2023_lee` uses ref providers that name concrete flights. `noaa_2023_idalia` does the same with less repetition using blend's `layer` option. Here `+{v}+` belongs to blend, not to a layer pattern, so it uses the bare placeholder name rather than `+{layer.v}+`.
 

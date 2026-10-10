@@ -43,6 +43,10 @@ Like other entities, the analytics configuration uses a parameter called `name` 
 |===
 
 .Example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 analytics:
@@ -60,3 +64,30 @@ analytics:
     maxSize: 5000
     maxAge: 30
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "analytics": {
+    "name": "clickhouse",
+    "id": "warehouse",
+    "datastore": "ch-0",
+    "table": "tile_events",
+    "fields": [
+      "duration",
+      "bytes"
+    ],
+    "extraFields": {
+      "tenant": "hdr.X-Tenant-Id",
+      "environment": "production"
+    },
+    "batch": {
+      "maxSize": 5000,
+      "maxAge": 30
+    }
+  }
+}
+----
+====

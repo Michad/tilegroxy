@@ -71,6 +71,10 @@ Name should be `postgresql`
 |===
 
 .Example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 datastores:
@@ -81,3 +85,22 @@ datastores:
     password: password
     database: postgres
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "datastores": [
+    {
+      "name": "postgresql",
+      "id": "pg-database-0",
+      "host": "localhost",
+      "user": "postgres",
+      "password": "password",
+      "database": "postgres"
+    }
+  ]
+}
+----
+====

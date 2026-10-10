@@ -19,6 +19,10 @@ Name should be `multi`
 |===
 
 .Example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 cache:
@@ -30,3 +34,26 @@ cache:
     - name: disk
       path: "./disk_tile_cache"
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "cache": {
+    "name": "multi",
+    "tiers": [
+      {
+        "name": "memory",
+        "maxsize": 1000,
+        "ttl": 1000
+      },
+      {
+        "name": "disk",
+        "path": "./disk_tile_cache"
+      }
+    ]
+  }
+}
+----
+====

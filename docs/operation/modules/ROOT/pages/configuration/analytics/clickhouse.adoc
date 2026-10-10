@@ -80,6 +80,10 @@ Also accepts the xref:configuration/analytics/index.adoc[batching parameters] sh
 |===
 
 .Example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 datastores:
@@ -102,8 +106,44 @@ analytics:
     maxAge: 30
 ----
 
+JSON::
++
+[,json]
+----
+{
+  "datastores": [
+    {
+      "name": "clickhouse",
+      "id": "ch-0",
+      "host": "clickhouse.internal",
+      "database": "analytics",
+      "user": "tilegroxy",
+      "password": "env.CLICKHOUSE_PASSWORD"
+    }
+  ],
+  "analytics": {
+    "name": "clickhouse",
+    "datastore": "ch-0",
+    "table": "tile_events",
+    "fields": [
+      "duration",
+      "bytes"
+    ],
+    "batch": {
+      "maxSize": 5000,
+      "maxAge": 30
+    }
+  }
+}
+----
+====
+
 Using an existing table with different column names:
 
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 analytics:
@@ -115,3 +155,22 @@ analytics:
     user_id: uid
     extra: attributes
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "analytics": {
+    "name": "clickhouse",
+    "datastore": "ch-0",
+    "table": "analytics.map_usage",
+    "columns": {
+      "layer": "layer_id",
+      "user_id": "uid",
+      "extra": "attributes"
+    }
+  }
+}
+----
+====

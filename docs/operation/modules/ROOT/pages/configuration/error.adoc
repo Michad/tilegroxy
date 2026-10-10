@@ -285,6 +285,10 @@ Each message is a template where `%v` is replaced by the relevant value, such as
 |===
 
 .Example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 error:
@@ -293,3 +297,19 @@ error:
     notauthorized: Nicht autorisiert
     timeout: Zeitüberschreitung
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "error": {
+    "mode": "image+header",
+    "messages": {
+      "notauthorized": "Nicht autorisiert",
+      "timeout": "Zeitüberschreitung"
+    }
+  }
+}
+----
+====

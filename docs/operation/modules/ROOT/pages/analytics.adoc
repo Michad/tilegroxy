@@ -106,12 +106,30 @@ The `extraFields` parameter lets you get very fancy with what info you record. Y
 
 For example, to track which server handled the request in question, the following gives your analytics destination a `server` field with your server's hostname:
 
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 analytics:
   extraFields:
     server: env.HOSTNAME
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "analytics": {
+    "extraFields": {
+      "server": "env.HOSTNAME"
+    }
+  }
+}
+----
+====
 
 
 == Metrics

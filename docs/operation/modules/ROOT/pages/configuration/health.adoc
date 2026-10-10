@@ -185,6 +185,10 @@ Name should be `cache`
 
 == Example
 
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 health:
@@ -201,6 +205,34 @@ health:
     - name: cache
       delay: 600
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "health": {
+    "port": 3020,
+    "checks": [
+      {
+        "name": "tile",
+        "layer": "some_layer",
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "validation": "content-type",
+        "result": "image/png; charset=UTF-8",
+        "delay": 60
+      },
+      {
+        "name": "cache",
+        "delay": 600
+      }
+    ]
+  }
+}
+----
+====
 
 
 Produces an output like:

@@ -73,6 +73,10 @@ Name should be `s3`
 |===
 
 .S3 example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 cache:
@@ -84,7 +88,28 @@ cache:
   profile: tilegroxy_s3_user
 ----
 
+JSON::
++
+[,json]
+----
+{
+  "cache": {
+    "name": "s3",
+    "bucket": "my-cache--use1-az6--x-s3",
+    "endpoint": "https://s3express-use1-az6.us-east-1.amazonaws.com",
+    "storageclass": "EXPRESS_ONEZONE",
+    "region": "us-east-1",
+    "profile": "tilegroxy_s3_user"
+  }
+}
+----
+====
+
 .R2 example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 cache:
@@ -96,3 +121,21 @@ cache:
   access: "<R2 access key id>"
   secret: "<R2 secret access key>"
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "cache": {
+    "name": "s3",
+    "bucket": "my-tilegroxy-cache",
+    "endpoint": "https://<account-id>.r2.cloudflarestorage.com",
+    "region": "auto",
+    "usepathstyle": true,
+    "access": "<R2 access key id>",
+    "secret": "<R2 secret access key>"
+  }
+}
+----
+====

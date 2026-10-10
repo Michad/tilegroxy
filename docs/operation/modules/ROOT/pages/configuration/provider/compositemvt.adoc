@@ -18,6 +18,10 @@ Name should be `compositemvt`
 |===
 
 .Example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 provider:
@@ -32,3 +36,29 @@ provider:
     datastore: vector-database-0
     table: public.buildings
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "provider": {
+    "name": "compositemvt",
+    "providers": [
+      {
+        "name": "postgismvt",
+        "layer": "boundaries",
+        "datastore": "vector-database-0",
+        "table": "public.boundaries"
+      },
+      {
+        "name": "postgismvt",
+        "layer": "buildings",
+        "datastore": "vector-database-0",
+        "table": "public.buildings"
+      }
+    ]
+  }
+}
+----
+====

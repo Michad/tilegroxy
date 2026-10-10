@@ -80,6 +80,10 @@ NOTE: While `WildcardOrigin` will cause the Access-Control-Allow-Origin header t
 |===
 
 .Example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 server:
@@ -91,3 +95,24 @@ server:
       - ETag
     maxage: 600
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "server": {
+    "cors": {
+      "enabled": true,
+      "origins": [
+        "https://*.example.com"
+      ],
+      "exposedheaders": [
+        "ETag"
+      ],
+      "maxage": 600
+    }
+  }
+}
+----
+====

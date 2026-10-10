@@ -31,6 +31,10 @@ Name should be `memory`
 |===
 
 .Example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 cache:
@@ -38,3 +42,17 @@ cache:
   maxsize: 1000
   ttl: 1000
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "cache": {
+    "name": "memory",
+    "maxsize": 1000,
+    "ttl": 1000
+  }
+}
+----
+====

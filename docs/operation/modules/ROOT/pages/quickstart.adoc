@@ -6,8 +6,12 @@ This example proxies tiles from OpenStreetMap. IMPORTANT: Be mindful of the Open
 
 == Write a configuration
 
-Create a file named `tilegroxy.yml` in your working directory:
+Create a file named `tilegroxy.yml` in your working directory, or `tilegroxy.json` if you prefer JSON:
 
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 server:
@@ -19,6 +23,27 @@ layers:
       url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
 ----
 
+JSON::
++
+[,json]
+----
+{
+  "server": {
+    "production": false
+  },
+  "layers": [
+    {
+      "id": "osm",
+      "provider": {
+        "name": "proxy",
+        "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+      }
+    }
+  ]
+}
+----
+====
+
 This defines a single layer called `osm` that fetches each tile from OpenStreetMap. `layers` is the only required top-level key. `server.production` defaults to `true`, which turns off the preview page used below, so it's set to `false` here.
 
 Before going further, confirm tilegroxy can read it:
@@ -28,7 +53,7 @@ Before going further, confirm tilegroxy can read it:
 tilegroxy config check
 ----
 
-It prints `Valid` if all is well, otherwise it tells you what's wrong. Tilegroxy looks for `./tilegroxy.yml` by default; use `-c` to point at a different file.
+It prints `Valid` if all is well, otherwise it tells you what's wrong. Tilegroxy looks for `./tilegroxy.yml` by default; use `-c` to point at a different file, such as `-c tilegroxy.json`.
 
 == Start the server
 
@@ -67,6 +92,10 @@ WARNING: Remember to set `server.production` back to `true` before deploying.
 
 Right now every request goes to OpenStreetMap. Add a cache so tiles are stored after the first fetch, and a second layer that reuses the first:
 
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 server:
@@ -88,13 +117,65 @@ layers:
         layer: osm
 ----
 
+JSON::
++
+[,json]
+----
+{
+  "server": {
+    "production": false
+  },
+  "cache": {
+    "name": "disk",
+    "path": "./tile_cache"
+  },
+  "layers": [
+    {
+      "id": "osm",
+      "provider": {
+        "name": "proxy",
+        "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+      }
+    },
+    {
+      "id": "osm_gray",
+      "provider": {
+        "name": "effect",
+        "mode": "grayscale",
+        "provider": {
+          "name": "ref",
+          "layer": "osm"
+        }
+      }
+    }
+  ]
+}
+----
+====
+
 The xref:configuration/cache/disk.adoc[disk] cache writes tiles as files under `./tile_cache`. If you'd rather not touch the filesystem, the xref:configuration/cache/memory.adoc[memory] cache works too:
 
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 cache:
   name: memory
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "cache": {
+    "name": "memory"
+  }
+}
+----
+====
 
 The new `osm_gray` layer uses the xref:configuration/provider/ref.adoc[ref] provider to pull tiles from the `osm` layer and the xref:configuration/provider/effect.adoc[effect] provider to turn them grayscale. Providers nest like this to build up more involved layers without repeating yourself.
 

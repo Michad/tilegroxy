@@ -18,6 +18,8 @@ Antora is a node app and the make command will automatically install the depende
 
 The docs are built in `build/site` and then copied into the `internal/website/resources` where `go:embed` can pull them into the tilegroxy binary.
 
+Configuration examples are shown as YAML and JSON tabs using the link:https://github.com/asciidoctor/asciidoctor-tabs[asciidoctor-tabs] extension. Its stylesheet and script are added to the UI through `supplemental_files` in `antora-playbook.yml`, which also overrides the `head-styles` and `footer-scripts` partials. Keep those overrides in step with the UI template if its partials change. A reader's choice of tab is remembered across pages.
+
 The UI template lives at https://github.com/tilegroxy/antora-ui and any changes to it will need to be built prior to building documentation in this repository by creating a tag in the form `vN` in that repository and then updating `antora-playbook.yml` in this repository to refer to that new version.
 
 === Readme

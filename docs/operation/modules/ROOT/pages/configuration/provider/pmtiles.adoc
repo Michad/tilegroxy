@@ -36,9 +36,26 @@ Name should be `pmtiles`
 |===
 
 .Example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 provider:
   name: pmtiles
   file: /data/tiles/overture.pmtiles
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "provider": {
+    "name": "pmtiles",
+    "file": "/data/tiles/overture.pmtiles"
+  }
+}
+----
+====

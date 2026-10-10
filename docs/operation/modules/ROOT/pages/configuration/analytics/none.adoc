@@ -9,8 +9,24 @@ Configuration options:
 None of its own.  The `id`, `fields`, `extraFields` and `batch` parameters common to every analytics module are still accepted and validated but have no effect.
 
 .Example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 analytics:
   name: none
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "analytics": {
+    "name": "none"
+  }
+}
+----
+====

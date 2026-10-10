@@ -33,6 +33,10 @@ Name should be `custom`
 |===
 
 .Example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 authentication:
@@ -41,5 +45,21 @@ authentication:
   token:
     header: X-Token
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "authentication": {
+    "name": "custom",
+    "file": "examples/auth/custom_from_file.go",
+    "token": {
+      "header": "X-Token"
+    }
+  }
+}
+----
+====
 
 A complete working script is available in link:/examples/auth/custom_from_file.go[examples/auth/custom_from_file.go].

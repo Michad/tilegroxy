@@ -33,6 +33,10 @@ Name should be `effect`
 |===
 
 .Example
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 provider:
@@ -42,3 +46,20 @@ provider:
     name: proxy
     url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "provider": {
+    "name": "effect",
+    "mode": "grayscale",
+    "provider": {
+      "name": "proxy",
+      "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+    }
+  }
+}
+----
+====
