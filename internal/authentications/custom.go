@@ -27,10 +27,8 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
-	"github.com/maypok86/otter"
 	"github.com/traefik/yaegi/interp"
 	"github.com/traefik/yaegi/stdlib"
-	"k8s.io/utils/keymutex"
 )
 
 const (
@@ -49,9 +47,7 @@ type CustomConfig struct {
 
 type Custom struct {
 	CustomConfig
-	cache *otter.Cache[string, authentication.ValidationResult]
-	// Only used with the cache, to avoid concurrent validation calls for the same token
-	locks          keymutex.KeyMutex
+	cache          *lookupCache[authentication.ValidationResult]
 	validationFunc func(string) authentication.ValidationResult
 	closeFunc      func(context.Context) error
 }
@@ -191,50 +187,24 @@ func (s CustomRegistration) Initialize(cfgAny any, deps authentication.Authentic
 		cfg.CacheSize = 100
 	}
 
-	if cfg.CacheSize < 0 {
-		return &Custom{cfg, nil, nil, validationFunc, closeFunc}, nil
-	}
-
-	lock := keymutex.NewHashed(-1)
-
-	cache, err := otter.MustBuilder[string, authentication.ValidationResult](cfg.CacheSize).Build()
+	cache, err := newLookupCache[authentication.ValidationResult](cfg.CacheSize, 0)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Custom{cfg, &cache, lock, validationFunc, closeFunc}, nil
+	return &Custom{cfg, cache, validationFunc, closeFunc}, nil
 }
 
 func (c Custom) CheckAuthentication(ctx context.Context, req *http.Request) bool {
 	slog.Log(ctx, config.LevelTrace, "Performing custom auth check")
 	tok, ok := extractToken(ctx, req, c.Token)
 	if ok {
-		var valResult authentication.ValidationResult
-		var inCache bool
+		valResult, _ := c.cache.get(ctx, tok, func() (authentication.ValidationResult, error) {
+			result := c.validationFunc(tok)
+			slog.DebugContext(ctx, fmt.Sprintf("Custom auth check returned %v", result.Pass))
 
-		if c.cache != nil {
-			c.locks.LockKey(tok)
-			defer func() {
-				err := c.locks.UnlockKey(tok)
-				if err != nil {
-					slog.ErrorContext(ctx, "Unable to release auth lock - this token might encounter issues going forward", "error", err)
-				}
-			}()
-
-			valResult, inCache = c.cache.Get(tok)
-			if !inCache {
-				slog.Log(ctx, config.LevelTrace, "Cache miss")
-			}
-		}
-
-		if !inCache {
-			valResult = c.validationFunc(tok)
-			slog.DebugContext(ctx, fmt.Sprintf("Custom auth check returned %v", valResult.Pass))
-
-			if c.cache != nil {
-				c.cache.Set(tok, valResult)
-			}
-		}
+			return result, nil
+		})
 
 		if checkValidationResult(valResult) {
 			uid, _ := pkg.UserIDFromContext(ctx)
@@ -263,6 +233,8 @@ func (c Custom) CheckAuthentication(ctx context.Context, req *http.Request) bool
 
 // The script's close function is optional so older scripts keep working
 func (c Custom) Close(ctx context.Context) error {
+	c.cache.close()
+
 	if c.closeFunc == nil {
 		return nil
 	}

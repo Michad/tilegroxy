@@ -29,6 +29,7 @@ type Authentication interface {
 // New dependencies are added as fields so the Initialize signature stays stable
 type AuthenticationDeps struct {
 	ErrorMessages config.ErrorMessages
+	ClientConfig  config.ClientConfig
 }
 
 type AuthenticationRegistration interface {

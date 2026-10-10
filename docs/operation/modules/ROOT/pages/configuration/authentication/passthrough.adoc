@@ -1,0 +1,147 @@
+= Passthrough
+
+Validates incoming requests by calling an existing HTTP endpoint. Selected headers, cookies, and query parameters from the incoming request are forwarded to the endpoint, and the status code of the response decides whether the request is allowed. This lets you reuse authentication your ecosystem already has, such as a session check or "current user" endpoint, without tilegroxy needing to understand the credentials.
+
+This authentication method can allow associating a user ID and tenant ID to the request, but does not support authorization options (allowed layers or bounding box).
+
+Only the values named in `Headers`, `Cookies`, and `QueryParams` are forwarded, each in the same form it arrived in. Nothing else from the incoming request is sent to the endpoint. If none of the named values are present on the incoming request, authentication fails without calling the endpoint.
+
+The request is made using the top-level xref:configuration/client.adoc[client] configuration. A `Client` can be supplied inside this authentication to override it, following the same rules as a layer's client: each parameter set here replaces the top-level value and any parameter left unset is inherited.
+
+`UserAgent`, `Headers`, `Timeout`, and `StatusCodes` always apply. The response body is only read when `UserId` or `TenantId` is configured, and only then do `ContentTypes`, `MaxLength`, and `UnknownLength` apply. The default `ContentTypes` only allow imagery, so add the content type your endpoint returns when using either. A response that fails those checks is treated as an error.
+
+Redirects are not followed. A redirect, such as one to a login page, is a rejection unless its status code is in `StatusCodes`.
+
+:note-caption: User and Tenant IDs
+
+[NOTE]
+====
+If `UserId` or `TenantId` is configured, the body of a successful response is parsed and the value is extracted using an https://www.w3.org/TR/xpath-10/[XPath] expression. The body is parsed as XML if it starts with `<` and as JSON otherwise. A response body that can't be parsed results in a warning being logged and authentication failing.
+
+For JSON, each object key becomes an element, so `{"user": {"id": "alice"}}` is matched by `/user/id`. Array items are elements without a name and are selected with `*`, such as `/users/*[1]/id`. Numbers are read as 64-bit floats, so numeric IDs larger than 2^53 lose precision. Return those as strings instead.
+
+For XML, the expression can match an element containing only text, such as `/user/id`, or an attribute, such as `/user/@id`. Whitespace around the value is removed.
+
+The expression must match a single string or number. Functions that return a string or number, such as `concat()`, are also allowed. If it matches nothing, no identifier is set and authentication still passes. If it matches more than one value or a value of another type, such as a JSON object or an XML element containing other elements, a warning is logged and authentication fails.
+
+See xref:howto/multi-tenant.adoc[How to: Serve Multiple Tenants] for more information on using a tenant ID
+====
+
+Results can be optionally cached in memory to decrease load on the endpoint. Results are cached by the combination of all forwarded values. Use this with caution as this means a session that is logged out or revoked can keep working until the cached result expires. While authentication rejections are also cached, outright errors (such as a timeout or inability to connect to the endpoint) are not.
+
+Name should be "passthrough"
+
+Configuration options:
+
+[cols="1,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| URL
+| The URL of the endpoint to call. Forwarded query parameters are added to any query string already in the URL
+| string
+| Yes
+| None
+
+| Method
+| The HTTP method to use when calling the endpoint. One of GET, HEAD, or POST. POST requests are sent without a body
+| string
+| No
+| GET
+
+| Headers
+| The headers to forward from the incoming request. Make sure these are in "canonical case" e.g. X-Api-Key - auth will always fail otherwise
+| string[]
+| No
+| None
+
+| Cookies
+| The names of cookies to forward from the incoming request
+| string[]
+| No
+| None
+
+| QueryParams
+| The query parameters to forward from the incoming request
+| string[]
+| No
+| None
+
+| UserId
+| An XPath expression for the user identifier within the response body. Not allowed when `Method` is HEAD
+| string
+| No
+| None
+
+| TenantId
+| An XPath expression for the tenant identifier within the response body. This is optional and generally only makes sense if you also use User ID. Useful if you have users grouped into some form of account system. Not allowed when `Method` is HEAD
+| string
+| No
+| None
+
+| CacheSize
+| How many results to keep in memory. Set to -1 to disable
+| int
+| No
+| -1
+
+| CacheTTL
+| How many seconds a result is reused before the endpoint is called again
+| uint32
+| No
+| 600
+
+| Client
+| Overrides the top-level client when calling the endpoint
+| xref:configuration/client.adoc[Client]
+| No
+| None
+|===
+
+At least one of `Headers`, `Cookies`, or `QueryParams` must be supplied.
+
+Example forwarding a session cookie to an endpoint that returns 200 for a logged in user and 401 otherwise:
+
+----
+authentication:
+  name: passthrough
+  url: https://accounts.example.com/api/session
+  cookies:
+    - session_id
+----
+
+Example forwarding an API key header, reading the user and tenant from a response such as `{"user": {"id": "alice", "org": {"id": "acme"}}}`, and overriding the client:
+
+----
+authentication:
+  name: passthrough
+  url: https://accounts.example.com/api/me
+  headers:
+    - X-Api-Key
+  userId: /user/id
+  tenantId: /user/org/id
+  cacheSize: 1000
+  cacheTTL: 60
+  client:
+    timeout: 2
+    statusCodes:
+      - 200
+      - 204
+    contentTypes:
+      - application/json
+----
+
+Example reading the user and tenant from an XML response such as `<user id="alice"><org>acme</org></user>`:
+
+----
+authentication:
+  name: passthrough
+  url: https://accounts.example.com/api/me.xml
+  headers:
+    - Authorization
+  userId: /user/@id
+  tenantId: /user/org
+  client:
+    contentTypes:
+      - application/xml
+----

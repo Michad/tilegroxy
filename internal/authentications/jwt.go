@@ -16,6 +16,7 @@ package authentications
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -29,11 +30,12 @@ import (
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/maypok86/otter"
 )
 
 const defaultExpiration = 24 * 60 * 60
 const defaultLeeway = 5 * time.Second
+
+var errInvalidJWT = errors.New("invalid JWT")
 
 type JWTConfig struct {
 	CacheSize        uint16      // Configures the size of the cache of already verified JWTs to avoid re-verifying keys for every token. Expiration still applies. Set to 0 to disable. Defaults to 0
@@ -66,7 +68,7 @@ type cachedAuthResult struct {
 
 type JWT struct {
 	JWTConfig
-	Cache         *otter.Cache[string, cachedAuthResult]
+	cache         *lookupCache[cachedAuthResult]
 	keys          *keySet
 	errorMessages config.ErrorMessages
 }
@@ -151,16 +153,12 @@ func (s JWTRegistration) Initialize(configAny any, deps authentication.Authentic
 		config.TenantID = "tid"
 	}
 
-	if config.CacheSize == 0 {
-		return &JWT{JWTConfig: config, Cache: nil, keys: keys, errorMessages: deps.ErrorMessages}, nil
-	}
-
-	cache, err := otter.MustBuilder[string, cachedAuthResult](int(config.CacheSize)).Build()
+	cache, err := newLookupCache[cachedAuthResult](int(config.CacheSize), 0)
 	if err != nil {
 		return nil, err
 	}
 
-	return &JWT{JWTConfig: config, Cache: &cache, keys: keys, errorMessages: deps.ErrorMessages}, nil
+	return &JWT{JWTConfig: config, cache: cache, keys: keys, errorMessages: deps.ErrorMessages}, nil
 }
 
 // Reconciles the deprecated Algorithm with Algorithms. Setting both is an error so no operator guesses which won
@@ -211,27 +209,28 @@ func (c JWT) CheckAuthentication(ctx context.Context, req *http.Request) bool {
 		return false
 	}
 
-	if c.Cache != nil {
-		result, ok := c.Cache.Get(tokenStr)
-
-		if ok {
-			if !result.expiration.After(time.Now()) {
-				return false
-			}
-
-			slog.DebugContext(ctx, "JWT Cache hit")
-			result.apply(ctx)
-			return true
+	fresh := false
+	result, err := c.cache.get(ctx, tokenStr, func() (cachedAuthResult, error) {
+		fresh = true
+		validated, ok := c.checkAuthenticationWithoutCache(ctx, tokenStr)
+		if !ok {
+			return cachedAuthResult{}, errInvalidJWT
 		}
-	}
 
-	result, ok := c.checkAuthenticationWithoutCache(ctx, tokenStr)
-	if !ok {
+		return *validated, nil
+	})
+	if err != nil {
 		return false
 	}
 
-	if c.Cache != nil {
-		c.Cache.SetIfAbsent(tokenStr, *result)
+	// A fresh validation already applied its side effects and allowed for leeway
+	if !fresh {
+		if !result.expiration.After(time.Now()) {
+			return false
+		}
+
+		slog.DebugContext(ctx, "JWT Cache hit")
+		result.apply(ctx)
 	}
 
 	return true
@@ -413,8 +412,10 @@ func (c JWT) keyFunc(ctx context.Context) jwt.Keyfunc {
 	}
 }
 
-// Releases the JWKS cache and its background goroutines
+// Releases the caches and their background goroutines
 func (c JWT) Close(ctx context.Context) error {
+	c.cache.close()
+
 	return c.keys.Close(ctx)
 }
 
