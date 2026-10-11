@@ -38,10 +38,10 @@ authentication:
       - application/json
 ----
 <1> Forwarded from the incoming request.  Cookies and query parameters can be forwarded too, and at least one of the three is required.
-<2> An https://www.w3.org/TR/xpath-10/[XPath] expression evaluated against the body of a successful response, which can be XML or JSON.  For JSON, each object key becomes an element, so `{"user": {"id": "alice"}}` is matched by `/user/id`.  Array items are elements without a name, selected with `*`, such as `/users/*[1]/id`.
-<3> Works the same as `userId`.  If nothing matches, no identifier is set and authentication still passes.  If more than one value or an element matches, or the body can't be parsed, a warning is logged and authentication fails.
+<2> An https://www.w3.org/TR/xpath-10/[XPath] expression evaluated against a JSON or XML response.  For JSON, each object key becomes an element, so this would match `{"user": {"id": "alice"}}`.  Array items are elements without a name, selected with `\*`, such as `/users/*[1]/id`. @/"userId"/
+<3> Works the same as `userId`.  If nothing (valid) matches, a warning is logged and authentication fails.
 <4> Keeps results in memory to decrease load on the endpoint.  Rejections are cached too, but outright errors such as an inability to connect are not.  Use with caution since a revoked token can keep working until the entry expires.
-<5> How long a result is reused before the endpoint is called again.
+<5> How long a result is cached.
 <6> Responses with any other status are rejected.
 <7> The response body is only read when `userId` or `tenantId` is set, and only then do the client's `contentTypes`, `maxLength`, and `unknownLength` apply.  Override `contentTypes` with the type you expect.
 
@@ -75,10 +75,10 @@ JSON::
 ----
 +
 . Forwarded from the incoming request.  Cookies and query parameters can be forwarded too, and at least one of the three is required. @/"headers"/
-. An https://www.w3.org/TR/xpath-10/[XPath] expression evaluated against the body of a successful response, which can be XML or JSON.  For JSON, each object key becomes an element, so `{"user": {"id": "alice"}}` is matched by `/user/id`.  Array items are elements without a name, selected with `*`, such as `/users/*[1]/id`. @/"userId"/
-. Works the same as `userId`.  If nothing matches, no identifier is set and authentication still passes.  If more than one value or an element matches, or the body can't be parsed, a warning is logged and authentication fails. @/"tenantId"/
+. An https://www.w3.org/TR/xpath-10/[XPath] expression evaluated against a JSON or XML response.  For JSON, each object key becomes an element, so this would match `{"user": {"id": "alice"}}`.  Array items are elements without a name, selected with `\*`, such as `/users/*[1]/id`. @/"userId"/
+. Works the same as `userId`.  If nothing (valid) matches, a warning is logged and authentication fails. @/"tenantId"/
 . Keeps results in memory to decrease load on the endpoint.  Rejections are cached too, but outright errors such as an inability to connect are not.  Use with caution since a revoked token can keep working until the entry expires. @/"cacheSize"/
-. How long a result is reused before the endpoint is called again. @/"cacheTTL"/
+. How long a result is cached. @/"cacheTTL"/
 . Responses with any other status are rejected. @/"statusCodes"/
 . The response body is only read when `userId` or `tenantId` is set, and only then do the client's `contentTypes`, `maxLength`, and `unknownLength` apply.  Override `contentTypes` with the type you expect. @/"contentTypes"/
 ====

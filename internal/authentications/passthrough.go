@@ -425,7 +425,8 @@ func selectPassthroughID(ctx context.Context, path *xpath.Expr, nav xpath.NodeNa
 		val, ok = formatPassthroughNumber(result)
 	case *xpath.NodeIterator:
 		if !result.MoveNext() {
-			return "", true
+			slog.WarnContext(ctx, "Passthrough authentication XPath matched nothing", "param", param)
+			return "", false
 		}
 		node := result.Current().Copy()
 		if result.MoveNext() {
@@ -435,11 +436,12 @@ func selectPassthroughID(ctx context.Context, path *xpath.Expr, nav xpath.NodeNa
 		val, ok = passthroughNodeValue(node)
 	}
 
-	if !ok {
-		slog.WarnContext(ctx, "Passthrough authentication XPath matched a value that isn't a string or number", "param", param)
+	if !ok || val == "" {
+		slog.WarnContext(ctx, "Passthrough authentication XPath matched a value that isn't a non-empty string or number", "param", param)
+		return "", false
 	}
 
-	return val, ok
+	return val, true
 }
 
 func formatPassthroughNumber(f float64) (string, bool) {
