@@ -202,3 +202,17 @@ func Test_ConstructValidation_EmptyExpression(t *testing.T) {
 		assert.Contains(t, err.Error(), "layer.paramValidator.name")
 	})
 }
+
+func Test_ConstructValidation_AlternationIsFullyAnchored(t *testing.T) {
+	for _, rule := range []string{"1[6-9][0-9]{2}|20[0-9]{2}", "^1[6-9][0-9]{2}|20[0-9]{2}$"} {
+		regex, err := constructValidation(map[string]string{"year": rule}, testErrorMessages)
+		require.NoError(t, err)
+
+		for _, year := range []string{"1860", "2050"} {
+			assert.True(t, validateParamMatches(map[string]string{"year": year}, regex), rule+" "+year)
+		}
+		for _, year := range []string{"1860abc", "x2050", "x1860y", "1599"} {
+			assert.False(t, validateParamMatches(map[string]string{"year": year}, regex), rule+" "+year)
+		}
+	}
+}
