@@ -1,6 +1,24 @@
+.Get started
 * xref:get-it.adoc[]
 * xref:quickstart.adoc[]
 * xref:concepts.adoc[]
+
+.Guides
+* xref:howto/index.adoc[]
+** xref:howto/productionizing.adoc[]
+** xref:howto/user-dynamic.adoc[]
+** xref:howto/multi-tenant.adoc[]
+** xref:howto/migrate-tilestache.adoc[]
+* xref:examples/index.adoc[]
+** xref:examples/production.adoc[]
+** xref:examples/vector-basemap.adoc[]
+** xref:examples/storm-imagery.adoc[]
+** xref:examples/terrain.adoc[]
+** xref:examples/multi-tenant.adoc[]
+** xref:examples/regional-imagery.adoc[]
+** xref:examples/historical-boundaries.adoc[]
+
+.Configure
 * xref:configuration/index.adoc[]
 ** xref:configuration/layer.adoc[]
 ** xref:configuration/provider/index.adoc[]
@@ -61,6 +79,9 @@
 ** xref:configuration/log.adoc[]
 ** xref:configuration/telemetry.adoc[]
 ** xref:configuration/error.adoc[]
+* xref:layer-patterns.adoc[]
+
+.Operate
 * xref:commands/index.adoc[]
 ** xref:commands/serve.adoc[]
 ** xref:commands/config_create.adoc[]
@@ -68,7 +89,6 @@
 ** xref:commands/config_diff.adoc[]
 ** xref:commands/seed.adoc[]
 ** xref:commands/test.adoc[]
-* xref:layer-patterns.adoc[]
 * xref:analytics.adoc[]
 * xref:content-type.adoc[]
 * xref:tilejson.adoc[]
@@ -78,8 +98,3 @@
 * xref:security.adoc[]
 * xref:compatibility.adoc[]
 * xref:telemetry.adoc[]
-* xref:howto/index.adoc[]
-** xref:howto/productionizing.adoc[]
-** xref:howto/user-dynamic.adoc[]
-** xref:howto/multi-tenant.adoc[]
-** xref:howto/migrate-tilestache.adoc[]

@@ -1,6 +1,5 @@
 = Concepts
-
-Tilegroxy has a few important concepts that are important to understand to utilize it effectively. 
+:description: Tilegroxy has a few important concepts that are important to understand to utilize it effectively.
 
 == Operators and Users
 
@@ -51,5 +50,5 @@ A xref:configuration/secret/index.adoc[secret] source lets any entity's string p
 
 == Custom
 
-Several of the entities described above have a special type available called "Custom."  This Custom provider/authentication/analytics allows the operator to write their own code to implement the entity without needing to recompile tilegroxy, making it much easier to handle trickier, non-standard map layers, or to customize how tilegroxy fits into a broader application. Custom always translates to a Yaegi interpreted Go script that has to follow a specific interface. Full details are in xref:extensibility.adoc#_custom[Extensibility]
+Several of the entities described above have a special type available called "Custom."  This Custom provider/authentication/analytics allows the operator to write their own code to implement the entity without needing to recompile tilegroxy, making it much easier to handle trickier, non-standard map layers, or to customize how tilegroxy fits into a broader application. Custom always translates to a Yaegi interpreted Go script that has to follow a specific interface. Full details are in xref:extensibility.adoc#custom[Extensibility]
 

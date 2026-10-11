@@ -1,16 +1,41 @@
 = Memory
+:description: A local in-memory cache. This stores the tiles in the memory of the tilegroxy daemon itself.
+:page-eyebrow: Cache
+:page-config-name: memory
 
-A local in-memory cache. This stores the tiles in the memory of the tilegroxy daemon itself.
+WARNING: This is not recommended for production use. It is meant for development and testing use-cases only. Setting this cache too high can cause stability issues for the service and this cache is not distributed so can cause inconsistent performance when deploying in a high-availability production environment.
 
-*This is not recommended for production use.* It is meant for development and testing use-cases only. Setting this cache too high can cause stability issues for the service and this cache is not distributed so can cause inconsistent performance when deploying in a high-availability production environment.
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+cache:
+  name: memory
+  maxsize: 1000
+  ttl: 1000
+----
 
-Name should be "memory"
+JSON::
++
+[,json]
+----
+{
+  "cache": {
+    "name": "memory",
+    "maxsize": 1000,
+    "ttl": 1000
+  }
+}
+----
+====
 
-Configuration options:
-
-[cols="1,3,1,1,1"]
+== Configuration
+[cols="1m,3,1,1,1"]
 |===
-| Parameter | Description | Type | Required | Default 
+| Parameter | Description | Type | Required | Default
 
 | maxsize
 | Maximum number of tiles to hold in the cache. Must be at least 10. Setting this too high can cause out-of-memory panics. This is not a guaranteed setting, which entry is evicted when exceeding this size is an implementation detail and the size can temporarily grow somewhat larger.
@@ -30,13 +55,3 @@ Configuration options:
 | No
 | None
 |===
-
-Example:
-
-[,yaml]
-----
-cache:
-  name: memory
-  maxsize: 1000
-  ttl: 1000
-----

@@ -1,0 +1,53 @@
+server:
+  production: false
+  tilejson:
+    enabled: true
+  cachecontrol:
+    enabled: true # <1>
+cache:
+  name: ttl # <3>
+  ttl: 2592000
+  cache:
+    name: disk
+    path: ./imagery_cache
+layers:
+  - id: osm_gray
+    provider:
+      name: effect
+      mode: grayscale
+      provider:
+        name: proxy
+        url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+  - id: colorado
+    description: USDA NAIP aerial imagery of Colorado over a grayscale basemap # <4>
+    attribution: USDA National Agriculture Imagery Program, © OpenStreetMap contributors
+    center: [-105.55, 39.0, 7]
+    client: # <2>
+      timeout: 30
+      unknownlength: true
+    provider:
+      name: fallback
+      zoom: 10-21 # <5>
+      bounds: # <6>
+        north: 41.0
+        south: 37.0
+        west: -109.05
+        east: -102.04
+      cache: unless-fallback # <7>
+      primary:
+        name: crop # <8>
+        bounds:
+          north: 41.0
+          south: 37.0
+          west: -109.05
+          east: -102.04
+        primary:
+          name: proxy
+          srid: 3857 # <9>
+          url: https://imagery.nationalmap.gov/arcgis/services/USGSNAIPImagery/ImageServer/WMSServer?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=USGSNAIPImagery:NaturalColor&STYLES=&CRS=EPSG:3857&BBOX={xmin},{ymin},{xmax},{ymax}&WIDTH=256&HEIGHT=256&FORMAT=image/jpeg
+        secondary:
+          name: ref # <10>
+          layer: osm_gray
+      secondary:
+        name: ref
+        layer: osm_gray

@@ -1,12 +1,14 @@
 = Tests
+:description: Tests in tilegroxy use the standard Go testing capabilities as well as the testify library to provide convenient asserts.
+:page-eyebrow: Development
 
-Tests in tilegroxy use the standard Go testing capabilities as well as the link:https://github.com/stretchr/testify[testify] library to provide convenient asserts.  
+== Overview
 
 The majority of tests are unit tests.  
 
 There are integration tests, especially with cache code, that utilize testcontainers to provide a better level of assurance of functionality.  The integration tests should be placed in dedicated files with a build flag to disable the test when the `unit` flag is specified, this allows building with these testcontainer tests excluded in situations where they're problematic (e.g. inside the dockerfile).
 
-There are a couple places where psuedo-end-to-end tests are placed: tile handler and serve command.  Tests in these places are suited for testing a full configuration, standing up a server (or at least one endpoint), sending requests in, and verifying the results.  This confirms everything is working with the exception of details of the final binary itself.
+There are a couple places where pseudo-end-to-end tests are placed: tile handler and serve command.  Tests in these places are suited for testing a full configuration, standing up a server (or at least one endpoint), sending requests in, and verifying the results.  This confirms everything is working with the exception of details of the final binary itself.
 
 == End-to-end tests
 
@@ -14,7 +16,9 @@ Tests in `test/e2e` run the compiled binary as a child process.  This covers wha
 
 Run them with `make e2e` which builds the documentation and the binary first so the artifact under test is complete.  It also builds the example project in `examples/extension`, a separate Go module that can only import `pkg` and `cmd`, and runs it.  A breaking change to the library API fails that build or its test.  They're excluded from `make test` and `make unit` by the `e2e` build tag.  Files behind a build tag are only linted because `.golangci.yml` lists the tag in `run.build-tags`, so a new tag needs to be added there as well.
 
-Set `TILEGROXY_E2E_BINARY` to test a binary built elsewhere such as a release artifact or one extracted from the container image.  If unset the harness uses the repository root binary produced by `make build`.  Note that running `go test` directly rather than through `make e2e` skips that build so the binary may be stale.
+Set `TILEGROXY_E2E_BINARY` to test a binary built elsewhere such as a release artifact or one extracted from the container image.  If unset the harness uses the repository root binary produced by `make build`.
+
+NOTE: Running `go test` directly rather than through `make e2e` skips that build so the binary may be stale.
 
 Set `TILEGROXY_E2E_TIMEOUT_SCALE` to a multiplier to stretch every deadline when running somewhere slower than a developer machine.
 
@@ -34,9 +38,8 @@ Set `MLT_REENCODE_OUT` to a directory to save each re-encoded tile alongside its
 
 Code coverage can be calculated using the Makefile:
 
-`make cover` calculates the code coverage and saves the results to a file
-
-`make coverage` does the same but also outputs the overall code coverage percentage and opens a browser tab displaying coverage breakdown
+`make cover`:: Calculates the code coverage and saves the results to a file
+`make coverage`:: Does the same but also outputs the overall code coverage percentage and opens a browser tab displaying coverage breakdown
 
 We use a tool called link:https://github.com/dave/courtney[Courtney] to calculate code coverage.  Courtney is built on the standard go coverage tool but excludes lines that don't make sense to count against coverage (such as a line like `return nil, err` after a function call returns an error).
 

@@ -1,12 +1,12 @@
 = Custom
+:description: Custom providers implement your own custom logic for providing imagery from whatever source you can imagine.  They require a custom Go script file interpreted using Yaegi.  
+:page-eyebrow: Provider
+:page-config-name: custom
 
-Custom providers implement your own custom logic for providing imagery from whatever source you can imagine.  They require a custom Go script file interpreted using https://github.com/traefik/yaegi[Yaegi].  The main README has more detailed information on implementing custom providers and link:/examples/providers/custom_proxy.go[an example is available].
+NOTE: See xref:extensibility.adoc[Extensibility] for more information
 
-Name should be "custom"
-
-Configuration options:
-
-[cols="1,3,1,1,1"]
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 

@@ -1,9 +1,12 @@
 = Commands
+:description: The `tilegroxy` executable is a standard cobra program with a handful of commands available. If you're deploying tilegroxy for use as a webserver you want to use the `serve` command. A couple other commands are available to aid in standing up and administering a tilegroxy deployment.
+:page-eyebrow: Command
 
-The `tilegroxy` executable is a standard https://github.com/spf13/cobra[cobra] program with a handful of commands available. If you're deploying tilegroxy for use as a webserver you want to use the `serve` command. A couple other commands are available to aid in standing up and administering a tilegroxy deployment.
+== Global flags
 
 The following global flags are available for supplying your configuration:
 
+[,text]
 ----
   -c, --config string            A file path to the configuration file to use.
                                  The file should have an extension of either

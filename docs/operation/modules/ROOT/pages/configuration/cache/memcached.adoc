@@ -1,12 +1,49 @@
 = Memcached
+:description: Cache tiles using memcached.
+:page-eyebrow: Cache
+:page-config-name: memcached
 
-Cache tiles using memcached.
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+datastores:
+  - name: memcached
+    id: memcached-0
+    host: 127.0.0.1
+    port: 11211
 
-Name should be "memcached"
+cache:
+  name: memcached
+  datastore: memcached-0
+----
 
-Configuration options:
+JSON::
++
+[,json]
+----
+{
+  "datastores": [
+    {
+      "name": "memcached",
+      "id": "memcached-0",
+      "host": "127.0.0.1",
+      "port": 11211
+    }
+  ],
+  "cache": {
+    "name": "memcached",
+    "datastore": "memcached-0"
+  }
+}
+----
+====
 
-[cols="1,3,1,1,1"]
+== Configuration
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -28,18 +65,3 @@ Configuration options:
 | Yes
 | None
 |===
-
-Example:
-
-[,yaml]
-----
-datastores:
-  - name: memcached
-    id: memcached-0
-    host: 127.0.0.1
-    port: 11211
-
-cache:
-  name: memcached
-  datastore: memcached-0
-----

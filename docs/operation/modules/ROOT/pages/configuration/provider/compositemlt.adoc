@@ -1,12 +1,53 @@
 = Composite MLT
+:description: Allows you to combine MapLibre Tiles (MLT). If given one child provider that returns an MLT with layer "a" and another that returns an MLT with layer "b", this will return an MLT with layers "a" and "b".  The contents of the MLTs are not changed in any way.
+:page-eyebrow: Provider
+:page-config-name: compositemlt
+:page-tags: MLT
 
-Allows you to combine MapLibre Tiles (MLT). If given one child provider that returns an MLT with layer "a" and another that returns an MLT with layer "b", this will return an MLT with layers "a" and "b".  The contents of the MLTs are not changed in any way.
+NOTE: This is the MLT equivalent of the xref:configuration/provider/compositemvt.adoc[compositemvt] provider. MVT and MLT can't be mixed in one tile, so a child known to produce MVT, such as xref:configuration/provider/postgismvt.adoc[postgismvt], is rejected when the configuration is loaded.
 
-This is the MLT equivalent of the xref:configuration/provider/compositemvt.adoc[compositemvt] provider. MVT and MLT can't be mixed in one tile, so a child known to produce MVT, such as xref:configuration/provider/postgismvt.adoc[postgismvt], is rejected when the configuration is loaded.
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+provider:
+  name: compositemlt
+  providers:
+  - name: pmtiles
+    file: /data/basemap.pmtiles
+  - name: proxy
+    url: https://tiles.example.com/overlay/{z}/{x}/{y}.mlt
+----
 
-Name should be "compositemlt"
+JSON::
++
+[,json]
+----
+{
+  "provider": {
+    "name": "compositemlt",
+    "providers": [
+      {
+        "name": "pmtiles",
+        "file": "/data/basemap.pmtiles"
+      },
+      {
+        "name": "proxy",
+        "url": "https://tiles.example.com/overlay/{z}/{x}/{y}.mlt"
+      }
+    ]
+  }
+}
+----
+====
 
-[cols="1,3,1,1,1"]
+== Configuration
+
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -17,15 +58,3 @@ Name should be "compositemlt"
 | None
 
 |===
-
-Example:
-
-----
-provider:
-  name: compositemlt
-  providers:
-  - name: pmtiles
-    file: /data/basemap.pmtiles
-  - name: proxy
-    url: https://tiles.example.com/overlay/{z}/{x}/{y}.mlt
-----
