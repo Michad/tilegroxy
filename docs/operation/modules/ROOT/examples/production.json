@@ -1,0 +1,90 @@
+{
+  "server": {
+    "bindhost": "0.0.0.0",
+    "production": true,
+    "timeout": 30,
+    "cors": {
+      "enabled": true,
+      "origins": [
+        "https://maps.example.com"
+      ]
+    },
+    "cachecontrol": {
+      "enabled": true,
+      "visibility": "private",
+      "maxage": 3600
+    }
+  },
+  "client": {
+    "useragent": "example-maps/1.0 (ops@example.com)",
+    "timeout": 5
+  },
+  "logging": {
+    "main": {
+      "level": "warn",
+      "format": "json"
+    },
+    "access": {
+      "console": false,
+      "path": "/var/log/tilegroxy/access.log"
+    },
+    "audit": {
+      "enabled": true,
+      "console": false,
+      "path": "/var/log/tilegroxy/audit.log"
+    }
+  },
+  "health": {
+    "enabled": true,
+    "port": 3000,
+    "checks": [
+      {
+        "name": "tile",
+        "layer": "basemap",
+        "z": 0,
+        "x": 0,
+        "y": 0,
+        "validation": "success",
+        "delay": 60
+      },
+      {
+        "name": "cache",
+        "delay": 600
+      }
+    ]
+  },
+  "authentication": {
+    "name": "jwt",
+    "key": "env.JWT_SIGNING_KEY",
+    "algorithms": [
+      "HS256"
+    ],
+    "expectedissuer": "https://auth.example.com"
+  },
+  "error": {
+    "mode": "image"
+  },
+  "cache": {
+    "name": "multi",
+    "tiers": [
+      {
+        "name": "memory",
+        "maxsize": 1000,
+        "ttl": 300
+      },
+      {
+        "name": "disk",
+        "path": "/var/cache/tilegroxy"
+      }
+    ]
+  },
+  "layers": [
+    {
+      "id": "basemap",
+      "provider": {
+        "name": "proxy",
+        "url": "https://tiles.example.com/basemap/{z}/{x}/{y}.png"
+      }
+    }
+  ]
+}

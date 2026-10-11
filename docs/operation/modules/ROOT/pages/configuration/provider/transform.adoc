@@ -1,7 +1,11 @@
 = Transform
+:description: This provider allows you to implement a function to change the RGBA value of each individual pixel in imagery from another provider.  Like the "Custom" provider this is implemented using Yaegi and requires you to include your own Go code.  The interface for this is however much simpler, it requires just a single function:
+:page-eyebrow: Provider
+:page-config-name: transform
 
-This provider allows you to implement a function to change the RGBA value of each individual pixel in imagery from another provider.  Like the "Custom" provider this is implemented using Yaegi and requires you to include your own Go code.  The interface for this is however much simpler, it requires just a single function:
+== Description
 
+[,go]
 ----
 func transform(r, g, b, a uint8) (uint8, uint8, uint8, uint8)
 ----
@@ -10,11 +14,47 @@ You can include the logic in a dedicated file, or inline in configuration. No sp
 
 This can only be used with layers that return JPEG or PNG images. The result is always output in PNG format at the same size as the tile from the downstream provider.
 
-Name should be "transform"
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+provider:
+  name: transform
+  threads: 8
+  formula: |
+    func transform(r, g, b, a uint8) (uint8, uint8, uint8, uint8) {
+      return g,b,r,a
+    }
+  provider:
+    name: proxy
+    url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+----
 
-Configuration options:
+JSON::
++
+[,json]
+----
+{
+  "provider": {
+    "name": "transform",
+    "threads": 8,
+    "formula": "func transform(r, g, b, a uint8) (uint8, uint8, uint8, uint8) {\n  return g,b,r,a\n}\n",
+    "provider": {
+      "name": "proxy",
+      "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+    }
+  }
+}
+----
+====
 
-[cols="1,3,1,1,1"]
+== Configuration
+
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -42,18 +82,3 @@ Configuration options:
 | No
 | 1
 |===
-
-Example:
-
-----
-provider:
-  name: transform
-  threads: 8
-  formula: |
-    func transform(r, g, b, a uint8) (uint8, uint8, uint8, uint8) {
-      return g,b,r,a
-    }
-  provider:
-    name: proxy
-    url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
-----

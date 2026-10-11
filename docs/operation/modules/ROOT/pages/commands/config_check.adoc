@@ -1,9 +1,14 @@
 = Config Check
+:description: Validates your supplied configuration.
+:page-eyebrow: Command
+:page-command: tilegroxy config check
 
-Validates your supplied configuration.
+== Usage
 
 Full, up-to-date usage information can be found with `tilegroxy config check -h`.
 
+.Output of `tilegroxy config check -h`
+[,text]
 ----
 Checks the validity of the configuration you supplied and then exits. If
 everything is valid the program displays "Valid" and exits with a code of
@@ -12,9 +17,22 @@ and it exits with a non-zero status code.
 
 Usage:
   tilegroxy config check [flags]
-
-Flags:
-  -e, --echo   Echos back the full parsed configuration including default
-               values if the configuration is valid
-  -h, --help   help for check
 ----
+
+== Flags
+
+.Flags
+[cols="1,1,1,3"]
+|===
+| Flag | Type | Default | Description
+
+| `-e`, `--echo`
+| bool
+| `false`
+| Echos back the full parsed configuration including default values if the configuration is valid
+
+| `-h`, `--help`
+| bool
+| `false`
+| help for check
+|===

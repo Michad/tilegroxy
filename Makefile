@@ -59,6 +59,7 @@ docs:
 readme:
 	@asciidoctor-reducer -v >/dev/null 2>&1 || gem install asciidoctor-reducer
 	@asciidoctor-reducer -o README.adoc README_source.adoc
+	@sed -i -E -e 's/^:description: (.*)/\n\1/' -e '/^:page-[a-z-]+:/d' README.adoc
 	@echo Updated README.adoc
 
 sec:

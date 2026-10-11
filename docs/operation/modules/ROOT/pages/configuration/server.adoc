@@ -1,10 +1,9 @@
 = Server
+:description: Configures how the HTTP server should operate
+:page-config-key: server
 
-Configures how the HTTP server should operate
-
-Configuration options:
-
-[cols="1,3,1,1,1"]
+== Configuration
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -99,9 +98,8 @@ Configuration options:
 | None
 |===
 
-The following can be supplied as environment variables:
-
-[cols="1,3"]
+.Environment variables
+[cols="1m,3m"]
 |===
 | Configuration Parameter | Environment Variable
 

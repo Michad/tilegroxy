@@ -1,5 +1,6 @@
 = None
+:description: No incoming authentication, all requests are allowed.
+:page-eyebrow: Authentication
+:page-config-name: none
 
-No incoming authentication, all requests are allowed. Ensure you have an external authentication solution before exposing this to the internet.
-
-Name should be "none"
+WARNING: Ensure you have an external authentication solution before exposing this to the internet.

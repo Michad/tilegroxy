@@ -1,10 +1,15 @@
 = Custom
+:description: Records events to whatever destination you can imagine by way of a Go script interpreted at runtime.  This allows reaching a destination tilegroxy doesn't support natively, such as a webhook, a message queue, or a file in a bespoke format, without building tilegroxy yourself.
+:page-eyebrow: Analytics
+:page-config-name: custom
 
-Records events to whatever destination you can imagine by way of a Go script interpreted at runtime.  This allows reaching a destination tilegroxy doesn't support natively, such as a webhook, a message queue, or a file in a bespoke format, without building tilegroxy yourself.
+== Description
 
-See xref:extensibility.adoc[Extensibility] for details on how custom modules work and their limitations.  Custom scripts run unrestricted and can use the entire standard library including `os/exec`; be as cautious using a third party analytics script as you would be executing any other third party software.  Scripts cannot import third party libraries so a destination requiring a vendor SDK needs a native module instead.  `net/http` is available which suffices for most HTTP APIs.
+NOTE: See xref:extensibility.adoc[Extensibility] for details on how custom modules work and their limitations.
 
-Name should be "custom"
+WARNING: Custom scripts run unrestricted and can use the entire standard library including `os/exec`. Be as cautious using a third party analytics script as you would be executing any other third party software.
+
+Scripts cannot import third party libraries so a destination requiring a vendor SDK needs a native module instead.  `net/http` is available which suffices for most HTTP APIs.
 
 == The Script
 
@@ -28,15 +33,57 @@ The `record` function is called once per *batch* of events rather than once per 
 
 Each `AnalyticsEvent` contains `Time`, `LayerID`, `LayerName`, `Z`, `X`, `Y`, `UserID` and `Fields`, the last being a map of whatever you selected via `fields` and `extraFields`.
 
-The `params` argument receives every configuration parameter that isn't one of the module's own.  Use this to pass a URL, a filename, or credentials to the script.  Note the `name` parameter is included in this map.
+The `params` argument receives every configuration parameter that isn't one of the module's own.  Use this to pass a URL, a filename, or credentials to the script.  The `name` parameter is included in this map.
 
 Returning an error causes the batch to be logged as failed and discarded.  The error never reaches the user.
 
-Configuration options:
+Also accepts the xref:configuration/analytics/index.adoc[batching parameters] shared by every analytics module.
 
-Also accepts the batching parameters described in xref:configuration/analytics/index.adoc[Analytics].
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+analytics:
+  name: custom
+  file: examples/analytics/custom_webhook.go
+  url: https://example.com/usage
+  fields:
+    - duration
+  batch:
+    maxSize: 100
+    maxAge: 60
+----
 
-[cols="1,3,1,1,1"]
+JSON::
++
+[,json]
+----
+{
+  "analytics": {
+    "name": "custom",
+    "file": "examples/analytics/custom_webhook.go",
+    "url": "https://example.com/usage",
+    "fields": [
+      "duration"
+    ],
+    "batch": {
+      "maxSize": 100,
+      "maxAge": 60
+    }
+  }
+}
+----
+====
+
+A complete working script is available in link:/examples/analytics/custom_webhook.go[examples/analytics/custom_webhook.go].
+
+== Configuration
+
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -78,19 +125,3 @@ Also accepts the batching parameters described in xref:configuration/analytics/i
 |===
 
 One of File or Script is required.
-
-Example:
-
-----
-analytics:
-  name: custom
-  file: examples/analytics/custom_webhook.go
-  url: https://example.com/usage
-  fields:
-    - duration
-  batch:
-    maxSize: 100
-    maxAge: 60
-----
-
-A complete working script is available in link:/examples/analytics/custom_webhook.go[examples/analytics/custom_webhook.go].

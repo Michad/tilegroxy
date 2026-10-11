@@ -1,29 +1,41 @@
+antora:
+  extensions:
+  - '@antora/lunr-extension'
 site:
   title: tilegroxy Docs
   # url: https://tilegroxy.com
   start_page: operation::index.adoc
+  keys:
+    manual_order: operation, development, decisions
+    footer_text: 'Copyright© Michael Davis and individual contributors to tilegroxy. Tilegroxy licensed under <a href="http://www.apache.org/licenses/">Apache License, Version 2.0</a>'
 content:
   sources:
   - url: .
     branches: HEAD
     start_path: docs/operation
-    edit_url: ~
+    edit_url: '{web_url}/edit/main/{path}'
   - url: .
     branches: HEAD
     start_path: docs/development
-    edit_url: ~
+    edit_url: '{web_url}/edit/main/{path}'
   - url: .
     branches: HEAD
     start_path: docs/decisions
-    edit_url: ~
+    edit_url: '{web_url}/edit/main/{path}'
 asciidoc:
   attributes:
     experimental: ''
     idprefix: ''
     idseparator: '-'
     page-pagination: ''
+    table-caption: false
+    url-repo: https://github.com/Michad/tilegroxy
+    tabs-sync-option: ''
+  extensions:
+  - '@asciidoctor/tabs'
+  - asciidoctor-external-callout
 
 ui:
   bundle:
-    url: https://github.com/tilegroxy/antora-ui/releases/download/v3/ui-bundle.zip
+    url: https://github.com/tilegroxy/antora-ui/releases/download/v4/ui-bundle.zip
     snapshot: true

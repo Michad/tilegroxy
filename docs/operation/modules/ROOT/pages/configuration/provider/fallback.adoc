@@ -1,16 +1,72 @@
 = Fallback
+:description: Delegates calls to a Primary provider, then falls back Secondary provider when an error is returned or the tile is outside the valid zoom or bounds. 
+:page-eyebrow: Provider
+:page-config-name: fallback
 
-Delegates calls to a Primary provider, then falls back Secondary provider when an error is returned or the tile is outside the valid zoom or bounds. This is useful, for example, where you're integrating with a system that returns an error for requests outside of the coverage area and you want to return a Static image in those cases without it being logged as an error.  It especially can be useful in conjunction with the Blend provider.
+== Description
 
-The fallback provider is not meant to be used to handle auth errors with custom providers. The preAuth method is never called for the secondary provider and, if the primary provider returns an auth error, the secondary provider will not be called (the re-auth behaviour for the primary provider will occur as normal). Any auth error handling should be built into your custom provider itself.
+This provider is useful, for example, where you're integrating with a system that returns an error for requests outside of the coverage area and you want to return a Static image in those cases without it being logged as an error.  It especially can be useful in conjunction with the Blend provider or other providers that work on multiple children.
+
+NOTE: The fallback provider is not meant to be used to handle auth errors with custom providers. The preAuth method is never called for the secondary provider and, if the primary provider returns an auth error, the secondary provider will not be called (the re-auth behaviour for the primary provider will occur as normal). Any auth error handling should be built into your custom provider itself.
 
 The bounds parameter is only applied at a per-tile level. That is, the edge where the fallback begins to kick in will visibly change as you zoom in/out. This allows this provider to work in a format agnostic manner for both raster and vector tiles.  See the xref:configuration/provider/crop.adoc[] provider to allow raster tiles to be limited at an exact geographic area.
 
-Name should be "fallback"
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+provider:
+  name: fallback
+  cache: always
+  zoom: 4-21
+  bounds:
+    south: 51
+    north: 63
+    west: -7
+    east: 0.1
+  primary:
+    name: proxy
+    url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+  secondary:
+    name: static
+    color: "0000"
+----
 
-Configuration options:
+JSON::
++
+[,json]
+----
+{
+  "provider": {
+    "name": "fallback",
+    "cache": "always",
+    "zoom": "4-21",
+    "bounds": {
+      "south": 51,
+      "north": 63,
+      "west": -7,
+      "east": 0.1
+    },
+    "primary": {
+      "name": "proxy",
+      "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+    },
+    "secondary": {
+      "name": "static",
+      "color": "0000"
+    }
+  }
+}
+----
+====
 
-[cols="1,3,1,1,1"]
+== Configuration
+
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -44,23 +100,3 @@ Configuration options:
 | No
 | unless-error
 |===
-
-Example:
-
-----
-provider:
-  name: fallback
-  cache: always
-  zoom: 4-21
-  bounds:
-    south: 51
-    north: 63
-    west: -7
-    east: 0.1
-  primary:
-    name: proxy
-    url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
-  secondary:
-    name: static
-    color: "0000"
-----

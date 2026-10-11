@@ -1,16 +1,24 @@
 = Layer
+:description: A layer represents a distinct mapping layer as would be displayed in a typical web map application.  Each layer can be accessed independently from other map layers. The main thing that needs to be configured for a layer is its provider.
+:page-config-key: layers[]
 
-A layer represents a distinct mapping layer as would be displayed in a typical web map application.  Each layer can be accessed independently from other map layers. The main thing that needs to be configured for a layer is the provider described below.
+== Layer names
 
-The URLs of incoming requests follow a format like: `+/tiles/{layerName}/{z}/{x}/{y}+` the layer name can be one of two things: 1) the ID of the layer or 2) A string that matches a pattern.  A pattern should include non-subsequent placeholder values wrapped in curly braces. Those placeholder values can be used in certain providers, such as the Proxy provider where they can be forwarded along to the upstream map layer. See xref:layer-patterns.adoc[Layer Patterns] for a walkthrough of how to utilize them
+The URLs of incoming requests follow a format like `+/tiles/{layerName}/{z}/{x}/{y}+`. The layer name can be one of two things:
+
+. The ID of the layer
+. A string that matches a pattern
+
+A pattern should include non-subsequent placeholder values wrapped in curly braces. Those placeholder values can be used in certain providers, such as the Proxy provider where they can be forwarded along to the upstream map layer. See xref:layer-patterns.adoc[Layer Patterns] for a walkthrough of how to utilize them
 
 When using a pattern you can include https://regex101.com/[Regular Expressions] to validate the values that match against the placeholder.
 
-It is highly recommended that layer names be alphanumeric plus underscores. While other characters aren't forbidden, several mechanisms (some caches and telemetry) replace potentially dangerous characters with underscores. This can lead to collisions if you have layer names that differ only by special characters.
+TIP: It is highly recommended that layer names be alphanumeric plus underscores. While other characters aren't forbidden, several mechanisms (some caches and telemetry) replace potentially dangerous characters with underscores. This can lead to collisions if you have layer names that differ only by special characters.
 
-Configuration options:
+== Configuration
 
-[cols="1,3,1,1,1"]
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -39,7 +47,7 @@ Configuration options:
 | None
 
 | client
-| A Client configuration to use for this layer specifically that overrides the Client from the top-level of the configuration. See below for Client schema
+| A Client configuration to use for this layer specifically that overrides the Client from the top-level of the configuration
 | xref:configuration/client.adoc[Client]
 | No
 | None
@@ -57,7 +65,7 @@ Configuration options:
 | false
 
 | allowcoalesce
-| Whether to allow concurrent requests for the same tile to be combined into one tile generation call. This includes requests triggered by different users. If your tiles are customized per user/tenant, you will want to set this false. See xref:../howto/user-dynamic.adoc#_coalesce[this how-to] for further information
+| Whether to allow concurrent requests for the same tile to be combined into one tile generation call. This includes requests triggered by different users. If your tiles are customized per user/tenant, you will want to set this false. See xref:howto/user-dynamic.adoc#coalesce[this how-to] for further information
 | bool
 | No
 | Auto (based on the layer's cache and provider)
@@ -70,25 +78,25 @@ Configuration options:
 
 
 | description
-| Defines a description of this layer for metadata purposes. Currently has no effect unless TileJSON is enabled. See <<Metadata>>
+| Defines a description of this layer for metadata purposes. Currently has no effect unless TileJSON is enabled. See <<metadata>>
 | string
 | No
 | None
 
 | attribution
-| Defines an attribution of this layer for metadata purposes. Currently has no effect unless TileJSON is enabled. See <<Metadata>>
+| Defines an attribution of this layer for metadata purposes. Currently has no effect unless TileJSON is enabled. See <<metadata>>
 | string
 | No
 | None
 
 | center
-| Specified as a triplet of longitude, latitude, zoom. Defines a center (or representative) point of this layer. Also used by the xref:commands/test.adoc[test command] to pick a default tile. See <<Metadata>>
+| Specified as a triplet of longitude, latitude, zoom. Defines a center (or representative) point of this layer. Also used by the xref:commands/test.adoc[test command] to pick a default tile. See <<metadata>>
 | float[]
 | No
 | None
 
 | vectorlayers
-| Only useful for vector data types. Defines the sub-layers inside the tiles matching the tilejson `vector_layers` format (`id`, `fields`, `description`, `minzoom`, and `maxzoom`). Currently only used for metadata purposes and has no effect unless TileJSON is enabled. See <<Metadata>>
+| Only useful for vector data types. Defines the sub-layers inside the tiles matching the tilejson `vector_layers` format (`id`, `fields`, `description`, `minzoom`, and `maxzoom`). Currently only used for metadata purposes and has no effect unless TileJSON is enabled. See <<metadata>>
 | Object[]
 | No
 | None
@@ -100,19 +108,19 @@ Configuration options:
 | Taken from the provider
 
 | minzoom
-| Requests for a zoom level below this are rejected as out of bounds. See <<Metadata>>
+| Requests for a zoom level below this are rejected as out of bounds. See <<metadata>>
 | int
 | No
 | No lower limit
 
 | maxzoom
-| Requests for a zoom level above this are rejected as out of bounds. See <<Metadata>>
+| Requests for a zoom level above this are rejected as out of bounds. See <<metadata>>
 | int
 | No
 | No upper limit
 
 | bounds
-| Restricts this layer to a geographic area. When set, the layer's provider is automatically cropped (via xref:configuration/provider/crop.adoc[crop], xref:configuration/provider/cropmvt.adoc[cropmvt], or xref:configuration/provider/cropmlt.adoc[cropmlt]). This requires the layer's data type to be resolvable. See <<Metadata>>
+| Restricts this layer to a geographic area. When set, the layer's provider is automatically cropped (via xref:configuration/provider/crop.adoc[crop], xref:configuration/provider/cropmvt.adoc[cropmvt], or xref:configuration/provider/cropmlt.adoc[cropmlt]). This requires the layer's data type to be resolvable. See <<metadata>>
 | Object with north, south, east, west
 | No
 | Whole world
@@ -140,7 +148,8 @@ Configuration options:
 
 Several options above describe the layer's tiles. Most of them can also come from the provider, for instance a provider reading an archive that records its own zoom range. Providers only describe, they never restrict. Only values set on the layer are enforced on requests.
 
-[cols="1,1,2,2"]
+.Metadata options
+[cols="1m,1,2,2"]
 |===
 | Option | Set by | Effect | Used by
 
@@ -174,8 +183,12 @@ A value set on the layer always replaces the provider's. A provider value that c
 
 Nesting providers combine what their children report. A provider wrapping a single other provider, such as xref:configuration/provider/effect.adoc[effect], passes its child's values through. One with several children, such as xref:configuration/provider/fallback.adoc[fallback] or xref:configuration/provider/blend.adoc[blend], reports values covering all of them, leaving a value unset if any child doesn't report it. A xref:configuration/provider/ref.adoc[ref] reports the metadata of the layer it points to.
 
-Example:
-
+.Example
+[tabs]
+====
+YAML::
++
+[,yaml]
 ----
 layer:
   id: my_layer
@@ -199,3 +212,37 @@ layer:
   provider:
     ...
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "layer": {
+    "id": "my_layer",
+    "pattern": "my_{name}_{version}",
+    "examples": [
+      "my_first_v2",
+      "my_second_v9"
+    ],
+    "paramValidator": {
+      "*": "^[a-zA-Z0-9]+$",
+      "version": "v[0-9]{1,3}"
+    },
+    "skipCache": true,
+    "client": {
+      "userAgent": "my_app/1.0"
+    },
+    "minzoom": 4,
+    "maxzoom": 18,
+    "bounds": {
+      "south": 51,
+      "north": 63,
+      "west": -7,
+      "east": 0.1
+    },
+    "provider": { ... }
+  }
+}
+----
+====

@@ -1,20 +1,25 @@
 = Health
+:description: Tilegroxy includes a facility for validating the health of the tilegroxy server.  This information is served from a separate port from the main endpoints; this is done for security reasons to avoid the risk of leaking internal details which could be used to create targeted attacks.  The intent is for the health endpoints to be used with load balancers, monitoring tools, or orchestration systems (such as kubernetes).
+:page-config-key: health
 
-Tilegroxy includes a facility for validating the health of the tilegroxy server.  This information is served from a separate port from the main endpoints; this is done for security reasons to avoid the risk of leaking internal details which could be used to create targeted attacks.  This port should not be exposed outside your local network. The intent is for the health endpoints to be used with load balancers, monitoring tools, or orchestration systems (such as kubernetes).
+== Description
 
-There are two specific endpoints available: `/` and `/health`.  
+WARNING: The health port should not be exposed outside your local network.
 
-Hitting `/` will return a 200 once the tilegroxy server is online.  
+There are two specific endpoints available:
 
-Hitting `/health` will invoke the full health check.
+[horizontal]
+`/`:: Returns a 200 once the tilegroxy server is online.
+`/health`:: Returns the result of the full health check.
 
 The full healthcheck consists of invoking a series of individual checks. The list of specific checks is configurable. Actual execution of these checks is fully asynchronous, which means calling the health endpoint returns the cached results of the most recent check rather than triggering the checks immediately.  
 
-The healthcheck follows the format documented link:https://datatracker.ietf.org/doc/html/draft-inadarei-api-health-check-06[here].
+The healthcheck follows the link:https://datatracker.ietf.org/doc/html/draft-inadarei-api-health-check-06[Health Check Response Format for HTTP APIs] draft.
 
-Configuration options:
+== Configuration
 
-[cols="1,3,1,1,1"]
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -44,8 +49,8 @@ Configuration options:
 
 |===
 
-The following can be supplied as environment variables:
-
+.Environment variables
+[cols="1m,3m"]
 |===
 | Configuration Parameter | Environment Variable
 
@@ -69,14 +74,12 @@ There are a number of different types of checks that can be performed.  Like els
 
 This check generates a synthetic request for a specific layer and validates the result is as expected. This allows you to detect issues connecting to an upstream provider or alert when broken imagery begins to be returned. These requests are generated internally and do not go through HTTP so will not show up in access logs, do not trigger authentication, and will not have a user ID associated. If telemetry is enabled, these requests will count against per-layer tile metrics but not against total tile metrics.
 
-THIS CHECK DOES NOT USE THE CACHE. Do not use this check against an intensive layer or one that incurs a monetary cost.
+WARNING: This check does not use the cache. Do not use this check against an intensive layer or one that incurs a monetary cost.
 
+Name should be `tile`
 
-Name should be "tile"
-
-Configuration options:
-
-[cols="1,3,1,1,1"]
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -111,7 +114,7 @@ Configuration options:
 | 534
 
 | validation
-| How to validate the resulting tile is as expected. Possible options: same, content-type, base-64, file, success. See below for details
+| How to validate the resulting tile is as expected. Possible options: same, content-type, base-64, file, success. See <<tile-validation>>
 | string
 | No
 | same
@@ -127,7 +130,9 @@ Configuration options:
 
 Once the tile is generated there's a few options for how you validate the tile is as you expect:
 
-[cols="1,3,2"]
+[#tile-validation]
+.Validation options
+[cols="1m,3,2"]
 |===
 | Validation | Description | How result is interpreted 
 
@@ -163,11 +168,10 @@ The key used to insert into the cache corresponds to a request against layer nam
 
 Every cache configured at the top level is checked, not just the default one, so a cache used only by a layer that xref:configuration/layer.adoc[overrides its cache] is still monitored. Use `caches` to narrow that down. The check fails if any of the caches it covers fails, and the output names which ones.
 
-Name should be "cache"
+Name should be `cache`
 
-Configuration options:
-
-[cols="1,3,1,1,1"]
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -187,7 +191,11 @@ Configuration options:
 
 == Example
 
-
+[tabs]
+====
+YAML::
++
+[,yaml]
 ----
 health:
   port: 3020
@@ -199,16 +207,43 @@ health:
       z: 0
       validation: content-type
       result: image/png; charset=UTF-8
-      delay: 60 
+      delay: 60
     - name: cache
       delay: 600
-        
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "health": {
+    "port": 3020,
+    "checks": [
+      {
+        "name": "tile",
+        "layer": "some_layer",
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "validation": "content-type",
+        "result": "image/png; charset=UTF-8",
+        "delay": 60
+      },
+      {
+        "name": "cache",
+        "delay": 600
+      }
+    ]
+  }
+}
+----
+====
 
 
 Produces an output like:
 
-
+[,json]
 ----
 {
   "checks": {
