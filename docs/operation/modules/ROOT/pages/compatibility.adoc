@@ -1,6 +1,5 @@
 = Compatibility
-
-Starting with version 1.0, tilegroxy follows link:https://semver.org/[semantic versioning].  An upgrade within the same major version (for example 1.2 to 1.5) should never require you to change your configuration, scripts, or code.  This document describes exactly what that promise covers, how features are retired, and what is excluded.
+:description: Starting with version 1.0, tilegroxy follows semantic versioning.  An upgrade within the same major version (for example 1.2 to 1.5) should never require you to change your configuration, scripts, or code.  This document describes exactly what that promise covers, how features are retired, and what is excluded.
 
 IMPORTANT: Releases before 1.0 made no such promise and frequently included breaking changes.  Read the release notes carefully when upgrading from a 0.x version.
 

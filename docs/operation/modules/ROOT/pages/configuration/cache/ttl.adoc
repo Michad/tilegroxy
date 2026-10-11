@@ -1,6 +1,7 @@
 = TTL
-
-Wraps another cache to enforce an expiration on top of it. This is useful if your cache doesn't support a native time-to-live but your layer changes over time.
+:description: Wraps another cache to enforce an expiration on top of it. This is useful if your cache doesn't support a native time-to-live but your layer changes over time.
+:page-eyebrow: Cache
+:page-config-name: ttl
 
 This does not actually delete data from your cache, it merely turns a cache hit into a miss when the data is old. If your concern is legal compliance, disk usage, or cloud cost, you will still need an external solution.
 
@@ -8,25 +9,7 @@ NOTE: TTL cache will not work properly if your data was cached using tilegroxy 0
 
 Name should be `ttl`
 
-.Configuration options
-[cols="1m,3,1,1,1"]
-|===
-| Parameter | Description | Type | Required | Default
-
-| ttl
-| Maximum time to live for cache entries in seconds
-| uint32
-| Yes
-| None
-
-| cache
-| The wrapped Cache configuration
-| Cache
-| Yes
-| None
-|===
-
-.Example
+== Example
 [tabs]
 ====
 YAML::
@@ -57,3 +40,21 @@ JSON::
 }
 ----
 ====
+
+== Configuration
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| ttl
+| Maximum time to live for cache entries in seconds
+| uint32
+| Yes
+| None
+
+| cache
+| The wrapped Cache configuration
+| Cache
+| Yes
+| None
+|===

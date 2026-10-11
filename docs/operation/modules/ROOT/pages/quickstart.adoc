@@ -1,10 +1,8 @@
 = Quickstart
+:description: To start with, make sure you either have the tilegroxy binary or the container image as described in How to get it.
+:page-eyebrow: Get started
 
-To start with, make sure you either have the tilegroxy binary or the container image as described in xref:get-it.adoc[How to get it].
-
-This example proxies tiles from OpenStreetMap.
-
-IMPORTANT: Be mindful of the OpenStreetMap https://operations.osmfoundation.org/policies/tiles/[tile usage policy] and don't abuse it.
+IMPORTANT: This example proxies tiles from OpenStreetMap. Be mindful of the OpenStreetMap https://operations.osmfoundation.org/policies/tiles/[tile usage policy] and don't abuse it.
 
 == Write a configuration
 

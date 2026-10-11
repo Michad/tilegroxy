@@ -1,6 +1,5 @@
 = Reloading
-
-Tilegroxy supports automatic reloading without a restart or downtime when running as a server. 
+:description: Tilegroxy supports automatic reloading without a restart or downtime when running as a server.
 
 Reloading can occur in a few different situations:
 

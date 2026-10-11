@@ -1,6 +1,7 @@
 = Blend
-
-Allows you to combine the imagery from multiple providers.  The simplest use case for this is to "sandwich" or "composite" semi-transparent images on top of each other.  For example you can put county boundaries on top of a flood map or include a watermark on your maps.  Multiple blending modes are available to fine-tune the effect.
+:description: Allows you to combine the imagery from multiple providers.  The simplest use case for this is to "sandwich" or "composite" semi-transparent images on top of each other.  For example you can put county boundaries on top of a flood map or include a watermark on your maps.  Multiple blending modes are available to fine-tune the effect.
+:page-eyebrow: Provider
+:page-config-name: blend
 
 This can only be used with layers that return JPEG or PNG images. Tiles will be scaled up to the highest resolution of the inputs to be combined and the combined result always output in PNG format.
 
@@ -12,49 +13,7 @@ image::diagram-blend.png[Blend request flow]
 
 Name should be `blend`
 
-.Configuration options
-[cols="1m,3,1,1,1"]
-|===
-| Parameter | Description | Type | Required | Default
-
-| providers
-| The providers to blend together.  Order matters
-| Provider[]
-| Yes
-| None
-
-| mode
-| How to blend the images. https://github.com/anthonynsimon/bild#blend-modes[Examples of the modes]. Possible values: `add`, `color burn`, `color dodge`, `darken`, `difference`, `divide`, `exclusion`, `lighten`, `linear burn`, `linear light`, `multiply`, `normal`, `opacity`, `overlay`, `screen`, `soft light`, `subtract`
-| String
-| No
-| normal
-
-| opacity
-| Only applicable if mode is `opacity`. A value between 0 and 1 controlling the amount of opacity
-| Float
-| No
-| 0
-
-| layer
-| An alternative to the `providers` parameter for specifying references to other layers that utilize patterns. Equivalent to specifying a number of xref:configuration/provider/ref.adoc[Ref] providers in `providers`
-| Object - See next rows
-| No
-| None
-
-| layer.pattern
-| A string with one or more placeholders present wrapped in curly brackets that match the layer placeholder you want to refer towards
-| String
-| Yes
-| None
-
-| layer.values
-| An entry per instantiation of the layer, each entry should have a value for each placeholder in the pattern with the key being the placeholder and the value being the replacement value
-| {"k":"v"}[]
-| Yes
-| None
-|===
-
-.Example
+== Example
 [tabs]
 ====
 YAML::
@@ -116,3 +75,47 @@ JSON::
 }
 ----
 ====
+
+== Configuration
+
+.Configuration options
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| providers
+| The providers to blend together.  Order matters
+| Provider[]
+| Yes
+| None
+
+| mode
+| How to blend the images. https://github.com/anthonynsimon/bild#blend-modes[Examples of the modes]. Possible values: `add`, `color burn`, `color dodge`, `darken`, `difference`, `divide`, `exclusion`, `lighten`, `linear burn`, `linear light`, `multiply`, `normal`, `opacity`, `overlay`, `screen`, `soft light`, `subtract`
+| String
+| No
+| normal
+
+| opacity
+| Only applicable if mode is `opacity`. A value between 0 and 1 controlling the amount of opacity
+| Float
+| No
+| 0
+
+| layer
+| An alternative to the `providers` parameter for specifying references to other layers that utilize patterns. Equivalent to specifying a number of xref:configuration/provider/ref.adoc[Ref] providers in `providers`
+| Object - See next rows
+| No
+| None
+
+| layer.pattern
+| A string with one or more placeholders present wrapped in curly brackets that match the layer placeholder you want to refer towards
+| String
+| Yes
+| None
+
+| layer.values
+| An entry per instantiation of the layer, each entry should have a value for each placeholder in the pattern with the key being the placeholder and the value being the replacement value
+| {"k":"v"}[]
+| Yes
+| None
+|===

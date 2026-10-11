@@ -1,10 +1,48 @@
 = ClickHouse
-
-Defines a connection pool to a link:https://clickhouse.com/[ClickHouse] database.  Utilizes link:https://github.com/ClickHouse/clickhouse-go[clickhouse-go] under the hood.
+:description: Defines a connection pool to a ClickHouse database.  Utilizes clickhouse-go under the hood.
+:page-eyebrow: Datastore
+:page-config-name: clickhouse
 
 Used by the xref:configuration/analytics/clickhouse.adoc[clickhouse analytics module].
 
 Name should be `clickhouse`
+
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+datastores:
+  - name: clickhouse
+    id: ch-0
+    host: clickhouse.internal
+    database: analytics
+    user: tilegroxy
+    password: env.CLICKHOUSE_PASSWORD
+----
+
+JSON::
++
+[,json]
+----
+{
+  "datastores": [
+    {
+      "name": "clickhouse",
+      "id": "ch-0",
+      "host": "clickhouse.internal",
+      "database": "analytics",
+      "user": "tilegroxy",
+      "password": "env.CLICKHOUSE_PASSWORD"
+    }
+  ]
+}
+----
+====
+
+== Configuration
 
 .Configuration options
 [cols="1m,3,1,1,1"]
@@ -77,38 +115,3 @@ Name should be `clickhouse`
 | No
 | 1 hour
 |===
-
-.Example
-[tabs]
-====
-YAML::
-+
-[,yaml]
-----
-datastores:
-  - name: clickhouse
-    id: ch-0
-    host: clickhouse.internal
-    database: analytics
-    user: tilegroxy
-    password: env.CLICKHOUSE_PASSWORD
-----
-
-JSON::
-+
-[,json]
-----
-{
-  "datastores": [
-    {
-      "name": "clickhouse",
-      "id": "ch-0",
-      "host": "clickhouse.internal",
-      "database": "analytics",
-      "user": "tilegroxy",
-      "password": "env.CLICKHOUSE_PASSWORD"
-    }
-  ]
-}
-----
-====

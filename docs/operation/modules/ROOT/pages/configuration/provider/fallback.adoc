@@ -1,6 +1,7 @@
 = Fallback
-
-Delegates calls to a Primary provider, then falls back Secondary provider when an error is returned or the tile is outside the valid zoom or bounds. This is useful, for example, where you're integrating with a system that returns an error for requests outside of the coverage area and you want to return a Static image in those cases without it being logged as an error.  It especially can be useful in conjunction with the Blend provider.
+:description: Delegates calls to a Primary provider, then falls back Secondary provider when an error is returned or the tile is outside the valid zoom or bounds. This is useful, for example, where you're integrating with a system that returns an error for requests outside of the coverage area and you want to return a Static image in those cases without it being logged as an error.  It especially can be useful in conjunction with the Blend provider.
+:page-eyebrow: Provider
+:page-config-name: fallback
 
 NOTE: The fallback provider is not meant to be used to handle auth errors with custom providers. The preAuth method is never called for the secondary provider and, if the primary provider returns an auth error, the secondary provider will not be called (the re-auth behaviour for the primary provider will occur as normal). Any auth error handling should be built into your custom provider itself.
 
@@ -8,43 +9,7 @@ The bounds parameter is only applied at a per-tile level. That is, the edge wher
 
 Name should be `fallback`
 
-.Configuration options
-[cols="1m,3,1,1,1"]
-|===
-| Parameter | Description | Type | Required | Default
-
-| primary
-| The provider to delegate to first
-| Provider
-| Yes
-| None
-
-| secondary
-| The provider to delegate to if primary returns an error
-| Provider
-| Yes
-| None
-
-| zoom
-| Zooming below or above this range will activate the fallback. Can be a single number, a range with a dash between start and end, or a comma separated list of the first two options.  For example "4" "2-3" or "2,3-4"
-| String
-| No
-| 0-21
-
-| bounds
-| Any tiles that don't intersect with this bounds will activate the fallback
-| Object with north, south, east, west
-| No
-| Whole world
-
-| cache
-| When to save the resulting tile to the cache. Options: always, unless-error, unless-fallback.
-| string
-| No
-| unless-error
-|===
-
-.Example
+== Example
 [tabs]
 ====
 YAML::
@@ -95,3 +60,41 @@ JSON::
 }
 ----
 ====
+
+== Configuration
+
+.Configuration options
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| primary
+| The provider to delegate to first
+| Provider
+| Yes
+| None
+
+| secondary
+| The provider to delegate to if primary returns an error
+| Provider
+| Yes
+| None
+
+| zoom
+| Zooming below or above this range will activate the fallback. Can be a single number, a range with a dash between start and end, or a comma separated list of the first two options.  For example "4" "2-3" or "2,3-4"
+| String
+| No
+| 0-21
+
+| bounds
+| Any tiles that don't intersect with this bounds will activate the fallback
+| Object with north, south, east, west
+| No
+| Whole world
+
+| cache
+| When to save the resulting tile to the cache. Options: always, unless-error, unless-fallback.
+| string
+| No
+| unless-error
+|===

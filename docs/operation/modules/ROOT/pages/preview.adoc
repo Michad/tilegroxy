@@ -1,6 +1,5 @@
 = Layer Preview
-
-Tilegroxy can generate a standalone HTML page previewing a single layer on a https://maplibre.org/maplibre-gl-js/docs/[MapLibre] map, so you can visually confirm that a layer works without a separate GIS client.
+:description: Tilegroxy can generate a standalone HTML page previewing a single layer on a MapLibre map, so you can visually confirm that a layer works without a separate GIS client.
 
 NOTE: The preview page is a development aid and is only available when xref:configuration/server.adoc[Server.Production] is `false`.
 

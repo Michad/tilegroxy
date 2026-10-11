@@ -1,36 +1,13 @@
 = Memory
-
-A local in-memory cache. This stores the tiles in the memory of the tilegroxy daemon itself.
+:description: A local in-memory cache. This stores the tiles in the memory of the tilegroxy daemon itself.
+:page-eyebrow: Cache
+:page-config-name: memory
 
 WARNING: This is not recommended for production use. It is meant for development and testing use-cases only. Setting this cache too high can cause stability issues for the service and this cache is not distributed so can cause inconsistent performance when deploying in a high-availability production environment.
 
 Name should be `memory`
 
-.Configuration options
-[cols="1m,3,1,1,1"]
-|===
-| Parameter | Description | Type | Required | Default 
-
-| maxsize
-| Maximum number of tiles to hold in the cache. Must be at least 10. Setting this too high can cause out-of-memory panics. This is not a guaranteed setting, which entry is evicted when exceeding this size is an implementation detail and the size can temporarily grow somewhat larger.
-| uint16
-| No
-| 100
-
-| ttl
-| Maximum time to live for cache entries in seconds
-| uint32
-| No
-| 3600
-
-| datastore
-| The ID of a xref:configuration/datastores/memory.adoc[memory datastore] to store tiles in instead of holding a private store. Use this when several memory caches need to hold the same tiles. Do not supply this at the same time as `maxsize` or `ttl`, those belong on the datastore
-| string
-| No
-| None
-|===
-
-.Example
+== Example
 [tabs]
 ====
 YAML::
@@ -56,3 +33,27 @@ JSON::
 }
 ----
 ====
+
+== Configuration
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| maxsize
+| Maximum number of tiles to hold in the cache. Must be at least 10. Setting this too high can cause out-of-memory panics. This is not a guaranteed setting, which entry is evicted when exceeding this size is an implementation detail and the size can temporarily grow somewhat larger.
+| uint16
+| No
+| 100
+
+| ttl
+| Maximum time to live for cache entries in seconds
+| uint32
+| No
+| 3600
+
+| datastore
+| The ID of a xref:configuration/datastores/memory.adoc[memory datastore] to store tiles in instead of holding a private store. Use this when several memory caches need to hold the same tiles. Do not supply this at the same time as `maxsize` or `ttl`, those belong on the datastore
+| string
+| No
+| None
+|===

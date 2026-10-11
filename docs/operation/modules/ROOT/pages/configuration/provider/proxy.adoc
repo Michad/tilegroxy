@@ -1,12 +1,41 @@
 = Proxy
-
-The Proxy provider is the simplest option that simply forwards tile requests to another HTTP(s) endpoint. This provider can be used for mapping services that operate in tiles (ZXY, TMS, or WMTS) or against bounds (i.e. WMS). TMS inverts the y coordinate compared to ZXY and WMTS formats, which is handled by the InvertY parameter.
+:description: The Proxy provider is the simplest option that simply forwards tile requests to another HTTP(s) endpoint. This provider can be used for mapping services that operate in tiles (ZXY, TMS, or WMTS) or against bounds (i.e. WMS). TMS inverts the y coordinate compared to ZXY and WMTS formats, which is handled by the InvertY parameter.
+:page-eyebrow: Provider
+:page-config-name: proxy
+:page-tags: ZXY · TMS · WMTS · WMS
 
 The following is the typical request flow when using a proxy provider:
 
 image::diagram-proxy.png[Proxy flow diagram]
 
 Name should be `proxy`
+
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+provider:
+  name: proxy
+  url: https://tile.openstreetmap.org/{z}/{x}/{y}.png?key={env.key}&agent={ctx.User-Agent}
+----
+
+JSON::
++
+[,json]
+----
+{
+  "provider": {
+    "name": "proxy",
+    "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png?key={env.key}&agent={ctx.User-Agent}"
+  }
+}
+----
+====
+
+== Configuration
 
 .Configuration options
 [cols="1m,3,1,1,1"]
@@ -32,7 +61,7 @@ Name should be `proxy`
 | 4326
 |===
 
-.URL placeholders
+== URL placeholders
 [cols="1m,4"]
 |===
 | Placeholder | Description
@@ -75,29 +104,4 @@ Name should be `proxy`
 `ctx.XXX` and `layer.XXX` values come from the incoming request and are percent-encoded before being inserted.  Placeholders before the first `?` in the `url` are path-escaped, those after it are query-escaped.  This prevents a request injecting a `?`, `#`, or `../` to rewrite the upstream path or add query parameters.  Note this means a value containing a `/` is encoded as `%2F` rather than treated as a path separator.
 
 Also see the `paramValidator` option in the xref:configuration/layer.adoc[Layer] configuration to restrict what values a pattern accepts in the first place.
-====
-
-.Example
-[tabs]
-====
-YAML::
-+
-[,yaml]
-----
-provider:
-  name: proxy
-  url: https://tile.openstreetmap.org/{z}/{x}/{y}.png?key={env.key}&agent={ctx.User-Agent}
-----
-
-JSON::
-+
-[,json]
-----
-{
-  "provider": {
-    "name": "proxy",
-    "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png?key={env.key}&agent={ctx.User-Agent}"
-  }
-}
-----
 ====

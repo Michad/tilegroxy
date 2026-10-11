@@ -1,6 +1,5 @@
 = Telemetry
-
-Tilegroxy supports utilizing https://opentelemetry.io/[OpenTelemetry (OTEL)] to provide portable observability.  This allows you to monitor and "observe" your tilegroxy deployment in tools such as Fluent Bit, CloudWatch, NewRelic, Dynatrace, https://opentelemetry.io/ecosystem/vendors/[etc.]
+:description: Tilegroxy supports utilizing OpenTelemetry (OTEL) to provide portable observability.  This allows you to monitor and "observe" your tilegroxy deployment in tools such as Fluent Bit, CloudWatch, NewRelic, Dynatrace, etc.
 
 The supported telemetry data includes metrics, logs, and traces. These are disabled by default and can be turned on by setting `telemetry.enabled` to `true` in your configuration or `TELEMETRY_ENABLED=true` via environment variable.  Tilegroxy only supports the HTTP exporter, not STDOUT or GRPC.  Once telemetry is enabled you will need to use https://opentelemetry.io/docs/languages/sdk-configuration/otlp-exporter/[standard OTEL environment variables] to point the HTTP exporter to your collector.  For example: `+OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4318"+`.
 

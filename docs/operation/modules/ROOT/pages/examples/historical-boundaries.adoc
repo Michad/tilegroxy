@@ -1,6 +1,7 @@
 = Historical Boundaries
-
-The Newberry Library's link:https://digital.newberry.org/ahcb/[Atlas of Historical County Boundaries] records every change to U.S. state and county lines.  This configuration serves it as vector tiles straight from PostGIS, where a single layer answers for any year, such as `boundaries_1860`.
+:description: The Newberry Library's Atlas of Historical County Boundaries records every change to U.S. state and county lines.  This configuration serves it as vector tiles straight from PostGIS, where a single layer answers for any year, such as `boundaries_1860`.
+:page-eyebrow: Example
+:page-tags: MVT
 
 The data is loaded into two tables with a tool such as `shp2pgsql`, from the atlas's state and county shapefiles.  Each row has a `start_date` and `end_date` for the period it was in effect.
 

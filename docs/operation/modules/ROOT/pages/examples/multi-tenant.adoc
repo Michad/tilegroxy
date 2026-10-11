@@ -1,6 +1,6 @@
 = Multi-Tenant Imagery
-
-This configuration serves a SaaS application where each customer organization has its own survey imagery, layered over a basemap that every organization shares.  The tenant comes from the user's token and decides which imagery is fetched, where it's cached, which area is visible, and how usage is attributed.
+:description: This configuration serves a SaaS application where each customer organization has its own survey imagery, layered over a basemap that every organization shares.  The tenant comes from the user's token and decides which imagery is fetched, where it's cached, which area is visible, and how usage is attributed.
+:page-eyebrow: Example
 
 Read xref:howto/multi-tenant.adoc[Serve Multiple Tenants] and xref:howto/user-dynamic.adoc[User Dynamic Layers] for the concepts behind it.
 

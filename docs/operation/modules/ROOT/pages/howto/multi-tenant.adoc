@@ -1,6 +1,6 @@
 = Serve Multiple Tenants
-
-A tilegroxy deployment can be set up with first class support for serving multiple tenants (also called "organizations" or "realms"). In this setup, requests gets tagged with a tenant ID taken from the user's credentials, and that ID can drive which imagery is fetched, how it's cached, and how usage is attributed.
+:description: A tilegroxy deployment can be set up with first class support for serving multiple tenants (also called "organizations" or "realms"). In this setup, requests gets tagged with a tenant ID taken from the user's credentials, and that ID can drive which imagery is fetched, how it's cached, and how usage is attributed.
+:page-eyebrow: Guide
 
 CAUTION: Serving different tiles to different tenants means a tile can leak to the wrong tenant through caching or coalescing. Read xref:howto/user-dynamic.adoc[] before deploying this.
 

@@ -1,6 +1,6 @@
 = Repository Structure
-
-The tilegroxy repository has the following structure
+:description: The tilegroxy repository has the following structure
+:page-eyebrow: Development
 
 == Root (/)
 

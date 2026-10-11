@@ -1,6 +1,6 @@
 = Encryption
-
-Configures how encryption should be applied to the server.
+:description: Configures how encryption should be applied to the server.
+:page-config-key: server.encrypt
 
 There are two main ways this can work:
 
@@ -8,6 +8,8 @@ There are two main ways this can work:
 . Via https://letsencrypt.org/how-it-works/[Let's Encrypt] (ACME) using Go's built-in autocert module
 
 If a certificate and keyfile are supplied the server will utilize option 1, otherwise it'll fallback to option 2. If you don't want to utilize encryption (for example you have TLS termination handled externally) simply omit `Server.Encrypt`.
+
+== Configuration
 
 .Configuration options
 [cols="1m,3,1,1,1"]

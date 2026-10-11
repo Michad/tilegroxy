@@ -1,6 +1,7 @@
 = Vector Basemap
-
-link:https://overturemaps.org[Overture Maps] publishes its data as PMTiles archives on S3, one per theme.  This configuration serves several themes as separate layers and combines them into a single basemap layer, without any tile preparation.
+:description: Overture Maps publishes its data as PMTiles archives on S3, one per theme.  This configuration serves several themes as separate layers and combines them into a single basemap layer, without any tile preparation.
+:page-eyebrow: Example
+:page-tags: MVT
 
 The archives are dated releases.  Check the link:https://docs.overturemaps.org/examples/overture-tiles/[Overture documentation] for the current one and update the date in each URL.
 

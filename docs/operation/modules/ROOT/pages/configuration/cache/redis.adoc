@@ -1,34 +1,11 @@
 = Redis
-
-Cache tiles using redis or another redis-compatible key-value store.
+:description: Cache tiles using redis or another redis-compatible key-value store.
+:page-eyebrow: Cache
+:page-config-name: redis
 
 Name should be `redis`
 
-.Configuration options
-[cols="1m,3,1,1,1"]
-|===
-| Parameter | Description | Type | Required | Default
-
-| keyprefix
-| A prefix to use for keys stored in cache. Serves a similar purpose as `db` in avoiding collisions when multiple applications use the same redis
-| string
-| No
-| None
-
-| ttl
-| How long cache entries should persist for in seconds. Cannot be disabled.
-| uint32
-| No
-| 1 day
-
-| datastore
-| The ID of a xref:configuration/datastores/redis.adoc[redis datastore] to use
-| string
-| Yes
-| None
-|===
-
-.Example
+== Example
 [tabs]
 ====
 YAML::
@@ -66,3 +43,27 @@ JSON::
 }
 ----
 ====
+
+== Configuration
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| keyprefix
+| A prefix to use for keys stored in cache. Serves a similar purpose as `db` in avoiding collisions when multiple applications use the same redis
+| string
+| No
+| None
+
+| ttl
+| How long cache entries should persist for in seconds. Cannot be disabled.
+| uint32
+| No
+| 1 day
+
+| datastore
+| The ID of a xref:configuration/datastores/redis.adoc[redis datastore] to use
+| string
+| Yes
+| None
+|===

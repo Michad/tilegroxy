@@ -1,6 +1,7 @@
 = Memory
-
-Defines an in-process store of tiles held in the memory of the tilegroxy daemon itself. Unlike the other datastores this is not a connection to anything external, it is the storage itself. Utilizes link:https://github.com/maypok86/otter[otter] under the hood.
+:description: Defines an in-process store of tiles held in the memory of the tilegroxy daemon itself. Unlike the other datastores this is not a connection to anything external, it is the storage itself. Utilizes otter under the hood.
+:page-eyebrow: Datastore
+:page-config-name: memory
 
 Only used by the xref:configuration/cache/memory.adoc[memory cache].
 
@@ -8,31 +9,7 @@ WARNING: This is not recommended for production use. The same caveats as the xre
 
 Name should be `memory`
 
-.Configuration options
-[cols="1m,3,1,1,1"]
-|===
-| Parameter | Description | Type | Required | Default
-
-| ID
-| The unique identifier of the datastore used to reference this datastore elsewhere in configuration
-| string
-| Yes
-| None
-
-| MaxSize
-| Maximum number of tiles to hold. Must be at least 10. Setting this too high can cause out-of-memory panics. This is not a guaranteed setting, which entry is evicted when exceeding this size is an implementation detail and the size can temporarily grow somewhat larger.
-| uint16
-| No
-| 100
-
-| TTL
-| Maximum time to live for entries in seconds
-| uint32
-| No
-| 3600
-|===
-
-.Example
+== Example
 [tabs]
 ====
 YAML::
@@ -62,3 +39,29 @@ JSON::
 }
 ----
 ====
+
+== Configuration
+
+.Configuration options
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| ID
+| The unique identifier of the datastore used to reference this datastore elsewhere in configuration
+| string
+| Yes
+| None
+
+| MaxSize
+| Maximum number of tiles to hold. Must be at least 10. Setting this too high can cause out-of-memory panics. This is not a guaranteed setting, which entry is evicted when exceeding this size is an implementation detail and the size can temporarily grow somewhat larger.
+| uint16
+| No
+| 100
+
+| TTL
+| Maximum time to live for entries in seconds
+| uint32
+| No
+| 3600
+|===

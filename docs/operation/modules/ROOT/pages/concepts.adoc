@@ -1,6 +1,5 @@
 = Concepts
-
-Tilegroxy has a few important concepts that are important to understand to utilize it effectively. 
+:description: Tilegroxy has a few important concepts that are important to understand to utilize it effectively.
 
 == Operators and Users
 

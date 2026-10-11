@@ -1,8 +1,41 @@
 = JWT
-
-Requires incoming requests include a https://jwt.io/[JSON Web Token (JWT)]. The signature of the token is verified and grants are validated.
+:description: Requires incoming requests include a JSON Web Token (JWT). The signature of the token is verified and grants are validated.
+:page-eyebrow: Authentication
+:page-config-name: jwt
 
 The verification key can either be a single key stored in configuration or supplied via environment variable, or a set of keys fetched from a remote https://datatracker.ietf.org/doc/html/rfc7517[JWKS] endpoint. See <<JWKS>>.
+
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+authentication:
+  name: jwt
+  key: env.JWT_KEY
+  algorithms:
+    - HS256
+----
+
+JSON::
++
+[,json]
+----
+{
+  "authentication": {
+    "name": "jwt",
+    "key": "env.JWT_KEY",
+    "algorithms": [
+      "HS256"
+    ]
+  }
+}
+----
+====
+
+== Configuration
 
 .Supported claims
 [cols="1m,4"]
@@ -114,77 +147,11 @@ Name should be `jwt`
 | tid
 |===
 
-.Example
-[tabs]
-====
-YAML::
-+
-[,yaml]
-----
-authentication:
-  name: jwt
-  key: env.JWT_KEY
-  algorithms:
-    - HS256
-----
-
-JSON::
-+
-[,json]
-----
-{
-  "authentication": {
-    "name": "jwt",
-    "key": "env.JWT_KEY",
-    "algorithms": [
-      "HS256"
-    ]
-  }
-}
-----
-====
-
 == JWKS
 
 Instead of a single static Key, verification keys can be fetched from a remote https://datatracker.ietf.org/doc/html/rfc7517[JWKS] endpoint as commonly published by an OIDC issuer.  When JWKS is configured, Key must not be set.
 
 If a token references a key ID that isn't in the currently cached keyset then the keyset is refreshed, rate limited by `RefreshMinInterval`.  This allows an issuer to rotate its keys without any action from the Operator.  If the issuer becomes unreachable the last successfully fetched keyset continues to be used, so existing keys still verify and only tokens signed with a new key ID fail while the endpoint is down.
-
-.Configuration options
-[cols="1m,3,1,1,1"]
-|===
-| Parameter | Description | Type | Required | Default
-
-| URL
-| The HTTPS URL of the JWKS endpoint. Plain http is rejected
-| string
-| Yes
-| None
-
-| RefreshInterval
-| How many seconds between unconditional refreshes of the keyset
-| uint
-| No
-| 900
-
-| RefreshMinInterval
-| The minimum seconds between refreshes triggered by an unknown key ID
-| uint
-| No
-| 60
-
-| RequestTimeout
-| How many seconds before a fetch of the keyset is cancelled
-| uint
-| No
-| 10
-
-| AllowStartupFailure
-| If false, a failed fetch of the keyset at startup prevents the server from starting. If true, it logs a warning instead and the server starts anyway
-| bool
-| No
-| false
-|===
 
 .Example
 [tabs]
@@ -222,3 +189,39 @@ JSON::
 }
 ----
 ====
+
+.Configuration options
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| URL
+| The HTTPS URL of the JWKS endpoint. Plain http is rejected
+| string
+| Yes
+| None
+
+| RefreshInterval
+| How many seconds between unconditional refreshes of the keyset
+| uint
+| No
+| 900
+
+| RefreshMinInterval
+| The minimum seconds between refreshes triggered by an unknown key ID
+| uint
+| No
+| 60
+
+| RequestTimeout
+| How many seconds before a fetch of the keyset is cancelled
+| uint
+| No
+| 10
+
+| AllowStartupFailure
+| If false, a failed fetch of the keyset at startup prevents the server from starting. If true, it logs a warning instead and the server starts anyway
+| bool
+| No
+| false
+|===

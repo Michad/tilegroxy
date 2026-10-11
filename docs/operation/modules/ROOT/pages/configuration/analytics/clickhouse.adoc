@@ -1,6 +1,7 @@
 = ClickHouse
-
-Writes events to a link:https://clickhouse.com/[ClickHouse] table using its native batch insert.  
+:description: Writes events to a ClickHouse table using its native batch insert.
+:page-eyebrow: Analytics
+:page-config-name: clickhouse
 
 Requires a xref:configuration/datastores/clickhouse.adoc[clickhouse datastore] to supply the connection.
 
@@ -37,49 +38,7 @@ ALTER TABLE tile_events MODIFY TTL time + INTERVAL 90 DAY
 
 Also accepts the xref:configuration/analytics/index.adoc[batching parameters] shared by every analytics module.
 
-.Configuration options
-[cols="1m,3,1,1,1"]
-|===
-| Parameter | Description | Type | Required | Default
-
-| Datastore
-| The ID of the datastore to use. The datastore must have a type of `clickhouse`.  Also see the xref:configuration/datastores/index.adoc[Datastores] documentation.
-| string
-| Yes
-| None
-
-| Table
-| The table to insert events into. May be schema qualified. Must be a plain identifier
-| string
-| Yes
-| None
-
-| ID
-| An identifier for this destination, used in logs to attribute analytics messages
-| string
-| No
-| clickhouse
-
-| Columns
-| Overrides for the default column names. Keys are the logical field names: time, layer, z, x, y, user_id, extra
-| map[string]string
-| No
-| None
-
-| Fields
-| Additional attributes to record. See xref:configuration/analytics/index.adoc[Analytics]
-| string[]
-| No
-| None
-
-| ExtraFields
-| Arbitrary additional attributes. See xref:configuration/analytics/index.adoc[Analytics]
-| map[string]string
-| No
-| None
-|===
-
-.Example
+== Example
 [tabs]
 ====
 YAML::
@@ -174,3 +133,47 @@ JSON::
 }
 ----
 ====
+
+== Configuration
+
+.Configuration options
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| Datastore
+| The ID of the datastore to use. The datastore must have a type of `clickhouse`.  Also see the xref:configuration/datastores/index.adoc[Datastores] documentation.
+| string
+| Yes
+| None
+
+| Table
+| The table to insert events into. May be schema qualified. Must be a plain identifier
+| string
+| Yes
+| None
+
+| ID
+| An identifier for this destination, used in logs to attribute analytics messages
+| string
+| No
+| clickhouse
+
+| Columns
+| Overrides for the default column names. Keys are the logical field names: time, layer, z, x, y, user_id, extra
+| map[string]string
+| No
+| None
+
+| Fields
+| Additional attributes to record. See xref:configuration/analytics/index.adoc[Analytics]
+| string[]
+| No
+| None
+
+| ExtraFields
+| Arbitrary additional attributes. See xref:configuration/analytics/index.adoc[Analytics]
+| map[string]string
+| No
+| None
+|===

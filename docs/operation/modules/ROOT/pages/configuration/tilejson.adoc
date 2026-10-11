@@ -1,6 +1,43 @@
 = TileJSON
+:description: Configuration for serving TileJSON documents describing configured layers. See that page for a full description of the endpoints, what goes into a document, and how authentication applies, including how a caller's own layer or geographic restrictions carry through to what's returned.
+:page-config-key: server.tilejson
 
-Configuration for serving xref:tilejson.adoc[TileJSON] documents describing configured layers. See that page for a full description of the endpoints, what goes into a document, and how authentication applies, including how a caller's own layer or geographic restrictions carry through to what's returned.
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+server:
+  tilejson:
+    enabled: true
+    indexpath: tilejson.json
+    baseurls:
+      - https://tiles-a.example.com/maps
+      - https://tiles-b.example.com/maps
+----
+
+JSON::
++
+[,json]
+----
+{
+  "server": {
+    "tilejson": {
+      "enabled": true,
+      "indexpath": "tilejson.json",
+      "baseurls": [
+        "https://tiles-a.example.com/maps",
+        "https://tiles-b.example.com/maps"
+      ]
+    }
+  }
+}
+----
+====
+
+== Configuration
 
 .Configuration options
 [cols="1m,3,1,1,1"]
@@ -41,42 +78,7 @@ Configuration for serving xref:tilejson.adoc[TileJSON] documents describing conf
 | SERVER_TILEJSON_BASEURLS
 |===
 
-.Example
-[tabs]
-====
-YAML::
-+
-[,yaml]
-----
-server:
-  tilejson:
-    enabled: true
-    indexpath: tilejson.json
-    baseurls:
-      - https://tiles-a.example.com/maps
-      - https://tiles-b.example.com/maps
-----
-
-JSON::
-+
-[,json]
-----
-{
-  "server": {
-    "tilejson": {
-      "enabled": true,
-      "indexpath": "tilejson.json",
-      "baseurls": [
-        "https://tiles-a.example.com/maps",
-        "https://tiles-b.example.com/maps"
-      ]
-    }
-  }
-}
-----
-====
-
-
+== Layer Metadata Examples
 
 .Example
 [tabs]

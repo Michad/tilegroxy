@@ -1,6 +1,6 @@
 = Documentation
-
-Tilegroxy documentation is written in AsciiDoc files stored in the same repository as code. Tilegroxy uses Antora to build its documentation into a website that can be served up inside the application as well as a common server.
+:description: Tilegroxy documentation is written in AsciiDoc files stored in the same repository as code. Tilegroxy uses Antora to build its documentation into a website that can be served up inside the application as well as a common server.
+:page-eyebrow: Development
 
 The documentation is automatically built via github actions as a test on every PR and commit to main.  The documentation is only published to https://tilegroxy.com[the doc server] upon new releases.  
 

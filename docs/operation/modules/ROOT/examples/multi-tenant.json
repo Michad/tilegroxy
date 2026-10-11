@@ -1,0 +1,111 @@
+{
+  "server": {
+    "production": true,
+    "cors": {
+      "enabled": true,
+      "origins": [
+        "https://app.example.com"
+      ]
+    },
+    "cachecontrol": {
+      "enabled": true,
+      "visibility": "private",
+      "maxage": 3600
+    }
+  },
+  "datastores": [
+    {
+      "name": "redis",
+      "id": "tile-store",
+      "host": "redis.internal"
+    },
+    {
+      "name": "postgresql",
+      "id": "warehouse",
+      "host": "postgres.internal",
+      "user": "tilegroxy",
+      "password": "env.POSTGRES_PASSWORD",
+      "database": "analytics"
+    }
+  ],
+  "authentication": {
+    "name": "jwt",
+    "key": "env.JWT_PUBLIC_KEY",
+    "algorithms": [
+      "RS256"
+    ],
+    "expectedissuer": "https://auth.example.com",
+    "tenantid": "org_id",
+    "layerscope": true,
+    "scopeprefix": "tiles/"
+  },
+  "cache": [
+    {
+      "id": "shared",
+      "name": "redis",
+      "datastore": "tile-store",
+      "keyprefix": "shared",
+      "ttl": 604800
+    },
+    {
+      "id": "per-tenant",
+      "name": "tenant",
+      "cache": {
+        "name": "redis",
+        "datastore": "tile-store",
+        "keyprefix": "tenant",
+        "ttl": 86400
+      }
+    }
+  ],
+  "analytics": {
+    "name": "postgresql",
+    "datastore": "warehouse",
+    "table": "tile_events",
+    "fields": [
+      "tenantid",
+      "cached",
+      "duration"
+    ]
+  },
+  "layers": [
+    {
+      "id": "basemap",
+      "provider": {
+        "name": "proxy",
+        "url": "https://tiles.example.com/basemap/{z}/{x}/{y}.png"
+      }
+    },
+    {
+      "id": "survey",
+      "cache": "per-tenant",
+      "provider": {
+        "name": "crop",
+        "boundsfromauth": true,
+        "primary": {
+          "name": "proxy",
+          "url": "https://imagery.example.com/{ctx.tenant}/survey/{z}/{x}/{y}.png"
+        }
+      }
+    },
+    {
+      "id": "survey_on_basemap",
+      "cache": "per-tenant",
+      "allowcoalesce": false,
+      "provider": {
+        "name": "blend",
+        "mode": "normal",
+        "providers": [
+          {
+            "name": "ref",
+            "layer": "survey"
+          },
+          {
+            "name": "ref",
+            "layer": "basemap"
+          }
+        ]
+      }
+    }
+  ]
+}

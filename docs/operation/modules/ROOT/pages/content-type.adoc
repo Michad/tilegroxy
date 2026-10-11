@@ -1,6 +1,5 @@
 = Content Type
-
-Every tile returned by tilegroxy carries a `Content-Type`, either received from an upstream server or known to the provider that generated it.  Content types from upstream servers are validated against an allowlist before being used.
+:description: Every tile returned by tilegroxy carries a `Content-Type`, either received from an upstream server or known to the provider that generated it.  Content types from upstream servers are validated against an allowlist before being used.
 
 == Where the Content Type comes from
 

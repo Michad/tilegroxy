@@ -1,6 +1,7 @@
 = None
-
-Disables analytics.  Since analytics is off by default this is mainly useful for temporarily disabling a destination without removing its configuration.
+:description: Disables analytics.  Since analytics is off by default this is mainly useful for temporarily disabling a destination without removing its configuration.
+:page-eyebrow: Analytics
+:page-config-name: none
 
 Name should be `none`
 

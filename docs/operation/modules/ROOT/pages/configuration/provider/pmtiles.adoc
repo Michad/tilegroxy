@@ -1,6 +1,7 @@
 = PMTiles
-
-Serves tiles out of a link:https://docs.protomaps.com/pmtiles/[PMTiles] archive. A PMTiles archive contains a pre-rendered tileset. This provider works either with a local file or via HTTP(s) (using range requests).
+:description: Serves tiles out of a PMTiles archive. A PMTiles archive contains a pre-rendered tileset. This provider works either with a local file or via HTTP(s) (using range requests).
+:page-eyebrow: Provider
+:page-config-name: pmtiles
 
 The archive is treated as immutable and static, the file and URL won't work with request-time parameters.
 
@@ -16,26 +17,7 @@ A request for a tile that isn't in the archive is treated as out of bounds and r
 
 Name should be `pmtiles`
 
-.Configuration options
-[cols="1m,3,1,1,1"]
-|===
-| Parameter | Description | Type | Required | Default
-
-| file
-| The path to a PMTiles archive on the local filesystem. Mutually exclusive with `url` and required if `url` is undefined
-| string
-| No
-| None
-
-| url
-| A URL pointing at a PMTiles archive. The server must support range requests. Mutually exclusive with `file` and required if `file` is undefined
-| string
-| No
-| None
-
-|===
-
-.Example
+== Example
 [tabs]
 ====
 YAML::
@@ -59,3 +41,24 @@ JSON::
 }
 ----
 ====
+
+== Configuration
+
+.Configuration options
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| file
+| The path to a PMTiles archive on the local filesystem. Mutually exclusive with `url` and required if `url` is undefined
+| string
+| No
+| None
+
+| url
+| A URL pointing at a PMTiles archive. The server must support range requests. Mutually exclusive with `file` and required if `file` is undefined
+| string
+| No
+| None
+
+|===

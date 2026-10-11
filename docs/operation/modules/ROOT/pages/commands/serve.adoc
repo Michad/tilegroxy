@@ -1,6 +1,7 @@
 = Serve
-
-The main operating mode of tilegroxy. Starts up an HTTP server and responds to incoming web requests. The process runs blocking in the foreground until terminated. 
+:description: The main operating mode of tilegroxy. Starts up an HTTP server and responds to incoming web requests. The process runs blocking in the foreground until terminated.
+:page-eyebrow: Command
+:page-command: tilegroxy serve
 
 Full, up-to-date usage information can be found with `tilegroxy serve -h`.
 

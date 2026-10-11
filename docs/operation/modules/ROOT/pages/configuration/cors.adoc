@@ -1,6 +1,6 @@
 = CORS
-
-Configuration for returning cross-origin resource sharing (CORS) headers on all endpoints (healthcheck excluded). Disabled by default. 
+:description: Configuration for returning cross-origin resource sharing (CORS) headers on all endpoints (healthcheck excluded). Disabled by default.
+:page-config-key: server.cors
 
 When enabled, overwrites any CORS headers specified via xref:configuration/server.adoc[Server.Headers].
 
@@ -9,6 +9,46 @@ CORS headers being returned is contingent on an origin match. If neither `Wildca
 NOTE: While `WildcardOrigin` will cause the Access-Control-Allow-Origin header to come back with a '\*', wildcard evaluation against the explicit `Origins` array happens server-side, resulting in the incoming origin being echoed back when there is a match. This has implications on browser behaviour.
 
 `Vary: Origin` is always included so a shared cache in front of tilegroxy doesn't serve one origin's response to another. Preflight (`OPTIONS`) requests are answered with a 204 and the negotiated methods, headers and max age.
+
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+server:
+  cors:
+    enabled: true
+    origins:
+      - https://*.example.com
+    exposedheaders:
+      - ETag
+    maxage: 600
+----
+
+JSON::
++
+[,json]
+----
+{
+  "server": {
+    "cors": {
+      "enabled": true,
+      "origins": [
+        "https://*.example.com"
+      ],
+      "exposedheaders": [
+        "ETag"
+      ],
+      "maxage": 600
+    }
+  }
+}
+----
+====
+
+== Configuration
 
 .Configuration options
 [cols="1m,3,1,1,1"]
@@ -78,41 +118,3 @@ NOTE: While `WildcardOrigin` will cause the Access-Control-Allow-Origin header t
 | MaxAge
 | SERVER_CORS_MAXAGE
 |===
-
-.Example
-[tabs]
-====
-YAML::
-+
-[,yaml]
-----
-server:
-  cors:
-    enabled: true
-    origins:
-      - https://*.example.com
-    exposedheaders:
-      - ETag
-    maxage: 600
-----
-
-JSON::
-+
-[,json]
-----
-{
-  "server": {
-    "cors": {
-      "enabled": true,
-      "origins": [
-        "https://*.example.com"
-      ],
-      "exposedheaders": [
-        "ETag"
-      ],
-      "maxage": 600
-    }
-  }
-}
-----
-====

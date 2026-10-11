@@ -1,34 +1,11 @@
 = Memcached
-
-Cache tiles using memcached.
+:description: Cache tiles using memcached.
+:page-eyebrow: Cache
+:page-config-name: memcached
 
 Name should be `memcached`
 
-.Configuration options
-[cols="1m,3,1,1,1"]
-|===
-| Parameter | Description | Type | Required | Default
-
-| keyprefix
-| A prefix to use for keys stored in cache. Helps avoid collisions when multiple applications use the same memcached
-| string
-| No
-| None
-
-| ttl
-| How long cache entries should persist for in seconds. Cannot be disabled.
-| uint32
-| No
-| 1 day
-
-| datastore
-| The ID of a xref:configuration/datastores/memcached.adoc[memcached datastore] to use.
-| string
-| Yes
-| None
-|===
-
-.Example
+== Example
 [tabs]
 ====
 YAML::
@@ -66,3 +43,27 @@ JSON::
 }
 ----
 ====
+
+== Configuration
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| keyprefix
+| A prefix to use for keys stored in cache. Helps avoid collisions when multiple applications use the same memcached
+| string
+| No
+| None
+
+| ttl
+| How long cache entries should persist for in seconds. Cannot be disabled.
+| uint32
+| No
+| 1 day
+
+| datastore
+| The ID of a xref:configuration/datastores/memcached.adoc[memcached datastore] to use.
+| string
+| Yes
+| None
+|===

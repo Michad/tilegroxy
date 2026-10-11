@@ -1,6 +1,6 @@
 = Troubleshooting
-
-Please submit an https://github.com/Michad/tilegroxy/issues/new[Issue] for any trouble you run into so we can build out this section.
+:description: Please submit an Issue for any trouble you run into so we can build out this section.
+:page-eyebrow: Development
 
 == I have trouble running tests due to an error referencing docker or permissions
 

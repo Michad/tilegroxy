@@ -1,6 +1,6 @@
 = Tests
-
-Tests in tilegroxy use the standard Go testing capabilities as well as the link:https://github.com/stretchr/testify[testify] library to provide convenient asserts.  
+:description: Tests in tilegroxy use the standard Go testing capabilities as well as the testify library to provide convenient asserts.
+:page-eyebrow: Development
 
 The majority of tests are unit tests.  
 

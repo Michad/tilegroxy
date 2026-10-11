@@ -1,8 +1,8 @@
 = Client
+:description: Configures how the HTTP client should operate for tile requests that require calling an external HTTP(s) server.
+:page-config-key: client
 
-Configures how the HTTP client should operate for tile requests that require calling an external HTTP(s) server.
-
-.Configuration options
+== Configuration
 [cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default

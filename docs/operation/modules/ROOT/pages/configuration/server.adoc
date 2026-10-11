@@ -1,8 +1,8 @@
 = Server
+:description: Configures how the HTTP server should operate
+:page-config-key: server
 
-Configures how the HTTP server should operate
-
-.Configuration options
+== Configuration
 [cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default

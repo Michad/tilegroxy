@@ -1,6 +1,6 @@
 = Production Deployment
-
-This configuration serves a single basemap layer behind JWT authentication, in a form suitable for an internet facing deployment.  It touches most top-level sections, so it's a good starting point to trim down from.  Read xref:howto/productionizing.adoc[Run in Production] alongside it for the parts of a deployment that live outside the configuration.
+:description: This configuration serves a single basemap layer behind JWT authentication, in a form suitable for an internet facing deployment.  It touches most top-level sections, so it's a good starting point to trim down from.  Read Run in Production alongside it for the parts of a deployment that live outside the configuration.
+:page-eyebrow: Example
 
 == Configuration
 

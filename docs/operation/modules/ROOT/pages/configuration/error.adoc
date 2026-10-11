@@ -1,6 +1,6 @@
 = Error
-
-Configures how errors are returned to users.
+:description: Configures how errors are returned to users.
+:page-config-key: error
 
 There are four primary operating modes:
 
@@ -23,6 +23,8 @@ Returning an Image provides the most user friendly experience as it provides fee
 Error responses set a `Content-Type` matching the mode: `text/plain; charset=utf-8` for Text and, for Image and Image with Header, `image/png`, `application/vnd.mapbox-vector-tile`, or `application/vnd.maplibre-tile` depending on the erroring layer's data type as described in <<error-images>>.  None mode returns no body and therefore no `Content-Type`.
 
 Every error response also sets `Cache-Control: no-store` regardless of mode.  This is most important when using `AlwaysOk`, since errors are then returned with a status of 200 like any other tile and a CDN or browser in front of tilegroxy would otherwise be free to cache them long after the underlying problem is resolved.
+
+== Configuration
 
 .Configuration options
 [cols="1m,3,1,1,1"]
@@ -232,6 +234,36 @@ The templates used for error messages for the majority of errors can be configur
 
 Each message is a template where `%v` is replaced by the relevant value, such as the parameter name.
 
+.Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+error:
+  mode: image+header
+  messages:
+    notauthorized: Nicht autorisiert
+    timeout: Zeitüberschreitung
+----
+
+JSON::
++
+[,json]
+----
+{
+  "error": {
+    "mode": "image+header",
+    "messages": {
+      "notauthorized": "Nicht autorisiert",
+      "timeout": "Zeitüberschreitung"
+    }
+  }
+}
+----
+====
+
 .Error messages
 [cols="1m,3m"]
 |===
@@ -285,33 +317,3 @@ Each message is a template where `%v` is replaced by the relevant value, such as
 | TileNotFound
 | Tile %v is not available
 |===
-
-.Example
-[tabs]
-====
-YAML::
-+
-[,yaml]
-----
-error:
-  mode: image+header
-  messages:
-    notauthorized: Nicht autorisiert
-    timeout: Zeitüberschreitung
-----
-
-JSON::
-+
-[,json]
-----
-{
-  "error": {
-    "mode": "image+header",
-    "messages": {
-      "notauthorized": "Nicht autorisiert",
-      "timeout": "Zeitüberschreitung"
-    }
-  }
-}
-----
-====

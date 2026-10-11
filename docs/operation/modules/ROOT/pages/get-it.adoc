@@ -1,6 +1,6 @@
 = How to get it
-
-Tilegroxy is available as a standalone executable or a container image. It's recommended you utilize a container for any serious deployment while the standalone executable can be useful to run locally while building your configuration.
+:description: Tilegroxy is available as a standalone executable or a container image. It's recommended you utilize a container for any serious deployment while the standalone executable can be useful to run locally while building your configuration.
+:page-eyebrow: Get started
 
 == Building
 

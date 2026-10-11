@@ -1,6 +1,7 @@
 = Custom
-
-Records events to whatever destination you can imagine by way of a Go script interpreted at runtime.  This allows reaching a destination tilegroxy doesn't support natively, such as a webhook, a message queue, or a file in a bespoke format, without building tilegroxy yourself.
+:description: Records events to whatever destination you can imagine by way of a Go script interpreted at runtime.  This allows reaching a destination tilegroxy doesn't support natively, such as a webhook, a message queue, or a file in a bespoke format, without building tilegroxy yourself.
+:page-eyebrow: Analytics
+:page-config-name: custom
 
 See xref:extensibility.adoc[Extensibility] for details on how custom modules work and their limitations.
 
@@ -37,6 +38,49 @@ The `params` argument receives every configuration parameter that isn't one of t
 Returning an error causes the batch to be logged as failed and discarded.  The error never reaches the user.
 
 Also accepts the xref:configuration/analytics/index.adoc[batching parameters] shared by every analytics module.
+
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+analytics:
+  name: custom
+  file: examples/analytics/custom_webhook.go
+  url: https://example.com/usage
+  fields:
+    - duration
+  batch:
+    maxSize: 100
+    maxAge: 60
+----
+
+JSON::
++
+[,json]
+----
+{
+  "analytics": {
+    "name": "custom",
+    "file": "examples/analytics/custom_webhook.go",
+    "url": "https://example.com/usage",
+    "fields": [
+      "duration"
+    ],
+    "batch": {
+      "maxSize": 100,
+      "maxAge": 60
+    }
+  }
+}
+----
+====
+
+A complete working script is available in link:/examples/analytics/custom_webhook.go[examples/analytics/custom_webhook.go].
+
+== Configuration
 
 .Configuration options
 [cols="1m,3,1,1,1"]
@@ -81,44 +125,3 @@ Also accepts the xref:configuration/analytics/index.adoc[batching parameters] sh
 |===
 
 One of File or Script is required.
-
-.Example
-[tabs]
-====
-YAML::
-+
-[,yaml]
-----
-analytics:
-  name: custom
-  file: examples/analytics/custom_webhook.go
-  url: https://example.com/usage
-  fields:
-    - duration
-  batch:
-    maxSize: 100
-    maxAge: 60
-----
-
-JSON::
-+
-[,json]
-----
-{
-  "analytics": {
-    "name": "custom",
-    "file": "examples/analytics/custom_webhook.go",
-    "url": "https://example.com/usage",
-    "fields": [
-      "duration"
-    ],
-    "batch": {
-      "maxSize": 100,
-      "maxAge": 60
-    }
-  }
-}
-----
-====
-
-A complete working script is available in link:/examples/analytics/custom_webhook.go[examples/analytics/custom_webhook.go].

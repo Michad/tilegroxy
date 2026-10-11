@@ -1,43 +1,13 @@
 = Crop
-
-Crops raster tiles from a primary provider to a specific geographic area and displays tiles from a secondary provider in the remaining areas. 
+:description: Crops raster tiles from a primary provider to a specific geographic area and displays tiles from a secondary provider in the remaining areas.
+:page-eyebrow: Provider
+:page-config-name: crop
 
 This is similar to the bounds parameter in the xref:configuration/provider/fallback.adoc[] provider but specific to raster tiles.  This provides a cleaner edge when zooming in and out but has greater overhead due to the image processing that occurs.
 
 Name should be `crop`
 
-.Configuration options
-[cols="1m,3,1,1,1"]
-|===
-| Parameter | Description | Type | Required | Default
-
-| primary
-| The provider of the imagery to crop
-| Provider
-| Yes
-| None
-
-| secondary
-| The provider to supply the imagery to use in areas that are cropped out
-| Provider
-| No
-| Fully transparent pixels
-
-| bounds
-| Any pixels that fall outside these geographic bounds (in WGS-84/EPSG:4326) will be removed. 
-| Object with north, south, east, west
-| No
-| Whole world
-
-| boundsFromAuth
-| If true, use the bounds supplied via the auth context such as the geohash claim in xref:configuration/authentication/jwt.adoc[JWT] auth.  If no bounds are specified via auth context then it falls back on the bounds parameter.
-| Boolean
-| No
-| No
-
-|===
-
-.Example
+== Example
 [tabs]
 ====
 YAML::
@@ -84,3 +54,36 @@ JSON::
 }
 ----
 ====
+
+== Configuration
+
+.Configuration options
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| primary
+| The provider of the imagery to crop
+| Provider
+| Yes
+| None
+
+| secondary
+| The provider to supply the imagery to use in areas that are cropped out
+| Provider
+| No
+| Fully transparent pixels
+
+| bounds
+| Any pixels that fall outside these geographic bounds (in WGS-84/EPSG:4326) will be removed.
+| Object with north, south, east, west
+| No
+| Whole world
+
+| boundsFromAuth
+| If true, use the bounds supplied via the auth context such as the geohash claim in xref:configuration/authentication/jwt.adoc[JWT] auth.  If no bounds are specified via auth context then it falls back on the bounds parameter.
+| Boolean
+| No
+| No
+
+|===

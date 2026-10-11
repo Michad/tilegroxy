@@ -1,6 +1,8 @@
 = Crop MLT
-
-Crops MapLibre Tiles (MLT) from another provider to a specific bounds.
+:description: Crops MapLibre Tiles (MLT) from another provider to a specific bounds.
+:page-eyebrow: Provider
+:page-config-name: cropmlt
+:page-tags: MLT
 
 This is the MLT equivalent of the xref:configuration/provider/cropmvt.adoc[cropmvt] provider. A child known to produce MVT is rejected when the configuration is loaded.
 
@@ -8,32 +10,7 @@ Tiles entirely inside the bounds are returned unchanged. Tiles that cross the bo
 
 Name should be `cropmlt`
 
-.Configuration options
-[cols="1m,3,1,1,1"]
-|===
-| Parameter | Description | Type | Required | Default
-
-| primary
-| The provider of the vector tile to crop
-| Provider
-| Yes
-| None
-
-| bounds
-| Any geometry that falls outside these geographic bounds (in WGS-84/EPSG:4326) will be removed.
-| Object with north, south, east, west
-| No
-| Whole world
-
-| boundsFromAuth
-| If true, use the bounds supplied via the auth context such as the geohash claim in xref:configuration/authentication/jwt.adoc[JWT] auth.  If no bounds are specified via auth context then it falls back on the bounds parameter.
-| Boolean
-| No
-| No
-
-|===
-
-.Example
+== Example
 [tabs]
 ====
 YAML::
@@ -73,3 +50,30 @@ JSON::
 }
 ----
 ====
+
+== Configuration
+
+.Configuration options
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| primary
+| The provider of the vector tile to crop
+| Provider
+| Yes
+| None
+
+| bounds
+| Any geometry that falls outside these geographic bounds (in WGS-84/EPSG:4326) will be removed.
+| Object with north, south, east, west
+| No
+| Whole world
+
+| boundsFromAuth
+| If true, use the bounds supplied via the auth context such as the geohash claim in xref:configuration/authentication/jwt.adoc[JWT] auth.  If no bounds are specified via auth context then it falls back on the bounds parameter.
+| Boolean
+| No
+| No
+
+|===

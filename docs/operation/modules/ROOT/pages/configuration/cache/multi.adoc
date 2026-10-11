@@ -1,24 +1,13 @@
 = Multi
-
-Implements a multi-tiered cache.
+:description: Implements a multi-tiered cache.
+:page-eyebrow: Cache
+:page-config-name: multi
 
 When looking up cache entries each cache is tried in order. When storing cache entries each cache is called simultaneously. This means that the fastest cache(s) should be first and slower cache(s) last. As each cache needs to be tried before tile generation starts, it is not recommended to have more than 2 or 3 caches configured.
 
 Name should be `multi`
 
-.Configuration options
-[cols="1m,3,1,1,1"]
-|===
-| Parameter | Description | Type | Required | Default
-
-| tiers
-| An array of Cache configurations. Multi should not be nested inside a Multi
-| Cache[]
-| Yes
-| None
-|===
-
-.Example
+== Example
 [tabs]
 ====
 YAML::
@@ -57,3 +46,15 @@ JSON::
 }
 ----
 ====
+
+== Configuration
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| tiers
+| An array of Cache configurations. Multi should not be nested inside a Multi
+| Cache[]
+| Yes
+| None
+|===

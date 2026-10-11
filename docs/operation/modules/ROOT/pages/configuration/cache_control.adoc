@@ -1,6 +1,6 @@
 = Cache Control
-
-Configuration for the `Cache-Control` header returned on tile responses. Disabled by default.
+:description: Configuration for the `Cache-Control` header returned on tile responses. Disabled by default.
+:page-config-key: server.cachecontrol
 
 If you simply set `Enabled` to true, tilegroxy will use the <<Automatic behaviour>> below. Beyond that, you can override each directive by setting the matching field explicitly. Automatic behaviour can be entirely turned off with `Auto: false`.
 
@@ -25,6 +25,8 @@ Layers that don't cache at all, either through `skipcache` or a xref:configurati
 `private` is returned when the layer's tiles appear to vary by who asked, such as if a xref:configuration/cache/tenant.adoc[tenant] cache is used or the configuration contains the `{ctx.user}` or `{ctx.tenant}` placeholders. Otherwise `public` is returned.
 
 CAUTION: This heuristic is not comprehensive and cannot detect all cases. For example, a xref:configuration/provider/custom.adoc[custom] provider might or might not return the same content for different users. Set `Visibility` to `private` explicitly on any layer whose tiles differ between callers. See also xref:howto/user-dynamic.adoc[user-dynamic layers]
+
+== Configuration
 
 .Configuration options
 [cols="1m,3,1,1,1"]

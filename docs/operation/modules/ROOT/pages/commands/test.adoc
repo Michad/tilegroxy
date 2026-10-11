@@ -1,6 +1,7 @@
 = Test
-
-Tests your layers and cache are correctly configured and working by performing end-to-end tests.
+:description: Tests your layers and cache are correctly configured and working by performing end-to-end tests.
+:page-eyebrow: Command
+:page-command: tilegroxy test
 
 Full, up-to-date usage information can be found with `tilegroxy test -h`.
 
@@ -15,32 +16,76 @@ A layer using a pattern is tested through its "examples" configurations if avail
 
 Use --file to write a summary to a file. The standard output will still render in stdout, use a bash redirect if you want that in a file. If using both --file and --json, only the file output will be in JSON
 
-Example:
-
-        tilegroxy test -c test_config.yml -l osm -z 10 -x 123 -y 534
-
 Usage:
   tilegroxy test [flags]
+----
 
-Flags:
-  -h, --help                help for test
-  -l, --layer strings       The ID(s) of the layer to test. Tests all
-                            layers by default
-      --no-cache            Don't write to the cache. The Cache
-                            configuration must still be syntactically valid
-      --tenant string       The tenant ID to test as, standing in for what
-                            authentication would supply on a real request.
-                            Required to test a specific tenant's tiles when
-                            using a tenant cache
-  -t, --threads uint16      How many layers to test at once. Be mindful of
-                            spamming upstream providers (default 1)
-      --user string         The user ID to test as, standing in for what
-                            authentication would supply on a real request
-  -x, --x-coordinate uint   The x coordinate to use to test (default 123)
-  -y, --y-coordinate uint   The y coordinate to use to test (default 534)
-  -z, --z-coordinate uint   The z coordinate to use to test (default 10)
-  -f, --file path           Write a run summary to this file.The file is JSON 
-                            if --json is set, otherwise plain text
-      --json                Output in JSON. If used with --file this only 
-                            outputs the written file, not standard out
+== Flags
+
+.Flags
+[cols="1,1,1,3"]
+|===
+| Flag | Type | Default | Description
+
+| `-f`, `--file`
+| string
+|
+| Write a run summary to this file. The file is JSON if --json is set, otherwise plain text
+
+| `-h`, `--help`
+| bool
+| `false`
+| help for test
+
+| `--json`
+| bool
+| `false`
+| Output in JSON. If used with --file this only outputs the written file, not standard out
+
+| `-l`, `--layer`
+| strings
+|
+| The ID(s) of the layer to test. Tests all layers by default
+
+| `--no-cache`
+| bool
+| `false`
+| Don't write to the cache. The Cache configuration must still be syntactically valid
+
+| `--tenant`
+| string
+|
+| The tenant ID to test as, standing in for what authentication would supply on a real request. Required to test a specific tenant's tiles when using a tenant cache
+
+| `-t`, `--threads`
+| uint16
+| `1`
+| How many layers to test at once. Be mindful of spamming upstream providers
+
+| `--user`
+| string
+|
+| The user ID to test as, standing in for what authentication would supply on a real request
+
+| `-x`, `--x-coordinate`
+| int
+| `123`
+| The x coordinate to use to test
+
+| `-y`, `--y-coordinate`
+| int
+| `534`
+| The y coordinate to use to test
+
+| `-z`, `--z-coordinate`
+| uint
+| `10`
+| The z coordinate to use to test
+|===
+
+== Example
+
+[,shell]
+----
+tilegroxy test -c test_config.yml -l osm -z 10 -x 123 -y 534
 ----

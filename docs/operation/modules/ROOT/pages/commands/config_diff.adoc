@@ -1,39 +1,72 @@
 = Config Diff
-
-Compares two configurations and reports what changed between them.
+:description: Compares two configurations and reports what changed between them.
+:page-eyebrow: Command
+:page-command: tilegroxy config diff
 
 Full, up-to-date usage information can be found with `tilegroxy config diff -h`.
 
 .Output of `tilegroxy config diff -h`
 [,text]
 ----
-Compares your current configuration against a new configuration, 
-outputting what changed and whether serve --hot-reload can apply 
-it without a restart.  Outputs everything that gets added, removed, 
-or modified.  The output isn't a simple line-by-line diff, instead 
-it's contextually aware of the tilegroxy config format, so a new 
-layer gets recorded as one addition.  
+Compares your current configuration against a new configuration,
+outputting what changed and whether serve --hot-reload can apply
+it without a restart.  Outputs everything that gets added, removed,
+or modified.  The output isn't a simple line-by-line diff, instead
+it's contextually aware of the tilegroxy config format, so a new
+layer gets recorded as one addition.
 
-The default output is a readable, colored text mode. Consider using 
-json or yaml for scripted use cases. The presence of a top-level 
+The default output is a readable, colored text mode. Consider using
+json or yaml for scripted use cases. The presence of a top-level
 'restart' key indicates whether a restart is needed for CICD purposes.
 
-Exits with a status code of 0 if the configurations match and 1 if 
-they differ. 
-
-Example:
-	tilegroxy config diff -c current.yml candidate.yml
+Exits with a status code of 0 if the configurations match and 1 if
+they differ.
 
 Usage:
   tilegroxy config diff FILE [flags]
+----
 
-Flags:
-  -h, --help       help for diff
-      --json       Output the differences in JSON
-      --markdown   Output the differences as a markdown table with 
-      one row per change
-      --no-color   Turn off the colorization of the default output
-      --table      Output the differences as a table with one row 
-      per change
-      --yaml       Output the differences in YAML
+== Flags
+
+.Flags
+[cols="1,1,1,3"]
+|===
+| Flag | Type | Default | Description
+
+| `-h`, `--help`
+| bool
+| `false`
+| help for diff
+
+| `--json`
+| bool
+| `false`
+| Output the differences in JSON
+
+| `--markdown`
+| bool
+| `false`
+| Output the differences as a markdown table with one row per change
+
+| `--no-color`
+| bool
+| `false`
+| Turn off the colorization of the default output
+
+| `--table`
+| bool
+| `false`
+| Output the differences as a table with one row per change
+
+| `--yaml`
+| bool
+| `false`
+| Output the differences in YAML
+|===
+
+== Example
+
+[,shell]
+----
+tilegroxy config diff -c current.yml candidate.yml
 ----

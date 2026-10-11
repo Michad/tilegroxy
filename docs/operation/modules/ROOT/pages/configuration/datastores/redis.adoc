@@ -1,10 +1,57 @@
 = Redis
-
-Defines a connection to link:https://redis.io/[redis] or another redis-compatible key-value store. Utilizes link:https://github.com/redis/go-redis[go-redis] under the hood.
+:description: Defines a connection to redis or another redis-compatible key-value store. Utilizes go-redis under the hood.
+:page-eyebrow: Datastore
+:page-config-name: redis
 
 Used by the xref:configuration/cache/redis.adoc[redis cache].
 
 Name should be `redis`
+
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+datastores:
+  - name: redis
+    id: redis-0
+    mode: ring
+    servers:
+      - host: 127.0.0.1
+        port: 6379
+      - host: 127.0.0.1
+        port: 6380
+----
+
+JSON::
++
+[,json]
+----
+{
+  "datastores": [
+    {
+      "name": "redis",
+      "id": "redis-0",
+      "mode": "ring",
+      "servers": [
+        {
+          "host": "127.0.0.1",
+          "port": 6379
+        },
+        {
+          "host": "127.0.0.1",
+          "port": 6380
+        }
+      ]
+    }
+  ]
+}
+----
+====
+
+== Configuration
 
 .Configuration options
 [cols="1m,3,1,1,1"]
@@ -59,47 +106,3 @@ Name should be `redis`
 | No
 | host and port
 |===
-
-.Example
-[tabs]
-====
-YAML::
-+
-[,yaml]
-----
-datastores:
-  - name: redis
-    id: redis-0
-    mode: ring
-    servers:
-      - host: 127.0.0.1
-        port: 6379
-      - host: 127.0.0.1
-        port: 6380
-----
-
-JSON::
-+
-[,json]
-----
-{
-  "datastores": [
-    {
-      "name": "redis",
-      "id": "redis-0",
-      "mode": "ring",
-      "servers": [
-        {
-          "host": "127.0.0.1",
-          "port": 6379
-        },
-        {
-          "host": "127.0.0.1",
-          "port": 6380
-        }
-      ]
-    }
-  ]
-}
-----
-====

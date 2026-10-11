@@ -1,6 +1,6 @@
 = Run in Production
-
-Tilegroxy puts a lot of trust and responsibility in its operator to deploy it securely, in accordance to the operator's use case. It is heavily recommended you fully read through the documentation before deploying this in a production (i.e. internet facing) deployment. The following is a non-exhaustive checklist of things to consider:
+:description: Tilegroxy puts a lot of trust and responsibility in its operator to deploy it securely, in accordance to the operator's use case. It is heavily recommended you fully read through the documentation before deploying this in a production (i.e. internet facing) deployment. The following is a non-exhaustive checklist of things to consider:
+:page-eyebrow: Guide
 
 [%interactive]
 .Production checklist

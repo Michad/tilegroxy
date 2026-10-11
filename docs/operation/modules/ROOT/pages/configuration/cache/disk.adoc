@@ -1,6 +1,7 @@
 = Disk
-
-Stores the cache entries as files in a location on the filesystem. 
+:description: Stores the cache entries as files in a location on the filesystem.
+:page-eyebrow: Cache
+:page-config-name: disk
 
 WARNING: Tilegroxy doesn't form clusters so a high-availability deployment with this cache pointing to a local filesystem will lead to inconsistent behaviour.
 
@@ -12,31 +13,7 @@ Cache entries are written to a temporary file (in the same directory) and then r
 
 Name should be `disk`
 
-.Configuration options
-[cols="1m,3,1,1,1"]
-|===
-| Parameter  | Description | Type | Required | Default
-
-| path
-| The absolute path to the directory to store cache entries within. Directory (and tree) will be created if it does not already exist
-| string
-| Yes
-| None
-
-| filemode
-| The permissions to use for all created files/directories. Either a unix octal string such as `"0644"` or a https://pkg.go.dev/io/fs#FileMode[Go filemode] as an integer. In YAML an unquoted number with a leading zero such as `0644` is also read as octal, but JSON has no octal numbers so use the string form there
-| string or uint32
-| No
-| 0777
-
-| layout
-| How cache entries are arranged within `path`. Either `flat` for one file per entry directly inside the directory, or `coordinate` for a `layer/z/x/y` directory tree
-| string
-| No
-| flat
-|===
-
-.Example
+== Example
 [tabs]
 ====
 YAML::
@@ -60,3 +37,27 @@ JSON::
 }
 ----
 ====
+
+== Configuration
+[cols="1m,3,1,1,1"]
+|===
+| Parameter  | Description | Type | Required | Default
+
+| path
+| The absolute path to the directory to store cache entries within. Directory (and tree) will be created if it does not already exist
+| string
+| Yes
+| None
+
+| filemode
+| The permissions to use for all created files/directories. Either a unix octal string such as `"0644"` or a https://pkg.go.dev/io/fs#FileMode[Go filemode] as an integer. In YAML an unquoted number with a leading zero such as `0644` is also read as octal, but JSON has no octal numbers so use the string form there
+| string or uint32
+| No
+| 0777
+
+| layout
+| How cache entries are arranged within `path`. Either `flat` for one file per entry directly inside the directory, or `coordinate` for a `layer/z/x/y` directory tree
+| string
+| No
+| flat
+|===

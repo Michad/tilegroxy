@@ -1,5 +1,6 @@
 = None
-
-Disables the cache.
+:description: Disables the cache.
+:page-eyebrow: Cache
+:page-config-name: none
 
 Name should be `none` or `test`

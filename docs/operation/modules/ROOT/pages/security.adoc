@@ -1,6 +1,5 @@
 = Security
-
-Tilegroxy operates as a configuration driven framework for flexibly serving up data that comes from a wide variety of possible sources.  The flexible configuration means that an operator can misconfigure tilegroxy in an insecure manner that opens it up to a wide variety of vulnerabilities. Tilegroxy cannot and does not attempt to prevent all possible misconfigurations however it aims to equip operators with the tools necessary to have a secure deployment when properly configured. This document describes the considerations one should have when deploying tilegroxy inside a security sensitive environment.
+:description: Tilegroxy operates as a configuration driven framework for flexibly serving up data that comes from a wide variety of possible sources.  The flexible configuration means that an operator can misconfigure tilegroxy in an insecure manner that opens it up to a wide variety of vulnerabilities. Tilegroxy cannot and does not attempt to prevent all possible misconfigurations however it aims to equip operators with the tools necessary to have a secure deployment when properly configured. This document describes the considerations one should have when deploying tilegroxy inside a security sensitive environment.
 
 == User Inputs
 

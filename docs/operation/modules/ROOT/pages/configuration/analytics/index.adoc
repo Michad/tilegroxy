@@ -1,48 +1,11 @@
 = Analytics
-
-Records usage events to a destination in batches for tracking purposes.
+:description: Records usage events to a destination in batches for tracking purposes.
 
 More details on Analytics capabilities can be found in xref:analytics.adoc[Analytics].
 
 Like other entities, the analytics configuration uses a parameter called `name` to dictate the type of analytics tracking to use, but the batching configuration below is shared by all options and goes under a `batch` parameter. Analytics is disabled by default.
 
-.Batch configuration options
-[cols="1m,3,1,1,1"]
-|===
-| Parameter | Description | Type | Required | Default
-
-| MaxSize
-| Write a batch once this many events have accumulated
-| uint
-| No
-| 1000
-
-| MaxAge
-| Write a partial batch after this many seconds so low-traffic layers still report promptly
-| uint
-| No
-| 10
-
-| QueueSize
-| The maximum number of events that can be held in memory. Raise this to absorb larger bursts at the cost of memory
-| uint
-| No
-| 10000
-
-| Workers
-| How many batches may be written concurrently
-| uint
-| No
-| 1
-
-| OnFull
-| What to do when the queue is full. Can be `drop` or `block`. Drop discards the event and logs a periodic warning. Block blocks (duh) incoming requests until there's room
-| string
-| No
-| drop
-|===
-
-.Example
+== Example
 [tabs]
 ====
 YAML::
@@ -91,3 +54,41 @@ JSON::
 }
 ----
 ====
+
+== Configuration
+
+.Batch configuration options
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| MaxSize
+| Write a batch once this many events have accumulated
+| uint
+| No
+| 1000
+
+| MaxAge
+| Write a partial batch after this many seconds so low-traffic layers still report promptly
+| uint
+| No
+| 10
+
+| QueueSize
+| The maximum number of events that can be held in memory. Raise this to absorb larger bursts at the cost of memory
+| uint
+| No
+| 10000
+
+| Workers
+| How many batches may be written concurrently
+| uint
+| No
+| 1
+
+| OnFull
+| What to do when the queue is full. Can be `drop` or `block`. Drop discards the event and logs a periodic warning. Block blocks (duh) incoming requests until there's room
+| string
+| No
+| drop
+|===

@@ -1,6 +1,5 @@
 = Extensibility
-
-Is tilegroxy's out of the box capabilities not sufficing for your use-case?  Luckily tilegroxy is designed to be highly extensible so you can add whatever functionality yourself!  If possible, please consider contributing back whatever functionality you add if it has generic usefulness.
+:description: Is tilegroxy's out of the box capabilities not sufficing for your use-case?  Luckily tilegroxy is designed to be highly extensible so you can add whatever functionality yourself!  If possible, please consider contributing back whatever functionality you add if it has generic usefulness.
 
 There are three ways to extend tilegroxy. The first is to use the various "custom" options to provide interpreted Go code to implement a provider, authentication scheme, or analytics destination. The second is to use tilegroxy as a library and create your own executable with whatever tweaks you need. The last is to fork the repository and change the code directly.
 

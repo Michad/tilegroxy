@@ -1,0 +1,36 @@
+cache:
+  name: memory
+  maxsize: 5000
+layers:
+  - id: noaa_poststorm
+    pattern: noaa_poststorm_{version} # <1>
+    paramValidator:
+      version: "[0-9]{8}[ab]" # <2>
+    examples: # <3>
+      - noaa_poststorm_20230902a
+      - noaa_poststorm_20230831b
+    client:
+      contenttypes: # <4>
+        - binary/octet-stream
+        - image/png
+      timeout: 2
+    provider:
+      name: fallback
+      primary:
+        name: proxy
+        url: https://stormscdn.ngs.noaa.gov/{layer.version}-rgb/{z}/{x}/{y} # <5>
+      secondary:
+        name: static
+        color: FFF0 # <6>
+  - id: hurricane_idalia
+    provider:
+      name: blend
+      mode: normal
+      layer: # <7>
+        pattern: noaa_poststorm_{version}
+        values:
+          - version: 20230902a # <8>
+          - version: 20230901b
+          - version: 20230901a
+          - version: 20230831b
+          - version: 20230831a
