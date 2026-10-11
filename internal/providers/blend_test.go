@@ -118,7 +118,7 @@ func Test_BlendPreAuthPanicDoesNotDeadlock(t *testing.T) {
 
 func Test_BlendValidate(t *testing.T) {
 	providers := makeBlendProviders()
-	b, err := BlendRegistration{}.Initialize(BlendConfig{Providers: providers}, layer.ProviderDeps{ClientConfig: testClientConfig, ErrorMessages: testErrMessages})
+	b, err := BlendRegistration{}.Initialize(BlendConfig{Opacity: 0.5, Providers: providers}, layer.ProviderDeps{ClientConfig: testClientConfig, ErrorMessages: testErrMessages})
 	assert.Nil(t, b)
 	require.Error(t, err)
 	b, err = BlendRegistration{}.Initialize(BlendConfig{Mode: "fake", Providers: providers}, layer.ProviderDeps{ClientConfig: testClientConfig, ErrorMessages: testErrMessages})
@@ -152,6 +152,12 @@ func Test_Blend_Layers(t *testing.T) {
 	bb := b.(*Blend)
 
 	assert.Len(t, bb.providers, 2)
+}
+
+func Test_BlendInitialize_DefaultsToNormal(t *testing.T) {
+	b, err := BlendRegistration{}.Initialize(BlendConfig{Providers: makeBlendProviders()}, layer.ProviderDeps{ClientConfig: testClientConfig, ErrorMessages: testErrMessages})
+	require.NoError(t, err)
+	assert.Equal(t, "normal", b.(*Blend).Mode)
 }
 
 func Test_BlendExecute_Add(t *testing.T) {
