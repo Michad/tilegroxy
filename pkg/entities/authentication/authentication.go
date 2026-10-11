@@ -20,6 +20,7 @@ import (
 	"sync"
 
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 )
 
 type Authentication interface {
@@ -30,6 +31,7 @@ type Authentication interface {
 type AuthenticationDeps struct {
 	ErrorMessages config.ErrorMessages
 	ClientConfig  config.ClientConfig
+	Datastores    datastore.DatastoreRegistry
 }
 
 type AuthenticationRegistration interface {

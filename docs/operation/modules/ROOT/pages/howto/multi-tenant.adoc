@@ -19,6 +19,9 @@ The tenant ID comes from xref:configuration/authentication/index.adoc[authentica
 | xref:configuration/authentication/passthrough.adoc[passthrough]
 | The value matched by the `tenantId` XPath expression in the endpoint's response. The user ID comes from `userId`
 
+| xref:configuration/authentication/bearer.adoc[bearer]
+| The `tenant_id` column returned by `postgresql.query`, or the `redis.tenantField` field of the hash. The user ID comes from the `user_id` column or `redis.userField`
+
 | xref:configuration/authentication/custom.adoc[custom]
 | The `TenantID` field your `validate` function returns. See xref:extensibility.adoc#custom-authentication[Extensibility]
 
