@@ -22,8 +22,8 @@ Name should be `effect`
 | mode
 | The effect to apply. https://github.com/anthonynsimon/bild[Examples of the modes]. Possible values: `blur`, `gaussian`, `brightness`, `contrast`, `gamma`, `hue`, `saturation`, `dilate`, `edge detection`, `erode`, `median`, `threshold`, `emboss`, `grayscale`, `invert`, `sepia`, `sharpen`, or `sobel`
 | String
-| No
-| normal
+| Yes
+| None
 
 | intensity
 | The intensity of the effect, exact meaning/value range depends on mode. Only applicable if mode is one of: `blur`, `gaussian`, `brightness`, `contrast`, `gamma`, `hue`, `saturation`, `dilate`, `edge detection`, `erode`, `median`, or `threshold`

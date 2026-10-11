@@ -24,7 +24,7 @@ Both commands support `--user` and `--tenant` flags to allow overriding those fi
 
 == Cache-Control
 
-As well as tilegroxy's cache, tiles may be cached in a browser (or CDN) cache as controlled by the Cache-Control header.  xref:configuration/cache_control.adoc[Cache-Control] is disabled by default, but if enabled it automatically detects the visibility directive to use via the same logic by which coalescing is determined (see below). Therefore, if you utilize Cache-Control, it's recommended to ensure you explicitly set `visibility: private` or turn the header off for the layer in question. Even if you don't utilize a CDN, this can lead to different users on shared machines seeing each other's content.
+As well as tilegroxy's cache, tiles may be cached in a browser (or CDN) cache as controlled by the Cache-Control header.  xref:configuration/cache_control.adoc[Cache-Control] is disabled by default, but if enabled it automatically detects the visibility directive to use via the same logic by which coalescing is determined (see <<coalesce>>). Therefore, if you utilize Cache-Control, it's recommended to ensure you explicitly set `visibility: private` or turn the header off for the layer in question. Even if you don't utilize a CDN, this can lead to different users on shared machines seeing each other's content.
 
 == Coalesce
 
@@ -32,7 +32,9 @@ Even if you entirely disable caching, there is still a risk that tiles can leak 
 
 Tilegroxy has a mechanism to "coalesce" or combine identical requests that come in concurrently.  This helps protect against cases where e.g. 20 people load the exact same map at once and overwhelm your upstream tileserver (since the tiles aren't yet cached).  Of course, this mechanism works by serving the exact same tile to the user.  
 
-Tilegroxy has a degree of "smarts" to control when to coalesce or not based on whether the configuration has a cache and whether the provider refers to the user or tenant ID, but this can not catch all cases (especially if you are using a custom provider). IMPORTANT: Set `allowcoalesce: false` explicitly if your content will vary by user.
+Tilegroxy has a degree of "smarts" to control when to coalesce or not based on whether the configuration has a cache and whether the provider refers to the user or tenant ID, but this can not catch all cases (especially if you are using a custom provider).
+
+IMPORTANT: Set `allowcoalesce: false` explicitly if your content will vary by user.
 
 == Example
 

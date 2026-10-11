@@ -4,11 +4,18 @@ Please submit an https://github.com/Michad/tilegroxy/issues/new[Issue] for any t
 
 == I have trouble running tests due to an error referencing docker or permissions
 
-This is most likely an issue due to your Docker installation.  There can be a number of issues at play depending on your OS and setup.  Some suggestions:
+This is most likely an issue due to your Docker installation.  There can be a number of issues at play depending on your OS and setup.  First make sure you have docker installed, the daemon is running, and your user has permission to use docker (is in the docker group).  Beyond that, some suggestions for specific setups:
 
-Make sure you have docker installed, the daemon is running, and your user has permission to use docker (is in the docker group).  If using Podman, ensure `podman.socket` is enabled both globally and for your `--user`.  If using Docker on Linux try temporarily setting `/var/run/docker.sock` world-writeable. If using Docker on a Mac, make sure colima is running. On Windows, ensure Docker Desktop is running.
-
-If using a system with SELinux try temporarily disabling SELinux with `sudo setenforce 0` or running with "Ryuk" disabled by setting the env var `TESTCONTAINERS_RYUK_DISABLED=true`.
+Podman::
+Ensure `podman.socket` is enabled both globally and for your `--user`.
+Docker on Linux::
+Try temporarily setting `/var/run/docker.sock` world-writeable.
+Docker on Mac::
+Make sure colima is running.
+Docker on Windows::
+Ensure Docker Desktop is running.
+SELinux::
+Try temporarily disabling SELinux with `sudo setenforce 0` or running with "Ryuk" disabled by setting the env var `TESTCONTAINERS_RYUK_DISABLED=true`.
 
 == Environment variables aren't applying
 

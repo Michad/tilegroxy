@@ -1,0 +1,57 @@
+= Multi-Tenant Imagery
+
+This configuration serves a SaaS application where each customer organization has its own survey imagery, layered over a basemap that every organization shares.  The tenant comes from the user's token and decides which imagery is fetched, where it's cached, which area is visible, and how usage is attributed.
+
+Read xref:howto/multi-tenant.adoc[Serve Multiple Tenants] and xref:howto/user-dynamic.adoc[User Dynamic Layers] for the concepts behind it.
+
+== Configuration
+
+[,yaml]
+----
+include::example$multi-tenant.yml[]
+----
+<1> Every layer needs a token, so no tile may be stored by a CDN or other shared cache.  `private` limits reuse to the requester's own browser.  See xref:configuration/cache_control.adoc[Cache Control].
+<2> One Redis connection pool serves both caches and one PostgreSQL pool serves analytics.  See xref:configuration/datastores/index.adoc[Datastores].
+<3> The public key of the identity provider, read from an environment variable.  The private key never needs to reach tilegroxy.
+<4> The token claim holding the organization.  Everything tenant-aware below reads the value of this claim.
+<5> A token only grants the layers listed in its `scope` claim with the `tiles/` prefix.  A scope of `tiles/basemap tiles/survey` allows those two layers and nothing else.  See xref:configuration/authentication/jwt.adoc[JWT].
+<6> The first cache in the list is the default, so layers that don't name a cache share this one.  A basemap tile fetched for one organization is served from cache to the next.
+<7> Adds the tenant to every cache key, so each organization's tiles are stored separately.  The `keyprefix` keeps both caches apart within the same Redis database.  See xref:configuration/cache/tenant.adoc[Tenant].
+<8> Records the organization on each event alongside the user ID, so usage can be billed per tenant.  The `tile_events` table must be created ahead of time as described in xref:configuration/analytics/postgresql.adoc[PostgreSQL].
+<9> Uses the default `shared` cache since it's identical for everyone.
+<10> If the token carries a `geohash` claim, pixels outside that area are made transparent.  This lets an organization issue tokens limited to one project site.  Tiles entirely outside the geohash are rejected by the JWT check before reaching the provider.  Tokens without the claim see the full tile.  See xref:configuration/provider/crop.adoc[Crop].
+<11> `+{ctx.tenant}+` is replaced with the organization from the token, percent-encoded.  Never take the tenant from the layer name or a header, as a user can change those.
+<12> The blended tile contains tenant imagery, so it must also be stored per tenant.  A layer only uses the cache it names, regardless of what its referenced layers use.
+<13> Tilegroxy already turns coalescing off for a layer with a tenant cache, but the detection can't catch every case.  Stating it explicitly on every layer that varies by tenant guarantees two organizations requesting the same tile at once are never handed each other's result.
+
+.JSON equivalent
+[%collapsible]
+====
+[,json]
+----
+include::example$multi-tenant.json[]
+----
+====
+
+== Try it
+
+Tokens are issued by your identity provider.  A token for a user of the `acme` organization limited to one site might carry these claims:
+
+[,json]
+----
+{
+  "iss": "https://auth.example.com",
+  "sub": "user-123",
+  "org_id": "acme",
+  "scope": "tiles/basemap tiles/survey_on_basemap",
+  "geohash": "9xj6",
+  "exp": 1791700000
+}
+----
+
+The xref:commands/seed.adoc[seed] command has no token, so pass the tenant explicitly to warm one organization's cache:
+
+[,shell]
+----
+tilegroxy seed -c multi-tenant.yml -l survey -z 10 -z 11 -z 12 --tenant acme
+----

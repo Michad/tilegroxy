@@ -57,6 +57,11 @@ layers:
       url: https://example.com/live/{z}/{x}/{y}.png
 datastores: ...
 ----
++
+. Every layer uses the `multi` cache unless it picks another. It caches in memory first and then falls back on an S3 bucket. @/defaultcache/
+. `public` doesn't set a cache, so it uses the default. @/id: public/
+. `per-user` uses the `tenanted` cache. That's the same `multi` cache underneath, but entries are segregated by tenant. @/cache: tenanted/
+. `uncached` uses the no-op `none` cache. Alternatively, the `skipcache` parameter avoids needing to define a `none` cache at the top level. @/cache: none/
 
 JSON::
 +
@@ -114,10 +119,9 @@ JSON::
   "datastores": [ ... ]
 }
 ----
++
+. Every layer uses the `multi` cache unless it picks another. It caches in memory first and then falls back on an S3 bucket. @/"defaultcache"/
+. `public` doesn't set a cache, so it uses the default. @/"id": "public"/
+. `per-user` uses the `tenanted` cache. That's the same `multi` cache underneath, but entries are segregated by tenant. @/"cache": "tenanted"/
+. `uncached` uses the no-op `none` cache. Alternatively, the `skipcache` parameter avoids needing to define a `none` cache at the top level. @/"cache": "none"/
 ====
-
-In this example, the `public` layer (and all layers by default) will use a `multi` cache that caches in-memory first and then falls back on an S3 bucket. 
-
-The `per-user` layer overrides the cache to use the `tenanted` cache, which means it will still use that same cache methodology, but the entries in the cache will be segregated by tenant.
-
-The `uncached` layer meanwhile won't be cached as it will use the no-op `none` cache.  Alternatively, you could use the `skipcache` parameter to avoid needing to explicitly define a `none` cache at the top level.

@@ -1,0 +1,41 @@
+= Storm Imagery Mosaic
+
+After a major storm, NOAA publishes aerial imagery of the affected area, with each flight as a separate tile set.  This configuration defines all of them with a single pattern layer and then blends the flights for one storm into a single layer.
+
+See xref:layer-patterns.adoc[Layer Patterns] for more on how patterns work.
+
+== Configuration
+
+[,yaml]
+----
+include::example$storm-imagery.yml[]
+----
+<1> The `+{version}+` placeholder matches any flight, so a request for `noaa_poststorm_20230902a` serves that flight.
+<2> The version is part of the upstream URL, so it's restricted to eight digits and a letter.  Expressions are matched against the whole value.  See xref:security.adoc#layer-name-parameters[Security].
+<3> Pattern layers have no single name to test with, so the xref:commands/test.adoc[test] command and xref:configuration/tilejson.adoc[TileJSON] use these instead.
+<4> NOAA serves tiles as `binary/octet-stream`, which isn't in the default allowlist.  This override applies to this layer only, along with a shorter timeout.  See xref:content-type.adoc[Content Type].
+<5> `+{layer.version}+` is replaced with the value matched by the pattern.
+<6> Each flight only covers a strip of coast and returns an error everywhere else.  The fallback returns a fully transparent tile there instead, so the flights can be stacked.
+<7> Expands into one reference per entry, each to a layer name built from the pattern.  This is equivalent to listing a `ref` provider for each flight under `providers`.  See xref:configuration/provider/blend.adoc[Blend].
+<8> Earlier entries are drawn on top of later ones, so the most recent flight is listed first.
+
+.JSON equivalent
+[%collapsible]
+====
+[,json]
+----
+include::example$storm-imagery.json[]
+----
+====
+
+== Try it
+
+Hurricane Idalia made landfall in Florida's Big Bend in late August 2023.  Request a tile over the coast near Cedar Key:
+
+[,shell]
+----
+tilegroxy serve -c storm-imagery.yml
+curl -o idalia.png http://127.0.0.1:8080/tiles/hurricane_idalia/14/4412/6804
+----
+
+Since the result is transparent outside the imagery, it's meant to be displayed above a basemap in your map client.

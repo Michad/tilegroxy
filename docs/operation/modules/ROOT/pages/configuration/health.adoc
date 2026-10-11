@@ -110,7 +110,7 @@ Name should be `tile`
 | 534
 
 | validation
-| How to validate the resulting tile is as expected. Possible options: same, content-type, base-64, file, success. See below for details
+| How to validate the resulting tile is as expected. Possible options: same, content-type, base-64, file, success. See <<tile-validation>>
 | string
 | No
 | same
@@ -126,6 +126,8 @@ Name should be `tile`
 
 Once the tile is generated there's a few options for how you validate the tile is as you expect:
 
+[#tile-validation]
+.Validation options
 [cols="1m,3,2"]
 |===
 | Validation | Description | How result is interpreted 

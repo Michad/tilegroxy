@@ -1,0 +1,15 @@
+= Examples
+
+The xref:configuration/index.adoc[configuration] pages describe one entity at a time.  These pages instead walk through a complete configuration, explaining how the pieces work together line by line.
+
+* xref:examples/production.adoc[] for a hardened deployment with authentication, health checks, and tiered caching.
+* xref:examples/vector-basemap.adoc[] for serving Overture Maps vector tiles straight from their PMTiles archives.
+* xref:examples/storm-imagery.adoc[] for stitching NOAA aerial imagery from several flights into one layer.
+* xref:examples/terrain.adoc[] for computing a new raster layer from elevation data.
+* xref:examples/multi-tenant.adoc[] for giving each customer organization its own imagery, cache, and usage records.
+* xref:examples/regional-imagery.adoc[] for showing slow, regional WMS imagery inside a border over a basemap.
+* xref:examples/historical-boundaries.adoc[] for serving PostGIS vector tiles that change by year.
+
+Each configuration can be saved and validated as-is with xref:commands/config_check.adoc[config check].  A JSON equivalent is available under each one.
+
+More examples, with less explanation, are available in the link:https://github.com/Michad/tilegroxy/tree/main/examples/configurations[repository].

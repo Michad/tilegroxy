@@ -8,10 +8,14 @@ IMPORTANT: Releases before 1.0 made no such promise and frequently included brea
 
 The compatibility promise applies to four surfaces:
 
-* *Configuration* - every documented key in the xref:configuration/index.adoc[configuration], including entity names such as `memcached` and the matching environment variables
-* *CLI* - the xref:commands/index.adoc[commands] and their documented flags
-* *Custom scripts* - the function signatures that xref:extensibility.adoc[custom] providers, authentication, and analytics are compiled against
-* *Core Server Behaviour* - the way the existing production routes behave for any reasonable client (small details like header order excluded)
+Configuration::
+Every documented key in the xref:configuration/index.adoc[configuration], including entity names such as `memcached` and the matching environment variables
+CLI::
+The xref:commands/index.adoc[commands] and their documented flags
+Custom scripts::
+The function signatures that xref:extensibility.adoc[custom] providers, authentication, and analytics are compiled against
+Core Server Behaviour::
+The way the existing production routes behave for any reasonable client (small details like header order excluded)
 
 Minor releases may add to any of these.  A new optional configuration key, a new CLI flag, or a new field on a struct returned by a custom script are all compatible changes.  Removing or renaming any of these, or changing what an existing option does, only happens in a major release.
 
@@ -60,11 +64,19 @@ If a vulnerability can only be fixed by changing or removing a feature, it may b
 
 The following are not guaranteed:
 
-* *Library API* - the exported types and functions under `pkg/` when xref:extensibility.adoc#using-tilegroxy-as-a-library[using tilegroxy as a library]. We will try to call these changes out as Breaking Changes, but some small changes may occur in minor versions.
-* *Cache contents* - the format of tiles written to a cache has its own versioning system and new versions may be introduced at any point. Tilegroxy maintains backwards compatibility between these versions
-* *Seed progress files* - a progress file written by `seed` might not be resumable after an upgrade
-* *Log messages* - the wording, fields, and quantity of log messages, as described in xref:configuration/log.adoc[Log]
-* *Undocumented behavior* - any configuration key, flag, or behavior not described in this documentation, even if it happens to work
-* *The Helm chart* - values in the chart follow the chart's own version rather than tilegroxy's
-* *Everything under `internal/`* - including when used through a fork
-* *Unreleased builds* - such as the `edge` container image tag
+Library API::
+The exported types and functions under `pkg/` when xref:extensibility.adoc#using-tilegroxy-as-a-library[using tilegroxy as a library]. We will try to call these changes out as Breaking Changes, but some small changes may occur in minor versions.
+Cache contents::
+The format of tiles written to a cache has its own versioning system and new versions may be introduced at any point. Tilegroxy maintains backwards compatibility between these versions
+Seed progress files::
+A progress file written by `seed` might not be resumable after an upgrade
+Log messages::
+The wording, fields, and quantity of log messages, as described in xref:configuration/log.adoc[Log]
+Undocumented behavior::
+Any configuration key, flag, or behavior not described in this documentation, even if it happens to work
+The Helm chart::
+Values in the chart follow the chart's own version rather than tilegroxy's
+Everything under `internal/`::
+Including when used through a fork
+Unreleased builds::
+Such as the `edge` container image tag

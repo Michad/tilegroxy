@@ -18,7 +18,7 @@ Two xref:configuration/client.adoc[client] options control what an external serv
 
 `ContentTypes` is an allowlist.  A response with a `Content-Type` outside this list is treated as an error and no tile is returned, even if the status code indicates success.  The default allows `image/png`, `image/jpg`, `image/jpeg`, `application/vnd.mapbox-vector-tile`, `application/x-protobuf`, `application/vnd.maplibre-tile`, and `application/vnd.maplibre-vector-tile`.  Matching is exact, so a server sending `image/png; charset=binary` requires that full string be added to the list.
 
-`RewriteContentTypes` replaces a content type after it passes the allowlist.  This is for servers that describe every tile with a generic type.  The default maps `application/octet-stream` to an empty string as described below.
+`RewriteContentTypes` replaces a content type after it passes the allowlist.  This is for servers that describe every tile with a generic type.  The default maps `application/octet-stream` to an empty string as described in <<empty-content-types>>.
 
 Rewriting happens after validation, therefore the original content type must appear in `ContentTypes` for the rewrite to be reached.  Adding an entry to `RewriteContentTypes` without also adding the key to `ContentTypes` has no effect.
 

@@ -2,7 +2,9 @@
 
 To start with, make sure you either have the tilegroxy binary or the container image as described in xref:get-it.adoc[How to get it].
 
-This example proxies tiles from OpenStreetMap. IMPORTANT: Be mindful of the OpenStreetMap https://operations.osmfoundation.org/policies/tiles/[tile usage policy] and don't abuse it.
+This example proxies tiles from OpenStreetMap.
+
+IMPORTANT: Be mindful of the OpenStreetMap https://operations.osmfoundation.org/policies/tiles/[tile usage policy] and don't abuse it.
 
 == Write a configuration
 
@@ -48,28 +50,47 @@ This defines a single layer called `osm` that fetches each tile from OpenStreetM
 
 Before going further, confirm tilegroxy can read it:
 
+[tabs]
+====
+Binary::
++
 [,shell]
 ----
 tilegroxy config check
 ----
 
+Container::
++
+[,shell]
+----
+docker run --rm -v ./tilegroxy.yml:/tilegroxy/tilegroxy.yml:Z ghcr.io/michad/tilegroxy config check
+----
+====
+
 It prints `Valid` if all is well, otherwise it tells you what's wrong. Tilegroxy looks for `./tilegroxy.yml` by default; use `-c` to point at a different file, such as `-c tilegroxy.json`.
 
 == Start the server
 
+[tabs]
+====
+Binary::
++
 [,shell]
 ----
 tilegroxy serve
 ----
 
-The server listens on `127.0.0.1:8080` by default and runs in the foreground until you stop it with kbd:[Ctrl+C]. See xref:configuration/server.adoc[Server] to change the host or port.
-
-If you're using the container image instead, mount the configuration into `/tilegroxy` and bind to all interfaces so the port is reachable from outside the container:
-
+Container::
++
+Mount the configuration into `/tilegroxy` and bind to all interfaces so the port is reachable from outside the container:
++
 [,shell]
 ----
 docker run --rm -p 8080:8080 -e SERVER_BINDHOST=0.0.0.0 -v ./tilegroxy.yml:/tilegroxy/tilegroxy.yml:Z ghcr.io/michad/tilegroxy serve
 ----
+====
+
+The server listens on `127.0.0.1:8080` by default and runs in the foreground until you stop it with kbd:[Ctrl+C]. See xref:configuration/server.adoc[Server] to change the host or port.
 
 == Request a tile
 
@@ -181,10 +202,22 @@ The new `osm_gray` layer uses the xref:configuration/provider/ref.adoc[ref] prov
 
 Stop the server and run:
 
+[tabs]
+====
+Binary::
++
 [,shell]
 ----
 tilegroxy test
 ----
+
+Container::
++
+[,shell]
+----
+docker run --rm -v ./tilegroxy.yml:/tilegroxy/tilegroxy.yml:Z ghcr.io/michad/tilegroxy test
+----
+====
 
 xref:commands/test.adoc[Test] goes further than `config check`. It actually generates a tile for each layer and confirms it can be written to and read back from the cache, printing a row per layer:
 

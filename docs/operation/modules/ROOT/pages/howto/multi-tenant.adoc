@@ -8,6 +8,7 @@ CAUTION: Serving different tiles to different tenants means a tile can leak to t
 
 The tenant ID comes from xref:configuration/authentication/index.adoc[authentication]. Not every option sets one:
 
+.Tenant ID by authentication
 [cols="1,3"]
 |===
 | Authentication | Tenant ID

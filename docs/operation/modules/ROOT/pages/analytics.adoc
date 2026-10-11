@@ -17,6 +17,7 @@ Every module accepts the same `batch` parameters. A batch is written when either
 
 Every event always includes the following:
 
+.Fields on every event
 [cols="1m,3"]
 |===
 | Field | Description
@@ -36,6 +37,7 @@ Every event always includes the following:
 
 The following can be included via `fields`:
 
+.Optional fields
 [cols="1m,3"]
 |===
 | Name | Description
@@ -87,6 +89,7 @@ The following can be included via `fields`:
 
 The `extraFields` parameter lets you get very fancy with what info you record. You can pick an env var, request var, or header and record it under whatever name you want.  
 
+.Extra field values
 [cols="1,3"]
 |===
 | Value form | Description
@@ -136,6 +139,7 @@ JSON::
 
 When xref:telemetry.adoc[telemetry] is enabled, analytics reports three counters: 
 
+.Analytics metrics
 [cols="1m,2"]
 |===
 | Metric | Description

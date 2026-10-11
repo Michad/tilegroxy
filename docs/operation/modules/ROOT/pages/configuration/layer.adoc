@@ -1,6 +1,6 @@
 = Layer
 
-A layer represents a distinct mapping layer as would be displayed in a typical web map application.  Each layer can be accessed independently from other map layers. The main thing that needs to be configured for a layer is the provider described below.
+A layer represents a distinct mapping layer as would be displayed in a typical web map application.  Each layer can be accessed independently from other map layers. The main thing that needs to be configured for a layer is its xref:configuration/provider/index.adoc[provider].
 
 The URLs of incoming requests follow a format like `+/tiles/{layerName}/{z}/{x}/{y}+`. The layer name can be one of two things:
 
@@ -43,7 +43,7 @@ TIP: It is highly recommended that layer names be alphanumeric plus underscores.
 | None
 
 | client
-| A Client configuration to use for this layer specifically that overrides the Client from the top-level of the configuration. See below for Client schema
+| A Client configuration to use for this layer specifically that overrides the Client from the top-level of the configuration
 | xref:configuration/client.adoc[Client]
 | No
 | None
@@ -74,25 +74,25 @@ TIP: It is highly recommended that layer names be alphanumeric plus underscores.
 
 
 | description
-| Defines a description of this layer for metadata purposes. Currently has no effect unless TileJSON is enabled. See <<Metadata>>
+| Defines a description of this layer for metadata purposes. Currently has no effect unless TileJSON is enabled. See <<metadata>>
 | string
 | No
 | None
 
 | attribution
-| Defines an attribution of this layer for metadata purposes. Currently has no effect unless TileJSON is enabled. See <<Metadata>>
+| Defines an attribution of this layer for metadata purposes. Currently has no effect unless TileJSON is enabled. See <<metadata>>
 | string
 | No
 | None
 
 | center
-| Specified as a triplet of longitude, latitude, zoom. Defines a center (or representative) point of this layer. Also used by the xref:commands/test.adoc[test command] to pick a default tile. See <<Metadata>>
+| Specified as a triplet of longitude, latitude, zoom. Defines a center (or representative) point of this layer. Also used by the xref:commands/test.adoc[test command] to pick a default tile. See <<metadata>>
 | float[]
 | No
 | None
 
 | vectorlayers
-| Only useful for vector data types. Defines the sub-layers inside the tiles matching the tilejson `vector_layers` format (`id`, `fields`, `description`, `minzoom`, and `maxzoom`). Currently only used for metadata purposes and has no effect unless TileJSON is enabled. See <<Metadata>>
+| Only useful for vector data types. Defines the sub-layers inside the tiles matching the tilejson `vector_layers` format (`id`, `fields`, `description`, `minzoom`, and `maxzoom`). Currently only used for metadata purposes and has no effect unless TileJSON is enabled. See <<metadata>>
 | Object[]
 | No
 | None
@@ -104,19 +104,19 @@ TIP: It is highly recommended that layer names be alphanumeric plus underscores.
 | Taken from the provider
 
 | minzoom
-| Requests for a zoom level below this are rejected as out of bounds. See <<Metadata>>
+| Requests for a zoom level below this are rejected as out of bounds. See <<metadata>>
 | int
 | No
 | No lower limit
 
 | maxzoom
-| Requests for a zoom level above this are rejected as out of bounds. See <<Metadata>>
+| Requests for a zoom level above this are rejected as out of bounds. See <<metadata>>
 | int
 | No
 | No upper limit
 
 | bounds
-| Restricts this layer to a geographic area. When set, the layer's provider is automatically cropped (via xref:configuration/provider/crop.adoc[crop], xref:configuration/provider/cropmvt.adoc[cropmvt], or xref:configuration/provider/cropmlt.adoc[cropmlt]). This requires the layer's data type to be resolvable. See <<Metadata>>
+| Restricts this layer to a geographic area. When set, the layer's provider is automatically cropped (via xref:configuration/provider/crop.adoc[crop], xref:configuration/provider/cropmvt.adoc[cropmvt], or xref:configuration/provider/cropmlt.adoc[cropmlt]). This requires the layer's data type to be resolvable. See <<metadata>>
 | Object with north, south, east, west
 | No
 | Whole world
@@ -144,6 +144,7 @@ TIP: It is highly recommended that layer names be alphanumeric plus underscores.
 
 Several options above describe the layer's tiles. Most of them can also come from the provider, for instance a provider reading an archive that records its own zoom range. Providers only describe, they never restrict. Only values set on the layer are enforced on requests.
 
+.Metadata options
 [cols="1m,1,2,2"]
 |===
 | Option | Set by | Effect | Used by

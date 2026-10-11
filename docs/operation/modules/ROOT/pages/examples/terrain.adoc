@@ -1,0 +1,38 @@
+= Derived Terrain Layer
+
+Some layers encode data in their pixel values rather than showing an image directly.  The Mapbox Terrain-RGB layer stores elevation as a number spread across the red, green, and blue channels.  This configuration decodes it, converts elevation into average air pressure, and renders the result in grayscale, then lays it over OpenStreetMap.
+
+Using the Terrain-RGB layer requires a link:https://www.mapbox.com/[Mapbox] access token, supplied through the `MAPBOX_KEY` environment variable.
+
+== Configuration
+
+[,yaml]
+----
+include::example$terrain.yml[]
+----
+<1> A tile has 65,536 pixels.  Splitting them across 8 goroutines makes each tile faster to produce at the cost of more CPU per request.
+<2> The function is called once per pixel.  Darker pixels are lower pressure, meaning higher ground.  See xref:configuration/provider/transform.adoc[Transform].
+<3> `+{env.MAPBOX_KEY}+` keeps the token out of the configuration file.  The `pngraw` format matters, as other formats can alter the pixel values and so the decoded elevation.
+<4> Mapbox returns an error for tiles entirely over the sea.  This color decodes to an elevation of 0, so sea level pressure is shown instead of an error.
+<5> Mixes the two images half and half rather than drawing one over the other, since both layers are fully opaque.
+<6> Each referenced layer is cached on its own, so `osm` and `air_pressure` can also be requested directly without generating them again.
+
+.JSON equivalent
+[%collapsible]
+====
+[,json]
+----
+include::example$terrain.json[]
+----
+====
+
+== Try it
+
+[,shell]
+----
+export MAPBOX_KEY=your-token
+tilegroxy test -c terrain.yml
+tilegroxy serve -c terrain.yml
+----
+
+The xref:commands/test.adoc[test] command confirms all three layers generate before you start the server.  Be mindful of the OpenStreetMap https://operations.osmfoundation.org/policies/tiles/[tile usage policy].

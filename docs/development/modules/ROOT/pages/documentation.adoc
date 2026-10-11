@@ -4,7 +4,7 @@ Tilegroxy documentation is written in AsciiDoc files stored in the same reposito
 
 The documentation is automatically built via github actions as a test on every PR and commit to main.  The documentation is only published to https://tilegroxy.com[the doc server] upon new releases.  
 
-IMPORTANT: If you are making changes to the asciidocs, please build the documentation before opening a PR.  Do not commit any changes to `internal/website/resources` - the folder is `git ignore`-ed, so built output won't show up in git. The one tracked file there is `index_default.html`, the placeholder served when no built site is embedded.
+IMPORTANT: If you are making changes to the asciidocs, please build the documentation before opening a PR.  Do not commit any changes to `internal/website/resources`.  The folder is `git ignore`-ed, so built output won't show up in git. The one tracked file there is `index_default.html`, the placeholder served when no built site is embedded.
 
 == Build
 
@@ -14,11 +14,34 @@ The Makefile contains a couple targets specific to the documentation
 
 Running `make docs` will invoke Antora to build the documentation. You must invoke this goal before building the go application in order to have the website available inside of tilegroxy.
 
-Antora is a node app and the make command will automatically install the dependency before invoking it. NOTE: You should use node 20 for building documentation.  
+Antora is a node app and the make command will automatically install the dependency before invoking it.
+
+NOTE: You should use node 20 for building documentation.
 
 The docs are built in `build/site` and then copied into the `internal/website/resources` where `go:embed` can pull them into the tilegroxy binary.
 
 Configuration examples are shown as YAML and JSON tabs using the link:https://github.com/asciidoctor/asciidoctor-tabs[asciidoctor-tabs] extension. Its stylesheet and script are added to the UI through `supplemental_files` in `antora-playbook.yml`, which also overrides the `head-styles` and `footer-scripts` partials. Keep those overrides in step with the UI template if its partials change. A reader's choice of tab is remembered across pages.
+
+Search is provided by link:https://gitlab.com/antora/antora-lunr-extension[Antora Lunr], which builds a `search-index.js` into the site so search works without a server, including inside the binary.  Add `:noindex:` to a page's header to leave it out of search, as `configuration.adoc` does since it duplicates every configuration page.
+
+Callouts can be attached to a listing from outside the block using link:https://github.com/RayOffiah/asciidoctor-external-callout-js[asciidoctor-external-callout].  This is mainly for JSON, which can't hold a `// <1>` comment.  Follow the listing with an ordered list where each item ends in a line number or a regular expression matching the line:
+
+[,asciidoc]
+....
+[,json]
+----
+{
+  "cache": "none"
+}
+----
+. Disables caching @/"cache"/
+....
+
+Inside tabs, attach the list to the listing with a `+` line.  A token that matches nothing is logged and skipped rather than failing the build, so check the rendered page.
+
+The configurations on the Examples pages are stored as files in `docs/operation/modules/ROOT/examples` and pulled in with `include::example$NAME.yml[]`.  Their callouts are YAML comments such as `# <1>`, so each file remains a valid configuration.  After changing one, run it through `tilegroxy config check` and regenerate the matching `.json` file so the two stay equivalent.
+
+Tables with 8 or more body rows get a filter box above them that hides rows not containing every word typed.  Add the `filterable` role (`[.filterable]`) to give a shorter table one or `nofilter` to remove it.  Tables using row spans are skipped.  The script and stylesheet live in `docs/ui` and are added through `supplemental_files` alongside the tabs assets.
 
 The UI template lives at https://github.com/tilegroxy/antora-ui and any changes to it will need to be built prior to building documentation in this repository by creating a tag in the form `vN` in that repository and then updating `antora-playbook.yml` in this repository to refer to that new version.
 

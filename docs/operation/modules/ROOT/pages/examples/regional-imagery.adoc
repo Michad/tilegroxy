@@ -1,0 +1,42 @@
+= Regional Imagery Inset
+
+Some of the best imagery comes from regional programs exposed through WMS, which are often slow and only cover a limited area.  This configuration shows U.S. Department of Agriculture link:https://naip-usdaonline.hub.arcgis.com/[NAIP] aerial imagery of Colorado, served by USGS, inside the state's borders and a grayscale basemap everywhere else.
+
+It's built so the slow server is called as rarely as possible.
+
+== Configuration
+
+[,yaml]
+----
+include::example$regional-imagery.yml[]
+----
+<1> Without further settings the `max-age` comes from the TTL cache, so a browser keeps each tile for exactly as long as tilegroxy does.  See xref:configuration/cache_control.adoc#automatic-behaviour[Cache Control].
+<2> This server can take 10 seconds per tile and doesn't send a `Content-Length` header, which tilegroxy rejects by default.  Overriding the client on this layer leaves the stricter defaults in place for every other layer.  The size limit still applies.  See xref:configuration/client.adoc[Client].
+<3> NAIP is refreshed every few years, so tiles are kept for 30 days before being fetched again.  The disk cache alone never expires anything.  See xref:configuration/cache/ttl.adoc[TTL].
+<4> `description`, `attribution`, and `center` are published through xref:configuration/tilejson.adoc[TileJSON] at `/tiles/colorado.json`, which map clients use to credit the sources and pick a starting view.
+<5> At low zoom levels a tile covers a large area and the WMS server struggles to render it.  Tiles below zoom 10 come from the basemap instead.
+<6> Tiles that don't touch Colorado go straight to the basemap without calling the WMS server.  This check is per tile, so it's cheap but leaves a jagged edge.
+<7> Only tiles produced by the primary are cached.  When the WMS server times out or returns an error the basemap is shown, but it's tried again on the next request instead of caching the gap for 30 days.  The basemap itself is still cached under the `osm_gray` layer.
+<8> For tiles on the state line, cuts the imagery exactly along the border and fills the rest from the basemap.  Together with the fallback bounds, the WMS server is only called for tiles that need it and the edge is still clean.  See xref:configuration/provider/crop.adoc[Crop].
+<9> The `+{xmin}+`, `+{ymin}+`, `+{xmax}+`, and `+{ymax}+` placeholders are the tile's bounding box in Web Mercator, matching `CRS=EPSG:3857` in the request.  See xref:configuration/provider/proxy.adoc[Proxy].
+<10> Both the crop and the fallback reuse the same basemap layer, so its tiles are generated and cached once.
+
+.JSON equivalent
+[%collapsible]
+====
+[,json]
+----
+include::example$regional-imagery.json[]
+----
+====
+
+== Try it
+
+[,shell]
+----
+tilegroxy serve -c regional-imagery.yml
+----
+
+Open http://127.0.0.1:8080/preview/colorado and zoom in past level 10.  The tile at `/tiles/colorado/11/443/782` has the Colorado and Kansas border running through its middle.  Expect the first view of an area to be slow while the cache fills.
+
+Be mindful of the OpenStreetMap https://operations.osmfoundation.org/policies/tiles/[tile usage policy] when choosing a basemap.

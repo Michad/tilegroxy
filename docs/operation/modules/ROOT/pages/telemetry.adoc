@@ -12,6 +12,7 @@ The "main" application logs will be shipped to OTEL in addition to the destinati
 
 Metrics are available for cache hit/miss and the number of tile requests broken down by status. The full list of metrics:
 
+.Metrics
 [cols="2m,3"]
 |===
 | Metric | Description

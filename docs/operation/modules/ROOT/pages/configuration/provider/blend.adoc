@@ -67,15 +67,15 @@ provider:
   layer:
     pattern: noaa_poststorm_{date}{version}
     values:
-      - date: 20230902
+      - date: "20230902"
         version: a
-      - date: 20230901
+      - date: "20230901"
         version: b
-      - date: 20230901
+      - date: "20230901"
         version: a
-      - date: 20230831
+      - date: "20230831"
         version: b
-      - date: 20230831
+      - date: "20230831"
         version: a
 ----
 
@@ -91,23 +91,23 @@ JSON::
       "pattern": "noaa_poststorm_{date}{version}",
       "values": [
         {
-          "date": 20230902,
+          "date": "20230902",
           "version": "a"
         },
         {
-          "date": 20230901,
+          "date": "20230901",
           "version": "b"
         },
         {
-          "date": 20230901,
+          "date": "20230901",
           "version": "a"
         },
         {
-          "date": 20230831,
+          "date": "20230831",
           "version": "b"
         },
         {
-          "date": 20230831,
+          "date": "20230831",
           "version": "a"
         }
       ]

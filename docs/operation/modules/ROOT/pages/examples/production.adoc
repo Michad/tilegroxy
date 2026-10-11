@@ -1,0 +1,50 @@
+= Production Deployment
+
+This configuration serves a single basemap layer behind JWT authentication, in a form suitable for an internet facing deployment.  It touches most top-level sections, so it's a good starting point to trim down from.  Read xref:howto/productionizing.adoc[Run in Production] alongside it for the parts of a deployment that live outside the configuration.
+
+== Configuration
+
+[,yaml]
+----
+include::example$production.yml[]
+----
+<1> The default of `127.0.0.1` only accepts connections from the same machine.  Binding to all interfaces is needed inside a container or behind a load balancer.
+<2> This is already the default.  Setting it explicitly guards against an environment variable or a copied development config turning it off, which would expose the documentation and xref:preview.adoc[layer preview] pages.
+<3> Browsers only let scripts on these origins read tiles.  Map libraries that fetch tiles with scripts or WebGL need this; plain `<img>` tags don't.  See xref:configuration/cors.adoc[CORS].
+<4> Lets the requester's browser reuse each tile for an hour.  The visibility is `private` because the tiles require a token: a `public` tile could be stored by a CDN and served to anyone.  `maxage` is required here since the memory cache's `ttl` isn't something tilegroxy can derive a freshness from.  See xref:configuration/cache_control.adoc[Cache Control].
+<5> Identify yourself to upstream servers so their operators can contact you.  The client `timeout` is kept well under the server's 30 seconds so a slow upstream fails with an error tile rather than a dropped connection.
+<6> `warn` keeps routine messages out of your log aggregator and `json` makes them easy to parse.  See xref:configuration/log.adoc[Log].
+<7> Rejected requests and configuration reloads are written to their own file.  Consider forwarding it to your SIEM.
+<8> Health checks are served on their own port so they can stay off the internet.  The tile check generates a real tile from the `basemap` layer every minute and the cache check confirms each cache is reachable every 10 minutes.  See xref:configuration/health.adoc[Health].
+<9> The signing key is read from the `JWT_SIGNING_KEY` environment variable so it never appears in the file.  Tokens must also come from the expected issuer.  See xref:configuration/authentication/jwt.adoc[JWT].
+<10> Errors are returned as an image tile that indicates the general problem without exposing the error message.  See xref:configuration/error.adoc[Error].
+<11> A small, fast memory cache sits in front of a larger disk cache.  A tile evicted from memory is still on disk, and a restart only loses the memory tier.  See xref:configuration/cache/multi.adoc[Multi].
+
+.JSON equivalent
+[%collapsible]
+====
+[,json]
+----
+include::example$production.json[]
+----
+====
+
+== Try it
+
+The disk cache and log directories must exist and be writable by the user running tilegroxy.  Then validate the configuration and start the server:
+
+[,shell]
+----
+export JWT_SIGNING_KEY=change-me
+tilegroxy config check -c production.yml
+tilegroxy serve -c production.yml
+----
+
+Requests now need a token signed with that key, with an `iss` claim of `\https://auth.example.com` and an `exp` claim no more than a day away:
+
+[,shell]
+----
+curl -H "Authorization: Bearer $TOKEN" -o tile.png http://127.0.0.1:8080/tiles/basemap/0/0/0
+----
+
+Replace `tiles.example.com` with your real upstream before deploying.
