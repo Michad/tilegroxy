@@ -1,5 +1,5 @@
 = Client
-:description: Configures how the HTTP client should operate for tile requests that require calling an external HTTP(s) server.
+:description: Configures how the HTTP client should operate for requests that require calling an external HTTP(s) server.
 :page-config-key: client
 
 == Configuration
