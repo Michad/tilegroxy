@@ -37,5 +37,5 @@ asciidoc:
 
 ui:
   bundle:
-    url: https://github.com/tilegroxy/antora-ui/releases/download/v4/ui-bundle.zip
+    url: https://github.com/tilegroxy/antora-ui/releases/download/v5/ui-bundle.zip
     snapshot: true

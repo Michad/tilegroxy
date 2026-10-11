@@ -8,6 +8,115 @@ Some cache options include built-in mechanisms for applying a TTL and maximum si
 
 When specifying a cache ensure you include the `name` parameter.
 
+== Choosing a cache
+
+[cols="2,1,3"]
+|===
+| Goal | Cache | Notes
+
+| Develop or test locally
+| xref:configuration/cache/memory.adoc[Memory]
+| Lost on restart and not shared between instances. Not for production
+
+| Keep tiles on a single server's filesystem
+| xref:configuration/cache/disk.adoc[Disk]
+| Survives restarts. No cleanup, so use an external job
+
+| Share a fast cache between instances
+| xref:configuration/cache/redis.adoc[Redis], xref:configuration/cache/memcached.adoc[Memcached]
+| Needs a matching xref:configuration/datastores/index.adoc[datastore]. Entries expire on their own
+
+| Store a large or long-lived cache cheaply
+| xref:configuration/cache/s3.adoc[S3]
+| Shared and durable, but slower and billed by usage. Expiration requires external lifecycle configuration. 
+
+| Combine a small fast cache with a large slow one
+| xref:configuration/cache/multi.adoc[Multi]
+| Tried in order on reads, written to all tiers. Keep to 2 or 3 tiers
+
+| Stop serving old entries from a cache with no native expiration
+| xref:configuration/cache/ttl.adoc[TTL]
+| Wraps another cache. Doesn't delete anything
+
+| Keep each tenant's tiles separate
+| xref:configuration/cache/tenant.adoc[Tenant]
+| Wraps another cache. Only useful with tenant IDs from xref:configuration/authentication/index.adoc[authentication]
+
+| Never cache a layer
+| xref:configuration/cache/none.adoc[None]
+| No-op cache. The `skipcache` layer option does the same without defining one
+|===
+
+=== Feature Comparison
+
+[cols="2,1,1,1,1,1"]
+|===
+| Cache | Shared between instances | Survives restart | Built-in TTL | Size limit | Needs datastore
+
+| Memory
+| No
+| No
+| Yes
+| Yes
+| Optional
+
+| Disk
+| No
+| Yes
+| No
+| No
+| No
+
+| Redis
+| Yes
+| Depends on server
+| Yes
+| Depends on server
+| Yes
+
+| Memcached
+| Yes
+| No
+| Yes
+| Depends on server
+| Yes
+
+| S3
+| Yes
+| Yes
+| No
+| No
+| No
+
+| Multi
+| N/A
+| N/A
+| N/A
+| N/A
+| No
+
+| TTL
+| N/A
+| N/A
+| Yes
+| N/A
+| No
+
+| Tenant
+| N/A
+| N/A
+| N/A
+| N/A
+| No
+
+| None
+| N/A
+| N/A
+| N/A
+| N/A
+| No
+|===
+
 == Overridable caches
 
 Layer configurations have the ability to specify a `cache` parameter that overrides the default cache configuration.  The top-level `cache` definition can be an array for specifying multiple distinct caches.  This is different from the `multi` cache mentioned above. The `multi` cache allows combining multiple physical caches into a single cache config, but specifying an array under `cache` directly specifies multiple distinct cache configs.

@@ -6,3 +6,77 @@
 Requests that do not comply with authentication requirements will receive a 401 Unauthorized HTTP status code.
 
 When supplying authentication ensure you include the `name` parameter.
+
+== Choosing an authentication
+
+[cols="2,1,3"]
+|===
+| Goal | Authentication | Notes
+
+| Allow every request
+| xref:configuration/authentication/none.adoc[None]
+| Only safe behind an external authentication layer
+
+| Block casual scrapers on a dev or intranet deployment
+| xref:configuration/authentication/static_key.adoc[Static Key]
+| One shared bearer token. Not true security
+
+| Accept tokens issued by an identity provider
+| xref:configuration/authentication/jwt.adoc[JWT]
+| Verifies the signature locally with a static key or a JWKS endpoint. Can limit layers and areas per token
+
+| Validate API keys you already store in a database
+| xref:configuration/authentication/bearer.adoc[Bearer Lookup]
+| Looks the token up in PostgreSQL or Redis. Can set user and tenant IDs
+
+| Reuse an existing login or API in your ecosystem
+| xref:configuration/authentication/passthrough.adoc[Passthrough]
+| Forwards credentials to an HTTP endpoint. Can set user and tenant IDs from the response
+
+| Anything else
+| xref:configuration/authentication/custom.adoc[Custom]
+| Your own Go code interpreted with Yaegi. See xref:extensibility.adoc[Extensibility]
+|===
+
+=== Comparison
+
+[cols="2,1,1,1,1"]
+|===
+| Authentication | User ID | Tenant ID | Limit by layer/area | External dependency 
+
+| None
+| No
+| No
+| No
+| No
+
+| Static Key
+| No
+| No
+| No
+| No
+
+| JWT
+| Yes
+| Yes
+| Yes
+| JWKS endpoint, optional
+
+| Bearer Lookup
+| Yes
+| Yes
+| No
+| PostgreSQL or Redis
+
+| Passthrough
+| Yes
+| Yes
+| No
+| HTTP endpoint
+
+| Custom
+| Yes
+| Yes
+| Yes
+| Up to your code
+|===
