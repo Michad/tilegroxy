@@ -35,7 +35,7 @@ Every event always includes the following:
 | The tile coordinates
 
 | user
-| The authenticated user, or empty when the request was anonymous. 
+| The authenticated user, or empty when the request was anonymous
 |===
 
 The following can be included via `fields`:
