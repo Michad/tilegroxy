@@ -1,16 +1,46 @@
 = TTL
+:description: Wraps another cache to enforce an expiration on top of it. This is useful if your cache doesn't support a native time-to-live but your layer changes over time.
+:page-eyebrow: Cache
+:page-config-name: ttl
 
-Wraps another cache to enforce an expiration on top of it. This is useful if your cache doesn't support a native time-to-live but your layer changes over time.
+IMPORTANT: This does not actually delete data from your cache, it merely turns a cache hit into a miss when the data is old. If your concern is legal compliance, disk usage, or cloud cost, you will still need an external solution.
 
-This does not actually delete data from your cache, it merely turns a cache hit into a miss when the data is old. If your concern is legal compliance, disk usage, or cloud cost, you will still need an external solution.
+NOTE: TTL cache will not work properly if your data was cached using tilegroxy 0.10 or below. However, it will work fine with data that was cached without the TTL cache applied, so there's no issue adding it later after running without it.
 
-TTL cache will not work properly if your data was cached using tilegroxy 0.10 or below. However, it will work fine with data that was cached without the TTL cache applied - that is, there's no issue to add this in later after running without it.
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+cache:
+  name: ttl
+  ttl: 3600
+  cache:
+    name: disk
+    path: "./disk_tile_cache"
+----
 
-Name should be "ttl"
+JSON::
++
+[,json]
+----
+{
+  "cache": {
+    "name": "ttl",
+    "ttl": 3600,
+    "cache": {
+      "name": "disk",
+      "path": "./disk_tile_cache"
+    }
+  }
+}
+----
+====
 
-Configuration options:
-
-[cols="1,3,1,1,1"]
+== Configuration
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -26,15 +56,3 @@ Configuration options:
 | Yes
 | None
 |===
-
-Example:
-
-[,yaml]
-----
-cache:
-  name: ttl
-  ttl: 3600
-  cache:
-    name: disk
-    path: "./disk_tile_cache"
-----

@@ -1,14 +1,66 @@
 = Analytics
+:description: Records usage events to a destination in batches for tracking purposes.
 
-Records usage events to a destination in batches for tracking purposes.
+== Description
 
-More details on Analytics capabilities can be found in xref:../analytics.adoc[Analytics].
+More details on Analytics capabilities can be found in xref:analytics.adoc[Analytics].
 
-Like other entities, the analytics configuration uses a parameter called "name" to dictate the type of analytics tracking to use, but the batching configuration below is shared by all options and goes under a `batch` parameter. Analytics is disabled by default.
+Like other entities, the analytics configuration uses a parameter called `name` to dictate the type of analytics tracking to use, but the batching configuration below is shared by all options and goes under a `batch` parameter. Analytics is disabled by default.
 
-Batch configuration options:
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+analytics:
+  name: clickhouse
+  id: warehouse
+  datastore: ch-0
+  table: tile_events
+  fields:
+    - duration
+    - bytes
+  extraFields:
+    tenant: hdr.X-Tenant-Id
+    environment: production
+  batch:
+    maxSize: 5000
+    maxAge: 30
+----
 
-[cols="1,3,1,1,1"]
+JSON::
++
+[,json]
+----
+{
+  "analytics": {
+    "name": "clickhouse",
+    "id": "warehouse",
+    "datastore": "ch-0",
+    "table": "tile_events",
+    "fields": [
+      "duration",
+      "bytes"
+    ],
+    "extraFields": {
+      "tenant": "hdr.X-Tenant-Id",
+      "environment": "production"
+    },
+    "batch": {
+      "maxSize": 5000,
+      "maxAge": 30
+    }
+  }
+}
+----
+====
+
+== Configuration
+
+.Batch configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -42,22 +94,3 @@ Batch configuration options:
 | No
 | drop
 |===
-
-Example:
-
-----
-analytics:
-  name: clickhouse
-  id: warehouse
-  datastore: ch-0
-  table: tile_events
-  fields:
-    - duration
-    - bytes
-  extraFields:
-    tenant: hdr.X-Tenant-Id
-    environment: production
-  batch:
-    maxSize: 5000
-    maxAge: 30
-----

@@ -1,0 +1,64 @@
+{
+  "cache": {
+    "name": "memory",
+    "maxsize": 5000
+  },
+  "layers": [
+    {
+      "id": "noaa_poststorm",
+      "pattern": "noaa_poststorm_{version}",
+      "paramValidator": {
+        "version": "[0-9]{8}[ab]"
+      },
+      "examples": [
+        "noaa_poststorm_20230902a",
+        "noaa_poststorm_20230831b"
+      ],
+      "client": {
+        "contenttypes": [
+          "binary/octet-stream",
+          "image/png"
+        ],
+        "timeout": 2
+      },
+      "provider": {
+        "name": "fallback",
+        "primary": {
+          "name": "proxy",
+          "url": "https://stormscdn.ngs.noaa.gov/{layer.version}-rgb/{z}/{x}/{y}"
+        },
+        "secondary": {
+          "name": "static",
+          "color": "FFF0"
+        }
+      }
+    },
+    {
+      "id": "hurricane_idalia",
+      "provider": {
+        "name": "blend",
+        "mode": "normal",
+        "layer": {
+          "pattern": "noaa_poststorm_{version}",
+          "values": [
+            {
+              "version": "20230902a"
+            },
+            {
+              "version": "20230901b"
+            },
+            {
+              "version": "20230901a"
+            },
+            {
+              "version": "20230831b"
+            },
+            {
+              "version": "20230831a"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

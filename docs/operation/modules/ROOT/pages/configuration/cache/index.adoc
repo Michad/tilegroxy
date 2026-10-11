@@ -1,6 +1,8 @@
 = Cache
+:description: The cache configuration defines the datastores where tiles should be stored/retrieved. We recommended you use a `multi`-tiered cache with a smaller, faster "near" cache first followed by a larger, slower "far" cache.
+:page-eyebrow: Cache
 
-The cache configuration defines the datastores where tiles should be stored/retrieved. We recommended you use a `multi`-tiered cache with a smaller, faster "near" cache first followed by a larger, slower "far" cache.
+== Description
 
 Some cache options include built-in mechanisms for applying a TTL and maximum size. Any cache can be wrapped in the xref:configuration/cache/ttl.adoc[ttl] cache to stop serving old entries, however that doesn't delete them, so some options require an external cleanup mechanism if desired. Be mindful of this as some options may incur their own costs if allowed to grow unchecked. To delete entries covering a specific area, use xref:commands/seed.adoc[the seed command] with `--purge`.
 
@@ -16,10 +18,14 @@ The first cache in the list will be used as the default cache. Any layers you wa
 
 If you don't want to use the first cache in the list as your default, you can specify a `defaultcache` parameter at the very top-level of your configuration.  This parameter takes the ID of the cache to use as your default. 
 
-Be aware: there is no deduplication of cache configurations. That means if you have two identical `memory` caches defined, each will be a totally separate cache with their own memory allocations and capacity. This goes for all other cache types. If you need to define a cache multiple times (for example to be used under different `multi`, `ttl`, or `tenant` setups) it's recommended you utilize xref:configuration/datastores/index.adoc[datastores].
+NOTE: There is no deduplication of cache configurations. That means if you have two identical `memory` caches defined, each will be a totally separate cache with their own memory allocations and capacity. This goes for all other cache types. If you need to define a cache multiple times (for example to be used under different `multi`, `ttl`, or `tenant` setups) it's recommended you utilize xref:configuration/datastores/index.adoc[datastores].
 
 === Example
 
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 cache:
@@ -53,9 +59,71 @@ layers:
       url: https://example.com/live/{z}/{x}/{y}.png
 datastores: ...
 ----
++
+. Every layer uses the `multi` cache unless it picks another. It caches in memory first and then falls back on an S3 bucket. @/defaultcache/
+. `public` doesn't set a cache, so it uses the default. @/id: public/
+. `per-user` uses the `tenanted` cache. That's the same `multi` cache underneath, but entries are segregated by tenant. @/cache: tenanted/
+. `uncached` uses the no-op `none` cache. Alternatively, the `skipcache` parameter avoids needing to define a `none` cache at the top level. @/cache: none/
 
-In this example, the `public` layer (and all layers by default) will use a `multi` cache that caches in-memory first and then falls back on an S3 bucket. 
-
-The `per-user` layer overrides the cache to use the `tenanted` cache, which means it will still use that same cache methodology, but the entries in the cache will be segregated by tenant.
-
-The `uncached` layer meanwhile won't be cached as it will use the no-op `none` cache.  Note, alternatively you could use the `skipcache` parameter to avoid needing to explicitly define a `none` cache at the top level.
+JSON::
++
+[,json]
+----
+{
+  "cache": [
+    {
+      "id": "tenanted",
+      "name": "tenant",
+      "cache": {
+        "name": "multi",
+        "tiers": [
+          {
+            "name": "memory",
+            "datastore": "tiles"
+          },
+          {
+            "name": "s3",
+            "bucket": "my-tile-cache"
+          }
+        ]
+      }
+    },
+    {
+      "name": "none"
+    }
+  ],
+  "defaultcache": "multi",
+  "layers": [
+    {
+      "id": "public",
+      "provider": {
+        "name": "proxy",
+        "url": "https://example.com/{z}/{x}/{y}.png"
+      }
+    },
+    {
+      "id": "per-user",
+      "cache": "tenanted",
+      "provider": {
+        "name": "proxy",
+        "url": "https://example.com/private/{z}/{x}/{y}.png"
+      }
+    },
+    {
+      "id": "uncached",
+      "cache": "none",
+      "provider": {
+        "name": "proxy",
+        "url": "https://example.com/live/{z}/{x}/{y}.png"
+      }
+    }
+  ],
+  "datastores": [ ... ]
+}
+----
++
+. Every layer uses the `multi` cache unless it picks another. It caches in memory first and then falls back on an S3 bucket. @/"defaultcache"/
+. `public` doesn't set a cache, so it uses the default. @/"id": "public"/
+. `per-user` uses the `tenanted` cache. That's the same `multi` cache underneath, but entries are segregated by tenant. @/"cache": "tenanted"/
+. `uncached` uses the no-op `none` cache. Alternatively, the `skipcache` parameter avoids needing to define a `none` cache at the top level. @/"cache": "none"/
+====

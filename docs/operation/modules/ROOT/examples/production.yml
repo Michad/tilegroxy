@@ -1,0 +1,60 @@
+server:
+  bindhost: 0.0.0.0 # <1>
+  production: true # <2>
+  timeout: 30
+  cors: # <3>
+    enabled: true
+    origins:
+      - https://maps.example.com
+  cachecontrol: # <4>
+    enabled: true
+    visibility: private
+    maxage: 3600
+client:
+  useragent: example-maps/1.0 (ops@example.com) # <5>
+  timeout: 5
+logging:
+  main:
+    level: warn # <6>
+    format: json
+  access:
+    console: false
+    path: /var/log/tilegroxy/access.log
+  audit: # <7>
+    enabled: true
+    console: false
+    path: /var/log/tilegroxy/audit.log
+health: # <8>
+  enabled: true
+  port: 3000
+  checks:
+    - name: tile
+      layer: basemap
+      z: 0
+      x: 0
+      y: 0
+      validation: success
+      delay: 60
+    - name: cache
+      delay: 600
+authentication: # <9>
+  name: jwt
+  key: env.JWT_SIGNING_KEY
+  algorithms:
+    - HS256
+  expectedissuer: https://auth.example.com
+error:
+  mode: image # <10>
+cache: # <11>
+  name: multi
+  tiers:
+    - name: memory
+      maxsize: 1000
+      ttl: 300
+    - name: disk
+      path: /var/cache/tilegroxy
+layers:
+  - id: basemap
+    provider:
+      name: proxy
+      url: https://tiles.example.com/basemap/{z}/{x}/{y}.png

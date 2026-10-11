@@ -1,25 +1,59 @@
 = Config Create
+:description: Outputs a valid configuration value containing all default values. Provided as a maybe-useful helper, not necessarily a good starting point. Consider using the Skill to help get started if you're struggling with following the docs.
+:page-eyebrow: Command
+:page-command: tilegroxy config create
 
-Outputs a valid configuration value containing all default values. Provided as a maybe-useful helper, not necessarily a good starting point. Consider using the xref:configuration/index.adoc[Skill] to help get started if you're struggling with following the docs.
+== Usage
 
 Full, up-to-date usage information can be found with `tilegroxy config create -h`.
 
+.Output of `tilegroxy config create -h`
+[,text]
 ----
-Creates either a JSON or YAML configuration with a skeleton containing all default values. 
-	
-Defaults to outputting to standard out, specify --output/-o to write to a file. Does not utilize --config/-c to avoid accidentally overwriting a configuration. If a file is specified this defaults to auto-detecting the format to use based on the file extension and ultimately defaults to YAML.
+Creates either a JSON or YAML configuration with a skeleton containing all default values.
 
-Example:
-        tilegroxy config create --json -o tilegroxy.json
+Defaults to outputting to standard out, specify --output/-o to write to a file. Does not utilize --config/-c to avoid accidentally overwriting a configuration. If a file is specified this defaults to auto-detecting the format to use based on the file extension and ultimately defaults to YAML.
 
 Usage:
   tilegroxy config create [flags]
+----
 
-Flags:
-  -h, --help            help for create
-      --json            Output the configuration in JSON
-      --no-pretty       Disable pretty printing JSON
-  -o, --output string   Write the configuration to a file. This will
-                        overwrite anything already in the file
-      --yaml            Output the configuration in YAML
+== Flags
+
+.Flags
+[cols="1,1,1,3"]
+|===
+| Flag | Type | Default | Description
+
+| `-h`, `--help`
+| bool
+| `false`
+| help for create
+
+| `--json`
+| bool
+| `false`
+| Output the configuration in JSON
+
+| `--no-pretty`
+| bool
+| `false`
+| Disable pretty printing JSON
+
+| `-o`, `--output`
+| string
+|
+| Write the configuration to a file. This will overwrite anything already in the file
+
+| `--yaml`
+| bool
+| `false`
+| Output the configuration in YAML
+|===
+
+== Example
+
+[,shell]
+----
+tilegroxy config create --json -o tilegroxy.json
 ----

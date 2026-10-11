@@ -1,10 +1,9 @@
 = PostgreSQL
+:description: Writes events to a PostgreSQL table.  This is a reasonable choice if you already run PostgreSQL and your event volume is moderate.  For high volume analytics it's recommended you use ClickHouse instead.
+:page-eyebrow: Analytics
+:page-config-name: postgresql
 
-Writes events to a link:https://www.postgresql.org/[PostgreSQL] table.  This is a reasonable choice if you already run PostgreSQL and your event volume is moderate.  For high volume analytics it's recommended you use xref:configuration/analytics/clickhouse.adoc[ClickHouse] instead.
-
-Requires a xref:configuration/datastores/postgresql.adoc[postgresql datastore] to supply the connection.  
-
-Name should be "postgresql"
+NOTE: Requires a xref:configuration/datastores/postgresql.adoc[postgresql datastore] to supply the connection.  
 
 == Table Setup
 
@@ -31,16 +30,74 @@ The `extra` column receives everything selected via `fields` and `extraFields` a
 
 Tilegroxy does not expire events so this table grows unbounded.  It is recommended you partition it by time and drop old partitions on a schedule.
 
-Configuration options:
+Also accepts the xref:configuration/analytics/index.adoc[batching parameters] shared by every analytics module.
 
-Also accepts the batching parameters described in xref:configuration/analytics/index.adoc[Analytics].
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+datastores:
+  - name: postgresql
+    id: pg-analytics
+    host: localhost
+    user: tilegroxy
+    password: env.PGPASSWORD
+    database: analytics
 
-[cols="1,3,1,1,1"]
+analytics:
+  name: postgresql
+  datastore: pg-analytics
+  table: tilegroxy_analytics
+  fields:
+    - duration
+    - contenttype
+  extraFields:
+    environment: production
+----
+
+JSON::
++
+[,json]
+----
+{
+  "datastores": [
+    {
+      "name": "postgresql",
+      "id": "pg-analytics",
+      "host": "localhost",
+      "user": "tilegroxy",
+      "password": "env.PGPASSWORD",
+      "database": "analytics"
+    }
+  ],
+  "analytics": {
+    "name": "postgresql",
+    "datastore": "pg-analytics",
+    "table": "tilegroxy_analytics",
+    "fields": [
+      "duration",
+      "contenttype"
+    ],
+    "extraFields": {
+      "environment": "production"
+    }
+  }
+}
+----
+====
+
+== Configuration
+
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
 | Datastore
-| The ID of the datastore to use. The datastore must have a type of "postgresql".  Also see the xref:configuration/datastores/index.adoc[Datastores] documentation.
+| The ID of the datastore to use. The datastore must have a type of `postgresql`.  Also see the xref:configuration/datastores/index.adoc[Datastores] documentation.
 | string
 | Yes
 | None
@@ -75,25 +132,3 @@ Also accepts the batching parameters described in xref:configuration/analytics/i
 | No
 | None
 |===
-
-Example:
-
-----
-datastores:
-  - name: postgresql
-    id: pg-analytics
-    host: localhost
-    user: tilegroxy
-    password: env.PGPASSWORD
-    database: analytics
-
-analytics:
-  name: postgresql
-  datastore: pg-analytics
-  table: tilegroxy_analytics
-  fields:
-    - duration
-    - contenttype
-  extraFields:
-    environment: production
-----

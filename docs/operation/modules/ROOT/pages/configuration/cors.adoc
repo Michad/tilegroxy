@@ -1,6 +1,8 @@
 = CORS
+:description: Configuration for returning cross-origin resource sharing (CORS) headers on all endpoints (healthcheck excluded). Disabled by default.
+:page-config-key: server.cors
 
-Configuration for returning cross-origin resource sharing (CORS) headers on all endpoints (healthcheck excluded). Disabled by default. 
+== Description
 
 When enabled, overwrites any CORS headers specified via xref:configuration/server.adoc[Server.Headers].
 
@@ -10,9 +12,48 @@ NOTE: While `WildcardOrigin` will cause the Access-Control-Allow-Origin header t
 
 `Vary: Origin` is always included so a shared cache in front of tilegroxy doesn't serve one origin's response to another. Preflight (`OPTIONS`) requests are answered with a 204 and the negotiated methods, headers and max age.
 
-Configuration options:
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+server:
+  cors:
+    enabled: true
+    origins:
+      - https://*.example.com
+    exposedheaders:
+      - ETag
+    maxage: 600
+----
 
-[cols="1,3,1,1,1"]
+JSON::
++
+[,json]
+----
+{
+  "server": {
+    "cors": {
+      "enabled": true,
+      "origins": [
+        "https://*.example.com"
+      ],
+      "exposedheaders": [
+        "ETag"
+      ],
+      "maxage": 600
+    }
+  }
+}
+----
+====
+
+== Configuration
+
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -65,9 +106,8 @@ Configuration options:
 | 0
 |===
 
-The following can be supplied as environment variables:
-
-[cols="1,3"]
+.Environment variables
+[cols="1m,3m"]
 |===
 | Configuration Parameter | Environment Variable
 
@@ -80,16 +120,3 @@ The following can be supplied as environment variables:
 | MaxAge
 | SERVER_CORS_MAXAGE
 |===
-
-Example:
-
-----
-server:
-  cors:
-    enabled: true
-    origins:
-      - https://*.example.com
-    exposedheaders:
-      - ETag
-    maxage: 600
-----

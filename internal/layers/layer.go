@@ -150,14 +150,8 @@ func constructValidation(raw map[string]string, errorMessages config.ErrorMessag
 			continue
 		}
 
-		if v[0] != '^' {
-			v = "^" + v
-		}
-		if v[len(v)-1] != '$' {
-			v += "$"
-		}
-
-		res[k], err = regexp.Compile(v)
+		// Grouping makes the anchors apply to every alternative, not just the first and last
+		res[k], err = regexp.Compile("^(?:" + v + ")$")
 
 		if err != nil {
 			errs = append(errs, err)
