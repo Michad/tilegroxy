@@ -7,6 +7,10 @@ NOTE: The archives are dated releases.  Check the link:https://docs.overturemaps
 
 == Configuration
 
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 include::example$vector-basemap.yml[]
@@ -20,13 +24,21 @@ include::example$vector-basemap.yml[]
 <7> Reuses the theme layers defined above rather than repeating their URLs.  Each theme is cached individually as well as the combined tile.
 <8> A built-in, valid vector tile with no layers in it.
 
-.JSON equivalent
-[%collapsible]
-====
+JSON::
++
 [,json]
 ----
 include::example$vector-basemap.json[]
 ----
++
+. Any website can use these tiles, which suits public data.  See xref:configuration/cors.adoc[CORS] to restrict it. @/"wildcardorigin"/
+. Serves a TileJSON document for each layer, such as `/tiles/overture_basemap.json`.  MapLibre can be pointed straight at it.  See xref:tilejson.adoc[TileJSON]. @/"tilejson"/
+. Dense tiles, such as buildings in a city center, decompress to more than the 10 MiB default.  This raises the limit to 50 MiB.  Don't raise it further than you need, as it bounds how much memory a single tile can take. @/"maxlength"/
+. Zoom range, bounds, and `vector_layers` come from the archive's header and metadata, so the layer doesn't need to declare them.  See xref:configuration/provider/pmtiles.adoc[PMTiles]. @/"url"/
+. Merges the layers inside each child's tile into one tile without changing them.  See xref:configuration/provider/compositemvt.adoc[Composite MVT]. @/"name": "compositemvt"/
+. A theme with no tile at a location returns an error.  Without the fallback, one empty theme would fail the whole composite tile. @/"name": "fallback"/
+. Reuses the theme layers defined above rather than repeating their URLs.  Each theme is cached individually as well as the combined tile. @/"name": "ref"/
+. A built-in, valid vector tile with no layers in it. @/embedded:empty.mvt/
 ====
 
 == Try it

@@ -6,6 +6,10 @@ NOTE: See xref:layer-patterns.adoc[Layer Patterns] for more on how patterns work
 
 == Configuration
 
+[tabs]
+====
+YAML::
++
 [,yaml]
 ----
 include::example$storm-imagery.yml[]
@@ -19,13 +23,21 @@ include::example$storm-imagery.yml[]
 <7> Expands into one reference per entry, each to a layer name built from the pattern.  This is equivalent to listing a `ref` provider for each flight under `providers`.  See xref:configuration/provider/blend.adoc[Blend].
 <8> Earlier entries are drawn on top of later ones, so the most recent flight is listed first.
 
-.JSON equivalent
-[%collapsible]
-====
+JSON::
++
 [,json]
 ----
 include::example$storm-imagery.json[]
 ----
++
+. The `+{version}+` placeholder matches any flight, so a request for `noaa_poststorm_20230902a` serves that flight. @/"pattern"/
+. The version is part of the upstream URL, so it's restricted to eight digits and a letter.  Expressions are matched against the whole value.  See xref:security.adoc#layer-name-parameters[Security]. @/paramValidator/
+. Pattern layers have no single name to test with, so the xref:commands/test.adoc[test] command and xref:configuration/tilejson.adoc[TileJSON] use these instead. @/"examples"/
+. NOAA serves tiles as `binary/octet-stream`, which isn't in the default allowlist.  This override applies to this layer only, along with a shorter timeout.  See xref:content-type.adoc[Content Type]. @/"contenttypes"/
+. `+{layer.version}+` is replaced with the value matched by the pattern. @/layer.version/
+. Each flight only covers a strip of coast and returns an error everywhere else.  The fallback returns a fully transparent tile there instead, so the flights can be stacked. @/"FFF0"/
+. Expands into one reference per entry, each to a layer name built from the pattern.  This is equivalent to listing a `ref` provider for each flight under `providers`.  See xref:configuration/provider/blend.adoc[Blend]. @/"layer": \{/
+. Earlier entries are drawn on top of later ones, so the most recent flight is listed first. @/"version": "20230902a"/
 ====
 
 == Try it
