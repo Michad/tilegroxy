@@ -2,7 +2,7 @@
 :description: Configures telemetry using OpenTelemetry (OTEL). This configuration only turns telemetry on and off, you must use standard OTEL environment variables to point the HTTP exporter to your collector.
 :page-config-key: telemetry
 
-More details on Telemetry capabilities can be found in xref:telemetry.adoc[Telemetry].
+NOTE: More details on Telemetry capabilities can be found in xref:telemetry.adoc[Telemetry].
 
 .Configuration options
 [cols="1m,3,1,1,1"]

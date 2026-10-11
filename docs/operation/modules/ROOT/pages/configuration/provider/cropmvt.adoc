@@ -4,9 +4,7 @@
 :page-config-name: cropmvt
 :page-tags: MVT
 
-This is the vector tile equivalent of the xref:configuration/provider/crop.adoc[crop] provider, except without the secondary provider (combine this with xref:configuration/provider/compositemvt.adoc[compositemvt] for the same effect).
-
-Name should be `cropmvt`
+NOTE: This is the vector tile equivalent of the xref:configuration/provider/crop.adoc[crop] provider, except without the secondary provider (combine this with xref:configuration/provider/compositemvt.adoc[compositemvt] for the same effect).
 
 == Example
 [tabs]

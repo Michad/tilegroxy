@@ -2,6 +2,8 @@
 :description: Configuration for returning cross-origin resource sharing (CORS) headers on all endpoints (healthcheck excluded). Disabled by default.
 :page-config-key: server.cors
 
+== Description
+
 When enabled, overwrites any CORS headers specified via xref:configuration/server.adoc[Server.Headers].
 
 CORS headers being returned is contingent on an origin match. If neither `WildcardOrigin` or `Origins` are specified, CORS headers will never be triggered. When `WildcardOrigin` is true, CORS headers are always returned. Otherwise, CORS is triggered if the incoming origin matches one of the entries in `Origins` (including wildcard evaluation).  

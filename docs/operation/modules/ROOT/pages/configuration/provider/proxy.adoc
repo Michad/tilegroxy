@@ -4,12 +4,6 @@
 :page-config-name: proxy
 :page-tags: ZXY · TMS · WMTS · WMS
 
-The following is the typical request flow when using a proxy provider:
-
-image::diagram-proxy.png[Proxy flow diagram]
-
-Name should be `proxy`
-
 == Example
 [tabs]
 ====

@@ -4,11 +4,9 @@
 :page-config-name: postgismvt
 :page-tags: MVT
 
-The intent of this provider is to avoid needing to install and operate a separate server for light use-cases with standard table structures. The data is pulled from postgis using built-in functions and a fixed format.  If you need a highly customized query to pull the data from PG then it's recommended you use a dedicated server for this such as link:https://mapserver.org/[Mapserver] (see the xref:configuration/provider/cgi.adoc[CGI provider]) or link:https://martin.maplibre.org/[Martin] (see the xref:configuration/provider/proxy.adoc[Proxy provider]).
+NOTE: The intent of this provider is to avoid needing to install and operate a separate server for light use-cases with standard table structures. The data is pulled from postgis using built-in functions and a fixed format.  If you need a highly customized query to pull the data from PG then it's recommended you use a dedicated server for this such as link:https://mapserver.org/[Mapserver] (see the xref:configuration/provider/cgi.adoc[CGI provider]) or link:https://martin.maplibre.org/[Martin] (see the xref:configuration/provider/proxy.adoc[Proxy provider]).
 
 IMPORTANT: This provider is one of a few that directly talks to a database which brings with it special security concerns.  Please see xref:security.adoc[Security] documentation for a discussion on Tilegroxy's trust model.
-
-Name should be `postgismvt`
 
 .Configuration options
 [cols="1m,3,1,1,1"]

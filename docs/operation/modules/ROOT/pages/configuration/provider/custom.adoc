@@ -1,9 +1,9 @@
 = Custom
-:description: Custom providers implement your own custom logic for providing imagery from whatever source you can imagine.  They require a custom Go script file interpreted using Yaegi.  The main README has more detailed information on implementing custom providers and an example is available.
+:description: Custom providers implement your own custom logic for providing imagery from whatever source you can imagine.  They require a custom Go script file interpreted using Yaegi.  
 :page-eyebrow: Provider
 :page-config-name: custom
 
-Name should be `custom`
+NOTE: See xref:extensibility.adoc[Extensibility] for more information
 
 .Configuration options
 [cols="1m,3,1,1,1"]

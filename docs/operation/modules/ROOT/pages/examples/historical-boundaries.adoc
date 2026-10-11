@@ -3,7 +3,7 @@
 :page-eyebrow: Example
 :page-tags: MVT
 
-The data is loaded into two tables with a tool such as `shp2pgsql`, from the atlas's state and county shapefiles.  Each row has a `start_date` and `end_date` for the period it was in effect.
+NOTE: The data is loaded into two tables with a tool such as `shp2pgsql`, from the atlas's state and county shapefiles.  Each row has a `start_date` and `end_date` for the period it was in effect.
 
 == Configuration
 

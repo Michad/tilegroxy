@@ -3,9 +3,7 @@
 :page-eyebrow: Datastore
 :page-config-name: clickhouse
 
-Used by the xref:configuration/analytics/clickhouse.adoc[clickhouse analytics module].
-
-Name should be `clickhouse`
+NOTE: Used by the xref:configuration/analytics/clickhouse.adoc[clickhouse analytics module].
 
 == Example
 [tabs]

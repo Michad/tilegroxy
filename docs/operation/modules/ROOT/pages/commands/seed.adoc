@@ -3,7 +3,9 @@
 :page-eyebrow: Command
 :page-command: tilegroxy seed
 
-The same command can also remove cached tiles with the `--purge` flag. A purge walks the same layer, bounding box and zoom levels a seed would but deletes the matching cache entries instead of populating them.
+NOTE: The same command can also remove cached tiles with the `--purge` flag. A purge walks the same layer, bounding box and zoom levels a seed would but deletes the matching cache entries instead of populating them.
+
+== Usage
 
 Full, up-to-date usage information can be found with `tilegroxy seed -h`.
 

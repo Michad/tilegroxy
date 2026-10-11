@@ -3,7 +3,7 @@
 :page-eyebrow: Authentication
 :page-config-name: jwt
 
-The verification key can either be a single key stored in configuration or supplied via environment variable, or a set of keys fetched from a remote https://datatracker.ietf.org/doc/html/rfc7517[JWKS] endpoint. See <<JWKS>>.
+NOTE: The verification key can either be a single key stored in configuration or supplied via environment variable, or a set of keys fetched from a remote https://datatracker.ietf.org/doc/html/rfc7517[JWKS] endpoint. See <<JWKS>>.
 
 == Example
 [tabs]
@@ -60,8 +60,6 @@ JSON::
 | geohash
 | Validate the current tile being requested is partially contained in https://en.wikipedia.org/wiki/Geohash[the geohash]. See the xref:configuration/provider/crop.adoc[crop provider] to limit raster imagery layers to precise areas
 |===
-
-Name should be `jwt`
 
 .Configuration options
 [cols="1m,3,1,1,1"]

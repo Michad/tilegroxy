@@ -3,6 +3,8 @@
 :page-eyebrow: Command
 :page-command: tilegroxy config diff
 
+== Usage
+
 Full, up-to-date usage information can be found with `tilegroxy config diff -h`.
 
 .Output of `tilegroxy config diff -h`

@@ -2,6 +2,8 @@
 :description: Configures how encryption should be applied to the server.
 :page-config-key: server.encrypt
 
+== Description
+
 There are two main ways this can work:
 
 . With a pre-supplied certificate and keyfile

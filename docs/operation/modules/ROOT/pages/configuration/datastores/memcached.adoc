@@ -3,9 +3,7 @@
 :page-eyebrow: Datastore
 :page-config-name: memcached
 
-Used by the xref:configuration/cache/memcached.adoc[memcached cache].
-
-Name should be `memcached`
+NOTE: Used by the xref:configuration/cache/memcached.adoc[memcached cache].
 
 == Example
 [tabs]

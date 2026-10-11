@@ -3,9 +3,9 @@
 :page-eyebrow: Provider
 :page-config-name: pmtiles
 
-The archive is treated as immutable and static, the file and URL won't work with request-time parameters.
+== Description
 
-WARNING: Replacing the file underneath a running tilegroxy is not supported and will lead to undefined behavior.
+NOTE: The archive is treated as immutable and static, the file and URL won't work with request-time parameters.
 
 Brotli or zstd compression are *not* supported. The `Content-Type` of every tile comes from the tile type in the archive header, falling back to `application/octet-stream` when the tile type is unknown. Archives of MapLibre Tiles (MLT) are served as `application/vnd.maplibre-tile` with the `mlt` datatype.
 
@@ -15,7 +15,8 @@ When using a URL the xref:configuration/client.adoc[client] `MaxLength` limits t
 
 A request for a tile that isn't in the archive is treated as out of bounds and returns the xref:configuration/error.adoc[out of bounds error]. Wrap this provider in a xref:configuration/provider/fallback.adoc[fallback] if you want another provider to fill those gaps. 
 
-Name should be `pmtiles`
+WARNING: Replacing the file underneath a running tilegroxy is not supported and will lead to undefined behavior.
+
 
 == Example
 [tabs]

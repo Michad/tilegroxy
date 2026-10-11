@@ -1,6 +1,8 @@
 = Reloading
 :description: Tilegroxy supports automatic reloading without a restart or downtime when running as a server.
 
+== Reload triggers
+
 Reloading can occur in a few different situations:
 
 . If `--hot-reload` is enabled via the CLI, any changes to configuration will be detected and the system will be reloaded with the new configuration. Hot reloading occurs automatically within a few seconds of the configuration changing on the filesystem.

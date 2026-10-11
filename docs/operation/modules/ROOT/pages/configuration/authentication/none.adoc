@@ -4,5 +4,3 @@
 :page-config-name: none
 
 WARNING: Ensure you have an external authentication solution before exposing this to the internet.
-
-Name should be `none`

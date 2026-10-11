@@ -3,13 +3,13 @@
 :page-eyebrow: Analytics
 :page-config-name: custom
 
-See xref:extensibility.adoc[Extensibility] for details on how custom modules work and their limitations.
+== Description
+
+NOTE: See xref:extensibility.adoc[Extensibility] for details on how custom modules work and their limitations.
 
 WARNING: Custom scripts run unrestricted and can use the entire standard library including `os/exec`. Be as cautious using a third party analytics script as you would be executing any other third party software.
 
 Scripts cannot import third party libraries so a destination requiring a vendor SDK needs a native module instead.  `net/http` is available which suffices for most HTTP APIs.
-
-Name should be `custom`
 
 == The Script
 

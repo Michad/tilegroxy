@@ -2,6 +2,8 @@
 :description: Tilegroxy can serve a layer whose tiles differ depending on who asked for them, either by building the upstream request out of the requester's identity, or by restricting the imagery to an area their credentials allow.
 :page-eyebrow: Guide
 
+== Overview
+
 NOTE: Nothing here matters if you're not using xref:configuration/authentication/index.adoc[Authentication] to differentiate users. 
 
 This doc provides a few things to consider to ensure you don't accidentally leak tiles between users.

@@ -3,6 +3,8 @@
 :page-eyebrow: Provider
 :page-config-name: blend
 
+== Description
+
 This can only be used with layers that return JPEG or PNG images. Tiles will be scaled up to the highest resolution of the inputs to be combined and the combined result always output in PNG format.
 
 Each downstream provider is called in parallel.
@@ -10,8 +12,6 @@ Each downstream provider is called in parallel.
 The following diagram depicts a possible request flow when using the Blend provider with the `layers` parameter. Note that each downstream layer is individually cached; this is useful when it's expected for requests to also come in for each of the individual layers but an unnecessary cost if not. If you only expect requests for the blended layer, either use the `providers` parameter option or simply disable caching in the downstream layer(s).
 
 image::diagram-blend.png[Blend request flow]
-
-Name should be `blend`
 
 == Example
 [tabs]

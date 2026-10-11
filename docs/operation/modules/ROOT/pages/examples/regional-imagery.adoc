@@ -2,7 +2,7 @@
 :description: Some of the best imagery comes from regional programs exposed through WMS, which are often slow and only cover a limited area.  This configuration shows U.S. Department of Agriculture NAIP aerial imagery of Colorado, served by USGS, inside the state's borders and a grayscale basemap everywhere else.
 :page-eyebrow: Example
 
-It's built so the slow server is called as rarely as possible.
+NOTE: It's built so the slow server is called as rarely as possible.
 
 == Configuration
 

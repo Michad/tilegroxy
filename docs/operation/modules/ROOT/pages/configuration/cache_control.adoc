@@ -2,6 +2,8 @@
 :description: Configuration for the `Cache-Control` header returned on tile responses. Disabled by default.
 :page-config-key: server.cachecontrol
 
+== Description
+
 If you simply set `Enabled` to true, tilegroxy will use the <<Automatic behaviour>> below. Beyond that, you can override each directive by setting the matching field explicitly. Automatic behaviour can be entirely turned off with `Auto: false`.
 
 This block can be specified on xref:configuration/server.adoc[Server] to apply to every layer and on an individual xref:configuration/layer.adoc[Layer] to override it. The override applies field by field (`extra` is replaced if set in both places, not added to). A layer can turn the header on for itself while the server leaves it off, or set `enabled: false` to turn off what the server enabled.

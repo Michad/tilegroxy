@@ -3,9 +3,7 @@
 :page-eyebrow: Analytics
 :page-config-name: postgresql
 
-Requires a xref:configuration/datastores/postgresql.adoc[postgresql datastore] to supply the connection.  
-
-Name should be `postgresql`
+NOTE: Requires a xref:configuration/datastores/postgresql.adoc[postgresql datastore] to supply the connection.  
 
 == Table Setup
 

@@ -1,6 +1,8 @@
 = Examples
 :description: These pages walk through a complete configuration, explaining how the pieces work together.
 
+== Available examples
+
 * xref:examples/production.adoc[] for a hardened deployment with authentication, health checks, and tiered caching.
 * xref:examples/vector-basemap.adoc[] for serving Overture Maps vector tiles straight from their PMTiles archives.
 * xref:examples/storm-imagery.adoc[] for stitching NOAA aerial imagery from several flights into one layer.

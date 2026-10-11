@@ -81,8 +81,6 @@ JSON::
 
 == Configuration
 
-Name should be `s3`
-
 .Configuration options
 [cols="1m,3,1,1,1"]
 |===

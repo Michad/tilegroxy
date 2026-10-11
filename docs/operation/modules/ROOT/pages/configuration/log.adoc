@@ -2,7 +2,7 @@
 :description: Configures how the application should log during operation.
 :page-config-key: logging
 
-The `logging` section supports three keys: <<main-logs,`main`>>, <<access-logs,`access`>> and <<audit-logs,`audit`>>, which are objects described below.
+NOTE: The `logging` section supports three keys: <<main-logs,`main`>>, <<access-logs,`access`>> and <<audit-logs,`audit`>>, which are objects described below.
 
 .Example
 [tabs]

@@ -3,9 +3,7 @@
 :page-eyebrow: Provider
 :page-config-name: static
 
-The image's extension decides what kind of tile it is. Images ending in `.mvt` or `.pbf` are served as Mapbox Vector Tiles and images ending in `.mlt` as MapLibre Tiles, which also sets the layer's `datatype`. Anything else is served as a PNG.
-
-Name should be `static`
+NOTE: The image's extension decides what kind of tile it is. Images ending in `.mvt` or `.pbf` are served as Mapbox Vector Tiles and images ending in `.mlt` as MapLibre Tiles, which also sets the layer's `datatype`. Anything else is served as a PNG.
 
 .Configuration options
 [cols="1m,3,1,1,1"]

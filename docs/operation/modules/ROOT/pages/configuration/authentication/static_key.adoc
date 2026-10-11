@@ -5,8 +5,6 @@
 
 CAUTION: It is recommended you employ caution with this option. It should be regarded as a protection against casual web scrapers but not true security. It is recommended only for development and internal ("intranet") use-cases. Does not include any authz logic.
 
-Name should be `static key`
-
 .Configuration options
 [cols="1m,3,1,1,1"]
 |===

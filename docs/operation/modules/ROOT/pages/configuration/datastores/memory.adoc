@@ -3,11 +3,9 @@
 :page-eyebrow: Datastore
 :page-config-name: memory
 
-Only used by the xref:configuration/cache/memory.adoc[memory cache].
+NOTE: Only used by the xref:configuration/cache/memory.adoc[memory cache].
 
 WARNING: This is not recommended for production use. The same caveats as the xref:configuration/cache/memory.adoc[memory cache] apply.
-
-Name should be `memory`
 
 == Example
 [tabs]

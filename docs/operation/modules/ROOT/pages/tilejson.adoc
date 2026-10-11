@@ -2,7 +2,7 @@
 :description: Tilegroxy can describe its layers using the TileJSON format. This allows TileJSON-aware clients, such as MapLibre, to discover layers.
 :page-tags: MVT · MLT
 
-TileJSON support is disabled by default. Enabling it doesn't change how tiles themselves are served. See xref:configuration/tilejson.adoc[TileJSON configuration] for the configuration reference.
+NOTE: TileJSON support is disabled by default. Enabling it doesn't change how tiles themselves are served. See xref:configuration/tilejson.adoc[TileJSON configuration] for the configuration reference.
 
 == Endpoints
 

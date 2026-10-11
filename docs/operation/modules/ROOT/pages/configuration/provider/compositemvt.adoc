@@ -4,8 +4,6 @@
 :page-config-name: compositemvt
 :page-tags: MVT
 
-Name should be `compositemvt`
-
 == Example
 [tabs]
 ====

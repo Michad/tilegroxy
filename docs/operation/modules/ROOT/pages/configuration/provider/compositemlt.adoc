@@ -4,9 +4,7 @@
 :page-config-name: compositemlt
 :page-tags: MLT
 
-This is the MLT equivalent of the xref:configuration/provider/compositemvt.adoc[compositemvt] provider. MVT and MLT can't be mixed in one tile, so a child known to produce MVT, such as xref:configuration/provider/postgismvt.adoc[postgismvt], is rejected when the configuration is loaded.
-
-Name should be `compositemlt`
+NOTE: This is the MLT equivalent of the xref:configuration/provider/compositemvt.adoc[compositemvt] provider. MVT and MLT can't be mixed in one tile, so a child known to produce MVT, such as xref:configuration/provider/postgismvt.adoc[postgismvt], is rejected when the configuration is loaded.
 
 == Example
 [tabs]

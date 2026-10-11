@@ -2,6 +2,8 @@
 :description: A layer represents a distinct mapping layer as would be displayed in a typical web map application.  Each layer can be accessed independently from other map layers. The main thing that needs to be configured for a layer is its provider.
 :page-config-key: layers[]
 
+== Layer names
+
 The URLs of incoming requests follow a format like `+/tiles/{layerName}/{z}/{x}/{y}+`. The layer name can be one of two things:
 
 . The ID of the layer

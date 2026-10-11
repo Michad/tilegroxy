@@ -2,7 +2,7 @@
 :description: Tilegroxy documentation is written in AsciiDoc files stored in the same repository as code. Tilegroxy uses Antora to build its documentation into a website that can be served up inside the application as well as a common server.
 :page-eyebrow: Development
 
-The documentation is automatically built via github actions as a test on every PR and commit to main.  The documentation is only published to https://tilegroxy.com[the doc server] upon new releases.  
+NOTE: The documentation is automatically built via github actions as a test on every PR and commit to main.  The documentation is only published to https://tilegroxy.com[the doc server] upon new releases.  
 
 IMPORTANT: If you are making changes to the asciidocs, please build the documentation before opening a PR.  Do not commit any changes to `internal/website/resources`.  The folder is `git ignore`-ed, so built output won't show up in git. The one tracked file there is `index_default.html`, the placeholder served when no built site is embedded.
 

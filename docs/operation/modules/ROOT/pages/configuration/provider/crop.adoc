@@ -3,9 +3,7 @@
 :page-eyebrow: Provider
 :page-config-name: crop
 
-This is similar to the bounds parameter in the xref:configuration/provider/fallback.adoc[] provider but specific to raster tiles.  This provides a cleaner edge when zooming in and out but has greater overhead due to the image processing that occurs.
-
-Name should be `crop`
+NOTE: This is similar to the bounds parameter in the xref:configuration/provider/fallback.adoc[] provider but specific to raster tiles.  This provides a cleaner edge when zooming in and out but has greater overhead due to the image processing that occurs.
 
 == Example
 [tabs]

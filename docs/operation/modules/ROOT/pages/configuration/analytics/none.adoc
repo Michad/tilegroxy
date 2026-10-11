@@ -3,9 +3,7 @@
 :page-eyebrow: Analytics
 :page-config-name: none
 
-Name should be `none`
-
-Configuration options:
+== Configuration
 
 None of its own.  The `id`, `fields`, `extraFields` and `batch` parameters common to every analytics module are still accepted and validated but have no effect.
 

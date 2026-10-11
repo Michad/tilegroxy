@@ -1,6 +1,8 @@
 = Analytics
 :description: Records usage events to a destination in batches for tracking purposes.
 
+== Description
+
 More details on Analytics capabilities can be found in xref:analytics.adoc[Analytics].
 
 Like other entities, the analytics configuration uses a parameter called `name` to dictate the type of analytics tracking to use, but the batching configuration below is shared by all options and goes under a `batch` parameter. Analytics is disabled by default.

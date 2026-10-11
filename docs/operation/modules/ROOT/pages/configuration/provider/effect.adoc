@@ -5,9 +5,7 @@
 
 CAUTION: Many of the effects can have very poor performance.
 
-This can only be used with layers that return JPEG or PNG images. The result always outputs in PNG format.
-
-Name should be `effect`
+NOTE: This can only be used with layers that return JPEG or PNG images. The result always outputs in PNG format.
 
 == Example
 [tabs]

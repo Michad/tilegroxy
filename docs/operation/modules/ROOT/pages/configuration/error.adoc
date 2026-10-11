@@ -2,6 +2,8 @@
 :description: Configures how errors are returned to users.
 :page-config-key: error
 
+== Operating modes
+
 There are four primary operating modes:
 
 None (`none`)::

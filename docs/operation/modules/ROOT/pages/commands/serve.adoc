@@ -3,6 +3,8 @@
 :page-eyebrow: Command
 :page-command: tilegroxy serve
 
+== Usage
+
 Full, up-to-date usage information can be found with `tilegroxy serve -h`.
 
 .Output of `tilegroxy serve -h`

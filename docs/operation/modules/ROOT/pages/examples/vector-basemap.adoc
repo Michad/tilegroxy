@@ -3,7 +3,7 @@
 :page-eyebrow: Example
 :page-tags: MVT
 
-The archives are dated releases.  Check the link:https://docs.overturemaps.org/examples/overture-tiles/[Overture documentation] for the current one and update the date in each URL.
+NOTE: The archives are dated releases.  Check the link:https://docs.overturemaps.org/examples/overture-tiles/[Overture documentation] for the current one and update the date in each URL.
 
 == Configuration
 

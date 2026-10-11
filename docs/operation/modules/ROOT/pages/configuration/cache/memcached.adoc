@@ -3,8 +3,6 @@
 :page-eyebrow: Cache
 :page-config-name: memcached
 
-Name should be `memcached`
-
 == Example
 [tabs]
 ====

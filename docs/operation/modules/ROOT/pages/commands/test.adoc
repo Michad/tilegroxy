@@ -3,6 +3,8 @@
 :page-eyebrow: Command
 :page-command: tilegroxy test
 
+== Usage
+
 Full, up-to-date usage information can be found with `tilegroxy test -h`.
 
 .Output of `tilegroxy test -h`

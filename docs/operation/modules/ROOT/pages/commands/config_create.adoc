@@ -3,6 +3,8 @@
 :page-eyebrow: Command
 :page-command: tilegroxy config create
 
+== Usage
+
 Full, up-to-date usage information can be found with `tilegroxy config create -h`.
 
 .Output of `tilegroxy config create -h`

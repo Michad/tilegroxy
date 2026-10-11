@@ -3,11 +3,11 @@
 :page-eyebrow: Authentication
 :page-config-name: custom
 
+== Description
+
 To help mitigate the performance impact of calling the interpreted `validate` method, a cache is utilized by default. In turn, to avoid concurrent requests that utilize the same token from causing repetitive calls to `validate`, a pool of locks are utilized when the cache is enabled. The size of the lock pool is equal to the number of CPUs.
 
 For more details on implementing the code for a custom authentication, see xref:extensibility.adoc#custom-authentication[Extensibility]
-
-Name should be `custom`
 
 == Example
 [tabs]

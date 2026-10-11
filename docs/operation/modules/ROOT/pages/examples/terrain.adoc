@@ -2,7 +2,7 @@
 :description: Some layers encode data in their pixel values rather than showing an image directly.  The Mapbox Terrain-RGB layer stores elevation as a number spread across the red, green, and blue channels.  This configuration decodes it, converts elevation into average air pressure, and renders the result in grayscale, then lays it over OpenStreetMap.
 :page-eyebrow: Example
 
-Using the Terrain-RGB layer requires a link:https://www.mapbox.com/[Mapbox] access token, supplied through the `MAPBOX_KEY` environment variable.
+IMPORTANT: Using the Terrain-RGB layer requires a link:https://www.mapbox.com/[Mapbox] access token, supplied through the `MAPBOX_KEY` environment variable.
 
 == Configuration
 

@@ -3,9 +3,7 @@
 :page-eyebrow: Analytics
 :page-config-name: clickhouse
 
-Requires a xref:configuration/datastores/clickhouse.adoc[clickhouse datastore] to supply the connection.
-
-Name should be `clickhouse`
+NOTE: Requires a xref:configuration/datastores/clickhouse.adoc[clickhouse datastore] to supply the connection.
 
 == Table Setup
 

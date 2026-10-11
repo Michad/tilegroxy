@@ -5,8 +5,6 @@
 
 WARNING: This is not recommended for production use. It is meant for development and testing use-cases only. Setting this cache too high can cause stability issues for the service and this cache is not distributed so can cause inconsistent performance when deploying in a high-availability production environment.
 
-Name should be `memory`
-
 == Example
 [tabs]
 ====
