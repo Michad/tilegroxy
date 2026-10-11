@@ -20,6 +20,7 @@ import (
 	"sync"
 
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 )
 
 type Authentication interface {
@@ -29,6 +30,7 @@ type Authentication interface {
 // New dependencies are added as fields so the Initialize signature stays stable
 type AuthenticationDeps struct {
 	ErrorMessages config.ErrorMessages
+	Datastores    datastore.DatastoreRegistry
 }
 
 type AuthenticationRegistration interface {

@@ -70,7 +70,7 @@ func configToEntities(ctx context.Context, cfg config.Config, reloadFunc func(re
 		return nil, closeAndReturn(built, err)
 	}
 
-	auth, err := authentications.ConstructAuth(cfg.Authentication, authentication.AuthenticationDeps{ErrorMessages: cfg.Error.Messages})
+	auth, err := authentications.ConstructAuth(cfg.Authentication, authentication.AuthenticationDeps{ErrorMessages: cfg.Error.Messages, Datastores: datastores})
 	if err != nil {
 		return nil, closeAndReturn(built, fmt.Errorf("error constructing auth: %w", err))
 	}
