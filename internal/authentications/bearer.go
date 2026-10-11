@@ -23,15 +23,12 @@ import (
 	"net/http"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/maypok86/otter"
 	"github.com/redis/go-redis/v9"
-	"k8s.io/utils/keymutex"
 )
 
 const (
@@ -85,9 +82,7 @@ type bearerLookup func(ctx context.Context, token string) (bearerLookupResult, e
 type Bearer struct {
 	BearerConfig
 	lookup bearerLookup
-	cache  *otter.Cache[string, bearerLookupResult]
-	// Only used with the cache, so a page of tiles sharing a token does one lookup
-	locks keymutex.KeyMutex
+	cache  *lookupCache[bearerLookupResult]
 }
 
 func init() {
@@ -132,18 +127,12 @@ func (s BearerRegistration) Initialize(cfgAny any, deps authentication.Authentic
 		return nil, err
 	}
 
-	if cfg.CacheSize <= 0 {
-		return &Bearer{BearerConfig: cfg, lookup: lookup}, nil
-	}
-
-	cache, err := otter.MustBuilder[string, bearerLookupResult](cfg.CacheSize).
-		WithTTL(time.Duration(cfg.CacheTTL) * time.Second).
-		Build()
+	cache, err := newLookupCache[bearerLookupResult](cfg.CacheSize, cfg.CacheTTL)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Bearer{BearerConfig: cfg, lookup: lookup, cache: &cache, locks: keymutex.NewHashed(-1)}, nil
+	return &Bearer{BearerConfig: cfg, lookup: lookup, cache: cache}, nil
 }
 
 func newBearerLookup(cfg *BearerConfig, deps authentication.AuthenticationDeps) (bearerLookup, error) {
@@ -366,38 +355,20 @@ func (b Bearer) CheckAuthentication(ctx context.Context, req *http.Request) bool
 	return true
 }
 
-// A TTL cache runs a cleanup goroutine that would otherwise leak on every reload
 func (b Bearer) Close(_ context.Context) error {
-	if b.cache != nil {
-		b.cache.Close()
-	}
+	b.cache.close()
 
 	return nil
 }
 
-// Errors fail closed and aren't cached, so an outage doesn't lock out valid tokens once it recovers
+// Errors fail closed and aren't cached by lookupCache
 func (b Bearer) cachedLookup(ctx context.Context, token string) (bearerLookupResult, bool) {
-	if b.cache != nil {
-		b.locks.LockKey(token)
-		defer func() {
-			if err := b.locks.UnlockKey(token); err != nil {
-				slog.ErrorContext(ctx, "Unable to release auth lock - this token might encounter issues going forward", "error", err)
-			}
-		}()
-
-		if result, ok := b.cache.Get(token); ok {
-			return result, true
-		}
-	}
-
-	result, err := b.lookup(ctx, token)
+	result, err := b.cache.get(ctx, token, func() (bearerLookupResult, error) {
+		return b.lookup(ctx, token)
+	})
 	if err != nil {
 		slog.ErrorContext(ctx, "Bearer token lookup failed", "datastore", b.Datastore, "error", err)
 		return bearerLookupResult{}, false
-	}
-
-	if b.cache != nil {
-		b.cache.Set(token, result)
 	}
 
 	return result, true
