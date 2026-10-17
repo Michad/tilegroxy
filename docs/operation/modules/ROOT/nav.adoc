@@ -19,6 +19,7 @@
 ** xref:examples/historical-boundaries.adoc[]
 
 .Configure
+* xref:configuration.adoc[]
 * xref:configuration/index.adoc[]
 ** xref:configuration/layer.adoc[]
 ** xref:configuration/provider/index.adoc[]
