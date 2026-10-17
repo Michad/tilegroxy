@@ -21,6 +21,7 @@ import (
 
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/datastore"
+	"github.com/Michad/tilegroxy/pkg/entities/secret"
 )
 
 type Authentication interface {
@@ -32,6 +33,8 @@ type AuthenticationDeps struct {
 	ErrorMessages config.ErrorMessages
 	ClientConfig  config.ClientConfig
 	Datastores    datastore.DatastoreRegistry
+	// Resolves secret.NAME in the authentication config. Nil disables secrets
+	Secreter secret.Secreter
 }
 
 type AuthenticationRegistration interface {

@@ -193,7 +193,7 @@ func (r *Reloader) build(swap swapFunc, newCfg *config.Config, reason string) (e
 		return err
 	}
 
-	if err := swap(newCfg, ent); err != nil {
+	if err := swap(ent.Config, ent); err != nil {
 		audit.ConfigReload(auditCtx, reason, err)
 
 		closeCtx, cancel := context.WithTimeout(context.Background(), time.Duration(configload.EffectiveShutdownTimeout(newCfg.Server))*time.Second) // #nosec G115 -- operator-supplied timeout in seconds, far below int64 overflow range

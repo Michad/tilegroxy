@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/Michad/tilegroxy/internal/configload"
+	"github.com/Michad/tilegroxy/internal/placeholder"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
@@ -54,24 +55,11 @@ func (reg *Registry) Close(ctx context.Context) error {
 	return errors.Join(errs...)
 }
 
-func ConstructDatastoreRegistry(ctx context.Context, cfg []map[string]interface{}, secreter secret.Secreter, errorMessages config.ErrorMessages) (*Registry, error) {
-	var err error
+func ConstructDatastoreRegistry(_ context.Context, cfg []map[string]interface{}, secreter secret.Secreter, errorMessages config.ErrorMessages) (*Registry, error) {
 	reg := Registry{}
 	reg.datastores = make(map[string]datastore.DatastoreWrapper)
 
 	for _, curCfg := range cfg {
-		curCfg = configload.ReplaceEnv(curCfg)
-		if secreter != nil {
-			curCfg, err = configload.ReplaceConfigValues(curCfg, "secret", func(k string) (string, error) {
-				v, _, lookupErr := secreter.Lookup(ctx, k)
-				return v, lookupErr
-			})
-
-			if err != nil {
-				return nil, err
-			}
-		}
-
 		wrapper, err := ConstructDatastoreWrapper(curCfg, datastore.DatastoreDeps{Secreter: secreter, ErrorMessages: errorMessages})
 
 		if err != nil {
@@ -93,7 +81,12 @@ func ConstructDatastoreRegistry(ctx context.Context, cfg []map[string]interface{
 }
 
 func ConstructDatastoreWrapper(rawConfig map[string]interface{}, deps datastore.DatastoreDeps) (datastore.DatastoreWrapper, error) {
-	rawConfig = configload.ReplaceEnv(rawConfig)
+	resolver := placeholder.NewResolver(context.Background(), deps.Secreter)
+
+	rawConfig, err := configload.ResolveEntityKeys(rawConfig, resolver)
+	if err != nil {
+		return nil, err
+	}
 
 	name, ok := rawConfig["name"].(string)
 
@@ -101,7 +94,7 @@ func ConstructDatastoreWrapper(rawConfig map[string]interface{}, deps datastore.
 		reg, ok := datastore.RegisteredDatastoreWrapper(name)
 		if ok {
 			cfg := reg.InitializeConfig()
-			err := configload.DecodeEntityConfig(rawConfig, &cfg)
+			err := configload.DecodeEntityConfig(rawConfig, &cfg, resolver)
 			if err != nil {
 				return nil, err
 			}

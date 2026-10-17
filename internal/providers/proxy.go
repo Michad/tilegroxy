@@ -18,13 +18,14 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Michad/tilegroxy/internal/placeholder"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
 type ProxyConfig struct {
-	URL     string
+	URL     placeholder.Template
 	InvertY bool // Used for TMS
 	Srid    uint
 }
@@ -55,7 +56,7 @@ func (s ProxyRegistration) DataType(_ any) config.DataType {
 
 func (s ProxyRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(ProxyConfig)
-	if cfg.URL == "" {
+	if cfg.URL.IsEmpty() {
 		return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "provider.proxy.url", "")
 	}
 

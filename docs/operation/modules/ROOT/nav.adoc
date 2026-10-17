@@ -81,6 +81,7 @@
 ** xref:configuration/log.adoc[]
 ** xref:configuration/telemetry.adoc[]
 ** xref:configuration/error.adoc[]
+* xref:dynamic-values.adoc[]
 * xref:layer-patterns.adoc[]
 
 .Operate

@@ -92,7 +92,7 @@ func Test_Validate(t *testing.T) {
 	cfg.Table = "test"
 	cfg.Geometry = "GEOM"
 	cfg.Attributes = []string{"str"}
-	cfg.Filter = "1=1"
+	cfg.Filter = mustTemplate("1=1")
 	cfg.Limit = 1
 
 	cfg.GID = "; safkjas @(%$)!@IU%"
@@ -174,7 +174,7 @@ func Test_GenerateTile(t *testing.T) {
 	cfg.GID = "gid"
 	cfg.Geometry = "GEOM"
 	cfg.Attributes = []string{"str"}
-	cfg.Filter = "{z}=0 AND {layer.test}::text IS NULL"
+	cfg.Filter = mustTemplate("{z}=0 AND {layer.test}::text IS NULL")
 	cfg.Limit = 1
 
 	prov, err := reg.Initialize(cfg, layer.ProviderDeps{ClientConfig: config.DefaultConfig().Client, ErrorMessages: config.DefaultConfig().Error.Messages, Datastores: datastore})

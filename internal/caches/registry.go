@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/Michad/tilegroxy/internal/configload"
+	"github.com/Michad/tilegroxy/internal/placeholder"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
@@ -148,7 +149,9 @@ func NewUnknownCacheError(errorMessages config.ErrorMessages, param, id string, 
 }
 
 // rawConfig is a single cache or an array. defaultID names the fallback entry and defaults to the first
-func ConstructCacheRegistry(ctx context.Context, rawConfig interface{}, defaultID string, secreter secret.Secreter, deps cache.CacheDeps) (*CacheRegistry, error) {
+func ConstructCacheRegistry(_ context.Context, rawConfig interface{}, defaultID string, secreter secret.Secreter, deps cache.CacheDeps) (*CacheRegistry, error) {
+	deps.Secreter = secreter
+
 	entries, err := configload.NormalizeCaches(rawConfig, deps.ErrorMessages)
 	if err != nil {
 		return nil, err
@@ -165,20 +168,7 @@ func ConstructCacheRegistry(ctx context.Context, rawConfig interface{}, defaultI
 			return nil, errors.Join(fmt.Errorf(deps.ErrorMessages.MustBeUnique, "cache.id", entry.ID), closeErr)
 		}
 
-		cfg := configload.ReplaceEnv(entry.Config)
-
-		if secreter != nil {
-			cfg, err = configload.ReplaceConfigValues(cfg, "secret", func(k string) (string, error) {
-				v, _, lookupErr := secreter.Lookup(ctx, k)
-				return v, lookupErr
-			})
-			if err != nil {
-				closeErr := reg.Close(context.Background())
-				return nil, errors.Join(err, closeErr)
-			}
-		}
-
-		built, err := ConstructCache(cfg, deps)
+		built, err := ConstructCache(entry.Config, deps)
 		if err != nil {
 			closeErr := reg.Close(context.Background())
 			return nil, errors.Join(err, closeErr)
@@ -235,6 +225,13 @@ func withoutCacheID(rawConfig map[string]interface{}) map[string]interface{} {
 }
 
 func ConstructCache(rawConfig map[string]interface{}, deps cache.CacheDeps) (cache.Cache, error) {
+	resolver := placeholder.NewResolver(context.Background(), deps.Secreter)
+
+	rawConfig, err := configload.ResolveEntityKeys(rawConfig, resolver)
+	if err != nil {
+		return nil, err
+	}
+
 	name, ok := rawConfig["name"].(string)
 
 	if ok {
@@ -251,7 +248,7 @@ func ConstructCache(rawConfig map[string]interface{}, deps cache.CacheDeps) (cac
 		reg, ok := cache.RegisteredCache(name)
 		if ok {
 			cfg := reg.InitializeConfig()
-			err := configload.DecodeEntityConfig(withoutCacheID(rawConfig), &cfg)
+			err := configload.DecodeEntityConfig(withoutCacheID(rawConfig), &cfg, resolver)
 			if err != nil {
 				return nil, err
 			}

@@ -22,6 +22,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/datastore"
+	"github.com/Michad/tilegroxy/pkg/entities/secret"
 )
 
 type Provider interface {
@@ -55,6 +56,8 @@ type ProviderDeps struct {
 	// Lets nesting providers reach sibling layers
 	LayerGroup LayerGroup
 	Datastores datastore.DatastoreRegistry
+	// Resolves secret.NAME in nested provider configs. Nil disables secrets
+	Secreter secret.Secreter
 }
 
 type ProviderRegistration interface {

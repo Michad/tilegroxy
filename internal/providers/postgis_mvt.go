@@ -24,6 +24,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Michad/tilegroxy/internal/placeholder"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
@@ -43,7 +44,7 @@ type PostgisMvtConfig struct {
 	GID        string
 	Geometry   string
 	Attributes []string
-	Filter     string
+	Filter     placeholder.Template
 	SourceSRID uint
 	Limit      uint16
 }
@@ -171,17 +172,17 @@ func (t PostgisMvt) GenerateTile(ctx context.Context, _ layer.ProviderContext, r
 	// The explicit BBox check is redundant with ST_Intersects but sometimes helps the query planner
 	query += ` WHERE "` + t.Geometry + `" && ST_Transform($5::geometry, $1::integer) AND ST_Intersects("` + t.Geometry + `", ST_Transform($5::geometry, $1::integer))`
 
-	if t.Filter != "" {
-		preparedFilter, replacements, err := replacePlaceholdersInString(ctx, req, t.Filter, len(params)+1, false, t.SourceSRID)
+	if !t.Filter.IsEmpty() {
+		vars, err := tileVars(req, false, t.SourceSRID)
 		if err != nil {
 			return nil, err
 		}
 
-		query += " AND " + preparedFilter
+		sink := placeholder.NewSQLSink(len(params) + 1)
+		t.Filter.Render(ctx, vars, sink)
 
-		if len(replacements) > 0 {
-			params = slices.Concat(params, replacements)
-		}
+		query += " AND " + sink.String()
+		params = slices.Concat(params, sink.Params())
 	}
 
 	if t.Limit > 0 {

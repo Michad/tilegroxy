@@ -21,6 +21,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/datastore"
+	"github.com/Michad/tilegroxy/pkg/entities/secret"
 )
 
 type Cache interface {
@@ -34,6 +35,8 @@ type Cache interface {
 type CacheDeps struct {
 	ErrorMessages config.ErrorMessages
 	Datastores    datastore.DatastoreRegistry
+	// Resolves secret.NAME in nested cache configs. Nil disables secrets
+	Secreter secret.Secreter
 }
 
 type CacheRegistration interface {

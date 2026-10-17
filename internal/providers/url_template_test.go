@@ -32,7 +32,7 @@ func Test_UrlTemplateValidate(t *testing.T) {
 	require.Error(t, err)
 
 	var clientConfig = config.ClientConfig{StatusCodes: []int{400}, MaxLength: 2000, ContentTypes: []string{"image/png"}, UnknownLength: new(true)}
-	p, err = URLTemplateRegistration{}.Initialize(URLTemplateConfig{Template: "url here"}, layer.ProviderDeps{ClientConfig: clientConfig, ErrorMessages: testErrMessages})
+	p, err = URLTemplateRegistration{}.Initialize(URLTemplateConfig{Template: mustTemplate("url here")}, layer.ProviderDeps{ClientConfig: clientConfig, ErrorMessages: testErrMessages})
 	assert.NotNil(t, p)
 	require.NoError(t, err)
 }

@@ -27,6 +27,7 @@ import (
 	"github.com/Michad/tilegroxy/internal/datastores"
 	"github.com/Michad/tilegroxy/internal/entities"
 	"github.com/Michad/tilegroxy/internal/layers"
+	"github.com/Michad/tilegroxy/internal/placeholder"
 	"github.com/Michad/tilegroxy/internal/secrets"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/analytics"
@@ -42,12 +43,17 @@ func configToEntities(ctx context.Context, cfg config.Config, reloadFunc func(re
 
 	built := &entities.Entities{}
 
-	cfg.Secret = configload.ReplaceEnv(cfg.Secret)
 	secreter, err := secrets.ConstructSecreter(cfg.Secret, secret.SecreterDeps{ErrorMessages: cfg.Error.Messages, ReloadFunc: reloadFunc})
 	if err != nil {
 		return nil, fmt.Errorf("error constructing secret: %w", err)
 	}
 	built.Secreter = secreter
+
+	// Only reaches typed sections. Entity sections are raw maps, resolved as each entity decodes them
+	if err := placeholder.NewResolver(ctx, secreter).ResolveInto(&cfg); err != nil {
+		return nil, closeAndReturn(built, err)
+	}
+	built.Config = &cfg
 
 	datastores, err := datastores.ConstructDatastoreRegistry(ctx, cfg.Datastores, secreter, cfg.Error.Messages)
 	if err != nil {
@@ -61,16 +67,7 @@ func configToEntities(ctx context.Context, cfg config.Config, reloadFunc func(re
 	}
 	built.Caches = caches
 
-	cfg.Authentication = configload.ReplaceEnv(cfg.Authentication)
-	cfg.Authentication, err = configload.ReplaceConfigValues(cfg.Authentication, "secret", func(k string) (string, error) {
-		v, _, lookupErr := secreter.Lookup(ctx, k)
-		return v, lookupErr
-	})
-	if err != nil {
-		return nil, closeAndReturn(built, err)
-	}
-
-	auth, err := authentications.ConstructAuth(cfg.Authentication, authentication.AuthenticationDeps{ErrorMessages: cfg.Error.Messages, ClientConfig: cfg.Client, Datastores: datastores})
+	auth, err := authentications.ConstructAuth(cfg.Authentication, authentication.AuthenticationDeps{ErrorMessages: cfg.Error.Messages, ClientConfig: cfg.Client, Datastores: datastores, Secreter: secreter})
 	if err != nil {
 		return nil, closeAndReturn(built, fmt.Errorf("error constructing auth: %w", err))
 	}
@@ -90,7 +87,7 @@ func configToEntities(ctx context.Context, cfg config.Config, reloadFunc func(re
 
 	// Built only to validate, then discarded. Otherwise a bad check would first fail when serve binds the health port
 	for _, checkCfg := range cfg.Health.Checks {
-		if _, err := checks.ConstructHealthCheck(checkCfg, layerGroup, caches, &cfg); err != nil {
+		if _, err := checks.ConstructHealthCheck(checkCfg, layerGroup, caches, &cfg, secreter); err != nil {
 			return nil, closeAndReturn(built, fmt.Errorf("error constructing health check: %w", err))
 		}
 	}

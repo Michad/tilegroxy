@@ -15,10 +15,12 @@
 package secrets
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"strings"
 
+	"github.com/Michad/tilegroxy/internal/placeholder"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/go-viper/mapstructure/v2"
 )
@@ -45,6 +47,12 @@ func parseWatchConfig(rawConfig map[string]interface{}, batchSize int, errorMess
 			continue
 		}
 		stripped[k] = v
+	}
+
+	// Resolved before the weakly typed decode, so env.NAME works for the numeric keys too
+	generic, err := placeholder.NewResolver(context.Background(), nil).ResolveRaw(generic)
+	if err != nil {
+		return secretWatchConfig{}, nil, err
 	}
 
 	var cfg secretWatchConfig

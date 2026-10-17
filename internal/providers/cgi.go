@@ -27,6 +27,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/Michad/tilegroxy/internal/placeholder"
 	"github.com/Michad/tilegroxy/internal/util"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -34,14 +35,14 @@ import (
 )
 
 type CGIConfig struct {
-	Exec           string              // The path to the CGI executable
-	Args           []string            // Arguments to pass into the executable in standard "split on spaces" format
-	URI            string              // The URI (path + query) to pass into the CGI for the fake request - think mod_rewrite style invocation of the CGI
-	Domain         string              // The host to pass into the CGI for the fake request. Defaults to localhost
-	Headers        map[string][]string // Extra headers to pass into the CGI for the fake request
-	Env            map[string]string   // Environment variables to supply to the CGI invocations. If the value is an empty string it passes along the value from the main tilegroxy invocation
-	WorkingDir     string              // Working directory for the CGI invocation
-	InvalidAsError bool                // If true, if the CGI response includes a content type that isn't in the Client's list of acceptable content types then it treats the response body as an error message
+	Exec           string               // The path to the CGI executable
+	Args           []string             // Arguments to pass into the executable in standard "split on spaces" format
+	URI            placeholder.Template // The URI (path + query) to pass into the CGI for the fake request - think mod_rewrite style invocation of the CGI
+	Domain         string               // The host to pass into the CGI for the fake request. Defaults to localhost
+	Headers        map[string][]string  // Extra headers to pass into the CGI for the fake request
+	Env            map[string]string    // Environment variables to supply to the CGI invocations. If the value is an empty string it passes along the value from the main tilegroxy invocation
+	WorkingDir     string               // Working directory for the CGI invocation
+	InvalidAsError bool                 // If true, if the CGI response includes a content type that isn't in the Client's list of acceptable content types then it treats the response body as an error message
 }
 
 type CGI struct {
@@ -119,7 +120,7 @@ func (s CGIRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.
 		return nil, fmt.Errorf(deps.ErrorMessages.ParamRequired, "provider.cgi.exec")
 	}
 
-	if cfg.URI == "" {
+	if cfg.URI.IsEmpty() {
 		return nil, fmt.Errorf(deps.ErrorMessages.ParamRequired, "provider.cgi.uri")
 	}
 
@@ -153,22 +154,19 @@ func (t CGI) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.Provider
 }
 
 func (t CGI) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
-	var err error
-
 	h := t.handler
 
 	stderr := &SLogWriter{ctx: ctx, level: slog.LevelError.Level()}
 	h.Stderr = stderr
 	h.Logger = log.New(stderr, "", 0)
 
-	uri := t.URI
-	if uri[0] != '/' {
-		uri = "/" + uri
-	}
-
-	uri, err = replaceURLPlaceholders(ctx, tileRequest, uri, false, pkg.SRIDWGS84)
+	uri, err := replaceURLPlaceholders(ctx, tileRequest, t.URI, false, pkg.SRIDWGS84)
 	if err != nil {
 		return nil, err
+	}
+
+	if !strings.HasPrefix(uri, "/") {
+		uri = "/" + uri
 	}
 
 	slog.DebugContext(ctx, fmt.Sprintf("Calling CGI via %v", util.RedactURLForLog(uri)))

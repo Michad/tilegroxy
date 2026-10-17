@@ -18,16 +18,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"math"
-	"net/url"
-	"os"
-	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/Michad/tilegroxy/internal/images"
+	"github.com/Michad/tilegroxy/internal/placeholder"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
@@ -35,189 +31,33 @@ import (
 
 const mimePng = "image/png"
 
-var envRegex = regexp.MustCompile(`{env\.[^{}}]*}`)
-var ctxRegex = regexp.MustCompile(`{ctx\.[^{}}]*}`)
-var lyrRegex = regexp.MustCompile(`{layer\.[^{}}]*}`)
-
 const mvtContentType = "application/vnd.mapbox-vector-tile"
 const mltContentType = images.MltContentType
 
-// Lets callers splicing a value into something else, like a URL, decide whether it needs escaping
-type placeholderSource int
-
-const (
-	// Operator-controlled, so trusted
-	sourceEnv placeholderSource = iota
-	// From HTTP headers, so User input
-	sourceCtx
-	// From pattern matches against the request path, so User input
-	sourceLayer
-)
-
-func replaceURLPlaceholders(ctx context.Context, tileRequest pkg.TileRequest, rawURL string, invertY bool, srid uint) (string, error) {
-	// $N is assigned in a fixed source order, so counts are enough to classify each. postgis needs only plain values
-	envCount := len(envRegex.FindAllString(rawURL, -1))
-	ctxCount := len(ctxRegex.FindAllString(rawURL, -1))
-
-	rawURL, replacements, err := replacePlaceholdersInString(ctx, tileRequest, rawURL, 0, invertY, srid)
-
-	if err != nil {
-		return "", err
-	}
-
-	sourceFor := func(idx int) placeholderSource {
-		switch {
-		case idx < envCount:
-			return sourceEnv
-		case idx < envCount+ctxCount:
-			return sourceCtx
-		default:
-			return sourceLayer
-		}
-	}
-
-	// One scan so substituted text is never re-examined. Repeated passes could splice a "$0" from User input into a secret
-	var out strings.Builder
-	queryStart := strings.Index(rawURL, "?")
-
-	for i := 0; i < len(rawURL); {
-		if rawURL[i] != '$' {
-			out.WriteByte(rawURL[i])
-			i++
-			continue
-		}
-
-		// Longest digit run so "$10" is index 10, not index 1 then "0"
-		j := i + 1
-		for j < len(rawURL) && rawURL[j] >= '0' && rawURL[j] <= '9' {
-			j++
-		}
-
-		idx, err := strconv.Atoi(rawURL[i+1 : j])
-		if j == i+1 || err != nil || idx >= len(replacements) {
-			// A literal "$" or an out of range index passes through untouched
-			out.WriteByte(rawURL[i])
-			i++
-			continue
-		}
-
-		value := fmt.Sprint(replacements[idx])
-
-		// {env.*} may inject a whole base URL. Request-derived values are escaped so "?", "#" or "/" can't alter the URL
-		if sourceFor(idx) == sourceEnv {
-			out.WriteString(value)
-		} else {
-			// Measured against the template so a "?" inside an {env.*} value can't change how later values are escaped
-			if queryStart >= 0 && i > queryStart {
-				out.WriteString(url.QueryEscape(value))
-			} else {
-				out.WriteString(url.PathEscape(value))
-			}
-		}
-
-		i = j
-	}
-
-	return out.String(), nil
-}
-
-// E.g. "a {env.foo}" -> "a $1" with {"$1": "bar"}. Coordinates are inlined. $N follows env, ctx, then layer order
-func replacePlaceholdersInString(ctx context.Context, tileRequest pkg.TileRequest, str string, startParamIndex int, invertY bool, srid uint) (string, []any, error) {
+func tileVars(tileRequest pkg.TileRequest, invertY bool, srid uint) (placeholder.TileVars, error) {
 	b, err := tileRequest.GetBoundsProjection(srid)
-
 	if err != nil {
-		return "", nil, err
+		return placeholder.TileVars{}, err
 	}
-
-	replacements := make([]any, 0)
-	paramIndex := startParamIndex
 
 	y := tileRequest.Y
 	if invertY {
 		y = int(math.Exp2(float64(tileRequest.Z))) - y - 1
 	}
 
-	if strings.Contains(str, "{env.") {
-		envMatches := envRegex.FindAllString(str, -1)
+	return placeholder.TileVars{Z: tileRequest.Z, X: tileRequest.X, Y: y, Bounds: *b, LayerName: tileRequest.LayerName}, nil
+}
 
-		for _, envMatch := range envMatches {
-			envVar := envMatch[5 : len(envMatch)-1]
-
-			param := "$" + strconv.Itoa(paramIndex)
-			envVarVal, envVarExists := os.LookupEnv(envVar)
-
-			if !envVarExists {
-				slog.Log(ctx, slog.LevelWarn, fmt.Sprintf("env variable %v could not be resolved while serving layer %v", envVar, tileRequest.LayerName))
-			}
-
-			replacements = append(replacements, envVarVal)
-			str = strings.Replace(str, envMatch, param, 1)
-			paramIndex++
-		}
+func replaceURLPlaceholders(ctx context.Context, tileRequest pkg.TileRequest, tmpl placeholder.Template, invertY bool, srid uint) (string, error) {
+	vars, err := tileVars(tileRequest, invertY, srid)
+	if err != nil {
+		return "", err
 	}
 
-	if strings.Contains(str, "{ctx.") {
-		ctxMatches := ctxRegex.FindAllString(str, -1)
+	var sink placeholder.URLSink
+	tmpl.Render(ctx, vars, &sink)
 
-		for _, ctxMatch := range ctxMatches {
-			ctxVar := ctxMatch[5 : len(ctxMatch)-1]
-
-			val := ctx.Value(ctxVar)
-			valVal := reflect.ValueOf(val)
-
-			if valVal.Kind() == reflect.Pointer {
-				val = valVal.Elem().Interface()
-			}
-
-			if val == nil {
-				slog.Log(ctx, slog.LevelWarn, fmt.Sprintf("ctx variable %v could not be resolved while serving layer %v", ctxVar, tileRequest.LayerName))
-			}
-
-			param := "$" + strconv.Itoa(paramIndex)
-			replacements = append(replacements, fmt.Sprint(val))
-			str = strings.Replace(str, ctxMatch, param, 1)
-			paramIndex++
-		}
-	}
-
-	if strings.Contains(str, "{layer.") {
-		layerMatches := lyrRegex.FindAllString(str, -1)
-
-		lpm, _ := pkg.LayerPatternMatchesFromContext(ctx)
-
-		for _, layerMatch := range layerMatches {
-			layerVar := layerMatch[7 : len(layerMatch)-1]
-
-			param := "$" + strconv.Itoa(paramIndex)
-			var val any
-			valExists := false
-
-			if lpm != nil {
-				val, valExists = (*lpm)[layerVar]
-			}
-
-			if !valExists {
-				slog.Log(ctx, slog.LevelWarn, fmt.Sprintf("layer variable %v could not be resolved while serving layer %v", layerVar, tileRequest.LayerName))
-			}
-
-			replacements = append(replacements, val)
-			str = strings.Replace(str, layerMatch, param, 1)
-			paramIndex++
-		}
-	}
-
-	str = strings.ReplaceAll(str, "{Z}", strconv.Itoa(tileRequest.Z))
-	str = strings.ReplaceAll(str, "{z}", strconv.Itoa(tileRequest.Z))
-	str = strings.ReplaceAll(str, "{Y}", strconv.Itoa(y))
-	str = strings.ReplaceAll(str, "{y}", strconv.Itoa(y))
-	str = strings.ReplaceAll(str, "{X}", strconv.Itoa(tileRequest.X))
-	str = strings.ReplaceAll(str, "{x}", strconv.Itoa(tileRequest.X))
-
-	str = strings.ReplaceAll(str, "{xmin}", fmt.Sprintf("%f", b.West))
-	str = strings.ReplaceAll(str, "{xmax}", fmt.Sprintf("%f", b.East))
-	str = strings.ReplaceAll(str, "{ymin}", fmt.Sprintf("%f", b.South))
-	str = strings.ReplaceAll(str, "{ymax}", fmt.Sprintf("%f", b.North))
-	return str, replacements, nil
+	return sink.String(), nil
 }
 
 // Lives in pkg so library consumers writing Go providers can call it too

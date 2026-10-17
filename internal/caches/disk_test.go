@@ -198,7 +198,7 @@ func decodeDiskFileMode(t *testing.T, raw string) (FileMode, error) {
 	require.NoError(t, err)
 
 	var cfg DiskConfig
-	err = configload.DecodeEntityConfig(c.Cache.(map[string]interface{}), &cfg)
+	err = configload.DecodeEntityConfig(c.Cache.(map[string]interface{}), &cfg, nil)
 	return cfg.FileMode, err
 }
 
@@ -237,7 +237,7 @@ func TestDisk_FileModeAppliedToEntries(t *testing.T) {
 	dir := t.TempDir()
 
 	var cfg DiskConfig
-	require.NoError(t, configload.DecodeEntityConfig(map[string]interface{}{"path": dir, "filemode": "0640"}, &cfg))
+	require.NoError(t, configload.DecodeEntityConfig(map[string]interface{}{"path": dir, "filemode": "0640"}, &cfg, nil))
 
 	c, err := DiskRegistration{}.Initialize(cfg, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)

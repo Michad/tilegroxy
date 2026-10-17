@@ -46,7 +46,7 @@ func CheckConfig(cfg *config.Config, opts CheckOptions, out io.Writer) error {
 	// Checking establishes real connections, so release them rather than relying on process exit
 	defer ent.Close(pkg.BackgroundContext()) //nolint:errcheck // Nothing actionable during a config check
 
-	if err := server.ValidateHealthChecks(cfg, ent); err != nil {
+	if err := server.ValidateHealthChecks(ent.Config, ent); err != nil {
 		return err
 	}
 
