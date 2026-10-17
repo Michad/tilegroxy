@@ -2,7 +2,7 @@ server:
   tilejson:
     enabled: true
 datastores:
-  - name: postgresql # <1>
+  - name: postgresql
     id: history
     host: db.internal
     user: tilegroxy
@@ -13,21 +13,21 @@ cache:
   path: /var/cache/tilegroxy
 analytics:
   name: postgresql
-  datastore: history # <2>
+  datastore: history
   table: tile_events
   fields:
-    - layerparams # <3>
+    - layerparams
 layers:
   - id: boundaries
-    pattern: boundaries_{year} # <4>
+    pattern: boundaries_{year}
     paramValidator:
-      year: "1[6-9][0-9]{2}|20[0-9]{2}" # <5>
+      year: "1[6-9][0-9]{2}|20[0-9]{2}"
     examples:
       - boundaries_1790
       - boundaries_1860
-    maxzoom: 12 # <6>
-    cacheversion: "2" # <7>
-    vectorlayers: # <8>
+    maxzoom: 12
+    cacheversion: "2"
+    vectorlayers:
       - id: states
         fields:
           name: State or territory name
@@ -35,16 +35,16 @@ layers:
         fields:
           full_name: County name including state
     provider:
-      name: compositemvt # <9>
+      name: compositemvt
       providers:
         - name: postgismvt
           datastore: history
-          layer: states # <10>
+          layer: states
           table: public.us_histstateterr
           gid: id_num
           attributes:
             - name
-          filter: "to_date({layer.year}, 'yyyy') BETWEEN start_date AND end_date" # <11>
+          filter: "to_date({layer.year}, 'yyyy') BETWEEN start_date AND end_date"
         - name: postgismvt
           datastore: history
           layer: counties
@@ -53,4 +53,4 @@ layers:
           attributes:
             - full_name
           filter: "to_date({layer.year}, 'yyyy') BETWEEN start_date AND end_date"
-          limit: 5000 # <12>
+          limit: 5000

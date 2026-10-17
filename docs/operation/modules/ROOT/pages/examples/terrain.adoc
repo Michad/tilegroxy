@@ -14,12 +14,15 @@ YAML::
 ----
 include::example$terrain.yml[]
 ----
-<1> A tile has 65,536 pixels.  Splitting them across 8 goroutines makes each tile faster to produce at the cost of more CPU per request.
-<2> The function is called once per pixel.  Darker pixels are lower pressure, meaning higher ground.  See xref:configuration/provider/transform.adoc[Transform].
-<3> `+{env.MAPBOX_KEY}+` keeps the token out of the configuration file.  The `pngraw` format matters, as other formats can alter the pixel values and so the decoded elevation.
-<4> Mapbox returns an error for tiles entirely over the sea.  This color decodes to an elevation of 0, so sea level pressure is shown instead of an error.
-<5> Mixes the two images half and half rather than drawing one over the other, since both layers are fully opaque.
-<6> Each referenced layer is cached on its own, so `osm` and `air_pressure` can also be requested directly without generating them again.
++
+// tag::callouts[]
+. A tile has 65,536 pixels.  Splitting them across 8 goroutines makes each tile faster to produce at the cost of more CPU per request. @/threads/
+. The function is called once per pixel.  Darker pixels are lower pressure, meaning higher ground.  See xref:configuration/provider/transform.adoc[Transform]. @/formula/
+. `+{env.MAPBOX_KEY}+` keeps the token out of the configuration file.  The `pngraw` format matters, as other formats can alter the pixel values and so the decoded elevation. @/api.mapbox.com/
+. Mapbox returns an error for tiles entirely over the sea.  This color decodes to an elevation of 0, so sea level pressure is shown instead of an error. @/0186a0/
+. Mixes the two images half and half rather than drawing one over the other, since both layers are fully opaque. @/mode"?: "?opacity/
+. Each referenced layer is cached on its own, so `osm` and `air_pressure` can also be requested directly without generating them again. @/name"?: "?ref/
+// end::callouts[]
 
 JSON::
 +
@@ -28,12 +31,7 @@ JSON::
 include::example$terrain.json[]
 ----
 +
-. A tile has 65,536 pixels.  Splitting them across 8 goroutines makes each tile faster to produce at the cost of more CPU per request. @/"threads"/
-. The function is called once per pixel.  Darker pixels are lower pressure, meaning higher ground.  See xref:configuration/provider/transform.adoc[Transform]. @/"formula"/
-. `+{env.MAPBOX_KEY}+` keeps the token out of the configuration file.  The `pngraw` format matters, as other formats can alter the pixel values and so the decoded elevation. @/api.mapbox.com/
-. Mapbox returns an error for tiles entirely over the sea.  This color decodes to an elevation of 0, so sea level pressure is shown instead of an error. @/0186a0/
-. Mixes the two images half and half rather than drawing one over the other, since both layers are fully opaque. @/"mode": "opacity"/
-. Each referenced layer is cached on its own, so `osm` and `air_pressure` can also be requested directly without generating them again. @/"name": "ref"/
+include::terrain.adoc[tag=callouts]
 ====
 
 == Try it

@@ -37,7 +37,7 @@ Commands for link:https://tilegroxy.com/operation/commands/seed.html[seeding] an
 +++</li><li>+++
 Run as link:https://tilegroxy.com/operation/configuration/encryption.html[HTTPS] including Let's Encrypt (ACME) support
 +++</li><li>+++
-Configurable via file or etcd with link:https://tilegroxy.com/operation/configuration/index.html[environment variable] override,
+Configurable via file or etcd with link:https://tilegroxy.com/operation/configuration.html#conventions[environment variable] override,
 link:https://tilegroxy.com/operation/configuration/secret/index.html[externalizable secrets], and link:https://tilegroxy.com/operation/reloading.html[zero-downtime reload]
 +++</li><li>+++
 link:https://tilegroxy.com/operation/get-it.html#docker[Container deployment]
@@ -59,7 +59,7 @@ Supports link:https://tilegroxy.com/operation/tilejson.html[TileJSON]
 
 Documentation is served by tilegroxy at `/docs` when running in dev (enable this behaviour by setting `Server.Production=false` in config or `SERVER_PRODUCTION=false` as an environment variable). Documentation is powered by link:https://antora.org[Antora] with raw AsciiDoc located in link:./docs[docs]
 
-A link:https://tilegroxy.com/operation/configuration/index.html#lazy-button[Skill] is available to help you get started with generating your configuration. However, do make sure you understand what it produces before you run it.
+A link:https://tilegroxy.com/operation/configuration.html#lazy-button[Skill] is available to help you get started with generating your configuration. However, do make sure you understand what it produces before you run it.
 
 
 :leveloffset: 1

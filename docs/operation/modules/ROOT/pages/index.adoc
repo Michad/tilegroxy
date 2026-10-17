@@ -106,7 +106,7 @@ docker run --rm -p 8080:8080 -e SERVER_BINDHOST=0.0.0.0 -v ./tilegroxy.yml:/tile
 * Minimal HTTP footprint to decrease security exposure
 
 .Operate
-* Configurable via file or etcd with xref:configuration/index.adoc[environment variable] override, xref:configuration/secret/index.adoc[externalizable secrets], and xref:reloading.adoc[zero-downtime reload]
+* Configurable via file or etcd with xref:configuration.adoc#conventions[environment variable] override, xref:configuration/secret/index.adoc[externalizable secrets], and xref:reloading.adoc[zero-downtime reload]
 * xref:get-it.adoc#docker[Container deployment]
 * Traces, metrics, and logs via xref:configuration/telemetry.adoc[OpenTelemetry]
 * Per-layer usage xref:configuration/analytics/index.adoc[analytics] to ClickHouse, PostgreSQL, or a custom destination

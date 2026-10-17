@@ -2,11 +2,11 @@ server:
   production: false
   cors:
     enabled: true
-    wildcardorigin: true # <1>
+    wildcardorigin: true
   tilejson:
-    enabled: true # <2>
+    enabled: true
 client:
-  maxlength: 52428800 # <3>
+  maxlength: 52428800
 cache:
   name: memory
   maxsize: 10000
@@ -15,7 +15,7 @@ layers:
   - id: overture_base
     provider:
       name: pmtiles
-      url: https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-08-19.0/base.pmtiles # <4>
+      url: https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-08-19.0/base.pmtiles
   - id: overture_transportation
     provider:
       name: pmtiles
@@ -26,15 +26,15 @@ layers:
       url: https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-08-19.0/buildings.pmtiles
   - id: overture_basemap
     provider:
-      name: compositemvt # <5>
+      name: compositemvt
       providers:
-        - name: fallback # <6>
+        - name: fallback
           primary:
-            name: ref # <7>
+            name: ref
             layer: overture_base
           secondary:
             name: static
-            image: embedded:empty.mvt # <8>
+            image: embedded:empty.mvt
         - name: fallback
           primary:
             name: ref

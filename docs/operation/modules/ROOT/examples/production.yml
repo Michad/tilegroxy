@@ -1,30 +1,30 @@
 server:
-  bindhost: 0.0.0.0 # <1>
-  production: true # <2>
+  bindhost: 0.0.0.0
+  production: true
   timeout: 30
-  cors: # <3>
+  cors:
     enabled: true
     origins:
       - https://maps.example.com
-  cachecontrol: # <4>
+  cachecontrol:
     enabled: true
     visibility: private
     maxage: 3600
 client:
-  useragent: example-maps/1.0 (ops@example.com) # <5>
+  useragent: example-maps/1.0 (ops@example.com)
   timeout: 5
 logging:
   main:
-    level: warn # <6>
+    level: warn
     format: json
   access:
     console: false
     path: /var/log/tilegroxy/access.log
-  audit: # <7>
+  audit:
     enabled: true
     console: false
     path: /var/log/tilegroxy/audit.log
-health: # <8>
+health:
   enabled: true
   port: 3000
   checks:
@@ -37,15 +37,15 @@ health: # <8>
       delay: 60
     - name: cache
       delay: 600
-authentication: # <9>
+authentication:
   name: jwt
   key: env.JWT_SIGNING_KEY
   algorithms:
     - HS256
   expectedissuer: https://auth.example.com
 error:
-  mode: image # <10>
-cache: # <11>
+  mode: image
+cache:
   name: multi
   tiers:
     - name: memory
