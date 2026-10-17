@@ -39,7 +39,26 @@ Callouts can be attached to a listing from outside the block using link:https://
 
 Inside tabs, attach the list to the listing with a `+` line.  A token that matches nothing is logged and skipped rather than failing the build, so check the rendered page.
 
-The configurations on the Examples pages are stored as files in `docs/operation/modules/ROOT/examples` and pulled in with `include::example$NAME.yml[]`.  Their callouts are YAML comments such as `# <1>`, so each file remains a valid configuration.  After changing one, run it through `tilegroxy config check` and regenerate the matching `.json` file so the two stay equivalent.
+When the same configuration is shown in YAML and JSON tabs, write the list once.  Use expressions that match both formats, such as `@/cache"?: "?none/`, and wrap the list in tags under the YAML listing.  The JSON tab then includes the page itself:
+
+[,asciidoc]
+....
++
+// tag::callouts[]
+. Disables caching @/cache"?: "?none/
+// end::callouts[]
+
+JSON::
++
+[,json]
+----
+\include::example$NAME.json[]
+----
++
+\include::NAME.adoc[tag=callouts]
+....
+
+The configurations on the Examples pages are stored as files in `docs/operation/modules/ROOT/examples` and pulled in with `include::example$NAME.yml[]`.  Keep callout markers out of these files so each one can be copied as is.  After changing one, run it through `tilegroxy config check` and regenerate the matching `.json` file so the two stay equivalent.
 
 Tables with 8 or more body rows get a filter box above them that hides rows not containing every word typed.  Add the `filterable` role (`[.filterable]`) to give a shorter table one or `nofilter` to remove it.  Tables using row spans are skipped.  The script and stylesheet are provided by the UI bundle.
 

@@ -169,10 +169,12 @@ layers:
 datastores: ...
 ----
 +
+// tag::callouts[]
 . Every layer uses the `multi` cache unless it picks another. It caches in memory first and then falls back on an S3 bucket. @/defaultcache/
-. `public` doesn't set a cache, so it uses the default. @/id: public/
-. `per-user` uses the `tenanted` cache. That's the same `multi` cache underneath, but entries are segregated by tenant. @/cache: tenanted/
-. `uncached` uses the no-op `none` cache. Alternatively, the `skipcache` parameter avoids needing to define a `none` cache at the top level. @/cache: none/
+. `public` doesn't set a cache, so it uses the default. @/id"?: "?public/
+. `per-user` uses the `tenanted` cache. That's the same `multi` cache underneath, but entries are segregated by tenant. @/cache"?: "?tenanted/
+. `uncached` uses the no-op `none` cache. Alternatively, the `skipcache` parameter avoids needing to define a `none` cache at the top level. @/cache"?: "?none/
+// end::callouts[]
 
 JSON::
 +
@@ -231,8 +233,5 @@ JSON::
 }
 ----
 +
-. Every layer uses the `multi` cache unless it picks another. It caches in memory first and then falls back on an S3 bucket. @/"defaultcache"/
-. `public` doesn't set a cache, so it uses the default. @/"id": "public"/
-. `per-user` uses the `tenanted` cache. That's the same `multi` cache underneath, but entries are segregated by tenant. @/"cache": "tenanted"/
-. `uncached` uses the no-op `none` cache. Alternatively, the `skipcache` parameter avoids needing to define a `none` cache at the top level. @/"cache": "none"/
+include::index.adoc[tag=callouts]
 ====
