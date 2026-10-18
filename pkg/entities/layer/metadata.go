@@ -27,7 +27,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
 )
 
-// Description is what a provider knows about its tiles. It is advertised to clients but never enforced.
+// What a provider knows about its tiles. Advertised to clients but never enforced
 type Description struct {
 	DataType config.DataType
 	MinZoom  *int
@@ -36,17 +36,17 @@ type Description struct {
 	config.TileJSONMetadata
 }
 
-// MetadataProvider is optionally implemented by providers that can describe their own tiles.
+// Optional, for providers that can describe their own tiles
 type MetadataProvider interface {
 	Metadata() Description
 }
 
-// Parent is implemented by providers that nest other providers, so the tree can be walked generically.
+// Providers that nest others, so the tree can be walked generically
 type Parent interface {
 	Children() []Provider
 }
 
-// DescribeTree lets a MetadataProvider speak for itself, passes a single child through, and unions several.
+// A MetadataProvider speaks for itself, a single child passes through, and several are unioned
 func DescribeTree(p Provider) Description {
 	if m, ok := p.(MetadataProvider); ok {
 		return m.Metadata()
@@ -70,7 +70,7 @@ func DescribeTree(p Provider) Description {
 	return Union(descriptions...)
 }
 
-// Union leaves a field unknown if any description does, since that source could cover anything.
+// A field is unknown if any description leaves it unknown, since that source could cover anything
 func Union(descriptions ...Description) Description {
 	if len(descriptions) == 0 {
 		return Description{}
@@ -100,7 +100,7 @@ func Union(descriptions ...Description) Description {
 	return merged
 }
 
-// Clip narrows a description to the given bounds, dropping a center that falls outside them.
+// Drops a center that falls outside the bounds
 func (d Description) Clip(bounds config.BoundsConfig) Description {
 	if bounds == (config.BoundsConfig{}) {
 		return d
@@ -120,7 +120,7 @@ func (d Description) Clip(bounds config.BoundsConfig) Description {
 	return d
 }
 
-// ZoomRange returns the advertised zoom levels with unset ends filled in.
+// Unset ends are filled in
 func (d Description) ZoomRange() (int, int) {
 	return zoomRange(d.MinZoom, d.MaxZoom)
 }
@@ -138,7 +138,7 @@ func zoomRange(minZoom, maxZoom *int) (int, int) {
 	return lo, hi
 }
 
-// CloseProvider closes a provider and every provider nested beneath it.
+// Also closes every provider nested beneath it
 func CloseProvider(ctx context.Context, p Provider) error {
 	errs := []error{lifecycle.CloseIfCloser(ctx, p)}
 
@@ -151,7 +151,7 @@ func CloseProvider(ctx context.Context, p Provider) error {
 	return errors.Join(errs...)
 }
 
-// A center is longitude, latitude, then an optional zoom.
+// Longitude, latitude, then an optional zoom
 const centerLatIndex = 1
 
 func centerWithin(center []float64, bounds config.BoundsConfig) bool {
@@ -164,7 +164,7 @@ func centerWithin(center []float64, bounds config.BoundsConfig) bool {
 	return lon >= bounds.West && lon <= bounds.East && lat >= bounds.South && lat <= bounds.North
 }
 
-// Unknown types are ignored, but two known types that disagree leave the union unknown.
+// Unknown types are ignored, but two known types that disagree leave the union unknown
 func unionDataType(a, b config.DataType) config.DataType {
 	switch {
 	case !isKnownDataType(a):
@@ -211,7 +211,7 @@ func appendUnique(existing []string, s string) []string {
 	return append(existing, s)
 }
 
-// Layers sharing an id are kept once since TileJSON treats the id as the source-layer name.
+// Layers sharing an id are kept once since TileJSON treats the id as the source-layer name
 func appendVectorLayers(existing, layers []config.VectorLayer) []config.VectorLayer {
 	for _, l := range layers {
 		if !slices.ContainsFunc(existing, func(e config.VectorLayer) bool { return e.ID == l.ID }) {

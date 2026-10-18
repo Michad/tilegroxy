@@ -23,11 +23,9 @@ import (
 	"time"
 )
 
-// How often Until rechecks its condition.
 const pollInterval = 50 * time.Millisecond
 
-// Scale stretches a timeout by TILEGROXY_E2E_TIMEOUT_SCALE so CI can be slower than a laptop
-// without every deadline being tuned tight.
+// Uses TILEGROXY_E2E_TIMEOUT_SCALE so CI can be slower than a laptop without tight deadlines
 func Scale(d time.Duration) time.Duration {
 	raw := os.Getenv("TILEGROXY_E2E_TIMEOUT_SCALE")
 	if raw == "" {
@@ -42,8 +40,7 @@ func Scale(d time.Duration) time.Duration {
 	return time.Duration(float64(d) * f)
 }
 
-// Until polls cond until it returns true or the timeout expires. Waiting is always a poll with a
-// deadline, never a fixed sleep, so a slow machine is slow rather than flaky.
+// Always a deadline poll, never a fixed sleep, so a slow machine is slow rather than flaky
 func Until(t *testing.T, timeout time.Duration, desc string, cond func() bool) {
 	t.Helper()
 

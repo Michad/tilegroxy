@@ -107,7 +107,7 @@ func TestMultiRemove(t *testing.T) {
 	validateNoLookup(t, mem2, tile)
 }
 
-// A tile left behind in any single tier would be served again on the next lookup.
+// A tile left in any single tier would be served again on the next lookup
 func TestMultiRemoveClearsTierWithOnlyCopy(t *testing.T) {
 	mem1, err := MemoryRegistration{}.Initialize(MemoryConfig{}, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)
@@ -121,7 +121,7 @@ func TestMultiRemoveClearsTierWithOnlyCopy(t *testing.T) {
 	img := makeImg(24)
 	require.NoError(t, mem2.Save(context.Background(), tile, &img))
 
-	// Only one tier held the tile, but the tile itself was still removed.
+	// Only one tier held the tile, but it still counts as removed
 	removed, err := multi.Remove(context.Background(), tile)
 	require.NoError(t, err)
 	require.True(t, removed)
@@ -129,7 +129,7 @@ func TestMultiRemoveClearsTierWithOnlyCopy(t *testing.T) {
 	validateNoLookup(t, multi, tile)
 }
 
-// A tier that's down shouldn't fail a request a later tier can serve.
+// A tier that's down shouldn't fail a request a later tier can serve
 func TestMultiLookupDegradedTierThenHit(t *testing.T) {
 	mem, err := MemoryRegistration{}.Initialize(MemoryConfig{}, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)

@@ -1,22 +1,17 @@
 = How to get it
-
-Tilegroxy is available as a standalone executable or a container image. It's recommended you utilize a container for any serious deployment while the standalone executable can be useful to run locally while building your configuration.
+:description: Tilegroxy is available as a standalone executable or a container image. It's recommended you utilize a container for any serious deployment while the standalone executable can be useful to run locally while building your configuration.
+:page-eyebrow: Get started
 
 == Building
 
 Tilegroxy builds as an executable binary with minimal dynamic dependencies. Prebuilt binaries are available from https://github.com/Michad/tilegroxy/releases[Github].
 
-Building tilegroxy yourself requires a bash-like shell with go, node, git, make, and standard POSIX utilities like date.  It uses a conventional link:https://github.com/Michad/tilegroxy/blob/main/Makefile[Makefile] workflow:
+Building tilegroxy yourself requires a bash-like shell with go, node, git, make, and standard POSIX utilities like date.  It uses a conventional link:https://github.com/Michad/tilegroxy/blob/main/Makefile[Makefile] workflow.
 
-Build with
-
+.Build and install
+[,shell]
 ----
 make
-----
-
-then install with
-
-----
 sudo make install
 ----
 
@@ -26,6 +21,7 @@ Once installed, tilegroxy can be invoked via the available link:https://tilegrox
 
 The build includes integration tests that use https://golang.testcontainers.org/[testcontainers].  This requires you have either docker or podman installed and running. If you encounter difficulties running these tests it's recommended you use a prebuilt binary.  That said, you can also build with just unit tests using:
 
+[,shell]
 ----
 make clean build unit
 ----
@@ -38,30 +34,33 @@ Tilegroxy is available as a container image on the Github container repository.
 
 You can pull the most recent versioned release with the `latest` tag and the very latest (and maybe buggy) build with the `edge` tag. Tags are also available for version numbers.  https://github.com/Michad/tilegroxy/pkgs/container/tilegroxy[See here for a full list].  Tags for just the major version, such as `1`, pick up new releases without crossing a breaking change as described in xref:compatibility.adoc[Compatibility].
 
-For example:
-
+.Pull the latest release
+[,shell]
 ----
 docker pull ghcr.io/michad/tilegroxy:latest
 ----
 
-To then run tilegroxy:
-
+.Run a command in the container
+[,shell]
 ----
 docker run --rm -v ./test_config.yml:/tilegroxy/tilegroxy.yml:Z ghcr.io/michad/tilegroxy seed -l osm -z 0 -v
 ----
 
 You can of course build the docker image yourself:
 
+.Build the image
+[,shell]
 ----
 docker build . -t tilegroxy
 ----
 
-An example link:https://github.com/Michad/tilegroxy/blob/main/docker-compose.yml[docker-compose.yml] is included that can be used to start the tilegroxy server. It assumes using a configuration file named "test_config.yml" is located in the current working directory.
+An example link:https://github.com/Michad/tilegroxy/blob/main/docker-compose.yml[docker-compose.yml] is included that can be used to start the tilegroxy server. It assumes a configuration file named `test_config.yml` is located in the current working directory.
 
 == Kubernetes
 
 A link:https://github.com/Michad/tilegroxy/tree/main/charts/tilegroxy[Helm chart] is included in the repository:
 
+[,shell]
 ----
 helm install tilegroxy ./charts/tilegroxy -f my-values.yaml
 ----
@@ -88,6 +87,8 @@ config:
         url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
 ----
 
-The values outside of `config` cover the usual deployment concerns such as replicas, resources, ingress, autoscaling, storage, and scheduling.  Avoid placing credentials in `config` since it becomes a ConfigMap.  Instead reference them as `env.VAR_NAME` in the configuration and supply the value using the chart's `secrets` or `existingSecretKeys` values.
+The values outside of `config` cover the usual deployment concerns such as replicas, resources, ingress, autoscaling, storage, and scheduling.
+
+WARNING: Avoid placing credentials in `config` since it becomes a ConfigMap.  Instead reference them as `env.VAR_NAME` in the configuration and supply the value using the chart's `secrets` or `existingSecretKeys` values.
 
 Probes are wired to the xref:configuration/health.adoc[health] endpoints when `config.health.enabled` is true, an init container validates the configuration before the server starts, and `tilegroxy seed` can be run as a Job after install and upgrade.  See the link:https://github.com/Michad/tilegroxy/blob/main/charts/tilegroxy/README.md[chart README] for the full list of values.

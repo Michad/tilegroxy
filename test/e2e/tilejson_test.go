@@ -25,8 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// tileJSONConfig mirrors staticLayerConfig but adds a plain layer and a pattern layer with
-// examples, matching the two eligibility cases documented in tilejson.adoc.
+// Adds a plain layer and a pattern layer with examples, the two eligibility cases in tilejson.adoc
 const tileJSONConfig = `
 server:
   port: {{.Port}}
@@ -99,9 +98,7 @@ type tileJSONIndexEntry struct {
 	TileJSON string `json:"tilejson"`
 }
 
-// When TileJSON is disabled the paths it would otherwise serve fall through to the default
-// unrouted-path handler, which redirects to the documentation site rather than the tilejson
-// document a caller would get when it's enabled.
+// Disabled paths fall through to the unrouted handler, which redirects to the docs
 func Test_TileJSON_DisabledByDefault(t *testing.T) {
 	inst := Start(t, Config{Raw: tileJSONDisabledConfig})
 
@@ -129,7 +126,7 @@ func Test_TileJSON_IndexListsEligibleLayers(t *testing.T) {
 		assert.Contains(t, entry.TileJSON, entry.Name+".json")
 	}
 
-	// The plain layer is eligible automatically; the pattern layer only through its examples.
+	// The plain layer is eligible automatically, the pattern layer only through its examples
 	assert.Contains(t, names, "color")
 	assert.Contains(t, names, "my_foo_v1")
 	assert.Contains(t, names, "my_bar_v2")
@@ -175,13 +172,12 @@ func Test_TileJSON_PatternLayerExampleServedByName(t *testing.T) {
 	assert.Equal(t, "my_foo_v1", doc.Name)
 	require.Len(t, doc.Tiles, 1)
 	assert.Contains(t, doc.Tiles[0], "/tiles/my_foo_v1/{z}/{x}/{y}")
-	// Examples have no description/attribution set on the underlying pattern layer.
+	// The underlying pattern layer sets no description or attribution
 	assert.Empty(t, doc.Description)
 	assert.Empty(t, doc.Attribution)
 }
 
-// An unknown layer name isn't distinguishable from one that's merely unauthorized for the
-// caller, so it's rejected the same way a tile request for it would be.
+// Indistinguishable from unauthorized, so it's rejected like a tile request would be
 func Test_TileJSON_UnknownLayerIsUnauthorized(t *testing.T) {
 	inst := Start(t, Config{Raw: tileJSONConfig})
 

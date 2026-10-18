@@ -21,7 +21,7 @@ import (
 	"strings"
 )
 
-// Find any string values that start with `keyTag.keyName` and replace it with replacer(keyName). Replaces the full value. Used for avoiding secrets in config so your configuration can be placed in source control
+// Replaces any string value starting with `keyTag.keyName` with replacer(keyName), so secrets stay out of source-controlled config
 func ReplaceConfigValues(rawConfig map[string]interface{}, keyTag string, replacer func(string) (string, error)) (map[string]interface{}, error) {
 	result, err := replaceConfigValuesAny(rawConfig, keyTag, replacer)
 	if err != nil {
@@ -31,10 +31,7 @@ func ReplaceConfigValues(rawConfig map[string]interface{}, keyTag string, replac
 	return result.(map[string]interface{}), nil
 }
 
-// replaceConfigValuesAny recursively walks arbitrary config values looking for strings tagged
-// "keyTag.keyName" to replace. It recurses by reflect.Kind rather than by concrete type because
-// config values arrive in more shapes than a type switch can enumerate: mapstructure-decoded
-// fields like ClientConfig.Headers are map[string]string, not map[string]interface{}.
+// Recurses by reflect.Kind since decoded fields like ClientConfig.Headers are map[string]string, not map[string]interface{}
 func replaceConfigValuesAny(v any, keyTag string, replacer func(string) (string, error)) (any, error) {
 	if v == nil {
 		return nil, nil
@@ -60,8 +57,7 @@ func replaceConfigValuesAny(v any, keyTag string, replacer func(string) (string,
 			if err != nil {
 				return nil, err
 			}
-			// A nil replacement means the original was nil, as a YAML key written with no value
-			// (`ttl:`) parses to. Convert would panic on the zero Value it produces.
+			// A YAML key with no value (`ttl:`) is nil, and Convert panics on the zero Value it produces
 			if replaced == nil {
 				result.SetMapIndex(key, original)
 				continue
@@ -70,8 +66,7 @@ func replaceConfigValuesAny(v any, keyTag string, replacer func(string) (string,
 		}
 		return result.Interface(), nil
 	case reflect.Slice, reflect.Array:
-		// Arrays come back as slices. Config parsed from YAML/JSON never contains arrays, so this
-		// only affects hand-constructed input.
+		// Arrays come back as slices. Only hand-constructed input contains arrays
 		result := reflect.MakeSlice(reflect.SliceOf(rv.Type().Elem()), rv.Len(), rv.Len())
 		for i := range rv.Len() {
 			original := rv.Index(i)
@@ -79,7 +74,7 @@ func replaceConfigValuesAny(v any, keyTag string, replacer func(string) (string,
 			if err != nil {
 				return nil, err
 			}
-			// See the nil note in the Map branch above.
+			// See the nil note in the Map branch above
 			if replaced == nil {
 				result.Index(i).Set(original)
 				continue
@@ -92,7 +87,7 @@ func replaceConfigValuesAny(v any, keyTag string, replacer func(string) (string,
 	}
 }
 
-// Find any string values that start with `env.` and interpret the rest as an environment variable. Replaces the full value with the contents of the respective environment variable. Useful for avoiding secrets in config so your configuration can be placed in source control
+// Replaces any string value starting with `env.` with that environment variable, so secrets stay out of source-controlled config
 func ReplaceEnv(rawConfig map[string]interface{}) map[string]interface{} {
 	result, _ := ReplaceConfigValues(rawConfig, "env", func(s string) (string, error) { return os.Getenv(s), nil })
 

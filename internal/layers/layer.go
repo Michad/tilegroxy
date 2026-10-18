@@ -41,15 +41,10 @@ var packageName = static.GetPackage()
 
 var metricNameSafeChars = regexp.MustCompile(`[^A-Za-z0-9_-]`)
 
-// Leaves room for the "tilegroxy.tiles.layer." prefix and the longest suffix within OTEL's 255
-// character limit.
+// Leaves room for the "tilegroxy.tiles.layer." prefix and longest suffix within OTEL's 255 character limit
 const maxSanitizedMetricNameLen = 200
 
-// sanitizeMetricName makes a layer ID safe to embed inside an OTEL instrument name. Such names
-// must start with a letter and may only contain ASCII letters, digits, '_', '.', '-', and '/', so
-// an unsanitized ID makes Int64Counter construction fail, which is fatal at startup. '.' and '/'
-// are replaced too even though OTEL permits them, since the ID sits mid-name and shouldn't be able
-// to inject extra segments.
+// OTEL rejects other characters, fatally at startup. '.' and '/' are also replaced so an ID can't inject segments
 func sanitizeMetricName(id string) string {
 	sanitized := metricNameSafeChars.ReplaceAllString(id, "_")
 
@@ -65,7 +60,7 @@ type layerSegment struct {
 	placeholder bool
 }
 
-// Utility method that prepends with checking for dupe segments and propagating errors along
+// Prepends while checking for duplicate segments and propagating errors
 func prependLayerSegment(existingSegments []layerSegment, newSegment layerSegment, errs error) ([]layerSegment, error) {
 	if newSegment.placeholder {
 		if len(existingSegments) > 0 && existingSegments[0].placeholder {
@@ -82,7 +77,7 @@ func prependLayerSegment(existingSegments []layerSegment, newSegment layerSegmen
 	return slices.Concat([]layerSegment{newSegment}, existingSegments), errs
 }
 
-// Breaks a pattern string into a series of segments, each of which is either a placeholder or a literal string value
+// Each segment is either a placeholder or a literal
 func parsePattern(pattern string) ([]layerSegment, error) {
 	if pattern == "" {
 		return []layerSegment{}, nil
@@ -155,14 +150,8 @@ func constructValidation(raw map[string]string, errorMessages config.ErrorMessag
 			continue
 		}
 
-		if v[0] != '^' {
-			v = "^" + v
-		}
-		if v[len(v)-1] != '$' {
-			v += "$"
-		}
-
-		res[k], err = regexp.Compile(v)
+		// Grouping makes the anchors apply to every alternative, not just the first and last
+		res[k], err = regexp.Compile("^(?:" + v + ")$")
 
 		if err != nil {
 			errs = append(errs, err)
@@ -216,7 +205,7 @@ type Layer struct {
 	metadata           ResolvedMetadata
 }
 
-// The inner provider is built and described first so the right bounds wrapper can be picked from its data type.
+// The inner provider is built and described first so the right bounds wrapper can be picked from its data type
 func wrapBounds(inner layer.Provider, rawConfig config.LayerConfig, datatype config.DataType, deps layer.ProviderDeps) (layer.Provider, error) {
 	wrapperName := "cropmvt"
 
@@ -242,13 +231,10 @@ func wrapBounds(inner layer.Provider, rawConfig config.LayerConfig, datatype con
 	return ProviderWrapper{Name: wrapperName, Provider: p, dataType: datatype}, nil
 }
 
-// The placeholders a provider uses to interpolate the requester's identity into a URL, query, or
-// body. A provider config mentioning either produces per-identity tiles.
+// A provider config mentioning either produces per-identity tiles
 var identityPlaceholders = []string{"{ctx.user}", "{ctx.tenant}"}
 
-// usesIdentityPlaceholder reports whether a raw provider config interpolates the requester's
-// identity anywhere. Nesting providers (ref, fallback, blend) hide configs inside themselves, and
-// a placeholder can sit in a map key as readily as a value, so the whole tree is walked.
+// Walks the whole tree since nesting providers hide configs and placeholders can sit in map keys as well as values
 func usesIdentityPlaceholder(node any) bool {
 	switch v := node.(type) {
 	case string:
@@ -268,10 +254,7 @@ func usesIdentityPlaceholder(node any) bool {
 	return false
 }
 
-// Coalescing serves every waiter the leader's tile, so it defaults on only where that's safe: the
-// layer caches (otherwise there's little to gain), its cache isn't keyed by identity, and the
-// provider doesn't build its request out of who asked. A tenant cache or an identity placeholder
-// says the tile varies per requester.
+// Every waiter gets the leader's tile, so only default on when the layer caches and nothing marks tiles as per-requester
 func resolveAllowCoalesce(rawConfig config.LayerConfig, layerCache cache.Cache) bool {
 	if rawConfig.AllowCoalesce != nil {
 		return *rawConfig.AllowCoalesce
@@ -281,7 +264,7 @@ func resolveAllowCoalesce(rawConfig config.LayerConfig, layerCache cache.Cache) 
 		return false
 	}
 
-	if caches.ContainsCache(layerCache, "tenant") {
+	if caches.IsKeyedByIdentity(layerCache) {
 		return false
 	}
 
@@ -289,26 +272,23 @@ func resolveAllowCoalesce(rawConfig config.LayerConfig, layerCache cache.Cache) 
 		return false
 	}
 
-	return !isNoopCache(layerCache)
+	return !caches.IsNoop(layerCache)
 }
 
-// CacheControlFacts is what a layer's own configuration says about how its tiles may be cached
-// downstream, resolved once at construction. The server turns these into header directives.
+// What a layer's config says about downstream caching, resolved at construction. The server turns these into headers
 type CacheControlFacts struct {
-	// Uncacheable is true when the layer keeps no tiles of its own, which argues against anything
-	// downstream keeping them either.
+	// The layer keeps no tiles itself, which argues against downstream caches keeping them
 	Uncacheable bool
-	// PerIdentity is true when the tiles appear to vary by who asked, so a shared cache must not
-	// hand one caller's tile to the next.
+	// Tiles appear to vary by requester, so a shared cache must not hand one caller's tile to the next
 	PerIdentity bool
-	// TTL is the lifetime the layer's cache enforces, if any. Zero means nothing to go on.
+	// Zero means the layer's cache enforces no TTL
 	TTL time.Duration
 }
 
 func resolveCacheControlFacts(rawConfig config.LayerConfig, layerCache cache.Cache) CacheControlFacts {
 	facts := CacheControlFacts{
-		Uncacheable: rawConfig.SkipCache || isNoopCache(layerCache),
-		PerIdentity: caches.ContainsCache(layerCache, "tenant") || usesIdentityPlaceholder(rawConfig.Provider),
+		Uncacheable: rawConfig.SkipCache || caches.IsNoop(layerCache),
+		PerIdentity: caches.IsKeyedByIdentity(layerCache) || usesIdentityPlaceholder(rawConfig.Provider),
 	}
 
 	if !facts.Uncacheable {
@@ -430,12 +410,26 @@ func ConstructLayer(ctx context.Context, rawConfig config.LayerConfig, defaultCl
 		return nil, errors.Join(err, layer.CloseProvider(ctx, provider))
 	}
 
-	return &Layer{rawConfig.ID, segments, validator, rawConfig, provider, nil, errorMessages, datatype, layer.ProviderContext{}, sync.Mutex{}, allowCoalesce, resolveCacheControlFacts(rawConfig, layerCache), tileAllCounter, tileAuthCounter, tileErrorCounter, tileSuccessCounter, metadata}, nil
+	return &Layer{
+		ID:                 rawConfig.ID,
+		Pattern:            segments,
+		ParamValidator:     validator,
+		Config:             rawConfig,
+		Provider:           provider,
+		Cache:              layerCache,
+		ErrorMessages:      errorMessages,
+		DataType:           datatype,
+		allowCoalesce:      allowCoalesce,
+		CacheControl:       resolveCacheControlFacts(rawConfig, layerCache),
+		tileAllCounter:     tileAllCounter,
+		tileAuthCounter:    tileAuthCounter,
+		tileErrorCounter:   tileErrorCounter,
+		tileSuccessCounter: tileSuccessCounter,
+		metadata:           metadata,
+	}, nil
 }
 
-// getProviderContext returns a snapshot of the current provider context, re-authenticating
-// first if needed. The mutex is held for the full read-check-write sequence so concurrent
-// requests can't observe a torn or stale value.
+// Re-authenticates first if needed. The mutex spans the read-check-write so concurrent requests never see a torn or stale value
 func (l *Layer) getProviderContext(ctx context.Context) (layer.ProviderContext, error) {
 	var err error
 
@@ -450,8 +444,7 @@ func (l *Layer) getProviderContext(ctx context.Context) (layer.ProviderContext, 
 	return l.providerContext, err
 }
 
-// forceReauth discards the current provider context's expiration so the next getProviderContext
-// call re-authenticates, then returns the refreshed context.
+// Discards the expiration so the next getProviderContext re-authenticates
 func (l *Layer) forceReauth(ctx context.Context) (layer.ProviderContext, error) {
 	l.authMutex.Lock()
 	l.providerContext.AuthExpiration = time.Time{}
@@ -475,10 +468,7 @@ func (l *Layer) MatchesName(ctx context.Context, layerName string) bool {
 	return false
 }
 
-// ConfigMatchesName reports whether a layer config would answer to the given name, including when
-// the layer is defined by a pattern. For callers working from raw config before the layers
-// themselves are built, so it resolves the pattern the same way construction does. A config whose
-// pattern doesn't parse matches nothing; construction reports that error.
+// For callers working from raw config before layers are built. An unparseable pattern matches nothing; construction reports it
 func ConfigMatchesName(rawConfig config.LayerConfig, errorMessages config.ErrorMessages, layerName string) bool {
 	segments, validator, err := resolvePatternAndValidator(rawConfig, errorMessages)
 	if err != nil {
@@ -490,14 +480,12 @@ func ConfigMatchesName(rawConfig config.LayerConfig, errorMessages config.ErrorM
 	return doesMatch && validateParamMatches(matches, validator)
 }
 
-// IsPattern reports whether this layer was defined with a pattern distinct from its ID, meaning
-// it has no single concrete tile URL and needs Config.Examples to produce TileJSON documents.
+// True when a pattern distinct from the ID means there's no single tile URL, so TileJSON needs Config.Examples
 func (l *Layer) IsPattern() bool {
 	return l.Config.Pattern != "" && l.Config.Pattern != l.Config.ID
 }
 
-// CheckZoomBounds rejects a request outside this layer's configured minzoom/maxzoom. Called before the
-// cache lookup so a cached tile can't bypass a zoom limit added after it was cached.
+// Called before the cache lookup so a cached tile can't bypass a zoom limit added later
 func (l *Layer) CheckZoomBounds(tileRequest pkg.TileRequest) error {
 	minZoom, maxZoom := zoomRange(l.metadata.Limits.MinZoom, l.metadata.Limits.MaxZoom)
 

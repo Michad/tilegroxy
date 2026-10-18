@@ -1,23 +1,15 @@
 = Composite MVT
+:description: Allows you to combine MVTs. If given one child provider that returns an MVT with layer "a" and another that returns an MVT with layer "b", this will return an MVT with layers "a" and "b".  The contents of the MVTs are not changed in any way.
+:page-eyebrow: Provider
+:page-config-name: compositemvt
+:page-tags: MVT
 
-Allows you to combine MVTs. If given one child provider that returns an MVT with layer "a" and another that returns an MVT with layer "b", this will return an MVT with layers "a" and "b".  The contents of the MVTs are not changed in any way.
-
-Name should be "compositemvt"
-
-[cols="1,3,1,1,1"]
-|===
-| Parameter | Description | Type | Required | Default
-
-| providers
-| The providers to combine.
-| Provider[]
-| Yes
-| None
-
-|===
-
-Example:
-
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
 ----
 provider:
   name: compositemvt
@@ -31,3 +23,44 @@ provider:
     datastore: vector-database-0
     table: public.buildings
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "provider": {
+    "name": "compositemvt",
+    "providers": [
+      {
+        "name": "postgismvt",
+        "layer": "boundaries",
+        "datastore": "vector-database-0",
+        "table": "public.boundaries"
+      },
+      {
+        "name": "postgismvt",
+        "layer": "buildings",
+        "datastore": "vector-database-0",
+        "table": "public.buildings"
+      }
+    ]
+  }
+}
+----
+====
+
+== Configuration
+
+.Configuration options
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| providers
+| The providers to combine.
+| Provider[]
+| Yes
+| None
+
+|===

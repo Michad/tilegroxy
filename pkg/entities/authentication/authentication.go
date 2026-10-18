@@ -20,16 +20,18 @@ import (
 	"sync"
 
 	"github.com/Michad/tilegroxy/pkg/config"
+	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 )
 
 type Authentication interface {
 	CheckAuthentication(ctx context.Context, req *http.Request) bool
 }
 
-// AuthenticationDeps carries everything an authentication module is given at construction. New
-// dependencies are added as fields so the Initialize signature stays stable
+// New dependencies are added as fields so the Initialize signature stays stable
 type AuthenticationDeps struct {
 	ErrorMessages config.ErrorMessages
+	ClientConfig  config.ClientConfig
+	Datastores    datastore.DatastoreRegistry
 }
 
 type AuthenticationRegistration interface {

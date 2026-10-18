@@ -26,16 +26,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// The values internal/static falls back to when the linker flags did not land.
+// What internal/static falls back to when the linker flags didn't land
 const (
 	unsetVersion = "v0.X.Y"
 	unsetRef     = "HEAD"
 	unsetDate    = "Unknown"
 )
 
-// Test_Version_LdflagsAreInjected is the test this whole harness exists for. A refactor that breaks
-// how the Makefile injects version information leaves every in-process test green, because those
-// set the variables directly rather than building a binary.
+// The reason this harness exists. In-process tests set the variables directly, so they miss broken Makefile injection
 func Test_Version_LdflagsAreInjected(t *testing.T) {
 	out, code := Run(t, "version", "--json")
 	require.Equal(t, 0, code)
@@ -48,9 +46,7 @@ func Test_Version_LdflagsAreInjected(t *testing.T) {
 	assert.NotEqual(t, unsetDate, res["buildDate"], "buildDate ldflag did not reach the binary")
 }
 
-// Shape checking catches injection wired to the wrong value, such as version and ref being swapped,
-// which a non-default assertion alone would miss. It stays independent of which commit built the
-// binary, so it holds for a release or Docker build too.
+// Catches injection wired to the wrong value, like swapped version and ref, regardless of which commit built it
 func Test_Version_FieldsHaveTheRightShape(t *testing.T) {
 	out, code := Run(t, "version", "--json")
 	require.Equal(t, 0, code)
@@ -65,8 +61,7 @@ func Test_Version_FieldsHaveTheRightShape(t *testing.T) {
 	assert.NoError(t, err, "buildDate should be an RFC3339 timestamp, got %q", res["buildDate"])
 }
 
-// X-Powered-By ties the injected version to a runtime response header rather than only the version
-// command. The header is suppressed when production is true, so this config must leave it false.
+// Ties the version to a runtime header. Production mode suppresses it, so production must stay false
 func Test_Version_PoweredByHeaderCarriesVersion(t *testing.T) {
 	inst := Start(t, Config{Raw: staticLayerConfig})
 
@@ -77,17 +72,14 @@ func Test_Version_PoweredByHeaderCarriesVersion(t *testing.T) {
 	assert.NotContains(t, powered, unsetVersion, "header carries the unset version fallback")
 }
 
-// The only check that `make docs` output actually reached the binary. make e2e depends on docs, so
-// this is a real assertion rather than a skip.
+// The only check that `make docs` output reached the binary. make e2e depends on docs, so this never skips
 func Test_Binary_ServesEmbeddedDocumentation(t *testing.T) {
 	inst := Start(t, Config{Raw: staticLayerConfig})
 
 	inst.Get("/docs/index.html").ExpectStatus(http.StatusOK)
 }
 
-// Config binding via environment variable is what the viper_bind_struct build tag enables. A binary
-// built without the tag fails here and nowhere else. Keys use _ as the delimiter with no prefix, so
-// this targets a scalar; map keys such as server.headers do not bind through AutomaticEnv.
+// Fails only on binaries built without viper_bind_struct. Map keys like server.headers don't bind, so a scalar is used
 func Test_Binary_EnvVarConfigBindingWorks(t *testing.T) {
 	inst := Start(t, Config{
 		Raw: staticLayerConfig,
@@ -98,8 +90,7 @@ func Test_Binary_EnvVarConfigBindingWorks(t *testing.T) {
 		ExpectStatus(http.StatusOK).
 		ExpectHeader("Content-Type", "image/png")
 
-	// The old path is no longer routed. Unrouted paths do not 404: default_handler.go answers them
-	// with a 307 to the docs path, so assert that directly rather than following it.
+	// The old path is unrouted, and unrouted paths 307 to the docs rather than 404
 	inst.GetNoRedirect("/tiles/color/8/12/32").
 		ExpectStatus(http.StatusTemporaryRedirect).
 		ExpectHeader("Location", "/docs")

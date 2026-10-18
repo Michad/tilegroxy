@@ -60,8 +60,7 @@ func Test_ReplaceEnv_WithVals(t *testing.T) {
 	assert.Equal(t, "saf", cloned["child"].(map[string]interface{})["f"])
 }
 
-// Config values legitimately arrive as map[string]string, []interface{}, and lists of maps, not
-// only map[string]interface{}, and a placeholder in any of them has to be substituted.
+// Values arrive as map[string]string, []interface{} and lists of maps, and placeholders in each must be substituted
 func Test_ReplaceEnv_MapStringString(t *testing.T) {
 	t.Setenv("TEST_HEADER", "secretvalue")
 
@@ -108,8 +107,7 @@ func Test_ReplaceEnv_ListOfMaps(t *testing.T) {
 	assert.Equal(t, "/from/env", tiers[0]["path"])
 }
 
-// A YAML key written with no value (`ttl:`) parses to a nil, which reflect.ValueOf turns into the
-// zero Value that Convert panics on. Nils must pass through untouched.
+// A YAML key with no value (`ttl:`) is nil, which reflect turns into a zero Value that Convert panics on
 func Test_ReplaceEnv_NilInMap(t *testing.T) {
 	raw := map[string]interface{}{
 		"ttl":   nil,
@@ -151,7 +149,7 @@ func Test_ReplaceEnv_NilInSlice(t *testing.T) {
 	assert.Equal(t, "literal", list[1])
 }
 
-// The shape from the original crash report: a list of maps where one map value is nil.
+// The shape from the original crash report
 func Test_ReplaceEnv_NilInsideListOfMaps(t *testing.T) {
 	t.Setenv("TEST_TIER_NAME", "memory")
 

@@ -25,8 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// A {layer.*} value comes from the request path via pattern matching, so unescaped it could
-// append query parameters, truncate the path, or traverse it.
+// {layer.*} comes from the request path, so unescaped it could add query parameters, truncate or traverse the path
 func Test_ReplaceURLPlaceholders_EscapesInjectionInPath(t *testing.T) {
 	ctx := pkg.BackgroundContext()
 	lpm, _ := pkg.LayerPatternMatchesFromContext(ctx)
@@ -86,8 +85,7 @@ func Test_ReplaceURLPlaceholders_NormalValuesStillWork(t *testing.T) {
 	require.Equal(t, "https://example.com/tiles/20230917a/1/1/0.png", result)
 }
 
-// {env.*} is operator config, and the documented idiom is to use it for an entire base URL, so
-// escaping it would mangle the "://" and "/" into "https:%2F%2Ftiles.example.com%2Fv1".
+// {env.*} is commonly an entire base URL, so escaping would mangle "://" and "/"
 func Test_ReplaceURLPlaceholders_EnvValuePassesThroughUnescaped(t *testing.T) {
 	t.Setenv("TILEGROXY_TEST_BASEURL", "https://tiles.example.com/v1")
 
@@ -99,7 +97,7 @@ func Test_ReplaceURLPlaceholders_EnvValuePassesThroughUnescaped(t *testing.T) {
 	require.Equal(t, "https://tiles.example.com/v1/1/1/0.png", result)
 }
 
-// Operators may inject a full URL including query parameters, which must also survive intact.
+// A full URL including query parameters must also survive intact
 func Test_ReplaceURLPlaceholders_EnvValueWithQueryStringPassesThroughUnescaped(t *testing.T) {
 	t.Setenv("TILEGROXY_TEST_SUFFIX", "?key=abc&fmt=png")
 
@@ -111,7 +109,7 @@ func Test_ReplaceURLPlaceholders_EnvValueWithQueryStringPassesThroughUnescaped(t
 	require.Equal(t, "https://example.com/tiles/1/1/0?key=abc&fmt=png", result)
 }
 
-// {ctx.*} resolves from HTTP headers, so like {layer.*} it must be escaped.
+// {ctx.*} comes from HTTP headers, so like {layer.*} it must be escaped
 func Test_ReplaceURLPlaceholders_CtxValueIsEscaped(t *testing.T) {
 	req, err := http.NewRequest(http.MethodGet, "http://example.com", nil)
 	require.NoError(t, err)
@@ -126,7 +124,7 @@ func Test_ReplaceURLPlaceholders_CtxValueIsEscaped(t *testing.T) {
 	require.Contains(t, result, "evil%3Fextra=param")
 }
 
-// An ordinary {ctx.*} value (no special characters) should still round-trip correctly.
+// An ordinary {ctx.*} value should still round-trip
 func Test_ReplaceURLPlaceholders_CtxValueNormalStillWorks(t *testing.T) {
 	req, err := http.NewRequest(http.MethodGet, "http://example.com", nil)
 	require.NoError(t, err)
@@ -140,8 +138,7 @@ func Test_ReplaceURLPlaceholders_CtxValueNormalStillWorks(t *testing.T) {
 	require.Equal(t, "https://example.com/tiles/1/1/0.png?agent=my-agent", result)
 }
 
-// A template combining a trusted {env.*} value with an untrusted {layer.*} value should escape
-// only the latter.
+// Only the untrusted {layer.*} value should be escaped
 func Test_ReplaceURLPlaceholders_MixedEnvAndLayerOnlyEscapesLayer(t *testing.T) {
 	t.Setenv("TILEGROXY_TEST_HOST", "https://tiles.example.com")
 
@@ -158,10 +155,7 @@ func Test_ReplaceURLPlaceholders_MixedEnvAndLayerOnlyEscapesLayer(t *testing.T) 
 	require.NotContains(t, result, "?x=1/")
 }
 
-// A request-derived value containing a literal "$N" must never be re-substituted: a repeated-pass
-// implementation would replace this "$0" with the {env.*} value, splicing an operator secret into
-// the outbound URL. PathEscape leaves "$" alone, so the value stays a literal "$0" here; what
-// matters is that it's inert.
+// A repeated-pass implementation would replace this "$0" with the {env.*} secret. PathEscape leaves "$", so it must stay inert
 func Test_ReplaceURLPlaceholders_CtxValueCannotReinjectPlaceholder(t *testing.T) {
 	t.Setenv("TILEGROXY_TEST_SECRET", "super-secret-value")
 
@@ -178,7 +172,7 @@ func Test_ReplaceURLPlaceholders_CtxValueCannotReinjectPlaceholder(t *testing.T)
 	require.Equal(t, "https://example.com/super-secret-value/$0/1/1/0.png", result)
 }
 
-// The same attack in query position, where url.QueryEscape does percent-encode "$".
+// The same attack in query position, where QueryEscape does percent-encode "$"
 func Test_ReplaceURLPlaceholders_CtxValueCannotReinjectPlaceholderInQuery(t *testing.T) {
 	t.Setenv("TILEGROXY_TEST_SECRET", "super-secret-value")
 
@@ -195,8 +189,7 @@ func Test_ReplaceURLPlaceholders_CtxValueCannotReinjectPlaceholderInQuery(t *tes
 	require.Contains(t, result, "agent=%240")
 }
 
-// Templates with more than ten placeholders must still resolve correctly - "$10" has to be read as
-// index 10 rather than index 1 followed by a literal "0".
+// "$10" must read as index 10, not index 1 then "0"
 func Test_ReplaceURLPlaceholders_DoubleDigitIndices(t *testing.T) {
 	var template string
 	var templateSb200 strings.Builder
@@ -216,8 +209,7 @@ func Test_ReplaceURLPlaceholders_DoubleDigitIndices(t *testing.T) {
 	}
 }
 
-// A literal "$" in the template that isn't one of our generated placeholders must pass through
-// untouched.
+// A literal "$" that isn't a generated placeholder passes through untouched
 func Test_ReplaceURLPlaceholders_LiteralDollarPreserved(t *testing.T) {
 	result, err := replaceURLPlaceholders(pkg.BackgroundContext(), pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com/a$b/c$/{z}/{x}/{y}.png", false, pkg.SRIDWGS84)
 

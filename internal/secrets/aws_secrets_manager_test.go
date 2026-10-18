@@ -34,7 +34,7 @@ import (
 )
 
 func init() {
-	// This is a hack to help with vscode test execution. Put a .env in repo root w/ anything you need for test containers
+	// Lets vscode test runs pick up testcontainer settings from a .env in the repo root
 	if env, err := os.ReadFile("../../.env"); err == nil {
 		envs := strings.Split(string(env), "\n")
 		for _, e := range envs {
@@ -114,8 +114,7 @@ func Test_SecretManager_Execute(t *testing.T) {
 	assert.Equal(t, "val", v3)
 }
 
-// Two keys inside one JSON secret must cost a single GetSecretValue, which the name-level map is
-// the only thing providing now that the operator-facing cache lives in the wrapper
+// Two keys in one JSON secret must cost one GetSecretValue now that the operator-facing cache lives in the wrapper
 func Test_SecretManager_JSONKeysShareOneFetch(t *testing.T) {
 	ctx := context.Background()
 	s := newLocalstackSecretManager(ctx, t)
@@ -144,8 +143,7 @@ func Test_SecretManager_CheckReportsCurrentVersion(t *testing.T) {
 	assert.Equal(t, "before", value)
 	require.NotEmpty(t, version)
 
-	// Check on an unchanged secret must agree with what Lookup recorded, which is what proves the
-	// AWSCURRENT selection matches GetSecretValue's default
+	// Agreeing with Lookup proves the AWSCURRENT selection matches GetSecretValue's default
 	versions, err := s.Check(ctx, []string{"rotating"})
 	require.NoError(t, err)
 	require.Len(t, versions, 1)

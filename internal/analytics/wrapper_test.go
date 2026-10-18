@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// fake is a minimal Analytics used to observe what the registry hands to each module.
+// Observes what the registry hands each module
 type fake struct {
 	mutex  sync.Mutex
 	events []analytics.Event
@@ -67,7 +67,6 @@ type fakeConfig struct {
 	CommonConfig `mapstructure:",squash"`
 }
 
-// fakeRegistration lets these tests observe what the real construction path hands each module.
 type fakeRegistration struct {
 	instances *[]*fake
 }
@@ -122,10 +121,10 @@ func Test_AnalyticsWrapper_Empty(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, a.Empty())
 
-	// The default configuration selects the noop module, which the handler should skip entirely.
+	// The default config selects the noop module, which the handler should skip
 	assert.True(t, (&AnalyticsWrapper{Name: noneName}).Empty())
 
-	// A nil wrapper is what tests and the seed/test commands end up with.
+	// What tests and the seed/test commands end up with
 	var nilWrapper *AnalyticsWrapper
 	assert.True(t, nilWrapper.Empty())
 	require.NoError(t, nilWrapper.Close(context.Background()))
@@ -187,7 +186,7 @@ func Test_AnalyticsWrapper_AbsorbsErrors(t *testing.T) {
 	f := &fake{err: errors.New("destination unreachable")}
 	w := AnalyticsWrapper{Name: "testfake", ID: "x", Analytics: f}
 
-	// A failing analytics destination must never produce an error the request path could act on.
+	// A failing destination must never surface an error the request path could act on
 	require.NoError(t, w.Record(pkg.BackgroundContext(), analytics.Event{LayerID: "main"}))
 	assert.Len(t, f.snapshot(), 1)
 }

@@ -33,8 +33,7 @@ func diffBaseConfig() config.Config {
 	return cfg
 }
 
-// Renders the diff as JSON then reads it back, so assertions can navigate the result without
-// depending on the text layout
+// Round trips through JSON so assertions don't depend on the text layout
 func diffAsMap(t *testing.T, oldCfg, newCfg config.Config) map[string]any {
 	t.Helper()
 
@@ -71,8 +70,7 @@ func Test_DiffConfig_NilWriterDoesNotPanic(t *testing.T) {
 	})
 }
 
-// A missing config is the same as one holding nothing, so comparing against it lists what the other
-// side has rather than failing
+// A missing config is treated as empty rather than failing
 func Test_DiffConfig_NilConfigIsTreatedAsEmpty(t *testing.T) {
 	cfg := diffBaseConfig()
 	var buf bytes.Buffer
@@ -135,7 +133,7 @@ func Test_DiffConfig_RemovedLayerIsARemoval(t *testing.T) {
 	require.Contains(t, layers, "extra")
 }
 
-// Only the field that changed should appear, nested the way it's written in a config file
+// Only the changed field should appear, nested as in a config file
 func Test_DiffConfig_ModifiedLayerKeepsProviderStructure(t *testing.T) {
 	oldCfg := diffBaseConfig()
 	newCfg := diffBaseConfig()
@@ -149,7 +147,7 @@ func Test_DiffConfig_ModifiedLayerKeepsProviderStructure(t *testing.T) {
 	require.NotContains(t, provider, "name")
 }
 
-// Metadata fields are embedded in LayerConfig but written flat in a config file
+// Metadata is embedded in LayerConfig but written flat in a config file
 func Test_DiffConfig_ModifiedLayerMetadataIsFlat(t *testing.T) {
 	oldCfg := diffBaseConfig()
 	newCfg := diffBaseConfig()
@@ -161,7 +159,7 @@ func Test_DiffConfig_ModifiedLayerMetadataIsFlat(t *testing.T) {
 	require.Equal(t, map[string]any{"version": "2"}, layers["main"])
 }
 
-// Reordering the layer list changes nothing about what gets served
+// Reordering layers changes nothing about what's served
 func Test_DiffConfig_ReorderedLayersAreNotAChange(t *testing.T) {
 	first := config.LayerConfig{ID: "a", Provider: map[string]any{"name": "static", "color": "FFF"}}
 	second := config.LayerConfig{ID: "b", Provider: map[string]any{"name": "static", "color": "000"}}
@@ -178,7 +176,7 @@ func Test_DiffConfig_ReorderedLayersAreNotAChange(t *testing.T) {
 	require.False(t, different)
 }
 
-// A layer identified by a pattern has no id to match on
+// A pattern layer has no id to match on
 func Test_DiffConfig_PatternLayerMatchesOnPattern(t *testing.T) {
 	oldCfg := diffBaseConfig()
 	oldCfg.Layers = []config.LayerConfig{{Pattern: "p_{v}", Provider: map[string]any{"name": "static", "color": "FFF"}}}
@@ -218,7 +216,7 @@ func Test_DiffConfig_ErrorSectionNeedsRestart(t *testing.T) {
 	require.Contains(t, restarted, "messages")
 }
 
-// Health reloads in place, unlike the server and error sections it sits beside
+// Health reloads in place, unlike the server and error sections
 func Test_DiffConfig_HealthChangeCanReload(t *testing.T) {
 	oldCfg := diffBaseConfig()
 	newCfg := diffBaseConfig()
@@ -231,7 +229,7 @@ func Test_DiffConfig_HealthChangeCanReload(t *testing.T) {
 	require.NotContains(t, res, "restart")
 }
 
-// Several changes within one section have to accumulate rather than overwrite each other
+// Changes within one section must accumulate rather than overwrite each other
 func Test_DiffConfig_MultipleKeysInOneSectionAreMerged(t *testing.T) {
 	oldCfg := diffBaseConfig()
 	newCfg := diffBaseConfig()
@@ -245,7 +243,7 @@ func Test_DiffConfig_MultipleKeysInOneSectionAreMerged(t *testing.T) {
 	require.Equal(t, "/tiles/", server["rootpath"])
 }
 
-// A key present in the old config and gone from the new one is a real change, not an absence
+// A key removed from the new config is a real change, not an absence
 func Test_DiffConfig_RemovedKeyIsReported(t *testing.T) {
 	oldCfg := diffBaseConfig()
 	oldCfg.Client.Headers = map[string]string{"X-Foo": "bar"}
@@ -291,7 +289,7 @@ func Test_DiffConfig_TextFormatGroupsByImpactAndKind(t *testing.T) {
 	require.Contains(t, out, "Modified: server.port: 9999")
 }
 
-// The summary leads the report, so it has to name the consequence of the changes below it
+// The summary leads the report, so it must name the consequence of the changes
 func Test_DiffConfig_TextFormatSummary(t *testing.T) {
 	base := diffBaseConfig()
 
@@ -327,7 +325,7 @@ func Test_DiffConfig_TextFormatSummary(t *testing.T) {
 	}
 }
 
-// The text format is meant to be read in a terminal, so it colorizes unless asked not to
+// Meant for a terminal, so it colorizes unless asked not to
 func Test_DiffConfig_TextFormatColorization(t *testing.T) {
 	oldCfg := diffBaseConfig()
 	newCfg := diffBaseConfig()
@@ -344,7 +342,7 @@ func Test_DiffConfig_TextFormatColorization(t *testing.T) {
 	require.Equal(t, plain.String(), stripANSI(colored.String()))
 }
 
-// Nothing to report still has to respect --no-color
+// Nothing to report must still respect --no-color
 func Test_DiffConfig_TextFormatColorizesNoDifferences(t *testing.T) {
 	cfg := diffBaseConfig()
 
@@ -365,7 +363,7 @@ func stripANSI(s string) string {
 	return ansiPattern.ReplaceAllString(s, "")
 }
 
-// A list value has no structure of its own to walk, so it renders as an indented block
+// A list has no structure to walk, so it renders as an indented block
 func Test_DiffConfig_TextFormatRendersLists(t *testing.T) {
 	oldCfg := diffBaseConfig()
 	oldCfg.Client.StatusCodes = []int{200, 204}
@@ -396,14 +394,14 @@ func Test_DiffConfig_TableFormatColumns(t *testing.T) {
 	require.Contains(t, lines[0], "Path")
 	require.Contains(t, lines[0], "Value")
 
-	// A reloadable layer change and a restart-only server change, each on one row
+	// A reloadable layer change and a restart-only server change, one row each
 	require.Contains(t, buf.String(), "yes")
 	require.Contains(t, buf.String(), "layers.main.provider.color")
 	require.Contains(t, buf.String(), "no")
 	require.Contains(t, buf.String(), "server.port")
 }
 
-// An added layer is one addition, not one per field it happens to contain
+// An added layer is one addition, not one per field
 func Test_DiffConfig_TableFormatGroupsAddedLayerIntoOneRow(t *testing.T) {
 	oldCfg := diffBaseConfig()
 	newCfg := diffBaseConfig()
@@ -413,18 +411,18 @@ func Test_DiffConfig_TableFormatGroupsAddedLayerIntoOneRow(t *testing.T) {
 	_, err := DiffConfig(&oldCfg, &newCfg, DiffOptions{Format: DiffFormatTable}, &buf)
 	require.NoError(t, err)
 
-	// One header row plus the single row for the added layer
+	// Header plus the added layer's row
 	lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
 	require.Len(t, lines, 2)
 	require.Contains(t, lines[1], "layers.extra")
 	require.NotContains(t, buf.String(), "layers.extra.provider.name")
 	require.NotContains(t, buf.String(), "map[")
 
-	// The contents are still reported, just within that one row
+	// Contents are still reported within that row
 	require.Contains(t, buf.String(), "static")
 }
 
-// Only the field that changed is reported, so a modified layer still breaks down per leaf
+// A modified layer still breaks down per changed leaf
 func Test_DiffConfig_TableFormatModifiedLayerKeepsLeafRows(t *testing.T) {
 	oldCfg := diffBaseConfig()
 	newCfg := diffBaseConfig()
@@ -437,7 +435,7 @@ func Test_DiffConfig_TableFormatModifiedLayerKeepsLeafRows(t *testing.T) {
 	require.Contains(t, buf.String(), "layers.main.provider.color")
 }
 
-// A single edit within one tier shouldn't report the whole tiers list as changed
+// One edited tier shouldn't report the whole tiers list
 func Test_DiffConfig_ListEntryChangeReportsOnlyThatEntry(t *testing.T) {
 	tiers := func(maxSize int) map[string]any {
 		return map[string]any{"name": "multi", "tiers": []any{
@@ -479,7 +477,7 @@ func Test_DiffConfig_TableFormatListEntryPath(t *testing.T) {
 	require.Contains(t, buf.String(), "cache.tiers[0].maxsize")
 }
 
-// Positions stop lining up once a list changes length, so matching them up would misreport
+// Positions stop lining up once a list changes length
 func Test_DiffConfig_ListLengthChangeReportsWholeList(t *testing.T) {
 	oldCfg := diffBaseConfig()
 	oldCfg.Cache = map[string]any{"name": "multi", "tiers": []any{
@@ -498,7 +496,7 @@ func Test_DiffConfig_ListLengthChangeReportsWholeList(t *testing.T) {
 	require.Len(t, cacheDiff["tiers"], 1)
 }
 
-// The grouped row still has to carry the layer's contents, not just its name
+// The grouped row must carry the layer's contents, not just its name
 func Test_DiffConfig_AddedLayerKeepsDetailInStructuredOutput(t *testing.T) {
 	oldCfg := diffBaseConfig()
 	newCfg := diffBaseConfig()
@@ -511,8 +509,7 @@ func Test_DiffConfig_AddedLayerKeepsDetailInStructuredOutput(t *testing.T) {
 	require.Equal(t, "static", provider["name"])
 }
 
-// The text format shows an added layer's contents as a block under its collapsed path, not as a
-// change per field, and the block has to line up with the surrounding indentation
+// An added layer's contents render as a block under its path, aligned with the surrounding indentation
 func Test_DiffConfig_TextFormatGroupsAddedLayer(t *testing.T) {
 	oldCfg := diffBaseConfig()
 	newCfg := diffBaseConfig()
@@ -527,7 +524,7 @@ func Test_DiffConfig_TextFormatGroupsAddedLayer(t *testing.T) {
 	require.Contains(t, buf.String(), "+   name: static")
 }
 
-// A layer with nothing set beyond its name prunes down to a scalar, which still has to render
+// A layer with only a name prunes to a scalar, which must still render
 func Test_DiffConfig_TextFormatGroupsEmptyAddedLayer(t *testing.T) {
 	oldCfg := diffBaseConfig()
 	newCfg := diffBaseConfig()
@@ -540,7 +537,7 @@ func Test_DiffConfig_TextFormatGroupsEmptyAddedLayer(t *testing.T) {
 	require.Contains(t, buf.String(), "bare_{v}")
 }
 
-// A list has no path of its own to split across rows, so it has to stay on one line
+// A list has no path to split across rows, so it stays on one line
 func Test_DiffConfig_TableFormatKeepsListsInline(t *testing.T) {
 	oldCfg := diffBaseConfig()
 	oldCfg.Client.StatusCodes = []int{200, 204}

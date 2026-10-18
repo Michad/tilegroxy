@@ -130,7 +130,7 @@ func (s CustomRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (lay
 		return nil, fmt.Errorf(deps.ErrorMessages.ScriptError, "provider.custom", "generateTile function has the wrong signature")
 	}
 
-	// close is optional so scripts written before it existed keep working unchanged.
+	// Optional so scripts written before it existed keep working
 	var closeFunc func(context.Context) error
 	if closeVal, closeErr := i.Eval("custom.close"); closeErr == nil {
 		fn, ok := closeVal.Interface().(func(context.Context) error)
@@ -151,8 +151,7 @@ func (t Custom) GenerateTile(ctx context.Context, providerContext layer.Provider
 	return t.generateTileFunc(ctx, providerContext, tileRequest, t.Params, t.clientConfig, t.errorMessages)
 }
 
-// Close calls the script's close function when it defines one. The symbol is optional so scripts written
-// before this existed keep working
+// The script's close function is optional so older scripts keep working
 func (t Custom) Close(ctx context.Context) error {
 	if t.closeFunc == nil {
 		return nil

@@ -24,7 +24,7 @@ import (
 	"go.opentelemetry.io/otel/metric/noop"
 )
 
-// removeRecordingCache records what PurgeTile asks it to delete.
+// Records what PurgeTile asks it to delete
 type removeRecordingCache struct {
 	removed []pkg.TileRequest
 	present bool
@@ -78,7 +78,7 @@ func Test_LayerGroup_PurgeTile_RemovesFromCache(t *testing.T) {
 	require.Equal(t, []pkg.TileRequest{req}, c.removed)
 }
 
-// The count a purge reports comes from the cache, so an uncached tile has to come back false.
+// The reported count comes from the cache, so an uncached tile must come back false
 func Test_LayerGroup_PurgeTile_ReportsUncachedTile(t *testing.T) {
 	c := &removeRecordingCache{}
 	lg := purgeTestLayerGroup(t, c, config.LayerConfig{})
@@ -88,7 +88,7 @@ func Test_LayerGroup_PurgeTile_ReportsUncachedTile(t *testing.T) {
 	require.False(t, removed)
 }
 
-// A purge has to target the same key a render would read, which cacheversion prefixes.
+// Must target the same cacheversion-prefixed key a render would read
 func Test_LayerGroup_PurgeTile_AppliesCacheVersion(t *testing.T) {
 	c := &removeRecordingCache{}
 	lg := purgeTestLayerGroup(t, c, config.LayerConfig{CacheVersion: "v2"})

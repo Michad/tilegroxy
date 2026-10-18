@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package analytics contains the analytics modules that record tile usage events to various destinations.
-// Modules are selected by the "name" parameter in configuration
+// Package analytics contains the modules that record tile usage events, selected by the "name" parameter
 package analytics
 
 import (
@@ -23,8 +22,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg/config"
 )
 
-// The default names for the columns holding the always-present members of an event. Any of these can be
-// overridden to match a table that already exists
+// Default names for columns holding the always-present event members. Each can be overridden to match an existing table
 const (
 	ColumnTime      = "time"
 	ColumnLayer     = "layer"
@@ -36,12 +34,9 @@ const (
 	ColumnLayerName = "layer_name"
 )
 
-// Table and column names come from configuration, which the security model treats as trusted, but they're
-// still interpolated into SQL instead of bound. Restricting them to plain identifiers keeps a config typo
-// from becoming a syntax error at flush time. Event values are always bound parameters, never formatted in
+// Trusted config is still interpolated into SQL, so restricting to plain identifiers keeps typos from becoming flush-time syntax errors
 var identifierRegex = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_$]*(\.[A-Za-z_][A-Za-z0-9_$]*)?$`)
 
-// validateIdentifier checks a table or column name before it's used in a statement
 func validateIdentifier(name, param string, errorMessages config.ErrorMessages) error {
 	if !identifierRegex.MatchString(name) {
 		return fmt.Errorf(errorMessages.InvalidParam, param, name)
@@ -50,7 +45,7 @@ func validateIdentifier(name, param string, errorMessages config.ErrorMessages) 
 	return nil
 }
 
-// resolveColumns merges the configured column name overrides over the defaults, validating each
+// Validates each override as it's merged
 func resolveColumns(defaults map[string]string, overrides map[string]string, param string, errorMessages config.ErrorMessages) (map[string]string, error) {
 	out := make(map[string]string, len(defaults))
 

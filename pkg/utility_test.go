@@ -17,10 +17,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
+	"fmt"
 	"math/rand/v2"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/Michad/tilegroxy/internal/util"
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -28,8 +31,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// GetTile is exported from pkg so a library consumer writing their own Go provider gets the same
-// MaxLength/ContentTypes/StatusCodes enforcement as the built-in ones without reimplementing it.
+// Library consumers writing Go providers get the same enforcement as the built-in ones
 func Test_GetTile(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "image/png")
@@ -51,6 +53,68 @@ func Test_GetTile(t *testing.T) {
 	require.NotNil(t, img)
 	assert.Equal(t, []byte("tiledata"), img.Content)
 	assert.Equal(t, "image/png", img.ContentType)
+}
+
+func closedPortURL(t *testing.T) string {
+	t.Helper()
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	addr := listener.Addr().String()
+	require.NoError(t, listener.Close())
+
+	return "http://" + addr + "/1/2/3.png?key=SECRETKEY"
+}
+
+// http.Client errors embed the full URL, which can carry the operator's API key.
+func Test_GetTile_ConnectionErrorOmitsURL(t *testing.T) {
+	url := closedPortURL(t)
+
+	_, err := GetTile(context.Background(), config.ClientConfig{Timeout: 5}, url, nil)
+
+	var connErr RemoteConnectionError
+	require.ErrorAs(t, err, &connErr)
+	assert.False(t, connErr.Timeout)
+	assert.Equal(t, TypeOfError(TypeOfErrorProvider), connErr.Type())
+	assert.Contains(t, err.Error(), "connection refused")
+	assert.NotContains(t, err.Error(), "SECRETKEY")
+	assert.NotContains(t, err.Error(), "127.0.0.1")
+
+	messages := config.DefaultConfig().Error.Messages
+	assert.Equal(t, messages.ProviderError, connErr.External(messages))
+}
+
+func Test_GetTile_TimeoutOmitsURL(t *testing.T) {
+	block := make(chan struct{})
+	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
+		<-block
+	}))
+	defer server.Close()
+	defer close(block)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	_, err := GetTile(ctx, config.ClientConfig{Timeout: 5}, server.URL+"/tile?key=SECRETKEY", nil)
+
+	var connErr RemoteConnectionError
+	require.ErrorAs(t, err, &connErr)
+	assert.True(t, connErr.Timeout)
+	assert.Equal(t, TypeOfError(TypeOfErrorTimeout), connErr.Type())
+	assert.Equal(t, "Remote server request timed out: context deadline exceeded", err.Error())
+
+	messages := config.DefaultConfig().Error.Messages
+	assert.Equal(t, messages.Timeout, connErr.External(messages))
+}
+
+func Test_GetTile_CanceledStaysCanceled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := GetTile(ctx, config.ClientConfig{Timeout: 5}, closedPortURL(t), nil)
+
+	require.ErrorIs(t, err, context.Canceled)
+	assert.NotContains(t, err.Error(), "SECRETKEY")
 }
 
 func Fuzz_EncodeDecodeImage(f *testing.F) {
@@ -77,7 +141,7 @@ func Fuzz_EncodeDecodeImage(f *testing.F) {
 		assert.Equal(t, img1.Content, img2.Content)
 		assert.Equal(t, img1.CreatedAt, img2.CreatedAt)
 
-		// Test backwards compatibility
+		// Backwards compatibility
 		img3, err := DecodeImage(img1.Content)
 		require.NoError(t, err)
 
@@ -90,7 +154,7 @@ func Fuzz_EncodeDecodeImage(f *testing.F) {
 	})
 }
 
-// A truncated or empty payload must read as a cache miss, not a successful empty tile.
+// A truncated or empty payload must read as a cache miss, not an empty tile
 func Test_DecodeImage_Empty(t *testing.T) {
 	for _, b := range [][]byte{nil, {}} {
 		img, err := DecodeImage(b)
@@ -99,7 +163,7 @@ func Test_DecodeImage_Empty(t *testing.T) {
 	}
 }
 
-// v1 payloads (Content + ContentType, no CreatedAt) must still decode after v2 was introduced.
+// v1 payloads without CreatedAt must still decode
 func Test_DecodeImage_V1(t *testing.T) {
 	b := bytes.Buffer{}
 	e := gob.NewEncoder(&b)
@@ -114,4 +178,40 @@ func Test_DecodeImage_V1(t *testing.T) {
 	assert.Equal(t, []byte("tiledata"), img.Content)
 	assert.Equal(t, "image/png", img.ContentType)
 	assert.Zero(t, img.CreatedAt)
+}
+
+func Test_GetTile_ErrorsAreValues(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/status":
+			w.WriteHeader(http.StatusServiceUnavailable)
+		case "/type":
+			w.Header().Set("Content-Type", "text/html")
+		default:
+			w.Header().Set("Content-Type", "image/png")
+			_, _ = w.Write([]byte("too long"))
+		}
+	}))
+	defer server.Close()
+
+	clientConfig := config.ClientConfig{
+		StatusCodes:  []int{http.StatusOK},
+		ContentTypes: []string{"image/png"},
+		MaxLength:    2,
+		Timeout:      5,
+	}
+
+	_, err := GetTile(context.Background(), clientConfig, server.URL+"/status", nil)
+	var remoteErr RemoteServerError
+	require.ErrorAs(t, fmt.Errorf("wrapped: %w", err), &remoteErr)
+	assert.Equal(t, http.StatusServiceUnavailable, remoteErr.StatusCode)
+
+	_, err = GetTile(context.Background(), clientConfig, server.URL+"/type", nil)
+	var typeErr InvalidContentTypeError
+	require.ErrorAs(t, err, &typeErr)
+	assert.Equal(t, "text/html", typeErr.ContentType)
+
+	_, err = GetTile(context.Background(), clientConfig, server.URL+"/length", nil)
+	var lengthErr InvalidContentLengthError
+	require.ErrorAs(t, err, &lengthErr)
 }

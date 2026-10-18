@@ -84,7 +84,6 @@ func (r *response) Header() http.Header {
 }
 
 func (r *response) Write(p []byte) (int, error) {
-	// fmt.Println(string(p))
 	return r.buff.Write(p)
 }
 

@@ -22,8 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Proxying a vector tile source is a documented use case, so the default allowlist has to cover
-// the MVT and MLT content types and not just raster ones.
+// Proxying vector tiles is a documented use case, so the default allowlist must cover MVT and MLT
 func TestDefaultConfig_ContentTypesIncludesVectorTileTypes(t *testing.T) {
 	c := DefaultConfig()
 

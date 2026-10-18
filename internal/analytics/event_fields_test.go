@@ -60,8 +60,7 @@ func Test_FieldResolver_AcceptsAllKnownFields(t *testing.T) {
 	ctx := testRequestContext(t)
 	out := r.Resolve(ctx, FieldSource{LayerName: "main", Bytes: 42, ContentType: "image/png"})
 
-	// Every documented field must resolve to something; a name that silently produces nothing is a
-	// documentation bug waiting to happen.
+	// A documented field that silently resolves to nothing is a documentation bug
 	for _, f := range AllFields {
 		assert.Contains(t, out, f, "field %v should resolve", f)
 	}
@@ -101,8 +100,7 @@ func Test_FieldResolver_Cached_MissingFromContext(t *testing.T) {
 	r, err := newFieldResolver(map[string]interface{}{"fields": []string{"cached"}}, msgs)
 	require.NoError(t, err)
 
-	// A context not built by pkg.NewRequestContext (e.g. a plain stdlib context) has no cached
-	// pointer to read, so the field should be omitted rather than panicking.
+	// A plain stdlib context has no cached pointer, so the field is omitted rather than panicking
 	out := r.Resolve(context.Background(), FieldSource{})
 	assert.NotContains(t, out, FieldCached)
 }
@@ -113,8 +111,7 @@ func Test_FieldResolver_TenantIDDefaultsToEmptyString(t *testing.T) {
 	r, err := newFieldResolver(map[string]interface{}{"fields": []string{"tenantid"}}, msgs)
 	require.NoError(t, err)
 
-	// A request that never went through tenant-aware auth still has a context-provided empty
-	// string, not an absent field - matches how UserID/TenantID behave elsewhere.
+	// Without tenant-aware auth the context still provides an empty string, matching UserID/TenantID elsewhere
 	req := httptest.NewRequest(http.MethodGet, "http://example.com/tiles/main/1/2/3", nil)
 	ctx := pkg.NewRequestContext(req)
 
@@ -126,7 +123,7 @@ func Test_FieldResolver_TenantIDDefaultsToEmptyString(t *testing.T) {
 func Test_FieldResolver_CaseInsensitiveFieldNames(t *testing.T) {
 	msgs := config.DefaultConfig().Error.Messages
 
-	// Config keys are case insensitive elsewhere in tilegroxy, so values here should be too.
+	// Config keys are case insensitive elsewhere so values should be too
 	r, err := newFieldResolver(map[string]interface{}{"fields": []string{"ContentType", "IP"}}, msgs)
 	require.NoError(t, err)
 
@@ -174,7 +171,7 @@ func Test_FieldResolver_BackgroundContextDoesNotPanic(t *testing.T) {
 	r, err := newFieldResolver(map[string]interface{}{"fields": AllFields}, msgs)
 	require.NoError(t, err)
 
-	// Seeding and health checks run against a synthetic context with no real request behind it.
+	// Seeding and health checks use a synthetic context with no real request
 	assert.NotPanics(t, func() {
 		r.Resolve(pkg.BackgroundContext(), FieldSource{})
 	})

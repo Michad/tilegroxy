@@ -44,7 +44,7 @@ func Test_Progress_RoundTrip(t *testing.T) {
 	assert.True(t, loaded.Matches("osm", e))
 }
 
-// Nothing to resume from is a normal state for a first run, not a failure.
+// Normal for a first run, not a failure
 func Test_Progress_LoadMissingFile(t *testing.T) {
 	loaded, err := LoadProgress(filepath.Join(t.TempDir(), "absent.json"))
 
@@ -60,7 +60,7 @@ func Test_Progress_LoadCorruptFile(t *testing.T) {
 	require.Error(t, err)
 }
 
-// A file from a version that enumerated tiles differently has a position that means something else.
+// A version that enumerated differently has a position that means something else
 func Test_Progress_LoadWrongVersion(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "progress.json")
 	require.NoError(t, os.WriteFile(path, []byte(`{"version":9999,"layer":"osm"}`), 0600))
@@ -69,8 +69,7 @@ func Test_Progress_LoadWrongVersion(t *testing.T) {
 	require.ErrorContains(t, err, "incompatible version")
 }
 
-// A position only refers to the same tile when the enumeration it indexes into is identical, so
-// anything that changes the sequence has to be caught.
+// Anything that changes the tile sequence must be caught
 func Test_Progress_MatchesDetectsChangedRun(t *testing.T) {
 	e, err := NewSeedJob("osm", world(), []uint{0, 1, 2})
 	require.NoError(t, err)
@@ -93,8 +92,7 @@ func Test_Progress_MatchesDetectsChangedRun(t *testing.T) {
 	assert.True(t, p.Matches("osm", e))
 }
 
-// Saving repeatedly over a run has to leave one usable file behind rather than accumulating
-// leftovers from the temporary file each write goes through.
+// Repeated saves must leave one usable file and no temp leftovers
 func Test_Progress_SaveOverwritesCleanly(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "progress.json")
@@ -140,8 +138,7 @@ func Test_Progress_FinishRemovesFile(t *testing.T) {
 	assert.True(t, os.IsNotExist(err))
 }
 
-// A run short enough that it never crossed a save interval never wrote a file, so there's nothing
-// to remove. That isn't a failure.
+// A run that never crossed a save interval never wrote a file
 func Test_Progress_FinishToleratesMissingFile(t *testing.T) {
 	e, err := NewSeedJob("osm", world(), []uint{1})
 	require.NoError(t, err)

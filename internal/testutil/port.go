@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package testutil holds helpers shared by tests across packages. Nothing outside of tests imports it.
+// Package testutil holds helpers shared by tests across packages
 package testutil
 
 import (
@@ -29,9 +29,7 @@ var (
 	handedOut   = map[int]struct{}{}
 )
 
-// FreePort asks the kernel for an unused TCP port on 127.0.0.1 and releases it for the caller to bind.
-// Nothing reserves a released port, so the kernel can return it again before the first caller binds.
-// Ports already handed out by this process are skipped to stop two servers in one test run racing for one port.
+// The kernel may reissue a released port before it's bound, so ports already handed out by this process are skipped
 func FreePort(t testing.TB) int {
 	t.Helper()
 

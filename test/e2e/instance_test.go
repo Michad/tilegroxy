@@ -26,8 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// The shared config for tests that are not about draining. drainDelay defaults to 5 seconds, which
-// every test would otherwise spend waiting during cleanup; the shutdown tests set it explicitly.
+// For tests not about draining. The default 5 second drainDelay would otherwise slow every cleanup
 const staticLayerConfig = `
 server:
   port: {{.Port}}

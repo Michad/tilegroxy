@@ -35,10 +35,10 @@ const numRGB = 3
 const numRGBA = 4
 const defaultImageSize = 512
 
-// MvtContentType is the Content-Type used for vector tile responses, including empty/error MVTs.
+// Also used for empty and error MVTs
 const MvtContentType = "application/vnd.mapbox-vector-tile"
 
-// MltContentType is the Content-Type used for MapLibre Tile responses, matching what MapLibre GL JS requests.
+// Matches what MapLibre GL JS requests
 const MltContentType = "application/vnd.maplibre-tile"
 
 //go:embed error.png
@@ -83,7 +83,7 @@ const KeyMltBox = "embedded:box.mlt"
 
 const KeyPrefixColor = "color:"
 
-// Guards dynamicImages and failedImages, which are read and written from request goroutines.
+// Guards dynamicImages and failedImages, which request goroutines read and write
 var imageCacheLock sync.RWMutex
 var dynamicImages = make(map[string]*[]byte, 0)
 var failedImages = make(map[string]error, 0)
@@ -151,7 +151,7 @@ func parseColor(fullStr string) (color.Color, error) {
 	return colObj, errors.New("invalid color")
 }
 
-// Returns the contents of an image. This can be an embedded image if path starts with "embedded:". The path will be treated as a standard filepath otherwise.  The contents of the image will be permanently cached in memory, this should be only used for images that will be reused a lot such as error responses. Errors will also be cached but 1% of the time it will be retried.
+// Paths starting with "embedded:" load embedded images. Results, including errors, are cached forever, with errors retried 1% of the time
 func GetStaticImage(path string) (*[]byte, error) {
 	if path == KeyImageError {
 		return &imageError, nil
@@ -219,8 +219,7 @@ func getColorImage(path string) (*[]byte, error) {
 	return output, nil
 }
 
-// RenderColorImage draws a solid color image without caching it. Use this for one-off colors, such
-// as a health check probe, that would otherwise grow the permanent image cache without bound.
+// Uncached, for one-off colors like a health check probe that would otherwise grow the permanent cache without bound
 func RenderColorImage(path string) (*[]byte, error) {
 	colObj, err := parseColor(path)
 

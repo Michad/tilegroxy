@@ -56,8 +56,7 @@ func (seedTestPanicRegistration) Initialize(_ any, _ layer.ProviderDeps) (layer.
 	return seedTestPanicProvider{}, nil
 }
 
-// seedThread runs on its own goroutine per chunk of tiles, so an unrecovered panic there, e.g.
-// from a buggy custom provider, crashes the entire seed process.
+// An unrecovered panic in a per-chunk goroutine, e.g. from a buggy custom provider, crashes the whole seed
 func Test_SeedThread_RecoversFromPanic(t *testing.T) {
 	layer.RegisterProvider(seedTestPanicRegistration{})
 
@@ -86,13 +85,12 @@ func Test_SeedThread_RecoversFromPanic(t *testing.T) {
 	close(errs)
 	require.Contains(t, out.String(), "panicked")
 
-	// The thread abandoned its tile, so recovering must not swallow the panic.
+	// The thread abandoned its tile, so recovering must not swallow the panic
 	require.Len(t, errs, 1)
 	require.ErrorContains(t, <-errs, "panicked")
 }
 
-// A panicking thread skips a whole chunk of tiles. Without an error the command exits 0 and a
-// partial seed is indistinguishable from a complete one.
+// Without an error a partial seed exits 0 and looks complete
 func Test_Seed_ReturnsErrorWhenThreadPanics(t *testing.T) {
 	layer.RegisterProvider(seedTestPanicRegistration{})
 
@@ -113,8 +111,7 @@ func Test_Seed_ReturnsErrorWhenThreadPanics(t *testing.T) {
 	require.ErrorContains(t, err, "panicked")
 }
 
-// seedTestCountingProvider records how many renders are in flight at once so the thread limit can be
-// checked, and how many tiles were rendered in total.
+// Tracks concurrent renders to check the thread limit, plus the total rendered
 type seedTestCountingProvider struct {
 	mutex    sync.Mutex
 	inFlight int
@@ -138,7 +135,7 @@ func (p *seedTestCountingProvider) GenerateTile(_ context.Context, _ layer.Provi
 	p.rendered = append(p.rendered, req)
 	p.mutex.Unlock()
 
-	// Long enough that concurrent renders actually overlap, so the in flight count is meaningful.
+	// Long enough that renders overlap, so the in flight count is meaningful
 	time.Sleep(50 * time.Microsecond)
 
 	p.mutex.Lock()
@@ -184,8 +181,7 @@ func seedTestConfig(t *testing.T) config.Config {
 	return cfg
 }
 
-// Streaming the tiles must not make the seed unboundedly parallel; --threads is what keeps a seed
-// from hammering an upstream provider.
+// --threads is what keeps a streaming seed from hammering an upstream provider
 func Test_Seed_RespectsThreadLimit(t *testing.T) {
 	cfg := seedTestConfig(t)
 
@@ -253,7 +249,7 @@ func Test_Seed_InvalidLayer(t *testing.T) {
 	}, &out), "invalid layer")
 }
 
-// An unknown --cache value has to fail loudly rather than silently seeding the default cache.
+// Must fail loudly rather than silently seed the default cache
 func Test_Seed_InvalidCacheName(t *testing.T) {
 	cfg := seedTestConfig(t)
 
@@ -272,8 +268,7 @@ func Test_Seed_InvalidCacheName(t *testing.T) {
 	assert.Empty(t, rendered)
 }
 
-// --cache names any configured cache by id, including one nested inside another, since nested
-// caches are registered under their own ids.
+// Nested caches are registered under their own ids so --cache can name them
 func Test_OverrideLayerCache_SetsNestedCacheID(t *testing.T) {
 	cfg, err := configload.LoadConfig(`
 cache:
@@ -297,7 +292,7 @@ layers:
 	assert.Equal(t, "disk", overridden[0].Cache)
 }
 
-// A pattern layer is seeded by a concrete name, which still has to resolve to that layer.
+// A pattern layer seeded by a concrete name must still resolve
 func Test_OverrideLayerCache_MatchesPatternLayer(t *testing.T) {
 	cfg, err := configload.LoadConfig(`
 cache:
@@ -322,7 +317,7 @@ layers:
 	assert.Equal(t, "disk", overridden[0].Cache)
 }
 
-// Only the layer being seeded is repointed; the rest keep whatever they were configured with.
+// Only the seeded layer is repointed
 func Test_OverrideLayerCache_LeavesOtherLayers(t *testing.T) {
 	cfg, err := configload.LoadConfig(`
 cache:
@@ -367,8 +362,7 @@ layers:
 	require.ErrorContains(t, err, "nope")
 }
 
-// --cache points the seeded layer at one cache by id. Same-kind tiers without explicit ids
-// collide, so only the first is addressable.
+// Same-kind tiers without explicit ids collide, so only the first is addressable
 func Test_Seed_CacheNameTargetsOneTier(t *testing.T) {
 	layer.RegisterProvider(seedTestCountingRegistration{})
 	seedTestCounter.reset()
@@ -398,8 +392,7 @@ func Test_Seed_CacheNameTargetsOneTier(t *testing.T) {
 	assert.Len(t, rendered, 1)
 }
 
-// The guard is now a count of how many tiles the run covers, not a memory ceiling, and --force is
-// still the way to say you meant it.
+// The guard counts tiles covered rather than memory, and --force still overrides it
 func Test_Seed_ExcessiveTileCountNeedsForce(t *testing.T) {
 	cfg := seedTestConfig(t)
 	opts := SeedOptions{
@@ -418,8 +411,7 @@ func Test_Seed_ExcessiveTileCountNeedsForce(t *testing.T) {
 	assert.Empty(t, rendered)
 }
 
-// A run over the threshold goes ahead once it's been confirmed. Checked against the guard rather
-// than by seeding, since actually rendering a run that size is the thing --force exists to allow.
+// Checked against the guard since actually rendering a run that size is what --force exists to allow
 func Test_Seed_ForceAllowsExcessiveTileCount(t *testing.T) {
 	e, err := seed.NewSeedJob("counts", pkg.WorldBounds(), []uint{10})
 	require.NoError(t, err)
@@ -431,8 +423,7 @@ func Test_Seed_ForceAllowsExcessiveTileCount(t *testing.T) {
 	require.NoError(t, checkSeedSize(e, opts, &out))
 }
 
-// A completed run cleans up its progress file rather than leaving it behind, since there's
-// nothing left to resume.
+// A completed run has nothing to resume, so the progress file is removed
 func Test_Seed_WritesProgressFile(t *testing.T) {
 	cfg := seedTestConfig(t)
 	path := filepath.Join(t.TempDir(), "progress.json")
@@ -450,8 +441,7 @@ func Test_Seed_WritesProgressFile(t *testing.T) {
 	assert.True(t, os.IsNotExist(err))
 }
 
-// Resuming has to pick up at exactly the recorded position, seeding the rest of the sequence and
-// nothing before it.
+// Resuming must seed exactly the rest of the sequence and nothing before it
 func Test_Seed_ResumesFromRecordedPosition(t *testing.T) {
 	cfg := seedTestConfig(t)
 	path := filepath.Join(t.TempDir(), "progress.json")
@@ -478,12 +468,11 @@ func Test_Seed_ResumesFromRecordedPosition(t *testing.T) {
 	assert.Equal(t, pkg.TileRequest{LayerName: "counts", Z: 2, X: 0, Y: 0}, rendered[0])
 	assert.Contains(t, out.String(), "Resuming from tile 5")
 
-	// The run completed, so the progress file should be cleaned up rather than left behind.
 	_, err = os.Stat(path)
 	assert.True(t, os.IsNotExist(err))
 }
 
-// Resuming a completed run has nothing left to do rather than seeding the whole thing again.
+// Nothing is left to do rather than seeding everything again
 func Test_Seed_ResumeFromCompletedRun(t *testing.T) {
 	cfg := seedTestConfig(t)
 	path := filepath.Join(t.TempDir(), "progress.json")
@@ -508,8 +497,7 @@ func Test_Seed_ResumeFromCompletedRun(t *testing.T) {
 	assert.Empty(t, rendered)
 }
 
-// A progress file for a different area indexes into a different sequence, so resuming from it would
-// seed the wrong tiles. That has to fail loudly rather than silently restarting.
+// A different area indexes into a different sequence, so resuming must fail loudly rather than seed the wrong tiles
 func Test_Seed_RefusesMismatchedProgressFile(t *testing.T) {
 	cfg := seedTestConfig(t)
 	path := filepath.Join(t.TempDir(), "progress.json")
@@ -551,8 +539,7 @@ func Test_Seed_CorruptProgressFile(t *testing.T) {
 	}, &out))
 }
 
-// A run has to be big enough to cross a save interval, otherwise the unwritable path never gets
-// exercised and the run just completes.
+// The run must cross a save interval or the unwritable path is never exercised
 func Test_Seed_UnwritableProgressFile(t *testing.T) {
 	cfg := seedTestConfig(t)
 
@@ -566,8 +553,7 @@ func Test_Seed_UnwritableProgressFile(t *testing.T) {
 	}, &out))
 }
 
-// Progress is saved periodically during a run, so a seed killed partway through leaves usable state
-// rather than nothing at all.
+// A seed killed partway through should leave usable state behind
 func Test_Seed_SavesProgressDuringRun(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "progress.json")
 
@@ -586,16 +572,14 @@ func Test_Seed_SavesProgressDuringRun(t *testing.T) {
 	opts := SeedOptions{ProgressFile: path}
 	require.NoError(t, trackProgress(opts, progress, 0, done, &out))
 
-	// trackProgress only saves at the periodic interval, so the file on disk should reflect the
-	// last interval crossed rather than the final position tracked in memory.
+	// Saves only happen at the interval, so the file reflects the last interval crossed, not the final position
 	saved, err := seed.LoadProgress(path)
 	require.NoError(t, err)
 	assert.Equal(t, e.Count()/progressInterval*progressInterval, saved.Position)
 	assert.Equal(t, e.Count(), progress.Position)
 }
 
-// A completed run cleans the progress file up at the end regardless of how many periodic saves
-// happened along the way.
+// Regardless of how many periodic saves happened along the way
 func Test_Seed_CleansUpProgressFileOnCompletion(t *testing.T) {
 	cfg := seedTestConfig(t)
 	path := filepath.Join(t.TempDir(), "progress.json")
@@ -613,8 +597,7 @@ func Test_Seed_CleansUpProgressFileOnCompletion(t *testing.T) {
 	assert.True(t, os.IsNotExist(err))
 }
 
-// seedTestFailingProvider fails the first failCount tiles it is asked to render and succeeds for
-// the rest, so a partial failure can be told apart from a total one.
+// Fails the first failCount tiles so partial failure can be told apart from total failure
 type seedTestFailingProvider struct {
 	mutex     sync.Mutex
 	failCount int
@@ -671,8 +654,7 @@ func seedTestFailingConfig(t *testing.T, failCount int) config.Config {
 	return cfg
 }
 
-// Per-tile render errors used to be discarded, so a run where every tile failed still exited 0 and
-// a silent failure in CI looked like a successful seed.
+// Render errors used to be discarded, so a seed where every tile failed still exited 0
 func Test_Seed_ReturnsErrorWhenEveryTileFails(t *testing.T) {
 	cfg := seedTestFailingConfig(t, 4)
 
@@ -688,7 +670,7 @@ func Test_Seed_ReturnsErrorWhenEveryTileFails(t *testing.T) {
 	require.ErrorIs(t, err, ErrTooManyFailures)
 }
 
-// The default only trips when every tile fails, so a mostly successful seed still succeeds.
+// The default only trips when every tile fails
 func Test_Seed_SucceedsWhenSomeTilesFail(t *testing.T) {
 	cfg := seedTestFailingConfig(t, 3)
 
@@ -715,13 +697,13 @@ func Test_Seed_MaxFailuresGivesUpEarly(t *testing.T) {
 
 	require.ErrorIs(t, err, ErrTooManyFailures)
 
-	// Giving up means the run stops handing out tiles rather than working through all 85 of them.
+	// Giving up stops handing out tiles rather than working through all 85
 	seedTestFailer.mutex.Lock()
 	defer seedTestFailer.mutex.Unlock()
 	assert.Less(t, seedTestFailer.attempts, 85)
 }
 
-// A limit above what the run can reach leaves the seed reporting success.
+// A limit the run can't reach leaves the seed reporting success
 func Test_Seed_MaxFailuresAboveTileCount(t *testing.T) {
 	cfg := seedTestFailingConfig(t, 4)
 
@@ -735,7 +717,7 @@ func Test_Seed_MaxFailuresAboveTileCount(t *testing.T) {
 	}, &out))
 }
 
-// A purge deletes what a seed wrote, over the same layer/bounds/zoom parameters.
+// Same layer, bounds and zoom parameters as a seed
 func Test_Seed_PurgeRemovesCachedTiles(t *testing.T) {
 	cfg := seedTestConfig(t)
 	dir := t.TempDir()
@@ -765,12 +747,11 @@ func Test_Seed_PurgeRemovesCachedTiles(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, entries)
 
-	// Zoom 0 and 1 over the whole world is 1 + 4 tiles, all of them seeded above.
+	// Zoom 0 and 1 over the whole world is 1 + 4 tiles, all seeded above
 	assert.Contains(t, out.String(), "Removed 5 of 5 tiles")
 }
 
-// The reported count is what tells an operator whether a purge actually found anything, so tiles
-// that were never cached must not be counted.
+// The count tells operators whether a purge found anything, so uncached tiles mustn't be counted
 func Test_Seed_PurgeReportsOnlyTilesThatWereCached(t *testing.T) {
 	cfg := seedTestConfig(t)
 	cfg.Cache = map[string]interface{}{"name": "disk", "path": t.TempDir()}
@@ -787,7 +768,7 @@ func Test_Seed_PurgeReportsOnlyTilesThatWereCached(t *testing.T) {
 	assert.Contains(t, out.String(), "Removed 0 of 5 tiles")
 }
 
-// A purge covering more than was seeded reports only what it found, not the whole range.
+// Reports only what it found, not the whole range
 func Test_Seed_PurgeReportsPartialCount(t *testing.T) {
 	cfg := seedTestConfig(t)
 	dir := t.TempDir()
@@ -813,7 +794,7 @@ func Test_Seed_PurgeReportsPartialCount(t *testing.T) {
 	assert.Contains(t, out.String(), " of 5 tiles")
 }
 
-// The point of a purge is to reclaim space, so it must not repopulate what it deletes.
+// A purge reclaims space, so it must not repopulate what it deletes
 func Test_Seed_PurgeDoesNotCallProvider(t *testing.T) {
 	cfg := seedTestConfig(t)
 	cfg.Cache = map[string]interface{}{"name": "disk", "path": t.TempDir()}
@@ -831,7 +812,7 @@ func Test_Seed_PurgeDoesNotCallProvider(t *testing.T) {
 	assert.Empty(t, rendered)
 }
 
-// --force guards against hammering an upstream provider, which a purge never does.
+// --force guards against hammering an upstream provider, which a purge never does
 func Test_Seed_PurgeSkipsForceThreshold(t *testing.T) {
 	e, err := seed.NewSeedJob("counts", pkg.WorldBounds(), []uint{10})
 	require.NoError(t, err)
@@ -843,7 +824,7 @@ func Test_Seed_PurgeSkipsForceThreshold(t *testing.T) {
 	require.ErrorContains(t, checkSeedSize(e, SeedOptions{LayerName: "counts"}, &out), "--force")
 }
 
-// A purge aimed at one cache id leaves the others alone, the same way seeding does.
+// Leaves other caches alone, the same way seeding does
 func Test_Seed_PurgeCacheNameTargetsOneTier(t *testing.T) {
 	cfg := seedTestConfig(t)
 	purged := t.TempDir()

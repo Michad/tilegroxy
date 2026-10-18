@@ -25,8 +25,7 @@ func Test_Ternary(t *testing.T) {
 	assert.Equal(t, "b", Ternary(false, "a", "b"))
 }
 
-// Provider URLs are templated and a {ctx.*} placeholder resolves to a value off the incoming
-// request, so a debug log of the outgoing URL could carry a live credential.
+// A {ctx.*} placeholder resolves from the request, so a logged outgoing URL could carry a live credential
 func Test_RedactURLForLog(t *testing.T) {
 	cases := []struct {
 		name string
@@ -39,7 +38,7 @@ func Test_RedactURLForLog(t *testing.T) {
 		{"access token masked", "https://example.com/t?access_token=abc123", "https://example.com/t?access_token=redacted"},
 		{"param name case insensitive", "https://example.com/t?ApiKey=abc123", "https://example.com/t?ApiKey=redacted"},
 		{"userinfo masked", "https://user:pass@example.com/t", "https://redacted@example.com/t"},
-		// The CGI provider logs a relative URI rather than an absolute URL.
+		// The CGI provider logs a relative URI rather than an absolute URL
 		{"relative uri untouched", "/cgi-bin/mapserv?z=1", "/cgi-bin/mapserv?z=1"},
 		{"relative uri key masked", "/cgi-bin/mapserv?key=abc123", "/cgi-bin/mapserv?key=redacted"},
 	}

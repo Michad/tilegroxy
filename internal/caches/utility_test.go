@@ -84,8 +84,7 @@ func TestSafeLayerName_WhitespaceAndControlCharsAreReplaced(t *testing.T) {
 	assert.Equal(t, "a_b", safeLayerName("a\x00b"))
 }
 
-// The accepted collision tradeoff of sanitizing instead of hashing: layer names differing only in
-// unsafe characters map to the same sanitized value.
+// The accepted tradeoff of sanitizing instead of hashing
 func TestSafeLayerName_CollisionsAreExpectedForDistinctUnsafeNames(t *testing.T) {
 	assert.Equal(t, safeLayerName("a/b"), safeLayerName("a b"))
 }
@@ -156,8 +155,7 @@ func validateSaveAndLookup(t *testing.T, c cache.Cache) {
 	validateLookup(t, c, tile, &img)
 }
 
-// validateRemove covers the whole contract: a removed tile is gone, and removing one that was
-// never cached is not an error.
+// A removed tile is gone, and removing an uncached tile isn't an error
 func validateRemove(t *testing.T, c cache.Cache) {
 	tile := makeReq(rand.Intn(10000))
 	img := makeImg(rand.Intn(100))

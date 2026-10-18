@@ -33,16 +33,15 @@ import (
 )
 
 const (
-	// How long Start waits for the child to bind its port.
+	// How long Start waits for the child to bind its port
 	startupTimeout = 30 * time.Second
-	// How long a probe connection may take before it counts as not-yet-listening.
+	// Before a probe counts as not yet listening
 	probeTimeout = time.Second
-	// How long test cleanup gives a child to exit after SIGTERM before killing it.
+	// Grace after SIGTERM before cleanup kills the child
 	cleanupTimeout = 15 * time.Second
 )
 
-// Instance is a running tilegroxy child process. Everything a test asserts against goes through
-// here, so no test manipulates the process directly.
+// Tests go through this rather than manipulating the process directly
 type Instance struct {
 	ConfigPath string
 
@@ -56,8 +55,7 @@ type Instance struct {
 	mu     sync.Mutex
 }
 
-// lockedBuffer collects child output. The process writes from its own goroutine while tests read,
-// so the buffer needs its own lock.
+// The process writes from its own goroutine while tests read
 type lockedBuffer struct {
 	mu sync.Mutex
 	b  bytes.Buffer
@@ -77,8 +75,7 @@ func (l *lockedBuffer) String() string {
 	return l.b.String()
 }
 
-// Start launches the binary with a generated config on freshly allocated ports and blocks until it
-// answers, so tests never race against startup.
+// Allocates fresh ports and blocks until the binary answers, so tests never race startup
 func Start(t *testing.T, c Config) *Instance {
 	t.Helper()
 
@@ -95,12 +92,11 @@ func Start(t *testing.T, c Config) *Instance {
 	return launch(t, BinaryPath(t), args, c.Env, "", p, path)
 }
 
-// launch starts binary and blocks until it binds p.Server. An empty dir keeps the test's working directory.
+// Blocks until the binary binds p.Server. An empty dir keeps the test's working directory
 func launch(t *testing.T, binary string, args []string, env []string, dir string, p ports, configPath string) *Instance {
 	t.Helper()
 
-	// The context is a backstop that outlives launch and is released by stop, so graceful shutdown
-	// stays the harness's job rather than being pre-empted by a cancelled context.
+	// A backstop released by stop, so graceful shutdown isn't pre-empted by a cancelled context
 	ctx, cancel := context.WithCancel(context.Background())
 
 	cmd := exec.CommandContext(ctx, binary, args...)
@@ -125,8 +121,7 @@ func launch(t *testing.T, binary string, args []string, env []string, dir string
 	return inst
 }
 
-// waitReady polls the TCP port rather than an HTTP endpoint so it works whether or not the config
-// enables health, and reports captured output on failure instead of a bare timeout.
+// Polls TCP rather than HTTP so it works without health enabled, and reports output on failure
 func (i *Instance) waitReady() {
 	i.t.Helper()
 
@@ -166,8 +161,7 @@ func (i *Instance) Output() string {
 	return i.out.String()
 }
 
-// Running reports whether the child is still alive, without consuming its exit status. Signal 0 is
-// the liveness probe; a nil signal is rejected by os.Process.Signal as an unsupported type.
+// Doesn't consume the exit status. Signal 0 probes liveness since os.Process.Signal rejects nil
 func (i *Instance) Running() bool {
 	i.mu.Lock()
 	defer i.mu.Unlock()
@@ -194,9 +188,7 @@ func (i *Instance) Signal(sig os.Signal) {
 	}
 }
 
-// WaitExit blocks for the process to exit and returns its status code, failing the test if it
-// outlives the timeout. Signals go to the child, so a hung shutdown fails one test rather than
-// taking down the test binary.
+// Fails the test past the timeout. Signals go to the child so a hung shutdown fails one test only
 func (i *Instance) WaitExit(timeout time.Duration) int {
 	i.t.Helper()
 
@@ -268,7 +260,7 @@ func (i *Instance) stop() {
 	i.cancel()
 }
 
-// Run executes a non-serve subcommand to completion and returns its combined output and exit code.
+// Runs a non-serve subcommand to completion, returning combined output and exit code
 func Run(t *testing.T, args ...string) (string, int) {
 	t.Helper()
 

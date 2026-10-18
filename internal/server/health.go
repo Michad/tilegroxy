@@ -32,6 +32,7 @@ import (
 
 	"github.com/Michad/tilegroxy/internal/caches"
 	"github.com/Michad/tilegroxy/internal/checks"
+	"github.com/Michad/tilegroxy/internal/entities"
 	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/internal/static"
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -50,12 +51,25 @@ type CheckResult struct {
 type healthHandler struct {
 	checks           []health.HealthCheck
 	checkResultCache *sync.Map
-	// Set when shutdown begins so readiness fails before the server starts draining
+	// Set when shutdown begins so readiness fails before draining starts
 	draining *atomic.Bool
 }
 
-// checkDetail builds the per-check entry of the health response, reporting whether that check is
-// currently passing. A result that's missing or older than its TTL counts as a failure
+func ValidateHealthChecks(cfg *config.Config, ent *entities.Entities) error {
+	if !cfg.Health.Enabled {
+		return nil
+	}
+
+	for _, checkCfg := range cfg.Health.Checks {
+		if _, err := checks.ConstructHealthCheck(checkCfg, ent.LayerGroup, ent.Caches, cfg); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// A result missing or older than its TTL counts as failing
 func checkDetail(i int, check health.HealthCheck, cache *sync.Map) (map[string]any, bool) {
 	detail := make(map[string]any)
 	detail["componentId"] = strconv.Itoa(i)
@@ -83,7 +97,7 @@ func checkDetail(i int, check health.HealthCheck, cache *sync.Map) (map[string]a
 	case resultCheck.err != nil:
 		detail["status"] = "error"
 		detail["output"] = resultCheck.err.Error()
-	// Include 5 second leeway for check not being performed instantly
+	// Leeway for the check not running instantly
 	case resultCheck.timestamp.Add(resultCheck.ttl).Add(checkLeeway).Before(time.Now()):
 		detail["status"] = "error"
 		detail["output"] = "stale"
@@ -216,8 +230,7 @@ func setupHealthEndpoints(ctx context.Context, h config.HealthConfig, checks []h
 	r.HandleFunc("/", handleNoContent)
 	r.Handle("/health", healthHandler{checks, checkResultCache, draining})
 
-	// Health has to keep answering through the drain window, so its requests hang off the
-	// un-signalled root rather than the signal context that cancels when shutdown begins
+	// Hangs off the un-signalled root so health keeps answering through the drain window
 	healthRootCtx := context.WithoutCancel(ctx)
 
 	srv := &http.Server{
@@ -231,7 +244,7 @@ func setupHealthEndpoints(ctx context.Context, h config.HealthConfig, checks []h
 
 	var err error
 
-	// Give srv a little breathing room to try to start up
+	// Give srv a little time to start up
 	select {
 	case err = <-srvErr:
 	case <-time.After(startupWaitTime):
@@ -281,9 +294,7 @@ func setupCheckRoutines(ctx context.Context, h config.HealthConfig, layerGroup *
 		}()
 	}
 
-	// Stopping broadcasts a close rather than sending: a send on an unbuffered channel deadlocks
-	// forever once the ticker goroutine has already exited, which two callers of the same shutdown
-	// func can reach. The Once keeps that second call from panicking on a closed channel.
+	// Close rather than send, since a send deadlocks once the ticker exits. The Once stops a second caller panicking
 	var stopOnce sync.Once
 
 	callback = func(ctx context.Context) error {
@@ -322,4 +333,93 @@ func tickCheck(ctx context.Context, i int, check health.HealthCheck, ttl time.Du
 	result := CheckResult{err: err, timestamp: time.Now(), ttl: ttl}
 
 	checkResultCache.Store(i, result)
+}
+
+// Holding mu across teardown and rebuild stops concurrent reloads double-closing an instance or racing for the port
+type healthSupervisor struct {
+	mu         sync.Mutex
+	shutdownFn func(context.Context) error
+	drainFn    func()
+	// A rebuild after shutdown starts must come up draining, not reopen readiness
+	draining bool
+	stopped  bool
+}
+
+func (s *healthSupervisor) Start(ctx context.Context, cfg *config.Config, ent *entities.Entities) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.build(ctx, cfg, ent)
+}
+
+func (s *healthSupervisor) Reload(ctx context.Context, cfg *config.Config, ent *entities.Entities) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Rebuilding now would bind a listener nothing is left to stop
+	if s.stopped {
+		return nil
+	}
+
+	// The old listener must close first since the host and port rarely change
+	if s.shutdownFn != nil {
+		if err := s.shutdownFn(context.Background()); err != nil {
+			slog.WarnContext(ctx, fmt.Sprintf("Error shutting down previous health generation: %v", err))
+		}
+	}
+
+	s.shutdownFn = nil
+	s.drainFn = nil
+
+	// The old instance isn't resurrected since it could fail the same way. The next good reload restores health
+	if err := s.build(ctx, cfg, ent); err != nil {
+		slog.ErrorContext(ctx, fmt.Sprintf("Failed to rebuild health subsystem on reload, reload aborted: %v", err))
+		return err
+	}
+
+	return nil
+}
+
+func (s *healthSupervisor) build(ctx context.Context, cfg *config.Config, ent *entities.Entities) error {
+	if !cfg.Health.Enabled {
+		return nil
+	}
+
+	// Kept even on error since a partial failure returns a shutdown for whatever did start
+	shutdownFn, drainFn, err := SetupHealth(ctx, cfg, ent.LayerGroup, ent.Caches)
+	s.shutdownFn = shutdownFn
+	s.drainFn = drainFn
+
+	if s.draining && drainFn != nil {
+		drainFn()
+	}
+
+	return err
+}
+
+func (s *healthSupervisor) Drain() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.draining = true
+
+	if s.drainFn != nil {
+		s.drainFn()
+	}
+}
+
+func (s *healthSupervisor) Shutdown(ctx context.Context) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.stopped = true
+	shutdownFn := s.shutdownFn
+	s.shutdownFn = nil
+	s.drainFn = nil
+
+	if shutdownFn == nil {
+		return nil
+	}
+
+	return shutdownFn(ctx)
 }

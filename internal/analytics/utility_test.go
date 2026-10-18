@@ -38,8 +38,7 @@ func Test_ValidateIdentifier(t *testing.T) {
 		require.NoError(t, validateIdentifier(name, "test", msgs), "%v should be accepted", name)
 	}
 
-	// Identifiers are interpolated into SQL rather than bound, so anything that could terminate or
-	// extend the statement has to be rejected outright.
+	// Identifiers are interpolated rather than bound, so anything that could terminate or extend the statement must be rejected
 	invalid := []string{
 		"",
 		"1events",
@@ -74,7 +73,7 @@ func Test_ResolveColumns(t *testing.T) {
 	assert.Equal(t, "layer_id", out[ColumnLayer])
 	assert.Equal(t, ColumnTime, out[ColumnTime], "unspecified columns should keep their default")
 
-	// Overriding the defaults must not mutate them; a second module would otherwise inherit them.
+	// Mutating the defaults would leak overrides into a second module
 	assert.Equal(t, ColumnLayer, defaults[ColumnLayer])
 
 	_, err = resolveColumns(defaults, map[string]string{"nonsense": "x"}, "test", msgs)

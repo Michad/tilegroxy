@@ -14,59 +14,59 @@
 
 //go:build ignore
 
-// This example implements a simple "proxy" provider but using a custom provider interface.  It can be used in contrast to the normal proxy provider for a quick performance comparison.
+// A simple proxy implemented as a custom provider, useful for comparing performance against the built-in proxy provider
 
 // Package must always be custom
 package custom
 
 import (
-	//The standard library is available for use
+	// The standard library is available for use
 	"math/rand"
 	"strconv"
 	"strings"
 
-	//This contains types and utility functions from the main tilegroxy application. It is required to always be imported
+	// Types and utility functions from tilegroxy. Always required
 	"tilegroxy/tilegroxy"
 )
 
-// This method is responsible for authenticating outgoing requests and returning a token or whatever else is needed. This method is called when needed by the application. A given instance of tilegroxy will only call this method once at a time and then shares the result among threads. However, this is not shared between instances of tilegroxy.
+// Authenticates outgoing requests. Called one at a time per instance with the result shared across threads, but not across instances
 func preAuth(
-	//Contextual information about the http request at play
+	// Contextual information about the incoming request
 	ctx tilegroxy.Context,
-	//The previous ProviderContext. Will have default/empty values the first time this is called.  Included for use-cases where a refreshToken is available
+	// The previous ProviderContext, empty on the first call. Useful when a refresh token is available
 	providerContext tilegroxy.ProviderContext,
-	//The parameters included under the provider in the configuration. In this case it will only contain "url"
+	// Parameters from the provider config block. Here, only "url"
 	params map[string]interface{},
-	//The Client configuration including information such as timeout settings and user agent
+	// Client settings such as timeouts and user agent
 	clientConfig tilegroxy.ClientConfig,
-	//A mapping for localization of error messages
+	// A mapping for localization of error messages
 	errorMessages tilegroxy.ErrorMessages,
 ) (tilegroxy.ProviderContext, error) {
-	//Setting Bypass to true will prevent preAuth ever being subsequently called. Set it for cases where you have no need to authenticate
+	// AuthBypass stops preAuth from being called again. Use it when no authentication is needed
 	return tilegroxy.ProviderContext{AuthBypass: true}, nil
 }
 
-// This method is responsible for creating a tile
+// Creates a tile
 func generateTile(
-	//Contextual information about the http request at play
+	// Contextual information about the incoming request
 	ctx tilegroxy.Context,
-	//The Authentication Context returned from the previous call to preAuth
+	// The ProviderContext returned by the latest preAuth call
 	providerContext tilegroxy.ProviderContext,
-	//The main input parameters for the request at hand.  Includes LayerName as well as Z, X, and Y tile coordinates
+	// Includes LayerName and the Z, X and Y tile coordinates
 	tileRequest tilegroxy.TileRequest,
-	//The parameters included under the provider in the configuration. In this case it will only contain "url"
+	// Parameters from the provider config block. Here, only "url"
 	params map[string]interface{},
-	//The Client configuration including information such as timeout settings and user agent
+	// Client settings such as timeouts and user agent
 	clientConfig tilegroxy.ClientConfig,
-	//A mapping for localization of error messages
+	// A mapping for localization of error messages
 	errorMessages tilegroxy.ErrorMessages,
 ) (
-	//The resulting image. Currently mapped to []byte
+	// Currently mapped to []byte
 	*tilegroxy.Image,
-	//An error for cases when images are not returned. Recommended for this to be mutually exclusive with the Image return. Can be any error type but make it tilegroxy.AuthError type to trigger an auth refresh
+	// Prefer returning either an image or an error, not both. A tilegroxy.AuthError triggers an auth refresh
 	error,
 ) {
-	//An example of how to trigger an authentication refresh. Only useful in cases where Bypass is false
+	// Demonstrates triggering an auth refresh. Only useful when AuthBypass is false
 	if rand.Float32() < 0.01 {
 		return nil, tilegroxy.AuthError{"Induced failure"}
 	}
@@ -77,9 +77,6 @@ func generateTile(
 	url = strings.ReplaceAll(url, "{y}", strconv.Itoa(tileRequest.Y))
 	url = strings.ReplaceAll(url, "{x}", strconv.Itoa(tileRequest.X))
 
-	//This method performs a GET call to the specified URL with all the standard configured headers/timeout settings
-	//The third parameter is a map containing custom HTTP headers to include, which should be used for Authentication
-	//You can also perform HTTP calls via standard go HTTP library for cases where a GET doesn't suffice. It's recommended
-	//to use GetTile where possible for consistency and ensure the configured rules are followed
+	// GetTile applies the configured headers and timeouts. The map adds custom headers like auth. Use net/http for non-GET calls
 	return tilegroxy.GetTile(ctx, clientConfig, url, make(map[string]string))
 }

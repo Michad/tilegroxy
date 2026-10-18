@@ -143,7 +143,7 @@ func Test_ConstructLayer_Metadata_UnknownMetadataKeepsConfig(t *testing.T) {
 	assert.Equal(t, config.DataTypeRaster, l.DataType)
 }
 
-// Provider zooms are descriptive, so a fallback whose primary stops at z8 still serves z9 from its secondary.
+// Provider zooms are descriptive, so a fallback whose primary stops at z8 still serves z9 from its secondary
 func Test_CheckZoomBounds_IgnoresProviderZoom(t *testing.T) {
 	l, _, err := constructMetadataLayer(t, "md-zoom-1", layer.Description{MinZoom: intPtr(3), MaxZoom: intPtr(8)}, nil)
 	require.NoError(t, err)

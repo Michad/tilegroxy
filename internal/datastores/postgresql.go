@@ -114,8 +114,7 @@ func (p PostgresqlWrapper) Native() any {
 	return p.pool
 }
 
-// Close shuts down the connection pool. Without this a hot reload would leak the pool and rely on
-// idle timeouts to eventually reclaim the connections.
+// Otherwise a hot reload would leak the pool until idle timeouts reclaim it
 func (p PostgresqlWrapper) Close(_ context.Context) error {
 	if p.pool != nil {
 		p.pool.Close()

@@ -66,8 +66,11 @@ func (s MultiRegistration) Initialize(configAny any, deps cache.CacheDeps) (cach
 	return Multi{tierCaches}, nil
 }
 
-// Close releases every tier that holds resources. Tiers are constructed by this cache so nothing
-// else is in a position to shut them down.
+func (c Multi) Children() []cache.Cache {
+	return c.Tiers
+}
+
+// This cache constructs its tiers, so nothing else can shut them down
 func (c Multi) Close(ctx context.Context) error {
 	errs := make([]error, 0, len(c.Tiers))
 
@@ -110,7 +113,7 @@ func (c Multi) Save(ctx context.Context, t pkg.TileRequest, img *pkg.Image) erro
 	return allErrors
 }
 
-// Every tier is covered because a hit in any one of them would otherwise resurrect the tile.
+// Covers every tier since a hit in any one would resurrect the tile
 func (c Multi) Remove(ctx context.Context, t pkg.TileRequest) (bool, error) {
 	var allErrors error
 

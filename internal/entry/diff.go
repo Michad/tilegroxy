@@ -29,23 +29,22 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Output formats for DiffConfig
 const (
 	DiffFormatText  = "text"
 	DiffFormatYAML  = "yaml"
 	DiffFormatJSON  = "json"
 	DiffFormatTable = "table"
-	// DiffFormatMarkdown is the table format written as a markdown pipe table
+	// The table format as a markdown pipe table
 	DiffFormatMarkdown = "markdown"
 )
 
-// Impact of a change on a running server started with --hot-reload
+// Impact on a running server started with --hot-reload
 const (
 	diffImpactReload  = "reload"
 	diffImpactRestart = "restart"
 )
 
-// Kinds of change reported within an impact group
+// Kinds of change within an impact group
 const (
 	diffKindAdded    = "added"
 	diffKindRemoved  = "removed"
@@ -54,7 +53,7 @@ const (
 
 type DiffOptions struct {
 	Format string
-	// Color turns on the ANSI escapes the text format uses. Ignored by every other format
+	// ANSI escapes for the text format. Ignored by every other format
 	Color bool
 }
 
@@ -98,8 +97,7 @@ func configToMap(cfg *config.Config) (map[string]any, error) {
 		return map[string]any{}, nil
 	}
 
-	// A YAML round trip rather than mapstructure.Decode: the latter leaves typed slices such as
-	// []LayerConfig intact, which the generic walk below can't descend into
+	// YAML round trip since mapstructure.Decode leaves typed slices like []LayerConfig that the walk can't descend into
 	encoded, err := yaml.Marshal(*cfg)
 	if err != nil {
 		return nil, err
@@ -143,7 +141,7 @@ func lowerKeys(v any) any {
 	}
 }
 
-// diffResult is impact -> kind -> the changed slice of config, nested exactly as it appears in a configuration file
+// impact -> kind -> changed config slice, nested as in a configuration file
 type diffResult map[string]map[string]map[string]any
 
 func buildDiff(oldMap, newMap map[string]any) diffResult {
@@ -181,7 +179,7 @@ func (d diffResult) add(e diffEntry) {
 	sections[e.section] = mergeInto(sections[e.section], e.value)
 }
 
-// mergeInto folds a second change to the same section into what's already recorded for it, so several modified keys within one section land in a single tree rather than overwriting each other
+// Folds several changed keys in one section into a single tree rather than overwriting each other
 func mergeInto(existing, addition any) any {
 	existingMap, ok1 := existing.(map[string]any)
 	additionMap, ok2 := addition.(map[string]any)
@@ -202,8 +200,7 @@ func mergeInto(existing, addition any) any {
 	return existingMap
 }
 
-// keyedSections hold a list of uniquely identified entries. Matching them by that identifier rather
-// than by position reports an inserted entry as one addition instead of shifting everything after it
+// Matched by identifier rather than position so an insert reports one addition instead of shifting everything after it
 var keyedSections = map[string]bool{
 	"layers":     true,
 	"datastores": true,
@@ -276,8 +273,7 @@ func entriesByID(val any) map[string]any {
 	return res
 }
 
-// entryKey identifies one entry for matching across the two configs. An entry with neither an id nor
-// a pattern can't be matched by name, so its position stands in
+// Entries with neither id nor pattern fall back to their position
 func entryKey(entry map[string]any, index int) string {
 	if id, ok := entry["id"].(string); ok && id != "" {
 		return id
@@ -290,8 +286,7 @@ func entryKey(entry map[string]any, index int) string {
 	return fmt.Sprintf("[%d]", index)
 }
 
-// pruneEmpty drops keys left at their zero value. A whole layer being reported means every field
-// it never set would otherwise be listed alongside the handful the operator actually wrote
+// Otherwise a reported layer would list every unset field alongside the few the operator wrote
 func pruneEmpty(v any) any {
 	m, ok := v.(map[string]any)
 	if !ok {
@@ -328,8 +323,7 @@ func isEmpty(v any) bool {
 	}
 }
 
-// diffValue returns the new value for anything that changed, keeping the surrounding structure, or
-// nil when old and new match. A removed key is reported as an explicit null
+// Keeps the surrounding structure, or returns nil when unchanged. A removed key is an explicit null
 func diffValue(oldVal, newVal any) any {
 	if reflect.DeepEqual(oldVal, newVal) {
 		return nil
@@ -366,10 +360,7 @@ func diffMap(oldMap, newMap map[string]any) any {
 	return changes
 }
 
-// diffList descends into a list the same way as a struct, keying entries by position. Lists whose
-// order carries meaning, such as a multi cache's tiers, would otherwise report the whole list as
-// changed for a single edit within one entry. A list that changed length is reported whole, since
-// positions no longer line up and every entry after an insert would read as modified
+// Positional so ordered lists like multi tiers report one edited entry, not the whole list. Length changes are reported whole
 func diffList(oldList, newList []any) any {
 	if len(oldList) != len(newList) {
 		return wrapValue(sliceToAny(newList))
@@ -398,14 +389,12 @@ func sliceToAny(list []any) any {
 	return list
 }
 
-// wholeValue marks an object that appeared or disappeared in one piece. The renderers stop
-// descending at it, so an added layer reads as one addition rather than as every field it contains
+// An object added or removed in one piece. Renderers stop here so an added layer reads as one addition
 type wholeValue struct {
 	value any
 }
 
-// nil is how diffValue signals "unchanged", so a value that genuinely became nil is boxed to stay
-// distinguishable
+// nil means "unchanged" to diffValue, so a value that became nil is boxed
 type removedValue struct{}
 
 func wrapValue(v any) any {
@@ -488,7 +477,7 @@ func renderDiff(result diffResult, opts DiffOptions, out io.Writer) error {
 	}
 }
 
-// structuredDiff converts to plain maps with the internal markers resolved, ready for a serializer
+// Plain maps with internal markers resolved, ready for a serializer
 func structuredDiff(result diffResult) map[string]any {
 	res := map[string]any{}
 
@@ -512,8 +501,7 @@ func structuredDiff(result diffResult) map[string]any {
 	return res
 }
 
-// renderDiffTable flattens every change to one row, trading the nesting of the other formats for
-// output that sorts and greps by column
+// One row per change, trading nesting for output that sorts and greps by column
 func renderDiffTable(result diffResult, out io.Writer) error {
 	if len(result) == 0 {
 		fmt.Fprintln(out, "No differences")
@@ -537,7 +525,7 @@ type tableRow struct {
 	value     string
 }
 
-// tableRows flattens the diff into the one-row-per-change form the table and markdown formats share
+// Shared by the table and markdown formats
 func tableRows(result diffResult) []tableRow {
 	var rows []tableRow
 
@@ -569,8 +557,7 @@ func tableRows(result diffResult) []tableRow {
 	return rows
 }
 
-// renderDiffMarkdown emits the same rows as the table format in a pipe table, for pasting into a
-// pull request or a job summary
+// For pasting into a pull request or job summary
 func renderDiffMarkdown(result diffResult, out io.Writer) error {
 	if len(result) == 0 {
 		fmt.Fprintln(out, "No differences")
@@ -587,7 +574,7 @@ func renderDiffMarkdown(result diffResult, out io.Writer) error {
 	return nil
 }
 
-// escapeMarkdownCell keeps a value containing a pipe or a backslash from splitting its cell
+// Keeps a pipe or backslash from splitting the cell
 func escapeMarkdownCell(s string) string {
 	s = strings.ReplaceAll(s, `\`, `\\`)
 
@@ -599,8 +586,7 @@ type diffRow struct {
 	value string
 }
 
-// joinPath appends a key to a dotted path. A list index is already bracketed, so it attaches
-// directly rather than taking a separator of its own
+// A list index is already bracketed, so it attaches without a separator
 func joinPath(path, key string) string {
 	if strings.HasPrefix(key, "[") {
 		return path + key
@@ -609,9 +595,7 @@ func joinPath(path, key string) string {
 	return path + "." + key
 }
 
-// flattenValue walks a change tree down to its leaves, joining the keys along the way into the
-// dotted path the same value has in a configuration file. format renders each leaf, which differs
-// between the formats that give a value a line of its own and those that keep it within a column
+// Joins keys into the dotted config path of each leaf. format differs between line-per-value and column formats
 func flattenValue(path string, val any, format func(any) string) []diffRow {
 	if whole, ok := val.(wholeValue); ok {
 		return []diffRow{{path: path, value: format(whole.value)}}
@@ -631,8 +615,7 @@ func flattenValue(path string, val any, format func(any) string) []diffRow {
 	return rows
 }
 
-// formatCell renders a leaf on one line. A list has no path of its own to split across rows, so it
-// stays inline rather than breaking the column layout
+// A list has no path to split across rows, so it stays inline
 func formatCell(val any) string {
 	switch t := val.(type) {
 	case removedValue, nil:
@@ -685,7 +668,7 @@ var diffImpactHeadings = map[string]string{
 	diffImpactRestart: "Changes Requiring a Restart",
 }
 
-// painter applies ANSI attributes, or leaves the text alone when color is off
+// No-op when color is off
 type painter bool
 
 func (p painter) paint(attrs, s string) string {
@@ -740,7 +723,7 @@ func writeImpactChanges(out io.Writer, paint painter, kinds map[string]map[strin
 
 		for _, section := range sortedKeys(sections) {
 			for _, row := range flattenValue(section, sections[section], formatBlock) {
-				// A block stands apart from whatever surrounds it; consecutive single line changes read better listed together
+				// Blocks stand apart, while consecutive single line changes read better listed together
 				block := strings.HasPrefix(row.value, "\n")
 				if !first && (block || afterBlock) {
 					fmt.Fprintln(out)

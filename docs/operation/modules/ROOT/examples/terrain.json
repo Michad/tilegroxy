@@ -1,0 +1,52 @@
+{
+  "cache": {
+    "name": "disk",
+    "path": "./terrain_cache"
+  },
+  "layers": [
+    {
+      "id": "osm",
+      "provider": {
+        "name": "proxy",
+        "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+      }
+    },
+    {
+      "id": "air_pressure",
+      "provider": {
+        "name": "transform",
+        "threads": 8,
+        "formula": "import \"math\"\nfunc transform(r, g, b, a uint8) (uint8, uint8, uint8, uint8) {\n  elevation := -10000 + ((float64(r)*256*256 + float64(g)*256 + float64(b)) * 0.1)\n  pressure := 101325 * math.Pow(1-.0000225577*elevation, 5.25588)\n  c := uint8(pressure / 1000)\n  return c, c, c, 255\n}\n",
+        "provider": {
+          "name": "fallback",
+          "primary": {
+            "name": "proxy",
+            "url": "https://api.mapbox.com/v4/mapbox.terrain-rgb/{z}/{x}/{y}.pngraw?access_token={env.MAPBOX_KEY}"
+          },
+          "secondary": {
+            "name": "static",
+            "color": "0186a0"
+          }
+        }
+      }
+    },
+    {
+      "id": "air_pressure_over_osm",
+      "provider": {
+        "name": "blend",
+        "mode": "opacity",
+        "opacity": 0.5,
+        "providers": [
+          {
+            "name": "ref",
+            "layer": "air_pressure"
+          },
+          {
+            "name": "ref",
+            "layer": "osm"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -30,7 +30,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// Note: inline connection info is intentionally undocumented, just left functional for compatibility
+// Inline connection info is intentionally undocumented, kept functional for compatibility
 type RedisConfig struct {
 	HostAndPort `mapstructure:",squash"` // Host and Port for a single server. A convenience equivalent to supplying Servers with a single entry
 	DB          int                      // Database number, defaults to 0
@@ -51,12 +51,9 @@ const (
 type Redis struct {
 	RedisConfig
 	cache *rediscache.Cache
-	// The underlying client, retained solely so it can be shut down. rediscache.Cache doesn't
-	// expose what it wraps, so we have to hold onto it ourselves. Left nil when the client comes
-	// from a shared datastore, since the datastore registry owns closing it in that case.
+	// rediscache.Cache doesn't expose its client, so it's retained for shutdown. Nil for a shared datastore, which the registry closes
 	client io.Closer
-	// The same client, held separately because Remove needs DEL's reply count, which
-	// rediscache.Cache discards. Always set, unlike client.
+	// Remove needs DEL's reply count, which rediscache.Cache discards. Always set, unlike client
 	redis redis.UniversalClient
 }
 
@@ -116,9 +113,7 @@ func initializeRedisFromDatastore(config RedisConfig, deps cache.CacheDeps) (cac
 	return &Redis{RedisConfig: config, cache: newRedisTileCache(client), client: nil, redis: client}, nil
 }
 
-// initializeRedisDirect builds a redis connection from the cache's own inline connection fields
-// by constructing a private, unregistered redis datastore. This reuses the datastore's
-// connection-building logic instead of duplicating it here.
+// Builds a private, unregistered redis datastore from the inline fields to reuse its connection logic
 func initializeRedisDirect(config RedisConfig, deps cache.CacheDeps) (cache.Cache, error) {
 	servers := make([]datastores.RedisHostAndPort, len(config.Servers))
 	for i, s := range config.Servers {
@@ -151,7 +146,6 @@ func newRedisTileCache(client redis.UniversalClient) *rediscache.Cache {
 	})
 }
 
-// Close shuts down the underlying redis client, releasing its connection pool.
 func (c Redis) Close(_ context.Context) error {
 	if c.client == nil {
 		return nil
@@ -195,8 +189,7 @@ func (c Redis) Save(ctx context.Context, t pkg.TileRequest, img *pkg.Image) erro
 	return err
 }
 
-// DEL replies with how many keys it actually removed, which rediscache.Cache discards, so this
-// goes to the client directly.
+// Goes to the client directly since rediscache.Cache discards DEL's removed count
 func (c Redis) Remove(ctx context.Context, t pkg.TileRequest) (bool, error) {
 	key := c.KeyPrefix + t.String()
 

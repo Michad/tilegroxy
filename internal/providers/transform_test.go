@@ -82,7 +82,7 @@ func Test_Transform_Execute(t *testing.T) {
 	assert.Equal(t, *exp, img.Content)
 }
 
-// Writes a solid-color single pixel image to a temp file and returns its path.
+// A solid-color single pixel image
 func writeTestImage(t *testing.T, name string, col color.Color, encode func(*os.File, image.Image) error) string {
 	t.Helper()
 
@@ -120,7 +120,7 @@ func Test_Transform_JPEGChannelsArePassedThroughUnchanged(t *testing.T) {
 		return jpeg.Encode(f, img, &jpeg.Options{Quality: 100})
 	})
 
-	// JPEG is lossy, so assert the identity transform preserves whatever the decoder produced.
+	// JPEG is lossy, so compare against whatever the decoder produced
 	expected := transformedPixel(t, path, `func transform(r, g, b, a uint8) (uint8, uint8, uint8, uint8) { return r,g,b,a }`)
 	swapped := transformedPixel(t, path, `func transform(r, g, b, a uint8) (uint8, uint8, uint8, uint8) { return b,r,g,a }`)
 

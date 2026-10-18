@@ -30,7 +30,7 @@ var version, ref, buildDate = static.GetVersionInformation()
 
 var tracer trace.Tracer = otel.Tracer(packageName)
 
-// Handles making a new context and span for entity wrappers to break down request flow. Make sure to End the span that is returned
+// A new context and span for entity wrappers to break down request flow. Callers must End the returned span
 func MakeChildSpan(ctx context.Context, newRequest *pkg.TileRequest, providerName string, childSpanName string, functionName string) (context.Context, trace.Span) {
 	spanName := providerName
 

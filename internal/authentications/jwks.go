@@ -72,9 +72,7 @@ func newKeySet(ctx context.Context, cfg JWKSConfig, algorithms []string, errorMe
 
 	k := &keySet{cfg: cfg, algorithms: algorithms, cache: cache, errorMessages: errorMessages}
 
-	// Register performs the first fetch and blocks on it, so it gets an explicit deadline on top
-	// of the client timeout. Refresh needs no such bound because the resource is already
-	// registered, so it returns promptly on failure rather than retrying.
+	// Register blocks on the first fetch so it needs its own deadline. Refresh returns promptly on failure
 	registerCtx, cancel := context.WithTimeout(ctx, time.Duration(cfg.RequestTimeout)*time.Second) // #nosec G115 -- operator-supplied timeout in seconds, far below int64 overflow range
 	err = cache.Register(registerCtx, cfg.URL,
 		jwk.WithMinInterval(time.Duration(cfg.RefreshMinInterval)*time.Second),   // #nosec G115 -- operator-supplied interval in seconds, far below int64 overflow range
@@ -89,7 +87,7 @@ func newKeySet(ctx context.Context, cfg JWKSConfig, algorithms []string, errorMe
 		return k, nil
 	}
 
-	// Fetch once now so a bad URL fails at startup rather than surfacing as 401s later.
+	// A bad URL should fail at startup rather than surface as 401s later
 	if _, err = cache.Refresh(ctx, cfg.URL); err != nil {
 		if startupErr := k.startupError(ctx, err); startupErr != nil {
 			_ = k.Close(ctx)
@@ -117,10 +115,7 @@ func (k *keySet) keyFor(ctx context.Context, kid string) (crypto.PublicKey, erro
 
 	key, found := k.lookup(set, kid)
 
-	// An unknown key ID usually means the issuer rotated, so force one refresh before rejecting.
-	// jwk.Cache.Refresh ignores RefreshMinInterval entirely (that only paces the background poll),
-	// so tryForceRefresh applies our own rate limit to stop a flood of bogus key IDs from turning
-	// into a flood of outbound requests to the issuer.
+	// An unknown kid usually means rotation. Refresh ignores RefreshMinInterval, so tryForceRefresh rate limits bogus kids itself
 	if !found {
 		refreshed, refreshErr := k.tryForceRefresh(ctx, set)
 		if refreshErr != nil {
@@ -151,7 +146,7 @@ func (k *keySet) keyFor(ctx context.Context, kid string) (crypto.PublicKey, erro
 	return pub, nil
 }
 
-// tryForceRefresh performs the forced refresh triggered by an unknown key ID, but only if RefreshMinInterval has elapsed since the last one. Avoids attackers making us spam jwks server
+// Skipped until RefreshMinInterval has elapsed so attackers can't make us spam the JWKS server
 func (k *keySet) tryForceRefresh(ctx context.Context, cached jwk.Set) (jwk.Set, error) {
 	k.forcedRefreshMu.Lock()
 	defer k.forcedRefreshMu.Unlock()
@@ -171,8 +166,7 @@ func (k *keySet) tryForceRefresh(ctx context.Context, cached jwk.Set) (jwk.Set, 
 	return refreshed, nil
 }
 
-// lookup finds the key by ID, or the only key in the set when the token carries no kid. More
-// than one candidate with no kid is ambiguous and rejected rather than guessed at.
+// Falls back to the only key when the token has no kid. Multiple candidates are ambiguous and rejected
 func (k *keySet) lookup(set jwk.Set, kid string) (jwk.Key, bool) {
 	if kid != "" {
 		return set.LookupKeyID(kid)

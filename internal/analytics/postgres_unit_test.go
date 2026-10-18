@@ -36,7 +36,6 @@ func Test_Postgres_Names(t *testing.T) {
 	}
 }
 
-// The deprecated alias must behave identically to the canonical registration
 func Test_Postgres_LegacyAliasInitializes(t *testing.T) {
 	msgs := config.DefaultConfig().Error.Messages
 

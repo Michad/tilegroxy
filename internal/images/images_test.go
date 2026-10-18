@@ -99,8 +99,7 @@ func TestImageLoad(t *testing.T) {
 	assert.Equal(t, imageError, *img)
 }
 
-// pkg/config can't import this package, so it mirrors these keys as literal constants. Guards the
-// two definitions against drifting apart.
+// pkg/config can't import this package so it mirrors these keys as literals. Guards against drift
 func TestDefaultConfigImageKeysMatchEmbeddedKeys(t *testing.T) {
 	def := config.DefaultConfig()
 

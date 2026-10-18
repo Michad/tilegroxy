@@ -38,7 +38,7 @@ import (
 )
 
 func init() {
-	// This is a hack to help with vscode test execution. Put a .env in repo root w/ anything you need for test containers
+	// Lets vscode test runs pick up testcontainer settings from a .env in the repo root
 	if env, err := os.ReadFile("../../.env"); err == nil {
 		envs := strings.Split(string(env), "\n")
 		for _, e := range envs {

@@ -24,7 +24,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 )
 
-// A struct that wraps all other providers in order to add in instrumentation, specifically child spans for tracing the flow between providers. This is used even when telemetry is disabled but OTEL handles no-op'ing in that case so performance impact is minimal
+// Adds tracing spans around every provider. Always used since OTEL no-ops when telemetry is disabled
 type ProviderWrapper struct {
 	Name     string
 	Provider layer.Provider
@@ -59,7 +59,7 @@ func (t ProviderWrapper) GenerateTile(ctx context.Context, providerContext layer
 	return img, err
 }
 
-// Close closes the whole tree beneath the wrapper, so the wrapper is deliberately not a Parent.
+// Closes the whole tree beneath, so the wrapper is deliberately not a Parent
 func (t ProviderWrapper) Close(ctx context.Context) error {
 	return layer.CloseProvider(ctx, t.Provider)
 }

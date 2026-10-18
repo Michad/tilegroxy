@@ -12,9 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package analytics defines the contract for recording lightweight usage events when a tile is successfully
-// served. This is distinct from telemetry; telemetry aggregates counters for operating the service whereas
-// analytics records individual events attributable to a layer, a coordinate and optionally a user
+// Package analytics records individual usage events per layer, coordinate and user, unlike telemetry's aggregate counters
 package analytics
 
 import (
@@ -26,33 +24,28 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 )
 
-// Event is a single successful tile delivery. Everything but Fields is always populated
+// A single successful tile delivery. Everything but Fields is always populated
 type Event struct {
 	Time time.Time
-	// The ID of the layer as configured, not the name from the URL. Matches how per-layer telemetry
-	// metrics are recorded so the two can be correlated
+	// The configured ID, not the URL name. Matches per-layer telemetry metrics so the two can be correlated
 	LayerID string
-	// The layer name exactly as requested, which differs from LayerID when the layer uses a pattern
+	// Exactly as requested, which differs from LayerID for pattern layers
 	LayerName string
 	Z         int
 	X         int
 	Y         int
-	// The authenticated user, or "" when anonymous. Only the jwt and custom auth modules populate this
+	// Empty when anonymous. Only the jwt and custom auth modules populate this
 	UserID string
-	// Additional attributes resolved from the module's configuration. Nil when none are configured
+	// Resolved from the module's configuration. Nil when none are configured
 	Fields map[string]any
 }
 
-// Analytics receives events for successful tile requests. Implementations must not block the caller; Record
-// runs on the request goroutine after the response is written so a slow implementation delays connection
-// reuse. Modules talking to a remote system should queue events and write them in the background.
-// Returning an error is for reporting only, it never surfaces to the user or affects the response
+// Record runs on the request goroutine after the response, so must not block. Errors are only reported, never surfaced
 type Analytics interface {
 	Record(ctx context.Context, event Event) error
 }
 
-// AnalyticsDeps carries everything an analytics module is given at construction. New dependencies are
-// added as fields so the Initialize signature stays stable
+// New dependencies are added as fields so the Initialize signature stays stable
 type AnalyticsDeps struct {
 	Datastores    datastore.DatastoreRegistry
 	ErrorMessages config.ErrorMessages

@@ -28,10 +28,7 @@ func GetPackage() string {
 	return "github.com/michad/tilegroxy"
 }
 
-// Returns a tuple containing build version information. Returns:
-// Version in the format vX.Y.Z - will include placeholders for unofficial builds
-// Verson Control System identifier (git ref)
-// Timestamp of when it was built
+// Returns the version (vX.Y.Z, with placeholders for unofficial builds), the git ref, and the build timestamp
 func GetVersionInformation() (string, string, string) {
 	myVersion := tilegroxyVersion
 

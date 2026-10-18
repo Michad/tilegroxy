@@ -122,7 +122,7 @@ type errSource struct {
 func (s *errSource) ReadRange(context.Context, uint64, uint64) ([]byte, error) { return nil, s.err }
 func (s *errSource) Close() error                                              { return nil }
 
-// Simulates a remote failure once reads reach tile data, keeping header/root/metadata reads working.
+// Fails once reads reach tile data, leaving header, root and metadata reads working
 type failAfterHeaderSource struct {
 	data     []byte
 	failFrom uint64

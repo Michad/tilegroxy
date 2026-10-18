@@ -227,7 +227,7 @@ func resizeImages(ctx context.Context, img image.Image, img2 image.Image) (image
 	return img, img2
 }
 
-// Only the default transparent secondary leaves the output limited to the primary within bounds.
+// Only the default transparent secondary limits the output to the primary within bounds
 func (t Crop) Metadata() layer.Description {
 	primary := layer.DescribeTree(t.Primary)
 	if t.CropConfig.Secondary != nil {

@@ -43,7 +43,7 @@ type AWSSecretsManagerConfig struct {
 	Endpoint string // For non-AWS (e.g. localstack)
 }
 
-// awsSecretValue is one fetched secret, kept so sibling JSON keys reuse a single API call
+// Kept so sibling JSON keys reuse a single API call
 type awsSecretValue struct {
 	value   string
 	version string
@@ -212,7 +212,7 @@ func (s AWSSecretsManagerSecreter) CheckBatchSize() int {
 	return 1
 }
 
-// Just for testing purposes
+// For tests
 func (s *AWSSecretsManager) makeSecret(key, val string) error {
 	_, err := s.client.CreateSecret(pkg.BackgroundContext(), &secretsmanager.CreateSecretInput{
 		Name:         &key,

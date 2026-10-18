@@ -17,6 +17,8 @@ package server
 import (
 	"context"
 	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"os"
 	"syscall"
 	"testing"
@@ -31,12 +33,11 @@ func Test_ListenAndServe_Validate(t *testing.T) {
 	cfg := config.DefaultConfig()
 	cfg.Server.Encrypt = &config.EncryptionConfig{Certificate: "asfjaslkf", Domain: ""}
 
-	require.Error(t, ListenAndServe(&cfg, nil, nil, nil))
+	require.Error(t, ListenAndServe(&cfg, nil, nil))
 }
 
 func Test_InterruptFlagsIncludesSigterm(t *testing.T) {
-	// Docker, Compose, and Kubernetes all stop containers with SIGTERM. Without it in this
-	// list the process dies on Go's default disposition and no teardown runs.
+	// Docker, Compose and Kubernetes stop containers with SIGTERM. Without it no teardown runs
 	assert.Contains(t, InterruptFlags, syscall.SIGTERM)
 	assert.Contains(t, InterruptFlags, os.Interrupt)
 }
@@ -47,9 +48,32 @@ func Test_NewHTTPServer_BoundsSlowClients(t *testing.T) {
 
 	srv := newHTTPServer(context.Background(), &cfg, http.NotFoundHandler())
 
-	// A client that stops reading the response would otherwise park the handler goroutine, and
-	// with it the refcount reload and shutdown wait on. Double Server.Timeout keeps this a
-	// backstop behind the timeout handler rather than a second deadline operators have to tune.
+	// A client that stops reading would park the handler and the refcount reload waits on. Doubled to stay a backstop
 	assert.Equal(t, 90*time.Second, srv.WriteTimeout)
 	assert.Equal(t, 90*time.Second, srv.IdleTimeout)
+}
+
+func Test_HTTPRedirectHandler_PinsHost(t *testing.T) {
+	h := httpRedirectHandler{host: "example.com"}
+
+	tests := map[string]string{
+		"/tiles/osm/1/2/3?key=abc": "https://example.com/tiles/osm/1/2/3?key=abc",
+		"http://evil.com/x?y=1":    "https://example.com/x?y=1",
+		"http:.evil.com":           "https://example.com",
+		"//evil.com/x":             "https://example.com//evil.com/x",
+	}
+
+	for target, expected := range tests {
+		t.Run(target, func(t *testing.T) {
+			u, err := url.ParseRequestURI(target)
+			require.NoError(t, err)
+
+			req := &http.Request{Method: http.MethodGet, URL: u, RequestURI: target, Header: http.Header{}}
+			rw := httptest.NewRecorder()
+			h.ServeHTTP(rw, req)
+
+			assert.Equal(t, http.StatusMovedPermanently, rw.Code)
+			assert.Equal(t, expected, rw.Header().Get("Location"))
+		})
+	}
 }

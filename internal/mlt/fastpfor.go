@@ -20,7 +20,7 @@ import (
 	"math"
 )
 
-// MLT v1 FastPFOR uses big-endian words and 256 value blocks, per https://arxiv.org/pdf/1209.2137 section 6.
+// MLT v1 FastPFOR uses big-endian words and 256 value blocks, per https://arxiv.org/pdf/1209.2137 section 6
 const (
 	fastPFORBlockSize   = 256
 	fastPFORPageSize    = 65536
@@ -85,7 +85,7 @@ func (d *fastPFORDecoder) word(i int) (uint32, error) {
 	return d.words[i], nil
 }
 
-// Returns the word position where the next page starts.
+// Returns the word position where the next page starts
 func (d *fastPFORDecoder) page(pos, outPos, size int) (int, error) {
 	whereMeta, err := d.word(pos)
 	if err != nil {
@@ -132,8 +132,7 @@ func (d *fastPFORDecoder) page(pos, outPos, size int) (int, error) {
 	return next, nil
 }
 
-// The bitmap flags which exception bit widths have a packed stream of values. A page can't
-// patch more values than it holds.
+// The bitmap flags which exception bit widths have a packed stream. A page can't patch more values than it holds
 func (d *fastPFORDecoder) exceptionStreams(bitmap uint32, pos int, pageSize int) ([][]uint32, int, error) {
 	exceptions := make([][]uint32, fastPFORMaxBits+1)
 	total := 0
@@ -211,7 +210,7 @@ func (b *fastPFORBlocks) decode(outPos int) error {
 	return b.patch(outPos, width, exceptionCount)
 }
 
-// Exceptions add the high bits that didn't fit in the block's width, at the positions listed in the metadata.
+// Exceptions add the high bits that didn't fit the block's width, at positions listed in the metadata
 func (b *fastPFORBlocks) patch(outPos, width, count int) error {
 	maxBits, err := b.metaByte()
 	if err != nil {
@@ -246,7 +245,7 @@ func (b *fastPFORBlocks) patch(outPos, width, count int) error {
 	return nil
 }
 
-// FastPFOR's variable byte coding marks the final byte of each value with the high bit.
+// The high bit marks each value's final byte
 func (d *fastPFORDecoder) vbyte(pos, outPos int) error {
 	var acc uint64
 
@@ -276,7 +275,7 @@ func (d *fastPFORDecoder) vbyte(pos, outPos int) error {
 	return nil
 }
 
-// Values are packed least significant bit first, spanning word boundaries.
+// Least significant bit first, spanning word boundaries
 func unpackBits(words []uint32, count, width int) []uint32 {
 	out := make([]uint32, count)
 	if width == 0 {

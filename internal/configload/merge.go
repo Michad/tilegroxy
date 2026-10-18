@@ -58,9 +58,7 @@ func CacheControlAutoEnabled(c config.CacheControlConfig) bool {
 	return c.Auto == nil || *c.Auto
 }
 
-// EffectiveShutdownTimeout resolves the shutdown budget. When unset it covers both phases that
-// consume it, the drain wait and a full-length request, so the budget is never smaller than the
-// work it has to fit
+// When unset, covers both the drain wait and a full-length request so the budget always fits its work
 func EffectiveShutdownTimeout(c config.ServerConfig) uint {
 	if c.ShutdownTimeout == 0 {
 		return c.Timeout + c.DrainDelay

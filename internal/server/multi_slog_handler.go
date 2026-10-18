@@ -20,7 +20,7 @@ import (
 	"log/slog"
 )
 
-// Simple slog.Handler that sends all requests to children handlers
+// Fans every record out to its child handlers
 type MultiHandler struct {
 	handlers []slog.Handler
 }

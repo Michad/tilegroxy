@@ -48,7 +48,7 @@ type TestOptions struct {
 	TenantID       string
 }
 
-// The default tile used when a layer has no configured center/bounds/zoom to derive one from.
+// Used when a layer has no center, bounds or zoom to derive a tile from
 const (
 	defaultZ = 10
 	defaultX = 123
@@ -100,8 +100,7 @@ func pickTile(l *layers.Layer, layerName string) pkg.TileRequest {
 	return pkg.TileRequest{LayerName: layerName, Z: int(z), X: x, Y: y} // #nosec G115 -- z is 0-21, bounded well within int range
 }
 
-// the set of layer names tested when none are given. A pattern layer's ID
-// isn't a name, so it contributes its examples instead
+// A pattern layer's ID isn't a name, so it contributes its examples instead
 func defaultLayerNames(layerObjects *layers.LayerGroup) []string {
 	names := make([]string, 0, len(layerObjects.Layers()))
 
@@ -220,14 +219,12 @@ func Test(cfg *config.Config, opts TestOptions, out io.Writer) (uint32, error) {
 
 	reqSplit := splitForThreads(tileRequests, opts.NumThread)
 
-	// The live per-tile text table is written to stdout unless we're in JSON mode with no file to
-	// separately stream to - in that case stdout is reserved for the JSON summary alone.
+	// In JSON mode with no file, stdout is reserved for the JSON summary
 	tableOut := out
 	if opts.JSON && opts.FilePath == "" {
 		tableOut = io.Discard
 	}
 
-	// Start processing all the tile requests over N threads
 	var wg sync.WaitGroup
 	errCount := uint32(0)
 	var failuresMu sync.Mutex
@@ -256,8 +253,7 @@ func Test(cfg *config.Config, opts TestOptions, out io.Writer) (uint32, error) {
 	return errCount, nil
 }
 
-// writeSummary emits the run summary to --file (if set) and, when in JSON mode with no --file, to
-// out as well since that's the only output stdout gets in that case.
+// Also writes to out in JSON mode without --file, since that's stdout's only output then
 func writeSummary(out io.Writer, opts TestOptions, summary TestSummary) error {
 	if opts.FilePath != "" {
 		file, err := os.Create(opts.FilePath) // #nosec G304 -- operator-supplied path from the CLI, not user input
@@ -300,53 +296,37 @@ func testTileRequests(layerObjects *layers.LayerGroup, opts TestOptions, errCoun
 	pkg.SetIdentity(ctx, opts.UserID, opts.TenantID)
 
 	for _, req := range myReqs {
+		var layerErr error
+		var cacheWriteErr error
+		var cacheReadErr error
 		layer := layerObjects.FindLayer(ctx, req.LayerName)
-		img, layerErr := layer.RenderTileNoCache(ctx, req)
-		var cacheWriteError error
-		var cacheReadError error
 
-		if !opts.NoCache && layerErr == nil {
-			cacheWriteError = layer.Cache.Save(ctx, req, img)
-			if cacheWriteError == nil {
-				var img2 *pkg.Image
-				img2, cacheReadError = layer.Cache.Lookup(ctx, req)
-				if cacheReadError == nil {
-					if img2 == nil {
-						cacheReadError = errors.New("no result from cache lookup")
-					} else if !slices.Equal(img.Content, img2.Content) {
-						cacheReadError = errors.New("cache result doesn't match what we put into cache")
-					}
-				}
-			}
+		if layer == nil {
+			layerErr = fmt.Errorf("layer %v unexpectedly not found", req.LayerName)
+		} else {
+			layerErr, cacheWriteErr, cacheReadErr = testTileRequest(ctx, layer, req, opts.NoCache)
 		}
 
-		layerFailure := layerErr
-		if layerFailure == nil {
-			layerFailure = cacheWriteError
-		}
-		if layerFailure == nil {
-			layerFailure = cacheReadError
-		}
+		allErrors := errors.Join(layerErr, cacheWriteErr, cacheReadErr)
 
-		if layerFailure != nil {
+		if allErrors != nil {
 			atomic.AddUint32(errCount, 1)
 
 			failuresMu.Lock()
-			*failures = append(*failures, TestFailure{LayerName: req.LayerName, Error: layerFailure.Error()})
+			*failures = append(*failures, TestFailure{LayerName: req.LayerName, Error: allErrors.Error()})
 			failuresMu.Unlock()
 		}
 
-		// Output the result into the table
 		resultStr := strconv.Itoa(t) + "\t" + req.LayerName + "\t"
 		if layerErr != nil {
 			resultStr += "No\tN/A\tN/A\t\xff" + layerErr.Error() + "\xff\t"
 		} else {
 			if opts.NoCache { //nolint:gocritic
 				resultStr += "Yes\tN/A\tN/A\tNone\t"
-			} else if cacheWriteError != nil {
-				resultStr += "Yes\tNo\tN/A\t\xff" + cacheWriteError.Error() + "\xff\t"
-			} else if cacheReadError != nil {
-				resultStr += "Yes\tYes\tNo\t\xff" + cacheReadError.Error() + "\xff\t"
+			} else if cacheWriteErr != nil {
+				resultStr += "Yes\tNo\tN/A\t\xff" + cacheWriteErr.Error() + "\xff\t"
+			} else if cacheReadErr != nil {
+				resultStr += "Yes\tYes\tNo\t\xff" + cacheReadErr.Error() + "\xff\t"
 			} else {
 				resultStr += "Yes\tYes\tYes\tNone\t"
 			}
@@ -356,4 +336,47 @@ func testTileRequests(layerObjects *layers.LayerGroup, opts TestOptions, errCoun
 	}
 
 	wg.Done()
+}
+
+// Recovers per request so one broken provider, script or cache can't abort the whole run
+func testTileRequest(ctx context.Context, l *layers.Layer, req pkg.TileRequest, noCache bool) (error, error, error) {
+	var layerErr error
+	var cacheWriteErr error
+	var cacheReadErr error
+
+	stage := &layerErr
+
+	defer func() {
+		if r := recover(); r != nil {
+			*stage = fmt.Errorf("panic: %v", r)
+		}
+	}()
+
+	img, err := l.RenderTileNoCache(ctx, req)
+	if err == nil && img == nil {
+		err = errors.New("provider returned no image and no error")
+	}
+
+	layerErr = err
+	if !noCache && err == nil {
+		stage = &cacheWriteErr
+
+		cacheWriteErr = l.Cache.Save(ctx, req, img)
+		if cacheWriteErr == nil {
+
+			stage = &cacheReadErr
+
+			img2, err := l.Cache.Lookup(ctx, req)
+			switch {
+			case err != nil:
+				cacheReadErr = err
+			case img2 == nil:
+				cacheReadErr = errors.New("no result from cache lookup")
+			case !slices.Equal(img.Content, img2.Content):
+				cacheReadErr = errors.New("cache result doesn't match what we put into cache")
+			}
+		}
+	}
+
+	return layerErr, cacheWriteErr, cacheReadErr
 }

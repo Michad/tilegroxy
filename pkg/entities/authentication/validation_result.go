@@ -16,20 +16,16 @@ package authentication
 
 import "time"
 
-// ValidationResult is returned by a custom authentication script's validate function. Fields are
-// added here rather than as new return values so adding a capability never requires another
-// breaking change to the validate signature.
+// Returned by a custom auth script's validate. New fields avoid breaking the validate signature again
 type ValidationResult struct {
-	// Whether the token is valid and should allow the request to proceed
+	// Whether the request should proceed
 	Pass bool
-	// When the authentication status of the token expires and validate should be called again.
-	// Pass should be false for already-expired tokens
+	// When validate should be called again. Pass should be false for already-expired tokens
 	Expiration time.Time
-	// An identifier for the user being authenticated. By default this is only used for logging
+	// By default only used for logging
 	UserID string
-	// An identifier for the tenant/organization the user belongs to. By default this is only
-	// used for logging and analytics
+	// The user's tenant or organization. By default only used for logging and analytics
 	TenantID string
-	// The specific layer IDs to allow access to with this token. Leave empty to allow all layers
+	// Layer IDs this token may access. Empty allows all layers
 	AllowedLayers []string
 }

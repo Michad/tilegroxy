@@ -40,8 +40,7 @@ func errorVars(cfg *config.ErrorConfig, errorType pkg.TypeOfError, dataType conf
 	case pkg.TypeOfErrorAuth:
 		level = slog.LevelDebug
 		status = http.StatusUnauthorized
-		// Always PNG: picking the vector variant would leak the layer's data type to a caller
-		// who hasn't been authenticated yet.
+		// Always PNG, since the vector variant would leak the layer's data type to an unauthenticated caller
 		imgPath, contentType = cfg.Images.Authentication, "image/png"
 	case pkg.TypeOfErrorBounds:
 		level = slog.LevelDebug
@@ -72,9 +71,7 @@ func errorVars(cfg *config.ErrorConfig, errorType pkg.TypeOfError, dataType conf
 	return status, level, imgPath, contentType
 }
 
-// errorImage picks the raster or vector error image, and its Content-Type, based on the
-// erroring layer's data type. A layer whose data type couldn't be determined keeps the
-// long-standing PNG behavior.
+// A layer of undetermined data type keeps the long-standing PNG behavior
 func errorImage(rasterPath string, mvtPath string, mltPath string, dataType config.DataType) (string, string) {
 	switch dataType {
 	case config.DataTypeMVT:
@@ -108,9 +105,7 @@ func writeErrorMessage(ctx context.Context, w http.ResponseWriter, cfg *config.E
 		audit.AuthFailure(ctx, internalMessage)
 	}
 
-	// Nothing else marks an error response as uncacheable - with AlwaysOK the status is even 200 -
-	// so a CDN in front of tilegroxy would hold onto "tile unavailable" long after the upstream
-	// recovers.
+	// Nothing else marks errors uncacheable, and AlwaysOK even returns 200, so a CDN could hold "tile unavailable" long after recovery
 	w.Header().Set(cacheControlHeader, noStoreDirective)
 
 	switch cfg.Mode {

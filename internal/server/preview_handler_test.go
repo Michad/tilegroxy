@@ -39,7 +39,7 @@ func Test_PreviewHandler_ValidLayer_ReturnsHTMLWithTileURL(t *testing.T) {
 	cfg.Layers = []config.LayerConfig{staticLayerConfig("main")}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	h := newPreviewHandler(ent)
+	h := newPreviewHandler(newGenerationHolder(ent))
 
 	req := httptest.NewRequest(http.MethodGet, "http://internal-host/preview/main", nil).WithContext(pkg.BackgroundContext())
 	req.SetPathValue("layer", "main")
@@ -60,9 +60,7 @@ func Test_PreviewHandler_ValidLayer_ReturnsHTMLWithTileURL(t *testing.T) {
 	assert.Contains(t, string(body), "maplibre")
 }
 
-// A pattern layer's ParamValidator is operator-configured but can be as permissive as ".*", so the
-// matched layer name reaching this handler can contain attacker-chosen characters. This verifies
-// the tile URL - built from that name - can't break out of the JS string literal it's placed in.
+// A permissive ParamValidator like ".*" lets attackers pick the name, so the URL must not escape its JS string
 func Test_PreviewHandler_PatternLayerWithHostileName_EscapesIntoTemplate(t *testing.T) {
 	cfg := config.DefaultConfig()
 	cfg.Layers = []config.LayerConfig{
@@ -75,7 +73,7 @@ func Test_PreviewHandler_PatternLayerWithHostileName_EscapesIntoTemplate(t *test
 	}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	h := newPreviewHandler(ent)
+	h := newPreviewHandler(newGenerationHolder(ent))
 
 	hostileName := `x"});</script><script>alert(1)</script>{L.tileLayer("x`
 	req := httptest.NewRequest(http.MethodGet, "http://internal-host/preview/"+hostileName, nil).WithContext(pkg.BackgroundContext())
@@ -101,7 +99,7 @@ func Test_PreviewHandler_UnknownLayer_Returns401(t *testing.T) {
 	cfg.Layers = []config.LayerConfig{staticLayerConfig("main")}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	h := newPreviewHandler(ent)
+	h := newPreviewHandler(newGenerationHolder(ent))
 
 	req := httptest.NewRequest(http.MethodGet, "http://internal-host/preview/doesnotexist", nil).WithContext(pkg.BackgroundContext())
 	req.SetPathValue("layer", "doesnotexist")
@@ -122,7 +120,7 @@ func Test_PreviewHandler_VectorLayer_NotesInBody(t *testing.T) {
 	}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	h := newPreviewHandler(ent)
+	h := newPreviewHandler(newGenerationHolder(ent))
 
 	req := httptest.NewRequest(http.MethodGet, "http://internal-host/preview/vec", nil).WithContext(pkg.BackgroundContext())
 	req.SetPathValue("layer", "vec")
@@ -147,7 +145,7 @@ func Test_PreviewHandler_VectorLayer_NameOverride_UsesQueryParam(t *testing.T) {
 	}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	h := newPreviewHandler(ent)
+	h := newPreviewHandler(newGenerationHolder(ent))
 
 	req := httptest.NewRequest(http.MethodGet, "http://internal-host/preview/vec?name=custom_layer", nil).WithContext(pkg.BackgroundContext())
 	req.SetPathValue("layer", "vec")
@@ -177,7 +175,7 @@ func Test_PreviewHandler_LayerWithBounds_UsesFitBounds(t *testing.T) {
 	}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	h := newPreviewHandler(ent)
+	h := newPreviewHandler(newGenerationHolder(ent))
 
 	req := httptest.NewRequest(http.MethodGet, "http://internal-host/preview/bounded", nil).WithContext(pkg.BackgroundContext())
 	req.SetPathValue("layer", "bounded")
@@ -201,7 +199,7 @@ func Test_PreviewHandler_AllowedArea_IntersectsBounds(t *testing.T) {
 	cfg.Layers = []config.LayerConfig{layerCfg}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	h := newPreviewHandler(ent)
+	h := newPreviewHandler(newGenerationHolder(ent))
 
 	ctx := pkg.BackgroundContext()
 	ctxAllowedArea, _ := pkg.AllowedAreaFromContext(ctx)
@@ -219,8 +217,7 @@ func Test_PreviewHandler_AllowedArea_IntersectsBounds(t *testing.T) {
 
 	body, err := io.ReadAll(res.Body)
 	require.NoError(t, err)
-	// The intersection of the layer's [-10,10]x[-10,10] bounds with the allowed [-5,5]x[-5,20]
-	// area narrows south/north to -5/5, so those should appear in the rendered bounds array.
+	// Intersecting [-10,10]x[-10,10] with the allowed [-5,5]x[-5,20] narrows south/north to -5/5
 	assert.Contains(t, string(body), "var bounds =")
 	assert.Contains(t, string(body), "-5")
 }
@@ -230,7 +227,7 @@ func Test_PreviewHandler_ReloadEntities_SwapsGenerationAndReleasesOld(t *testing
 	oldGen := newGeneration(&cfg, &entities.Entities{})
 	newGen := oldGen.succeededBy(&entities.Entities{})
 
-	h := newPreviewHandler(oldGen)
+	h := newPreviewHandler(newGenerationHolder(oldGen))
 
 	h.mu.RLock()
 	assert.Equal(t, oldGen, h.current)
@@ -248,7 +245,7 @@ func Test_PreviewHandler_LayerScope_RestrictsAccess(t *testing.T) {
 	cfg.Layers = []config.LayerConfig{staticLayerConfig("main"), staticLayerConfig("other")}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	h := newPreviewHandler(ent)
+	h := newPreviewHandler(newGenerationHolder(ent))
 
 	ctx := pkg.BackgroundContext()
 	limitLayers, _ := pkg.LimitLayersFromContext(ctx)
@@ -273,7 +270,7 @@ func Test_PreviewHandler_NonGetMethod_MethodNotAllowed(t *testing.T) {
 	cfg.Layers = []config.LayerConfig{staticLayerConfig("main")}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	h := newPreviewHandler(ent)
+	h := newPreviewHandler(newGenerationHolder(ent))
 
 	req := httptest.NewRequest(http.MethodPost, "http://internal-host/preview/main", nil).WithContext(pkg.BackgroundContext())
 	req.SetPathValue("layer", "main")
@@ -292,7 +289,7 @@ func Test_PreviewHandler_OptionsMethod_NoContent(t *testing.T) {
 	cfg.Layers = []config.LayerConfig{staticLayerConfig("main")}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	h := newPreviewHandler(ent)
+	h := newPreviewHandler(newGenerationHolder(ent))
 
 	req := httptest.NewRequest(http.MethodOptions, "http://internal-host/preview/main", nil).WithContext(pkg.BackgroundContext())
 	req.SetPathValue("layer", "main")
@@ -366,7 +363,7 @@ func Test_PreviewHandler_IgnoresReloadedServerConfig(t *testing.T) {
 	cfg.Layers = []config.LayerConfig{staticLayerConfig("main")}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	h := newPreviewHandler(ent)
+	h := newPreviewHandler(newGenerationHolder(ent))
 
 	h.reload(ent.succeededBy(&entities.Entities{LayerGroup: ent.layerGroup(), Auth: ent.auth()}))
 
@@ -394,7 +391,7 @@ func servePMTilesPreview(t *testing.T, target string) string {
 		{ID: "pm", Provider: map[string]interface{}{"name": "pmtiles", "file": "../pmtiles/testdata/vector.pmtiles"}},
 	}
 
-	h := newPreviewHandler(buildTileJSONTestServing(t, cfg))
+	h := newPreviewHandler(newGenerationHolder(buildTileJSONTestServing(t, cfg)))
 
 	req := httptest.NewRequest(http.MethodGet, target, nil).WithContext(pkg.BackgroundContext())
 	req.SetPathValue("layer", "pm")
@@ -436,7 +433,7 @@ func Test_PreviewHandler_NoMetadata_ProbesGuessedLayer(t *testing.T) {
 		{ID: "vec", LayerMetadata: config.LayerMetadata{DataType: config.DataTypeMVT}, Provider: map[string]interface{}{"name": "proxy", "url": "http://example.com/{z}/{x}/{y}"}},
 	}
 
-	h := newPreviewHandler(buildTileJSONTestServing(t, cfg))
+	h := newPreviewHandler(newGenerationHolder(buildTileJSONTestServing(t, cfg)))
 
 	req := httptest.NewRequest(http.MethodGet, "http://internal-host/preview/vec", nil).WithContext(pkg.BackgroundContext())
 	req.SetPathValue("layer", "vec")
@@ -481,7 +478,7 @@ func servePreviewBody(t *testing.T, dataType config.DataType) string {
 		{ID: "vec", LayerMetadata: config.LayerMetadata{DataType: dataType}, Provider: map[string]interface{}{"name": "proxy", "url": "http://example.com/{z}/{x}/{y}"}},
 	}
 
-	h := newPreviewHandler(buildTileJSONTestServing(t, cfg))
+	h := newPreviewHandler(newGenerationHolder(buildTileJSONTestServing(t, cfg)))
 
 	req := httptest.NewRequest(http.MethodGet, "http://internal-host/preview/vec", nil).WithContext(pkg.BackgroundContext())
 	req.SetPathValue("layer", "vec")
@@ -498,7 +495,7 @@ func servePreviewBody(t *testing.T, dataType config.DataType) string {
 	return string(body)
 }
 
-// MapLibre GL JS decodes a source as MVT unless told otherwise, and the probe has to read the matching format.
+// MapLibre GL JS decodes sources as MVT unless told otherwise, and the probe must read the matching format
 func Test_PreviewHandler_MltLayer(t *testing.T) {
 	body := servePreviewBody(t, config.DataTypeMLT)
 

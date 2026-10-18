@@ -18,20 +18,19 @@ package e2e
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
+	"net/http/httptrace"
 	"strings"
 	"sync"
 	"time"
 )
 
-// How long a single request under load may take before it counts as a failure. Shorter than
-// requestTimeout so a stalled request surfaces inside the window a continuity test observes.
+// Shorter than requestTimeout so a stalled request surfaces within a continuity test's window
 const loadRequestTimeout = 15 * time.Second
 
-// LoadResult tallies what a load run observed. The distinction that matters for shutdown tests is
-// between a connection refused at dial time (acceptable once the listener closes) and a connection
-// that was accepted and then broken (never acceptable).
+// Separates refusals at dial time, fine once the listener closes, from accepted connections that broke, which never are
 type LoadResult struct {
 	Total           int
 	ByStatus        map[int]int
@@ -40,13 +39,12 @@ type LoadResult struct {
 	MaxLatency      time.Duration
 }
 
-// AllOK reports the property most continuity tests assert: every request returned 200 and nothing
-// failed at the transport level.
+// Every request returned 200 with no transport failures
 func (r LoadResult) AllOK() bool {
 	return r.TransportErrors == 0 && r.Total > 0 && r.ByStatus[http.StatusOK] == r.Total
 }
 
-// Load is a running set of workers hammering one URL until Stop.
+// Workers hammering one URL until Stop
 type Load struct {
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
@@ -54,8 +52,7 @@ type Load struct {
 	result LoadResult
 }
 
-// StartLoad drives sustained traffic until Stop. Continuity assertions reduce to running this
-// across a disruption and checking nothing failed.
+// Continuity assertions run this across a disruption and check nothing failed
 func (i *Instance) StartLoad(path string, workers int) *Load {
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -81,7 +78,11 @@ func (i *Instance) StartLoad(path string, workers int) *Load {
 }
 
 func (l *Load) once(ctx context.Context, client *http.Client, url string) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	var reused bool
+
+	trace := &httptrace.ClientTrace{GotConn: func(info httptrace.GotConnInfo) { reused = info.Reused }}
+
+	req, err := http.NewRequestWithContext(httptrace.WithClientTrace(ctx, trace), http.MethodGet, url, nil)
 	if err != nil {
 		return
 	}
@@ -98,8 +99,7 @@ func (l *Load) once(ctx context.Context, client *http.Client, url string) {
 	defer l.mu.Unlock()
 
 	if ctx.Err() != nil {
-		// Cancellation during Stop is the harness shutting down, not a server failure, so the
-		// request is not counted at all.
+		// Cancellation during Stop is the harness shutting down, so it isn't counted
 		return
 	}
 
@@ -112,7 +112,7 @@ func (l *Load) once(ctx context.Context, client *http.Client, url string) {
 	if err != nil {
 		l.result.TransportErrors++
 
-		if isRefused(err) {
+		if isRefused(err) || (!reused && isBacklogReset(err)) {
 			l.result.RefusedErrors++
 		}
 
@@ -124,16 +124,21 @@ func (l *Load) once(ctx context.Context, client *http.Client, url string) {
 	l.result.ByStatus[resp.StatusCode]++
 }
 
-// isRefused separates "the listener is gone" from "the connection broke mid-flight". Matching on
-// message text is crude but avoids a syscall-package dependency that differs across platforms.
+// Message matching is crude but avoids platform-specific syscall dependencies
 func isRefused(err error) bool {
 	msg := err.Error()
 
 	return strings.Contains(msg, "connection refused") || strings.Contains(msg, "no such host")
 }
 
-// Stop cancels the workers and returns what they observed. In-flight requests are cancelled rather
-// than awaited, so Stop returns promptly even against a hung server.
+// Closing a listener resets completed but unaccepted connections, which in practice is a refusal
+func isBacklogReset(err error) bool {
+	msg := err.Error()
+
+	return errors.Is(err, io.EOF) || strings.Contains(msg, "connection reset by peer") || strings.Contains(msg, "broken pipe")
+}
+
+// In-flight requests are cancelled rather than awaited so Stop returns promptly against a hung server
 func (l *Load) Stop() LoadResult {
 	l.cancel()
 	l.wg.Wait()

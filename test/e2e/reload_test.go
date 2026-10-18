@@ -29,28 +29,25 @@ import (
 )
 
 const (
-	// How long a reload may take to become observable on the serving port.
+	// How long a reload may take to become observable on the serving port
 	reloadObserveTimeout = 30 * time.Second
-	// How many times the burst tests rewrite the config. Enough that a generation leak compounds
-	// into something measurable.
+	// Enough that a generation leak compounds into something measurable
 	reloadBurstCount = 10
-	// Spacing between burst writes, so the watcher sees each as a distinct change rather than
-	// coalescing them.
+	// So the watcher sees each write as distinct rather than coalescing them
 	reloadBurstSpacing = 300 * time.Millisecond
-	// How long a test holds a window open to prove a rejected config changed nothing.
+	// How long to wait to prove a rejected config changed nothing
 	settleWindow = 3 * time.Second
-	// How long the readiness observer polls across a reload.
+	// How long the readiness observer polls across a reload
 	observeWindow = 5 * time.Second
-	// Buffer for observed readiness blips. Sized so the observer never blocks on a full channel.
+	// Sized so the observer never blocks
 	blipBuffer = 128
-	// Ceiling on file descriptor growth across a reload burst. A multiple rather than a delta,
-	// since the absolute count depends on what else the runtime has open.
+	// A multiple rather than a delta, since the absolute count depends on what else the runtime has open
 	fdGrowthFactor = 3
-	// The config file mode the harness writes, matching writeConfig.
+	// Matches writeConfig
 	configMode = 0600
 )
 
-// Hot reload requires the --hot-reload flag; without it a config file change does nothing.
+// Hot reload requires the --hot-reload flag
 const reloadConfigA = `
 server:
   port: {{.Port}}
@@ -79,8 +76,7 @@ layers:
       color: "FFFFFF"
 `
 
-// rewriteConfig replaces the running instance's config file in place, preserving the allocated port
-// by rendering through the same template path Start used.
+// Renders through Start's template path to keep the allocated port
 func rewriteConfig(t *testing.T, inst *Instance, raw string) {
 	t.Helper()
 
@@ -89,7 +85,7 @@ func rewriteConfig(t *testing.T, inst *Instance, raw string) {
 	require.NoError(t, os.WriteFile(inst.ConfigPath, []byte(rendered), configMode))
 }
 
-// The headline reload test: a client hitting a live socket must never see a failure across a swap.
+// A client hitting a live socket must never see a failure across a swap
 func Test_Reload_DropsNoRequests(t *testing.T) {
 	inst := Start(t, Config{Raw: reloadConfigA, HotReload: true})
 
@@ -113,8 +109,7 @@ func Test_Reload_DropsNoRequests(t *testing.T) {
 	assert.True(t, res.AllOK(), "reload dropped requests: %+v. Output:\n%s", res, inst.Output())
 }
 
-// The generation registry exists because repeated saves used to pin several generations at once,
-// each holding its own connection pools.
+// Repeated saves used to pin several generations at once, each holding its own pools
 func Test_Reload_BurstOfReloadsDropsNoRequests(t *testing.T) {
 	inst := Start(t, Config{Raw: reloadConfigA, HotReload: true})
 
@@ -135,8 +130,7 @@ func Test_Reload_BurstOfReloadsDropsNoRequests(t *testing.T) {
 	assert.True(t, res.AllOK(), "reload burst dropped requests: %+v. Output:\n%s", res, inst.Output())
 }
 
-// Malformed YAML must leave the running server untouched, asserted under load so the claim is
-// continuity rather than eventual recovery.
+// Asserted under load so the claim is continuity rather than eventual recovery
 func Test_Reload_MalformedConfigLeavesServerServing(t *testing.T) {
 	inst := Start(t, Config{Raw: reloadConfigA, HotReload: true})
 
@@ -154,10 +148,7 @@ func Test_Reload_MalformedConfigLeavesServerServing(t *testing.T) {
 	inst.Get("/tiles/color/8/12/32").ExpectStatus(http.StatusOK)
 }
 
-// Valid YAML that fails entity construction is a different code path from malformed YAML, and is
-// where a partial swap would be most likely to slip through. A ref provider naming a layer that
-// does not exist fails construction, which `tilegroxy config check` reports as
-// `error constructing layers`.
+// A different path from malformed YAML, where a partial swap is likeliest. A ref to a missing layer fails construction
 func Test_Reload_UnconstructableConfigLeavesServerServing(t *testing.T) {
 	inst := Start(t, Config{Raw: reloadConfigA, HotReload: true})
 
@@ -184,7 +175,7 @@ layers:
 	inst.Get("/tiles/color/8/12/32").ExpectStatus(http.StatusOK)
 }
 
-// The draining flag read under healthMutex in buildShutdownPhases exists for exactly this race.
+// The draining flag read under healthMutex in buildShutdownPhases exists for exactly this race
 func Test_Reload_RacingShutdownStaysClean(t *testing.T) {
 	for range 3 {
 		inst := Start(t, Config{Raw: reloadConfigA, HotReload: true})
@@ -199,8 +190,7 @@ func Test_Reload_RacingShutdownStaysClean(t *testing.T) {
 	}
 }
 
-// An orchestrator polling /health throughout a reload must never see a blip. health_reload_test.go
-// covers the rebuild itself; this covers whether readiness was ever observably lost.
+// An orchestrator polling /health must never see a blip. health_reload_test.go covers the rebuild itself
 func Test_Reload_HealthChecksRebuildWithoutReadinessBlip(t *testing.T) {
 	healthA := `
 server:
@@ -275,8 +265,7 @@ layers:
 	}
 }
 
-// The generation registry exists so retired generations release their connection pools. A leak
-// shows up as file descriptors that never come back down.
+// A leak of retired generations shows up as file descriptors that never come back down
 func Test_Reload_DoesNotLeakFileDescriptors(t *testing.T) {
 	inst := Start(t, Config{Raw: reloadConfigA, HotReload: true})
 

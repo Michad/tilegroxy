@@ -221,8 +221,7 @@ func Test_SeedCommand_AntimeridianCrossing(t *testing.T) {
 	assert.Equal(t, 1, exitStatus)
 }
 
-// The progress file is what makes an interrupted seed resumable, so the command has to pick up
-// from a recorded position and clean the file up once the run finishes.
+// The progress file makes an interrupted seed resumable
 func Test_SeedCommand_ProgressFileAndResume(t *testing.T) {
 	exitStatus = -1
 	rootCmd.ResetFlags()
@@ -252,12 +251,11 @@ func Test_SeedCommand_ProgressFileAndResume(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(out), "Resuming from tile 1")
 
-	// The run completed, so the progress file should be cleaned up rather than left behind.
 	_, err = os.Stat(progressPath)
 	assert.True(t, os.IsNotExist(err))
 }
 
-// A progress file recorded for a different area indexes into a different sequence of tiles.
+// Progress recorded for a different area indexes into a different tile sequence
 func Test_SeedCommand_MismatchedProgressFile(t *testing.T) {
 	exitStatus = -1
 	rootCmd.ResetFlags()
@@ -307,13 +305,13 @@ func Test_SeedCommand_Purge(t *testing.T) {
 
 	fmt.Println(string(out))
 
-	// The cache is "none", so nothing is there to remove, but the count still gets reported.
+	// The cache is "none" so nothing is removed, but the count is still reported
 	assert.Contains(t, string(out), "Removed 0 of 1 tiles")
 	assert.Contains(t, string(out), "Completed purging")
 	assert.Equal(t, -1, exitStatus)
 }
 
-// A purge makes no upstream requests, so the --force tile limit doesn't apply to it.
+// A purge makes no upstream requests, so the --force tile limit doesn't apply to it
 func Test_SeedCommand_PurgeIgnoresTileLimit(t *testing.T) {
 	exitStatus = -1
 	rootCmd.ResetFlags()
@@ -335,7 +333,6 @@ func Test_SeedCommand_PurgeIgnoresTileLimit(t *testing.T) {
 	assert.Equal(t, -1, exitStatus)
 }
 
-// A deployment keying tiles off the tenant needs to pick which tenant a seed runs as.
 func Test_SeedCommand_TenantAndUser(t *testing.T) {
 	exitStatus = -1
 	rootCmd.ResetFlags()

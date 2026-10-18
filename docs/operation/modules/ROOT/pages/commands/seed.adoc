@@ -1,11 +1,16 @@
 = Seed
+:description: A helper command to allow you to prepopulate your cache with prerendered tiles. This is especially useful when adding a new layer to tilegroxy that is slow to render the furthest out zoom levels and you want to avoid your first end-users running into this slowness. This command is roughly equivalent to standing up a server using the `serve` command and then hitting the layer endpoint with `cURL` requests for all the tiles you want.
+:page-eyebrow: Command
+:page-command: tilegroxy seed
 
-A helper command to allow you to prepopulate your cache with prerendered tiles. This is especially useful when adding a new layer to tilegroxy that is slow to render the furthest out zoom levels and you want to avoid your first end-users running into this slowness. This command is roughly equivalent to standing up a server using the `serve` command and then hitting the layer endpoint with `cURL` requests for all the tiles you want.
+NOTE: The same command can also remove cached tiles with the `--purge` flag. A purge walks the same layer, bounding box and zoom levels a seed would but deletes the matching cache entries instead of populating them.
 
-The same command can also remove cached tiles with the `--purge` flag. A purge walks the same layer, bounding box and zoom levels a seed would but deletes the matching cache entries instead of populating them.
+== Usage
 
 Full, up-to-date usage information can be found with `tilegroxy seed -h`.
 
+.Output of `tilegroxy seed -h`
+[,text]
 ----
 Pre-populates the cache for a given layer for a given area (bounding box)
 for a range of zoom levels.
@@ -20,58 +25,104 @@ Pass --purge to delete the tiles covering the same area instead of
 populating them. Purging makes no requests against upstream providers,
 so it isn't subject to the --force tile limit.
 
-Seed jobs can be resumed automatically by specifying a file with the --progress flag. Job progress will be written to that file as we go. Interrupting the command and then running the exact same command again, will start off more-or-less from where things left off. The file will be overwritten with progress and should get deleted once done. 
-
-Example:
-
-	tilegroxy seed -c test_config.yml -l osm -z 2 -v -t 7 -z 0 -z 1 -z 3 -z 4 --progress seed_job.json
-	tilegroxy seed -c test_config.yml -l osm -z 5 --purge
+Seed jobs can be resumed automatically by specifying a file with the --progress flag. Job progress will be written to that file as we go. Interrupting the command and then running the exact same command again, will start off more-or-less from where things left off. The file will be overwritten with progress and should get deleted once done.
 
 Usage:
   tilegroxy seed [flags]
-
-Flags:
-      --cache string            Seed into the cache with this ID instead of
-                                the one the layer normally uses. 
-      --force                   Perform the seeding even if it covers an
-                                excessive number of tiles. Without this
-                                flag seeds over 10k tiles will error out.
-                                Warning: A seed that large can spend hours
-                                making requests against an upstream provider
-  -h, --help                    help for seed
-  -l, --layer string            The ID of the layer to seed
-      --max-failures uint       How many tiles can fail to render before
-                                the seed gives up and exits with a failure
-                                status.
-                                Defaults to the number of tiles being
-                                seeded, meaning the seed only fails if
-                                every tile does
-  -n, --max-latitude float32    The maximum latitude to seed. The north
-                                side of the bounding box (default 90)
-  -e, --max-longitude float32   The maximum longitude to seed. The east
-                                side of the bounding box (default 180)
-  -s, --min-latitude float32    The minimum latitude to seed. The south
-                                side of the bounding box (default -90)
-  -w, --min-longitude float32   The minimum longitude to seed. The west
-                                side of the bounding box (default -180)
-  -p, --progress string         A file to use to record how far the seed 
-                                got. If the file already exists the seed resumes from its recorded position instead of starting over.
-      --purge                   Delete the cached tiles covering the
-                                given area and zoom levels instead of
-                                populating them.
-      --tenant string           The tenant ID to seed as, standing in for
-                                what authentication would supply on a real
-                                request. Required to seed a specific
-                                tenant's tiles when using a tenant cache
-  -t, --threads uint16          How many concurrent requests to use to
-                                perform seeding. Be mindful of spamming
-                                upstream providers (default 1)
-      --user string             The user ID to seed as, standing in for
-                                what authentication would supply on a real
-                                request
-  -v, --verbose                 Output verbose information including every
-                                tile being requested and success or error status
-  -z, --zoom uints              The zoom level(s) to seed (default [0,1,2,
-                                3,4,5])
 ----
 
+== Flags
+
+.Flags
+[cols="1,1,1,3"]
+|===
+| Flag | Type | Default | Description
+
+| `--cache`
+| string
+|
+| Seed into the cache with this ID instead of the one the layer normally uses.
+
+| `--force`
+| bool
+| `false`
+| Perform the seeding even if it covers an excessive number of tiles. Without this flag seeds over 10k tiles will error out. Warning: A seed that large can spend hours making requests against an upstream provider
+
+| `-h`, `--help`
+| bool
+| `false`
+| help for seed
+
+| `-l`, `--layer`
+| string
+|
+| The ID of the layer to seed
+
+| `--max-failures`
+| uint64
+|
+| How many tiles can fail to render before the seed gives up and exits with a failure status. Defaults to the number of tiles being seeded, meaning the seed only fails if every tile does
+
+| `-n`, `--max-latitude`
+| float32
+| `90`
+| The maximum latitude to seed. The north side of the bounding box
+
+| `-e`, `--max-longitude`
+| float32
+| `180`
+| The maximum longitude to seed. The east side of the bounding box
+
+| `-s`, `--min-latitude`
+| float32
+| `-90`
+| The minimum latitude to seed. The south side of the bounding box
+
+| `-w`, `--min-longitude`
+| float32
+| `-180`
+| The minimum longitude to seed. The west side of the bounding box
+
+| `-p`, `--progress`
+| string
+|
+| A file to use to record how far the seed got. If the file already exists the seed resumes from its recorded position instead of starting over.
+
+| `--purge`
+| bool
+| `false`
+| Delete the cached tiles covering the given area and zoom levels instead of populating them.
+
+| `--tenant`
+| string
+|
+| The tenant ID to seed as, standing in for what authentication would supply on a real request. Required to seed a specific tenant's tiles when using a tenant cache
+
+| `-t`, `--threads`
+| uint16
+| `1`
+| How many concurrent requests to use to perform seeding. Be mindful of spamming upstream providers
+
+| `--user`
+| string
+|
+| The user ID to seed as, standing in for what authentication would supply on a real request
+
+| `-v`, `--verbose`
+| bool
+| `false`
+| Output verbose information including every tile being requested and success or error status
+
+| `-z`, `--zoom`
+| uints
+| `[0,1,2,3,4,5]`
+| The zoom level(s) to seed
+|===
+
+== Example
+
+[,shell]
+----
+tilegroxy seed -c test_config.yml -l osm -z 2 -v -t 7 -z 0 -z 1 -z 3 -z 4 --progress seed_job.json
+tilegroxy seed -c test_config.yml -l osm -z 5 --purge
+----

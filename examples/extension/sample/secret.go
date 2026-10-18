@@ -21,7 +21,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
 )
 
-// SecretConfig holds the secrets inline. A real secret source would fetch them from a vault instead
+// Holds secrets inline. A real secret source would fetch them from a vault
 type SecretConfig struct {
 	Values map[string]string
 }
@@ -44,7 +44,7 @@ func (SecretRegistration) Name() string {
 	return "sample"
 }
 
-// Zero means this source can't report changes, so secret watching can't be enabled for it
+// Zero means this source can't report changes, so secret watching can't be enabled
 func (SecretRegistration) CheckBatchSize() int {
 	return 0
 }

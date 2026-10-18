@@ -22,7 +22,7 @@ type Closer interface {
 	Close(ctx context.Context) error
 }
 
-// CloseIfCloser closes if an entity implements Closer and does nothing otherwise. A nil o is ignored
+// No-op for entities that aren't Closers, including nil
 func CloseIfCloser(ctx context.Context, o any) error {
 	if o == nil {
 		return nil

@@ -1,0 +1,61 @@
+= Historical Boundaries
+:description: The Newberry Library's Atlas of Historical County Boundaries records every change to U.S. state and county lines.  This configuration serves it as vector tiles straight from PostGIS, where a single layer answers for any year, such as `boundaries_1860`.
+:page-eyebrow: Example
+:page-tags: MVT
+
+NOTE: The data is loaded into two tables with a tool such as `shp2pgsql`, from the atlas's state and county shapefiles.  Each row has a `start_date` and `end_date` for the period it was in effect.
+
+== Configuration
+
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+include::example$historical-boundaries.yml[]
+----
+<1> One connection pool serves both the vector tiles and analytics.  See xref:configuration/datastores/postgresql.adoc[PostgreSQL].
+<2> Events are written to the same database as the data.  The `tile_events` table must be created ahead of time as described in xref:configuration/analytics/postgresql.adoc[PostgreSQL analytics].
+<3> Records the placeholder values of each request, so the `extra` column shows which years people look at, such as `{"layerparams": {"year": "1860"}}`.
+<4> Any name matching the pattern is served by this layer, with the year available to providers as `+{layer.year}+`.  See xref:layer-patterns.adoc[Layer Patterns].
+<5> Only four digit years from 1600 to 2099 are accepted.  Anything else is rejected before a query runs.
+<6> Requests past zoom 12 are rejected rather than querying the database for tiles with no more detail.  TileJSON advertises this limit, so map clients stretch zoom 12 tiles instead of requesting deeper ones.
+<7> Changing this value invalidates every cached tile for the layer without deleting anything.  Bump it after reloading the tables.
+<8> Describes the sub-layers inside the tiles.  It's published through xref:configuration/tilejson.adoc[TileJSON], once for each name under `examples`, so a map client can style the data without inspecting a tile.
+<9> Merges the output of both queries into one tile.  The children run in parallel and see the same `+{layer.year}+`.  See xref:configuration/provider/compositemvt.adoc[Composite MVT].
+<10> Names the sub-layer inside the tile.  Without it, both queries would use the requested layer name, such as `boundaries_1860`, and collide.
+<11> The year is sent to PostgreSQL as a prepared statement parameter rather than pasted into the SQL, so a request can't inject SQL through it.  The rest of the filter is operator input and is used as-is.  See xref:security.adoc[Security].
+<12> Caps the number of counties in a tile, protecting the database from the most expensive low zoom requests.
+
+JSON::
++
+[,json]
+----
+include::example$historical-boundaries.json[]
+----
++
+. One connection pool serves both the vector tiles and analytics.  See xref:configuration/datastores/postgresql.adoc[PostgreSQL]. @/"name": "postgresql"/
+. Events are written to the same database as the data.  The `tile_events` table must be created ahead of time as described in xref:configuration/analytics/postgresql.adoc[PostgreSQL analytics]. @/"datastore": "history"/
+. Records the placeholder values of each request, so the `extra` column shows which years people look at, such as `{"layerparams": {"year": "1860"}}`. @/"layerparams"/
+. Any name matching the pattern is served by this layer, with the year available to providers as `+{layer.year}+`.  See xref:layer-patterns.adoc[Layer Patterns]. @/"pattern"/
+. Only four digit years from 1600 to 2099 are accepted.  Anything else is rejected before a query runs. @/"year"/
+. Requests past zoom 12 are rejected rather than querying the database for tiles with no more detail.  TileJSON advertises this limit, so map clients stretch zoom 12 tiles instead of requesting deeper ones. @/"maxzoom"/
+. Changing this value invalidates every cached tile for the layer without deleting anything.  Bump it after reloading the tables. @/"cacheversion"/
+. Describes the sub-layers inside the tiles.  It's published through xref:configuration/tilejson.adoc[TileJSON], once for each name under `examples`, so a map client can style the data without inspecting a tile. @/"vectorlayers"/
+. Merges the output of both queries into one tile.  The children run in parallel and see the same `+{layer.year}+`.  See xref:configuration/provider/compositemvt.adoc[Composite MVT]. @/"name": "compositemvt"/
+. Names the sub-layer inside the tile.  Without it, both queries would use the requested layer name, such as `boundaries_1860`, and collide. @/"layer": "states"/
+. The year is sent to PostgreSQL as a prepared statement parameter rather than pasted into the SQL, so a request can't inject SQL through it.  The rest of the filter is operator input and is used as-is.  See xref:security.adoc[Security]. @/"filter"/
+. Caps the number of counties in a tile, protecting the database from the most expensive low zoom requests. @/"limit"/
+====
+
+== Try it
+
+[,shell]
+----
+export POSTGRES_PASSWORD=your-password
+tilegroxy test -c historical-boundaries.yml
+tilegroxy serve -c historical-boundaries.yml
+----
+
+The xref:commands/test.adoc[test] command uses the two `examples` names, since a pattern layer has no single name of its own.  Compare `/tiles/boundaries_1790/7/36/49` with `/tiles/boundaries_1870/7/36/49` to see Virginia before and after West Virginia split from it.

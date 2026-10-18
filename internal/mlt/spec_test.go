@@ -41,7 +41,7 @@ const specRepo = "https://github.com/maplibre/maplibre-tile-spec.git"
 
 var specDir string
 
-// Set MLT_SPEC_DIR to use an existing checkout, or MLT_SPEC_REF to pick the branch, tag, or commit to fetch.
+// MLT_SPEC_DIR uses an existing checkout. MLT_SPEC_REF picks the branch, tag or commit to fetch
 func TestMain(m *testing.M) {
 	specDir = os.Getenv("MLT_SPEC_DIR")
 
@@ -95,7 +95,7 @@ func checkoutSpec(dir string) error {
 	return nil
 }
 
-// Only the 0x01 layer format is supported, so later format folders like 0x02 are left out.
+// Only the 0x01 layer format is supported, so later format folders like 0x02 are left out
 func Test_SpecSynthetic(t *testing.T) {
 	dirs, err := filepath.Glob(filepath.Join(specDir, "test", "synthetic", "0x01*"))
 	require.NoError(t, err)
@@ -108,7 +108,7 @@ func Test_SpecSynthetic(t *testing.T) {
 	}
 }
 
-// Covers FastPFOR blocks with exceptions, which no tile exercises.
+// Covers FastPFOR blocks with exceptions, which no tile exercises
 func Test_SpecFastPFOR(t *testing.T) {
 	dir := filepath.Join(specDir, "test", "fixtures", "fastpfor")
 
@@ -168,7 +168,7 @@ func runConformance(t *testing.T, dir string) {
 				require.NoError(t, os.WriteFile(filepath.Join(out, name+".mlt"), reencoded, 0600))
 			}
 
-			// Tiles without an expected output only have to survive being encoded again.
+			// Tiles without an expected output only have to survive being encoded again
 			expected, err := os.ReadFile(strings.TrimSuffix(f, ".mlt") + ".json")
 			if os.IsNotExist(err) {
 				assert.Equal(t, layers, again)
@@ -315,7 +315,7 @@ func assertValue(t *testing.T, expected any, got any, msg string) {
 	}
 }
 
-// Special values are written as strings like f32::NAN.
+// Special values are written as strings like f32::NAN
 func assertFloat(t *testing.T, expected any, got float64, bits int, msg string) {
 	t.Helper()
 

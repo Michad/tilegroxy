@@ -21,9 +21,7 @@ import (
 	"time"
 )
 
-// Using context.Context in this way to pass along so much information is controversial. Due to the flexibility of the application
-// there's a lot of data that might be needed quite deep and there's places we need to pass control to libraries and back, making it
-// difficult to preserve all the information we might need deep in a specific provider any other way.
+// Passing this much through context.Context is controversial, but data is needed deep in providers across library boundaries
 
 //lint:file-ignore SA1029 Want values to be accessible
 
@@ -84,67 +82,66 @@ func NewRequestContext(req *http.Request) context.Context {
 	return ctx
 }
 
-// The raw HTTP request that is being processed
 func ReqFromContext(ctx context.Context) (*http.Request, bool) {
 	u, ok := ctx.Value(reqKey).(*http.Request)
 	return u, ok
 }
 
-// When the request was received and started being processed
+// When the request was received
 func StartTimeFromContext(ctx context.Context) (time.Time, bool) {
 	u, ok := ctx.Value(startTimeKey).(time.Time)
 	return u, ok
 }
 
-// If true, allowed layers should be restricted. Used to distinguish between someone being restricted to no layers vs unrestricted
+// Distinguishes being restricted to no layers from being unrestricted
 func LimitLayersFromContext(ctx context.Context) (*bool, bool) {
 	u, ok := ctx.Value(limitLayersKey).(*bool)
 	return u, ok
 }
 
-// List of layers allowed via auth
+// Layers allowed via auth
 func AllowedLayersFromContext(ctx context.Context) (*[]string, bool) {
 	u, ok := ctx.Value(allowedLayersKey).(*[]string)
 	return u, ok
 }
 
-// If non-null-island then restrict map to a specific area
+// Restricts the map to an area unless null island
 func AllowedAreaFromContext(ctx context.Context) (*Bounds, bool) {
 	u, ok := ctx.Value(allowedAreaKey).(*Bounds)
 	return u, ok
 }
 
-// If true, allowed area should be an "Intersects" and if false allowed area should be a "Contains"
+// True means the allowed area is checked with Intersects, false with Contains
 func LimitAreaPartialFromContext(ctx context.Context) (*bool, bool) {
 	u, ok := ctx.Value(limitAreaPartialKey).(*bool)
 	return u, ok
 }
 
-// If auth specifies a way to retrieve a user identifier, it's contained here
+// Set when auth can identify the user
 func UserIDFromContext(ctx context.Context) (*string, bool) {
 	u, ok := ctx.Value(userIDKey).(*string)
 	return u, ok
 }
 
-// If auth specifies a way to retrieve a tenant identifier, it's contained here
+// Set when auth can identify the tenant
 func TenantIDFromContext(ctx context.Context) (*string, bool) {
 	u, ok := ctx.Value(tenantIDKey).(*string)
 	return u, ok
 }
 
-// Maps any parameters in the layer name from their key defined in config to the value from the real URL
+// Maps each layer name parameter's configured key to its value from the URL
 func LayerPatternMatchesFromContext(ctx context.Context) (*map[string]string, bool) {
 	u, ok := ctx.Value(layerPatternMatchesKey).(*map[string]string)
 	return u, ok
 }
 
-// Tracks how many times a request has been forwarded internally via the ref provider, to guard against cycles
+// Internal forwards via the ref provider, to guard against cycles
 func RefDepthFromContext(ctx context.Context) (*int, bool) {
 	u, ok := ctx.Value(refDepthKey).(*int)
 	return u, ok
 }
 
-// Whether the tile ultimately served for this request came from the layer's cache
+// Whether the served tile came from the layer's cache
 func CachedFromContext(ctx context.Context) (*bool, bool) {
 	u, ok := ctx.Value(cachedKey).(*bool)
 	return u, ok
@@ -153,15 +150,14 @@ func CachedFromContext(ctx context.Context) (*bool, bool) {
 func BackgroundContext() context.Context {
 	req, _ := http.NewRequestWithContext(context.Background(), "", "", nil)
 
-	// Override Go's default of setting these to default strings to avoid logging confusion.  Perhaps we shouldn't be setting the HTTP fields for background context at all
+	// Go's default strings would confuse logs. Perhaps background contexts shouldn't set HTTP fields at all
 	req.Method = ""
 	req.Proto = ""
 
 	return NewRequestContext(req)
 }
 
-// Sets the identity an offline run (seed, test) acts as, standing in for what auth would set on a
-// real request.
+// Identity an offline run (seed, test) acts as, standing in for what auth sets on a real request
 func SetIdentity(ctx context.Context, userID, tenantID string) {
 	if u, ok := UserIDFromContext(ctx); ok && u != nil {
 		*u = userID

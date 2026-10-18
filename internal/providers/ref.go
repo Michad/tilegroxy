@@ -25,16 +25,11 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// Maximum number of hops a request may be forwarded through ref providers before we assume a cycle
-// and bail out. Startup validation catches statically-resolvable cycles; this is the backstop for
-// patterned layer names, which can't be resolved until request time. The root request is hop 0, so
-// exactly maxRefDepth ref hops are allowed.
+// Backstop for cycles through patterned names, which startup validation can't resolve. The root request is hop 0
 const maxRefDepth = 10
 
 type RefConfig struct {
 	Layer string
-	// Pattern string
-	// Replace map[string][]string
 }
 
 type Ref struct {
@@ -87,7 +82,7 @@ func (t Ref) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequ
 		return nil, fmt.Errorf("ref: maximum reference depth (%v) exceeded, likely a cycle involving layer %v", maxRefDepth, t.Layer)
 	}
 
-	// We need to make a new context for the child call to avoid e.g. layer placeholder from main layer interfering with that of the child layer
+	// A fresh context keeps the parent layer's placeholders from leaking into the child layer
 	req, _ := pkg.ReqFromContext(ctx)
 	newCtx := pkg.NewRequestContext(req)
 
@@ -97,14 +92,13 @@ func (t Ref) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequ
 		*newDepth = *depth + 1
 	}
 
-	// Copy span over from original context
 	span := trace.SpanFromContext(ctx)
 	newCtx = trace.ContextWithSpan(newCtx, span)
 
 	return t.layerGroup.RenderTile(newCtx, newRequest)
 }
 
-// Built before this layer, so the target's metadata is final.
+// Built before this layer, so the target's metadata is final
 func (t Ref) Metadata() layer.Description {
 	return t.target
 }

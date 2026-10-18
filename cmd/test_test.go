@@ -51,7 +51,7 @@ func tileTestServer(t *testing.T) *httptest.Server {
 }
 
 func init() {
-	// This is a hack to help with vscode test execution. Put a .env in repo root w/ anything you need for test containers
+	// Lets vscode test runs pick up testcontainer settings from a .env in the repo root
 	if env, err := os.ReadFile("../.env"); err == nil {
 		envs := strings.Split(string(env), "\n")
 		for _, e := range envs {
@@ -326,8 +326,7 @@ func Test_TestCommand_InvalidConfig(t *testing.T) {
 	assert.Equal(t, 1, exitStatus)
 }
 
-// A deployment keying tiles off the tenant needs to pick which tenant a test run acts as, so the
-// tile it writes lands in the namespace that tenant's requests read from.
+// The tile must land in the namespace the chosen tenant's requests read from
 func Test_ExecuteTestCommand_TenantAndUser(t *testing.T) {
 	exitStatus = -1
 	rootCmd.ResetFlags()
@@ -367,7 +366,7 @@ layers:
 	require.NoError(t, err)
 	require.NotEmpty(t, entries)
 
-	// The disk cache re-sanitizes the tenant cache's "~" separator into "_" when building filenames.
+	// The disk cache re-sanitizes the tenant separator "~" into "_" in filenames
 	for _, entry := range entries {
 		assert.True(t, strings.HasPrefix(entry.Name(), "tenant_a_osm"), "cached tile %v isn't namespaced to the tenant", entry.Name())
 	}

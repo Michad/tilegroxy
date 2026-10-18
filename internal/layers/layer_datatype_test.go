@@ -104,9 +104,7 @@ func Test_ConstructLayer_DataType_ProviderUnknownNoExplicitType_Succeeds(t *test
 	assert.Equal(t, config.DataTypeUnknown, l.DataType)
 }
 
-// Regression test for #768: the layer's resolved DataType must be exposed on the constructed
-// Layer, inferred from the provider alone, so error responses can pick a vector-tile image
-// instead of always falling back to PNG.
+// Regression test for #768: error responses need the inferred DataType to pick a vector image instead of PNG
 func Test_ConstructLayer_DataType_InferredFromProvider_IsExposedOnLayer(t *testing.T) {
 	layer.RegisterProvider(fixedTypeTestRegistration{name: "fixed-mvt-inferred-1", dt: config.DataTypeMVT})
 
@@ -274,7 +272,7 @@ func Test_ConstructLayer_Bounds_MLT_WrapsInCropMlt(t *testing.T) {
 	require.Equal(t, "cropmlt", wrapper.Name)
 }
 
-// Both are vector tiles, but a client configured for one can't decode the other.
+// Both are vector tiles, but a client configured for one can't decode the other
 func Test_ConstructLayer_DataType_MltContradictsMvt_Fails(t *testing.T) {
 	layer.RegisterProvider(fixedTypeTestRegistration{name: "fixed-mlt-2", dt: config.DataTypeMLT})
 
@@ -301,14 +299,13 @@ func Test_ConstructLayer_NoBounds_NoWrapping(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotNil(t, l)
-	// Unwrapped: the provider wrapper's Name is the literal provider name, not "crop"
+	// The wrapper's Name is the literal provider name, not "crop"
 	wrapper, ok := l.Provider.(ProviderWrapper)
 	require.True(t, ok)
 	require.Equal(t, "fixed-raster-3", wrapper.Name)
 }
 
-// closableTypedProvider is like closableProvider (layergroup_test.go) but registered under a
-// caller-supplied data type, needed here to be resolvable enough to trigger bounds wrapping.
+// Like closableProvider but with a caller-supplied data type, so bounds wrapping triggers
 type closableTypedProvider struct {
 	closed *bool
 }
@@ -348,7 +345,7 @@ func (r closableTypedTestRegistration) Initialize(_ any, _ layer.ProviderDeps) (
 	return closableTypedProvider{closed: r.closed}, nil
 }
 
-// The bounds wrapper wraps the provider already built to learn its data type rather than building another.
+// The bounds wrapper reuses the already-built provider rather than building another
 func Test_ConstructLayer_Bounds_ConstructsProviderOnce(t *testing.T) {
 	layer.RegisterProvider(wrapMarkerRegistration{name: "crop"})
 	closed := false

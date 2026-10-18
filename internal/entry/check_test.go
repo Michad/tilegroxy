@@ -29,8 +29,7 @@ func validConfig() config.Config {
 	return cfg
 }
 
-// A caller who only wants pass/fail, not the "Valid" text or echoed config, has no other value to
-// pass, so a nil writer has to error rather than panic inside fmt.Fprintln.
+// Callers wanting only pass/fail have nothing else to pass, so nil must error rather than panic
 func Test_CheckConfig_NilWriterDoesNotPanic(t *testing.T) {
 	cfg := validConfig()
 
@@ -67,6 +66,58 @@ func Test_CheckConfig_InvalidConfigErrors(t *testing.T) {
 	err := CheckConfig(&cfg, CheckOptions{}, &buf)
 
 	require.Error(t, err)
+}
+
+func Test_CheckConfig_MiscRejects(t *testing.T) {
+	sixty := uint(60)
+	yes := true
+
+	tests := map[string]func(*config.Config){
+		"encrypt without domain": func(c *config.Config) {
+			c.Server.Encrypt = &config.EncryptionConfig{Certificate: "cert"}
+		},
+		"cors wildcard with credentials": func(c *config.Config) {
+			c.Server.CORS = config.CORSConfig{Enabled: true, WildcardOrigin: true, AllowCredentials: true}
+		},
+		"server cachecontrol nostore with maxage": func(c *config.Config) {
+			c.Server.CacheControl = config.CacheControlConfig{Enabled: &yes, NoStore: &yes, MaxAge: &sixty}
+		},
+		"layer cachecontrol bad visibility": func(c *config.Config) {
+			c.Layers[0].CacheControl = &config.CacheControlConfig{Enabled: &yes, Visibility: "everyone"}
+		},
+		"access log bad format": func(c *config.Config) {
+			c.Logging.Access.Format = "nope"
+		},
+		"main log bad format": func(c *config.Config) {
+			c.Logging.Main.Format = "nope"
+		},
+		"main log bad level": func(c *config.Config) {
+			c.Logging.Main.Level = "nope"
+		},
+		"audit log bad format": func(c *config.Config) {
+			c.Logging.Audit = config.AuditConfig{Enabled: true, Console: true, Format: "nope"}
+		},
+		"audit log without output": func(c *config.Config) {
+			c.Logging.Audit = config.AuditConfig{Enabled: true, Format: config.AuditFormatJSON}
+		},
+		"health check on unknown layer": func(c *config.Config) {
+			c.Health.Enabled = true
+			c.Health.Checks = []map[string]any{{"name": "tile", "layer": "nope"}}
+		},
+	}
+
+	for name, mutate := range tests {
+		t.Run(name, func(t *testing.T) {
+			cfg := validConfig()
+			mutate(&cfg)
+			var buf bytes.Buffer
+
+			err := CheckConfig(&cfg, CheckOptions{}, &buf)
+
+			require.Error(t, err)
+			require.NotContains(t, buf.String(), "Valid")
+		})
+	}
 }
 
 func Test_CheckConfig_RejectsInvalidCORS(t *testing.T) {

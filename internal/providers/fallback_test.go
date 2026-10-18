@@ -27,8 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// fixedDataTypeTestProvider is a minimal layer.Provider used to test nesting providers
-// (Fallback, Crop) that pass through their primary's data type.
+// For nesting providers (Fallback, Crop) that pass through their primary's data type
 type fixedDataTypeTestProvider struct {
 	dt config.DataType
 }
@@ -41,8 +40,7 @@ func (p fixedDataTypeTestProvider) GenerateTile(_ context.Context, _ layer.Provi
 	return nil, nil
 }
 
-// fixedDataTypeTestRegistration registers fixedDataTypeTestProvider under a config-supplied name,
-// so a raw provider config (e.g. Fallback.Primary) can be pointed at a provider of any data type.
+// Registered under a config-supplied name so a raw provider config can point at any data type
 type fixedDataTypeTestRegistration struct {
 	name string
 	dt   config.DataType
@@ -251,4 +249,31 @@ func Test_Fallback_CacheMode(t *testing.T) {
 	img, err = f.GenerateTile(ctx, layer.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 20, X: 1, Y: 1})
 	require.NoError(t, err)
 	assert.True(t, img.ForceSkipCache)
+}
+
+type errorTestProvider struct {
+	err error
+}
+
+func (p errorTestProvider) PreAuth(_ context.Context, pc layer.ProviderContext) (layer.ProviderContext, error) {
+	return pc, nil
+}
+
+func (p errorTestProvider) GenerateTile(_ context.Context, _ layer.ProviderContext, _ pkg.TileRequest) (*pkg.Image, error) {
+	return nil, p.err
+}
+
+func Test_Fallback_PropagatesProviderAuthError(t *testing.T) {
+	p, s := makeFallbackProvidersFail()
+
+	built, err := FallbackRegistration{}.Initialize(FallbackConfig{Primary: p, Secondary: s}, layer.ProviderDeps{ErrorMessages: testErrMessages})
+	require.NoError(t, err)
+
+	f := built.(*Fallback)
+	f.Primary = errorTestProvider{err: pkg.ProviderAuthError{Message: "expired"}}
+
+	img, err := f.GenerateTile(pkg.BackgroundContext(), layer.ProviderContext{}, pkg.TileRequest{LayerName: "layer", Z: 1, X: 0, Y: 0})
+
+	require.Nil(t, img)
+	require.ErrorAs(t, err, &pkg.ProviderAuthError{})
 }

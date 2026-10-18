@@ -1,6 +1,8 @@
 = Cache Control
+:description: Configuration for the `Cache-Control` header returned on tile responses. Disabled by default.
+:page-config-key: server.cachecontrol
 
-Configuration for the `Cache-Control` header returned on tile responses. Disabled by default.
+== Description
 
 If you simply set `Enabled` to true, tilegroxy will use the <<Automatic behaviour>> below. Beyond that, you can override each directive by setting the matching field explicitly. Automatic behaviour can be entirely turned off with `Auto: false`.
 
@@ -24,11 +26,12 @@ Layers that don't cache at all, either through `skipcache` or a xref:configurati
 
 `private` is returned when the layer's tiles appear to vary by who asked, such as if a xref:configuration/cache/tenant.adoc[tenant] cache is used or the configuration contains the `{ctx.user}` or `{ctx.tenant}` placeholders. Otherwise `public` is returned.
 
-CAUTION: This heuristic is not comprehensive and cannot detect all cases. For example, a xref:configuration/provider/custom.adoc[custom] provider might or might not return the same content for different users. Set `Visibility` to `private` explicitly on any layer whose tiles differ between callers. See also xref:../howto/user-dynamic.adoc[user-dynamic layers]
+CAUTION: This heuristic is not comprehensive and cannot detect all cases. For example, a xref:configuration/provider/custom.adoc[custom] provider might or might not return the same content for different users. Set `Visibility` to `private` explicitly on any layer whose tiles differ between callers. See also xref:howto/user-dynamic.adoc[user-dynamic layers]
 
-Configuration options:
+== Configuration
 
-[cols="1,3,1,1,1"]
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -81,9 +84,8 @@ Configuration options:
 | None
 |===
 
-The following can be supplied as environment variables:
-
-[cols="1,3"]
+.Environment variables
+[cols="1m,3m"]
 |===
 | Configuration Parameter | Environment Variable
 
@@ -109,10 +111,15 @@ The following can be supplied as environment variables:
 | SERVER_CACHECONTROL_NOSTORE
 |===
 
-Examples:
+== Examples
 
 Turning the header on for every layer and letting each one derive its own value from its cache:
 
+[tabs]
+====
+YAML::
++
+[,yaml]
 ----
 server:
   cachecontrol:
@@ -126,14 +133,42 @@ cache:
     path: "./disk_tile_cache"
 ----
 
+JSON::
++
+[,json]
+----
+{
+  "server": {
+    "cachecontrol": {
+      "enabled": true
+    }
+  },
+  "cache": {
+    "name": "ttl",
+    "ttl": 3600,
+    "cache": {
+      "name": "disk",
+      "path": "./disk_tile_cache"
+    }
+  }
+}
+----
+====
+
 Returns, for a tile generated 50 minutes ago:
 
+[,http]
 ----
 Cache-Control: public, max-age=600
 ----
 
 Adding a CDN lifetime and a stale window on top of the derived freshness, neither of which is derived:
 
+[tabs]
+====
+YAML::
++
+[,yaml]
 ----
 server:
   cachecontrol:
@@ -142,15 +177,36 @@ server:
     stalewhilerevalidate: 60
 ----
 
+JSON::
++
+[,json]
+----
+{
+  "server": {
+    "cachecontrol": {
+      "enabled": true,
+      "sharedmaxage": 86400,
+      "stalewhilerevalidate": 60
+    }
+  }
+}
+----
+====
+
 Returns, for that same tile:
 
+[,http]
 ----
 Cache-Control: public, max-age=600, s-maxage=86400, stale-while-revalidate=60
 ----
- 
 
 A layer opting out of derivation entirely and stating its own header:
 
+[tabs]
+====
+YAML::
++
+[,yaml]
 ----
 layers:
   - id: basemap
@@ -165,14 +221,46 @@ layers:
       url: https://example.com/basemap/{z}/{x}/{y}.png
 ----
 
+JSON::
++
+[,json]
+----
+{
+  "layers": [
+    {
+      "id": "basemap",
+      "cachecontrol": {
+        "auto": false,
+        "visibility": "public",
+        "maxage": 86400,
+        "extra": [
+          "immutable"
+        ]
+      },
+      "provider": {
+        "name": "proxy",
+        "url": "https://example.com/basemap/{z}/{x}/{y}.png"
+      }
+    }
+  ]
+}
+----
+====
+
 Returns:
 
+[,http]
 ----
 Cache-Control: public, max-age=86400, immutable
 ----
 
 A layer opting out of the header the server turned on, leaving every other layer unaffected:
 
+[tabs]
+====
+YAML::
++
+[,yaml]
 ----
 server:
   cachecontrol:
@@ -186,5 +274,31 @@ layers:
       name: proxy
       url: https://example.com/preview/{z}/{x}/{y}.png
 ----
+
+JSON::
++
+[,json]
+----
+{
+  "server": {
+    "cachecontrol": {
+      "enabled": true
+    }
+  },
+  "layers": [
+    {
+      "id": "preview",
+      "cachecontrol": {
+        "enabled": false
+      },
+      "provider": {
+        "name": "proxy",
+        "url": "https://example.com/preview/{z}/{x}/{y}.png"
+      }
+    }
+  ]
+}
+----
+====
 
 Returns no `Cache-Control` header at all for `preview`.

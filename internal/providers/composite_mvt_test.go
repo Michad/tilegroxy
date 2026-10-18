@@ -35,8 +35,7 @@ func Test_DataType_CompositeMVT(t *testing.T) {
 func Test_CompositeMVTCloseClosesChildProviders(t *testing.T) {
 	p1 := &closableProvider{}
 	p2 := &closableProvider{}
-	// ConstructProvider always wraps, so one child is wrapped here to match what production
-	// actually builds: the close has to survive both hops, not just the forwarding one
+	// ConstructProvider always wraps, so the close must survive both hops like production
 	c := &CompositeVector{providers: []layer.Provider{layers.ProviderWrapper{Name: "child", Provider: p1}, p2}, contentType: mvtContentType}
 
 	require.NoError(t, layer.CloseProvider(context.Background(), c))
@@ -71,7 +70,7 @@ func Test_Composite_ExecuteStatic(t *testing.T) {
 	assert.Len(t, img.Content, len(*imgExp)*2)
 }
 
-// panicProvider models a child that misbehaves badly enough to unwind through the compositor.
+// Misbehaves badly enough to unwind through the compositor
 type panicProvider struct{}
 
 func (p panicProvider) PreAuth(_ context.Context, providerContext layer.ProviderContext) (layer.ProviderContext, error) {
@@ -82,8 +81,7 @@ func (p panicProvider) GenerateTile(_ context.Context, _ layer.ProviderContext, 
 	panic("boom")
 }
 
-// A child returning (nil, err) used to leave the collection loop waiting on an image that was
-// never sent, leaking the goroutine and poisoning the tile forever.
+// A child returning (nil, err) used to leave the collector waiting forever, leaking the goroutine and poisoning the tile
 func Test_Composite_ChildErrorDoesNotHang(t *testing.T) {
 	cases := map[string]layer.Provider{
 		"error": &Fail{FailConfig{Message: "child blew up"}},
@@ -113,7 +111,7 @@ func Test_Composite_ChildErrorDoesNotHang(t *testing.T) {
 	}
 }
 
-// Both children failing means both errors need to make it back to the caller.
+// Both errors must reach the caller
 func Test_Composite_AllChildrenFailJoinsErrors(t *testing.T) {
 	c := &CompositeVector{providers: []layer.Provider{&Fail{FailConfig{Message: "first"}}, &Fail{FailConfig{Message: "second"}}}, errorMessages: testErrMessages, contentType: mvtContentType}
 

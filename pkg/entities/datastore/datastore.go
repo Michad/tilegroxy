@@ -21,16 +21,15 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
 )
 
-// Wraps around an arbitrary struct for communicating with an arbitrary database. The goal for this datastore mechanism isn't to provide a uniform interface for querying databases but instead to provide a consistent way to declare database connection (pools) that can be reused between providers
+// Not a uniform query interface, just a consistent way to declare connection pools that providers can share
 type DatastoreWrapper interface {
-	// Returns the ID of the datastore as defined in configuration.  Should return cfg.ID
+	// Should return cfg.ID
 	GetID() string
-	// Returns the underlying library for connecting to the datastore.  e.g. for postgresql it returns *pgx.Pool. Calling providers should ensure the type matches what they expect and return a clear error if not (in case the operator mixes things up in config)
+	// The underlying client, e.g. *pgx.Pool. Callers should check the type and return a clear error for operator mixups
 	Native() any
 }
 
-// DatastoreDeps carries everything a datastore is given at construction. New dependencies are added as
-// fields so the Initialize signature stays stable
+// New dependencies are added as fields so the Initialize signature stays stable
 type DatastoreDeps struct {
 	Secreter      secret.Secreter
 	ErrorMessages config.ErrorMessages
@@ -68,7 +67,7 @@ func RegisteredDatastoreWrapperNames() []string {
 	return names
 }
 
-// DatastoreRegistry gives entities access to the datastores configured by ID
+// Gives entities access to the datastores configured by ID
 type DatastoreRegistry interface {
 	Get(id string) (DatastoreWrapper, bool)
 }

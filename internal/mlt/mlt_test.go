@@ -29,7 +29,7 @@ func square(minX, minY, maxX, maxY float64) orb.Polygon {
 	return orb.Polygon{{{minX, minY}, {maxX, minY}, {maxX, maxY}, {minX, maxY}, {minX, minY}}}
 }
 
-// One feature of every geometry type, with every kind of column.
+// One feature of every geometry type, with every kind of column
 func sampleLayer() Layer {
 	present := []bool{true, false, true, true, false, true}
 
@@ -178,7 +178,7 @@ func Test_Clip(t *testing.T) {
 	}
 	require.Len(t, clipped.Geometries, len(expected))
 
-	// Clipping may start a ring at a different vertex, so shapes are compared by type and extent.
+	// Clipping may start a ring at a different vertex, so shapes are compared by type and extent
 	for i, g := range clipped.Geometries {
 		assert.Equal(t, expected[i].GeoJSONType(), g.GeoJSONType(), "geometry %v", i)
 		assert.Equal(t, expected[i].Bound(), g.Bound(), "geometry %v", i)
@@ -217,7 +217,7 @@ func Test_Decode_SkipsOtherLayerFormats(t *testing.T) {
 	assert.Equal(t, 1, skipped)
 }
 
-// A tiny tile can claim billions of values through run lengths.
+// A tiny tile can claim billions of values through run lengths
 func excessiveRunsLayer() []byte {
 	body := appendString(nil, "l")
 	body = append(body, 1, 1, codeGeometry, 2)
@@ -228,7 +228,7 @@ func excessiveRunsLayer() []byte {
 	return layerBytes(body)
 }
 
-// Each use of a dictionary entry is charged, since encoding writes it out again.
+// Each use of a dictionary entry is charged, since encoding writes it out again
 func repeatedDictionaryLayer() []byte {
 	entry := make([]byte, 1<<20)
 	codes := appendVarint(appendVarint(nil, 60), 0)
@@ -239,7 +239,7 @@ func repeatedDictionaryLayer() []byte {
 		appendRawStream(nil, categoryData, dataSingle, 1, entry))
 }
 
-// A short FSST corpus of long symbols expands enormously.
+// A short FSST corpus of long symbols expands enormously
 func fsstBombLayer() []byte {
 	symbol := make([]byte, 1<<16)
 	corpus := make([]byte, 1000)
@@ -335,7 +335,7 @@ func pointLayer(columns ...byte) []byte {
 	return append(body, columns...)
 }
 
-// Builds a layer of one point and a single property column.
+// One point and a single property column
 func withColumn(meta []byte, data ...[]byte) []byte {
 	body := pointLayer(append([]byte{2, codeGeometry}, meta...)...)
 	body = append(body, appendGeometryColumnOrPanic([]orb.Geometry{orb.Point{1, 1}})...)
@@ -347,7 +347,7 @@ func withColumn(meta []byte, data ...[]byte) []byte {
 	return layerBytes(body)
 }
 
-// Builds a layer whose geometry column holds the given types and extra streams.
+// The geometry column holds the given types and extra streams
 func withGeometry(types []uint64, streams int, extra ...func([]byte) []byte) []byte {
 	buf := appendVarintStream([]byte{byte(streams)}, categoryLength, lengthVarBinary, types)
 	for _, e := range extra {
@@ -469,7 +469,7 @@ func appendGeometryColumnOrPanic(geoms []orb.Geometry) []byte {
 }
 
 func Test_DecodeFastPFOR_TailOnly(t *testing.T) {
-	// No full blocks, then 5 and 300 in FastPFOR's variable byte coding.
+	// No full blocks, then 5 and 300 in FastPFOR's variable byte coding
 	out, err := decodeFastPFOR([]byte{0, 0, 0, 0, 0x00, 0x82, 0x2C, 0x85}, 2)
 	require.NoError(t, err)
 	assert.Equal(t, []uint64{5, 300}, out)
@@ -484,7 +484,7 @@ func Test_DecodeFastPFOR_TailOnly(t *testing.T) {
 	require.ErrorIs(t, err, ErrMalformed)
 }
 
-// The embedded box is the same square as box.mvt, so it must stay exactly what Encode writes for it.
+// The embedded box matches box.mvt, so it must stay exactly what Encode writes
 func Test_Encode_MatchesEmbeddedBox(t *testing.T) {
 	embedded, err := os.ReadFile("../images/box.mlt")
 	require.NoError(t, err)

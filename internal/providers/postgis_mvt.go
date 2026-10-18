@@ -31,7 +31,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// column names come explicitly from config which are trusted operator inputs. So this isn't intended to be a primary protection against SQL injection attacks, just a helper against mistakes
+// Column names are trusted operator input, so this guards against mistakes rather than SQL injection
 var columnRegex = regexp.MustCompile("^[a-zA-Z0-9_]+$")
 
 type PostgisMvtConfig struct {
@@ -168,7 +168,7 @@ func (t PostgisMvt) GenerateTile(ctx context.Context, _ layer.ProviderContext, r
 
 	query += `FROM ` + t.Table
 
-	// Doing both an explicit BBox check and ST_Intersects isn't strictly necessary but I've seen cases where it helps the query planner
+	// The explicit BBox check is redundant with ST_Intersects but sometimes helps the query planner
 	query += ` WHERE "` + t.Geometry + `" && ST_Transform($5::geometry, $1::integer) AND ST_Intersects("` + t.Geometry + `", ST_Transform($5::geometry, $1::integer))`
 
 	if t.Filter != "" {

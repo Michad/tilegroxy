@@ -184,7 +184,7 @@ func Test_Tile_TruncatedTileData(t *testing.T) {
 }
 
 func Test_Tile_DirectoryDepthExceeded(t *testing.T) {
-	// A leaf that points at itself forces endless descent.
+	// A leaf that points at itself forces endless descent
 	var leaf []byte
 	length := uint32(1)
 	for {
@@ -298,7 +298,7 @@ func Test_Open_RootOutsideFirstFetch(t *testing.T) {
 	h, err := parseHeader(data)
 	require.NoError(t, err)
 
-	// Move the root directory past the 16 KiB initial fetch.
+	// Move the root directory past the 16 KiB initial fetch
 	padding := make([]byte, 20000)
 	root := data[h.RootOffset : h.RootOffset+h.RootLength]
 	rest := data[h.RootOffset+h.RootLength:]
@@ -445,7 +445,7 @@ func Test_Tile_HighBitsOfCoordinatesRejected(t *testing.T) {
 	a, err := Open(context.Background(), src, testMaxLength)
 	require.NoError(t, err)
 
-	// x=4 is 1<<z for z=2 and would alias to x=0 if high bits were ignored.
+	// x=4 is 1<<z for z=2 and would alias to x=0 if high bits were ignored
 	_, ok, err := a.Tile(context.Background(), 2, 4, 0)
 
 	require.NoError(t, err)

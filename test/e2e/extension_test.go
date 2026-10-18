@@ -31,8 +31,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// The example in examples/extension builds only against pkg and cmd, so a breaking change to either
-// fails `make extension` or this test before it reaches a release.
+// The example builds only against pkg and cmd, so breaking either fails here before a release
 func Test_Extension_TestsThenServesEverySampleEntity(t *testing.T) {
 	p := ports{Server: testutil.FreePort(t), Health: testutil.FreePort(t)}
 	dir := t.TempDir()

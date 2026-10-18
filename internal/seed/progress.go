@@ -26,19 +26,13 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 )
 
-// progressVersion guards against reading a progress file written by a version of tilegroxy that
-// enumerated tiles in a different order, which would make its position meaningless here.
+// Guards against files from versions that enumerated tiles in a different order, making the position meaningless
 const progressVersion = 1
 
-// ErrProgressMismatch is returned when a progress file describes a different run than the one being
-// started. Resuming would seed the wrong tiles, so the caller has to either use the same arguments
-// or start over.
+// Resuming would seed the wrong tiles, so the caller must reuse the same arguments or start over
 var ErrProgressMismatch = errors.New("the progress file describes a different seed run")
 
-// Progress is the on-disk record of how far a seed run got. Position is how many tiles of the
-// sequence are done, so the run picks back up at exactly that index. The layer, bounds and zoom
-// levels are recorded alongside it because a position only refers to the same tile when the
-// enumeration it indexes into is identical.
+// How far a seed got. A position only means the same tile when the layer, bounds and zooms match
 type Progress struct {
 	Version   int        `json:"version"`
 	LayerName string     `json:"layer"`
@@ -48,7 +42,6 @@ type Progress struct {
 	Position  uint64     `json:"position"`
 }
 
-// NewProgress records the starting state for a run of the given enumeration.
 func NewProgress(layerName string, e *SeedJob) *Progress {
 	return &Progress{
 		Version:   progressVersion,
@@ -59,8 +52,7 @@ func NewProgress(layerName string, e *SeedJob) *Progress {
 	}
 }
 
-// LoadProgress reads a progress file. A missing file isn't an error, it just means there's nothing
-// to resume from, so nil is returned for both values.
+// A missing file just means nothing to resume, so both return values are nil
 func LoadProgress(path string) (*Progress, error) {
 	raw, err := os.ReadFile(path) // #nosec G304 -- the path is operator supplied
 	if err != nil {
@@ -83,9 +75,7 @@ func LoadProgress(path string) (*Progress, error) {
 	return &p, nil
 }
 
-// Matches reports whether this progress file describes the same sequence of tiles the given run
-// produces. Anything that changes the enumeration, including the bounds and the set of zoom levels,
-// makes a recorded position refer to a different tile.
+// Any change to the enumeration, including bounds and zoom levels, makes a recorded position refer to a different tile
 func (p *Progress) Matches(layerName string, e *SeedJob) bool {
 	return p.LayerName == layerName &&
 		p.Bounds == e.Bounds() &&
@@ -93,8 +83,7 @@ func (p *Progress) Matches(layerName string, e *SeedJob) bool {
 		slices.Equal(p.Zooms, e.Zooms())
 }
 
-// Save writes the progress file. The write goes to a temporary file first so a seed killed mid-write
-// leaves the previous position behind rather than a truncated file.
+// Writes via a temp file so a seed killed mid-write leaves the previous position, not a truncated file
 func (p *Progress) Save(path string, out io.Writer, verbose bool) error {
 	raw, err := json.Marshal(p)
 	if err != nil {

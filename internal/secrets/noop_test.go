@@ -34,7 +34,7 @@ func Test_Noop_LookupErrorsWithEmptyVersion(t *testing.T) {
 	assert.Empty(t, version)
 }
 
-// Empty versions are how a backend says it cannot detect changes
+// Empty versions are how a backend says it can't detect changes
 func Test_Noop_CheckReturnsEmptyVersions(t *testing.T) {
 	s, err := NoopRegistration{}.Initialize(NoopConfig{}, secret.SecreterDeps{ErrorMessages: config.ErrorMessages{}})
 	require.NoError(t, err)

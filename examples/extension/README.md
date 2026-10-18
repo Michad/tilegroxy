@@ -2,7 +2,7 @@
 
 This folder is a standalone Go module showing how to build your own tilegroxy executable with native entities, as described in the extensibility documentation. It implements a sample version of every entity type and a wrapper executable, `my_tg_wrapper`, that always uses the `tilegroxy.yml` beside it, runs the `test` command against every layer, and then starts serving.
 
-The module can only import tilegroxy's public `pkg` and `cmd` packages since Go refuses imports of `internal` from another module. `make e2e` builds and runs it so any breaking change to those packages fails the build.
+`make e2e` from the repository root builds and runs this.
 
 ## Structure
 
@@ -20,7 +20,7 @@ The module can only import tilegroxy's public `pkg` and `cmd` packages since Go 
 
 `tilegroxy.yml` is the configuration file, using only the sample entities
 
-`go.mod` points at this checkout with a `replace` directive. Remove it in your own project to build against a released version
+There's no `go.mod` or `go.sum` checked in to avoid needing to maintain the files as dependencies change. Running `make extension` will generate these files. In your own project, run `go mod init` with your module path, update the `sample` import in `main.go` to match, and `go get github.com/Michad/tilegroxy` to build against a released version
 
 ## Running
 

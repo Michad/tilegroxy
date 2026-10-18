@@ -1,14 +1,58 @@
 = Crop MVT
+:description: Crops vector tiles from another provider to a specific bounds.
+:page-eyebrow: Provider
+:page-config-name: cropmvt
+:page-tags: MVT
 
-Crops vector tiles from another provider to a specific bounds.
+NOTE: This is the vector tile equivalent of the xref:configuration/provider/crop.adoc[crop] provider, except without the secondary provider (combine this with xref:configuration/provider/compositemvt.adoc[compositemvt] for the same effect).
 
-This is the vector tile equivalent of the xref:configuration/provider/crop.adoc[crop] provider, except without the secondary provider (combine this with xref:configuration/provider/compositemvt.adoc[compositemvt] for the same effect).
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+provider:
+  name: cropmvt
+  bounds:
+    south: 51
+    north: 63
+    west: -7
+    east: 0.1
+  primary:
+    name: postgismvt
+    datastore: mydb
+    table: roads
+----
 
-Name should be "cropmvt"
+JSON::
++
+[,json]
+----
+{
+  "provider": {
+    "name": "cropmvt",
+    "bounds": {
+      "south": 51,
+      "north": 63,
+      "west": -7,
+      "east": 0.1
+    },
+    "primary": {
+      "name": "postgismvt",
+      "datastore": "mydb",
+      "table": "roads"
+    }
+  }
+}
+----
+====
 
-Configuration options:
+== Configuration
 
-[cols="1,3,1,1,1"]
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -31,19 +75,3 @@ Configuration options:
 | No
 
 |===
-
-Example:
-
-----
-provider:
-  name: cropmvt
-  bounds:
-    south: 51
-    north: 63
-    west: -7
-    east: 0.1
-  primary:
-    name: postgismvt
-    datastore: mydb
-    table: roads
-----

@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -31,7 +32,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// gaCapture stands in for the Measurement Protocol endpoint.
+// Stands in for the Measurement Protocol endpoint
 type gaCapture struct {
 	mutex    sync.Mutex
 	payloads []gaPayload
@@ -183,7 +184,7 @@ func Test_GoogleAnalytics_ClampsBatchSize(t *testing.T) {
 	defer srv.Close()
 
 	a := newGA(t, srv.URL, func(cfg *GoogleAnalyticsConfig) {
-		// Well above the Measurement Protocol's 25 event ceiling.
+		// Well above the Measurement Protocol's 25 event ceiling
 		cfg.Batch.MaxSize = 500
 		cfg.Batch.MaxAge = 600
 	})
@@ -218,7 +219,7 @@ func Test_GoogleAnalytics_GroupsByClient(t *testing.T) {
 	closeGA(t, a)
 
 	payloads := capture.snapshot()
-	// GA requires one client_id per payload, so two users cannot share a request.
+	// GA requires one client_id per payload so two users can't share a request
 	require.Len(t, payloads, 2)
 
 	seen := map[string]bool{}
@@ -237,7 +238,7 @@ func Test_GoogleAnalytics_ServerErrorIsContained(t *testing.T) {
 
 	a := newGA(t, srv.URL, nil)
 
-	// A 500 from GA must not propagate; the batcher logs and counts it.
+	// The batcher logs and counts a 500 instead of propagating it
 	require.NoError(t, a.Record(pkg.BackgroundContext(), analytics.Event{LayerID: "main"}))
 	closeGA(t, a)
 
@@ -264,4 +265,20 @@ func Test_ChunkEvents(t *testing.T) {
 	assert.Len(t, chunks[2], 1)
 
 	assert.Empty(t, chunkEvents(nil, 3))
+}
+
+// The endpoint URL carries the api_secret, which a raw *url.Error would put in the warn log.
+func Test_GoogleAnalytics_ConnectionErrorOmitsSecret(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	addr := listener.Addr().String()
+	require.NoError(t, listener.Close())
+
+	a := newGA(t, "http://"+addr+"/mp/collect", nil)
+	defer closeGA(t, a)
+
+	err = a.(*GoogleAnalytics).send(context.Background(), "client", []analytics.Event{{LayerID: "main"}})
+
+	require.Error(t, err)
+	assert.Equal(t, "google analytics request failed: dial tcp: connection refused", err.Error())
 }

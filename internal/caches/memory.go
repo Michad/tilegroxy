@@ -34,8 +34,7 @@ type MemoryConfig struct {
 type Memory struct {
 	MemoryConfig
 	Cache otter.Cache[string, pkg.Image]
-	// Held only so it can be shut down. Nil when the store comes from a shared datastore, since the
-	// datastore registry owns closing it in that case.
+	// Held only for shutdown. Nil when the store comes from a shared datastore, which the registry closes
 	owned *datastores.MemoryWrapper
 }
 
@@ -61,8 +60,7 @@ func (s MemoryRegistration) Initialize(configAny any, deps cache.CacheDeps) (cac
 		return initializeMemoryFromDatastore(config, deps)
 	}
 
-	// A private store, so two memory caches don't unexpectedly share tiles. Operators who do want
-	// them shared point both at one datastore.
+	// Private so two memory caches don't unexpectedly share tiles. Pointing both at one datastore shares them
 	owned, err := datastores.NewMemoryWrapper(datastores.MemoryWrapperConfig{MaxSize: config.MaxSize, TTL: config.TTL})
 	if err != nil {
 		return nil, err
@@ -91,7 +89,7 @@ func initializeMemoryFromDatastore(config MemoryConfig, deps cache.CacheDeps) (c
 	return &Memory{config, store, nil}, nil
 }
 
-// Close releases a private store. A shared one belongs to the datastore registry.
+// Only a private store is closed. A shared one belongs to the datastore registry
 func (c Memory) Close(ctx context.Context) error {
 	if c.owned == nil {
 		return nil
@@ -118,7 +116,7 @@ func (c Memory) Save(_ context.Context, t pkg.TileRequest, img *pkg.Image) error
 func (c Memory) Remove(_ context.Context, t pkg.TileRequest) (bool, error) {
 	key := t.String()
 
-	// otter's Delete reports nothing, so presence has to be checked separately.
+	// otter's Delete reports nothing, so presence is checked separately
 	present := c.Cache.Has(key)
 	c.Cache.Delete(key)
 

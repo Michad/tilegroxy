@@ -53,7 +53,7 @@ func Test_AccessLoggingToStdoutNeedsNoClose(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, closeLog, "callers must never nil-check the returned closer")
 
-	// Closing stdout would break logging for the rest of the process.
+	// Closing stdout would break logging for the rest of the process
 	require.NoError(t, closeLog())
 }
 
@@ -65,11 +65,11 @@ func Test_ConfigureAccessLoggingClosesFileOnFormatError(t *testing.T) {
 	require.Error(t, err)
 	require.NotNil(t, closeLog, "must return non-nil closer even on error")
 
-	// Validation happens before file opening, so file should not exist.
+	// Validation precedes file opening, so the file shouldn't exist
 	_, statErr := os.Stat(path)
 	require.Error(t, statErr, "file should not exist since validation happens before open")
 
-	// Verify the closer does not panic and is callable.
+	// Must still be callable without panicking
 	require.NoError(t, closeLog())
 }
 
@@ -83,7 +83,7 @@ func Test_ConfigureMainLoggingClosesFileOnFormatError(t *testing.T) {
 	_, err := configureMainLogging(&cfg)
 	require.Error(t, err)
 
-	// Validation happens before file opening, so file should not exist.
+	// Validation precedes file opening, so the file shouldn't exist
 	_, statErr := os.Stat(path)
 	assert.Error(t, statErr, "file should not exist since validation happens before open")
 }
@@ -98,7 +98,7 @@ func Test_ConfigureMainLoggingClosesFileOnLevelError(t *testing.T) {
 	_, err := configureMainLogging(&cfg)
 	require.Error(t, err)
 
-	// The file should not have been opened since level is validated first.
+	// Level is validated before the file is opened
 	_, statErr := os.Stat(path)
 	assert.Error(t, statErr, "file should not exist since validation happens before open")
 }
@@ -162,8 +162,7 @@ func Test_AuditLoggingIncludesRequestAttributes(t *testing.T) {
 	assert.Contains(t, string(content), "mozilla/5.0")
 }
 
-// A config reload has no request behind it, so the request attributes must be left off rather than
-// recorded as a row of empty strings.
+// A config reload has no request, so request attributes are omitted rather than logged as empty strings
 func Test_AuditLoggingOmitsRequestAttributesWithoutARequest(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "audit.log")
 	cfg := config.DefaultConfig()
@@ -196,13 +195,13 @@ func Test_AuditLoggingRejectsInvalidFormat(t *testing.T) {
 	require.Error(t, err)
 	require.NotNil(t, closeLog, "must return non-nil closer even on error")
 
-	// Validation happens before file opening, so file should not exist.
+	// Validation precedes file opening, so the file shouldn't exist
 	_, statErr := os.Stat(path)
 	require.Error(t, statErr, "file should not exist since validation happens before open")
 	require.NoError(t, closeLog())
 }
 
-// Auditing on with console off and no path would silently drop the trail the operator asked for.
+// Console off with no path would silently drop the trail the operator asked for
 func Test_AuditLoggingRejectsNoDestination(t *testing.T) {
 	cfg := config.DefaultConfig()
 	cfg.Logging.Audit.Enabled = true

@@ -26,7 +26,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg/entities/datastore"
 )
 
-// The wire protocols clickhouse-go can speak
+// Wire protocols clickhouse-go can speak
 const (
 	ClickhouseProtocolNative = "native"
 	ClickhouseProtocolHTTP   = "http"
@@ -131,7 +131,7 @@ func (p ClickhouseWrapper) Native() any {
 	return p.conn
 }
 
-// Close shuts down the connection pool so a hot reload doesn't leak it
+// Prevents a hot reload from leaking the pool
 func (p ClickhouseWrapper) Close(_ context.Context) error {
 	if p.conn == nil {
 		return nil

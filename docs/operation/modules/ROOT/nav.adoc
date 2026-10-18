@@ -1,4 +1,24 @@
+.Get started
 * xref:get-it.adoc[]
+* xref:quickstart.adoc[]
+* xref:concepts.adoc[]
+
+.Guides
+* xref:howto/index.adoc[]
+** xref:howto/productionizing.adoc[]
+** xref:howto/user-dynamic.adoc[]
+** xref:howto/multi-tenant.adoc[]
+** xref:howto/migrate-tilestache.adoc[]
+* xref:examples/index.adoc[]
+** xref:examples/production.adoc[]
+** xref:examples/vector-basemap.adoc[]
+** xref:examples/storm-imagery.adoc[]
+** xref:examples/terrain.adoc[]
+** xref:examples/multi-tenant.adoc[]
+** xref:examples/regional-imagery.adoc[]
+** xref:examples/historical-boundaries.adoc[]
+
+.Configure
 * xref:configuration/index.adoc[]
 ** xref:configuration/layer.adoc[]
 ** xref:configuration/provider/index.adoc[]
@@ -33,6 +53,8 @@
 *** xref:configuration/authentication/none.adoc[]
 *** xref:configuration/authentication/static_key.adoc[]
 *** xref:configuration/authentication/jwt.adoc[]
+*** xref:configuration/authentication/passthrough.adoc[]
+*** xref:configuration/authentication/bearer.adoc[]
 *** xref:configuration/authentication/custom.adoc[]
 ** xref:configuration/analytics/index.adoc[]
 *** xref:configuration/analytics/none.adoc[]
@@ -58,6 +80,9 @@
 ** xref:configuration/log.adoc[]
 ** xref:configuration/telemetry.adoc[]
 ** xref:configuration/error.adoc[]
+* xref:layer-patterns.adoc[]
+
+.Operate
 * xref:commands/index.adoc[]
 ** xref:commands/serve.adoc[]
 ** xref:commands/config_create.adoc[]
@@ -74,7 +99,3 @@
 * xref:security.adoc[]
 * xref:compatibility.adoc[]
 * xref:telemetry.adoc[]
-* xref:howto/index.adoc[]
-** xref:howto/productionizing.adoc[]
-** xref:howto/user-dynamic.adoc[]
-** xref:howto/migrate-tilestache.adoc[]

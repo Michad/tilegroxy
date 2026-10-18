@@ -58,7 +58,7 @@ func (s StaticRegistration) DataType(cfgAny any) config.DataType {
 	return dataType
 }
 
-// Vector tiles are recognized by their extension, embedded ones included. Everything else is a PNG.
+// Vector tiles are recognized by extension, embedded ones included. Everything else is a PNG
 func staticImageFormat(image string) (config.DataType, string) {
 	switch strings.ToLower(filepath.Ext(image)) {
 	case ".mvt", ".pbf":

@@ -28,24 +28,21 @@ import (
 	"go.opentelemetry.io/otel/codes"
 )
 
-// AnalyticsWrapper adds tracing to an analytics module. Unlike the cache and provider wrappers it also absorbs
-// errors; a broken analytics destination must never degrade tile serving
+// Unlike the cache and provider wrappers, also absorbs errors since a broken analytics destination must never degrade tile serving
 type AnalyticsWrapper struct {
 	Name      string
 	ID        string // Identifies this destination in logs. Defaults to the module name
 	Analytics analytics.Analytics
-	// Built from the same raw config the module sees so field validation happens once at startup
+	// Built from the module's raw config so field validation happens once at startup
 	resolver *fieldResolver
 }
 
-// Empty reports whether analytics is effectively unconfigured, letting the handler skip building an Event
-// at all. True for the nil wrapper and for the noop module
+// Lets the handler skip building an Event. True for the nil wrapper and the noop module
 func (w *AnalyticsWrapper) Empty() bool {
 	return w == nil || w.Name == "" || w.Name == noneName
 }
 
-// RecordEvent resolves the configured fields for the event and hands it to the module. Separate from Record
-// so the caller doesn't need to know how fields are sourced
+// Separate from Record so callers don't need to know how fields are sourced
 func (w *AnalyticsWrapper) RecordEvent(ctx context.Context, event analytics.Event, src FieldSource) {
 	if w == nil {
 		return
@@ -53,7 +50,7 @@ func (w *AnalyticsWrapper) RecordEvent(ctx context.Context, event analytics.Even
 
 	event.Fields = w.resolver.Resolve(ctx, src)
 
-	// Errors are already logged and absorbed by Record
+	// Record already logs and absorbs errors
 	_ = w.Record(ctx, event)
 }
 
@@ -72,7 +69,7 @@ func (w *AnalyticsWrapper) Record(ctx context.Context, event analytics.Event) er
 	return nil
 }
 
-// Close forwards to the wrapped module so batched events get flushed on shutdown and hot reload
+// Lets batched events flush on shutdown and hot reload
 func (w *AnalyticsWrapper) Close(ctx context.Context) error {
 	if w == nil {
 		return nil
@@ -81,27 +78,21 @@ func (w *AnalyticsWrapper) Close(ctx context.Context) error {
 	return lifecycle.CloseIfCloser(ctx, w.Analytics)
 }
 
-// CommonConfig holds the parameters every analytics module accepts. Modules embed it with
-// `mapstructure:",squash"` so these keys sit at the top level of the module's configuration
+// Accepted by every module. Embedded with `mapstructure:",squash"` so these keys sit at the top of the module config
 type CommonConfig struct {
-	// Identifier used in logs to attribute analytics messages. Defaults to the module name
+	// Attributes analytics log messages. Defaults to the module name
 	ID string
-	// Names of additional attributes to include, from the set in event_fields.go. An unrecognized name is a
-	// startup error so mistakes surface when running `tilegroxy config check`
+	// From the set in event_fields.go. Unknown names fail at startup so `tilegroxy config check` catches them
 	Fields []string
-	// Arbitrary additional attributes. Keys are the output attribute names, values select a source via a
-	// `ctx.` or `hdr.` prefix and are otherwise used as a literal constant
+	// Keys are attribute names. Values select a source via a `ctx.` or `hdr.` prefix, otherwise they're literal
 	ExtraFields map[string]string
-	// Controls how events are buffered before being written to the destination
-	Batch BatchConfig
+	Batch       BatchConfig
 }
 
-// noneName is the module that records nothing, used as the default so an absent analytics block behaves
-// the same as an explicitly disabled one
+// Default, so an absent analytics block behaves the same as an explicitly disabled one
 const noneName = "none"
 
-// secreter is separate from deps because it resolves values in the raw config before the module is
-// constructed, rather than being handed to the module
+// secreter is separate from deps because it resolves the raw config before the module is constructed
 func ConstructAnalytics(ctx context.Context, rawConfig map[string]interface{}, secreter secret.Secreter, deps analytics.AnalyticsDeps) (*AnalyticsWrapper, error) {
 	var err error
 
@@ -128,7 +119,6 @@ func ConstructAnalytics(ctx context.Context, rawConfig map[string]interface{}, s
 				return nil, err
 			}
 
-			// Built from the same raw config the module sees so field validation happens once here
 			resolver, err := newFieldResolver(rawConfig, deps.ErrorMessages)
 			if err != nil {
 				return nil, err

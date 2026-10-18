@@ -25,8 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// The nesting caches live in this package, so the registry's walk over them is exercised here
-// rather than beside the registry itself.
+// The nesting caches live in this package, so the registry's walk over them is tested here
 func nestedTestDeps() cache.CacheDeps {
 	return cache.CacheDeps{ErrorMessages: config.DefaultConfig().Error.Messages}
 }
@@ -57,8 +56,7 @@ func (s countingRegistration) Initialize(_ any, _ cache.CacheDeps) (cache.Cache,
 	return countingCache(s), nil
 }
 
-// Mirrors the arrangement in the cache configuration docs: a tenant cache wrapping a multi cache,
-// where a layer can reference the multi cache nested two levels down.
+// Mirrors the docs: a tenant cache wrapping a multi cache, with a layer referencing the multi two levels down
 func Test_Registry_ReferencesNestedCacheByID(t *testing.T) {
 	reg, err := ConstructCacheRegistry(context.Background(), []map[string]interface{}{
 		{
@@ -103,8 +101,7 @@ func Test_Registry_NestedIDCollidesWithTopLevel(t *testing.T) {
 	require.ErrorContains(t, err, "outer")
 }
 
-// A nested cache is closed by the parent that constructed it, so surfacing it in the registry must
-// not cause a second close.
+// The parent closes nested caches, so surfacing them in the registry must not close them twice
 func Test_Registry_ClosesNestedCacheOnce(t *testing.T) {
 	closed := 0
 	cache.RegisterCache(countingRegistration{closed: &closed})
@@ -125,52 +122,4 @@ func Test_Registry_ClosesNestedCacheOnce(t *testing.T) {
 
 	require.NoError(t, reg.Close(context.Background()))
 	assert.Equal(t, 1, closed)
-}
-
-// ContainsCache has to find a tenant cache wherever it sits, since that's what decides whether a
-// layer coalesces concurrent requests by default. Exercised against the real nesting caches.
-func Test_ContainsCache_FindsTenantAtAnyDepth(t *testing.T) {
-	deps := nestedTestDeps()
-
-	plain, err := ConstructCache(map[string]interface{}{"name": "memory"}, deps)
-	require.NoError(t, err)
-	assert.False(t, ContainsCache(plain, "tenant"))
-
-	direct, err := ConstructCache(map[string]interface{}{
-		"name":  "tenant",
-		"cache": map[string]interface{}{"name": "memory"},
-	}, deps)
-	require.NoError(t, err)
-	assert.True(t, ContainsCache(direct, "tenant"))
-
-	underTTL, err := ConstructCache(map[string]interface{}{
-		"name": "ttl",
-		"ttl":  60,
-		"cache": map[string]interface{}{
-			"name":  "tenant",
-			"cache": map[string]interface{}{"name": "memory"},
-		},
-	}, deps)
-	require.NoError(t, err)
-	assert.True(t, ContainsCache(underTTL, "tenant"))
-
-	inOneTier, err := ConstructCache(map[string]interface{}{
-		"name": "multi",
-		"tiers": []map[string]interface{}{
-			{"name": "memory"},
-			{"name": "tenant", "cache": map[string]interface{}{"name": "memory"}},
-		},
-	}, deps)
-	require.NoError(t, err)
-	assert.True(t, ContainsCache(inOneTier, "tenant"))
-
-	noTenant, err := ConstructCache(map[string]interface{}{
-		"name": "multi",
-		"tiers": []map[string]interface{}{
-			{"name": "memory"},
-			{"name": "ttl", "ttl": 60, "cache": map[string]interface{}{"name": "memory"}},
-		},
-	}, deps)
-	require.NoError(t, err)
-	assert.False(t, ContainsCache(noTenant, "tenant"))
 }

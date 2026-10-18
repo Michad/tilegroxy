@@ -26,8 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// capture installs a logger writing into a buffer and restores the previous state afterwards, so
-// tests don't leak a destination into each other.
+// Restores the previous logger afterwards so tests don't leak a destination into each other
 func capture(t *testing.T) *bytes.Buffer {
 	t.Helper()
 

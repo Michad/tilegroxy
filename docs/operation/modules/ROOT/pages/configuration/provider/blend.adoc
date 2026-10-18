@@ -1,17 +1,85 @@
 = Blend
+:description: Allows you to combine the imagery from multiple providers.  The simplest use case for this is to "sandwich" or "composite" semi-transparent images on top of each other.  For example you can put county boundaries on top of a flood map or include a watermark on your maps.  Multiple blending modes are available to fine-tune the effect.
+:page-eyebrow: Provider
+:page-config-name: blend
 
-Allows you to combine the imagery from multiple providers.  The simplest use case for this is to "sandwich" or "composite" semi-transparent images on top of each other.  For example you can put county boundaries on top of a flood map or include a watermark on your maps.  Multiple blending modes are available to fine-tune the effect.
+== Description
 
 This can only be used with layers that return JPEG or PNG images. Tiles will be scaled up to the highest resolution of the inputs to be combined and the combined result always output in PNG format.
 
 Each downstream provider is called in parallel.
 
 The following diagram depicts a possible request flow when using the Blend provider with the `layers` parameter. Note that each downstream layer is individually cached; this is useful when it's expected for requests to also come in for each of the individual layers but an unnecessary cost if not. If you only expect requests for the blended layer, either use the `providers` parameter option or simply disable caching in the downstream layer(s).
-image:diagram-blend.png[Blend request flow]
 
-Name should be "blend"
+image::diagram-blend.png[Blend request flow]
 
-[cols="1,3,1,1,1"]
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+provider:
+  name: blend
+  mode: normal
+  layer:
+    pattern: noaa_poststorm_{date}{version}
+    values:
+      - date: "20230902"
+        version: a
+      - date: "20230901"
+        version: b
+      - date: "20230901"
+        version: a
+      - date: "20230831"
+        version: b
+      - date: "20230831"
+        version: a
+----
+
+JSON::
++
+[,json]
+----
+{
+  "provider": {
+    "name": "blend",
+    "mode": "normal",
+    "layer": {
+      "pattern": "noaa_poststorm_{date}{version}",
+      "values": [
+        {
+          "date": "20230902",
+          "version": "a"
+        },
+        {
+          "date": "20230901",
+          "version": "b"
+        },
+        {
+          "date": "20230901",
+          "version": "a"
+        },
+        {
+          "date": "20230831",
+          "version": "b"
+        },
+        {
+          "date": "20230831",
+          "version": "a"
+        }
+      ]
+    }
+  }
+}
+----
+====
+
+== Configuration
+
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -22,19 +90,19 @@ Name should be "blend"
 | None
 
 | mode
-| How to blend the images. https://github.com/anthonynsimon/bild#blend-modes[Examples of the modes]. Possible values: "add", "color burn", "color dodge", "darken", "difference", "divide", "exclusion", "lighten", "linear burn", "linear light", "multiply", "normal", "opacity", "overlay", "screen", "soft light", "subtract"
+| How to blend the images. https://github.com/anthonynsimon/bild#blend-modes[Examples of the modes]. Possible values: `add`, `color burn`, `color dodge`, `darken`, `difference`, `divide`, `exclusion`, `lighten`, `linear burn`, `linear light`, `multiply`, `normal`, `opacity`, `overlay`, `screen`, `soft light`, `subtract`
 | String
 | No
 | normal
 
 | opacity
-| Only applicable if mode is "opacity". A value between 0 and 1 controlling the amount of opacity
+| Only applicable if mode is `opacity`. A value between 0 and 1 controlling the amount of opacity
 | Float
 | No
 | 0
 
 | layer
-| An alternative to the `providers` parameter for specifying references to other layers that utilize patterns. Equivalent to specifying a number of <<ref,`Ref`>> providers in `providers`
+| An alternative to the `providers` parameter for specifying references to other layers that utilize patterns. Equivalent to specifying a number of xref:configuration/provider/ref.adoc[Ref] providers in `providers`
 | Object - See next rows
 | No
 | None
@@ -51,24 +119,3 @@ Name should be "blend"
 | Yes
 | None
 |===
-
-Example:
-
-----
-provider:
-  name: blend
-  mode: normal
-  layer:
-    pattern: noaa_poststorm_{date}{version}
-    values:
-      - date: 20230902
-        version: a
-      - date: 20230901
-        version: b
-      - date: 20230901
-        version: a
-      - date: 20230831
-        version: b
-      - date: 20230831
-        version: a
-----

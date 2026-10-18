@@ -33,8 +33,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// testPNGImage returns a minimal but valid 1x1 PNG, needed by any layer that has Bounds
-// configured since that wraps the provider in a crop wrapper which decodes the image.
+// A minimal valid PNG, since layers with Bounds wrap the provider in a cropper that decodes the image
 func testPNGImage() []byte {
 	img := image.NewRGBA(image.Rect(0, 0, 1, 1))
 	img.Set(0, 0, color.White)
@@ -67,8 +66,7 @@ func (testFixedRegistration) Initialize(_ any, _ layer.ProviderDeps) (layer.Prov
 	return testFixedProvider{}, nil
 }
 
-// A pattern layer has no single concrete name, so testing "all layers" (or naming it explicitly)
-// must expand it into its configured examples rather than testing its bare id/pattern.
+// A pattern layer has no single name, so it expands into its examples rather than testing its bare pattern
 func Test_Test_ExpandsPatternLayerIntoExamples(t *testing.T) {
 	layer.RegisterProvider(testFixedRegistration{})
 
@@ -95,8 +93,7 @@ func Test_Test_ExpandsPatternLayerIntoExamples(t *testing.T) {
 	require.NotContains(t, out.String(), "pattern_layer")
 }
 
-// A pattern layer without any configured examples has nothing concrete to test, so it's skipped
-// with a warning instead of failing the whole run or testing its meaningless bare id/pattern.
+// Nothing concrete to test, so it's skipped with a warning rather than failing the run
 func Test_Test_SkipsPatternLayerWithNoExamples(t *testing.T) {
 	layer.RegisterProvider(testFixedRegistration{})
 
@@ -116,7 +113,7 @@ func Test_Test_SkipsPatternLayerWithNoExamples(t *testing.T) {
 	require.Equal(t, uint32(0), errCount)
 }
 
-// A plain id layer keeps being tested under its own name, unaffected by pattern expansion.
+// Unaffected by pattern expansion
 func Test_Test_PlainLayerUnaffected(t *testing.T) {
 	layer.RegisterProvider(testFixedRegistration{})
 
@@ -136,8 +133,7 @@ func Test_Test_PlainLayerUnaffected(t *testing.T) {
 	require.Contains(t, out.String(), "plain_layer")
 }
 
-// An explicitly requested name is tested as given, so a pattern layer can be tested against a
-// name that isn't one of its examples.
+// Lets a pattern layer be tested against a name that isn't one of its examples
 func Test_Test_ExplicitNameUsedAsGiven(t *testing.T) {
 	layer.RegisterProvider(testFixedRegistration{})
 
@@ -183,9 +179,7 @@ func (testRecordingRegistration) Initialize(_ any, _ layer.ProviderDeps) (layer.
 	return testRecordingProvider{}, nil
 }
 
-// Without explicit -z/-x/-y, the picked tile has to fall inside the layer's configured bounds and
-// zoom range rather than using the arbitrary fixed default, otherwise the whole point of scoping
-// the test to a layer's actual coverage area is lost.
+// Without explicit coordinates the tile must fall inside the layer's bounds and zoom, not the fixed default
 func Test_Test_PicksTileWithinLayerBoundsAndZoom(t *testing.T) {
 	layer.RegisterProvider(testRecordingRegistration{})
 
@@ -218,8 +212,7 @@ func Test_Test_PicksTileWithinLayerBoundsAndZoom(t *testing.T) {
 	require.Less(t, lastRecordedTileRequest.Y, zoneRange.YMax)
 }
 
-// A layer with no bounds/zoom configured keeps using the old fixed default tile, so behavior for
-// the common unrestricted layer doesn't change.
+// The common unrestricted layer keeps the old fixed default tile
 func Test_Test_FallsBackToDefaultTileWithoutBoundsOrZoom(t *testing.T) {
 	layer.RegisterProvider(testRecordingRegistration{})
 
@@ -239,7 +232,7 @@ func Test_Test_FallsBackToDefaultTileWithoutBoundsOrZoom(t *testing.T) {
 	require.Equal(t, pkg.TileRequest{LayerName: "unrestricted_layer", Z: defaultZ, X: defaultX, Y: defaultY}, lastRecordedTileRequest)
 }
 
-// A configured center wins over the midpoint of the layer's bounds, including its zoom.
+// A configured center, including its zoom, wins over the bounds midpoint
 func Test_Test_PicksTileFromCenter(t *testing.T) {
 	layer.RegisterProvider(testRecordingRegistration{})
 
@@ -297,8 +290,7 @@ func Test_PickTile_Center(t *testing.T) {
 	}
 }
 
-// Explicit coordinates take priority over bounds/zoom derived ones even when the layer has bounds
-// configured.
+// Explicit coordinates win over derived ones even when the layer has bounds
 func Test_Test_ExplicitCoordinatesOverrideAutoPick(t *testing.T) {
 	layer.RegisterProvider(testRecordingRegistration{})
 
@@ -313,9 +305,7 @@ func Test_Test_ExplicitCoordinatesOverrideAutoPick(t *testing.T) {
 		},
 	}
 
-	// Z:5 X:9 Y:12 is inside the layer's bounds at z=5 but distinct from the tile auto-pick would
-	// choose (X:9 Y:11, the midpoint of the layer's tile range), so this proves the explicit
-	// coordinate was used rather than the auto-picked one.
+	// Inside the bounds but distinct from the auto-picked X:9 Y:11, proving the explicit coordinate was used
 	var out bytes.Buffer
 	errCount, err := Test(&cfg, TestOptions{Z: 5, X: 9, Y: 12, CoordinatesSet: true, NumThread: 1, NoCache: true}, &out)
 
@@ -324,7 +314,7 @@ func Test_Test_ExplicitCoordinatesOverrideAutoPick(t *testing.T) {
 	require.Equal(t, pkg.TileRequest{LayerName: "bounded_layer", Z: 5, X: 9, Y: 12}, lastRecordedTileRequest)
 }
 
-// --json without --file replaces the per-tile text table with a single JSON summary on stdout.
+// --json without --file replaces the per-tile table with a single JSON summary on stdout
 func Test_Test_JSONOutputWithoutFile(t *testing.T) {
 	layer.RegisterProvider(testFixedRegistration{})
 
@@ -347,8 +337,7 @@ func Test_Test_JSONOutputWithoutFile(t *testing.T) {
 	require.Empty(t, summary.Failures)
 }
 
-// --file alone keeps streaming the text table to stdout and writes a plain text summary to the
-// file.
+// --file alone keeps the table on stdout and writes a plain text summary to the file
 func Test_Test_FileOutputPlainText(t *testing.T) {
 	layer.RegisterProvider(testFixedRegistration{})
 
@@ -371,8 +360,7 @@ func Test_Test_FileOutputPlainText(t *testing.T) {
 	require.Contains(t, string(content), "Tested 1 layers, 0 failures")
 }
 
-// --file combined with --json keeps streaming the text table to stdout but writes the JSON
-// summary to the file.
+// --file with --json keeps the table on stdout and writes a JSON summary to the file
 func Test_Test_FileOutputJSON(t *testing.T) {
 	layer.RegisterProvider(testFixedRegistration{})
 

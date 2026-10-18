@@ -27,10 +27,8 @@ import (
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
-	"github.com/maypok86/otter"
 	"github.com/traefik/yaegi/interp"
 	"github.com/traefik/yaegi/stdlib"
-	"k8s.io/utils/keymutex"
 )
 
 const (
@@ -49,9 +47,7 @@ type CustomConfig struct {
 
 type Custom struct {
 	CustomConfig
-	cache *otter.Cache[string, authentication.ValidationResult]
-	// Only used when cache is used to avoid multiple calls to the validation func for the same token at once
-	locks          keymutex.KeyMutex
+	cache          *lookupCache[authentication.ValidationResult]
 	validationFunc func(string) authentication.ValidationResult
 	closeFunc      func(context.Context) error
 }
@@ -98,7 +94,7 @@ func extractToken(ctx context.Context, req *http.Request, tokenExtract map[strin
 
 		lastVal := pathSplit[len(pathSplit)-1]
 
-		// This is a little hacky, make sure we're getting a suffix and not just the last tile coordinate. Surely the token won't be an integer
+		// Hacky: assumes the token is never an integer, so a suffix can be told apart from the y coordinate
 		yVal := req.PathValue("y")
 		if yVal != lastVal {
 			return lastVal, true
@@ -177,7 +173,7 @@ func (s CustomRegistration) Initialize(cfgAny any, deps authentication.Authentic
 		return nil, fmt.Errorf(deps.ErrorMessages.ScriptError, "auth.custom", validationVal)
 	}
 
-	// close is optional so scripts written before it existed keep working unchanged.
+	// Optional so scripts written before it existed keep working
 	var closeFunc func(context.Context) error
 	if closeVal, closeErr := i.Eval("custom.close"); closeErr == nil {
 		fn, ok := closeVal.Interface().(func(context.Context) error)
@@ -191,50 +187,24 @@ func (s CustomRegistration) Initialize(cfgAny any, deps authentication.Authentic
 		cfg.CacheSize = 100
 	}
 
-	if cfg.CacheSize < 0 {
-		return &Custom{cfg, nil, nil, validationFunc, closeFunc}, nil
-	}
-
-	lock := keymutex.NewHashed(-1)
-
-	cache, err := otter.MustBuilder[string, authentication.ValidationResult](cfg.CacheSize).Build()
+	cache, err := newLookupCache[authentication.ValidationResult](cfg.CacheSize, 0)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Custom{cfg, &cache, lock, validationFunc, closeFunc}, nil
+	return &Custom{cfg, cache, validationFunc, closeFunc}, nil
 }
 
 func (c Custom) CheckAuthentication(ctx context.Context, req *http.Request) bool {
 	slog.Log(ctx, config.LevelTrace, "Performing custom auth check")
 	tok, ok := extractToken(ctx, req, c.Token)
 	if ok {
-		var valResult authentication.ValidationResult
-		var inCache bool
+		valResult, _ := c.cache.get(ctx, tok, func() (authentication.ValidationResult, error) {
+			result := c.validationFunc(tok)
+			slog.DebugContext(ctx, fmt.Sprintf("Custom auth check returned %v", result.Pass))
 
-		if c.cache != nil {
-			c.locks.LockKey(tok)
-			defer func() {
-				err := c.locks.UnlockKey(tok)
-				if err != nil {
-					slog.ErrorContext(ctx, "Unable to release auth lock - this token might encounter issues going forward", "error", err)
-				}
-			}()
-
-			valResult, inCache = c.cache.Get(tok)
-			if !inCache {
-				slog.Log(ctx, config.LevelTrace, "Cache miss")
-			}
-		}
-
-		if !inCache {
-			valResult = c.validationFunc(tok)
-			slog.DebugContext(ctx, fmt.Sprintf("Custom auth check returned %v", valResult.Pass))
-
-			if c.cache != nil {
-				c.cache.Set(tok, valResult)
-			}
-		}
+			return result, nil
+		})
 
 		if checkValidationResult(valResult) {
 			uid, _ := pkg.UserIDFromContext(ctx)
@@ -261,9 +231,10 @@ func (c Custom) CheckAuthentication(ctx context.Context, req *http.Request) bool
 	return false
 }
 
-// Close calls the script's close function when it defines one. The symbol is optional so scripts written
-// before this existed keep working
+// The script's close function is optional so older scripts keep working
 func (c Custom) Close(ctx context.Context) error {
+	c.cache.close()
+
 	if c.closeFunc == nil {
 		return nil
 	}

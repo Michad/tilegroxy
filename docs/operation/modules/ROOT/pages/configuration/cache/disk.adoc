@@ -1,20 +1,45 @@
-= Disks
+= Disk
+:description: Stores the cache entries as files in a location on the filesystem.
+:page-eyebrow: Cache
+:page-config-name: disk
 
-Stores the cache entries as files in a location on the filesystem. 
+== Description
 
-Tilegroxy doesn't form clusters so a high-availability deployment with this cache pointing to a local filesystem will lead to inconsistent behaviour.
+WARNING: Tilegroxy doesn't form clusters so a high-availability deployment with this cache pointing to a local filesystem will lead to inconsistent behaviour.
 
-No automatic cleanup process is included inside of `tilegroxy` itself. It is recommended you use an external job to avoid running out of disk space.
+NOTE: No automatic cleanup process is included inside of `tilegroxy` itself. It is recommended you use an external job to avoid running out of disk space.
 
 How entries are arranged on disk is controlled by `layout`. Sub-directories are created as tiles are cached. Layer names are sanitized by replacing potentially dangerous characters with an underscore. This can lead to exotically named layers colliding. Be cognizant of that risk when using this cache.
 
 Cache entries are written to a temporary file (in the same directory) and then renamed, so an interrupted write won't leave partial files behind. The temp files should get automatically removed, but if you see any old files ending with `.tmp`, feel free to clean them up.
 
-Name should be "disk"
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+cache:
+  name: disk
+  path: ./disk_tile_cache
+----
 
-Configuration options:
+JSON::
++
+[,json]
+----
+{
+  "cache": {
+    "name": "disk",
+    "path": "./disk_tile_cache"
+  }
+}
+----
+====
 
-[cols="1,3,1,1,1"]
+== Configuration
+[cols="1m,3,1,1,1"]
 |===
 | Parameter  | Description | Type | Required | Default
 
@@ -25,8 +50,8 @@ Configuration options:
 | None
 
 | filemode
-| A https://pkg.go.dev/io/fs#FileMode[Go filemode] as an integer to use for all created files/directories
-| uint32
+| The permissions to use for all created files/directories. Either a unix octal string such as `"0644"` or a https://pkg.go.dev/io/fs#FileMode[Go filemode] as an integer. In YAML an unquoted number with a leading zero such as `0644` is also read as octal, but JSON has no octal numbers so use the string form there
+| string or uint32
 | No
 | 0777
 
@@ -36,17 +61,3 @@ Configuration options:
 | No
 | flat
 |===
-
-Example:
-
-[,json]
-----
-"cache": {
-  "name": "disk",
-  "path": "./disk_tile_cache"
-}
-----
-
-
-
-

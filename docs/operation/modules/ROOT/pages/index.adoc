@@ -1,44 +1,114 @@
-= Why tilegroxy?
+= tilegroxy
+:page-layout: home
+:description: Tilegroxy provides authentication, caching, observability, and a uniform entry point for all your tiled map layers.
 
-Tilegroxy shines when you consume maps from multiple sources.  It isn't tied to any one mapping backend and can pull data from any protocol, whether the standard alphabet soup or a proprietary, authenticated API. Rather than make your frontend aware of every single vendor and exposing your keys, utilize tilegroxy and provide a uniform API with a configuration-driven backend that can be augmented by code when necessary.
+[.hero]
+--
+[.eyebrow]
+Your Maptile gateway
+
+[discrete]
+== One tile API in front of every map source you use.
+
+[.lead]
+Tilegroxy shines when your application consumes geospatial data from multiple sources.
+Instead of being tied to a specific backend, it can pull data from any protocol, whether the standard initialisms or a proprietary, authenticated API.
+Tilegroxy allows you to provide access to all your maps through a single entry point with uniform authentication, caching, CORS rules, logging, and tracking, all while protecting your keys and upstream providers.
+
+[.actions]
+* xref:quickstart.adoc[Quickstart]
+* xref:get-it.adoc[How to get it]
+* Apache-2.0 · Go
+
+****
+.tilegroxy.yml
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+server:
+  production: false
+layers:
+  - id: osm
+    provider:
+      name: proxy
+      url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+----
+JSON::
++
+[,json]
+----
+{
+  "server": { "production": false },
+  "layers": [
+    {
+      "id": "osm",
+      "provider": {
+        "name": "proxy",
+        "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+      }
+    }
+  ]
+}
+----
+====
+
+[tabs]
+====
+Binary::
++
+[,sh]
+----
+tilegroxy config check
+tilegroxy serve
+----
+Container::
++
+[,sh]
+----
+docker run --rm -p 8080:8080 -e SERVER_BINDHOST=0.0.0.0 -v ./tilegroxy.yml:/tilegroxy/tilegroxy.yml:Z ghcr.io/michad/tilegroxy serve
+----
+====
+****
+--
+
+[.paths]
+* [.kicker]#Start# xref:quickstart.adoc[Quickstart] Proxy tiles from OpenStreetMap with a single-layer config.
+* [.kicker]#Reference# xref:configuration/index.adoc[Configuration] Layers, providers, caches, authentication, server and telemetry.
+* [.kicker]#Learn by example# xref:examples/index.adoc[Examples] Complete configurations, from a vector basemap to multi-tenant imagery.
+* [.kicker]#CLI# xref:commands/index.adoc[Commands] serve, seed, test, and config create / check / diff.
 
 == Features
 
-+++<ul><li>+++
-link:https://tilegroxy.com/operation/configuration/provider/proxy.html[Proxy] to ZXY, WMS, TMS, WMTS, or other protocol map layers
-+++</li><li>+++
-Cache tiles in link:https://tilegroxy.com/operation/configuration/cache/disk.html[disk], link:https://tilegroxy.com/operation/configuration/cache/memory.html[memory], link:https://tilegroxy.com/operation/configuration/cache/s3.html[s3], link:https://tilegroxy.com/operation/configuration/cache/redis.html[redis], and/or link:https://tilegroxy.com/operation/configuration/cache/memcached.html[memcached]
-+++</li><li>+++
-Require authentication using link:https://tilegroxy.com/operation/configuration/authentication/static_key.html[static key], link:https://tilegroxy.com/operation/configuration/authentication/jwt.html[JWT], or link:https://tilegroxy.com/operation/configuration/authentication/custom.html[custom] logic
-+++</li><li>+++
-link:https://tilegroxy.com/operation/configuration/authentication/jwt.html[Restrict access] to a given layer and/or geographic region based on auth token
-+++</li><li>+++
-Create your own link:https://tilegroxy.com/operation/extensibility.html[custom provider] to pull in non-standard and proprietary imagery sources
-+++</li><li>+++
-Support for raster tiles and both the Mapbox Vector Tile (MVT) and MapLibre Tile (MLT) vector formats
-+++</li><li>+++
-Tweak your raster layers with link:https://tilegroxy.com/operation/configuration/provider/effect.html[18 standard effects] or by providing your own link:https://tilegroxy.com/operation/configuration/provider/transform.html[pixel-level logic]
-+++</li><li>+++
-Combine link:https://tilegroxy.com/operation/configuration/provider/blend.html[raster] or link:https://tilegroxy.com/operation/configuration/provider/compositemvt.html[vector tile] layers
-+++</li><li>+++
-link:https://tilegroxy.com/operation/configuration/provider/cgi.html[Act as an HTTP server] for https://www.mapserver.org[MapServer] and any other CGI application that generates tiles
-+++</li><li>+++
-Commands for link:https://tilegroxy.com/operation/commands/seed.html[seeding] and link:https://tilegroxy.com/operation/commands/test.html[testing] your layers
-+++</li><li>+++
-Run as link:https://tilegroxy.com/operation/configuration/encryption.html[HTTPS] including Let's Encrypt (ACME) support
-+++</li><li>+++
-Configurable via file or etcd with link:https://tilegroxy.com/operation/configuration/index.html[environment variable] override, 
-link:https://tilegroxy.com/operation/configuration/secret/index.html[externalizable secrets], and link:https://tilegroxy.com/operation/reloading.html[zero-downtime reload]
-+++</li><li>+++
-link:#docker[Container deployment]
-+++</li><li>+++
-Minimal HTTP footprint to decrease security exposure
-+++</li><li>+++
-Traces, metrics, and logs available via link:https://tilegroxy.com/operation/configuration/telemetry.html[OpenTelemetry]
-+++</li><li>+++
-Per-layer usage link:https://tilegroxy.com/operation/configuration/analytics/index.html[analytics] recorded to ClickHouse, PostgreSQL, or a custom destination
-+++</li><li>+++
-Usable as an application or a link:https://tilegroxy.com/operation/extensibility.html[library]
-+++</li><li>+++
-Supports link:https://tilegroxy.com/operation/tilejson.html[TileJSON]
-+++</li></ul>+++
+[.features]
+--
+.Sources
+* xref:configuration/provider/proxy.adoc[Proxy] to ZXY, WMS, TMS, WMTS, or other protocol map layers
+* Raster tiles plus Mapbox Vector Tile (MVT) and MapLibre Tile (MLT) vector formats
+* xref:configuration/provider/cgi.adoc[Act as an HTTP server] for https://www.mapserver.org[MapServer] and other CGI tile generators
+* xref:extensibility.adoc[Custom providers] for non-standard and proprietary imagery sources
+
+.Transform
+* Tweak raster layers with xref:configuration/provider/effect.adoc[18 standard effects] or your own xref:configuration/provider/transform.adoc[pixel-level logic]
+* Combine xref:configuration/provider/blend.adoc[raster] or xref:configuration/provider/compositemvt.adoc[vector tile] layers
+* Supports xref:tilejson.adoc[TileJSON]
+
+.Cache
+* Cache tiles in xref:configuration/cache/disk.adoc[disk], xref:configuration/cache/memory.adoc[memory], xref:configuration/cache/s3.adoc[s3], xref:configuration/cache/redis.adoc[redis], and/or xref:configuration/cache/memcached.adoc[memcached]
+* Commands for xref:commands/seed.adoc[seeding] and xref:commands/test.adoc[testing] your layers
+
+.Secure
+* Require authentication using xref:configuration/authentication/static_key.adoc[static key], xref:configuration/authentication/jwt.adoc[JWT], xref:configuration/authentication/passthrough.adoc[an existing HTTP endpoint], xref:configuration/authentication/bearer.adoc[API keys in a database], or xref:configuration/authentication/custom.adoc[custom] logic
+* xref:configuration/authentication/jwt.adoc[Restrict access] to a layer and/or geographic region by auth token
+* Run as xref:configuration/encryption.adoc[HTTPS], including Let's Encrypt (ACME)
+* Minimal HTTP footprint to decrease security exposure
+
+.Operate
+* Configurable via file or etcd with xref:configuration/index.adoc[environment variable] override, xref:configuration/secret/index.adoc[externalizable secrets], and xref:reloading.adoc[zero-downtime reload]
+* xref:get-it.adoc#docker[Container deployment]
+* Traces, metrics, and logs via xref:configuration/telemetry.adoc[OpenTelemetry]
+* Per-layer usage xref:configuration/analytics/index.adoc[analytics] to ClickHouse, PostgreSQL, or a custom destination
+* Usable as an application or a xref:extensibility.adoc[library]
+--

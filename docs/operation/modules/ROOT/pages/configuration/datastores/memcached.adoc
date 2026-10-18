@@ -1,14 +1,45 @@
 = Memcached
+:description: Defines a connection to memcached. Utilizes gomemcache under the hood.
+:page-eyebrow: Datastore
+:page-config-name: memcached
 
-Defines a connection to link:https://memcached.org/[memcached]. Utilizes link:https://github.com/bradfitz/gomemcache[gomemcache] under the hood.
+NOTE: Used by the xref:configuration/cache/memcached.adoc[memcached cache].
 
-Used by the xref:configuration/cache/memcached.adoc[memcached cache].
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+datastores:
+  - name: memcached
+    id: memcached-0
+    host: 127.0.0.1
+    port: 11211
+----
 
-Name should be "memcached"
+JSON::
++
+[,json]
+----
+{
+  "datastores": [
+    {
+      "name": "memcached",
+      "id": "memcached-0",
+      "host": "127.0.0.1",
+      "port": 11211
+    }
+  ]
+}
+----
+====
 
-Configuration options:
+== Configuration
 
-[cols="1,3,1,1,1"]
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -36,14 +67,3 @@ Configuration options:
 | No
 | host and port
 |===
-
-Example:
-
-[,yaml]
-----
-datastores:
-  - name: memcached
-    id: memcached-0
-    host: 127.0.0.1
-    port: 11211
-----

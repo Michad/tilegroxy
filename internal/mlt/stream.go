@@ -20,7 +20,7 @@ import (
 	"math"
 )
 
-// Stream categories, the high nibble of the stream type byte.
+// Stream categories, the high nibble of the stream type byte
 const (
 	categoryPresent uint8 = iota
 	categoryData
@@ -28,7 +28,7 @@ const (
 	categoryLength
 )
 
-// Subtypes of categoryData.
+// Subtypes of categoryData
 const (
 	dataNone uint8 = iota
 	dataSingle
@@ -38,14 +38,14 @@ const (
 	dataFSST
 )
 
-// Subtypes of categoryOffset.
+// Subtypes of categoryOffset
 const (
 	offsetVertex uint8 = iota
 	offsetIndex
 	offsetString
 )
 
-// Subtypes of categoryLength.
+// Subtypes of categoryLength
 const (
 	lengthVarBinary uint8 = iota
 	lengthGeometries
@@ -56,7 +56,7 @@ const (
 	lengthDictionary
 )
 
-// Logical encodings, as the encoding byte with its physical bits cleared.
+// Logical encodings, as the encoding byte with its physical bits cleared
 const (
 	logicalNone               uint8 = 0x00
 	logicalDelta              uint8 = 0x20
@@ -68,7 +68,7 @@ const (
 	logicalMortonRle          uint8 = 0x8C
 )
 
-// Physical encodings, the low bits of the encoding byte.
+// Physical encodings, the low bits of the encoding byte
 const (
 	physicalNone uint8 = iota
 	physicalFastPFOR
@@ -105,7 +105,7 @@ func (s stream) is(category, subtype uint8) bool {
 	return s.category == category && s.subtype == subtype
 }
 
-// Boolean streams never carry run counts in their header, since they follow from numValues.
+// Boolean streams never carry run counts in their header, since they follow from numValues
 func readStream(r *reader, isBool bool) (stream, error) {
 	var s stream
 
@@ -170,7 +170,7 @@ func (s *stream) readExtraHeader(r *reader, isBool bool) error {
 	return err
 }
 
-// Decodes the payload into unsigned words, 64 bit if wide and 32 bit otherwise.
+// 64 bit words if wide, 32 bit otherwise
 func (s stream) words(r *reader, wide bool) ([]uint64, error) {
 	if err := r.spend(uint64(s.numValues), word64Bytes); err != nil {
 		return nil, err
@@ -233,7 +233,7 @@ func varintWords(data []byte, n uint32, wide bool) ([]uint64, error) {
 	return out, nil
 }
 
-// Decodes integer values as unsigned, truncated to 32 bits unless wide.
+// Truncated to 32 bits unless wide
 func (s stream) unsigned(r *reader, wide bool) ([]uint64, error) {
 	w, err := s.expanded(r, wide)
 	if err != nil {
@@ -247,7 +247,6 @@ func (s stream) unsigned(r *reader, wide bool) ([]uint64, error) {
 	return w, nil
 }
 
-// Decodes integer values of a signed type.
 func (s stream) signed(r *reader, wide bool) ([]int64, error) {
 	w, err := s.expanded(r, wide)
 	if err != nil {
@@ -270,7 +269,7 @@ func (s stream) signed(r *reader, wide bool) ([]int64, error) {
 	return out, nil
 }
 
-// Physically decodes and expands any run length encoding, leaving delta and zigzag coding in place.
+// Expands run length encoding, leaving delta and zigzag coding in place
 func (s stream) expanded(r *reader, wide bool) ([]uint64, error) {
 	switch s.logical {
 	case logicalNone, logicalDelta:
@@ -287,7 +286,7 @@ func (s stream) expanded(r *reader, wide bool) ([]uint64, error) {
 	}
 }
 
-// Run lengths come first, then the value of each run.
+// Run lengths come first, then the value of each run
 func expandRuns(r *reader, w []uint64, runs uint32, total uint32) ([]uint64, error) {
 	if uint64(len(w)) != 2*uint64(runs) {
 		return nil, fmt.Errorf("%w: %v words can't hold %v runs", ErrMalformed, len(w), runs)
@@ -320,7 +319,7 @@ func expandRuns(r *reader, w []uint64, runs uint32, total uint32) ([]uint64, err
 	return out, nil
 }
 
-// Deltas are zigzag coded and accumulate with wrapping at the word width.
+// Deltas are zigzag coded and accumulate with wrapping at the word width
 func deltaDecode(w []uint64, wide bool) []uint64 {
 	out := make([]uint64, len(w))
 
@@ -355,7 +354,7 @@ func zigzag(v int64, wide bool) uint64 {
 	return uint64(uint32((w << 1) ^ (w >> signShift32))) // #nosec G115 -- reinterprets the zigzag bit pattern
 }
 
-// Reinterprets a word's bits as a two's complement value of the stream's width.
+// Reinterprets a word's bits as a two's complement value of the stream's width
 func asSigned(v uint64, wide bool) int64 {
 	if wide {
 		return int64(v) // #nosec G115 -- reinterprets the bit pattern
@@ -394,7 +393,7 @@ func (s stream) bools(r *reader) ([]bool, error) {
 	return out, nil
 }
 
-// ORC byte RLE: a control byte below 128 repeats the next byte control+3 times, else 256-control literal bytes follow.
+// ORC byte RLE: a control byte below 128 repeats the next byte control+3 times, else 256-control literal bytes follow
 func decodeByteRle(data []byte, n uint64) ([]byte, error) {
 	out := make([]byte, 0, n)
 	pos := 0
@@ -462,7 +461,7 @@ func (s stream) floats(r *reader, wide bool) ([]float64, error) {
 	return out, nil
 }
 
-// Decodes a vertex stream into interleaved x, y coordinates.
+// Into interleaved x, y coordinates
 func (s stream) vertices(r *reader) ([]int32, error) {
 	switch s.logical {
 	case logicalNone, logicalDelta:
@@ -508,7 +507,7 @@ func (s stream) componentwiseDelta(r *reader) ([]int32, error) {
 	return out, nil
 }
 
-// Each code interleaves the bits of one shifted vertex. MortonDelta stores plain differences between codes.
+// Each code interleaves the bits of one shifted vertex. MortonDelta stores plain differences between codes
 func (s stream) morton(r *reader) ([]int32, error) {
 	w, err := s.words(r, false)
 	if err != nil {

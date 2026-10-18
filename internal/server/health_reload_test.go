@@ -56,8 +56,7 @@ func waitForPort(t *testing.T, port int) {
 		"timed out waiting for port %v to accept connections", port)
 }
 
-// tryHealthStatus fetches the health endpoint's status, reporting failure to reach or parse it
-// rather than asserting, since in polling loops that's an expected intermediate state.
+// Reports failure instead of asserting, since it's an expected intermediate state while polling
 func tryHealthStatus(port int) (string, bool) {
 	resp, err := http.DefaultClient.Get("http://127.0.0.1:" + strconv.Itoa(port) + "/health")
 	if err != nil {
@@ -92,8 +91,7 @@ func waitForHealthStatus(t *testing.T, port int, want string) {
 	}, 15*time.Second, 100*time.Millisecond, "health status never became %v (last seen %q)", want, last)
 }
 
-// healthTestConfig builds a minimal config with health enabled on a dynamically chosen port and a
-// single working "static" layer that the tile health check can exercise.
+// Health on a dynamic port with a single working "static" layer for the tile check
 func healthTestConfig(t *testing.T) (config.Config, int) {
 	t.Helper()
 
@@ -114,28 +112,21 @@ func healthTestConfig(t *testing.T) (config.Config, int) {
 	return cfg, healthPort
 }
 
-// entitiesFor wraps a LayerGroup in the entities bundle ListenAndServe takes. The health
-// subsystem reads nothing else, and Entities.Close tolerates the rest being nil.
+// Health reads nothing else, and Entities.Close tolerates the rest being nil
 func entitiesFor(lg *layers.LayerGroup) *entities.Entities {
 	return &entities.Entities{LayerGroup: lg}
 }
 
-// startServer boots ListenAndServe in the background, waits until its health endpoint is live, and
-// returns the reload callback it published, registering cleanup that stops the server.
-//
-// ListenAndServe writes through reloadPtr on its own goroutine with no synchronization, so the
-// value is handed over through a channel from the onReady callback rather than read directly.
+// Waits until health is live, returns the published reload callback, and stops the server on cleanup
 func startServer(t *testing.T, cfg *config.Config, lg *layers.LayerGroup) reloadEntitiesFunc {
 	t.Helper()
-
-	var reloadFn reloadEntitiesFunc
 
 	published := make(chan reloadEntitiesFunc, 1)
 
 	done := make(chan error, 1)
 	go func() {
-		err := ListenAndServe(cfg, entitiesFor(lg), &reloadFn, func() { published <- reloadFn })
-		// Unblock the handoff if the server died before ever publishing.
+		err := ListenAndServe(cfg, entitiesFor(lg), func(fn reloadEntitiesFunc) { published <- fn })
+		// Unblock the handoff if the server died before publishing
 		select {
 		case published <- nil:
 		default:
@@ -162,9 +153,7 @@ func startServer(t *testing.T, cfg *config.Config, lg *layers.LayerGroup) reload
 	}
 }
 
-// Health check tickers close over the LayerGroup they were built against, so without a rebuild on
-// reload a layer that a reload fixes or breaks stays invisible to health checks. Driven through
-// ListenAndServe's own reloadPtr, keeping the layer ID and check config identical throughout.
+// Check tickers close over their LayerGroup, so without a rebuild they never see a reload fix or break a layer
 func Test_ListenAndServe_HealthChecksRebuildOnReload(t *testing.T) {
 	cfg1, healthPort := healthTestConfig(t)
 
@@ -189,9 +178,7 @@ func Test_ListenAndServe_HealthChecksRebuildOnReload(t *testing.T) {
 	waitForHealthStatus(t, healthPort, "error")
 }
 
-// internal/configload dispatches each config-change event on its own goroutine, so concurrent reloads are
-// reachable in production. Two reloads that both invoke the same generation's shutdown func
-// deadlock the second caller, so the body runs behind a timeout to fail rather than hang.
+// configload dispatches each change on its own goroutine, so concurrent reloads are real. Timed out to fail rather than hang
 func Test_ListenAndServe_ConcurrentHealthReloadsDoNotDeadlock(t *testing.T) {
 	cfg, healthPort := healthTestConfig(t)
 
@@ -235,14 +222,11 @@ func Test_ListenAndServe_ConcurrentHealthReloadsDoNotDeadlock(t *testing.T) {
 		t.Fatalf("%v concurrent reloads deadlocked - they did not all complete within the timeout", reloadCount)
 	}
 
-	// Exactly one generation should own the health port and be serving normally.
+	// Exactly one generation should own the health port and serve normally
 	waitForHealthStatus(t, healthPort, "ok")
 }
 
-// A rebuild failing on bad check config leaves the old generation already shut down, and the tile
-// handler reload has succeeded by that point, so the process keeps serving tiles with its liveness
-// endpoint down. The failure has to be reported, no stale shutdown pointer retained, and a later
-// good reload has to bring health back.
+// A failed rebuild leaves liveness down. It must be reported, drop the stale pointer, and recover on a good reload
 func Test_ListenAndServe_FailedHealthRebuildRecovers(t *testing.T) {
 	cfg, healthPort := healthTestConfig(t)
 
@@ -254,7 +238,7 @@ func Test_ListenAndServe_FailedHealthRebuildRecovers(t *testing.T) {
 	waitForPort(t, healthPort)
 	waitForHealthStatus(t, healthPort, "ok")
 
-	// Reload with a check name that doesn't resolve to any registered health check.
+	// A check name that doesn't resolve to any registered health check
 	badCfg := cfg
 	badCfg.Health.Checks = []map[string]any{
 		{"name": "this-check-does-not-exist", "delay": 1},
@@ -265,7 +249,7 @@ func Test_ListenAndServe_FailedHealthRebuildRecovers(t *testing.T) {
 
 	require.Error(t, reloadFn(&badCfg, entitiesFor(badLg)), "a reload with an unknown health check name must surface an error")
 
-	// A subsequent good reload must bring the health endpoint back.
+	// A later good reload must bring health back
 	goodLg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
 	require.NoError(t, err)
 
@@ -275,11 +259,8 @@ func Test_ListenAndServe_FailedHealthRebuildRecovers(t *testing.T) {
 	waitForHealthStatus(t, healthPort, "ok")
 }
 
-// If shutdown has already flipped draining before a concurrent reload lands, the rebuilt health
-// subsystem must come up already reporting 503, not ready - otherwise the reload reopens the
-// readiness window shutdown just closed. Asserted by hitting the rebuilt /health endpoint rather
-// than spying on newHealthDrain being called.
-func Test_healthReloader_RebuildsAlreadyDrainingWhenShutdownStarted(t *testing.T) {
+// A reload landing after shutdown flipped draining must come up reporting 503, not reopen readiness
+func Test_healthSupervisor_RebuildsAlreadyDrainingWhenShutdownStarted(t *testing.T) {
 	cfg, healthPort := healthTestConfig(t)
 
 	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
@@ -287,17 +268,11 @@ func Test_healthReloader_RebuildsAlreadyDrainingWhenShutdownStarted(t *testing.T
 
 	ctx := context.Background()
 
-	var healthMutex sync.Mutex
-	var healthShutdown func(context.Context) error
-	var healthDrain func()
-	draining := true
+	s := &healthSupervisor{}
+	s.Drain()
 
-	require.NoError(t, healthReloader(ctx, &cfg, entitiesFor(lg), &healthMutex, &healthShutdown, &healthDrain, &draining))
-	t.Cleanup(func() {
-		if healthShutdown != nil {
-			_ = healthShutdown(context.Background())
-		}
-	})
+	require.NoError(t, s.Reload(ctx, &cfg, entitiesFor(lg)))
+	t.Cleanup(func() { _ = s.Shutdown(context.Background()) })
 
 	waitForPort(t, healthPort)
 
@@ -309,9 +284,8 @@ func Test_healthReloader_RebuildsAlreadyDrainingWhenShutdownStarted(t *testing.T
 		"a reload landing after shutdown started draining must not resurrect readiness")
 }
 
-// After a failed rebuild the shutdown pointer must not still reference the previous generation's
-// already-invoked shutdown func, which ListenAndServe's final shutdown would call a second time.
-func Test_healthReloader_FailedRebuildDoesNotRetainStalePointer(t *testing.T) {
+// Otherwise ListenAndServe's final shutdown would call the previous, already-invoked shutdown func again
+func Test_healthSupervisor_FailedRebuildDoesNotRetainStalePointer(t *testing.T) {
 	cfg, _ := healthTestConfig(t)
 
 	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
@@ -319,30 +293,69 @@ func Test_healthReloader_FailedRebuildDoesNotRetainStalePointer(t *testing.T) {
 
 	ctx := context.Background()
 
-	var healthMutex sync.Mutex
-
 	oldCalls := 0
-	oldShutdown := func(context.Context) error {
+	s := &healthSupervisor{shutdownFn: func(context.Context) error {
 		oldCalls++
 		return nil
-	}
-	healthShutdown := oldShutdown
-	var healthDrain func()
-	draining := false
+	}}
 
 	badCfg := cfg
 	badCfg.Health.Checks = []map[string]any{
 		{"name": "this-check-does-not-exist", "delay": 1},
 	}
 
-	require.Error(t, healthReloader(ctx, &badCfg, entitiesFor(lg), &healthMutex, &healthShutdown, &healthDrain, &draining))
+	require.Error(t, s.Reload(ctx, &badCfg, entitiesFor(lg)))
 	require.Equal(t, 1, oldCalls, "the previous generation should have been shut down exactly once")
 
-	if healthShutdown != nil {
-		// Whatever remains must be a new func tearing down the partial generation.
-		require.NoError(t, healthShutdown(ctx))
-		require.Equal(t, 1, oldCalls, "the retained shutdown func must not be the stale previous generation's")
+	// Must tear down the partial generation, not the stale previous one
+	require.NoError(t, s.Shutdown(ctx))
+	require.Equal(t, 1, oldCalls, "the retained shutdown func must not be the stale previous generation's")
+}
+
+func Test_healthSupervisor_ReloadAfterShutdownDoesNotRebind(t *testing.T) {
+	cfg, healthPort := healthTestConfig(t)
+
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
+	require.NoError(t, err)
+
+	s := &healthSupervisor{}
+	require.NoError(t, s.Start(context.Background(), &cfg, entitiesFor(lg)))
+	waitForPort(t, healthPort)
+
+	require.NoError(t, s.Shutdown(context.Background()))
+	waitForPortClosed(t, healthPort)
+
+	require.NoError(t, s.Reload(context.Background(), &cfg, entitiesFor(lg)))
+	require.Nil(t, s.shutdownFn, "a reload after shutdown must not bind a listener nothing will stop")
+	require.False(t, dialPort(healthPort))
+}
+
+func Test_healthSupervisor_DrainAndShutdownTargetCurrentInstance(t *testing.T) {
+	drained := 0
+	shutdowns := 0
+	s := &healthSupervisor{
+		drainFn:    func() { drained++ },
+		shutdownFn: func(context.Context) error { shutdowns++; return nil },
 	}
+
+	phases := buildShutdownPhases(shutdownDeps{health: s})
+	phases.drain()
+	require.NoError(t, phases.health(context.Background()))
+	require.NoError(t, phases.health(context.Background()))
+
+	require.Equal(t, 1, drained)
+	require.Equal(t, 1, shutdowns, "a second shutdown must not call into an instance already stopped")
+	require.True(t, s.draining)
+}
+
+func Test_healthSupervisor_DisabledIsNoOp(t *testing.T) {
+	cfg := config.DefaultConfig()
+	cfg.Health.Enabled = false
+
+	s := &healthSupervisor{}
+	require.NoError(t, s.Start(context.Background(), &cfg, entitiesFor(nil)))
+	s.Drain()
+	require.NoError(t, s.Shutdown(context.Background()))
 }
 
 func waitForPortClosed(t *testing.T, port int) {
@@ -382,28 +395,27 @@ func Test_ListenAndServe_HealthDisabledOnReloadStopsServing(t *testing.T) {
 	waitForHealthStatus(t, healthPort, "ok")
 }
 
-func Test_healthReloader_DisablingClearsPointers(t *testing.T) {
+func Test_healthSupervisor_DisablingClearsPointers(t *testing.T) {
 	cfg, _ := healthTestConfig(t)
 
 	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
 	require.NoError(t, err)
 
-	var healthMutex sync.Mutex
-
 	oldCalls := 0
-	healthShutdown := func(context.Context) error {
-		oldCalls++
-		return nil
+	s := &healthSupervisor{
+		shutdownFn: func(context.Context) error {
+			oldCalls++
+			return nil
+		},
+		drainFn: func() {},
 	}
-	healthDrain := func() {}
-	draining := false
 
 	offCfg := cfg
 	offCfg.Health.Enabled = false
 
-	require.NoError(t, healthReloader(context.Background(), &offCfg, entitiesFor(lg), &healthMutex, &healthShutdown, &healthDrain, &draining))
+	require.NoError(t, s.Reload(context.Background(), &offCfg, entitiesFor(lg)))
 
 	require.Equal(t, 1, oldCalls, "the previous generation should have been shut down exactly once")
-	require.Nil(t, healthShutdown)
-	require.Nil(t, healthDrain)
+	require.Nil(t, s.shutdownFn)
+	require.Nil(t, s.drainFn)
 }

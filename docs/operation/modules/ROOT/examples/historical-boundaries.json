@@ -1,0 +1,86 @@
+{
+  "server": {
+    "tilejson": {
+      "enabled": true
+    }
+  },
+  "datastores": [
+    {
+      "name": "postgresql",
+      "id": "history",
+      "host": "db.internal",
+      "user": "tilegroxy",
+      "password": "env.POSTGRES_PASSWORD",
+      "database": "history"
+    }
+  ],
+  "cache": {
+    "name": "disk",
+    "path": "/var/cache/tilegroxy"
+  },
+  "analytics": {
+    "name": "postgresql",
+    "datastore": "history",
+    "table": "tile_events",
+    "fields": [
+      "layerparams"
+    ]
+  },
+  "layers": [
+    {
+      "id": "boundaries",
+      "pattern": "boundaries_{year}",
+      "paramValidator": {
+        "year": "1[6-9][0-9]{2}|20[0-9]{2}"
+      },
+      "examples": [
+        "boundaries_1790",
+        "boundaries_1860"
+      ],
+      "maxzoom": 12,
+      "cacheversion": "2",
+      "vectorlayers": [
+        {
+          "id": "states",
+          "fields": {
+            "name": "State or territory name"
+          }
+        },
+        {
+          "id": "counties",
+          "fields": {
+            "full_name": "County name including state"
+          }
+        }
+      ],
+      "provider": {
+        "name": "compositemvt",
+        "providers": [
+          {
+            "name": "postgismvt",
+            "datastore": "history",
+            "layer": "states",
+            "table": "public.us_histstateterr",
+            "gid": "id_num",
+            "attributes": [
+              "name"
+            ],
+            "filter": "to_date({layer.year}, 'yyyy') BETWEEN start_date AND end_date"
+          },
+          {
+            "name": "postgismvt",
+            "datastore": "history",
+            "layer": "counties",
+            "table": "public.us_histcounties",
+            "gid": "id_num",
+            "attributes": [
+              "full_name"
+            ],
+            "filter": "to_date({layer.year}, 'yyyy') BETWEEN start_date AND end_date",
+            "limit": 5000
+          }
+        ]
+      }
+    }
+  ]
+}

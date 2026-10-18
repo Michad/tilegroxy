@@ -21,7 +21,7 @@ import (
 	"github.com/Michad/tilegroxy/internal/static"
 )
 
-// Configuration for TLS (HTTPS) operation. If this is configured then TLS is enabled. This can operate either with a static certificate and keyfile via the filesystem or via ACME/Let's Encrypt
+// TLS is enabled when configured, using either a static certificate and keyfile or ACME/Let's Encrypt
 type EncryptionConfig struct {
 	Domain      string // The domain name you're operating with (the domain end-users use). Required
 	Cache       string // The path to a directory to cache certificates in if using let's encrypt. Defaults to ./certs
@@ -30,7 +30,6 @@ type EncryptionConfig struct {
 	HTTPPort    int    // The port used for non-encrypted traffic. Required if using Let's Encrypt for ACME challenge and needs to indirectly be 80 (that is, it could be 8080 if something else redirects 80 to 8080). Everything except .well-known will be redirected to the main port when set.
 }
 
-// Configuration for health checks
 type HealthConfig struct {
 	Enabled bool             // If set to false the port isn't bound to. Defaults false
 	Port    int              // The port to serve health on. Defaults to 3000
@@ -38,7 +37,7 @@ type HealthConfig struct {
 	Checks  []map[string]any // An array defining the specific checks to perform.
 }
 
-// Configuration for serving TileJSON documents describing configured layers
+// TileJSON documents describing configured layers
 type TileJSONConfig struct {
 	Enabled   bool     // If true, serve TileJSON documents for eligible layers. Defaults false
 	IndexPath string   // The HTTP path, relative to RootPath, that serves a TileJSON index listing every eligible layer. Defaults to tilejson.json
@@ -123,7 +122,7 @@ type TelemetryConfig struct {
 	Enabled bool
 }
 
-// Modes for error reporting
+// Error reporting modes
 const (
 	ModeErrorPlainText   = "text"         // Response will be text/plain with the error message in the body
 	ModeErrorNoError     = "none"         // Response will not include any data but will return status code.
@@ -131,9 +130,7 @@ const (
 	ModeErrorImageHeader = "image+header" // Response will return an image and include the error inside x-error-message
 )
 
-// This is a poor-man's i8n solution. It allows replacing the error messages our app generates in the main `serve` mode.
-// It's questionable if anyone will ever want to make use of it, but it at least helps avoid magic strings and can be
-// replaced with fully static constants later if it does turn out nobody ever sees value in it
+// A poor-man's i18n that also avoids magic strings. Could become static constants if nobody uses it
 type ErrorMessages struct {
 	NotAuthorized           string
 	ParamRequired           string
@@ -153,8 +150,7 @@ type ErrorMessages struct {
 	TileNotFound            string
 }
 
-// Default embedded image keys, mirrored as literals from internal/images.GetStaticImage since
-// internal/images imports this package.
+// Mirrored from internal/images since it imports this package
 const (
 	defaultImageError        = "embedded:error.png"
 	defaultImageTransparent  = "embedded:transparent.png"
@@ -163,7 +159,7 @@ const (
 	defaultImageMltEmpty     = "embedded:empty.mlt"
 )
 
-// Selects what image to return when various errors occur. These should either be an embedded:XXX value reflecting an image in `internal/images` or the path to an image in the runtime filesystem.
+// Images returned for various errors. Either embedded:XXX from internal/images or a path on the runtime filesystem
 type ErrorImages struct {
 	OutOfBounds    string // A request for a zoom level or tile coordinate that's invalid for the requested layer
 	Authentication string // Auth failed. Always PNG, see above.
@@ -186,7 +182,7 @@ type ErrorConfig struct {
 	AlwaysOK bool          // If set we always return 200 regardless of what happens
 }
 
-// Formats for outputting the access log
+// Access log formats
 const (
 	AccessFormatCommon   = "common"
 	AccessFormatCombined = "combined"
@@ -198,7 +194,7 @@ type AccessConfig struct {
 	Format  string // The format to output access logs in. Applies to both standard out and file out. Possible values: common, combined. Defaults to common
 }
 
-// Formats for outputting the main log
+// Main log formats
 const (
 	MainFormatPlain = "plain"
 	MainFormatJSON  = "json"
@@ -216,14 +212,13 @@ type MainConfig struct {
 	Headers []string // Headers to include in the logs. Useful for a transaction/request/trace/correlation ID or user identifiers
 }
 
-// Formats for outputting the audit log
+// Audit log formats
 const (
 	AuditFormatPlain = "plain"
 	AuditFormatJSON  = "json"
 )
 
-// Configures the audit log: a stream of security relevant events (authentication and authorization
-// failures, configuration reloads)
+// Security relevant events: authentication and authorization failures and configuration reloads
 type AuditConfig struct {
 	Enabled bool     // If true, emit audit events. Defaults to false
 	Console bool     // If true, write audit events to standard out. Defaults to true
@@ -238,7 +233,6 @@ type LogConfig struct {
 	Audit  AuditConfig
 }
 
-// Defines a layer to be served up by the application
 type LayerConfig struct {
 	ID             string            // A distinct identifier for this layer. If no pattern is defined this is used to match against the layer name. Also used
 	Pattern        string            // A pattern to match against for layer names in incoming requests. Includes placeholders from which values can be extracted when matching. Not regular expressions, placeholders are simply wrapped in curly braces

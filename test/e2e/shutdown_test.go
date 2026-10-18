@@ -28,28 +28,23 @@ import (
 )
 
 const (
-	// How long a test waits for a signalled instance to exit. Generous because a drain window plus a
-	// slow provider is the point of several of these tests.
+	// Generous since a drain window plus a slow provider is the point of several tests
 	exitTimeout = 45 * time.Second
-	// How long a readiness transition may take to become observable.
+	// How long a readiness transition may take to become observable
 	drainObserveTimeout = 10 * time.Second
-	// Workers used by the continuity tests. Enough to keep a connection in flight at all times
-	// without saturating a laptop.
+	// Keeps a connection in flight at all times without saturating a laptop
 	loadWorkers = 4
-	// How long load runs before a disruption, so the disruption lands on a busy server.
+	// So the disruption lands on a busy server
 	loadWarmup = time.Second
-	// How long an in-flight request client waits. Longer than any provider sleep these tests
-	// configure, so a client timeout never masks a server-side reset.
+	// Longer than any configured provider sleep so a client timeout never masks a server reset
 	inFlightClientTimeout = 60 * time.Second
-	// The bound Test_Shutdown_TimeoutIsAHardCeiling asserts. Comfortably above the configured 2s
-	// budget and comfortably below the 30s the provider would take if the budget were ignored.
+	// Well above the 2s budget and well below the 30s the provider takes if the budget is ignored
 	shutdownCeiling = 20 * time.Second
-	// What os/exec reports for a process terminated by a signal rather than exiting on its own.
+	// What os/exec reports for a process killed by a signal
 	signalTerminatedCode = -1
 )
 
-// Health is disabled by default, so every readiness test must turn it on explicitly. DrainDelay
-// creates the observation window by configuration rather than by racing for it.
+// Health is off by default. DrainDelay creates the observation window by configuration rather than racing for it
 const drainConfig = `
 server:
   port: {{.Port}}
@@ -65,8 +60,7 @@ layers:
       color: "FFFFFF"
 `
 
-// slowProviderConfig uses the custom Yaegi provider to hold a request open, which is how a request
-// is kept in flight while shutdown runs.
+// A custom Yaegi provider holds a request open while shutdown runs
 const slowProviderConfig = `
 server:
   port: {{.Port}}
@@ -104,8 +98,7 @@ layers:
         }
 `
 
-// waitForDraining blocks until the health endpoint reports the draining status, so tests assert an
-// ordering against an observed transition rather than against a sleep.
+// Lets tests assert ordering against an observed transition rather than a sleep
 func waitForDraining(t *testing.T, inst *Instance) {
 	t.Helper()
 
@@ -136,13 +129,7 @@ func Test_Shutdown_SigintExitsZero(t *testing.T) {
 	assert.Equal(t, 0, inst.WaitExit(exitTimeout))
 }
 
-// The highest-value test here. Readiness must go false before the listener closes, or the endpoints
-// controller keeps routing new traffic to a terminating pod. Asserts the ordering, not a duration.
-//
-// The drain delay exists so traffic already routed to this pod keeps being served while the
-// endpoints controller catches up. A tile request during that window must therefore still return
-// 200; a pod that fails every request the moment it is signalled has a readiness window that
-// accomplishes nothing.
+// Readiness must fail before the listener closes or traffic keeps routing here. Tiles must still serve during the drain delay
 func Test_Shutdown_ReadinessFailsBeforeListenerCloses(t *testing.T) {
 	inst := Start(t, Config{Raw: drainConfig})
 
@@ -152,13 +139,13 @@ func Test_Shutdown_ReadinessFailsBeforeListenerCloses(t *testing.T) {
 
 	waitForDraining(t, inst)
 
-	// The drain delay is still running, so tiles must still serve.
+	// The drain delay is still running, so tiles must still serve
 	inst.Get("/tiles/color/8/12/32").ExpectStatus(http.StatusOK)
 
 	assert.Equal(t, 0, inst.WaitExit(exitTimeout))
 }
 
-// A pod whose liveness fails during drain is SIGKILLed instead of being allowed to finish.
+// A pod whose liveness fails during drain is SIGKILLed instead of finishing
 func Test_Shutdown_LivenessStaysOKWhileDraining(t *testing.T) {
 	inst := Start(t, Config{Raw: drainConfig})
 
@@ -173,8 +160,7 @@ func Test_Shutdown_LivenessStaysOKWhileDraining(t *testing.T) {
 	assert.Equal(t, 0, inst.WaitExit(exitTimeout))
 }
 
-// What must not appear is a request that connected and was then reset. A refusal after the listener
-// closes is acceptable; a broken accepted connection is not.
+// A refusal after the listener closes is fine, but a reset accepted connection never is
 func Test_Shutdown_UnderLoadDropsNothingMidFlight(t *testing.T) {
 	inst := Start(t, Config{Raw: drainConfig})
 
@@ -195,13 +181,7 @@ func Test_Shutdown_UnderLoadDropsNothingMidFlight(t *testing.T) {
 	}
 }
 
-// docker stop followed by docker kill produces this. It must neither panic nor hang.
-//
-// The second signal terminates the process rather than being absorbed: signal.NotifyContext restores
-// the default disposition once it has fired, so a repeat SIGTERM lands on the default handler. That
-// is the documented Go behavior and matches what an operator escalating a stop expects, so the
-// assertion is that shutdown ends promptly and cleanly, not that the exit status is zero. A
-// signal-terminated process has no exit code, which os/exec reports as -1.
+// docker stop then kill. NotifyContext restores the default disposition, so the second SIGTERM terminates (-1) rather than hangs
 func Test_Shutdown_SecondSignalDoesNotHangOrPanic(t *testing.T) {
 	inst := Start(t, Config{Raw: drainConfig})
 
@@ -215,8 +195,7 @@ func Test_Shutdown_SecondSignalDoesNotHangOrPanic(t *testing.T) {
 	assert.Contains(t, []int{0, 1, signalTerminatedCode}, code)
 }
 
-// DrainDelay 0 is the documented behavior when a preStop hook covers the delay. Asserts an ordering
-// between two configurations rather than an absolute duration.
+// DrainDelay 0 is documented for when a preStop hook covers the delay. Asserts ordering, not absolute duration
 func Test_Shutdown_ZeroDrainDelayIsFasterThanFive(t *testing.T) {
 	fast := Start(t, Config{Raw: `
 server:
@@ -247,9 +226,7 @@ layers:
 	assert.Less(t, fastElapsed, slowElapsed, "drainDelay 0 should shut down faster than drainDelay 5")
 }
 
-// The core graceful-shutdown promise: a request already being served finishes rather than being
-// cut off. The provider sleeps 5s and the signal lands 1s in, so the only way to pass is to let the
-// remaining 4s of work finish and return the tile.
+// The provider sleeps 5s and the signal lands at 1s, so passing requires finishing the remaining work
 func Test_Shutdown_InFlightRequestCompletes(t *testing.T) {
 	inst := Start(t, Config{Raw: slowProviderConfig})
 
@@ -286,8 +263,7 @@ func Test_Shutdown_InFlightRequestCompletes(t *testing.T) {
 	assert.Equal(t, 0, inst.WaitExit(exitTimeout))
 }
 
-// A shutdown that overruns its budget gets SIGKILLed by the container runtime, which is the failure
-// this bound exists to prevent. The provider sleeps 30s while the budget is 2s.
+// Overrunning the budget gets SIGKILLed by the runtime. The provider sleeps 30s against a 2s budget
 func Test_Shutdown_TimeoutIsAHardCeiling(t *testing.T) {
 	inst := Start(t, Config{Raw: `
 server:

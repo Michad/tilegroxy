@@ -56,7 +56,7 @@ func Test_TileJSONHandler_ReloadEntities_SwapsGenerationAndReleasesOld(t *testin
 	oldGen := newGeneration(&cfg, &entities.Entities{})
 	newGen := oldGen.succeededBy(&entities.Entities{})
 
-	h := newTileJSONHandler(oldGen, true)
+	h := newTileJSONHandler(newGenerationHolder(oldGen), true)
 
 	h.mu.RLock()
 	before := h.current
@@ -75,14 +75,12 @@ func Test_TileJSONHandler_ReloadEntities_SwapsGenerationAndReleasesOld(t *testin
 	assert.False(t, newGen.isClosed(), "the serving generation must stay open")
 }
 
-func Test_TileJSONHandlers_ReloadEntities_Disabled_NoOp(t *testing.T) {
+func Test_TileJSONHandlers_Disabled_NoOp(t *testing.T) {
 	cfg := config.DefaultConfig()
 
-	th := setupTileJSONHandlers(&cfg, newGeneration(&cfg, nil))
-	gen := newGeneration(&cfg, &entities.Entities{})
+	th := setupTileJSONHandlers(&cfg, newGenerationHolder(newGeneration(&cfg, nil)))
 
-	// Must not panic even though TileJSON is disabled and no handlers were built.
-	th.reload(gen)
+	// Must not panic even though TileJSON is disabled and no handlers were built
 	th.wrapWithTelemetry()
 
 	mux := &http.ServeMux{}
@@ -97,7 +95,7 @@ func Test_TileJSONHandlers_WrapWithTelemetry_PreservesRouting(t *testing.T) {
 	cfg.Layers = []config.LayerConfig{staticLayerConfig("main")}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	th := setupTileJSONHandlers(&cfg, ent)
+	th := setupTileJSONHandlers(&cfg, newGenerationHolder(ent))
 	th.wrapWithTelemetry()
 
 	mux := &http.ServeMux{}
@@ -129,7 +127,7 @@ func Test_TileJSONHandler_Index_ListsEligibleLayers(t *testing.T) {
 	}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	h := newTileJSONHandler(ent, true)
+	h := newTileJSONHandler(newGenerationHolder(ent), true)
 
 	req := httptest.NewRequest(http.MethodGet, "http://example.com/tilejson.json", nil).WithContext(pkg.BackgroundContext())
 	w := httptest.NewRecorder()
@@ -165,7 +163,7 @@ func Test_TileJSONHandler_Document_PlainLayer(t *testing.T) {
 	cfg.Layers = []config.LayerConfig{layerCfg}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	h := newTileJSONHandler(ent, false)
+	h := newTileJSONHandler(newGenerationHolder(ent), false)
 
 	req := httptest.NewRequest(http.MethodGet, "http://example.com/tiles/main.json", nil).WithContext(pkg.BackgroundContext())
 	req.SetPathValue("layerjson", "main.json")
@@ -196,7 +194,7 @@ func Test_TileJSONHandler_Document_UnknownLayer_Returns401(t *testing.T) {
 	cfg.Layers = []config.LayerConfig{staticLayerConfig("main")}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	h := newTileJSONHandler(ent, false)
+	h := newTileJSONHandler(newGenerationHolder(ent), false)
 
 	req := httptest.NewRequest(http.MethodGet, "http://example.com/tiles/doesnotexist.json", nil).WithContext(pkg.BackgroundContext())
 	req.SetPathValue("layerjson", "doesnotexist.json")
@@ -217,7 +215,7 @@ func Test_TileJSONHandler_Document_PatternLayerWithoutExamples_NotEligible(t *te
 	}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	h := newTileJSONHandler(ent, false)
+	h := newTileJSONHandler(newGenerationHolder(ent), false)
 
 	req := httptest.NewRequest(http.MethodGet, "http://example.com/tiles/my_foo.json", nil).WithContext(pkg.BackgroundContext())
 	req.SetPathValue("layerjson", "my_foo.json")
@@ -236,8 +234,8 @@ func Test_TileJSONHandler_LayerScope_RestrictsIndexAndDocument(t *testing.T) {
 	cfg.Layers = []config.LayerConfig{staticLayerConfig("main"), staticLayerConfig("other")}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	indexHandler := newTileJSONHandler(ent, true)
-	docHandler := newTileJSONHandler(ent, false)
+	indexHandler := newTileJSONHandler(newGenerationHolder(ent), true)
+	docHandler := newTileJSONHandler(newGenerationHolder(ent), false)
 
 	ctx := pkg.BackgroundContext()
 	limitLayers, _ := pkg.LimitLayersFromContext(ctx)
@@ -257,7 +255,7 @@ func Test_TileJSONHandler_LayerScope_RestrictsIndexAndDocument(t *testing.T) {
 	require.Len(t, entries, 1)
 	assert.Equal(t, "main", entries[0].Name)
 
-	// Requesting the disallowed layer's document directly returns 401
+	// The disallowed layer's document returns 401
 	req2 := httptest.NewRequest(http.MethodGet, "http://example.com/tiles/other.json", nil).WithContext(ctx)
 	req2.SetPathValue("layerjson", "other.json")
 	w2 := httptest.NewRecorder()
@@ -266,7 +264,7 @@ func Test_TileJSONHandler_LayerScope_RestrictsIndexAndDocument(t *testing.T) {
 	defer func() { require.NoError(t, res2.Body.Close()) }()
 	assert.Equal(t, http.StatusUnauthorized, res2.StatusCode)
 
-	// Requesting the allowed layer's document succeeds
+	// The allowed layer's document succeeds
 	req3 := httptest.NewRequest(http.MethodGet, "http://example.com/tiles/main.json", nil).WithContext(ctx)
 	req3.SetPathValue("layerjson", "main.json")
 	w3 := httptest.NewRecorder()
@@ -285,7 +283,7 @@ func Test_TileJSONHandler_AllowedArea_IntersectsBounds(t *testing.T) {
 	cfg.Layers = []config.LayerConfig{layerCfg}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	h := newTileJSONHandler(ent, false)
+	h := newTileJSONHandler(newGenerationHolder(ent), false)
 
 	ctx := pkg.BackgroundContext()
 	ctxAllowedArea, _ := pkg.AllowedAreaFromContext(ctx)
@@ -313,7 +311,7 @@ func Test_TileJSONHandler_BaseURLs_Override(t *testing.T) {
 	cfg.Layers = []config.LayerConfig{staticLayerConfig("main")}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	h := newTileJSONHandler(ent, false)
+	h := newTileJSONHandler(newGenerationHolder(ent), false)
 
 	req := httptest.NewRequest(http.MethodGet, "http://internal-host/tiles/main.json", nil).WithContext(pkg.BackgroundContext())
 	req.SetPathValue("layerjson", "main.json")
@@ -337,7 +335,7 @@ func Test_TileJSONHandler_BaseURLs_Multiple(t *testing.T) {
 	cfg.Layers = []config.LayerConfig{staticLayerConfig("main")}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	h := newTileJSONHandler(ent, false)
+	h := newTileJSONHandler(newGenerationHolder(ent), false)
 
 	req := httptest.NewRequest(http.MethodGet, "http://internal-host/tiles/main.json", nil).WithContext(pkg.BackgroundContext())
 	req.SetPathValue("layerjson", "main.json")
@@ -361,7 +359,7 @@ func Test_TileJSONHandler_ForwardedHeaders(t *testing.T) {
 	cfg.Layers = []config.LayerConfig{staticLayerConfig("main")}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	h := newTileJSONHandler(ent, false)
+	h := newTileJSONHandler(newGenerationHolder(ent), false)
 
 	req := httptest.NewRequest(http.MethodGet, "http://internal-host/tiles/main.json", nil).WithContext(pkg.BackgroundContext())
 	req.SetPathValue("layerjson", "main.json")
@@ -381,15 +379,11 @@ func Test_TileJSONHandler_ForwardedHeaders(t *testing.T) {
 	assert.Equal(t, "https://public.example.com/maps/tiles/main/{z}/{x}/{y}", doc.Tiles[0])
 }
 
-// setupTestRootHandler builds the full mux via setupHandlers, discarding the reload/shutdown
-// plumbing tests here don't exercise.
+// Discards the reload and shutdown plumbing these tests don't exercise
 func setupTestRootHandler(cfg *config.Config, ent *entities.Entities) (http.Handler, error) {
-	rootHandler, _, currentEntities, registry, closeAccessLog, err := setupHandlers(cfg, ent)
-	_ = currentEntities
-	_ = registry
-	_ = closeAccessLog
+	routes, err := setupHandlers(cfg, ent)
 
-	return rootHandler, err
+	return routes.root, err
 }
 
 func Test_SetupHandlers_TileJSON_RoutesRegistered(t *testing.T) {
@@ -454,15 +448,14 @@ func Test_SetupHandlers_TileJSON_Disabled_RoutesNotRegistered(t *testing.T) {
 	assert.NotEqual(t, http.StatusOK, res.StatusCode, "TileJSON index should not be served when disabled")
 }
 
-// Regression test for issue 920: the tile route is registered once at startup, so advertising a
-// reloaded tilepath would hand consumers URLs that 404
+// Regression test for #920: the tile route is registered at startup, so a reloaded tilepath would advertise URLs that 404
 func Test_TileJSONHandler_Document_IgnoresReloadedServerConfig(t *testing.T) {
 	cfg := config.DefaultConfig()
 	cfg.Server.TileJSON.Enabled = true
 	cfg.Layers = []config.LayerConfig{staticLayerConfig("main")}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	h := newTileJSONHandler(ent, false)
+	h := newTileJSONHandler(newGenerationHolder(ent), false)
 
 	h.reload(ent.succeededBy(&entities.Entities{LayerGroup: ent.layerGroup(), Auth: ent.auth()}))
 

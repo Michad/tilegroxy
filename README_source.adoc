@@ -9,7 +9,49 @@ Tilegroxy lives between your map and your mapping providers to deliver a consist
 🔌 Features a flexible plugin system powered by https://github.com/traefik/yaegi[Yaegi]. +
 💡 Inspired by https://github.com/tilestache/tilestache[tilestache] +
 
-include::docs/operation/modules/ROOT/pages/index.adoc[leveloffset=1]
+== Why tilegroxy?
+Tilegroxy shines when you consume maps from multiple sources.  It isn't tied to any one mapping backend and can pull data from any protocol, whether the standard alphabet soup or a proprietary, authenticated API. Rather than make your frontend aware of every single vendor and exposing your keys, utilize tilegroxy and provide a uniform API with a configuration-driven backend that can be augmented by code when necessary.
+
+=== Features
+
++++<ul><li>+++
+link:https://tilegroxy.com/operation/configuration/provider/proxy.html[Proxy] to ZXY, WMS, TMS, WMTS, or other protocol map layers
++++</li><li>+++
+Cache tiles in link:https://tilegroxy.com/operation/configuration/cache/disk.html[disk], link:https://tilegroxy.com/operation/configuration/cache/memory.html[memory], link:https://tilegroxy.com/operation/configuration/cache/s3.html[s3], link:https://tilegroxy.com/operation/configuration/cache/redis.html[redis], and/or link:https://tilegroxy.com/operation/configuration/cache/memcached.html[memcached]
++++</li><li>+++
+Require authentication using link:https://tilegroxy.com/operation/configuration/authentication/static_key.html[static key], link:https://tilegroxy.com/operation/configuration/authentication/jwt.html[JWT], link:https://tilegroxy.com/operation/configuration/authentication/passthrough.html[an existing HTTP endpoint], link:https://tilegroxy.com/operation/configuration/authentication/bearer.html[API keys stored in a database], or link:https://tilegroxy.com/operation/configuration/authentication/custom.html[custom] logic
++++</li><li>+++
+link:https://tilegroxy.com/operation/configuration/authentication/jwt.html[Restrict access] to a given layer and/or geographic region based on auth token
++++</li><li>+++
+Create your own link:https://tilegroxy.com/operation/extensibility.html[custom provider] to pull in non-standard and proprietary imagery sources
++++</li><li>+++
+Support for raster tiles and both the Mapbox Vector Tile (MVT) and MapLibre Tile (MLT) vector formats
++++</li><li>+++
+Tweak your raster layers with link:https://tilegroxy.com/operation/configuration/provider/effect.html[18 standard effects] or by providing your own link:https://tilegroxy.com/operation/configuration/provider/transform.html[pixel-level logic]
++++</li><li>+++
+Combine link:https://tilegroxy.com/operation/configuration/provider/blend.html[raster] or link:https://tilegroxy.com/operation/configuration/provider/compositemvt.html[vector tile] layers
++++</li><li>+++
+link:https://tilegroxy.com/operation/configuration/provider/cgi.html[Act as an HTTP server] for https://www.mapserver.org[MapServer] and any other CGI application that generates tiles
++++</li><li>+++
+Commands for link:https://tilegroxy.com/operation/commands/seed.html[seeding] and link:https://tilegroxy.com/operation/commands/test.html[testing] your layers
++++</li><li>+++
+Run as link:https://tilegroxy.com/operation/configuration/encryption.html[HTTPS] including Let's Encrypt (ACME) support
++++</li><li>+++
+Configurable via file or etcd with link:https://tilegroxy.com/operation/configuration/index.html[environment variable] override, 
+link:https://tilegroxy.com/operation/configuration/secret/index.html[externalizable secrets], and link:https://tilegroxy.com/operation/reloading.html[zero-downtime reload]
++++</li><li>+++
+link:https://tilegroxy.com/operation/get-it.html#docker[Container deployment]
++++</li><li>+++
+Minimal HTTP footprint to decrease security exposure
++++</li><li>+++
+Traces, metrics, and logs available via link:https://tilegroxy.com/operation/configuration/telemetry.html[OpenTelemetry]
++++</li><li>+++
+Per-layer usage link:https://tilegroxy.com/operation/configuration/analytics/index.html[analytics] recorded to ClickHouse, PostgreSQL, or a custom destination
++++</li><li>+++
+Usable as an application or a link:https://tilegroxy.com/operation/extensibility.html[library]
++++</li><li>+++
+Supports link:https://tilegroxy.com/operation/tilejson.html[TileJSON]
++++</li></ul>+++
 
 == Documentation
 
@@ -17,7 +59,7 @@ include::docs/operation/modules/ROOT/pages/index.adoc[leveloffset=1]
 
 Documentation is served by tilegroxy at `/docs` when running in dev (enable this behaviour by setting `Server.Production=false` in config or `SERVER_PRODUCTION=false` as an environment variable). Documentation is powered by link:https://antora.org[Antora] with raw AsciiDoc located in link:./docs[docs]
 
-A link:https://tilegroxy.com/operation/configuration/index.html#_generating_configuration_with_ai_agents[Skill] is available to help you get started with generating your configuration. However, do make sure you understand what it produces before you run it.
+A link:https://tilegroxy.com/operation/configuration/index.html#lazy-button[Skill] is available to help you get started with generating your configuration. However, do make sure you understand what it produces before you run it.
 
 
 include::docs/operation/modules/ROOT/pages/get-it.adoc[leveloffset=1]

@@ -211,7 +211,7 @@ func Test_PMTiles_LayerUsesArchiveMetadata(t *testing.T) {
 	t.Cleanup(func() { _ = l.Provider.(layers.ProviderWrapper).Close(context.Background()) })
 
 	assert.Equal(t, config.DataTypeMVT, l.DataType)
-	// The archive's zoom range is advertised but not enforced, since the layer sets no limits of its own.
+	// The archive's zoom range is advertised but not enforced since the layer sets no limits of its own
 	require.NoError(t, l.CheckZoomBounds(pkg.TileRequest{Z: 2}))
 	require.NoError(t, l.CheckZoomBounds(pkg.TileRequest{Z: 1}))
 	assert.Equal(t, 0, *l.Metadata().Advertised.MinZoom)

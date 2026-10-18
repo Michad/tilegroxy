@@ -9,20 +9,17 @@ Tilegroxy lives between your map and your mapping providers to deliver a consist
 🔌 Features a flexible plugin system powered by https://github.com/traefik/yaegi[Yaegi]. +
 💡 Inspired by https://github.com/tilestache/tilestache[tilestache] +
 
-:leveloffset: 1
-
-= Why tilegroxy?
-
+== Why tilegroxy?
 Tilegroxy shines when you consume maps from multiple sources.  It isn't tied to any one mapping backend and can pull data from any protocol, whether the standard alphabet soup or a proprietary, authenticated API. Rather than make your frontend aware of every single vendor and exposing your keys, utilize tilegroxy and provide a uniform API with a configuration-driven backend that can be augmented by code when necessary.
 
-== Features
+=== Features
 
 +++<ul><li>+++
 link:https://tilegroxy.com/operation/configuration/provider/proxy.html[Proxy] to ZXY, WMS, TMS, WMTS, or other protocol map layers
 +++</li><li>+++
 Cache tiles in link:https://tilegroxy.com/operation/configuration/cache/disk.html[disk], link:https://tilegroxy.com/operation/configuration/cache/memory.html[memory], link:https://tilegroxy.com/operation/configuration/cache/s3.html[s3], link:https://tilegroxy.com/operation/configuration/cache/redis.html[redis], and/or link:https://tilegroxy.com/operation/configuration/cache/memcached.html[memcached]
 +++</li><li>+++
-Require authentication using link:https://tilegroxy.com/operation/configuration/authentication/static_key.html[static key], link:https://tilegroxy.com/operation/configuration/authentication/jwt.html[JWT], or link:https://tilegroxy.com/operation/configuration/authentication/custom.html[custom] logic
+Require authentication using link:https://tilegroxy.com/operation/configuration/authentication/static_key.html[static key], link:https://tilegroxy.com/operation/configuration/authentication/jwt.html[JWT], link:https://tilegroxy.com/operation/configuration/authentication/passthrough.html[an existing HTTP endpoint], link:https://tilegroxy.com/operation/configuration/authentication/bearer.html[API keys stored in a database], or link:https://tilegroxy.com/operation/configuration/authentication/custom.html[custom] logic
 +++</li><li>+++
 link:https://tilegroxy.com/operation/configuration/authentication/jwt.html[Restrict access] to a given layer and/or geographic region based on auth token
 +++</li><li>+++
@@ -43,7 +40,7 @@ Run as link:https://tilegroxy.com/operation/configuration/encryption.html[HTTPS]
 Configurable via file or etcd with link:https://tilegroxy.com/operation/configuration/index.html[environment variable] override,
 link:https://tilegroxy.com/operation/configuration/secret/index.html[externalizable secrets], and link:https://tilegroxy.com/operation/reloading.html[zero-downtime reload]
 +++</li><li>+++
-link:#docker[Container deployment]
+link:https://tilegroxy.com/operation/get-it.html#docker[Container deployment]
 +++</li><li>+++
 Minimal HTTP footprint to decrease security exposure
 +++</li><li>+++
@@ -56,15 +53,13 @@ Usable as an application or a link:https://tilegroxy.com/operation/extensibility
 Supports link:https://tilegroxy.com/operation/tilejson.html[TileJSON]
 +++</li></ul>+++
 
-:leveloffset!:
-
 == Documentation
 
 **Prebuilt Documentation for the most recent release is available link:https://tilegroxy.com[here]. **
 
 Documentation is served by tilegroxy at `/docs` when running in dev (enable this behaviour by setting `Server.Production=false` in config or `SERVER_PRODUCTION=false` as an environment variable). Documentation is powered by link:https://antora.org[Antora] with raw AsciiDoc located in link:./docs[docs]
 
-A link:https://tilegroxy.com/operation/configuration/index.html#_generating_configuration_with_ai_agents[Skill] is available to help you get started with generating your configuration. However, do make sure you understand what it produces before you run it.
+A link:https://tilegroxy.com/operation/configuration/index.html#lazy-button[Skill] is available to help you get started with generating your configuration. However, do make sure you understand what it produces before you run it.
 
 
 :leveloffset: 1
@@ -77,17 +72,12 @@ Tilegroxy is available as a standalone executable or a container image. It's rec
 
 Tilegroxy builds as an executable binary with minimal dynamic dependencies. Prebuilt binaries are available from https://github.com/Michad/tilegroxy/releases[Github].
 
-Building tilegroxy yourself requires a bash-like shell with go, node, git, make, and standard POSIX utilities like date.  It uses a conventional link:https://github.com/Michad/tilegroxy/blob/main/Makefile[Makefile] workflow:
+Building tilegroxy yourself requires a bash-like shell with go, node, git, make, and standard POSIX utilities like date.  It uses a conventional link:https://github.com/Michad/tilegroxy/blob/main/Makefile[Makefile] workflow.
 
-Build with
-
+.Build and install
+[,shell]
 ----
 make
-----
-
-then install with
-
-----
 sudo make install
 ----
 
@@ -97,6 +87,7 @@ Once installed, tilegroxy can be invoked via the available link:https://tilegrox
 
 The build includes integration tests that use https://golang.testcontainers.org/[testcontainers].  This requires you have either docker or podman installed and running. If you encounter difficulties running these tests it's recommended you use a prebuilt binary.  That said, you can also build with just unit tests using:
 
+[,shell]
 ----
 make clean build unit
 ----
@@ -109,30 +100,33 @@ Tilegroxy is available as a container image on the Github container repository.
 
 You can pull the most recent versioned release with the `latest` tag and the very latest (and maybe buggy) build with the `edge` tag. Tags are also available for version numbers.  https://github.com/Michad/tilegroxy/pkgs/container/tilegroxy[See here for a full list].  Tags for just the major version, such as `1`, pick up new releases without crossing a breaking change as described in xref:compatibility.adoc[Compatibility].
 
-For example:
-
+.Pull the latest release
+[,shell]
 ----
 docker pull ghcr.io/michad/tilegroxy:latest
 ----
 
-To then run tilegroxy:
-
+.Run a command in the container
+[,shell]
 ----
 docker run --rm -v ./test_config.yml:/tilegroxy/tilegroxy.yml:Z ghcr.io/michad/tilegroxy seed -l osm -z 0 -v
 ----
 
 You can of course build the docker image yourself:
 
+.Build the image
+[,shell]
 ----
 docker build . -t tilegroxy
 ----
 
-An example link:https://github.com/Michad/tilegroxy/blob/main/docker-compose.yml[docker-compose.yml] is included that can be used to start the tilegroxy server. It assumes using a configuration file named "test_config.yml" is located in the current working directory.
+An example link:https://github.com/Michad/tilegroxy/blob/main/docker-compose.yml[docker-compose.yml] is included that can be used to start the tilegroxy server. It assumes a configuration file named `test_config.yml` is located in the current working directory.
 
 == Kubernetes
 
 A link:https://github.com/Michad/tilegroxy/tree/main/charts/tilegroxy[Helm chart] is included in the repository:
 
+[,shell]
 ----
 helm install tilegroxy ./charts/tilegroxy -f my-values.yaml
 ----
@@ -159,7 +153,9 @@ config:
         url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
 ----
 
-The values outside of `config` cover the usual deployment concerns such as replicas, resources, ingress, autoscaling, storage, and scheduling.  Avoid placing credentials in `config` since it becomes a ConfigMap.  Instead reference them as `env.VAR_NAME` in the configuration and supply the value using the chart's `secrets` or `existingSecretKeys` values.
+The values outside of `config` cover the usual deployment concerns such as replicas, resources, ingress, autoscaling, storage, and scheduling.
+
+WARNING: Avoid placing credentials in `config` since it becomes a ConfigMap.  Instead reference them as `env.VAR_NAME` in the configuration and supply the value using the chart's `secrets` or `existingSecretKeys` values.
 
 Probes are wired to the xref:configuration/health.adoc[health] endpoints when `config.health.enabled` is true, an init container validates the configuration before the server starts, and `tilegroxy seed` can be run as a Job after install and upgrade.  See the link:https://github.com/Michad/tilegroxy/blob/main/charts/tilegroxy/README.md[chart README] for the full list of values.
 

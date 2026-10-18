@@ -26,14 +26,13 @@ import (
 )
 
 const (
-	// How long a single request may take before it counts as a failure.
+	// How long a single request may take before it counts as a failure
 	requestTimeout = 30 * time.Second
-	// How much of a body an assertion failure prints before it stops being useful.
+	// How much of a body an assertion failure prints
 	bodyExcerpt = 512
 )
 
-// Response is a fully read HTTP response. The body is consumed and closed on construction, which
-// is what lets tests chain assertions without tracking Close calls.
+// The body is read and closed on construction so tests can chain assertions without tracking Close
 type Response struct {
 	StatusCode int
 	Header     http.Header
@@ -48,8 +47,7 @@ func (i *Instance) Get(path string) *Response {
 	return i.doGet(i.BaseURL() + path)
 }
 
-// GetWithHeader behaves like Get but sets a single request header, which is what auth schemes
-// that read from headers (e.g. static key's "Authorization: Bearer ...") need to be exercised.
+// For auth schemes that read headers, like static key's "Authorization: Bearer ..."
 func (i *Instance) GetWithHeader(path, header, value string) *Response {
 	i.t.Helper()
 
@@ -64,9 +62,7 @@ func (i *Instance) GetHealth() *Response {
 	return i.doGet(i.HealthURL() + "/health")
 }
 
-// GetNoRedirect returns the first response rather than following it, so a test can assert on a
-// redirect itself. The default handler answers unrouted paths with a 307 to the docs path, which a
-// following client would otherwise report as the docs page's 200.
+// Unrouted paths 307 to the docs, which a following client would report as the docs page's 200
 func (i *Instance) GetNoRedirect(path string) *Response {
 	i.t.Helper()
 
@@ -75,8 +71,7 @@ func (i *Instance) GetNoRedirect(path string) *Response {
 	}, nil)
 }
 
-// doGet reports the child's captured output when a request fails, since a transport error usually
-// means the server logged the real reason.
+// Reports captured output on failure since the server usually logged the real reason
 func (i *Instance) doGet(url string) *Response {
 	i.t.Helper()
 

@@ -178,7 +178,7 @@ func TestTileToEWKT(t *testing.T) {
 	req := TileRequest{LayerName: "", Z: 2, X: 1, Y: 1}
 	b, err := req.GetBoundsProjection(SRIDPsuedoMercator)
 	require.NoError(t, err)
-	// test case from result of postgis `SELECT ST_AsEWKT(ST_TileEnvelope(2,1,1))` with precision tweak
+	// From postgis `SELECT ST_AsEWKT(ST_TileEnvelope(2,1,1))` with a precision tweak
 	assert.Equal(t, "SRID=3857;POLYGON((-10018754.1713945 0.0000000,-10018754.1713945 10018754.1713945,0.0000000 10018754.1713945,0.0000000 0.0000000,-10018754.1713945 0.0000000))", b.ToEWKT())
 }
 

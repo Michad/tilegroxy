@@ -33,7 +33,7 @@ import (
 )
 
 func init() {
-	// This is a hack to help with vscode test execution. Put a .env in repo root w/ anything you need for test containers
+	// Lets vscode test runs pick up testcontainer settings from a .env in the repo root
 	if env, err := os.ReadFile("../../.env"); err == nil {
 		envs := strings.Split(string(env), "\n")
 		for _, e := range envs {
@@ -235,7 +235,7 @@ func TestRedisWithContainerUsingDatastore(t *testing.T) {
 
 	validateSaveAndLookup(t, r)
 
-	// Closing the cache must not close the shared datastore connection out from under other consumers.
+	// Closing the cache must not close the shared datastore connection under other consumers
 	require.NoError(t, r.(interface {
 		Close(ctx context.Context) error
 	}).Close(ctx))

@@ -26,7 +26,7 @@ import (
 	"github.com/Michad/tilegroxy/pkg/config"
 )
 
-// custom version of http.TimeoutHandler
+// A custom version of http.TimeoutHandler
 type timeoutHandler struct {
 	handler http.Handler
 	dt      time.Duration
@@ -69,18 +69,16 @@ func (h *timeoutHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(tw.code)
 		_, _ = w.Write(tw.wbuf.Bytes())
 	case <-ctx.Done():
-		// Nothing written by the inner handler wins after this point; timeoutWriter.Write starts rejecting writes once tw.timedOut is set.
+		// Inner handler writes are rejected from here on since tw.timedOut is set
 		tw.mu.Lock()
 		tw.timedOut = true
 		tw.mu.Unlock()
-		// Deliberately outside the lock: writing to the real socket can block on a slow client,
-		// and the inner handler would block behind it on its next write
+		// Outside the lock since a slow client could block the write, and the inner handler would block behind it
 		writeError(ctx, w, h.errCfg, pkg.TimeoutError{}, config.DataTypeUnknown)
 	}
 }
 
-// timeoutWriter buffers the inner handler's response so it can be discarded if the deadline
-// fires before the handler finishes, the same trick the stdlib's timeoutWriter uses.
+// Buffers the response so it can be discarded if the deadline fires first, as the stdlib's timeoutWriter does
 type timeoutWriter struct {
 	w    http.ResponseWriter
 	h    http.Header

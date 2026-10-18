@@ -25,8 +25,7 @@ import (
 )
 
 type Provider interface {
-	// Performs authentication before tiles are ever generated. The calling code ensures this is only called once at a time and only when needed
-	// based on the expiration in layergroup.ProviderContext and when an AuthError is returned from GenerateTile
+	// Runs before tiles are generated. Called one at a time, when ProviderContext expires or GenerateTile returns an AuthError
 	PreAuth(ctx context.Context, providerContext ProviderContext) (ProviderContext, error)
 	GenerateTile(ctx context.Context, providerContext ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error)
 }
@@ -38,23 +37,22 @@ type ProviderContext struct {
 	Other          map[string]interface{} // A generic holder in cases where a provider needs extra storage - for instance Blend which needs Context for child providers
 }
 
-// LayerGroup is the set of configured layers, letting an entity render tiles from other layers
+// Lets an entity render tiles from other layers
 type LayerGroup interface {
-	// Renders a tile through the named layer, including its cache and permission checks
+	// Includes the layer's cache and permission checks
 	RenderTile(ctx context.Context, tileRequest pkg.TileRequest) (*pkg.Image, error)
-	// Renders a tile through the named layer's provider, skipping its cache
+	// Skips the layer's cache
 	RenderTileNoCache(ctx context.Context, tileRequest pkg.TileRequest) (*pkg.Image, error)
-	// Reports whether a layer name, including one matching a layer pattern, resolves to a layer
+	// Includes names matching a layer pattern
 	HasLayer(ctx context.Context, layerName string) bool
 	ListLayerIDs() []string
 }
 
-// ProviderDeps carries everything a provider is given at construction. New dependencies are added as
-// fields so the Initialize signature stays stable
+// New dependencies are added as fields so the Initialize signature stays stable
 type ProviderDeps struct {
 	ClientConfig  config.ClientConfig
 	ErrorMessages config.ErrorMessages
-	// The group the provider belongs to, used by nesting providers to reach sibling layers
+	// Lets nesting providers reach sibling layers
 	LayerGroup LayerGroup
 	Datastores datastore.DatastoreRegistry
 }
@@ -63,11 +61,11 @@ type ProviderRegistration interface {
 	Name() string
 	Initialize(config any, deps ProviderDeps) (Provider, error)
 	InitializeConfig() any
-	// Whether this provider itself produces raster or vector tiles. Nesting providers return config.DataTypeUnknown.
+	// Raster or vector. Nesting providers return config.DataTypeUnknown
 	DataType(config any) config.DataType
 }
 
-// BoundsWrapper lets a ProviderRegistration restrict an already built provider to a layer's bounds.
+// Lets a ProviderRegistration restrict an already built provider to a layer's bounds
 type BoundsWrapper interface {
 	WrapBounds(inner Provider, bounds pkg.Bounds, deps ProviderDeps) (Provider, error)
 }

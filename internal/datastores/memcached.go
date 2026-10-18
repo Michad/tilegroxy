@@ -66,7 +66,7 @@ func (s MemcachedWrapperRegistration) Name() string {
 	return "memcached"
 }
 
-// MemcachedWrapperLegacyRegistration is the deprecated "memcache" alias for MemcachedWrapperRegistration
+// Deprecated "memcache" alias for MemcachedWrapperRegistration
 type MemcachedWrapperLegacyRegistration struct {
 	MemcachedWrapperRegistration
 }
@@ -118,7 +118,6 @@ func (w MemcachedWrapper) Native() any {
 	return w.client
 }
 
-// Close shuts down the memcached client, releasing its connection pool.
 func (w MemcachedWrapper) Close(_ context.Context) error {
 	if w.client == nil {
 		return nil

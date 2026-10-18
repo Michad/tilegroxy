@@ -21,7 +21,7 @@ import (
 
 const tileJSONVersion = "3.0.0"
 
-// Based off the TileJSON 3.0.0 spec: https://github.com/mapbox/tilejson-spec/tree/master/3.0.0
+// Per the TileJSON 3.0.0 spec: https://github.com/mapbox/tilejson-spec/tree/master/3.0.0
 type TileJSONDocument struct {
 	TileJSON string    `json:"tilejson"` // Version
 	Name     string    `json:"name"`
@@ -29,7 +29,7 @@ type TileJSONDocument struct {
 	MinZoom  int       `json:"minzoom"`
 	MaxZoom  int       `json:"maxzoom"`
 	Bounds   []float64 `json:"bounds"`
-	// Not part of the TileJSON spec. MapLibre GL JS reads it to know a source serves MapLibre Tiles
+	// Not in the TileJSON spec. MapLibre GL JS reads it to know a source serves MapLibre Tiles
 	Encoding string `json:"encoding,omitempty"`
 	config.TileJSONMetadata
 }

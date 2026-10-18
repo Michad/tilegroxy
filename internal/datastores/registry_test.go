@@ -23,8 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// A registration whose Initialize never fails, so registry-level ID validation is what's under
-// test here rather than any particular datastore implementation's connection behavior.
+// Never fails, so only registry-level ID validation is under test
 type stubDatastoreConfig struct {
 	ID string
 }
@@ -49,8 +48,7 @@ func init() {
 	datastore.RegisterDatastoreWrapper(stubDatastoreRegistration{})
 }
 
-// Duplicate IDs would otherwise overwrite each other in the registry map, hiding the first
-// datastore with no error anywhere.
+// Duplicates would silently overwrite each other in the registry map
 func Test_ConstructDatastoreRegistry_DuplicateIDErrors(t *testing.T) {
 	cfg := []map[string]interface{}{
 		{"name": "stub", "id": "dupe"},
@@ -62,7 +60,7 @@ func Test_ConstructDatastoreRegistry_DuplicateIDErrors(t *testing.T) {
 	require.Contains(t, err.Error(), "duplicate datastore id")
 }
 
-// Two datastores with no ID would both key into datastores[""].
+// Both would key into datastores[""]
 func Test_ConstructDatastoreRegistry_EmptyIDErrors(t *testing.T) {
 	cfg := []map[string]interface{}{
 		{"name": "stub"},

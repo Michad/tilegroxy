@@ -34,7 +34,7 @@ type ProviderConfig struct {
 	Color string // Six digit hex, such as 00AA88
 }
 
-// Provider renders a solid color tile once at startup and serves it for every request
+// Renders a solid color tile once at startup and serves it for every request
 type Provider struct {
 	png []byte
 }

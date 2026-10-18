@@ -30,7 +30,7 @@ import (
 const cacheControlHeader = "Cache-Control"
 const noStoreDirective = "no-store"
 
-// The path is the dotted prefix the block was found at so the message names the right place
+// path is the dotted prefix of the block so the message names the right place
 func ValidateCacheControl(cfg config.CacheControlConfig, path string, errorMessages config.ErrorMessages) error {
 	if !configload.CacheControlEnabled(cfg) {
 		return nil
@@ -57,7 +57,7 @@ func ValidateCacheControl(cfg config.CacheControlConfig, path string, errorMessa
 	return nil
 }
 
-// no-store tells caches to keep nothing, so any directive describing how long to keep it contradicts the same block.
+// no-store keeps nothing, so any lifetime directive in the same block contradicts it
 func checkNoStoreConflicts(cfg config.CacheControlConfig) []string {
 	var conflicts []string
 
@@ -159,8 +159,7 @@ func resolveRemainingTTL(cfg config.CacheControlConfig, facts layers.CacheContro
 
 	remaining := facts.TTL
 
-	// CreatedAt is zero for entries written by a path that bypasses the TTL cache, which the cache
-	// itself treats as fresh. Those get the full TTL rather than an age that looks like 1970.
+	// Zero for entries written around the TTL cache, which treats them as fresh, so they get the full TTL
 	if img != nil && img.CreatedAt != 0 {
 		remaining = facts.TTL - now.Sub(time.Unix(img.CreatedAt, 0))
 	}
@@ -172,14 +171,13 @@ func resolveRemainingTTL(cfg config.CacheControlConfig, facts layers.CacheContro
 	return uint(remaining.Seconds()), true
 }
 
-// The main "entry point"
 func (s *generation) generateCacheControlForTile(ctx context.Context, tileReq pkg.TileRequest, img *pkg.Image) string {
 	l := s.layerGroup().FindLayer(ctx, tileReq.LayerName)
 
 	return generateCacheControlValue(mergeCacheControl(s.serverCfg.CacheControl, l), l, img, time.Now())
 }
 
-// Validate both server level and all layer levels
+// Validates the server level and every layer
 func validateAllCacheControl(cfg *config.Config) error {
 	if err := ValidateCacheControl(cfg.Server.CacheControl, "server.cachecontrol", cfg.Error.Messages); err != nil {
 		return err

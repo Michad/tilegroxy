@@ -1,12 +1,47 @@
 = PostgreSQL
+:description: Defines a connection pool to a PostgreSQL database.  Utilizes pgx under the hood which supports PostgreSQL 12 and higher.
+:page-eyebrow: Datastore
+:page-config-name: postgresql
 
-Defines a connection pool to a link:https://www.postgresql.org/[PostgreSQL] database.  Utilizes link:https://github.com/jackc/pgx?tab=readme-ov-file#supported-go-and-postgresql-versions[pgx] under the hood which supports PostgreSQL 12 and higher.  
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+datastores:
+  - name: postgresql
+    id: pg-database-0
+    host: localhost
+    user: postgres
+    password: password
+    database: postgres
+----
 
-Name should be "postgresql"
+JSON::
++
+[,json]
+----
+{
+  "datastores": [
+    {
+      "name": "postgresql",
+      "id": "pg-database-0",
+      "host": "localhost",
+      "user": "postgres",
+      "password": "password",
+      "database": "postgres"
+    }
+  ]
+}
+----
+====
 
-== Configuration options
+== Configuration
 
-[cols="1,3,1,1,1"]
+.Configuration options
+[cols="1m,3,1,1,1"]
 |===
 | Parameter | Description | Type | Required | Default
 
@@ -40,19 +75,19 @@ Name should be "postgresql"
 | No
 | None
 
-| Database 
+| Database
 | The name of the database to connect to
 | string
 | No
 | postgres
 
-| MinConnections 
+| MinConnections
 | The minimum number of connections to keep in reserve in the connection pool
 | int
 | No
 | 10
 
-| MaxConnections 
+| MaxConnections
 | The maximum number of connections to allow in the connection pool. Ensure your postgresql instance's `max_connections` is configured high enough to accommodate this setting
 | int
 | No
@@ -70,16 +105,3 @@ Name should be "postgresql"
 | No
 | 1 day
 |===
-
-
-== Example
-
-----
-datastores:
-  - name: postgresql
-    id: pg-database-0
-    host: localhost
-    user: postgres
-    password: password
-    database: postgres
-----

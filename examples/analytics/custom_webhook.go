@@ -29,7 +29,7 @@
 package custom
 
 import (
-	//The standard library is available for use
+	// The standard library is available for use
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -37,11 +37,11 @@ import (
 	"strconv"
 	"time"
 
-	//This contains types and utility functions from the main tilegroxy application. It is required to always be imported
+	// Types and utility functions from tilegroxy. Always required
 	"tilegroxy/tilegroxy"
 )
 
-// The shape sent to the webhook. This is kept independent of tilegroxy's own event struct so the payload stays stable if that changes
+// Independent of tilegroxy's event struct so the webhook payload stays stable if that changes
 type usageRecord struct {
 	Time    time.Time      `json:"time"`
 	Layer   string         `json:"layer"`
@@ -52,15 +52,15 @@ type usageRecord struct {
 	Details map[string]any `json:"details,omitempty"`
 }
 
-// This method is responsible for delivering events to their destination. It is called once per batch of events, not once per request
+// Delivers events to their destination. Called once per batch, not once per request
 func record(
-	//Contextual information about the batch being written
+	// Contextual information about the batch being written
 	ctx tilegroxy.Context,
-	//The events to record. Each contains Time, LayerID, LayerName, Z, X, Y, UserID and a Fields map
+	// Each contains Time, LayerID, LayerName, Z, X, Y, UserID and a Fields map
 	events []tilegroxy.AnalyticsEvent,
-	//The parameters included under the analytics module in the configuration. In this case it will contain "url" and "token"
+	// Parameters from the analytics config block. Here, "url" and "token"
 	params map[string]interface{},
-	//A mapping for localization of error messages
+	// A mapping for localization of error messages
 	_ tilegroxy.ErrorMessages,
 ) error {
 	url, ok := params["url"].(string)
@@ -94,7 +94,7 @@ func record(
 
 	req.Header.Set("Content-Type", "application/json")
 
-	//Any extra configuration parameter is available here, so credentials can come from env. or a secret store instead of being written into the script
+	// Extra parameters can come from env. or a secret store instead of living in the script
 	if token, ok := params["token"].(string); ok && token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
@@ -108,7 +108,7 @@ func record(
 
 	defer resp.Body.Close()
 
-	//Returning an error here causes the batch to be logged as failed and dropped. It never affects the tile responses that produced these events
+	// An error marks the batch as failed and drops it. It never affects tile responses
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return errors.New("webhook returned status " + strconv.Itoa(resp.StatusCode))
 	}
