@@ -1,0 +1,67 @@
+= Memory
+:description: Keeps rate limit counters in the memory of the tilegroxy daemon itself.
+:page-eyebrow: Rate Limit
+:page-config-name: memory
+
+WARNING: Counters aren't shared between instances, so a deployment of N instances lets through N times each limit, and that multiple changes whenever an autoscaler adds or removes instances. Counts are also lost on restart, which makes this unsuitable for long periods. Use xref:configuration/ratelimit/redis.adoc[redis] in production.
+
+== Description
+
+When `maxsize` is reached the least recently used counters are dropped, which resets the limit for whoever they belonged to.  Counters are kept across a xref:reloading.adoc[reload] as long as `maxsize` doesn't change.
+
+Since the counters live inside the server process, the xref:commands/ratelimit.adoc[ratelimit command] can't read or reset them.
+
+Also accepts the xref:configuration/ratelimit/index.adoc[policies and options] shared by every store.
+
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+ratelimit:
+  name: memory
+  maxsize: 10000
+  policies:
+    - id: standard
+      rules:
+        - limit: 50
+          period: 1
+----
+
+JSON::
++
+[,json]
+----
+{
+  "ratelimit": {
+    "name": "memory",
+    "maxsize": 10000,
+    "policies": [
+      {
+        "id": "standard",
+        "rules": [
+          {
+            "limit": 50,
+            "period": 1
+          }
+        ]
+      }
+    ]
+  }
+}
+----
+====
+
+== Configuration
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| maxsize
+| Maximum number of counters to hold. Each combination of rule and segment values is one counter
+| uint32
+| No
+| 100000
+|===

@@ -20,10 +20,10 @@ Metrics are available for cache hit/miss and the number of tile requests broken 
 | The total number of tile requests received by tilegroxy
 
 | tilegroxy.tiles.total.valid
-| The number of tile requests received by tilegroxy that pass validation and authentication checks
+| The number of tile requests received by tilegroxy that pass validation, authentication, and rate limit checks
 
 | tilegroxy.tiles.total.error
-| The number of tile requests that result in an error excluding validation and authentication
+| The number of tile requests that result in an error excluding validation, authentication, and rate limits
 
 | tilegroxy.tiles.total.success
 | The number of tiles requests that result in a successful response - this includes when a fallback kicks in
@@ -55,6 +55,15 @@ Metrics are available for cache hit/miss and the number of tile requests broken 
 | tilegroxy.analytics.error
 | The number of analytics events in batches that failed to write
 
+| tilegroxy.ratelimit.total.rejected
+| The number of tile requests rejected by any xref:configuration/ratelimit/index.adoc[rate limit] rule
+
+| tilegroxy.ratelimit.policy.\{policyId}.rejected
+| The number of tile requests rejected by a rule defined in the indicated rate limit policy. The policy ID is sanitized the same way as a layer ID
+
+| tilegroxy.ratelimit.error
+| The number of rate limit checks that failed because the store failed or timed out
+
 | http.server.response.size
 | Provided by otelhttp. Reflects the size of responses bodies returned from tilegroxy in bytes
 
@@ -80,9 +89,11 @@ The layer ID is sanitized to only alphanumeric characters, underscores, and hyph
 
 The `tilegroxy.analytics.*` metrics are meant to help monitor the health of xref:configuration/analytics/index.adoc[Analytics] delivery.  A spike in `dropped` or `error` count means usage tracking is getting dropped, so it's worth alerting on these separately.
 
+Alerting on `tilegroxy.ratelimit.error` is recommended, see xref:ratelimit.adoc#auditing[Rate Limiting].
+
 == Traces
 
-Traces are generated for all incoming requests into tilegroxy.  For tile requests we include a parent span named "tilegroxy" that then includes child spans for providers, authentication, and cache.  Additionally child spans are generated for outgoing HTTP requests.  Utilizing these spans allows you to see a breakdown of where time is spent for a given request and where errors occur, this is especially useful for complicated layer setups.
+Traces are generated for all incoming requests into tilegroxy.  For tile requests we include a parent span named "tilegroxy" that then includes child spans for providers, authentication, rate limiting, and cache.  Additionally child spans are generated for outgoing HTTP requests.  Utilizing these spans allows you to see a breakdown of where time is spent for a given request and where errors occur, this is especially useful for complicated layer setups.
 
 .An example trace (display depends on the vendor)
 image::example_trace_in_aws.png[Example trace in AWS]

@@ -3,7 +3,7 @@
 :page-eyebrow: Datastore
 :page-config-name: redis
 
-NOTE: Used by the xref:configuration/cache/redis.adoc[redis cache] and xref:configuration/authentication/bearer.adoc[bearer authentication].
+NOTE: Used by the xref:configuration/cache/redis.adoc[redis cache], xref:configuration/authentication/bearer.adoc[bearer authentication], and xref:configuration/ratelimit/redis.adoc[redis rate limit].
 
 == Example
 [tabs]

@@ -178,9 +178,11 @@ Configures logs for incoming HTTP requests. Primarily outputs in standard Apache
 
 Configures a log containing only security relevant events. Auditing is off by default.
 
-Two kinds of event are emitted, each identified by an `event` attribute:
+Four kinds of event are emitted, each identified by an `event` attribute:
 
 `auth_failure`:: A request was rejected for an authentication or authorization reason. This covers a failed check by the configured xref:configuration/authentication/index.adoc[authentication], a request for a layer the caller isn't allowed, and a request for a tile outside the caller's allowed geographic area. The `reason` attribute names which of these occurred. Standard request fields are always included (URI, path, protocol, IP, method, host, and user agent) and, when possible, `user` and `tenant` are included as well.
+`rate_limited`:: A request was rejected by a xref:configuration/ratelimit/index.adoc[rate limit]. Repeated rejections are only recorded about once per window, see xref:ratelimit.adoc#auditing[Rate Limiting]. The `policy` attribute names the policy that defines the exceeded rule, `rule` names the rule as described in xref:ratelimit.adoc#headers[Headers], and `layer` is the ID of the requested layer. The same standard request fields as `auth_failure` are included, as are `user` and `tenant` when present.
+`ratelimit_reset`:: Rate limit counters were reset with the xref:commands/ratelimit.adoc[ratelimit command]. The `rules` attribute lists the rules that were reset, and `user`, `tenant`, `ip`, and `layer` are included when they were supplied.
 `config_reload`:: The configuration was reloaded, which happens when xref:reloading.adoc[hot reloading] is enabled or when a watched xref:configuration/secret/index.adoc[secret] rotates. The `outcome` attribute is either `success` or `failure`, and a failure carries the `error` that stopped it. The `reason` attribute says what triggered the reload: `config_file` for a change to the configuration file, `signal` for a `SIGHUP` reload signal, `secret_rotation` for a watched secret whose value changed, and `secret_ttl` for the periodic reload a secret `ttl` schedules.
 
 .Configuration options

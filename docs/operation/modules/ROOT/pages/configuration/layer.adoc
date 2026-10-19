@@ -64,6 +64,18 @@ TIP: It is highly recommended that layer names be alphanumeric plus underscores.
 | No
 | false
 
+| ratelimit
+| The ID of the xref:configuration/ratelimit/index.adoc[rate limit] policy that limits this layer
+| string
+| No
+| The default policy
+
+| skipratelimit
+| If true, requests for this layer are never checked against or counted by any rate limit policy
+| bool
+| No
+| false
+
 | allowcoalesce
 | Whether to allow concurrent requests for the same tile to be combined into one tile generation call. This includes requests triggered by different users. If your tiles are customized per user/tenant, you will want to set this false. See xref:howto/user-dynamic.adoc#coalesce[this how-to] for further information
 | bool
