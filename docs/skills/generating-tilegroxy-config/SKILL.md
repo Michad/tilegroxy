@@ -1,6 +1,6 @@
 ---
 name: generating-tilegroxy-config
-description: Use when writing or editing a tilegroxy configuration file (YAML or JSON) - creating a new tilegroxy.yml, adding a layer/provider/cache/authentication/analytics/secret block, or troubleshooting a config validation error
+description: Use when writing or editing a tilegroxy configuration file (YAML or JSON) - creating a new tilegroxy.yml, adding a layer/provider/cache/authentication/analytics/ratelimit/secret block, or troubleshooting a config validation error
 ---
 
 # Generating Tilegroxy Configuration
@@ -10,7 +10,7 @@ description: Use when writing or editing a tilegroxy configuration file (YAML or
 Tilegroxy is configured entirely through one YAML or JSON file. Unknown keys are
 rejected, so a config either matches the schema exactly or fails to start. This skill
 covers the schema shape and the entity pattern shared by providers, caches,
-authentication, analytics, datastores, and secrets. This skill is the map, not the
+authentication, analytics, rate limits, datastores, and secrets. This skill is the map, not the
 territory: it does not stand in for the field-by-field reference, so always locate and
 read the actual documentation pages before writing config, using the procedure below.
 
@@ -52,8 +52,10 @@ error: ...             # how errors are surfaced to end users
 secret: ...            # external secret store
 authentication: ...    # incoming request auth
 cache: ...             # tile cache
-datastores: [...]      # named DB connections, referenced by analytics
+datastores: [...]      # named DB connections, referenced by analytics, auth, ratelimit
 analytics: ...         # usage event recording
+ratelimit: ...         # named policies of request limits per user/tenant/ip/layer
+defaultratelimit: ...  # policy id used by layers that don't set `ratelimit`
 layers:                # required, at least one entry
   - id: ...
     provider: ...
@@ -64,7 +66,7 @@ examples but any case works.
 
 ## The entity pattern
 
-`provider`, `cache`, `authentication`, `analytics`, `datastore`, and `secret` are all
+`provider`, `cache`, `authentication`, `analytics`, `ratelimit`, `datastore`, and `secret` are all
 "entities": pick an implementation with a required `name` field, and the rest of the
 object's shape depends on that name. Example - a cache is either:
 
@@ -135,9 +137,9 @@ materially changes which entity or page to read next.
 5. **Add error handling** for production: `error.mode: image` (default) or
    `image+header` so failures render as a map tile instead of leaking a raw error to
    end users.
-6. **Add secret/analytics/datastores** only as needed. `datastores` are named and
-   referenced by id from `analytics` blocks that write to a database and from `bearer`
-   authentication.
+6. **Add secret/analytics/ratelimit/datastores** only as needed. `datastores` are named
+   and referenced by id from `analytics` blocks that write to a database, from `bearer`
+   authentication, and from `redis` or `postgresql` rate limits.
 
 ## Validating
 

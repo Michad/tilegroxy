@@ -91,7 +91,7 @@ JSON::
 | The response headers made readable to browser scripts, beyond the handful browsers always expose. 
 | string[]
 | No
-| ETag
+| ETag, plus `RateLimit`, `RateLimit-Policy`, and `Retry-After` when xref:configuration/ratelimit/index.adoc[rate limiting] is enabled
 
 | AllowCredentials
 | If true, allow requests that carry cookies or HTTP authentication. Cannot be combined with WildcardOrigin, or with a wildcard in Headers or ExposedHeaders

@@ -23,6 +23,8 @@ When reloading occurs, new connections will be established for configured xref:c
 
 Buffered xref:configuration/analytics/index.adoc[analytics] events are flushed before the previous configuration is released so a reload doesn't lose the current batch.
 
+xref:configuration/ratelimit/index.adoc[Rate limit] counts survive a reload unless a policy's `id`, a rule's `segment` or period, or the store's own settings changed. See xref:ratelimit.adoc#reloading[Rate Limiting].
+
 Tilegroxy uses link:https://github.com/fsnotify/fsnotify[fsnotify] to detect when configuration has changed. It is possible for the file change event to reach tilegroxy before the file has finished being written. Tilegroxy waits 1 second before applying changes to avoid this but if you are using a filesystem with especially slow writes it is possible tilegroxy will attempt to read the configuration too early. This will usually result in an invalid configuration which will be ignored but could result in operating against incorrect configuration.
 
 CAUTION: Avoid using hot reload if you're at risk of slow writes, especially if using YAML configurations.
@@ -39,6 +41,7 @@ The following sections of the configuration can be reloaded:
 * xref:configuration/cache/index.adoc[cache]
 * xref:configuration/datastores/index.adoc[datastores]
 * xref:configuration/analytics/index.adoc[analytics]
+* xref:configuration/ratelimit/index.adoc[ratelimit]
 * xref:configuration/layer.adoc[layers]
 * xref:configuration/health.adoc[health]
 

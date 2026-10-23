@@ -5,7 +5,7 @@
 
 == Description
 
-This lets you validate API keys you already manage in your own database. It can associate a user ID and tenant ID with the request, but does not support authorization options (allowed layers or bounding box). Supported datastores are xref:configuration/datastores/postgresql.adoc[postgresql] and xref:configuration/datastores/redis.adoc[redis].
+This lets you validate API keys you already manage in your own database. It can associate a user ID, tenant ID, and plan with the request, but does not support authorization options (allowed layers or bounding box). Supported datastores are xref:configuration/datastores/postgresql.adoc[postgresql] and xref:configuration/datastores/redis.adoc[redis].
 
 Lookup results can optionally be cached in memory to decrease database load. Use this with caution since a revoked token can keep working until the cache entry expires. Rejections are cached too, but outright errors (such as an inability to connect to the database) are not.
 
@@ -126,6 +126,9 @@ JSON::
 
 | tenant_id
 | A string used as the tenant identifier, if non-null. See xref:howto/multi-tenant.adoc[How to: Serve Multiple Tenants]
+
+| plan
+| A string used as the plan for xref:configuration/ratelimit/index.adoc[rate limit] overrides, if non-null
 |===
 
 .Configuration options
@@ -142,7 +145,7 @@ JSON::
 
 == Redis
 
-The auth token is used as a key, with an optional prefix. Authentication passes if the key exists. Setting a user ID and tenant ID requires the entry to be a Hash.
+The auth token is used as a key, with an optional prefix. Authentication passes if the key exists. Setting a user ID, tenant ID, or plan requires the entry to be a Hash.
 
 .Example
 [tabs]
@@ -210,4 +213,10 @@ A matching token can be created with `HSET apikey:abc123 user alice tenant acme`
 | string
 | No
 | tenant
+
+| planField
+| The hash field containing the plan
+| string
+| No
+| plan
 |===

@@ -44,6 +44,10 @@ See xref:howto/user-dynamic.adoc[User Dynamic Layers] if your tiles vary by user
 
 xref:configuration/analytics/index.adoc[Analytics] records a usage event for each tile served and writes them out in batches. It's disabled by default and individual layers can opt out with `skipanalytics`. See xref:analytics.adoc[Analytics] for how events are recorded.
 
+== Rate Limits
+
+xref:configuration/ratelimit/index.adoc[Rate limits] cap how many tiles a user, tenant, or IP address can request in a period, from seconds up to a calendar month. Limits are grouped into policies defined once with an ID, and like caches, every layer uses the first policy unless you set `defaultratelimit` or the layer picks another with its own `ratelimit` parameter. Layers can opt out with `skipratelimit`. Rejected requests get a standard `429` response. It's disabled by default. See xref:ratelimit.adoc[Rate Limiting] for how limits are counted.
+
 == Secrets
 
 A xref:configuration/secret/index.adoc[secret] source lets any entity's string parameters say `secret.NAME` instead of containing the value itself, the same way `env.NAME` reads an environment variable. Secrets are resolved at startup and on every xref:reloading.adoc[reload].

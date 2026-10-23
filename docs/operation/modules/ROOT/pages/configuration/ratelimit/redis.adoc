@@ -1,0 +1,110 @@
+= Redis
+:description: Keeps rate limit counters in redis or another redis-compatible key-value store, shared by every instance of tilegroxy.
+:page-eyebrow: Rate Limit
+:page-config-name: redis
+
+NOTE: Requires a xref:configuration/datastores/redis.adoc[redis datastore] to supply the connection.
+
+== Description
+
+Each counter is a key that expires on its own once its period is over, so no cleanup is needed.  Each counter is updated atomically on the server using the server's clock, so concurrent requests from several instances never lose a count.  In `cluster` mode the counters for one request can live on different servers, which costs a round trip to each of them in parallel.
+
+Configure redis with a `maxmemory-policy` of `noeviction`.  An evicted key resets the limit for whoever it belonged to.  If you use `calendar` periods of a day or longer, also turn on persistence (AOF) so a restart of redis doesn't reset everyone's quota.  Replication is asynchronous, so a failover can lose the last few increments.
+
+The `cluster` mode of the datastore is recommended for high availability.  The `ring` mode doesn't replicate, so losing one server resets every counter stored on it.
+
+Don't share a redis server with the xref:configuration/cache/redis.adoc[redis cache].  The eviction policy applies to the whole server, and a tile cache needs one that evicts.
+
+Also accepts the xref:configuration/ratelimit/index.adoc[policies and options] shared by every store.
+
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+datastores:
+  - name: redis
+    id: redis-0
+    mode: cluster
+    servers:
+      - host: redis-0.internal
+        port: 6379
+      - host: redis-1.internal
+        port: 6379
+      - host: redis-2.internal
+        port: 6379
+
+ratelimit:
+  name: redis
+  datastore: redis-0
+  policies:
+    - id: standard
+      rules:
+        - limit: 50
+          period: 1
+----
+
+JSON::
++
+[,json]
+----
+{
+  "datastores": [
+    {
+      "name": "redis",
+      "id": "redis-0",
+      "mode": "cluster",
+      "servers": [
+        {
+          "host": "redis-0.internal",
+          "port": 6379
+        },
+        {
+          "host": "redis-1.internal",
+          "port": 6379
+        },
+        {
+          "host": "redis-2.internal",
+          "port": 6379
+        }
+      ]
+    }
+  ],
+  "ratelimit": {
+    "name": "redis",
+    "datastore": "redis-0",
+    "policies": [
+      {
+        "id": "standard",
+        "rules": [
+          {
+            "limit": 50,
+            "period": 1
+          }
+        ]
+      }
+    ]
+  }
+}
+----
+====
+
+== Configuration
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| datastore
+| The ID of a xref:configuration/datastores/redis.adoc[redis datastore] to use
+| string
+| Yes
+| None
+
+| keyprefix
+| A prefix for every key. Changing it resets every counter
+| string
+| No
+| ratelimit:
+|===

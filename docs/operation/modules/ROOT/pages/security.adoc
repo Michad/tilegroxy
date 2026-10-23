@@ -46,8 +46,14 @@ Tilegroxy provides a flexible capability for xref:configuration/authentication/i
 
 Tilegroxy is primarily intended to be used as a microservice within a broader application ecosystem so implementing the specifics of how authentication should work end-to-end is left up to the operator in conjunction with their needs.
 
+== Rate Limiting
+
+xref:configuration/ratelimit/index.adoc[Rate limiting] can stop one user from exhausting an upstream provider or a quota shared with everyone else. It isn't a defense against denial of service, since every rejected request is still received and checked. See xref:ratelimit.adoc[Rate Limiting].
+
+Limits counted by `ip` are only meaningful if the IP can't be forged. Only list proxies you control in `server.trustedProxies`, otherwise anyone can pick their own IP with a forwarding header and get a fresh allowance on every request.
+
 == Logging
 
 Tilegroxy has a few separately configurable log streams available. Consider ingesting each of these into your SIEM or log aggregator if your system is security-sensitive. 
 
-Most notably from a security side, rejected requests and configuration reloads can be recorded to a dedicated xref:configuration/log.adoc[audit log]. 
+Most notably from a security side, rejected requests, rate limit rejections, and configuration reloads can be recorded to a dedicated xref:configuration/log.adoc[audit log]. 

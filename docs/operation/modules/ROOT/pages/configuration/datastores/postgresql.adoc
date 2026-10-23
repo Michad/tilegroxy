@@ -3,6 +3,8 @@
 :page-eyebrow: Datastore
 :page-config-name: postgresql
 
+NOTE: Used by the xref:configuration/provider/postgismvt.adoc[postgismvt provider], xref:configuration/analytics/postgresql.adoc[postgresql analytics], xref:configuration/authentication/bearer.adoc[bearer authentication], and xref:configuration/ratelimit/postgresql.adoc[postgresql rate limit].
+
 == Example
 [tabs]
 ====

@@ -1,0 +1,122 @@
+= PostgreSQL
+:description: Keeps rate limit counters in a PostgreSQL table, shared by every instance of tilegroxy.  This is a reasonable choice if you already run PostgreSQL, want quotas kept in a database you back up, and your traffic is moderate.  For high traffic use redis instead.
+:page-eyebrow: Rate Limit
+:page-config-name: postgresql
+
+NOTE: Requires a xref:configuration/datastores/postgresql.adoc[postgresql datastore] to supply the connection.
+
+== Description
+
+Every tile request updates a row for each rule that applies to it, all in one statement using the database's clock.  A single map view can request dozens of tiles at once, so make sure your database and the datastore's `maxConnections` can keep up with your peak request rate.  The connection pool is shared with anything else using the datastore, and running out of connections triggers `onError`.
+
+A rule with an empty `segment`, or a busy tenant, is a single row that every instance updates, so those requests queue up behind each other on its lock.  If such rules see heavy traffic, use the redis store instead.
+
+Also accepts the xref:configuration/ratelimit/index.adoc[policies and options] shared by every store.
+
+== Table Setup
+
+Tilegroxy never issues DDL so you must create the table yourself before starting tilegroxy.  This keeps the credentials tilegroxy uses free of schema privileges.
+
+[,sql]
+----
+CREATE TABLE tilegroxy_ratelimit (
+    key           TEXT        NOT NULL,
+    window_start  TIMESTAMPTZ NOT NULL,
+    count         BIGINT      NOT NULL,
+    expires       TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (key, window_start)
+);
+
+CREATE INDEX ON tilegroxy_ratelimit (expires);
+----
+
+Tilegroxy ignores expired rows but doesn't delete them, so this table grows unbounded.  It is recommended you delete old rows on a schedule, for instance with https://github.com/citusdata/pg_cron[pg_cron]:
+
+[,sql]
+----
+DELETE FROM tilegroxy_ratelimit WHERE expires < now();
+----
+
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+datastores:
+  - name: postgresql
+    id: pg-ratelimit
+    host: localhost
+    user: tilegroxy
+    password: env.PGPASSWORD
+    database: tilegroxy
+
+ratelimit:
+  name: postgresql
+  datastore: pg-ratelimit
+  table: tilegroxy_ratelimit
+  policies:
+    - id: quota
+      rules:
+        - segment:
+            - tenant
+          limit: 100000
+          calendar: month
+----
+
+JSON::
++
+[,json]
+----
+{
+  "datastores": [
+    {
+      "name": "postgresql",
+      "id": "pg-ratelimit",
+      "host": "localhost",
+      "user": "tilegroxy",
+      "password": "env.PGPASSWORD",
+      "database": "tilegroxy"
+    }
+  ],
+  "ratelimit": {
+    "name": "postgresql",
+    "datastore": "pg-ratelimit",
+    "table": "tilegroxy_ratelimit",
+    "policies": [
+      {
+        "id": "quota",
+        "rules": [
+          {
+            "segment": [
+              "tenant"
+            ],
+            "limit": 100000,
+            "calendar": "month"
+          }
+        ]
+      }
+    ]
+  }
+}
+----
+====
+
+== Configuration
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| datastore
+| The ID of the datastore to use. The datastore must have a type of `postgresql`.  Also see the xref:configuration/datastores/index.adoc[Datastores] documentation.
+| string
+| Yes
+| None
+
+| table
+| The table holding the counters. May be schema qualified. Must be a plain identifier
+| string
+| Yes
+| None
+|===
