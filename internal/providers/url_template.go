@@ -20,13 +20,14 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Michad/tilegroxy/internal/placeholder"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
 type URLTemplateConfig struct {
-	Template string
+	Template placeholder.Template
 	Width    uint16
 	Height   uint16
 	Srid     uint
@@ -61,7 +62,7 @@ func (s URLTemplateRegistration) DataType(_ any) config.DataType {
 
 func (s URLTemplateRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(URLTemplateConfig)
-	if cfg.Template == "" {
+	if cfg.Template.IsEmpty() {
 		return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "provider.url template.url", "")
 	}
 
@@ -80,17 +81,19 @@ func (s URLTemplateRegistration) Initialize(cfgAny any, deps layer.ProviderDeps)
 		return nil, fmt.Errorf(deps.ErrorMessages.EnumError, "provider.url template.srid", cfg.Srid, []int{pkg.SRIDPsuedoMercator, pkg.SRIDWGS84})
 	}
 
-	url := strings.ReplaceAll(cfg.Template, "$xmin", "{xmin}")
-	url = strings.ReplaceAll(url, "$xmax", "{xmax}")
-	url = strings.ReplaceAll(url, "$ymin", "{ymin}")
-	url = strings.ReplaceAll(url, "$ymax", "{ymax}")
-	url = strings.ReplaceAll(url, "$zoom", "{z}")
-	url = strings.ReplaceAll(url, "$width", strconv.Itoa(int(cfg.Width)))
-	url = strings.ReplaceAll(url, "$height", strconv.Itoa(int(cfg.Height)))
-	url = strings.ReplaceAll(url, "$srs", strconv.FormatUint(uint64(cfg.Srid), 10))
+	replacer := strings.NewReplacer(
+		"$xmin", "{xmin}",
+		"$xmax", "{xmax}",
+		"$ymin", "{ymin}",
+		"$ymax", "{ymax}",
+		"$zoom", "{z}",
+		"$width", strconv.Itoa(int(cfg.Width)),
+		"$height", strconv.Itoa(int(cfg.Height)),
+		"$srs", strconv.FormatUint(uint64(cfg.Srid), 10),
+	)
 
 	proxyCfg := ProxyConfig{
-		URL:  url,
+		URL:  cfg.Template.MapLiterals(replacer.Replace),
 		Srid: cfg.Srid,
 	}
 

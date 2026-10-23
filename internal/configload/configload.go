@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Michad/tilegroxy/internal/placeholder"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/fsnotify/fsnotify"
 	"github.com/go-viper/mapstructure/v2"
@@ -224,7 +225,7 @@ func toCacheEntryList(raw interface{}, errorMessages config.ErrorMessages) ([]ma
 }
 
 // Errors on unknown keys so a typo can't silently revert a security control. "id" stays since datastore declares it
-func DecodeEntityConfig(rawConfig map[string]interface{}, out any) error {
+func DecodeEntityConfig(rawConfig map[string]interface{}, out any, resolver *placeholder.Resolver) error {
 	stripped := make(map[string]interface{}, len(rawConfig))
 	for k, v := range rawConfig {
 		if strings.EqualFold(k, "name") {
@@ -242,7 +243,11 @@ func DecodeEntityConfig(rawConfig map[string]interface{}, out any) error {
 		return err
 	}
 
-	return decoder.Decode(stripped)
+	if err := decoder.Decode(stripped); err != nil {
+		return err
+	}
+
+	return resolver.ResolveInto(out)
 }
 
 func initViper() *viper.Viper {

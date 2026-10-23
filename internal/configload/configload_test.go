@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Michad/tilegroxy/internal/placeholder"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -111,7 +112,7 @@ func TestDecodeEntityConfig_UnknownKeyErrors(t *testing.T) {
 	err := DecodeEntityConfig(map[string]interface{}{
 		"name": "foo",
 		"baz":  "typo'd field",
-	}, &out)
+	}, &out, nil)
 
 	require.Error(t, err)
 }
@@ -125,7 +126,7 @@ func TestDecodeEntityConfig_NameStrippedButFieldsWork(t *testing.T) {
 	err := DecodeEntityConfig(map[string]interface{}{
 		"name": "foo",
 		"bar":  "value",
-	}, &out)
+	}, &out, nil)
 
 	require.NoError(t, err)
 	assert.Equal(t, "value", out.Bar)
@@ -142,7 +143,7 @@ func TestDecodeEntityConfig_IDPassesThroughWhenStructWantsIt(t *testing.T) {
 		"name": "foo",
 		"id":   "myid",
 		"bar":  "value",
-	}, &out)
+	}, &out, nil)
 
 	require.NoError(t, err)
 	assert.Equal(t, "myid", out.ID)
@@ -162,7 +163,7 @@ func TestDecodeEntityConfig_StringUsesTextUnmarshaler(t *testing.T) {
 	}
 
 	var out fooConfig
-	err := DecodeEntityConfig(map[string]interface{}{"bar": "value"}, &out)
+	err := DecodeEntityConfig(map[string]interface{}{"bar": "value"}, &out, nil)
 
 	require.NoError(t, err)
 	assert.Equal(t, upperText("VALUE"), out.Bar)
@@ -619,4 +620,28 @@ layers:
 	assert.Equal(t, 2, *md.VectorLayers[0].MinZoom)
 	// Viper lowercases every map key, including field names
 	assert.Equal(t, map[string]string{"name": "String"}, md.VectorLayers[0].Fields)
+}
+
+// Template fields keep request placeholders for the provider, while plain strings are fully resolved
+func TestDecodeEntityConfig_ResolvesPlaceholders(t *testing.T) {
+	t.Setenv("TEST_DECODE_HOST", "example.com")
+
+	type templateConfig struct {
+		Host string
+		URL  placeholder.Template
+	}
+
+	var out templateConfig
+	err := DecodeEntityConfig(map[string]interface{}{
+		"host": "env.TEST_DECODE_HOST",
+		"url":  "https://{env.TEST_DECODE_HOST}/{z}?u={ctx.user}",
+	}, &out, nil)
+
+	require.NoError(t, err)
+	assert.Equal(t, "example.com", out.Host)
+	assert.Equal(t, "https://{env.TEST_DECODE_HOST}/{z}?u={ctx.user}", out.URL.String())
+	assert.True(t, out.URL.Uses(placeholder.SourceCtx))
+
+	err = DecodeEntityConfig(map[string]interface{}{"host": "secret.nope"}, &out, nil)
+	require.Error(t, err)
 }

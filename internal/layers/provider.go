@@ -15,20 +15,29 @@
 package layers
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Michad/tilegroxy/internal/configload"
+	"github.com/Michad/tilegroxy/internal/placeholder"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
 )
 
 func ConstructProvider(rawConfig map[string]interface{}, deps layer.ProviderDeps) (layer.Provider, error) {
+	resolver := placeholder.NewResolver(context.Background(), deps.Secreter)
+
+	rawConfig, err := configload.ResolveEntityKeys(rawConfig, resolver)
+	if err != nil {
+		return nil, err
+	}
+
 	name, ok := rawConfig["name"].(string)
 
 	if ok {
 		reg, ok := layer.RegisteredProvider(name)
 		if ok {
 			cfg := reg.InitializeConfig()
-			err := configload.DecodeEntityConfig(rawConfig, &cfg)
+			err := configload.DecodeEntityConfig(rawConfig, &cfg, resolver)
 			if err != nil {
 				return nil, err
 			}

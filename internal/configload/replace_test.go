@@ -18,151 +18,39 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func Test_ReplaceEnv_Nothing(t *testing.T) {
-	raw := make(map[string]interface{})
-	child := make(map[string]interface{})
-
-	raw["H"] = "K"
-	raw["f"] = 1.0
-	raw["i"] = 1
-	raw["a"] = []string{"a", "b", "c"}
-	raw["child"] = child
-	child["f"] = "saf"
-
-	cloned := ReplaceEnv(raw)
-
-	assert.Equal(t, raw, cloned)
-}
-
-func Test_ReplaceEnv_WithVals(t *testing.T) {
-	t.Setenv("TEST", "val")
-	t.Setenv("TEST2", "val2")
-	raw := make(map[string]interface{})
-	child := make(map[string]interface{})
-
-	raw["H"] = "K"
-	raw["f"] = 1.0
-	raw["i"] = 1
-	raw["a"] = []string{"a", "b", "c"}
-	raw["child"] = child
-	child["f"] = "saf"
-	raw["p"] = "env.TEST"
-	raw["fake"] = "env.FAKE"
-	child["r"] = "env.TEST2"
-
-	cloned := ReplaceEnv(raw)
-
-	assert.Equal(t, "val", cloned["p"])
-	assert.Empty(t, cloned["fake"])
-	assert.Equal(t, "val2", cloned["child"].(map[string]interface{})["r"])
-	assert.Equal(t, "saf", cloned["child"].(map[string]interface{})["f"])
-}
-
-// Values arrive as map[string]string, []interface{} and lists of maps, and placeholders in each must be substituted
-func Test_ReplaceEnv_MapStringString(t *testing.T) {
-	t.Setenv("TEST_HEADER", "secretvalue")
+func Test_ResolveEntityKeys_ResolvesNameAndID(t *testing.T) {
+	t.Setenv("TEST_ENTITY_NAME", "proxy")
+	t.Setenv("TEST_ENTITY_ID", "main")
 
 	raw := map[string]interface{}{
-		"headers": map[string]string{
-			"Authorization": "env.TEST_HEADER",
-			"Other":         "literal",
-		},
+		"name":  "env.TEST_ENTITY_NAME",
+		"ID":    "{env.TEST_ENTITY_ID}-1",
+		"url":   "env.TEST_ENTITY_NAME",
+		"child": map[string]interface{}{"name": "env.TEST_ENTITY_NAME"},
 	}
 
-	cloned := ReplaceEnv(raw)
+	resolved, err := ResolveEntityKeys(raw, nil)
 
-	headers := cloned["headers"].(map[string]string)
-	assert.Equal(t, "secretvalue", headers["Authorization"])
-	assert.Equal(t, "literal", headers["Other"])
+	require.NoError(t, err)
+	assert.Equal(t, "proxy", resolved["name"])
+	assert.Equal(t, "main-1", resolved["ID"])
+	assert.Equal(t, "env.TEST_ENTITY_NAME", resolved["url"])
+	assert.Equal(t, "env.TEST_ENTITY_NAME", resolved["child"].(map[string]interface{})["name"])
+	assert.Equal(t, "env.TEST_ENTITY_NAME", raw["name"])
 }
 
-func Test_ReplaceEnv_ListOfInterface(t *testing.T) {
-	t.Setenv("TEST_LIST_VAL", "fromenv")
+func Test_ResolveEntityKeys_Nil(t *testing.T) {
+	resolved, err := ResolveEntityKeys(nil, nil)
 
-	raw := map[string]interface{}{
-		"list": []interface{}{"env.TEST_LIST_VAL", "literal"},
-	}
-
-	cloned := ReplaceEnv(raw)
-
-	list := cloned["list"].([]interface{})
-	assert.Equal(t, "fromenv", list[0])
-	assert.Equal(t, "literal", list[1])
+	require.NoError(t, err)
+	assert.Nil(t, resolved)
 }
 
-func Test_ReplaceEnv_ListOfMaps(t *testing.T) {
-	t.Setenv("TEST_TIER_PATH", "/from/env")
+func Test_ResolveEntityKeys_SecretWithoutStore(t *testing.T) {
+	_, err := ResolveEntityKeys(map[string]interface{}{"name": "secret.foo"}, nil)
 
-	raw := map[string]interface{}{
-		"tiers": []map[string]interface{}{
-			{"path": "env.TEST_TIER_PATH"},
-		},
-	}
-
-	cloned := ReplaceEnv(raw)
-
-	tiers := cloned["tiers"].([]map[string]interface{})
-	assert.Equal(t, "/from/env", tiers[0]["path"])
-}
-
-// A YAML key with no value (`ttl:`) is nil, which reflect turns into a zero Value that Convert panics on
-func Test_ReplaceEnv_NilInMap(t *testing.T) {
-	raw := map[string]interface{}{
-		"ttl":   nil,
-		"other": "literal",
-	}
-
-	cloned := ReplaceEnv(raw)
-
-	assert.Nil(t, cloned["ttl"])
-	assert.Equal(t, "literal", cloned["other"])
-}
-
-func Test_ReplaceEnv_NilInNestedMap(t *testing.T) {
-	t.Setenv("TEST_NESTED_NIL", "fromenv")
-
-	raw := map[string]interface{}{
-		"cache": map[string]interface{}{
-			"ttl":  nil,
-			"path": "env.TEST_NESTED_NIL",
-		},
-	}
-
-	cloned := ReplaceEnv(raw)
-
-	cacheCfg := cloned["cache"].(map[string]interface{})
-	assert.Nil(t, cacheCfg["ttl"])
-	assert.Equal(t, "fromenv", cacheCfg["path"])
-}
-
-func Test_ReplaceEnv_NilInSlice(t *testing.T) {
-	raw := map[string]interface{}{
-		"list": []interface{}{nil, "literal"},
-	}
-
-	cloned := ReplaceEnv(raw)
-
-	list := cloned["list"].([]interface{})
-	assert.Nil(t, list[0])
-	assert.Equal(t, "literal", list[1])
-}
-
-// The shape from the original crash report
-func Test_ReplaceEnv_NilInsideListOfMaps(t *testing.T) {
-	t.Setenv("TEST_TIER_NAME", "memory")
-
-	raw := map[string]interface{}{
-		"tiers": []interface{}{
-			map[string]interface{}{"name": "env.TEST_TIER_NAME", "ttl": nil},
-		},
-	}
-
-	cloned := ReplaceEnv(raw)
-
-	tiers := cloned["tiers"].([]interface{})
-	tier := tiers[0].(map[string]interface{})
-	assert.Equal(t, "memory", tier["name"])
-	assert.Nil(t, tier["ttl"])
+	require.Error(t, err)
 }

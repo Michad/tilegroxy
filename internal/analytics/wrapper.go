@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/Michad/tilegroxy/internal/configload"
+	"github.com/Michad/tilegroxy/internal/placeholder"
 	"github.com/Michad/tilegroxy/internal/tracing"
 	"github.com/Michad/tilegroxy/pkg/entities/analytics"
 	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
@@ -94,18 +94,10 @@ const noneName = "none"
 
 // secreter is separate from deps because it resolves the raw config before the module is constructed
 func ConstructAnalytics(ctx context.Context, rawConfig map[string]interface{}, secreter secret.Secreter, deps analytics.AnalyticsDeps) (*AnalyticsWrapper, error) {
-	var err error
-
-	rawConfig = configload.ReplaceEnv(rawConfig)
-
-	if secreter != nil {
-		rawConfig, err = configload.ReplaceConfigValues(rawConfig, "secret", func(k string) (string, error) {
-			v, _, lookupErr := secreter.Lookup(ctx, k)
-			return v, lookupErr
-		})
-		if err != nil {
-			return nil, err
-		}
+	// Analytics modules never nest other entities, so every value can be resolved up front
+	rawConfig, err := placeholder.NewResolver(ctx, secreter).ResolveRaw(rawConfig)
+	if err != nil {
+		return nil, err
 	}
 
 	name, ok := rawConfig["name"].(string)

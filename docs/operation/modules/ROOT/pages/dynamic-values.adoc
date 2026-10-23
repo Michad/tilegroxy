@@ -1,0 +1,266 @@
+= Dynamic Values
+:description: Several mechanisms let configuration values come from somewhere other than the configuration file itself, such as environment variables, a secret store, or the incoming request. This page lists all of them, where each one applies, and when it is resolved.
+
+== Overview
+
+[cols="2m,2,2,1"]
+|===
+| Form | Source | Where | Resolved
+
+| env.NAME +{env.NAME}+
+| Environment variable
+| Any string
+| Startup
+
+| secret.NAME +{secret.NAME}+
+| xref:configuration/secret/index.adoc[Secret] store
+| Any string outside `secret`
+| Startup
+
+| +{z} {x} {y}+
+| Tile coordinates
+| Request templates
+| Request
+
+| +{ctx.NAME}+
+| Incoming request
+| Request templates
+| Request
+
+| +{hdr.NAME}+
+| Request header
+| Request templates
+| Request
+
+| +{query.NAME}+
+| Request query parameter
+| Request templates
+| Request
+
+| +{layer.NAME}+
+| Layer name pattern
+| Request templates
+| Request
+
+| $xmin $zoom
+| Tile bounds and zoom
+| URL Template
+| Request
+
+| $srs $width $height
+| Provider configuration
+| URL Template
+| Startup
+
+| ctx.NAME hdr.NAME
+| Incoming request
+| Analytics `extraFields`
+| Request
+|===
+
+Values resolved at startup are resolved again whenever the configuration is xref:reloading.adoc[reloaded].
+
+Any braced placeholder with a name, such as `+{ctx.NAME}+`, can carry a default written `+{ctx.NAME:-default}+`. The default is used when the value can't be resolved.
+
+== Environment variables and secrets
+
+Any string in the configuration can take its value from an environment variable or a secret. This applies to every section and to string values at any depth, including inside lists and nested maps. The one exception is the xref:configuration/secret/index.adoc[`secret`] section itself, which can use environment variables but not secrets. Non-string values such as numbers and booleans are left alone.
+
+There are two forms:
+
+* `env.NAME` and `secret.NAME` replace the whole value. The prefix must start the value, so `env.HOST/tiles` looks up a variable literally named `HOST/tiles`.
+* `+{env.NAME}+` and `+{secret.NAME}+` can appear anywhere in a string, any number of times, alongside other text. These also accept a default.
+
+Substituted values are inserted as-is and never scanned for further placeholders, so an environment variable containing `secret.NAME` or `+{z}+` is used literally. A request template whose whole value is `env.NAME` or `secret.NAME` works differently, as described below.
+
+An environment variable that isn't set becomes an empty string unless a default is given. A secret that can't be found stops the application from starting unless a default is given, as does using `secret.NAME` without a secret store configured.
+
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+secret:
+  name: awssecretsmanager
+  region: us-east-1
+datastores:
+  - name: redis
+    id: tiles
+    host: "{env.REDIS_HOST:-127.0.0.1}"
+    password: secret.redis-password
+----
+
+JSON::
++
+[,json]
+----
+{
+  "secret": {
+    "name": "awssecretsmanager",
+    "region": "us-east-1"
+  },
+  "datastores": [
+    {
+      "name": "redis",
+      "id": "tiles",
+      "host": "{env.REDIS_HOST:-127.0.0.1}",
+      "password": "secret.redis-password"
+    }
+  ]
+}
+----
+====
+
+== Request placeholders
+
+Some provider parameters are request templates. Placeholders wrapped in `{}` are filled in for every tile request, so one layer can produce different requests for each tile and each caller.
+
+The following parameters are request templates:
+
+* xref:configuration/provider/proxy.adoc[Proxy] `url`
+* xref:configuration/provider/cgi.adoc[CGI] `uri`
+* xref:configuration/provider/postgismvt.adoc[PostGIS MVT] `filter`
+* xref:configuration/provider/url_template.adoc[URL Template] `template`
+
+[cols="1m,4"]
+|===
+| Placeholder | Description
+
+| z, Z
+| The zoom level of the requested tile
+
+| x, X
+| The X coordinate of the requested tile
+
+| y, Y
+| The Y coordinate of the requested tile. Proxy flips it when `inverty` is set
+
+| xmin, xmax, ymin, ymax
+| The west, east, south and north edges of the requested tile. Proxy uses the projection set by `srid`, CGI always uses EPSG:4326 and PostGIS MVT uses the table's `sourcesrid`
+
+| ctx.NAME
+| A value from the incoming request, see <<ctx-values>>
+
+| hdr.NAME
+| The request header called `NAME`. The name is not case sensitive
+
+| query.NAME
+| The query parameter called `NAME` from the request URL
+
+| layer.NAME
+| The value matched by the `+{NAME}+` placeholder in the layer's xref:layer-patterns.adoc[pattern]
+|===
+
+`+{env.NAME}+` and `+{secret.NAME}+` work in request templates as they do everywhere else, and are resolved at startup. When a request template's whole value is `env.NAME` or `secret.NAME`, the variable supplies the template itself, so any placeholders in it are filled in for each request.
+
+The coordinate placeholders are case sensitive apart from the `Z`, `X`, and `Y` variants listed. Names following `ctx.`, `query.`, and `layer.` are case sensitive as well.
+
+A header or query parameter sent more than once is joined into one value with commas.
+
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+layers:
+  - id: imagery
+    provider:
+      name: proxy
+      url: "{env.IMAGERY_BASE}/{ctx.tenant:-public}/{z}/{x}/{y}.png?key={secret.imagery-key}"
+----
+
+JSON::
++
+[,json]
+----
+{
+  "layers": [
+    {
+      "id": "imagery",
+      "provider": {
+        "name": "proxy",
+        "url": "{env.IMAGERY_BASE}/{ctx.tenant:-public}/{z}/{x}/{y}.png?key={secret.imagery-key}"
+      }
+    }
+  ]
+}
+----
+====
+
+[#ctx-values]
+=== Context values
+
+[cols="1m,4"]
+|===
+| Name | Description
+
+| user
+| The user ID set by xref:configuration/authentication/index.adoc[authentication]. Empty if the authentication method doesn't identify users
+
+| tenant
+| The tenant ID set by authentication. Empty if the authentication method doesn't identify tenants
+
+| ip
+| The client's IP address as seen by tilegroxy
+
+| host
+| The `Host` the request was sent to
+
+| method
+| The HTTP method
+
+| path
+| The path of the request URL
+
+| query-string
+| The raw query string of the request URL, without the leading `?`
+
+| uri
+| The full request URI, path and query string
+
+| proto
+| The HTTP protocol version, such as `HTTP/1.1`
+|===
+
+For compatibility with older configurations, `+{ctx.Header-Name}+` also reads a request header when the name is in canonical Header-Case. Prefer `+{hdr.NAME}+`.
+
+Using `{ctx.user}` or `{ctx.tenant}` anywhere in a layer's provider marks the layer as varying per caller. That returns `private` from automatic xref:configuration/cache_control.adoc[Cache Control] and turns off request coalescing by default.
+
+WARNING: The cache key doesn't include the user or tenant. Use a xref:configuration/cache/tenant.adoc[tenant] cache or `skipCache` to stop one caller's tiles being served to another.
+
+=== Escaping
+
+In Proxy and CGI, `env.NAME` and `secret.NAME` values are inserted as-is. These are Operator input, so a variable can supply an entire base URL including the scheme, host, and path.
+
+`ctx.NAME`, `hdr.NAME`, `query.NAME`, and `layer.NAME` values come from the request and are percent-encoded before being inserted. Placeholders before the first `?` are path-escaped and those after it are query-escaped. This stops a request from injecting a `?`, `#`, or `../` to rewrite the upstream URL. It also means a `/` in a value becomes `%2F` rather than a path separator. Defaults are escaped the same way as the value they stand in for.
+
+In PostGIS MVT, every placeholder other than the coordinates is passed as a prepared statement parameter rather than being pasted into the SQL. The coordinate placeholders are numbers and are inserted directly.
+
+=== Missing values
+
+A request placeholder that can't be resolved, such as a header the client didn't send, uses its default if it has one. Otherwise it becomes an empty string, or `NULL` in PostGIS MVT, and logs a warning.
+
+A `+{layer.NAME}+` placeholder whose `NAME` isn't declared in the layer's pattern stops the application from starting. Use xref:commands/test.adoc[`tilegroxy test`] to catch other mistakes, such as a misspelled header name, before they reach production.
+
+The xref:commands/seed.adoc[seed] and xref:commands/test.adoc[test] commands have no incoming request. Their `--user` and `--tenant` flags supply `ctx.user` and `ctx.tenant`. The other request fields are empty, and headers and query parameters are unresolved.
+
+== Other placeholder syntaxes
+
+A few parameters have their own placeholders that don't follow the forms above:
+
+* The xref:configuration/provider/url_template.adoc[URL Template] provider uses `$xmin`, `$xmax`, `$ymin`, `$ymax`, `$zoom`, `$srs`, `$width`, and `$height` in its `template`. The `{}` placeholders above work there too.
+* A layer's xref:layer-patterns.adoc[`pattern`] declares placeholders as `+{NAME}+`, which providers then read as `+{layer.NAME}+`.
+* The xref:configuration/provider/blend.adoc[Blend] provider's `layer.pattern` uses bare `+{NAME}+` placeholders filled from its own `layer.values` list.
+* xref:analytics.adoc#custom-attributes[Analytics] `extraFields` accepts whole values of the form `ctx.NAME` or `hdr.NAME`, read from each request. Header names are not case sensitive. Any other value is used as-is after the usual environment variable and secret substitution.
+
+== Security
+
+`env.NAME` and `secret.NAME` are Operator input and are trusted. Everything reached through `ctx.NAME`, `hdr.NAME`, `query.NAME`, and `layer.NAME` is User input and should be treated as hostile. Escaping and prepared statements prevent the most direct injection, but they don't stop a User from asking your upstream for something you didn't intend to serve.
+
+IMPORTANT: Never let a request-derived placeholder control the hostname of an upstream URL. Restrict pattern values with `paramValidator` on the xref:configuration/layer.adoc[Layer], and prefer `{ctx.user}` or `{ctx.tenant}` from authentication over a header or query parameter the caller can set to anything.
+
+When a request URL is logged, query parameters with credential-like names such as `key`, `token`, or `password` are redacted. A credential placed in the path or under another parameter name is not, so prefer one of those names when an upstream lets you choose. This matters most for `+{secret.NAME}+`, which is otherwise easy to leak into logs.
+
+See xref:security.adoc[Security] for more.

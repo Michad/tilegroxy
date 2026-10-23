@@ -37,6 +37,7 @@ import (
 	"github.com/Michad/tilegroxy/internal/static"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/health"
+	"github.com/Michad/tilegroxy/pkg/entities/secret"
 )
 
 var startupWaitTime = 100 * time.Millisecond
@@ -61,7 +62,7 @@ func ValidateHealthChecks(cfg *config.Config, ent *entities.Entities) error {
 	}
 
 	for _, checkCfg := range cfg.Health.Checks {
-		if _, err := checks.ConstructHealthCheck(checkCfg, ent.LayerGroup, ent.Caches, cfg); err != nil {
+		if _, err := checks.ConstructHealthCheck(checkCfg, ent.LayerGroup, ent.Caches, cfg, ent.Secreter); err != nil {
 			return err
 		}
 	}
@@ -183,7 +184,7 @@ func (h healthHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func SetupHealth(ctx context.Context, cfg *config.Config, layerGroup *layers.LayerGroup, caches *caches.CacheRegistry) (func(context.Context) error, func(), error) {
+func SetupHealth(ctx context.Context, cfg *config.Config, layerGroup *layers.LayerGroup, caches *caches.CacheRegistry, secreter secret.Secreter) (func(context.Context) error, func(), error) {
 	h := cfg.Health
 
 	slog.InfoContext(ctx, fmt.Sprintf("Initializing health subsystem with %v checks on %v:%v", len(h.Checks), h.Host, h.Port))
@@ -195,7 +196,7 @@ func SetupHealth(ctx context.Context, cfg *config.Config, layerGroup *layers.Lay
 	noopDrain := func() {}
 
 	if len(h.Checks) > 0 {
-		checks, callback, err = setupCheckRoutines(ctx, h, layerGroup, caches, cfg, &checkResultCache)
+		checks, callback, err = setupCheckRoutines(ctx, h, layerGroup, caches, cfg, secreter, &checkResultCache)
 		if err != nil {
 			return callback, noopDrain, err
 		}
@@ -253,14 +254,14 @@ func setupHealthEndpoints(ctx context.Context, h config.HealthConfig, checks []h
 	return srv.Shutdown, func() { draining.Store(true) }, err
 }
 
-func setupCheckRoutines(ctx context.Context, h config.HealthConfig, layerGroup *layers.LayerGroup, cacheRegistry *caches.CacheRegistry, cfg *config.Config, checkResultCache *sync.Map) ([]health.HealthCheck, func(context.Context) error, error) {
+func setupCheckRoutines(ctx context.Context, h config.HealthConfig, layerGroup *layers.LayerGroup, cacheRegistry *caches.CacheRegistry, cfg *config.Config, secreter secret.Secreter, checkResultCache *sync.Map) ([]health.HealthCheck, func(context.Context) error, error) {
 	built := make([]health.HealthCheck, 0, len(h.Checks))
 	var callback func(context.Context) error
 	tickers := make([]*time.Ticker, 0, len(h.Checks))
 	exitChannels := make([]chan struct{}, 0, len(h.Checks))
 
 	for _, checkCfg := range h.Checks {
-		hc, err := checks.ConstructHealthCheck(checkCfg, layerGroup, cacheRegistry, cfg)
+		hc, err := checks.ConstructHealthCheck(checkCfg, layerGroup, cacheRegistry, cfg, secreter)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -386,7 +387,7 @@ func (s *healthSupervisor) build(ctx context.Context, cfg *config.Config, ent *e
 	}
 
 	// Kept even on error since a partial failure returns a shutdown for whatever did start
-	shutdownFn, drainFn, err := SetupHealth(ctx, cfg, ent.LayerGroup, ent.Caches)
+	shutdownFn, drainFn, err := SetupHealth(ctx, cfg, ent.LayerGroup, ent.Caches, ent.Secreter)
 	s.shutdownFn = shutdownFn
 	s.drainFn = drainFn
 

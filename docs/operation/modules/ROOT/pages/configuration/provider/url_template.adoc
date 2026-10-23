@@ -11,7 +11,7 @@ NOTE: Only supports EPSG:4326 and EPSG:3857
 | Parameter | Description | Type | Required | Default
 
 | template
-| A URL pointing to the tile server. Should contain placeholders `$xmin` `$xmax` `$ymin` and `$ymax` for tile bounds and can also contains `$srs` `$width` and `$height`
+| A URL pointing to the tile server. Should contain placeholders `$xmin` `$xmax` `$ymin` and `$ymax` for tile bounds and can also contain `$zoom` `$srs` `$width` and `$height`
 | string
 | Yes
 | None

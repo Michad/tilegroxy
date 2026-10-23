@@ -20,6 +20,7 @@ import (
 	"net/http"
 
 	"github.com/Michad/tilegroxy/internal/configload"
+	"github.com/Michad/tilegroxy/internal/placeholder"
 	"github.com/Michad/tilegroxy/internal/tracing"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
@@ -44,13 +45,20 @@ func (w AuthWrapper) Close(ctx context.Context) error {
 }
 
 func ConstructAuth(rawConfig map[string]interface{}, deps authentication.AuthenticationDeps) (authentication.Authentication, error) {
+	resolver := placeholder.NewResolver(context.Background(), deps.Secreter)
+
+	rawConfig, err := configload.ResolveEntityKeys(rawConfig, resolver)
+	if err != nil {
+		return nil, err
+	}
+
 	name, ok := rawConfig["name"].(string)
 
 	if ok {
 		reg, ok := authentication.RegisteredAuthentication(name)
 		if ok {
 			cfg := reg.InitializeConfig()
-			err := configload.DecodeEntityConfig(rawConfig, &cfg)
+			err := configload.DecodeEntityConfig(rawConfig, &cfg, resolver)
 			if err != nil {
 				return nil, err
 			}

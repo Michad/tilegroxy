@@ -61,7 +61,7 @@ func Serve(cfg *config.Config, opts ServeOptions, out io.Writer) error {
 		return err
 	}
 
-	return server.ListenAndServe(cfg, ent, func(swap swapFunc) {
+	return server.ListenAndServe(ent.Config, ent, func(swap swapFunc) {
 		reloader.ready(swap)
 		close(ready)
 	})

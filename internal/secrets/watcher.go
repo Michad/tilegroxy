@@ -221,8 +221,12 @@ func (w *watchingSecreter) Close(ctx context.Context) error {
 	return lifecycle.CloseIfCloser(ctx, w.backend)
 }
 
+// The secret block itself can only use env, since no secret store exists yet
 func ConstructSecreter(rawConfig map[string]interface{}, deps secret.SecreterDeps) (secret.Secreter, error) {
-	rawConfig = configload.ReplaceEnv(rawConfig)
+	rawConfig, err := configload.ResolveEntityKeys(rawConfig, nil)
+	if err != nil {
+		return nil, err
+	}
 
 	name, ok := rawConfig["name"].(string)
 
@@ -235,7 +239,7 @@ func ConstructSecreter(rawConfig map[string]interface{}, deps secret.SecreterDep
 			}
 
 			cfg := reg.InitializeConfig()
-			if err := configload.DecodeEntityConfig(stripped, &cfg); err != nil {
+			if err := configload.DecodeEntityConfig(stripped, &cfg, nil); err != nil {
 				return nil, err
 			}
 

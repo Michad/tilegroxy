@@ -25,6 +25,7 @@ import (
 	"github.com/Michad/tilegroxy/internal/caches"
 	"github.com/Michad/tilegroxy/internal/datastores"
 	"github.com/Michad/tilegroxy/internal/layers"
+	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
@@ -38,6 +39,8 @@ type Entities struct {
 	Caches     *caches.CacheRegistry
 	Datastores *datastores.Registry
 	Secreter   secret.Secreter
+	// The config these were built from, with env and secret placeholders resolved
+	Config *config.Config
 }
 
 func (e *Entities) Close(ctx context.Context) error {

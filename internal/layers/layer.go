@@ -27,6 +27,7 @@ import (
 	"github.com/Michad/tilegroxy/internal/caches"
 	"github.com/Michad/tilegroxy/internal/configload"
 	"github.com/Michad/tilegroxy/internal/datastores"
+	"github.com/Michad/tilegroxy/internal/placeholder"
 	"github.com/Michad/tilegroxy/internal/static"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -231,27 +232,50 @@ func wrapBounds(inner layer.Provider, rawConfig config.LayerConfig, datatype con
 	return ProviderWrapper{Name: wrapperName, Provider: p, dataType: datatype}, nil
 }
 
-// A provider config mentioning either produces per-identity tiles
-var identityPlaceholders = []string{"{ctx.user}", "{ctx.tenant}"}
-
 // Walks the whole tree since nesting providers hide configs and placeholders can sit in map keys as well as values
-func usesIdentityPlaceholder(node any) bool {
+func collectRefs(node any) []placeholder.Ref {
+	var refs []placeholder.Ref
+
 	switch v := node.(type) {
 	case string:
-		return slices.ContainsFunc(identityPlaceholders, func(placeholder string) bool {
-			return strings.Contains(v, placeholder)
-		})
+		refs = placeholder.Refs(v)
 	case map[string]any:
 		for key, val := range v {
-			if usesIdentityPlaceholder(key) || usesIdentityPlaceholder(val) {
-				return true
-			}
+			refs = slices.Concat(refs, collectRefs(key), collectRefs(val))
 		}
 	case []any:
-		return slices.ContainsFunc(v, usesIdentityPlaceholder)
+		for _, val := range v {
+			refs = slices.Concat(refs, collectRefs(val))
+		}
 	}
 
-	return false
+	return refs
+}
+
+// A provider config mentioning either produces per-identity tiles
+func usesIdentityPlaceholder(node any) bool {
+	return slices.ContainsFunc(collectRefs(node), func(ref placeholder.Ref) bool {
+		return ref.Source == placeholder.SourceCtx && (ref.Name == "user" || ref.Name == "tenant")
+	})
+}
+
+// Such a placeholder could never resolve, so it's almost certainly a typo
+func checkUndeclaredLayerRefs(provider map[string]any, segments []layerSegment, errorMessages config.ErrorMessages) error {
+	for _, ref := range collectRefs(provider) {
+		if ref.Source != placeholder.SourceLayer {
+			continue
+		}
+
+		declared := slices.ContainsFunc(segments, func(seg layerSegment) bool {
+			return seg.placeholder && seg.value == ref.Name
+		})
+
+		if !declared {
+			return fmt.Errorf(errorMessages.InvalidParam, "layer.provider", ref.String())
+		}
+	}
+
+	return nil
 }
 
 // Every waiter gets the leader's tile, so only default on when the layer caches and nothing marks tiles as per-requester
@@ -356,19 +380,12 @@ func ConstructLayer(ctx context.Context, rawConfig config.LayerConfig, defaultCl
 
 	}
 
-	rawConfig.Provider = configload.ReplaceEnv(rawConfig.Provider)
-	if secreter != nil {
-		rawConfig.Provider, err = configload.ReplaceConfigValues(rawConfig.Provider, "secret", func(k string) (string, error) {
-			v, _, lookupErr := secreter.Lookup(ctx, k)
-			return v, lookupErr
-		})
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	segments, validator, err := resolvePatternAndValidator(rawConfig, errorMessages)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := checkUndeclaredLayerRefs(rawConfig.Provider, segments, errorMessages); err != nil {
 		return nil, err
 	}
 
@@ -377,6 +394,7 @@ func ConstructLayer(ctx context.Context, rawConfig config.LayerConfig, defaultCl
 		ErrorMessages: errorMessages,
 		LayerGroup:    layerGroup,
 		Datastores:    datastoreRegistry,
+		Secreter:      secreter,
 	}
 
 	provider, err := ConstructProvider(rawConfig.Provider, deps)

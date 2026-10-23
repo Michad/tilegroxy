@@ -15,81 +15,33 @@
 package configload
 
 import (
-	"log/slog"
-	"os"
-	"reflect"
 	"strings"
+
+	"github.com/Michad/tilegroxy/internal/placeholder"
 )
 
-// Replaces any string value starting with `keyTag.keyName` with replacer(keyName), so secrets stay out of source-controlled config
-func ReplaceConfigValues(rawConfig map[string]interface{}, keyTag string, replacer func(string) (string, error)) (map[string]interface{}, error) {
-	result, err := replaceConfigValuesAny(rawConfig, keyTag, replacer)
-	if err != nil {
-		return nil, err
-	}
-
-	return result.(map[string]interface{}), nil
-}
-
-// Recurses by reflect.Kind since decoded fields like ClientConfig.Headers are map[string]string, not map[string]interface{}
-func replaceConfigValuesAny(v any, keyTag string, replacer func(string) (string, error)) (any, error) {
-	if v == nil {
+// name and id are read before the entity is decoded, so they're resolved on their own
+func ResolveEntityKeys(rawConfig map[string]interface{}, resolver *placeholder.Resolver) (map[string]interface{}, error) {
+	if rawConfig == nil {
 		return nil, nil
 	}
 
-	if vStr, ok := v.(string); ok {
-		if strings.Index(vStr, keyTag+".") == 0 {
-			varName := vStr[len(keyTag)+1:]
-			slog.Debug("Replacing " + keyTag + " var " + varName)
-			return replacer(varName)
+	out := make(map[string]interface{}, len(rawConfig))
+
+	for k, v := range rawConfig {
+		s, ok := v.(string)
+		if !ok || (!strings.EqualFold(k, "name") && !strings.EqualFold(k, "id")) {
+			out[k] = v
+			continue
 		}
-		return vStr, nil
+
+		resolved, err := resolver.ResolveString(s)
+		if err != nil {
+			return nil, err
+		}
+
+		out[k] = resolved
 	}
 
-	rv := reflect.ValueOf(v)
-
-	switch rv.Kind() { //nolint:exhaustive // the default arm handles all remaining kinds
-	case reflect.Map:
-		result := reflect.MakeMap(rv.Type())
-		for _, key := range rv.MapKeys() {
-			original := rv.MapIndex(key)
-			replaced, err := replaceConfigValuesAny(original.Interface(), keyTag, replacer)
-			if err != nil {
-				return nil, err
-			}
-			// A YAML key with no value (`ttl:`) is nil, and Convert panics on the zero Value it produces
-			if replaced == nil {
-				result.SetMapIndex(key, original)
-				continue
-			}
-			result.SetMapIndex(key, reflect.ValueOf(replaced).Convert(rv.Type().Elem()))
-		}
-		return result.Interface(), nil
-	case reflect.Slice, reflect.Array:
-		// Arrays come back as slices. Only hand-constructed input contains arrays
-		result := reflect.MakeSlice(reflect.SliceOf(rv.Type().Elem()), rv.Len(), rv.Len())
-		for i := range rv.Len() {
-			original := rv.Index(i)
-			replaced, err := replaceConfigValuesAny(original.Interface(), keyTag, replacer)
-			if err != nil {
-				return nil, err
-			}
-			// See the nil note in the Map branch above
-			if replaced == nil {
-				result.Index(i).Set(original)
-				continue
-			}
-			result.Index(i).Set(reflect.ValueOf(replaced).Convert(rv.Type().Elem()))
-		}
-		return result.Interface(), nil
-	default:
-		return v, nil
-	}
-}
-
-// Replaces any string value starting with `env.` with that environment variable, so secrets stay out of source-controlled config
-func ReplaceEnv(rawConfig map[string]interface{}) map[string]interface{} {
-	result, _ := ReplaceConfigValues(rawConfig, "env", func(s string) (string, error) { return os.Getenv(s), nil })
-
-	return result
+	return out, nil
 }

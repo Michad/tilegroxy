@@ -13,7 +13,7 @@ YAML::
 ----
 provider:
   name: proxy
-  url: https://tile.openstreetmap.org/{z}/{x}/{y}.png?key={env.key}&agent={ctx.User-Agent}
+  url: https://tile.openstreetmap.org/{z}/{x}/{y}.png?key={env.key}&agent={hdr.User-Agent}
 ----
 
 JSON::
@@ -23,7 +23,7 @@ JSON::
 {
   "provider": {
     "name": "proxy",
-    "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png?key={env.key}&agent={ctx.User-Agent}"
+    "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png?key={env.key}&agent={hdr.User-Agent}"
   }
 }
 ----
@@ -84,18 +84,31 @@ JSON::
 | env.XXX
 | An environment variable whose name is XXX
 
+| secret.XXX
+| A xref:configuration/secret/index.adoc[secret] whose name is XXX
+
 | ctx.XXX
-| A context variable (typically an HTTP header) whose name is XXX
+| A value from the incoming request whose name is XXX, such as `user`, `tenant` or `ip`
+
+| hdr.XXX
+| The incoming request header whose name is XXX
+
+| query.XXX
+| The query parameter from the incoming request whose name is XXX
 
 | layer.XXX
 | If the layer includes a pattern with a placeholder of XXX, this is the replacement value from the used layer name
 |===
 
+Any placeholder with a name after a `.` can include a default to use when the value can't be resolved, such as `+{ctx.tenant:-public}+`.
+
 [NOTE]
 ====
-`env.XXX` values are inserted as-is without escaping.  Environment variables are Operator input so this is intentional; it allows supplying an entire base URL including scheme, host, and path via `{env.XXX}`.
+`env.XXX` and `secret.XXX` values are inserted as-is without escaping.  These are Operator input so this is intentional; it allows supplying an entire base URL including scheme, host, and path via `{env.XXX}`.
 
-`ctx.XXX` and `layer.XXX` values come from the incoming request and are percent-encoded before being inserted.  Placeholders before the first `?` in the `url` are path-escaped, those after it are query-escaped.  This prevents a request injecting a `?`, `#`, or `../` to rewrite the upstream path or add query parameters.  Note this means a value containing a `/` is encoded as `%2F` rather than treated as a path separator.
+`ctx.XXX`, `hdr.XXX`, `query.XXX` and `layer.XXX` values come from the incoming request and are percent-encoded before being inserted.  Placeholders before the first `?` in the `url` are path-escaped, those after it are query-escaped.  This prevents a request injecting a `?`, `#`, or `../` to rewrite the upstream path or add query parameters.  Note this means a value containing a `/` is encoded as `%2F` rather than treated as a path separator.
+
+See xref:dynamic-values.adoc[Dynamic Values] for the full list of context values and how missing values are handled.
 
 Also see the `paramValidator` option in the xref:configuration/layer.adoc[Layer] configuration to restrict what values a pattern accepts in the first place.
 ====

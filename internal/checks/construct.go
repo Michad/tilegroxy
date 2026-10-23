@@ -15,17 +15,25 @@
 package checks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Michad/tilegroxy/internal/configload"
+	"github.com/Michad/tilegroxy/internal/placeholder"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
 	"github.com/Michad/tilegroxy/pkg/entities/health"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
+	"github.com/Michad/tilegroxy/pkg/entities/secret"
 )
 
-func ConstructHealthCheck(rawConfig map[string]interface{}, lg layer.LayerGroup, caches cache.CacheRegistry, allCfg *config.Config) (health.HealthCheck, error) {
-	rawConfig = configload.ReplaceEnv(rawConfig)
+func ConstructHealthCheck(rawConfig map[string]interface{}, lg layer.LayerGroup, caches cache.CacheRegistry, allCfg *config.Config, secreter secret.Secreter) (health.HealthCheck, error) {
+	resolver := placeholder.NewResolver(context.Background(), secreter)
+
+	rawConfig, err := configload.ResolveEntityKeys(rawConfig, resolver)
+	if err != nil {
+		return nil, err
+	}
 
 	name, ok := rawConfig["name"].(string)
 
@@ -33,7 +41,7 @@ func ConstructHealthCheck(rawConfig map[string]interface{}, lg layer.LayerGroup,
 		reg, ok := health.RegisteredHealthCheck(name)
 		if ok {
 			cfg := reg.InitializeConfig()
-			err := configload.DecodeEntityConfig(rawConfig, &cfg)
+			err := configload.DecodeEntityConfig(rawConfig, &cfg, resolver)
 			if err != nil {
 				return nil, err
 			}
