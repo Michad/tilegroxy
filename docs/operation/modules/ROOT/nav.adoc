@@ -2,6 +2,7 @@
 * xref:get-it.adoc[]
 * xref:quickstart.adoc[]
 * xref:concepts.adoc[]
+* xref:alternatives.adoc[]
 
 .Guides
 * xref:howto/index.adoc[]

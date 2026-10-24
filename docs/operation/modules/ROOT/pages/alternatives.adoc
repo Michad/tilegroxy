@@ -1,0 +1,105 @@
+= Alternatives
+:description: There's no shortage of tile servers and tile caches out there. Tilegroxy overlaps with a few of them but it isn't really trying to replace them. Here's how it stacks up.
+:page-eyebrow: Get started
+
+NOTE: This is far from definitive. Double check the documentation for the other projects before taking anything here as gospel.
+
+== Quick comparison
+
+[cols="1,1,3,3"]
+|===
+| Project | Language | What it does | With tilegroxy
+
+| Tilegroxy (this project)
+| Go
+| Tile gateway - cache, proxy, observability, authentication, and light serving
+| 
+
+| https://github.com/tilestache/tilestache[TileStache]
+| Python
+| Tile server and cache
+| Migrate off of it, see <<tilestache>>
+
+| https://mapproxy.org[MapProxy]
+| Python
+| Caching proxy for WMS, WMTS, and TMS
+| Proxy to it for reprojection or OGC output
+
+| https://mapserver.org/mapcache/[MapCache], https://www.geowebcache.org[GeoWebCache]
+| C, Java
+| Tile cache for MapServer or GeoServer
+| Proxy to the cache or the server behind it
+
+| https://martin.maplibre.org[Martin], https://github.com/CrunchyData/pg_tileserv[pg_tileserv], https://tegola.io[Tegola]
+| Rust, Go, Go
+| Vector tiles from PostGIS and other databases
+| Proxy to it for custom queries
+
+| https://developmentseed.org/titiler/[TiTiler]
+| Python
+| Dynamic raster tiles from COGs and STAC
+| Proxy to it and cache the results
+
+| https://github.com/maptiler/tileserver-gl[TileServer GL]
+| JavaScript
+| Vector tiles and rendering map styles to raster
+| Proxy to it for rasterized styles
+
+| WAF or CDN (such as Cloudflare)
+| N/A
+| Edge caching and DDoS protection
+| Put it in front of tilegroxy
+|===
+
+== Tilegroxy
+
+Tilegroxy isn't just a tile server and it isn't just a cache.  It's a gateway.  It lives between your map and your mapping providers so your frontend only ever talks to one consistent API.  Every layer gets the same xref:configuration/authentication/index.adoc[authentication], xref:configuration/ratelimit/index.adoc[rate limits], xref:configuration/cache/index.adoc[caching], xref:configuration/cors.adoc[CORS rules], xref:configuration/analytics/index.adoc[analytics], and xref:configuration/telemetry.adoc[telemetry] no matter where it comes from.  Your upstream keys stay in the configuration instead of in the browser.  Switching vendors, or moving from a vendor to something you host yourself, is a config change your users never notice.
+
+That also means tilegroxy doesn't do a lot of heavy rendering itself.  It can read xref:configuration/provider/pmtiles.adoc[PMTiles] archives and simple xref:configuration/provider/postgismvt.adoc[PostGIS tables], and it can xref:configuration/provider/blend.adoc[blend], xref:configuration/provider/crop.adoc[crop], and xref:configuration/provider/effect.adoc[tweak] tiles from anywhere else.  For anything beyond that, utilize a dedicated server and point tilegroxy at it with the xref:configuration/provider/proxy.adoc[proxy] or xref:configuration/provider/cgi.adoc[CGI] provider.  Most of the projects below are as likely to sit behind tilegroxy as to be used instead of it.
+
+[#tilestache]
+== TileStache
+
+Tilegroxy was inspired by TileStache and a lot of the configuration will look familiar if you've used it.  Unfortunately TileStache hasn't been maintained in years.  The last release was in 2017 and the last commit landed in 2019.  It's not recommended for anything new.
+
+Aside from actually being maintained, tilegroxy runs as its own server instead of inside a WSGI webserver, custom providers are written in Go instead of Python, and authentication, rate limits, analytics, and telemetry come built in. 
+
+Still running TileStache?  See xref:howto/migrate-tilestache.adoc[Migrate from Tilestache].
+
+== MapProxy
+
+MapProxy is the go-to for OGC services.  It can reproject between coordinate systems, serve sources back out as WMS, WMTS, TMS, or KML, and store caches in formats like MBTiles and GeoPackage.
+
+Tilegroxy can pull from WMS, WMTS, and TMS sources but only serves ZXY tiles in Web Mercator.  If your clients need a different projection or an OGC endpoint, use MapProxy.  The lack of support for advanced protocols (especially WMS, WCS, and WFS) in tilegroxy is intentional, they can be a dangerous exploit vector and are harder to cache or measure.
+
+== MapCache and GeoWebCache
+
+MapCache and GeoWebCache are tile caches that come bundled with a bigger map server.  MapCache runs as an Apache or nginx module next to MapServer.  GeoWebCache is built into GeoServer and shares its security and admin.
+
+If all your layers come out of one MapServer or GeoServer, its bundled cache is probably the easy answer.  Tilegroxy makes more sense when that server is just one of several sources, or when you want access control that doesn't depend on it.  MapServer can even run directly under tilegroxy with the xref:configuration/provider/cgi.adoc[CGI provider], no separate webserver needed.
+
+== Martin, pg_tileserv, and Tegola
+
+These generate vector tiles from a database, mostly PostGIS.  They handle things like SQL functions and multiple tables per tile.  Martin also serves sprites, fonts, and styles, and Tegola has its own caching and seeding.
+
+The xref:configuration/provider/postgismvt.adoc[Postgis Vector] provider covers the simple case of one table or view per layer so you don't need a whole separate server for it.  Anything fancier belongs in one of these, with tilegroxy proxying to it.  You still get authentication, xref:configuration/authentication/jwt.adoc[geographic restrictions], and caching, and you can merge their output with other vector sources using xref:configuration/provider/compositemvt.adoc[Composite MVT].
+
+== TiTiler
+
+TiTiler renders tiles on the fly from Cloud Optimized GeoTIFFs and STAC items, complete with band math, color maps, and mosaics.  Tilegroxy doesn't read GeoTIFFs.  Proxy to TiTiler and let tilegroxy cache the results so the same tile doesn't get rendered twice.
+
+== TileServer GL
+
+TileServer GL serves vector tiles from local archives and can render them into raster tiles with a MapLibre style.  Tilegroxy serves vector tiles from PMTiles but doesn't render styles.  If some of your clients can't draw vector tiles, proxy to TileServer GL for the raster versions.
+
+== WAF or CDN (such as Cloudflare)
+
+A WAF or CDN adds protection and caches tiles at edge locations close to your users, which is hard to beat for latency.  However they don't know anything about tiles.  They can't xref:commands/seed.adoc[seed] or purge by area, xref:content-type.adoc[validate content] from upstream, fall back to another source past a certain zoom, or keep tiles separate per tenant.
+
+You don't have to pick one, and honestly you probably shouldn't. Tilegroxy's own xref:ratelimit.adoc[rate limits] are for keeping usage fair, not for fending off an attack; having DDoS protection in front is highly advisable. You can use tilegroxy's xref:configuration/cache_control.adoc[Cache Control] configuration to tell the CDN how long to hold each layer, and make sure it isn't caching layers that vary by user.
+
+== Is tilegroxy right for you?
+
+Tilegroxy shines when you consume maps from multiple sources, especially ones with different protocols or credentials, and want them all behind one uniform API.  It's also a good fit if you need to keep your keys out of the browser, share a limited upstream quota fairly, restrict layers or regions by user, or see who's using what.
+
+It isn't the right tool on its own if your clients need something other than Web Mercator, need a WMS or WMTS endpoint, or you need to render tiles from raw data like GeoTIFFs, shapefiles, or map styles.  In those cases reach for one of the servers above, either directly or behind tilegroxy.
