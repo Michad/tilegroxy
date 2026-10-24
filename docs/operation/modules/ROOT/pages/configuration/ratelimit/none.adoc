@@ -1,5 +1,5 @@
 = None
-:description: Disables rate limiting.  Since rate limiting is off by default this is mainly useful for temporarily turning it off without removing your policies.
+:description: Disables rate limiting.  Since rate limiting is off by default this is mainly useful for temporarily turning it off.
 :page-eyebrow: Rate Limit
 :page-config-name: none
 

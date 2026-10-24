@@ -87,11 +87,26 @@ type CacheControlConfig struct {
 	Extra                []string // Additional directives returned as-is. Always appended
 }
 
+// The headers trusted proxies report the original request in
+type ForwardedHeadersConfig struct {
+	For    string // The client IP. Defaults to X-Forwarded-For
+	Host   string // The host the client requested. Defaults to X-Forwarded-Host
+	Proto  string // Either http or https. Defaults to X-Forwarded-Proto
+	Port   string // Ignored when the host includes a port. Defaults to X-Forwarded-Port
+	Prefix string // The path tilegroxy is served under. Defaults to X-Forwarded-Prefix
+}
+
+type ForwardedConfig struct {
+	Trusted []string               // IPs or CIDR ranges of proxies whose forwarding headers are believed. Defaults to none
+	Headers ForwardedHeadersConfig // Which headers to read from a trusted proxy
+}
+
 type ServerConfig struct {
 	Encrypt      *EncryptionConfig  // Whether and how to use TLS. Defaults to none AKA no encryption.
 	TileJSON     TileJSONConfig     // Whether to enable endpoints that describe layers using the TileJSON format
 	CORS         CORSConfig         // Whether and how to return cross-origin resource sharing headers
 	CacheControl CacheControlConfig // Whether and how to return a Cache-Control header on tile responses
+	Forwarded    ForwardedConfig    // Which proxies in front of tilegroxy to trust for the client IP, host, protocol, and port
 	BindHost     string             // IP address to bind HTTP server to
 	Port         int                // Port to bind HTTP server to
 	RootPath     string             // Root HTTP Path to apply to all endpoints. Defaults to /
@@ -148,6 +163,7 @@ type ErrorMessages struct {
 	ParamRegex              string
 	MustBeUnique            string
 	TileNotFound            string
+	RateLimited             string
 }
 
 // Mirrored from internal/images since it imports this package
@@ -155,6 +171,7 @@ const (
 	defaultImageError        = "embedded:error.png"
 	defaultImageTransparent  = "embedded:transparent.png"
 	defaultImageUnauthorized = "embedded:unauthorized.png"
+	defaultImageRateLimited  = "embedded:ratelimited.png"
 	defaultImageMvtEmpty     = "embedded:empty.mvt"
 	defaultImageMltEmpty     = "embedded:empty.mlt"
 )
@@ -163,14 +180,17 @@ const (
 type ErrorImages struct {
 	OutOfBounds    string // A request for a zoom level or tile coordinate that's invalid for the requested layer
 	Authentication string // Auth failed. Always PNG, see above.
+	RateLimited    string // A rate limit rejected the request
 	Provider       string // Provider specific errors
 	Other          string // Catch-all for unexpected system errors
 
 	OutOfBoundsMvt string // Vector-tile equivalent of OutOfBounds, used when the layer's data type is mvt
+	RateLimitedMvt string // Vector-tile equivalent of RateLimited, used when the layer's data type is mvt
 	ProviderMvt    string // Vector-tile equivalent of Provider, used when the layer's data type is mvt
 	OtherMvt       string // Vector-tile equivalent of Other, used when the layer's data type is mvt
 
 	OutOfBoundsMlt string // MapLibre Tile equivalent of OutOfBounds, used when the layer's data type is mlt
+	RateLimitedMlt string // MapLibre Tile equivalent of RateLimited, used when the layer's data type is mlt
 	ProviderMlt    string // MapLibre Tile equivalent of Provider, used when the layer's data type is mlt
 	OtherMlt       string // MapLibre Tile equivalent of Other, used when the layer's data type is mlt
 }
@@ -218,7 +238,7 @@ const (
 	AuditFormatJSON  = "json"
 )
 
-// Security relevant events: authentication and authorization failures and configuration reloads
+// Security relevant events: authentication and authorization failures, rate limit rejections, and configuration reloads
 type AuditConfig struct {
 	Enabled bool     // If true, emit audit events. Defaults to false
 	Console bool     // If true, write audit events to standard out. Defaults to true
@@ -240,6 +260,8 @@ type LayerConfig struct {
 	Provider       map[string]any    // Raw config parameters for the provider to use. Name determines the specific schema
 	SkipCache      bool              // If true, don't use the cache
 	SkipAnalytics  bool              // If true, successful requests for this layer don't produce analytics events
+	RateLimit      string            // Optional. The ID of the rate limit policy for this layer instead of the default
+	SkipRateLimit  bool              // If true, requests for this layer are never checked against or counted by a rate limit
 	Client         *ClientConfig     // If specified, the default Client is overridden.
 	LayerMetadata  `mapstructure:",squash" yaml:",inline"`
 	Examples       []string            // Optional. Concrete layer names used to generate TileJSON documents for a `pattern` layer. Has no effect on a layer identified by a plain id
@@ -250,19 +272,21 @@ type LayerConfig struct {
 }
 
 type Config struct {
-	Server         ServerConfig
-	Health         HealthConfig
-	Client         ClientConfig
-	Logging        LogConfig
-	Error          ErrorConfig
-	Telemetry      TelemetryConfig
-	Secret         map[string]interface{}
-	Datastores     []map[string]interface{}
-	Authentication map[string]interface{}
-	Cache          interface{} // Either a single cache or an array of caches.
-	DefaultCache   string      // The id of the cache layers use when they don't specify one. Defaults to the first entry
-	Analytics      map[string]interface{}
-	Layers         []LayerConfig
+	Server           ServerConfig
+	Health           HealthConfig
+	Client           ClientConfig
+	Logging          LogConfig
+	Error            ErrorConfig
+	Telemetry        TelemetryConfig
+	Secret           map[string]interface{}
+	Datastores       []map[string]interface{}
+	Authentication   map[string]interface{}
+	Cache            interface{} // Either a single cache or an array of caches.
+	DefaultCache     string      // The id of the cache layers use when they don't specify one. Defaults to the first entry
+	Analytics        map[string]interface{}
+	RateLimit        map[string]interface{}
+	DefaultRateLimit string // The ID of the rate limit policy layers use when they don't specify one. Defaults to the first policy
+	Layers           []LayerConfig
 }
 
 func DefaultConfig() Config {
@@ -292,6 +316,15 @@ func DefaultConfig() Config {
 			CacheControl: CacheControlConfig{
 				Enabled: new(false),
 				Auto:    new(true),
+			},
+			Forwarded: ForwardedConfig{
+				Headers: ForwardedHeadersConfig{
+					For:    "X-Forwarded-For",
+					Host:   "X-Forwarded-Host",
+					Proto:  "X-Forwarded-Proto",
+					Port:   "X-Forwarded-Port",
+					Prefix: "X-Forwarded-Prefix",
+				},
 			},
 		},
 		Health: HealthConfig{
@@ -334,42 +367,7 @@ func DefaultConfig() Config {
 				Headers: []string{},
 			},
 		},
-		Error: ErrorConfig{
-			Mode: ModeErrorImage,
-			Messages: ErrorMessages{
-				NotAuthorized:           "Not authorized",
-				InvalidParam:            "Invalid value supplied for parameter %v: %v",
-				RangeError:              "%v must be between %v and %v",
-				ServerError:             "Unexpected server error: %v",
-				ProviderError:           "Provider failed to return image",
-				ParamsBothOrNeither:     "Parameters %v and %v must be either both or neither supplied",
-				EnumError:               "Invalid value supplied for %v: '%v'. It must be one of: %v",
-				ParamsMutuallyExclusive: "Parameters %v and %v cannot both be set",
-				ParamRequiresParam:      "Parameter %v can only be set when %v is enabled",
-				ScriptError:             "The script specified for %v is invalid: %v",
-				OneOfRequired:           "You must specify one of: %v",
-				Timeout:                 "Timeout error",
-				ParamRequired:           "Parameter %v is required",
-				ParamRegex:              "Invalid value supplied for parameter %v: %v. Value must conform to regex: %v ",
-				MustBeUnique:            "Invalid value supplied for parameter %v: %v. Value must be unique. ",
-				TileNotFound:            "Tile %v is not available",
-			},
-			Images: ErrorImages{
-				OutOfBounds:    defaultImageTransparent,
-				Authentication: defaultImageUnauthorized,
-				Provider:       defaultImageError,
-				Other:          defaultImageError,
-
-				OutOfBoundsMvt: defaultImageMvtEmpty,
-				ProviderMvt:    defaultImageMvtEmpty,
-				OtherMvt:       defaultImageMvtEmpty,
-
-				OutOfBoundsMlt: defaultImageMltEmpty,
-				ProviderMlt:    defaultImageMltEmpty,
-				OtherMlt:       defaultImageMltEmpty,
-			},
-			AlwaysOK: false,
-		},
+		Error: defaultErrorConfig(),
 		Secret: map[string]interface{}{
 			"name": "none",
 		},
@@ -383,6 +381,52 @@ func DefaultConfig() Config {
 		Analytics: map[string]interface{}{
 			"name": "none",
 		},
+		RateLimit: map[string]interface{}{
+			"name": "none",
+		},
 		Layers: []LayerConfig{},
+	}
+}
+
+func defaultErrorConfig() ErrorConfig {
+	return ErrorConfig{
+		Mode: ModeErrorImage,
+		Messages: ErrorMessages{
+			NotAuthorized:           "Not authorized",
+			InvalidParam:            "Invalid value supplied for parameter %v: %v",
+			RangeError:              "%v must be between %v and %v",
+			ServerError:             "Unexpected server error: %v",
+			ProviderError:           "Provider failed to return image",
+			ParamsBothOrNeither:     "Parameters %v and %v must be either both or neither supplied",
+			EnumError:               "Invalid value supplied for %v: '%v'. It must be one of: %v",
+			ParamsMutuallyExclusive: "Parameters %v and %v cannot both be set",
+			ParamRequiresParam:      "Parameter %v can only be set when %v is enabled",
+			ScriptError:             "The script specified for %v is invalid: %v",
+			OneOfRequired:           "You must specify one of: %v",
+			Timeout:                 "Timeout error",
+			ParamRequired:           "Parameter %v is required",
+			ParamRegex:              "Invalid value supplied for parameter %v: %v. Value must conform to regex: %v ",
+			MustBeUnique:            "Invalid value supplied for parameter %v: %v. Value must be unique. ",
+			TileNotFound:            "Tile %v is not available",
+			RateLimited:             "Rate limit exceeded",
+		},
+		Images: ErrorImages{
+			OutOfBounds:    defaultImageTransparent,
+			Authentication: defaultImageUnauthorized,
+			RateLimited:    defaultImageRateLimited,
+			Provider:       defaultImageError,
+			Other:          defaultImageError,
+
+			OutOfBoundsMvt: defaultImageMvtEmpty,
+			RateLimitedMvt: defaultImageMvtEmpty,
+			ProviderMvt:    defaultImageMvtEmpty,
+			OtherMvt:       defaultImageMvtEmpty,
+
+			OutOfBoundsMlt: defaultImageMltEmpty,
+			RateLimitedMlt: defaultImageMltEmpty,
+			ProviderMlt:    defaultImageMltEmpty,
+			OtherMlt:       defaultImageMltEmpty,
+		},
+		AlwaysOK: false,
 	}
 }

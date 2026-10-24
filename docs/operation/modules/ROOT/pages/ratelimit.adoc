@@ -213,7 +213,7 @@ ratelimit:
 ----
 +
 // tag::callouts[]
-. Requests from the internal network are never limited by this rule. @/limit"?: "?-1/
+. Requests from the internal network are never limited or counted by this rule. @/limit"?: "?-1/
 . These tenants get 50 times the default monthly quota. @/limit"?: "?5000000/
 . A limit of 0 rejects every request, cutting this tenant off without touching authentication. @/limit"?: "?0/
 . Requests without a tenant all share one counter, with a small quota of their own.  `anonymous` only applies to rules segmented by user or tenant. @/anonymous/
@@ -326,7 +326,7 @@ When xref:telemetry.adoc[telemetry] is enabled, rejections are counted per polic
 Traces::
 The check appears as a `ratelimit` span under the request.
 Command::
-xref:commands/ratelimit.adoc[`tilegroxy ratelimit`] shows how much of each rule a user, tenant, or IP address has used, and can reset it.  Resets are audited too.
+xref:commands/ratelimit.adoc[`tilegroxy ratelimit`] shows how much of each rule a user, tenant, or IP address has used, and can reset it.
 
 Counters expire along with their period and can't be listed, so use xref:analytics.adoc[analytics] to find your heaviest users and for billing.
 

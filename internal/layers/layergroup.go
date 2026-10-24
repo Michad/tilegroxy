@@ -277,6 +277,25 @@ func (lg *LayerGroup) ListLayerIDs() []string {
 	return r
 }
 
+// The checks RenderTile makes before consulting the cache, for callers that act between the two
+func (lg *LayerGroup) CheckAccess(ctx context.Context, tileRequest pkg.TileRequest) (*Layer, error) {
+	l := lg.FindLayer(ctx, tileRequest.LayerName)
+
+	if l == nil {
+		return nil, pkg.UnauthorizedError{Message: "Layer " + tileRequest.LayerName + " does not exist"}
+	}
+
+	if err := l.CheckZoomBounds(tileRequest); err != nil {
+		return nil, err
+	}
+
+	if err := lg.checkPermission(ctx, l, tileRequest); err != nil {
+		return nil, err
+	}
+
+	return l, nil
+}
+
 func (lg *LayerGroup) RenderTile(ctx context.Context, tileRequest pkg.TileRequest) (*pkg.Image, error) {
 	var img *pkg.Image
 	var err error

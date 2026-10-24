@@ -234,7 +234,7 @@ There are 5 built-in raster images available:
 
 | ratelimited.png
 | A semi-transparent solid red image with the words "Rate Limited" in white
-|
+| image:ratelimited.png[]
 |===
 
 There are also 4 built-in vector tiles available, the `.mvt` ones for use with the `Mvt`-suffixed fields above and the `.mlt` ones for the `Mlt`-suffixed fields:

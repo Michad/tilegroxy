@@ -58,14 +58,16 @@ type DiffOptions struct {
 }
 
 var reloadableSections = map[string]bool{
-	"secret":         true,
-	"client":         true,
-	"authentication": true,
-	"cache":          true,
-	"datastores":     true,
-	"analytics":      true,
-	"layers":         true,
-	"health":         true,
+	"secret":           true,
+	"client":           true,
+	"authentication":   true,
+	"cache":            true,
+	"datastores":       true,
+	"analytics":        true,
+	"ratelimit":        true,
+	"defaultratelimit": true,
+	"layers":           true,
+	"health":           true,
 }
 
 func DiffConfig(oldCfg, newCfg *config.Config, opts DiffOptions, out io.Writer) (bool, error) {

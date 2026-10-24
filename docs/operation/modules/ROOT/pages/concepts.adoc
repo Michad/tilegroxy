@@ -46,7 +46,7 @@ xref:configuration/analytics/index.adoc[Analytics] records a usage event for eac
 
 == Rate Limits
 
-xref:configuration/ratelimit/index.adoc[Rate limits] cap how many tiles a user, tenant, or IP address can request in a period, from seconds up to a calendar month. Limits are grouped into policies defined once with an ID, and like caches, every layer uses the first policy unless you set `defaultratelimit` or the layer picks another with its own `ratelimit` parameter. Layers can opt out with `skipratelimit`. Rejected requests get a standard `429` response. It's disabled by default. See xref:ratelimit.adoc[Rate Limiting] for how limits are counted.
+xref:configuration/ratelimit/index.adoc[Rate limits] cap how many tiles a user, tenant, or IP address can request in a period, from seconds up to a calendar year. See xref:ratelimit.adoc[Rate Limiting] for how limits are counted.
 
 == Secrets
 

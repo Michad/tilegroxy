@@ -29,6 +29,7 @@ import (
 
 	"github.com/Michad/tilegroxy/internal/entities"
 	"github.com/Michad/tilegroxy/internal/layers"
+	"github.com/Michad/tilegroxy/internal/ratelimit"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
@@ -107,6 +108,14 @@ func (g *generation) auth() authentication.Authentication {
 func (g *generation) analytics() *internalanalytics.AnalyticsWrapper {
 	if all := g.entities(); all != nil {
 		return all.Analytics
+	}
+
+	return nil
+}
+
+func (g *generation) rateLimit() *ratelimit.Limiter {
+	if all := g.entities(); all != nil {
+		return all.RateLimit
 	}
 
 	return nil

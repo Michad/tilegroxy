@@ -98,7 +98,7 @@
 | None
 
 | Forwarded
-| Configuration for trusting the client IP, host, protocol, and port reported by a CDN, load balancer, or reverse proxy in front of tilegroxy
+| Configuration for trusting the client IP, host, protocol, port, and path prefix reported by a CDN, load balancer, or reverse proxy in front of tilegroxy
 | xref:configuration/forwarded.adoc[Forwarded]
 | No
 | None

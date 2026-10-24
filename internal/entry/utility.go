@@ -27,11 +27,13 @@ import (
 	"github.com/Michad/tilegroxy/internal/datastores"
 	"github.com/Michad/tilegroxy/internal/entities"
 	"github.com/Michad/tilegroxy/internal/layers"
+	"github.com/Michad/tilegroxy/internal/ratelimit"
 	"github.com/Michad/tilegroxy/internal/secrets"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/analytics"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
+	pkgratelimit "github.com/Michad/tilegroxy/pkg/entities/ratelimit"
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
 )
 
@@ -81,6 +83,12 @@ func configToEntities(ctx context.Context, cfg config.Config, reloadFunc func(re
 		return nil, closeAndReturn(built, fmt.Errorf("error constructing analytics: %w", err))
 	}
 	built.Analytics = analyticsObj
+
+	limiter, err := ratelimit.ConstructLimiter(ctx, cfg, secreter, pkgratelimit.RateLimiterDeps{Datastores: datastores, ErrorMessages: cfg.Error.Messages})
+	if err != nil {
+		return nil, closeAndReturn(built, fmt.Errorf("error constructing ratelimit: %w", err))
+	}
+	built.RateLimit = limiter
 
 	layerGroup, err := layers.ConstructLayerGroup(ctx, cfg, caches, secreter, datastores)
 	if err != nil {

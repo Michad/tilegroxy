@@ -1,12 +1,12 @@
 = Forwarded
-:description: Configures which proxies in front of tilegroxy are trusted to report the original client IP, host, protocol, and port.
+:description: Configures which proxies in front of tilegroxy are trusted to report the original client IP, host, protocol, port, and path prefix.
 :page-config-key: server.forwarded
 
 == Description
 
 A CDN, load balancer, or reverse proxy replaces the details of the original request with its own and passes the originals along in headers. Tilegroxy only reads those headers when the request arrives from an address listed in `Trusted`. Requests from anywhere else use their own connection details and any forwarding headers are ignored.
 
-The client IP is used for xref:configuration/ratelimit/index.adoc[rate limiting], xref:analytics.adoc[analytics], and every log. The host, protocol, and port are used to build the URLs in xref:tilejson.adoc[TileJSON] documents.
+The client IP is used for xref:configuration/ratelimit/index.adoc[rate limiting], xref:analytics.adoc[analytics], and every log. The host, protocol, port, and path prefix are used to build the URLs in xref:tilejson.adoc[TileJSON] documents.
 
 For the `X-Forwarded-For` header, the right-most address that isn't itself a trusted proxy is used. Any other `For` header, such as `CF-Connecting-IP` or `True-Client-IP`, must hold a single address.
 
@@ -91,10 +91,16 @@ JSON::
 | X-Forwarded-Proto
 
 | Port
-| The header holding the port the client connected to. Ignored when the host already includes a port
+| The header holding the port the client connected to, a number from 1 to 65535. Ignored when the host already includes a port
 | string
 | No
 | X-Forwarded-Port
+
+| Prefix
+| The header holding the path the proxy serves tilegroxy under. Must start with `/` and contain only characters valid in a URL path
+| string
+| No
+| X-Forwarded-Prefix
 |===
 
 .Environment variables
@@ -116,4 +122,7 @@ JSON::
 
 | Headers.Port
 | SERVER_FORWARDED_HEADERS_PORT
+
+| Headers.Prefix
+| SERVER_FORWARDED_HEADERS_PREFIX
 |===

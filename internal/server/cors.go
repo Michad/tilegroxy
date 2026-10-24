@@ -18,9 +18,12 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 
+	"github.com/Michad/tilegroxy/internal/configload"
+	"github.com/Michad/tilegroxy/internal/ratelimit"
 	"github.com/Michad/tilegroxy/pkg/config"
 )
 
@@ -52,6 +55,24 @@ func validateCORS(cfg config.CORSConfig, errorMessages config.ErrorMessages) err
 	}
 
 	return nil
+}
+
+// Browser scripts can only read rate limit headers once exposed, so they join the default list when rate limiting is on
+func corsWithRateLimitHeaders(cfg *config.Config) config.CORSConfig {
+	cors := cfg.Server.CORS
+
+	name, _ := configload.ReplaceEnv(cfg.RateLimit)["name"].(string)
+	if name == "" || name == "none" {
+		return cors
+	}
+
+	if !slices.Equal(cors.ExposedHeaders, config.DefaultConfig().Server.CORS.ExposedHeaders) {
+		return cors
+	}
+
+	cors.ExposedHeaders = append(slices.Clone(cors.ExposedHeaders), ratelimit.ExposedHeaders()...)
+
+	return cors
 }
 
 // Returns the origin to put in the header and whether it's allowed

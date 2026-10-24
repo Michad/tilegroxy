@@ -52,6 +52,10 @@ func ValidateConfig(cfg *config.Config) error {
 		return err
 	}
 
+	if _, err := parseTrustedProxies(cfg.Server.Forwarded, cfg.Error.Messages); err != nil {
+		return err
+	}
+
 	return validateAllCacheControl(cfg)
 }
 
@@ -164,10 +168,24 @@ func wrapRootHandler(cfg *config.Config, mux *http.ServeMux) (http.Handler, func
 	rootHandler = newTimeoutHandler(rootHandler, time.Duration(cfg.Server.Timeout)*time.Second, &cfg.Error) // #nosec G115 -- config normalization clamps the timeout to MaxInt32 seconds
 
 	if cfg.Server.CORS.Enabled {
-		rootHandler = corsHandler{rootHandler, cfg.Server.CORS}
+		rootHandler = corsHandler{rootHandler, corsWithRateLimitHeaders(cfg)}
 	}
 
-	return configureAccessLogging(cfg.Logging.Access, cfg.Error.Messages, rootHandler)
+	rootHandler, closeAccessLog, err := configureAccessLogging(cfg.Logging.Access, cfg.Error.Messages, rootHandler)
+	if err != nil {
+		return nil, closeAccessLog, err
+	}
+
+	trusted, err := parseTrustedProxies(cfg.Server.Forwarded, cfg.Error.Messages)
+	if err != nil {
+		return nil, closeAccessLog, errors.Join(err, closeAccessLog())
+	}
+
+	if len(trusted) > 0 {
+		rootHandler = forwardedHandler{rootHandler, trusted, cfg.Server.Forwarded.Headers}
+	}
+
+	return rootHandler, closeAccessLog, nil
 }
 
 func listenAndServeTLS(cfg *config.Config, srvErr chan error, srv *http.Server) {

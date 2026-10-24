@@ -30,6 +30,9 @@ import (
 
 const StatusClientClosed = 499
 
+// The limiter already warns about store failures, at most once a minute, so this logs quietly
+const typeOfErrorRateLimitUnavailable pkg.TypeOfError = -1
+
 func errorVars(cfg *config.ErrorConfig, errorType pkg.TypeOfError, dataType config.DataType) (int, slog.Level, string, string) {
 	var status int
 	var level slog.Level
@@ -56,6 +59,14 @@ func errorVars(cfg *config.ErrorConfig, errorType pkg.TypeOfError, dataType conf
 		imgPath, contentType = errorImage(cfg.Images.Other, cfg.Images.OtherMvt, cfg.Images.OtherMlt, dataType)
 	case pkg.TypeOfErrorTimeout:
 		level = slog.LevelWarn
+		status = http.StatusServiceUnavailable
+		imgPath, contentType = errorImage(cfg.Images.Other, cfg.Images.OtherMvt, cfg.Images.OtherMlt, dataType)
+	case pkg.TypeOfErrorRateLimit:
+		level = slog.LevelDebug
+		status = http.StatusTooManyRequests
+		imgPath, contentType = errorImage(cfg.Images.RateLimited, cfg.Images.RateLimitedMvt, cfg.Images.RateLimitedMlt, dataType)
+	case typeOfErrorRateLimitUnavailable:
+		level = slog.LevelDebug
 		status = http.StatusServiceUnavailable
 		imgPath, contentType = errorImage(cfg.Images.Other, cfg.Images.OtherMvt, cfg.Images.OtherMlt, dataType)
 	default:

@@ -43,6 +43,7 @@ import (
 	_ "github.com/Michad/tilegroxy/internal/caches"
 	_ "github.com/Michad/tilegroxy/internal/datastores"
 	_ "github.com/Michad/tilegroxy/internal/providers"
+	"github.com/Michad/tilegroxy/internal/ratelimit"
 	_ "github.com/Michad/tilegroxy/internal/secrets"
 )
 
@@ -190,9 +191,17 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	l, err := cur.layerGroup().CheckAccess(ctx, tileReq)
+	if err == nil && !cur.checkRateLimit(ctx, w, l.ID, dataType) {
+		return
+	}
+
 	h.tileValidCounter.Add(ctx, 1)
 
-	img, err := cur.layerGroup().RenderTile(ctx, tileReq)
+	var img *pkg.Image
+	if err == nil {
+		img, err = cur.layerGroup().RenderTile(ctx, tileReq)
+	}
 
 	if err != nil {
 		h.tileErrorCounter.Add(ctx, 1)
@@ -216,6 +225,27 @@ func (h *tileHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	// After the response so analytics stays off the latency path. Failed writes still count since the upstream cost was incurred
 	cur.recordAnalytics(ctx, tileReq, img)
+}
+
+// False when the request was rejected and a response already written. Seeding, health, and ref never get here
+func (s *generation) checkRateLimit(ctx context.Context, w http.ResponseWriter, layerID string, dataType config.DataType) bool {
+	res := s.rateLimit().Check(ctx, layerID)
+
+	for k, v := range res.Header {
+		w.Header()[k] = v
+	}
+
+	switch res.Outcome {
+	case ratelimit.Rejected:
+		writeErrorMessage(ctx, w, &s.errCfg, pkg.TypeOfErrorRateLimit, "Rate limit "+res.Rule+" exceeded", s.errCfg.Messages.RateLimited, nil, dataType)
+		return false
+	case ratelimit.Unavailable:
+		writeErrorMessage(ctx, w, &s.errCfg, typeOfErrorRateLimitUnavailable, "Rate limit store unavailable", fmt.Sprintf(s.errCfg.Messages.ServerError, "rate limit unavailable"), nil, dataType)
+		return false
+	case ratelimit.Allowed:
+	}
+
+	return true
 }
 
 // Re-resolves the layer for its ID and skip flag, keeping this off RenderTile, which seeding, health and ref also use
