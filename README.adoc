@@ -23,6 +23,8 @@ Require authentication using link:https://tilegroxy.com/operation/configuration/
 +++</li><li>+++
 link:https://tilegroxy.com/operation/configuration/authentication/jwt.html[Restrict access] to a given layer and/or geographic region based on auth token
 +++</li><li>+++
+link:https://tilegroxy.com/operation/ratelimit.html[Rate limit] users, tenants, or IP addresses, from per-second bursts to monthly quotas
++++</li><li>+++
 Create your own link:https://tilegroxy.com/operation/extensibility.html[custom provider] to pull in non-standard and proprietary imagery sources
 +++</li><li>+++
 Support for raster tiles and both the Mapbox Vector Tile (MVT) and MapLibre Tile (MLT) vector formats
