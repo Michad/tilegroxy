@@ -45,7 +45,7 @@ authentication:
 . Keeps results in memory to decrease load on the endpoint.  Rejections are cached too, but outright errors such as an inability to connect are not.  Use with caution since a revoked token can keep working until the entry expires. @/cacheSize/
 . How long a result is cached. @/cacheTTL/
 . Responses with any other status are rejected. @/statusCodes/
-. The response body is only read when `userId`, `tenantId`, or `plan` is set, and only then do the client's `contentTypes`, `maxLength`, and `unknownLength` apply.  Override `contentTypes` with the type you expect. @/contentTypes/
+. The response body is only read when `userId` or `tenantId` is set, and only then do the client's `contentTypes`, `maxLength`, and `unknownLength` apply.  Override `contentTypes` with the type you expect. @/contentTypes/
 // end::callouts[]
 
 JSON::
@@ -127,12 +127,6 @@ At least one of `Headers`, `Cookies`, or `QueryParams` must be supplied.
 
 | TenantId
 | An XPath expression for the tenant identifier within the response body. Not allowed when `Method` is HEAD
-| string
-| No
-| None
-
-| Plan
-| An XPath expression for the plan within the response body, used by xref:configuration/ratelimit/index.adoc[rate limit] overrides. Not allowed when `Method` is HEAD
 | string
 | No
 | None

@@ -40,12 +40,11 @@ When supplying authentication ensure you include the `name` parameter.
 
 === Comparison
 
-[cols="2,1,1,1,1,1"]
+[cols="2,1,1,1,1"]
 |===
-| Authentication | User ID | Tenant ID | Plan | Limit by layer/area | External dependency 
+| Authentication | User ID | Tenant ID | Limit by layer/area | External dependency 
 
 | None
-| No
 | No
 | No
 | No
@@ -56,10 +55,8 @@ When supplying authentication ensure you include the `name` parameter.
 | No
 | No
 | No
-| No
 
 | JWT
-| Yes
 | Yes
 | Yes
 | Yes
@@ -68,19 +65,16 @@ When supplying authentication ensure you include the `name` parameter.
 | Bearer Lookup
 | Yes
 | Yes
-| Yes
 | No
 | PostgreSQL or Redis
 
 | Passthrough
 | Yes
 | Yes
-| Yes
 | No
 | HTTP endpoint
 
 | Custom
-| Yes
 | Yes
 | Yes
 | Yes

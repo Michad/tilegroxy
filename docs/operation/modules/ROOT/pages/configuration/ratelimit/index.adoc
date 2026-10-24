@@ -62,8 +62,8 @@ ratelimit:
           limit: 100000
           calendar: month
           overrides:
-            - plans:
-                - enterprise
+            - tenants:
+                - acme
               limit: 5000000
 defaultratelimit: standard
 ----
@@ -105,8 +105,8 @@ JSON::
             "calendar": "month",
             "overrides": [
               {
-                "plans": [
-                  "enterprise"
+                "tenants": [
+                  "acme"
                 ],
                 "limit": 5000000
               }
@@ -242,12 +242,6 @@ An override matches a request if any of its conditions match.
 |===
 | Parameter | Description | Type | Required | Default
 
-| Plans
-| Plans to match, as established during xref:configuration/authentication/index.adoc[authentication]
-| string[]
-| No
-| None
-
 | Users
 | User IDs to match
 | string[]
@@ -279,4 +273,4 @@ An override matches a request if any of its conditions match.
 | None
 |===
 
-At least one of Plans, Users, Tenants, IPs, or Anonymous is required.
+At least one of Users, Tenants, IPs, or Anonymous is required.

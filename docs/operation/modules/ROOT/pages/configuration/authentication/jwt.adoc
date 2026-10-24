@@ -143,12 +143,6 @@ JSON::
 | string
 | No
 | tid
-
-| Plan
-| Use the specified claim as the plan, which xref:configuration/ratelimit/index.adoc[rate limit] overrides can match on
-| string
-| No
-| None
 |===
 
 == JWKS

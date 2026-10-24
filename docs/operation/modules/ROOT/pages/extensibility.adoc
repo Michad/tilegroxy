@@ -141,10 +141,6 @@ The `validate` method will be supplied with a single token and returns a `Valida
 | string
 | An identifier for the tenant/realm/organization/site/group the user belongs to. Omit if not applicable
 
-| Plan
-| string
-| The plan the user is on, which xref:configuration/ratelimit/index.adoc[rate limit] overrides can match on. Omit if not applicable
-
 | AllowedLayers
 | []string
 | The specific layer IDs to allow access to with this specific token. Leave empty to allow access to all of them

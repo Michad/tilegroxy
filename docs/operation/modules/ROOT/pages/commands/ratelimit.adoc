@@ -23,7 +23,6 @@ either, every policy is shown.
 Supply the same values a tile request would have. A user or tenant left
 out falls back to --ip, the same as an anonymous request. A rule needing
 a value you didn't supply, including --ip, is skipped with a warning.
-Supply --plan to see the limit an override for that plan would give.
 
 For a rolling period, Used is the same weighted estimate the check uses.
 
@@ -61,11 +60,6 @@ Usage:
 |
 | The ID of the layer to look up. Selects the layer's policy unless --policy is given. Required by rules segmented by layer
 
-| `--plan`
-| string
-|
-| The plan to look up, used only to pick which override applies
-
 | `-p`, `--policy`
 | strings
 |
@@ -95,7 +89,7 @@ Using the policies from the xref:configuration/ratelimit/index.adoc#example[conf
 
 [,shell]
 ----
-tilegroxy ratelimit -c tilegroxy.yml -p premium --tenant acme --user alice --plan enterprise
+tilegroxy ratelimit -c tilegroxy.yml -p premium --tenant acme --user alice
 tilegroxy ratelimit -c tilegroxy.yml -p premium --tenant acme --reset
 ----
 

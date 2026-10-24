@@ -53,7 +53,7 @@ Every xref:analytics.adoc[analytics] event records the user ID. To also record t
 
 == Quotas
 
-A xref:configuration/ratelimit/index.adoc[rate limit] policy with a rule of `segment: [tenant]` gives each tenant its own allowance, and `calendar: month` lines it up with a billing cycle. Have authentication supply each tenant's plan, as described above for the tenant ID, and use `overrides` to give each plan its limit. See xref:ratelimit.adoc[Rate Limiting].
+A xref:configuration/ratelimit/index.adoc[rate limit] policy with a rule of `segment: [tenant]` gives each tenant its own allowance, and `calendar: month` lines it up with a billing cycle. Use `overrides` to give particular tenants a different limit. See xref:ratelimit.adoc[Rate Limiting].
 
 == Seeding
 

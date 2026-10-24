@@ -3,7 +3,7 @@
 
 == Overview
 
-This is useful for keeping one user from starving everyone else, keeping the total traffic to an expensive layer within what you're willing to serve, and enforcing usage quotas on a plan.  Rate limiting is disabled by default.
+This is useful for keeping one user from starving everyone else, keeping the total traffic to an expensive layer within what you're willing to serve, and enforcing usage quotas on a tenant.  Rate limiting is disabled by default.
 
 Limits are checked once the request is authenticated, its layer is found, and it passes authorization and zoom checks, but before the cache is consulted.  This means:
 
@@ -127,7 +127,7 @@ A policy may have no rules.  Make an empty policy the default if only a few laye
 
 Policies that extend each other in a loop are rejected at startup.  A policy reached through more than one `extend` is only checked once.
 
-WARNING: If a premium layer has its own policy, any layer that reaches it through xref:configuration/provider/ref.adoc[ref] or xref:configuration/provider/blend.adoc[blend] needs that policy too, otherwise it's a way around the quota.
+WARNING: If a layer has its own policy, any layer that reaches it through xref:configuration/provider/ref.adoc[ref] or xref:configuration/provider/blend.adoc[blend] providers need that policy too.
 
 == Rules
 
@@ -145,7 +145,7 @@ A rule's period is set with exactly one of `period`, for a rolling window, or `c
 
 === Segments
 
-A rule's `segment` parameter decides what gets its own counter.  It's a list of the values below, combined, so `[tenant, layer]` gives every tenant a separate allowance for each layer.  Without `segment`, each user gets their own counter.
+A rule's `segment` parameter decides how usage counters are segmented. For instance a rule of 100 requests per hour segmented by `user` and `layer` will allow each user to make 100 requests per layer per hour. Meanwhile, a rule applied to two layers that's segmented by just `user` means the user has a shared pool of 100 requests over both layers.
 
 .Values for `segment`
 [cols="1m,3"]
@@ -159,27 +159,17 @@ A rule's `segment` parameter decides what gets its own counter.  It's a list of 
 | The tenant ID established during authentication. See xref:howto/multi-tenant.adoc[Serve Multiple Tenants]
 
 | ip
-| The client IP address. IPv6 addresses sharing their first 64 bits count as one client, which `ipv6Prefix` can change. Behind a load balancer this requires xref:configuration/server.adoc[`server.trustedProxies`]
+| The client IP address. IPv6 addresses sharing their first 64 bits count as one client, which `ipv6Prefix` can change. 
 
 | layer
 | The ID of the requested layer, not the name from the URL. Every name matching a pattern layer shares one counter
 |===
 
-Without authentication, use `segment: [ip]`.
-
-An empty list gives the rule one counter for every request to every layer using the policy.  For example, a rule with `segment: []` and a `limit` of 200 caps those layers at 200 requests per period in total.  Pair it with a per-IP rule so one client can't use it all.
-
-Requests can arrive without a user ID or tenant ID, either because they're anonymous or because the token didn't carry one.  By default, the missing value is replaced by the client IP, so anonymous requests are counted per IP instead of all together.  Only the missing value is replaced, so `[tenant, user]` with no tenant counts by IP and user.  A rule can instead reject these requests by setting its `missing` parameter to `deny`, which suits deployments where every request should be authenticated.
-
-NAT puts many users behind one address, so be generous with limits that count by IP.
-
 === Overrides
 
-A rule's `overrides` parameter gives some requests a different limit under the same rule, such as a higher quota on a paid plan or an exemption for an internal service.  Each override has its own `limit` and matches by plan, user ID, tenant ID, IP range, or `anonymous`.  An override with several conditions matches if any one of them does.  The full list is in the xref:configuration/ratelimit/index.adoc#overrides[reference].
+A rule's `overrides` parameter gives some requests a different limit under the same rule, such as a higher quota for a large customer or an exemption for an internal service.  Each override has its own `limit` and matches by user ID, tenant ID, IP range, or `anonymous`.  An override with several conditions matches if any one of them does.  The full list is in the xref:configuration/ratelimit/index.adoc#overrides[reference].
 
-Overrides are checked in order and the first match wins.  Requests matching none get the rule's own `limit`.  Overrides change the limit, not what's counted, so a tenant given a higher limit still has one counter.
-
-Prefer matching plans over listing tenants or users.  xref:configuration/authentication/index.adoc[Authentication] can take each request's plan from a token claim, a database column, or an API response, so a customer changing plan needs no configuration change.  On a rule segmented by tenant, issue the same plan to every user of a tenant; otherwise each request gets the limit of its own user's plan.
+Overrides are checked in order and the first match wins.  Requests matching none get the rule's own `limit`.  Overrides only change the limit, not what's counted.
 
 [tabs]
 ====
@@ -206,8 +196,9 @@ ratelimit:
           limit: 100000
           calendar: month
           overrides:
-            - plans:
-                - enterprise
+            - tenants:
+                - acme
+                - globex
               limit: 5000000
             - tenants:
                 - delinquent-co
@@ -218,7 +209,7 @@ ratelimit:
 +
 // tag::callouts[]
 . Requests from the internal network are never limited by this rule. @/limit"?: "?-1/
-. Tenants whose token says they're on the enterprise plan get 50 times the default monthly quota. @/limit"?: "?5000000/
+. These tenants get 50 times the default monthly quota. @/limit"?: "?5000000/
 . A limit of 0 rejects every request, cutting this tenant off without touching authentication. @/limit"?: "?0/
 . Requests without a tenant are counted per IP address and get a small quota of their own.  `anonymous` only applies to rules segmented by user or tenant. @/anonymous/
 // end::callouts[]
@@ -258,8 +249,9 @@ JSON::
             "calendar": "month",
             "overrides": [
               {
-                "plans": [
-                  "enterprise"
+                "tenants": [
+                  "acme",
+                  "globex"
                 ],
                 "limit": 5000000
               },
@@ -285,13 +277,11 @@ JSON::
 include::ratelimit.adoc[tag=callouts]
 ====
 
-See xref:configuration/authentication/jwt.adoc[JWT] for taking the tenant and plan from token claims.
-
 == Responses
 
-A rejected request returns `429 Too Many Requests` with a `Retry-After` header giving the number of seconds until the exceeded rule allows another request.  For a `calendar` rule that's the start of the next period, which can be weeks away.  `Retry-After` is left out when waiting won't help, which is when the limit is 0 or the request was rejected by `missing: deny`.  It's also left out when `headers` is `none`.  The body follows the xref:configuration/error.adoc[error] mode, using the `RateLimited` image and message.
+A rejected request returns `429 Too Many Requests` with a `Retry-After` header giving the number of seconds until the exceeded rule allows another request. `Retry-After` is left out when the rule's limit is 0, the request was rejected by `missing: deny`, or when `headers` parameter is `none` (disabled).  The response body follows the xref:configuration/error.adoc[error] mode, using the `RateLimited` image and message.
 
-CAUTION: The `AlwaysOk` error option replaces the 429 with a 200, which most clients won't recognize as a rejection.
+CAUTION: The `AlwaysOk` error mode replaces the 429 with a 200, which most clients won't recognize as a rejection.
 
 === Headers
 
@@ -306,11 +296,11 @@ No headers apart from `Retry-After` on a rejection.  Use this if you'd rather no
 `none`::
 No headers at all, not even `Retry-After`.
 
-Rules have no names of their own, so each is listed as its policy ID, segment, and period joined by dots, such as `standard.user.1s` or `premium.tenant.month`.  Multiple segments are joined with `+` and an empty segment is `all`.  The same names are used in audit events and the xref:commands/ratelimit.adoc[ratelimit command].
+==== Standard
 
-In `RateLimit-Policy`, `q` is the limit and `w` is the period in seconds, which for a `calendar` rule is the length of the current period.  In `RateLimit`, `r` is how many requests remain, after counting the current one, and `t` is how many seconds until the current period or bucket ends.  For a rolling period, `r` keeps rising for a while after `t`, as the previous bucket's weight falls away.
+A rule is identified by its policy ID, segment, and period joined by dots, such as `standard.user.1s` or `premium.tenant.month`.  Multiple segments are joined with `+` and an empty segment is `all`.  The same names are used in audit events and the xref:commands/ratelimit.adoc[ratelimit command].
 
-On `satellite` from the first example, a user whose tenant has made 11,201 requests this month sees:
+From the earlier `satellite` example, a user whose tenant has made 11,201 requests this month sees:
 
 [,http]
 ----
@@ -319,10 +309,6 @@ RateLimit: "standard.user.1s";r=49;t=1, "premium.tenant.month";r=88799;t=1209600
 ----
 
 A rule with an unlimited override is left out of the headers for that request.
-
-A shared cache in front of tilegroxy stores these headers with the tile and replays them to everyone.  Behind a CDN, use `headers: min` for public tiles or strip the headers at the CDN.
-
-If you set xref:configuration/cors.adoc[CORS] `exposedHeaders` yourself, add `RateLimit`, `RateLimit-Policy`, and `Retry-After` so browser scripts can read them.
 
 == Auditing
 
@@ -361,6 +347,6 @@ During a rolling deployment that changes them, old and new instances count separ
 
 == Security
 
-A limit is only as good as the identity it counts by.  Without authentication every request is anonymous, so rules segmented by `user` or `tenant` fall back to IP address.  Tilegroxy logs a warning at startup when that happens.
+A limit is only as good as the identity it counts by.  Without authentication every request is anonymous, so rules segmented by `user` or `tenant` make no sense.  Tilegroxy logs a warning at startup when that happens.
 
-User IDs, tenant IDs, and IP addresses are hashed before being used as store keys, so a hostile value can't affect the key structure.  The hash isn't meant to hide them.  See xref:security.adoc[Security] for more.
+User IDs, tenant IDs, and IP addresses are hashed before being used as store keys.  The hash isn't meant to hide them.  See xref:security.adoc[Security] for more.

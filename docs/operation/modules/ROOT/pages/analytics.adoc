@@ -54,9 +54,6 @@ The following can be included via `fields`:
 | tenantid
 | The tenant identifier established during authentication, if any
 
-| plan
-| The plan established during authentication, if any
-
 | ip
 | The client IP address, taking xref:configuration/server.adoc[`server.trustedProxies`] into account
 
