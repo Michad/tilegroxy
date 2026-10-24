@@ -21,8 +21,8 @@ layer given with --layer, including the policies they extend. Without
 either, every policy is shown.
 
 Supply the same values a tile request would have. A user or tenant left
-out falls back to --ip, the same as an anonymous request. A rule needing
-a value you didn't supply, including --ip, is skipped with a warning.
+out is empty, the same as a request without one. A rule needing an IP
+address or layer you didn't supply is skipped with a warning.
 
 For a rolling period, Used is the same weighted estimate the check uses.
 

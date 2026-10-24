@@ -36,7 +36,9 @@ ratelimit:
   policies:
     - id: standard
       rules:
-        - limit: 50
+        - segment:
+            - user
+          limit: 50
           period: 1
     - id: premium
       extend:
@@ -78,6 +80,9 @@ JSON::
         "id": "standard",
         "rules": [
           {
+            "segment": [
+              "user"
+            ],
             "limit": 50,
             "period": 1
           }
@@ -211,7 +216,7 @@ ratelimit:
 . Requests from the internal network are never limited by this rule. @/limit"?: "?-1/
 . These tenants get 50 times the default monthly quota. @/limit"?: "?5000000/
 . A limit of 0 rejects every request, cutting this tenant off without touching authentication. @/limit"?: "?0/
-. Requests without a tenant are counted per IP address and get a small quota of their own.  `anonymous` only applies to rules segmented by user or tenant. @/anonymous/
+. Requests without a tenant all share one counter, with a small quota of their own.  `anonymous` only applies to rules segmented by user or tenant. @/anonymous/
 // end::callouts[]
 
 JSON::
@@ -279,7 +284,7 @@ include::ratelimit.adoc[tag=callouts]
 
 == Responses
 
-A rejected request returns `429 Too Many Requests` with a `Retry-After` header giving the number of seconds until the exceeded rule allows another request. `Retry-After` is left out when the rule's limit is 0, the request was rejected by `missing: deny`, or when `headers` parameter is `none` (disabled).  The response body follows the xref:configuration/error.adoc[error] mode, using the `RateLimited` image and message.
+A rejected request returns `429 Too Many Requests` with a `Retry-After` header giving the number of seconds until the exceeded rule allows another request. `Retry-After` is left out when the rule's limit is 0 or when `headers` parameter is `none` (disabled).  The response body follows the xref:configuration/error.adoc[error] mode, using the `RateLimited` image and message.
 
 CAUTION: The `AlwaysOk` error mode replaces the 429 with a 200, which most clients won't recognize as a rejection.
 
@@ -337,7 +342,7 @@ Every tile request, including cache hits, costs a round trip to the store, so ke
 
 With several regions, either give each region its own store and divide limits by the number of regions, or share one store and accept the latency.
 
-Behind a CDN, load balancer, or reverse proxy, list every proxy in xref:configuration/server.adoc[`server.trustedProxies`].  Otherwise the client IP is the proxy's and every anonymous user shares one counter.
+Behind a CDN, load balancer, or reverse proxy, list every proxy in xref:configuration/server.adoc[`server.trustedProxies`].  Otherwise the client IP is the proxy's and every client shares one counter on rules segmented by `ip`.
 
 === Reloading
 
@@ -347,6 +352,6 @@ During a rolling deployment that changes them, old and new instances count separ
 
 == Security
 
-A limit is only as good as the identity it counts by.  Without authentication every request is anonymous, so rules segmented by `user` or `tenant` make no sense.  Tilegroxy logs a warning at startup when that happens.
+A limit is only as good as the identity it counts by.  Without authentication every request is anonymous, so a rule segmented by `user` or `tenant` is a configuration error when xref:configuration/authentication/index.adoc[authentication] is `none`.
 
 User IDs, tenant IDs, and IP addresses are hashed before being used as store keys.  The hash isn't meant to hide them.  See xref:security.adoc[Security] for more.

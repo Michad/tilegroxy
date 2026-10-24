@@ -213,16 +213,10 @@ JSON::
 | None
 
 | Segment
-| What gets its own counter. Any of `user`, `tenant`, `ip`, and `layer`, each at most once. An empty list shares one counter between every request. See xref:ratelimit.adoc#segments[Segments]
+| What gets its own counter. Any of `user`, `tenant`, `ip`, and `layer`, each at most once. An empty list shares one counter between every request. Requests without a user or tenant ID all share the empty ID, and so one counter. `user` and `tenant` are an error when xref:configuration/authentication/index.adoc[authentication] is `none`. See xref:ratelimit.adoc#segments[Segments]
 | string[]
-| No
-| user
-
-| Missing
-| What to do when a request has no value for `user` or `tenant` in `segment`. `ip` counts it by client IP instead. `deny` rejects it with a 429 and no `Retry-After`
-| string
-| No
-| ip
+| Yes
+| None
 
 | Overrides
 | Different limits for specific requests. The first match wins. See <<overrides>>
@@ -261,7 +255,7 @@ An override matches a request if any of its conditions match.
 | None
 
 | Anonymous
-| If true, match requests that were counted by IP because a `user` or `tenant` value was missing. Only meaningful on rules segmented by `user` or `tenant`
+| If true, match requests without a user or tenant ID for the values in the rule's `segment`. Only meaningful on rules segmented by `user` or `tenant`
 | bool
 | No
 | false

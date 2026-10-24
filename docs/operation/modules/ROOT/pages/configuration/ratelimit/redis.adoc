@@ -9,12 +9,6 @@ NOTE: Requires a xref:configuration/datastores/redis.adoc[redis datastore] to su
 
 Each counter is a key that expires on its own once its period is over, so no cleanup is needed.  Each counter is updated atomically on the server using the server's clock, so concurrent requests from several instances never lose a count.  In `cluster` mode the counters for one request can live on different servers, which costs a round trip to each of them in parallel.
 
-Configure redis with a `maxmemory-policy` of `noeviction`.  An evicted key resets the limit for whoever it belonged to.  If you use `calendar` periods of a day or longer, also turn on persistence (AOF) so a restart of redis doesn't reset everyone's quota.  Replication is asynchronous, so a failover can lose the last few increments.
-
-The `cluster` mode of the datastore is recommended for high availability.  The `ring` mode doesn't replicate, so losing one server resets every counter stored on it.
-
-Don't share a redis server with the xref:configuration/cache/redis.adoc[redis cache].  The eviction policy applies to the whole server, and a tile cache needs one that evicts.
-
 Also accepts the xref:configuration/ratelimit/index.adoc[policies and options] shared by every store.
 
 == Example
@@ -42,7 +36,9 @@ ratelimit:
   policies:
     - id: standard
       rules:
-        - limit: 50
+        - segment:
+            - user
+          limit: 50
           period: 1
 ----
 
@@ -80,6 +76,9 @@ JSON::
         "id": "standard",
         "rules": [
           {
+            "segment": [
+              "user"
+            ],
             "limit": 50,
             "period": 1
           }
@@ -108,3 +107,11 @@ JSON::
 | No
 | ratelimit:
 |===
+
+== Deployment Recommendations
+
+The `cluster` mode of the datastore should be used for high availability.  The `ring` mode doesn't replicate, so losing one server resets every counter stored on it.
+
+Configure redis with a `maxmemory-policy` of `noeviction`.  An evicted key resets the limit for whoever it belonged to.  If you use `calendar` periods of a day or longer, also turn on persistence (AOF) so a restart of redis doesn't reset everyone's quota.  Replication is asynchronous, so a failover can lose the last few increments. 
+
+Use a separate redis cluster for rate limiting and caching so the memory pressure and policies of the two concerns don't conflict.
