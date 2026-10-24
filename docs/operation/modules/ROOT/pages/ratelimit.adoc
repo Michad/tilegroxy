@@ -303,7 +303,7 @@ No headers at all, not even `Retry-After`.
 
 ==== Standard
 
-A rule is identified by its policy ID, segment, and period joined by dots, such as `standard.user.1s` or `premium.tenant.month`.  Multiple segments are joined with `+` and an empty segment is `all`.  The same names are used in audit events and the xref:commands/ratelimit.adoc[ratelimit command].
+A rule is identified by its policy ID, segment, and period joined by dots, such as `standard.user.1s` or `premium.tenant.month`.  Multiple segments are joined with `+` and an empty segment is `all`.  The same names are used in audit events and the `ratelimit` commands.
 
 From the earlier `satellite` example, a user whose tenant has made 11,201 requests this month sees:
 
@@ -326,9 +326,9 @@ When xref:telemetry.adoc[telemetry] is enabled, rejections are counted per polic
 Traces::
 The check appears as a `ratelimit` span under the request.
 Command::
-xref:commands/ratelimit.adoc[`tilegroxy ratelimit`] shows how much of each rule a user, tenant, or IP address has used, and can reset it.
+xref:commands/ratelimit_status.adoc[`tilegroxy ratelimit status`] shows whether a user, tenant, or IP address is being limited and how much of each rule they've used.  xref:commands/ratelimit_reset.adoc[`tilegroxy ratelimit reset`] sets a counter back to zero and xref:commands/ratelimit_list.adoc[`tilegroxy ratelimit list`] finds rules by name, policy, layer, or segment.
 
-Counters expire along with their period and can't be listed, so use xref:analytics.adoc[analytics] to find your heaviest users and for billing.
+Counters expire along with their period and can only be looked up for a given identity, not listed, so use xref:analytics.adoc[analytics] to find your heaviest users and for billing.
 
 TIP: Alert on `tilegroxy.ratelimit.error`.  By default a store outage means nothing is being limited, while tiles keep being served normally.
 

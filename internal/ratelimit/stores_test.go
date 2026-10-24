@@ -293,12 +293,14 @@ layers:
 	require.NoError(t, err)
 	assert.Equal(t, Rejected, other.Check(ctx, "l").Outcome)
 
-	usages, _, err := other.Inspect(context.Background(), InspectOptions{IP: "10.0.0.1"})
+	status, _, err := other.Status(context.Background(), "l", Request{IP: "10.0.0.1"})
 	require.NoError(t, err)
-	require.Len(t, usages, 1)
-	assert.Equal(t, int64(3), usages[0].Used)
+	require.Len(t, status.Rules, 1)
+	assert.Equal(t, int64(3), status.Rules[0].Used)
+	assert.False(t, status.Allowed)
 
-	_, _, err = other.Reset(context.Background(), InspectOptions{IP: "10.0.0.1"}, false)
+	used, _, err := other.ResetRule(context.Background(), "a.ip.60s", map[string]string{SegmentIP: "10.0.0.1"}, false)
 	require.NoError(t, err)
+	assert.Equal(t, int64(3), used)
 	assert.Equal(t, Allowed, l.Check(ctx, "l").Outcome)
 }

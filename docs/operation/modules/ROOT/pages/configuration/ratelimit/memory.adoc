@@ -9,7 +9,7 @@ WARNING: Counters aren't shared between instances, so a deployment of N instance
 
 When `maxsize` is reached the least recently used counters are dropped, which resets the limit for whoever they belonged to.  Counters are kept across a xref:reloading.adoc[reload] as long as `maxsize` doesn't change.
 
-Since the counters live inside the server process, the xref:commands/ratelimit.adoc[ratelimit command] can't read or reset them.
+Since the counters live inside the server process, the xref:commands/ratelimit_status.adoc[ratelimit status] and xref:commands/ratelimit_reset.adoc[ratelimit reset] commands can't read or reset them.
 
 Also accepts the xref:configuration/ratelimit/index.adoc[policies and options] shared by every store.
 

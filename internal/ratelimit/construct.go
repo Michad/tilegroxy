@@ -79,63 +79,14 @@ func StoreDatastoreID(rawConfig map[string]interface{}) string {
 // Validates the whole rate limit configuration, including the policies layers refer to.
 // secreter is separate from deps because it resolves the raw config before the store is constructed
 func ConstructLimiter(ctx context.Context, cfg config.Config, secreter secret.Secreter, deps ratelimit.RateLimiterDeps) (*Limiter, error) {
-	messages := deps.ErrorMessages
-
-	rawConfig := configload.ReplaceEnv(cfg.RateLimit)
-	if rawConfig == nil {
-		rawConfig = map[string]interface{}{"name": noneName}
-	}
-
-	var err error
-
-	if secreter != nil {
-		rawConfig, err = configload.ReplaceConfigValues(rawConfig, "secret", func(k string) (string, error) {
-			v, _, lookupErr := secreter.Lookup(ctx, k)
-			return v, lookupErr
-		})
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	name, _ := rawConfig["name"].(string)
-
-	reg, ok := ratelimit.RegisteredRateLimiter(name)
-	if !ok {
-		nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
-		return nil, fmt.Errorf(messages.EnumError, "ratelimit.name", nameCoerce, ratelimit.RegisteredRateLimiterNames())
-	}
-
-	commonRaw, storeRaw := splitConfig(rawConfig)
-
-	var common CommonConfig
-	if err := configload.DecodeEntityConfig(commonRaw, &common); err != nil {
-		return nil, fmt.Errorf(messages.InvalidParam, "ratelimit", err.Error())
-	}
-
-	l := &Limiter{
-		enabled:   name != noneName,
-		storeName: name,
-		now:       time.Now,
-		audited:   newLRU(auditMemory),
-	}
-
-	if err := l.applyOptions(common, name, messages); err != nil {
-		return nil, err
-	}
-
-	l.policies, err = compilePolicies(common.Policies, authenticationEnabled(cfg.Authentication), messages)
+	l, reg, storeRaw, err := compileLimiter(ctx, cfg, secreter, deps.ErrorMessages)
 	if err != nil {
-		return nil, err
-	}
-
-	if err := l.resolveLayers(cfg, messages); err != nil {
 		return nil, err
 	}
 
 	storeCfg := reg.InitializeConfig()
 	if err := configload.DecodeEntityConfig(storeRaw, &storeCfg); err != nil {
-		return nil, fmt.Errorf(messages.InvalidParam, "ratelimit."+name, err.Error())
+		return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "ratelimit."+l.storeName, err.Error())
 	}
 
 	l.store, err = reg.Initialize(storeCfg, deps)
@@ -150,6 +101,74 @@ func ConstructLimiter(ctx context.Context, cfg config.Config, secreter secret.Se
 	l.initClock(ctx)
 
 	return l, nil
+}
+
+// Never constructs the store, so the result is disabled and only useful for describing rules
+func ConstructPolicies(ctx context.Context, cfg config.Config, secreter secret.Secreter, messages config.ErrorMessages) (*Limiter, error) {
+	l, _, _, err := compileLimiter(ctx, cfg, secreter, messages)
+	if err != nil {
+		return nil, err
+	}
+
+	l.enabled = false
+
+	return l, nil
+}
+
+func compileLimiter(ctx context.Context, cfg config.Config, secreter secret.Secreter, messages config.ErrorMessages) (*Limiter, ratelimit.RateLimiterRegistration, map[string]interface{}, error) {
+	rawConfig := configload.ReplaceEnv(cfg.RateLimit)
+	if rawConfig == nil {
+		rawConfig = map[string]interface{}{"name": noneName}
+	}
+
+	var err error
+
+	if secreter != nil {
+		rawConfig, err = configload.ReplaceConfigValues(rawConfig, "secret", func(k string) (string, error) {
+			v, _, lookupErr := secreter.Lookup(ctx, k)
+			return v, lookupErr
+		})
+		if err != nil {
+			return nil, nil, nil, err
+		}
+	}
+
+	name, _ := rawConfig["name"].(string)
+
+	reg, ok := ratelimit.RegisteredRateLimiter(name)
+	if !ok {
+		nameCoerce := fmt.Sprintf("%#v", rawConfig["name"])
+		return nil, nil, nil, fmt.Errorf(messages.EnumError, "ratelimit.name", nameCoerce, ratelimit.RegisteredRateLimiterNames())
+	}
+
+	commonRaw, storeRaw := splitConfig(rawConfig)
+
+	var common CommonConfig
+	if err := configload.DecodeEntityConfig(commonRaw, &common); err != nil {
+		return nil, nil, nil, fmt.Errorf(messages.InvalidParam, "ratelimit", err.Error())
+	}
+
+	l := &Limiter{
+		enabled:   name != noneName,
+		storeName: name,
+		now:       time.Now,
+		audited:   newLRU(auditMemory),
+	}
+
+	if err := l.applyOptions(common, name, messages); err != nil {
+		return nil, nil, nil, err
+	}
+
+	l.policies, err = compilePolicies(common.Policies, authenticationEnabled(cfg.Authentication), messages)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	if err := l.resolveLayers(cfg, messages); err != nil {
+		return nil, nil, nil, err
+	}
+
+	return l, reg, storeRaw, nil
 }
 
 func (l *Limiter) applyOptions(common CommonConfig, name string, messages config.ErrorMessages) error {
@@ -212,6 +231,7 @@ func (l *Limiter) resolveLayers(cfg config.Config, messages config.ErrorMessages
 	}
 
 	l.layerPolicies = make(map[string]*policy, len(cfg.Layers))
+	l.layerIDs = make([]string, 0, len(cfg.Layers))
 
 	for i, layer := range cfg.Layers {
 		if layer.SkipRateLimit {
@@ -234,6 +254,7 @@ func (l *Limiter) resolveLayers(cfg config.Config, messages config.ErrorMessages
 
 		if p != nil {
 			l.layerPolicies[layer.ID] = p
+			l.layerIDs = append(l.layerIDs, layer.ID)
 		}
 	}
 

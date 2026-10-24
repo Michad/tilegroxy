@@ -1,0 +1,103 @@
+= Rate Limit Status
+:description: Checks whether a tile request from a given user, tenant, or IP address would be rate limited and which rules are blocking it. Useful for answering support questions and checking how close a customer is to their quota.
+:page-eyebrow: Command
+:page-command: tilegroxy ratelimit status
+
+NOTE: This reads the store configured under xref:configuration/ratelimit/index.adoc[ratelimit] directly, so it works against a running deployment. It only connects to the datastore the store uses, not to any providers or caches. It can't be used with the memory store since those counters only exist inside the server process.
+
+== Usage
+
+Full, up-to-date usage information can be found with `tilegroxy ratelimit status -h`.
+
+.Output of `tilegroxy ratelimit status -h`
+[,text]
+----
+Checks whether the next tile request for each layer given with --layer
+would be allowed for the given user, tenant, and IP address, without
+counting a request. The layer is matched by name the same way the server
+matches a request, including patterns.
+
+Rejected requests list the rules blocking them and how long until the
+request would be allowed. Pass --all to also show the rules that aren't
+blocking, along with the limit after overrides and when the count resets.
+
+A user or tenant left out is empty, the same as a request without one.
+A rule needing an IP address you didn't supply is skipped with a warning.
+
+For a rolling period, Used is the same weighted estimate the check uses.
+
+Usage:
+  tilegroxy ratelimit status [flags]
+----
+
+== Flags
+
+.Flags
+[cols="1,1,1,3"]
+|===
+| Flag | Type | Default | Description
+
+| `-a`, `--all`
+| bool
+| `false`
+| Show every rule that applies, not just the ones blocking the request
+
+| `-h`, `--help`
+| bool
+| `false`
+| help for status
+
+| `--ip`
+| string
+|
+| The client IP address to check as. Required by rules segmented by ip
+
+| `--json`
+| bool
+| `false`
+| Output in JSON
+
+| `-l`, `--layer`
+| strings
+|
+| The name(s) of the layer to check, as they'd appear in a tile request. Required
+
+| `--tenant`
+| string
+|
+| The tenant ID to check as, standing in for what authentication would supply on a real request
+
+| `--user`
+| string
+|
+| The user ID to check as, standing in for what authentication would supply on a real request
+|===
+
+== Example
+
+Using the policies from the xref:ratelimit.adoc#policies[Rate Limiting] example:
+
+[,shell]
+----
+tilegroxy ratelimit status -c tilegroxy.yml -l satellite --tenant acme --user alice
+tilegroxy ratelimit status -c tilegroxy.yml -l satellite --tenant acme --user alice --all
+----
+
+In Kubernetes, the simplest way to run this is inside an existing pod, which already has the configuration and access to the store:
+
+[,shell]
+----
+kubectl exec deploy/tilegroxy -- tilegroxy ratelimit status -c /tilegroxy/config/tilegroxy.yml -l satellite --tenant acme --user alice
+----
+
+The first command produces an output like:
+
+[,text]
+----
+satellite: rejected by premium.tenant.month, retry after 189h12m5s
+
+Layer        Rule                    Used      Limit     Remaining    Resets
+satellite    premium.tenant.month    100000    100000    0            2026-11-01T00:00:00Z
+----
+
+A layer with `skipratelimit` set is reported as allowed and not rate limited.

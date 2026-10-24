@@ -127,12 +127,14 @@ type Limiter struct {
 	defaultPolicy *policy
 	// Policy by layer ID. Absent for layers that skip rate limiting
 	layerPolicies map[string]*policy
-	headers       string
-	onError       string
-	timeout       time.Duration
-	ipv6Prefix    int
-	now           func() time.Time
-	clock         ratelimit.Clock
+	// The keys of layerPolicies in configuration order
+	layerIDs   []string
+	headers    string
+	onError    string
+	timeout    time.Duration
+	ipv6Prefix int
+	now        func() time.Time
+	clock      ratelimit.Clock
 	// Nanoseconds to add to now to get the store's time
 	clockOffset atomic.Int64
 	lastSync    atomic.Int64

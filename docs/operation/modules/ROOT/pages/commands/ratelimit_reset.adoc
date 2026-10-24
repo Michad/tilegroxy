@@ -1,0 +1,90 @@
+= Rate Limit Reset
+:description: Sets one rate limit counter back to zero, such as the monthly quota of a single tenant. Useful for granting a customer more requests after a mistake or a support request.
+:page-eyebrow: Command
+:page-command: tilegroxy ratelimit reset
+
+NOTE: This writes to the store configured under xref:configuration/ratelimit/index.adoc[ratelimit] directly, so it works against a running deployment. It only connects to the datastore the store uses, not to any providers or caches. It can't be used with the memory store since those counters only exist inside the server process.
+
+== Usage
+
+Full, up-to-date usage information can be found with `tilegroxy ratelimit reset -h`.
+
+.Output of `tilegroxy ratelimit reset -h`
+[,text]
+----
+Sets the counter of one rate limit rule back to zero. For a rolling
+period this clears both the current and previous bucket.
+
+Give the rule by name, such as premium.tenant.month, which
+'ratelimit list' shows. Every segment of the rule must be supplied with
+its flag, and only those. Pass an empty value, such as --user "", to
+reset the counter shared by requests without one. --layer takes the
+layer's ID, not the name from the URL.
+
+Usage:
+  tilegroxy ratelimit reset <rule> [flags]
+----
+
+Rule names are described under xref:ratelimit.adoc#standard[Rate Limiting]. Use xref:commands/ratelimit_list.adoc[ratelimit list] to find them and xref:commands/ratelimit_status.adoc[ratelimit status] to see which rule is blocking a request.
+
+== Flags
+
+.Flags
+[cols="1,1,1,3"]
+|===
+| Flag | Type | Default | Description
+
+| `--dry-run`
+| bool
+| `false`
+| Show the counter that would be reset without changing it
+
+| `-h`, `--help`
+| bool
+| `false`
+| help for reset
+
+| `--ip`
+| string
+|
+| The client IP address of the counter. Required when the rule is segmented by ip
+
+| `--json`
+| bool
+| `false`
+| Output in JSON
+
+| `-l`, `--layer`
+| string
+|
+| The layer ID of the counter. Required when the rule is segmented by layer
+
+| `--tenant`
+| string
+|
+| The tenant ID of the counter. Required when the rule is segmented by tenant
+
+| `--user`
+| string
+|
+| The user ID of the counter. Required when the rule is segmented by user
+|===
+
+== Example
+
+Using the policies from the xref:ratelimit.adoc#policies[Rate Limiting] example:
+
+[,shell]
+----
+tilegroxy ratelimit reset premium.tenant.month -c tilegroxy.yml --tenant acme --dry-run
+tilegroxy ratelimit reset premium.tenant.month -c tilegroxy.yml --tenant acme
+----
+
+The second command produces an output like:
+
+[,text]
+----
+Reset premium.tenant.month for tenant="acme", which had 100000 used
+----
+
+Adding `--user alice` to either command is an error, since `premium.tenant.month` isn't segmented by user.

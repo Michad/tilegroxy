@@ -1,0 +1,81 @@
+= Rate Limit List
+:description: Lists the configured rate limit rules, optionally filtered by name, policy, layer, or segment. Shows each rule's limit, period, and the layers it applies to.
+:page-eyebrow: Command
+:page-command: tilegroxy ratelimit list
+
+== Usage
+
+Full, up-to-date usage information can be found with `tilegroxy ratelimit list -h`.
+
+.Output of `tilegroxy ratelimit list -h`
+[,text]
+----
+Lists the configured rate limit rules matching every filter given, in
+the order they're configured. With no filters every rule is listed.
+
+The optional search matches any part of a rule's name, ignoring case.
+Each flag matches a rule if it matches any of its values. --layer takes
+a layer ID or a name from a tile request, and matches rules the layer
+enforces including through extend. --segment matches rules segmented by
+the value, or by nothing for "all".
+
+This only reads the configuration, so it works with every store and
+doesn't connect to one.
+
+Usage:
+  tilegroxy ratelimit list [search] [flags]
+----
+
+The JSON output also includes each rule's segments and the full list of its overrides.
+
+== Flags
+
+.Flags
+[cols="1,1,1,3"]
+|===
+| Flag | Type | Default | Description
+
+| `-h`, `--help`
+| bool
+| `false`
+| help for list
+
+| `--json`
+| bool
+| `false`
+| Output in JSON
+
+| `-l`, `--layer`
+| strings
+|
+| Only rules enforced on these layers
+
+| `-p`, `--policy`
+| strings
+|
+| Only rules enforced by these policies, including those they extend
+
+| `--segment`
+| strings
+|
+| Only rules segmented by these values. One of user, tenant, ip, layer, or all
+|===
+
+== Example
+
+Using the policies from the xref:ratelimit.adoc#policies[Rate Limiting] example:
+
+[,shell]
+----
+tilegroxy ratelimit list -c tilegroxy.yml
+tilegroxy ratelimit list -c tilegroxy.yml month --segment tenant
+----
+
+The first command produces an output like:
+
+[,text]
+----
+Rule                    Limit     Period    Overrides    Layers
+standard.user.1s        50        1s        0            basemap, satellite
+premium.tenant.month    100000    month     0            satellite
+----

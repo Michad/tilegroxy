@@ -24,54 +24,106 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func runRateLimitCommand(t *testing.T, args ...string) string {
+const rateLimitTestConfig = `{
+	"authentication": {"name": "static key", "key": "abc"},
+	"ratelimit": {"name": "memory", "policies": [{"id": "a", "rules": [
+		{"segment": ["tenant"], "limit": 5, "calendar": "month"},
+		{"segment": ["ip"], "limit": 5, "period": 60}
+	]}]},
+	"layers": [{"id": "l", "provider": {"name": "static", "color": "FFF"}}]
+}`
+
+func runRateLimitCommand(t *testing.T, args ...string) (string, error) {
 	t.Helper()
 
 	exitStatus = -1
 	rootCmd.ResetFlags()
-	rateLimitCmd.ResetFlags()
+	rateLimitStatusCmd.ResetFlags()
+	rateLimitResetCmd.ResetFlags()
+	rateLimitListCmd.ResetFlags()
 	initRoot()
-	initRateLimit()
+	initRateLimitStatus()
+	initRateLimitReset()
+	initRateLimitList()
 
 	b := bytes.NewBufferString("")
 	rootCmd.SetOut(b)
 	rootCmd.SetErr(b)
 	rootCmd.SetArgs(append([]string{"ratelimit"}, args...))
-	require.NoError(t, rootCmd.Execute())
+	err := rootCmd.Execute()
 
-	return b.String()
+	return b.String(), err
 }
 
-func Test_RateLimitCommand_MemoryStoreRejected(t *testing.T) {
-	out := runRateLimitCommand(t, "--raw-config", `{"ratelimit": {"name": "memory", "policies": [{"id": "a"}]}}`)
+func Test_RateLimitStatusCommand_MemoryStoreRejected(t *testing.T) {
+	out, err := runRateLimitCommand(t, "status", "--raw-config", rateLimitTestConfig, "-l", "l", "--tenant", "acme", "--user", "alice", "--ip", "10.0.0.1", "-a", "--json")
+	require.NoError(t, err)
 
 	assert.Equal(t, 1, exitStatus)
 	assert.Contains(t, out, "can't be read or reset from outside the server")
 }
 
-func Test_RateLimitCommand_DryRunNeedsReset(t *testing.T) {
-	out := runRateLimitCommand(t, "--raw-config", `{}`, "--dry-run")
-
-	assert.Equal(t, 1, exitStatus)
-	assert.Contains(t, out, "--dry-run can only be used with --reset")
-}
-
-func Test_RateLimitCommand_BadConfig(t *testing.T) {
-	out := runRateLimitCommand(t, "-c", "does-not-exist.yml")
-
-	assert.Equal(t, 1, exitStatus)
-	assert.Contains(t, out, "Error:")
-}
-
-func Test_RateLimitCommand_HelpMatchesDocs(t *testing.T) {
-	out := runRateLimitCommand(t, "-h")
-
-	docs, err := os.ReadFile("../docs/operation/modules/ROOT/pages/commands/ratelimit.adoc")
+func Test_RateLimitStatusCommand_InvalidLayer(t *testing.T) {
+	out, err := runRateLimitCommand(t, "status", "--raw-config", rateLimitTestConfig, "-l", "nope")
 	require.NoError(t, err)
 
-	_, block, ok := strings.Cut(string(docs), ".Output of `tilegroxy ratelimit -h`\n[,text]\n----\n")
-	require.True(t, ok)
-	block, _, _ = strings.Cut(block, "----")
+	assert.Equal(t, 1, exitStatus)
+	assert.Contains(t, out, "invalid layer name: nope")
+}
 
-	assert.True(t, strings.HasPrefix(out, block), "update commands/ratelimit.adoc to match:\n%v", out)
+func Test_RateLimitResetCommand_MemoryStoreRejected(t *testing.T) {
+	out, err := runRateLimitCommand(t, "reset", "a.tenant.month", "--raw-config", rateLimitTestConfig, "--tenant", "acme", "--dry-run", "--json")
+	require.NoError(t, err)
+
+	assert.Equal(t, 1, exitStatus)
+	assert.Contains(t, out, "can't be read or reset from outside the server")
+}
+
+func Test_RateLimitResetCommand_NeedsRule(t *testing.T) {
+	_, err := runRateLimitCommand(t, "reset", "--raw-config", rateLimitTestConfig)
+	require.Error(t, err)
+}
+
+func Test_RateLimitListCommand(t *testing.T) {
+	out, err := runRateLimitCommand(t, "list", "tenant", "--raw-config", rateLimitTestConfig, "-l", "l", "-p", "a", "--segment", "tenant")
+	require.NoError(t, err)
+
+	assert.Equal(t, -1, exitStatus)
+	assert.Contains(t, out, "a.tenant.month")
+	assert.NotContains(t, out, "a.ip.60s")
+
+	out, err = runRateLimitCommand(t, "list", "--raw-config", rateLimitTestConfig, "--json")
+	require.NoError(t, err)
+	assert.Contains(t, out, `"rule":"a.ip.60s"`)
+
+	out, err = runRateLimitCommand(t, "list", "--raw-config", rateLimitTestConfig, "-p", "nope")
+	require.NoError(t, err)
+	assert.Equal(t, 1, exitStatus)
+	assert.Contains(t, out, "unknown rate limit policy")
+}
+
+func Test_RateLimitCommands_BadConfig(t *testing.T) {
+	for _, args := range [][]string{{"status", "-l", "l"}, {"reset", "a.tenant.month"}, {"list"}} {
+		out, err := runRateLimitCommand(t, append(args, "-c", "does-not-exist.yml")...)
+		require.NoError(t, err)
+
+		assert.Equal(t, 1, exitStatus, args)
+		assert.Contains(t, out, "Error:", args)
+	}
+}
+
+func Test_RateLimitCommands_HelpMatchesDocs(t *testing.T) {
+	for _, sub := range []string{"status", "reset", "list"} {
+		out, err := runRateLimitCommand(t, sub, "-h")
+		require.NoError(t, err)
+
+		docs, err := os.ReadFile("../docs/operation/modules/ROOT/pages/commands/ratelimit_" + sub + ".adoc")
+		require.NoError(t, err)
+
+		_, block, ok := strings.Cut(string(docs), ".Output of `tilegroxy ratelimit "+sub+" -h`\n[,text]\n----\n")
+		require.True(t, ok, sub)
+		block, _, _ = strings.Cut(block, "----")
+
+		assert.True(t, strings.HasPrefix(out, block), "update commands/ratelimit_%v.adoc to match:\n%v", sub, out)
+	}
 }
