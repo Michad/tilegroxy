@@ -73,18 +73,6 @@
 | No
 | 5
 
-| TrustedProxies
-| IP addresses or CIDR ranges of every CDN, load balancer, and reverse proxy in front of tilegroxy. When a request arrives from one of these, the client IP is taken from `ClientIPHeader`. This is the IP used for xref:configuration/ratelimit/index.adoc[rate limiting], xref:analytics.adoc[analytics], and every log. Never include addresses outside your own infrastructure. In Kubernetes this is usually the pod CIDR of your ingress controller
-| string[]
-| No
-| None
-
-| ClientIPHeader
-| The header trusted proxies put the client IP in. For `X-Forwarded-For` the right-most address that isn't itself a trusted proxy is used. Any other header, such as `CF-Connecting-IP` or `True-Client-IP`, must hold a single address. Only used with TrustedProxies
-| string
-| No
-| X-Forwarded-For
-
 | Encrypt
 | Configuration for enabling TLS (HTTPS). Don't specify to operate without encryption (the default)
 | xref:configuration/encryption.adoc[Encryption]
@@ -106,6 +94,12 @@
 | CacheControl
 | Configuration for returning a `Cache-Control` header so browsers and CDNs can reuse a tile without asking again
 | xref:configuration/cache_control.adoc[Cache Control]
+| No
+| None
+
+| Forwarded
+| Configuration for trusting the client IP, host, protocol, and port reported by a CDN, load balancer, or reverse proxy in front of tilegroxy
+| xref:configuration/forwarded.adoc[Forwarded]
 | No
 | None
 |===
@@ -144,10 +138,4 @@
 
 | DrainDelay
 | SERVER_DRAINDELAY
-
-| TrustedProxies
-| SERVER_TRUSTEDPROXIES
-
-| ClientIPHeader
-| SERVER_CLIENTIPHEADER
 |===

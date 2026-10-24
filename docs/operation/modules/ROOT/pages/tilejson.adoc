@@ -27,7 +27,7 @@ Most of a TileJSON document is derived from configuration that already exists fo
 
 `name`:: Always the layer's `id`, or the resolved example string for a layer generated from `examples`.
 
-`tiles`:: URLs built based on the path to reach each layer. The protocol/host are built from incoming headers (including `X-Forward-` headers if set). For protection against theoretical attacks, or bad reverse proxies, you can customize the URLs with the `BaseURLs` configuration. Configuring more than one entry populates the `tiles` array with one URL per entry, useful if tiles are reachable at multiple base URLs.
+`tiles`:: URLs built based on the path to reach each layer. The protocol/host are built from the incoming request, or from the forwarding headers sent by a proxy listed in xref:configuration/forwarded.adoc[`server.forwarded.trusted`]. For protection against bad reverse proxies, you can customize the URLs with the `BaseURLs` configuration. Configuring more than one entry populates the `tiles` array with one URL per entry, useful if tiles are reachable at multiple base URLs.
 
 `minzoom`, `maxzoom`, `bounds`:: Reflect the layer's xref:configuration/layer.adoc#metadata[metadata]. They default to `0`, `21`, and the whole world unless the layer sets them explicitly or a provider passes them through from a datasource that defines it. 
 

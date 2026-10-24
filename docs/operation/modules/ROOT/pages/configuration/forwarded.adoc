@@ -1,0 +1,119 @@
+= Forwarded
+:description: Configures which proxies in front of tilegroxy are trusted to report the original client IP, host, protocol, and port.
+:page-config-key: server.forwarded
+
+== Description
+
+A CDN, load balancer, or reverse proxy replaces the details of the original request with its own and passes the originals along in headers. Tilegroxy only reads those headers when the request arrives from an address listed in `Trusted`. Requests from anywhere else use their own connection details and any forwarding headers are ignored.
+
+The client IP is used for xref:configuration/ratelimit/index.adoc[rate limiting], xref:analytics.adoc[analytics], and every log. The host, protocol, and port are used to build the URLs in xref:tilejson.adoc[TileJSON] documents.
+
+For the `X-Forwarded-For` header, the right-most address that isn't itself a trusted proxy is used. Any other `For` header, such as `CF-Connecting-IP` or `True-Client-IP`, must hold a single address.
+
+WARNING: Never include addresses outside your own infrastructure in `Trusted`. Anyone sending requests from a trusted address can pick their own IP and get a fresh rate limit allowance on every request.
+
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+server:
+  forwarded:
+    trusted:
+      - 10.0.0.0/8
+    headers:
+      for: CF-Connecting-IP
+----
+
+JSON::
++
+[,json]
+----
+{
+  "server": {
+    "forwarded": {
+      "trusted": [
+        "10.0.0.0/8"
+      ],
+      "headers": {
+        "for": "CF-Connecting-IP"
+      }
+    }
+  }
+}
+----
+====
+
+== Configuration
+
+.Configuration options
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| Trusted
+| IP addresses or CIDR ranges of every CDN, load balancer, and reverse proxy in front of tilegroxy. In Kubernetes this is usually the pod CIDR of your ingress controller
+| string[]
+| No
+| None
+
+| Headers
+| The headers trusted proxies put the original request details in
+| <<headers,Headers>>
+| No
+| See below
+|===
+
+[#headers]
+.Headers
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| For
+| The header holding the client IP
+| string
+| No
+| X-Forwarded-For
+
+| Host
+| The header holding the host the client requested
+| string
+| No
+| X-Forwarded-Host
+
+| Proto
+| The header holding the protocol the client used, either `http` or `https`
+| string
+| No
+| X-Forwarded-Proto
+
+| Port
+| The header holding the port the client connected to. Ignored when the host already includes a port
+| string
+| No
+| X-Forwarded-Port
+|===
+
+.Environment variables
+[cols="1m,3m"]
+|===
+| Configuration Parameter | Environment Variable
+
+| Trusted
+| SERVER_FORWARDED_TRUSTED
+
+| Headers.For
+| SERVER_FORWARDED_HEADERS_FOR
+
+| Headers.Host
+| SERVER_FORWARDED_HEADERS_HOST
+
+| Headers.Proto
+| SERVER_FORWARDED_HEADERS_PROTO
+
+| Headers.Port
+| SERVER_FORWARDED_HEADERS_PORT
+|===

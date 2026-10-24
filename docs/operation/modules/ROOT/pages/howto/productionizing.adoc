@@ -14,7 +14,7 @@
 * [ ] Configure xref:configuration/log.adoc[logging] to output at warning or error levels to avoid a bad signal to noise ratio
 * [ ] Consume logs into your aggregator or observability solution with a tool such as fluentbit/filebeat and/or rotate them with a tool such as logrotate
 * [ ] Ensure you have xref:configuration/authentication/index.adoc[authentication] configured either inside tilegroxy or upstream 
-* [ ] Consider xref:configuration/ratelimit/index.adoc[rate limits] backed by a shared store with eviction disabled, set `server.trustedProxies` if limiting by IP behind a load balancer, and alert on `tilegroxy.ratelimit.error`
+* [ ] Consider xref:configuration/ratelimit/index.adoc[rate limits] backed by a shared store with eviction disabled, set xref:configuration/forwarded.adoc[`server.forwarded.trusted`] if limiting by IP behind a load balancer, and alert on `tilegroxy.ratelimit.error`
 * [ ] Ensure you have monitoring of the xref:configuration/health.adoc[health endpoints] and the endpoints are not exposed to the internet
 * [ ] Ensure caching is configured against a distributed, high availability datastore
 * [ ] Consume xref:telemetry.adoc[telemetry] data into an observability solution with trace sampling set at a level that won't overwhelm you
