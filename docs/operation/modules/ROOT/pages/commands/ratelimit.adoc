@@ -70,6 +70,11 @@ Usage:
 | `false`
 | Set the matching counters back to zero
 
+| `--dry-run`
+| bool
+| `false`
+| Only usable with `--reset`. Display what rules will be reset
+
 | `--tenant`
 | string
 |
@@ -80,8 +85,6 @@ Usage:
 |
 | The user ID to look up
 |===
-
-Each reset writes a `ratelimit_reset` event to the xref:configuration/log.adoc#audit-logs[audit log] configured in the configuration file.
 
 == Example
 
