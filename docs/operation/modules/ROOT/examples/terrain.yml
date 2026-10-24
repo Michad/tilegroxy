@@ -9,8 +9,8 @@ layers:
   - id: air_pressure
     provider:
       name: transform
-      threads: 8 # <1>
-      formula: | # <2>
+      threads: 8
+      formula: |
         import "math"
         func transform(r, g, b, a uint8) (uint8, uint8, uint8, uint8) {
           elevation := -10000 + ((float64(r)*256*256 + float64(g)*256 + float64(b)) * 0.1)
@@ -22,17 +22,17 @@ layers:
         name: fallback
         primary:
           name: proxy
-          url: https://api.mapbox.com/v4/mapbox.terrain-rgb/{z}/{x}/{y}.pngraw?access_token={env.MAPBOX_KEY} # <3>
+          url: https://api.mapbox.com/v4/mapbox.terrain-rgb/{z}/{x}/{y}.pngraw?access_token={env.MAPBOX_KEY}
         secondary:
           name: static
-          color: "0186a0" # <4>
+          color: "0186a0"
   - id: air_pressure_over_osm
     provider:
       name: blend
-      mode: opacity # <5>
+      mode: opacity
       opacity: 0.5
       providers:
-        - name: ref # <6>
+        - name: ref
           layer: air_pressure
         - name: ref
           layer: osm

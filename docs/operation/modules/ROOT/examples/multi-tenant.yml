@@ -4,11 +4,11 @@ server:
     enabled: true
     origins:
       - https://app.example.com
-  cachecontrol: # <1>
+  cachecontrol:
     enabled: true
     visibility: private
     maxage: 3600
-datastores: # <2>
+datastores:
   - name: redis
     id: tile-store
     host: redis.internal
@@ -20,21 +20,21 @@ datastores: # <2>
     database: analytics
 authentication:
   name: jwt
-  key: env.JWT_PUBLIC_KEY # <3>
+  key: env.JWT_PUBLIC_KEY
   algorithms:
     - RS256
   expectedissuer: https://auth.example.com
-  tenantid: org_id # <4>
-  layerscope: true # <5>
+  tenantid: org_id
+  layerscope: true
   scopeprefix: tiles/
 cache:
-  - id: shared # <6>
+  - id: shared
     name: redis
     datastore: tile-store
     keyprefix: shared
     ttl: 604800
   - id: per-tenant
-    name: tenant # <7>
+    name: tenant
     cache:
       name: redis
       datastore: tile-store
@@ -44,12 +44,12 @@ analytics:
   name: postgresql
   datastore: warehouse
   table: tile_events
-  fields: # <8>
+  fields:
     - tenantid
     - cached
     - duration
 layers:
-  - id: basemap # <9>
+  - id: basemap
     provider:
       name: proxy
       url: https://tiles.example.com/basemap/{z}/{x}/{y}.png
@@ -57,13 +57,13 @@ layers:
     cache: per-tenant
     provider:
       name: crop
-      boundsfromauth: true # <10>
+      boundsfromauth: true
       primary:
         name: proxy
-        url: https://imagery.example.com/{ctx.tenant}/survey/{z}/{x}/{y}.png # <11>
+        url: https://imagery.example.com/{ctx.tenant}/survey/{z}/{x}/{y}.png
   - id: survey_on_basemap
-    cache: per-tenant # <12>
-    allowcoalesce: false # <13>
+    cache: per-tenant
+    allowcoalesce: false
     provider:
       name: blend
       mode: normal

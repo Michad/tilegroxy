@@ -4,3 +4,6 @@ reason = "No version considered fixed after 2+ years and doesn't meaningfully im
 [[IgnoredVulns]]
 id = "GHSA-ffrw-9mx8-89p8"
 reason = "CVE is against an internal tool that is not exploitable. Project maintainer classified as WONTFIX and is disputing."
+[[IgnoredVulns]]
+id = "GHSA-vfj7-8cjw-p6xm"
+reason = "No fixed braces release exists and maintainer disputes CVE. Not exploitable. Only reached by Antora at docs build time with repository-controlled patterns."
