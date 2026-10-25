@@ -29,6 +29,7 @@ import (
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/Michad/tilegroxy/internal/layers"
 	internalratelimit "github.com/Michad/tilegroxy/internal/ratelimit"
+	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 	"github.com/Michad/tilegroxy/pkg/entities/cache"
@@ -275,15 +276,47 @@ ratelimit:
   policies:
     - id: a
 `)
-	assert.Equal(t, []string{"ETag", "RateLimit", "RateLimit-Policy", "Retry-After"}, corsWithRateLimitHeaders(&cfg).ExposedHeaders)
+	assert.Equal(t, []string{"ETag", "RateLimit", "RateLimit-Policy", "Retry-After"}, corsWithRateLimitHeaders(cfg.Server.CORS, cfg.RateLimit).ExposedHeaders)
 
 	cfg.Server.CORS.ExposedHeaders = []string{"X-Custom"}
-	assert.Equal(t, []string{"X-Custom"}, corsWithRateLimitHeaders(&cfg).ExposedHeaders, "an explicit list is left alone")
+	assert.Equal(t, []string{"X-Custom"}, corsWithRateLimitHeaders(cfg.Server.CORS, cfg.RateLimit).ExposedHeaders, "an explicit list is left alone")
 
 	cfg = loadTestConfig(t, `
 server:
   cors:
     enabled: true
 `)
-	assert.Equal(t, []string{"ETag"}, corsWithRateLimitHeaders(&cfg).ExposedHeaders)
+	assert.Equal(t, []string{"ETag"}, corsWithRateLimitHeaders(cfg.Server.CORS, cfg.RateLimit).ExposedHeaders)
+}
+
+func Test_RateLimit_CORSExposedHeadersFollowReload(t *testing.T) {
+	cfg := config.DefaultConfig()
+	cfg.Server.CORS = config.CORSConfig{Enabled: true, WildcardOrigin: true, ExposedHeaders: cfg.Server.CORS.ExposedHeaders}
+	cfg.Layers = []config.LayerConfig{staticLayerConfig("main")}
+
+	routes, err := setupHandlers(&cfg, buildTileJSONTestServing(t, cfg).all)
+	require.NoError(t, err)
+
+	exposed := func() string {
+		req := httptest.NewRequest(http.MethodGet, "http://example.com/tiles/main/8/12/32", nil).WithContext(pkg.BackgroundContext())
+		req.Header.Set("Origin", "https://a.example.com")
+
+		w := httptest.NewRecorder()
+		routes.root.ServeHTTP(w, req)
+
+		return w.Header().Get("Access-Control-Expose-Headers")
+	}
+
+	assert.Equal(t, "ETag", exposed())
+
+	nextCfg := cfg
+	nextCfg.RateLimit = map[string]interface{}{"name": "memory"}
+	require.NoError(t, routes.reload(&nextCfg, buildTileJSONTestServing(t, nextCfg).all))
+	assert.Equal(t, "ETag, RateLimit, RateLimit-Policy, Retry-After", exposed())
+
+	require.NoError(t, routes.reload(&cfg, buildTileJSONTestServing(t, cfg).all))
+	assert.Equal(t, "ETag", exposed())
+
+	require.NoError(t, routes.registry.closeAll(context.Background()))
+	require.NoError(t, routes.closeAccessLog())
 }

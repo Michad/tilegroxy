@@ -126,9 +126,6 @@ Level controls the verbosity of logs. There is no guarantee as to the specific l
 
 | Request
 | LOGGING_MAIN_REQUEST
-
-| Headers
-| LOGGING_MAIN_HEADERS
 |===
 
 == Access Logs
@@ -236,7 +233,4 @@ Three kinds of event are emitted, each identified by an `event` attribute:
 
 | Format
 | LOGGING_AUDIT_FORMAT
-
-| Headers
-| LOGGING_AUDIT_HEADERS
 |===

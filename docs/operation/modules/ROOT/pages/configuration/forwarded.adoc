@@ -6,11 +6,13 @@
 
 A CDN, load balancer, or reverse proxy replaces the details of the original request with its own and passes the originals along in headers. Tilegroxy only reads those headers when the request arrives from an address listed in `Trusted`. Requests from anywhere else use their own connection details and any forwarding headers are ignored.
 
+By default every private, loopback, and link-local address is trusted, which covers a proxy running on the same host or network as tilegroxy. A CDN or load balancer with a public address needs to be added. Setting `Trusted` replaces the default rather than adding to it, and an empty list trusts nothing.
+
 The client IP is used for xref:configuration/ratelimit/index.adoc[rate limiting], xref:analytics.adoc[analytics], and every log. The host, protocol, port, and path prefix are used to build the URLs in xref:tilejson.adoc[TileJSON] documents.
 
 For the `X-Forwarded-For` header, the right-most address that isn't itself a trusted proxy is used. Any other `For` header, such as `CF-Connecting-IP` or `True-Client-IP`, must hold a single address.
 
-WARNING: Never include addresses outside your own infrastructure in `Trusted`. Anyone sending requests from a trusted address can pick their own IP and get a fresh rate limit allowance on every request.
+WARNING: Never include addresses outside your own infrastructure in `Trusted`. Anyone sending requests from a trusted address can pick their own IP and get a fresh rate limit allowance on every request. If clients can reach tilegroxy directly from a private network, narrow `Trusted` to just your proxies.
 
 == Example
 [tabs]
@@ -57,7 +59,7 @@ JSON::
 | IP addresses or CIDR ranges of every CDN, load balancer, and reverse proxy in front of tilegroxy. In Kubernetes this is usually the pod CIDR of your ingress controller
 | string[]
 | No
-| None
+| 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16, 127.0.0.0/8, fc00::/7, fe80::/10, ::1/128
 
 | Headers
 | The headers trusted proxies put the original request details in
@@ -107,9 +109,6 @@ JSON::
 [cols="1m,3m"]
 |===
 | Configuration Parameter | Environment Variable
-
-| Trusted
-| SERVER_FORWARDED_TRUSTED
 
 | Headers.For
 | SERVER_FORWARDED_HEADERS_FOR

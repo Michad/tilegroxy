@@ -50,7 +50,9 @@ Tilegroxy is primarily intended to be used as a microservice within a broader ap
 
 xref:configuration/ratelimit/index.adoc[Rate limiting] can stop one user from exhausting an upstream provider or a quota shared with everyone else. It isn't a defense against denial of service, since every rejected request is still received and checked. See xref:ratelimit.adoc[Rate Limiting].
 
-Limits counted by `ip` are only meaningful if the IP can't be forged. Only list proxies you control in xref:configuration/forwarded.adoc[`server.forwarded.trusted`], otherwise anyone can pick their own IP with a forwarding header and get a fresh allowance on every request.
+Limits counted by `ip` are only meaningful if the IP can't be forged. Only list proxies you control in xref:configuration/forwarded.adoc[`server.forwarded.trusted`], otherwise anyone can pick their own IP with a forwarding header and get a fresh allowance on every request. Every private network address is trusted by default, so narrow it if clients can reach tilegroxy without going through a proxy.
+
+User IDs, tenant IDs, and IP addresses are hashed with SHA-256 before being used as store keys so any value is safe to store. The hash is unsalted, so anyone who can read the store can check whether a known IP or ID is being counted. Restrict access to the store accordingly.
 
 == Logging
 

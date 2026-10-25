@@ -74,12 +74,17 @@ type handlerSetup struct {
 	first          *generation
 	gens           *generationHolder
 	registry       *generationRegistry
+	cors           *corsSettings
 	closeAccessLog func() error
 }
 
-// The new config is deliberately ignored since every handler-visible section is non-reloadable
-func (s handlerSetup) reload(_ *config.Config, ent *entities.Entities) error {
+// Only rate limiting is read from the new config since every other handler-visible section is non-reloadable
+func (s handlerSetup) reload(cfg *config.Config, ent *entities.Entities) error {
 	slog.WarnContext(pkg.BackgroundContext(), "Requesting to refresh entities from configuration")
+
+	if cfg != nil {
+		s.cors.update(cfg.RateLimit)
+	}
 
 	gen := s.first.succeededBy(ent)
 	s.registry.add(gen)
@@ -101,12 +106,14 @@ func setupHandlers(cfg *config.Config, ent *entities.Entities) (handlerSetup, er
 		return handlerSetup{}, err
 	}
 
-	root, closeAccessLog, err := wrapRootHandler(cfg, mux)
+	cors := newCORSSettings(cfg.Server.CORS, cfg.RateLimit)
+
+	root, closeAccessLog, err := wrapRootHandler(cfg, mux, cors)
 	if err != nil {
 		return handlerSetup{}, err
 	}
 
-	return handlerSetup{root: root, first: first, gens: gens, registry: registry, closeAccessLog: closeAccessLog}, nil
+	return handlerSetup{root: root, first: first, gens: gens, registry: registry, cors: cors, closeAccessLog: closeAccessLog}, nil
 }
 
 func newRouter(cfg *config.Config, gens *generationHolder) (*http.ServeMux, error) {
@@ -157,7 +164,7 @@ func newRouter(cfg *config.Config, gens *generationHolder) (*http.ServeMux, erro
 	return r, nil
 }
 
-func wrapRootHandler(cfg *config.Config, mux *http.ServeMux) (http.Handler, func() error, error) {
+func wrapRootHandler(cfg *config.Config, mux *http.ServeMux, cors *corsSettings) (http.Handler, func() error, error) {
 	var rootHandler http.Handler = mux
 
 	if cfg.Server.Gzip {
@@ -168,7 +175,7 @@ func wrapRootHandler(cfg *config.Config, mux *http.ServeMux) (http.Handler, func
 	rootHandler = newTimeoutHandler(rootHandler, time.Duration(cfg.Server.Timeout)*time.Second, &cfg.Error) // #nosec G115 -- config normalization clamps the timeout to MaxInt32 seconds
 
 	if cfg.Server.CORS.Enabled {
-		rootHandler = corsHandler{rootHandler, corsWithRateLimitHeaders(cfg)}
+		rootHandler = corsHandler{rootHandler, cors}
 	}
 
 	rootHandler, closeAccessLog, err := configureAccessLogging(cfg.Logging.Access, cfg.Error.Messages, rootHandler)

@@ -219,7 +219,7 @@ func Test_CORS_AppliedAsMiddleware(t *testing.T) {
 	})
 
 	w := httptest.NewRecorder()
-	corsHandler{inner, cfg}.ServeHTTP(w, corsRequest(t, http.MethodGet, map[string]string{"Origin": "https://a.example.com"}))
+	corsHandler{inner, newCORSSettings(cfg, nil)}.ServeHTTP(w, corsRequest(t, http.MethodGet, map[string]string{"Origin": "https://a.example.com"}))
 
 	assert.Equal(t, "https://a.example.com", w.Header().Get("Access-Control-Allow-Origin"))
 }
@@ -234,7 +234,7 @@ func Test_CORS_OverwritesStaticHeader(t *testing.T) {
 	})
 
 	w := httptest.NewRecorder()
-	corsHandler{inner, cfg}.ServeHTTP(w, corsRequest(t, http.MethodGet, map[string]string{"Origin": "https://a.example.com"}))
+	corsHandler{inner, newCORSSettings(cfg, nil)}.ServeHTTP(w, corsRequest(t, http.MethodGet, map[string]string{"Origin": "https://a.example.com"}))
 
 	assert.Equal(t, []string{"https://a.example.com"}, w.Header().Values("Access-Control-Allow-Origin"))
 }
@@ -248,7 +248,7 @@ func Test_CORS_AppliedOnImplicitWrite(t *testing.T) {
 	})
 
 	w := httptest.NewRecorder()
-	corsHandler{inner, cfg}.ServeHTTP(w, corsRequest(t, http.MethodGet, map[string]string{"Origin": "https://a.example.com"}))
+	corsHandler{inner, newCORSSettings(cfg, nil)}.ServeHTTP(w, corsRequest(t, http.MethodGet, map[string]string{"Origin": "https://a.example.com"}))
 
 	assert.Equal(t, "*", w.Header().Get("Access-Control-Allow-Origin"))
 }
@@ -349,7 +349,7 @@ func Test_CORS_ClearsStaticHeaderForDisallowedOrigin(t *testing.T) {
 	})
 
 	w := httptest.NewRecorder()
-	corsHandler{inner, cfg}.ServeHTTP(w, corsRequest(t, http.MethodGet, map[string]string{"Origin": "https://evil.example.com"}))
+	corsHandler{inner, newCORSSettings(cfg, nil)}.ServeHTTP(w, corsRequest(t, http.MethodGet, map[string]string{"Origin": "https://evil.example.com"}))
 
 	assert.Empty(t, w.Header().Get("Access-Control-Allow-Origin"))
 	assert.Empty(t, w.Header().Get("Access-Control-Allow-Credentials"))
@@ -365,7 +365,7 @@ func Test_CORS_ClearsStaticHeaderNotReplaced(t *testing.T) {
 	})
 
 	w := httptest.NewRecorder()
-	corsHandler{inner, cfg}.ServeHTTP(w, corsRequest(t, http.MethodGet, map[string]string{"Origin": "https://a.example.com"}))
+	corsHandler{inner, newCORSSettings(cfg, nil)}.ServeHTTP(w, corsRequest(t, http.MethodGet, map[string]string{"Origin": "https://a.example.com"}))
 
 	assert.Equal(t, "https://a.example.com", w.Header().Get("Access-Control-Allow-Origin"))
 	assert.Empty(t, w.Header().Get("Access-Control-Allow-Credentials"))
@@ -377,8 +377,9 @@ func Test_SetupHandlers_CORSWrapsOutsideTimeout(t *testing.T) {
 	cfg.Server.CORS.Enabled = true
 	cfg.Server.CORS.Origins = []string{"https://example.com"}
 	cfg.Layers = []config.LayerConfig{staticLayerConfig("main")}
-	// Access logging would otherwise wrap outermost and hide the CORS/timeout order
+	// Access logging and forwarding would otherwise wrap outermost and hide the CORS/timeout order
 	cfg.Logging.Access.Console = false
+	cfg.Server.Forwarded.Trusted = nil
 
 	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(caches.Noop{}), nil, nil)
 	require.NoError(t, err)

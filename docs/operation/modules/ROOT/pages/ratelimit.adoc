@@ -342,7 +342,7 @@ Every tile request, including cache hits, costs a round trip to the store, so ke
 
 With several regions, either give each region its own store and divide limits by the number of regions, or share one store and accept the latency.
 
-Behind a CDN, load balancer, or reverse proxy, list every proxy in xref:configuration/forwarded.adoc[`server.forwarded.trusted`].  Otherwise the client IP is the proxy's and every client shares one counter on rules segmented by `ip`.
+Behind a CDN, load balancer, or reverse proxy with a public address, add it to xref:configuration/forwarded.adoc[`server.forwarded.trusted`].  Otherwise the client IP is the proxy's and every client shares one counter on rules segmented by `ip`.  Proxies on a private network are trusted by default.
 
 === Reloading
 

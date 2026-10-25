@@ -97,7 +97,7 @@ type ForwardedHeadersConfig struct {
 }
 
 type ForwardedConfig struct {
-	Trusted []string               // IPs or CIDR ranges of proxies whose forwarding headers are believed. Defaults to none
+	Trusted []string               // IPs or CIDR ranges of proxies whose forwarding headers are believed. Defaults to private, loopback, and link-local ranges
 	Headers ForwardedHeadersConfig // Which headers to read from a trusted proxy
 }
 
@@ -318,6 +318,16 @@ func DefaultConfig() Config {
 				Auto:    new(true),
 			},
 			Forwarded: ForwardedConfig{
+				Trusted: []string{
+					"10.0.0.0/8",
+					"172.16.0.0/12",
+					"192.168.0.0/16",
+					"169.254.0.0/16",
+					"127.0.0.0/8",
+					"fc00::/7",
+					"fe80::/10",
+					"::1/128",
+				},
 				Headers: ForwardedHeadersConfig{
 					For:    "X-Forwarded-For",
 					Host:   "X-Forwarded-Host",

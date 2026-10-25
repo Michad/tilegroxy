@@ -21,6 +21,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync/atomic"
 
 	"github.com/Michad/tilegroxy/internal/configload"
 	"github.com/Michad/tilegroxy/internal/ratelimit"
@@ -58,10 +59,8 @@ func validateCORS(cfg config.CORSConfig, errorMessages config.ErrorMessages) err
 }
 
 // Browser scripts can only read rate limit headers once exposed, so they join the default list when rate limiting is on
-func corsWithRateLimitHeaders(cfg *config.Config) config.CORSConfig {
-	cors := cfg.Server.CORS
-
-	name, _ := configload.ReplaceEnv(cfg.RateLimit)["name"].(string)
+func corsWithRateLimitHeaders(cors config.CORSConfig, rateLimit map[string]interface{}) config.CORSConfig {
+	name, _ := configload.ReplaceEnv(rateLimit)["name"].(string)
 	if name == "" || name == "none" {
 		return cors
 	}
@@ -258,13 +257,31 @@ func addVary(w http.ResponseWriter, name string) {
 	w.Header().Add("Vary", name)
 }
 
+// The CORS section isn't reloadable but rate limiting is, and that changes the exposed headers
+type corsSettings struct {
+	base config.CORSConfig
+	live atomic.Pointer[config.CORSConfig]
+}
+
+func newCORSSettings(cors config.CORSConfig, rateLimit map[string]interface{}) *corsSettings {
+	s := &corsSettings{base: cors}
+	s.update(rateLimit)
+
+	return s
+}
+
+func (s *corsSettings) update(rateLimit map[string]interface{}) {
+	cors := corsWithRateLimitHeaders(s.base, rateLimit)
+	s.live.Store(&cors)
+}
+
 type corsHandler struct {
-	inner http.Handler
-	cfg   config.CORSConfig
+	inner    http.Handler
+	settings *corsSettings
 }
 
 func (h corsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	h.inner.ServeHTTP(&corsResponseWriter{ResponseWriter: w, cfg: h.cfg, req: req}, req)
+	h.inner.ServeHTTP(&corsResponseWriter{ResponseWriter: w, cfg: *h.settings.live.Load(), req: req}, req)
 }
 
 type corsResponseWriter struct {

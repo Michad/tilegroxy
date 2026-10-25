@@ -17,8 +17,10 @@ package server
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"testing"
 
+	"github.com/Michad/tilegroxy/internal/configload"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/stretchr/testify/assert"
@@ -192,7 +194,7 @@ func Test_Forwarded_AccessLogSeesClientIP(t *testing.T) {
 
 	var seen string
 
-	root, _, err := wrapRootHandler(&cfg, http.NewServeMux())
+	root, _, err := wrapRootHandler(&cfg, http.NewServeMux(), newCORSSettings(cfg.Server.CORS, nil))
 	require.NoError(t, err)
 
 	fh, ok := root.(forwardedHandler)
@@ -209,9 +211,36 @@ func Test_Forwarded_AccessLogSeesClientIP(t *testing.T) {
 	assert.Equal(t, "203.0.113.5", seen)
 
 	cfg.Server.Forwarded.Trusted = nil
-	root, _, err = wrapRootHandler(&cfg, http.NewServeMux())
+	root, _, err = wrapRootHandler(&cfg, http.NewServeMux(), newCORSSettings(cfg.Server.CORS, nil))
 	require.NoError(t, err)
 
 	_, ok = root.(forwardedHandler)
 	assert.False(t, ok, "nothing to trust, nothing to wrap")
+}
+
+func Test_Forwarded_DefaultTrustsPrivateNetworks(t *testing.T) {
+	cfg := config.DefaultConfig()
+
+	trusted, err := parseTrustedProxies(cfg.Server.Forwarded, cfg.Error.Messages)
+	require.NoError(t, err)
+
+	h := forwardedHandler{trusted: trusted}
+
+	for _, ip := range []string{"10.1.2.3", "172.31.0.1", "192.168.1.1", "169.254.1.1", "127.0.0.1", "fd00::1", "fe80::1", "::1"} {
+		assert.True(t, h.isTrusted(netip.MustParseAddr(ip)), ip)
+	}
+
+	for _, ip := range []string{"172.32.0.1", "192.0.2.1", "8.8.8.8", "2001:db8::1"} {
+		assert.False(t, h.isTrusted(netip.MustParseAddr(ip)), ip)
+	}
+}
+
+func Test_Forwarded_EmptyTrustedOverridesDefault(t *testing.T) {
+	cfg, err := configload.LoadConfig(`
+server:
+  forwarded:
+    trusted: []
+`)
+	require.NoError(t, err)
+	assert.Empty(t, cfg.Server.Forwarded.Trusted)
 }

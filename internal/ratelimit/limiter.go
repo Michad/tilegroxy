@@ -66,7 +66,7 @@ const (
 // The hex characters of a hashed segment value kept in a key. Half a SHA-256, plenty to avoid collisions
 const keyHashLen = 32
 
-// The longest a repeated rejection or store failure goes unreported
+// The shortest gap between reports of a repeated rejection or store failure
 const reportInterval = time.Minute
 
 // Bounds the memory spent remembering which rejections were already audited
