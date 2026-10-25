@@ -13,7 +13,7 @@ NOTE: The image's extension decides what kind of tile it is. Images ending in `.
 | image
 | Either a filepath to an image on the local filesystem or one of the xref:configuration/error.adoc[built-in images]
 | string
-| Yes
+| No
 | None
 
 | color
@@ -22,3 +22,5 @@ NOTE: The image's extension decides what kind of tile it is. Images ending in `.
 | No
 | None
 |===
+
+One of either `image` or `color` is required.

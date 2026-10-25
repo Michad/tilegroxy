@@ -3,7 +3,7 @@
 :page-eyebrow: Cache
 :page-config-name: multi
 
-NOTE: When looking up cache entries each cache is tried in order. When storing cache entries each cache is called simultaneously. This means that the fastest cache(s) should be first and slower cache(s) last. As each cache needs to be tried before tile generation starts, it is not recommended to have more than 2 or 3 caches configured.
+NOTE: When looking up cache entries, a hit in an early child precludes checking later caches. This means that the fastest cache(s) should be first and slower cache(s) last. But we don't recommend having more than a few caches configured since cache misses loop through all children.
 
 == Example
 [tabs]

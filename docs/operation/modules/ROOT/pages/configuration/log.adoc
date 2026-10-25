@@ -95,8 +95,8 @@ Level controls the verbosity of logs. There is no guarantee as to the specific l
 | info
 
 | Request
-| Whether to include any extra attributes based on request parameters (excluding explicitly requested). If auto (default) it defaults true if format is json, false otherwise
-| bool
+| Whether to include any extra attributes based on request parameters (excluding explicitly requested). If `auto` (default) it defaults true if format is json, false otherwise. Possible values: `auto`, `true`, `false`
+| string
 | No
 | auto
 

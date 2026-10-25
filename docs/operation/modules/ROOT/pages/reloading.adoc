@@ -77,11 +77,9 @@ The phases run in this order:
 . OpenTelemetry shuts down
 . Log file handles close
 
-Every phase draws from a single deadline of `ShutdownTimeout` seconds.  If the deadline passes or a second signal is sent, the remaining phases are skipped and an error is logged. 
+Phases draw from a combined deadline defined by `ShutdownTimeout` in seconds (with some phases getting some reserved time).  If the deadline passes or a second signal is sent, the remaining phases are skipped the process gets killed ASAP. When `ShutdownTimeout` isn't specified it defaults to `Server.Timeout` plus `DrainDelay`.  
 
-When `ShutdownTimeout` isn't specified it defaults to `Server.Timeout` plus `DrainDelay`, which covers the two phases that consume it: the wait before draining and one full-length request finishing during the drain.  A value at or below `DrainDelay` is rejected as it leaves no time to drain.
-
-A value below `Server.Timeout` is allowed but means a slow request can outlive the budget.
+A value at or below `DrainDelay` is rejected as it leaves no time to drain.  A value below `Server.Timeout` is allowed but means a slow request can outlive the budget.
 
 === Coordinating with your orchestrator
 

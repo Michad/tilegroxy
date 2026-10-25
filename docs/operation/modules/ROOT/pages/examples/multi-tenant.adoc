@@ -51,7 +51,7 @@ Tokens are issued by your identity provider.  A token for a user of the `acme` o
   "iss": "https://auth.example.com",
   "sub": "user-123",
   "org_id": "acme",
-  "scope": "tiles/basemap tiles/survey_on_basemap",
+  "scope": "tiles/basemap tiles/survey tiles/survey_on_basemap",
   "geohash": "9xj6",
   "exp": 1791700000
 }
