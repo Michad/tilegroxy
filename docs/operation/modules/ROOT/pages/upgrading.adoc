@@ -1,7 +1,7 @@
 = Upgrading
 :description: What needs acting on when upgrading
 
-This covers breaking changes and the highlights you may want to adopt.  Bug fixes, internal changes, and dependency updates are left out. Follow the release notes link under each version for the full change notes.
+This covers breaking changes and the highlights you may want to adopt. Follow the release notes link under each version for the full change notes.
 
 NOTE: Releases before 1.0 do not follow the xref:compatibility.adoc[compatibility policy] and frequently include breaking changes.
 
@@ -14,9 +14,11 @@ NOTE: Releases before 1.0 do not follow the xref:compatibility.adoc[compatibilit
 
 == 0.14.0
 
-NOTE: Not yet released.
-
-link:https://github.com/Michad/tilegroxy/releases/tag/v0.14.0[Release notes]
+[.release]
+Released:: Not yet released
+Risk:: [.risk.medium]#Medium#
+Commits:: link:https://github.com/Michad/tilegroxy/compare/v0.13.0...main[40 so far]
+Release notes:: link:https://github.com/Michad/tilegroxy/releases/tag/v0.14.0[v0.14.0 on GitHub]
 
 === Breaking Changes
 
@@ -33,7 +35,11 @@ link:https://github.com/Michad/tilegroxy/releases/tag/v0.14.0[Release notes]
 
 == 0.13.0
 
-link:https://github.com/Michad/tilegroxy/releases/tag/v0.13.0[Release notes]
+[.release]
+Released:: October 2026
+Risk:: [.risk.medium]#Medium#
+Commits:: link:https://github.com/Michad/tilegroxy/compare/v0.12.0...v0.13.0[81]
+Release notes:: link:https://github.com/Michad/tilegroxy/releases/tag/v0.13.0[v0.13.0 on GitHub]
 
 === Breaking Changes
 
@@ -52,7 +58,11 @@ link:https://github.com/Michad/tilegroxy/releases/tag/v0.13.0[Release notes]
 
 == 0.12.0
 
-link:https://github.com/Michad/tilegroxy/releases/tag/v0.12.0[Release notes]
+[.release]
+Released:: September 2026
+Risk:: [.risk.high]#High#
+Commits:: link:https://github.com/Michad/tilegroxy/compare/v0.11.0...v0.12.0[144]
+Release notes:: link:https://github.com/Michad/tilegroxy/releases/tag/v0.12.0[v0.12.0 on GitHub]
 
 === Breaking Changes
 
@@ -74,7 +84,11 @@ link:https://github.com/Michad/tilegroxy/releases/tag/v0.12.0[Release notes]
 
 == 0.11.0
 
-link:https://github.com/Michad/tilegroxy/releases/tag/v0.11.0[Release notes]
+[.release]
+Released:: August 2026
+Risk:: [.risk.high]#High#
+Commits:: link:https://github.com/Michad/tilegroxy/compare/v0.10.0...v0.11.0[97]
+Release notes:: link:https://github.com/Michad/tilegroxy/releases/tag/v0.11.0[v0.11.0 on GitHub]
 
 === Breaking Changes
 
@@ -98,7 +112,11 @@ link:https://github.com/Michad/tilegroxy/releases/tag/v0.11.0[Release notes]
 
 == 0.10.0
 
-link:https://github.com/Michad/tilegroxy/releases/tag/v0.10.0[Release notes]
+[.release]
+Released:: August 2026
+Risk:: [.risk.high]#High#
+Commits:: link:https://github.com/Michad/tilegroxy/compare/v0.9.2...v0.10.0[10]
+Release notes:: link:https://github.com/Michad/tilegroxy/releases/tag/v0.10.0[v0.10.0 on GitHub]
 
 === Breaking Changes
 
@@ -113,13 +131,21 @@ link:https://github.com/Michad/tilegroxy/releases/tag/v0.10.0[Release notes]
 
 == 0.9.2
 
-link:https://github.com/Michad/tilegroxy/releases/tag/v0.9.2[Release notes]
+[.release]
+Released:: August 2026
+Risk:: [.risk.low]#Low#
+Commits:: link:https://github.com/Michad/tilegroxy/compare/v0.9.1...v0.9.2[40]
+Release notes:: link:https://github.com/Michad/tilegroxy/releases/tag/v0.9.2[v0.9.2 on GitHub]
 
 Maintenance release updating dependencies.  Nothing to act on.
 
 == 0.9.1
 
-link:https://github.com/Michad/tilegroxy/releases/tag/v0.9.1[Release notes]
+[.release]
+Released:: November 2025
+Risk:: [.risk.low]#Low#
+Commits:: link:https://github.com/Michad/tilegroxy/compare/v0.9.0...v0.9.1[210]
+Release notes:: link:https://github.com/Michad/tilegroxy/releases/tag/v0.9.1[v0.9.1 on GitHub]
 
 === Breaking Changes
 
@@ -131,7 +157,11 @@ link:https://github.com/Michad/tilegroxy/releases/tag/v0.9.1[Release notes]
 
 == 0.9.0
 
-link:https://github.com/Michad/tilegroxy/releases/tag/v0.9.0[Release notes]
+[.release]
+Released:: January 2025
+Risk:: [.risk.low]#Low#
+Commits:: link:https://github.com/Michad/tilegroxy/compare/v0.8.0...v0.9.0[85]
+Release notes:: link:https://github.com/Michad/tilegroxy/releases/tag/v0.9.0[v0.9.0 on GitHub]
 
 === Highlights
 
@@ -140,7 +170,11 @@ link:https://github.com/Michad/tilegroxy/releases/tag/v0.9.0[Release notes]
 
 == 0.8.0
 
-link:https://github.com/Michad/tilegroxy/releases/tag/v0.8.0[Release notes]
+[.release]
+Released:: October 2024
+Risk:: [.risk.low]#Low#
+Commits:: link:https://github.com/Michad/tilegroxy/compare/v0.7.0...v0.8.0[88]
+Release notes:: link:https://github.com/Michad/tilegroxy/releases/tag/v0.8.0[v0.8.0 on GitHub]
 
 === Highlights
 
@@ -149,7 +183,11 @@ link:https://github.com/Michad/tilegroxy/releases/tag/v0.8.0[Release notes]
 
 == 0.7.0
 
-link:https://github.com/Michad/tilegroxy/releases/tag/v0.7.0[Release notes]
+[.release]
+Released:: September 2024
+Risk:: [.risk.medium]#Medium#
+Commits:: link:https://github.com/Michad/tilegroxy/compare/v0.6.0...v0.7.0[61]
+Release notes:: link:https://github.com/Michad/tilegroxy/releases/tag/v0.7.0[v0.7.0 on GitHub]
 
 === Breaking Changes
 
@@ -162,7 +200,11 @@ link:https://github.com/Michad/tilegroxy/releases/tag/v0.7.0[Release notes]
 
 == 0.6.0
 
-link:https://github.com/Michad/tilegroxy/releases/tag/v0.6.0[Release notes]
+[.release]
+Released:: August 2024
+Risk:: [.risk.low]#Low#
+Commits:: link:https://github.com/Michad/tilegroxy/compare/v0.5.1...v0.6.0[35]
+Release notes:: link:https://github.com/Michad/tilegroxy/releases/tag/v0.6.0[v0.6.0 on GitHub]
 
 === Highlights
 
@@ -172,13 +214,21 @@ link:https://github.com/Michad/tilegroxy/releases/tag/v0.6.0[Release notes]
 
 == 0.5.1
 
-link:https://github.com/Michad/tilegroxy/releases/tag/v0.5.1[Release notes]
+[.release]
+Released:: August 2024
+Risk:: [.risk.low]#Low#
+Commits:: link:https://github.com/Michad/tilegroxy/compare/v0.5.0...v0.5.1[12]
+Release notes:: link:https://github.com/Michad/tilegroxy/releases/tag/v0.5.1[v0.5.1 on GitHub]
 
 Fixes a crash when using the xref:configuration/provider/blend.adoc[blend] provider.  Nothing to act on.
 
 == 0.5.0
 
-link:https://github.com/Michad/tilegroxy/releases/tag/v0.5.0[Release notes]
+[.release]
+Released:: July 2024
+Risk:: [.risk.low]#Low#
+Commits:: link:https://github.com/Michad/tilegroxy/compare/v0.4.0...v0.5.0[121]
+Release notes:: link:https://github.com/Michad/tilegroxy/releases/tag/v0.5.0[v0.5.0 on GitHub]
 
 === Highlights
 
@@ -188,7 +238,11 @@ link:https://github.com/Michad/tilegroxy/releases/tag/v0.5.0[Release notes]
 
 == 0.4.0
 
-link:https://github.com/Michad/tilegroxy/releases/tag/v0.4.0[Release notes]
+[.release]
+Released:: July 2024
+Risk:: [.risk.medium]#Medium#
+Commits:: link:https://github.com/Michad/tilegroxy/compare/v0.3.0...v0.4.0[72]
+Release notes:: link:https://github.com/Michad/tilegroxy/releases/tag/v0.4.0[v0.4.0 on GitHub]
 
 === Breaking Changes
 
@@ -202,7 +256,11 @@ link:https://github.com/Michad/tilegroxy/releases/tag/v0.4.0[Release notes]
 
 == 0.3.0
 
-link:https://github.com/Michad/tilegroxy/releases/tag/v0.3.0[Release notes]
+[.release]
+Released:: July 2024
+Risk:: [.risk.high]#High#
+Commits:: link:https://github.com/Michad/tilegroxy/compare/v0.2.1...v0.3.0[44]
+Release notes:: link:https://github.com/Michad/tilegroxy/releases/tag/v0.3.0[v0.3.0 on GitHub]
 
 === Breaking Changes
 
@@ -238,8 +296,25 @@ Many configuration keys were renamed for brevity:
 
 == 0.2.0 and earlier
 
-link:https://github.com/Michad/tilegroxy/releases[All releases]
+[.release]
+Released:: June 2024
+Risk:: [.risk.low]#Low#
+Commits:: link:https://github.com/Michad/tilegroxy/commits/v0.2.1[231]
+Release notes:: link:https://github.com/Michad/tilegroxy/releases[All releases on GitHub]
 
-* 0.2.1 is a maintenance release with no changes to act on
-* 0.2.0 added the xref:configuration/provider/blend.adoc[blend], xref:configuration/provider/effect.adoc[effect], xref:configuration/provider/fallback.adoc[fallback], xref:configuration/provider/static.adoc[static], and xref:configuration/provider/transform.adoc[transform] providers and xref:configuration/authentication/custom.adoc[custom authentication]
-* 0.1.0 added xref:configuration/provider/custom.adoc[custom providers]
+[cols="1,1,4"]
+|===
+| Version | Commits | Highlights
+
+| 0.2.1
+| link:https://github.com/Michad/tilegroxy/compare/v0.2.0...v0.2.1[51]
+| Maintenance release.  Nothing to act on
+
+| 0.2.0
+| link:https://github.com/Michad/tilegroxy/compare/v0.1.0...v0.2.0[42]
+| The xref:configuration/provider/blend.adoc[blend], xref:configuration/provider/effect.adoc[effect], xref:configuration/provider/fallback.adoc[fallback], xref:configuration/provider/static.adoc[static], and xref:configuration/provider/transform.adoc[transform] providers and xref:configuration/authentication/custom.adoc[custom authentication]
+
+| 0.1.0
+| link:https://github.com/Michad/tilegroxy/compare/v0.0.2...v0.1.0[33]
+| xref:configuration/provider/custom.adoc[Custom providers]
+|===
