@@ -202,8 +202,8 @@ YAML::
 +
 [,yaml]
 ----
-layer:
-  id: my_layer
+layers:
+- id: my_layer
   pattern: my_{name}_{version}
   examples:
     - my_first_v2
@@ -229,8 +229,8 @@ JSON::
 +
 [,json]
 ----
-{
-  "layer": {
+[
+  {
     "id": "my_layer",
     "pattern": "my_{name}_{version}",
     "examples": [
@@ -255,6 +255,6 @@ JSON::
     },
     "provider": { ... }
   }
-}
+]
 ----
 ====

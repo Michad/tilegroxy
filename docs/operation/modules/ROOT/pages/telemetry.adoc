@@ -64,23 +64,23 @@ Metrics are available for cache hit/miss and the number of tile requests broken 
 | tilegroxy.ratelimit.error
 | The number of rate limit checks that failed because the store failed or timed out
 
-| http.server.response.size
-| Provided by otelhttp. Reflects the size of responses bodies returned from tilegroxy in bytes
-
-| http.server.request.size
-| Provided by otelhttp. Reflects the size of request bodies sent to tilegroxy in bytes
-
-| http.server.duration
+| http.server.request.duration
 | Provided by otelhttp. Reflects the time tilegroxy spends processing a request
 
-| http.client.duration
+| http.server.request.body.size
+| Provided by otelhttp. Reflects the size of request bodies sent to tilegroxy in bytes
+
+| http.server.response.body.size
+| Provided by otelhttp. Reflects the size of responses bodies returned from tilegroxy in bytes
+
+| http.client.request.duration
 | Provided by otelhttp. Reflects the time tilegroxy waits on requests to external APIs
 
-| http.client.response.size
-| Provided by otelhttp. Reflects the size of responses bodies from external APIs called by tilegroxy in bytes
-
-| http.client.request.size
+| http.client.request.body.size
 | Provided by otelhttp. Reflects the size of request bodies sent to external APIs by tilegroxy in bytes
+
+| http.client.response.body.size
+| Provided by otelhttp. Reflects the size of responses bodies from external APIs called by tilegroxy in bytes
 |===
 
 When using patterns with layers, metrics are logged against the ID of the layer not the name passed into the URL.  If using a Ref provider (including indirectly via the  Blend provider), the "child" layer requests are recorded in the layer-specific metrics *but not* the total metrics.

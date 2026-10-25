@@ -211,6 +211,7 @@ YAML::
 layers:
   - id: basemap
     cachecontrol:
+      enabled: true
       auto: false
       visibility: public
       maxage: 86400
@@ -230,6 +231,7 @@ JSON::
     {
       "id": "basemap",
       "cachecontrol": {
+        "enabled": true,
         "auto": false,
         "visibility": "public",
         "maxage": 86400,

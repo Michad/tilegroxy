@@ -33,7 +33,6 @@ xref:configuration/layer.adoc[Layers]::
 * Layers are supplied as a flat array of layer objects with an `id` parameter for the URL-safe layer name instead of them being supplied as an Object with the id being a key.
 * Most parameters unavailable. Some have an equivalent in the `Client` configuration
 * The `write cache` parameter is replaced with `skipcache` with inverted value
-* No `bounds` parameter - instead use the `fallback` provider but note it applies on a per-tile level only (not per-pixel)
 * No `pixel effects` parameter - instead use the `effect` provider
 
 xref:configuration/provider/url_template.adoc[URL Template provider]::

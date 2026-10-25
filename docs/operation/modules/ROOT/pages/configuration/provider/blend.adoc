@@ -9,7 +9,7 @@ This can only be used with layers that return JPEG or PNG images. Tiles will be 
 
 Each downstream provider is called in parallel.
 
-The following diagram depicts a possible request flow when using the Blend provider with the `layers` parameter. Note that each downstream layer is individually cached; this is useful when it's expected for requests to also come in for each of the individual layers but an unnecessary cost if not. If you only expect requests for the blended layer, either use the `providers` parameter option or simply disable caching in the downstream layer(s).
+The following diagram depicts a possible request flow when using the Blend provider with the `layer` parameter. Note that each downstream layer is individually cached; this is useful when it's expected for requests to also come in for each of the individual layers but an unnecessary cost if not. If you only expect requests for the blended layer, either use the `providers` parameter option or simply disable caching in the downstream layer(s).
 
 image::diagram-blend.png[Blend request flow]
 
@@ -86,7 +86,7 @@ JSON::
 | providers
 | The providers to blend together.  Order matters
 | Provider[]
-| Yes
+| No
 | None
 
 | mode
@@ -119,3 +119,5 @@ JSON::
 | Yes
 | None
 |===
+
+One of either `providers` or `layer` is required.

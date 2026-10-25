@@ -22,21 +22,21 @@
       "id": "overture_base",
       "provider": {
         "name": "pmtiles",
-        "url": "https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-08-19.0/base.pmtiles"
+        "url": "https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-10-21.0/base.pmtiles"
       }
     },
     {
       "id": "overture_transportation",
       "provider": {
         "name": "pmtiles",
-        "url": "https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-08-19.0/transportation.pmtiles"
+        "url": "https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-10-21.0/transportation.pmtiles"
       }
     },
     {
       "id": "overture_buildings",
       "provider": {
         "name": "pmtiles",
-        "url": "https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-08-19.0/buildings.pmtiles"
+        "url": "https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-10-21.0/buildings.pmtiles"
       }
     },
     {

@@ -9,7 +9,7 @@ WARNING: The health port should not be exposed outside your local network.
 There are two specific endpoints available:
 
 [horizontal]
-`/`:: Returns a 200 once the tilegroxy server is online.
+`/`:: Returns a 204 once the tilegroxy server is online.
 `/health`:: Returns the result of the full health check.
 
 The full healthcheck consists of invoking a series of individual checks. The list of specific checks is configurable. Actual execution of these checks is fully asynchronous, which means calling the health endpoint returns the cached results of the most recent check rather than triggering the checks immediately.  
@@ -198,6 +198,7 @@ YAML::
 [,yaml]
 ----
 health:
+  enabled: true
   port: 3020
   checks:
     - name: tile
@@ -218,6 +219,7 @@ JSON::
 ----
 {
   "health": {
+    "enabled": true,
     "port": 3020,
     "checks": [
       {

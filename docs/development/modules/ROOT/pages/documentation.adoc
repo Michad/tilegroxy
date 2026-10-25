@@ -60,6 +60,8 @@ JSON::
 
 The configurations on the Examples pages are stored as files in `docs/operation/modules/ROOT/examples` and pulled in with `include::example$NAME.yml[]`.  Keep callout markers out of these files so each one can be copied as is.  After changing one, run it through `tilegroxy config check` and regenerate the matching `.json` file so the two stay equivalent.
 
+Several examples point at Overture Maps tiles, which are published under a release version.  Run `make examples` to update those URLs in `docs` and `examples` to the latest Overture release.  This requires network access.
+
 Tables with 8 or more body rows get a filter box above them that hides rows not containing every word typed.  Add the `filterable` role (`[.filterable]`) to give a shorter table one or `nofilter` to remove it.  Tables using row spans are skipped.  The script and stylesheet are provided by the UI bundle.
 
 The UI template lives at https://github.com/tilegroxy/antora-ui and any changes to it will need to be built prior to building documentation in this repository by creating a tag in the form `vN` in that repository and then updating `antora-playbook.yml` in this repository to refer to that new version.

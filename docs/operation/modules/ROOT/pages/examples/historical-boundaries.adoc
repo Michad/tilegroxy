@@ -50,4 +50,4 @@ tilegroxy test -c historical-boundaries.yml
 tilegroxy serve -c historical-boundaries.yml
 ----
 
-The xref:commands/test.adoc[test] command uses the two `examples` names, since a pattern layer has no single name of its own.  Compare `/tiles/boundaries_1790/7/36/49` with `/tiles/boundaries_1870/7/36/49` to see Virginia before and after West Virginia split from it.
+The xref:commands/test.adoc[test] command uses the two `examples` names, since a pattern layer has no single name of its own.  Compare `/tiles/boundaries_1790/7/35/49` with `/tiles/boundaries_1870/7/35/49` to see Virginia before and after West Virginia split from it.

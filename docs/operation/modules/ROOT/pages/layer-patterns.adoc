@@ -12,7 +12,7 @@ Incoming tile requests look like `+/tiles/{layerName}/{z}/{x}/{y}+`. Tilegroxy c
 
 Because the first match wins, put specific layers above broad patterns that could also match their names. A request that matches nothing is rejected as an unknown layer.
 
-A pattern layer still needs a unique `id`. It's used for the layer's identity elsewhere, such as the xref:commands/test.adoc[test command] `--layer` flag and the TileJSON `name`. 
+A pattern layer still needs a unique `id` as it's used for the layer's identity elsewhere.
 
 The xref:configuration/provider/ref.adoc[ref] provider resolves its `layer` the same way as an incoming request, so a ref can point at a name that fits a pattern.
 

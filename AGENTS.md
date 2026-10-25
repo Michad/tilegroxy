@@ -93,6 +93,7 @@ make lint       # runs lints
 make cover      # generates coverage, writes coveragef.out
 make docs       # builds documentation
 make readme     # regenerates README.adoc, never edit that file directly
+make examples   # updates Overture release versions in example configs to the latest
 ```
 
 `make build` embeds `internal/website/resources`, which is gitignored build output produced by

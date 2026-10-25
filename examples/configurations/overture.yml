@@ -22,23 +22,23 @@ layers:
   - id: overture_base
     provider:
       name: pmtiles
-      url: https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-08-19.0/base.pmtiles
+      url: https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-10-21.0/base.pmtiles
   - id: overture_transportation
     provider:
       name: pmtiles
-      url: https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-08-19.0/transportation.pmtiles
+      url: https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-10-21.0/transportation.pmtiles
   - id: overture_buildings
     provider:
       name: pmtiles
-      url: https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-08-19.0/buildings.pmtiles
+      url: https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-10-21.0/buildings.pmtiles
   - id: overture_places
     provider:
       name: pmtiles
-      url: https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-08-19.0/places.pmtiles
+      url: https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-10-21.0/places.pmtiles
   - id: overture_divisions
     provider:
       name: pmtiles
-      url: https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-08-19.0/divisions.pmtiles
+      url: https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-10-21.0/divisions.pmtiles
   - id: overture_basemap
     provider:
       name: compositemvt
