@@ -62,6 +62,13 @@ readme:
 	@sed -i -E -e 's/^:description: (.*)/\n\1/' -e '/^:page-[a-z-]+:/d' README.adoc
 	@echo Updated README.adoc
 
+examples:
+	@latest=$$(curl -fsS https://stac.overturemaps.org/catalog.json | grep -oE '"latest": *"[^"]+"' | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}\.[0-9]+') \
+		&& test -n "$$latest" \
+		&& git grep -lE 'overturemaps-extras[^ ]*/tiles/[0-9]{4}-[0-9]{2}-[0-9]{2}\.[0-9]+/' -- docs examples \
+		| xargs -r sed -i -E "s#(overturemaps-extras[^ ]*/tiles/)[0-9]{4}-[0-9]{2}-[0-9]{2}\.[0-9]+/#\1$$latest/#g" \
+		&& echo Updated Overture examples to $$latest
+
 sec:
 	@gosec -no-fail -exclude=G504 -exclude-dir=.superpowers -terse ./pkg/... ./internal/... | grep -v Autofix
 
@@ -76,4 +83,4 @@ clean:
 	-@rm ${OUT}
 	-@rm -f examples/extension/my_tg_wrapper examples/extension/go.mod examples/extension/go.sum
 
-.PHONY: build clean cover cover-out coverage docs e2e extension lint libyears mltspec readme test unit version
+.PHONY: build clean cover cover-out coverage docs e2e examples extension lint libyears mltspec readme test unit version
