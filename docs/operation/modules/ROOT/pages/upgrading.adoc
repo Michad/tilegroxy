@@ -1,0 +1,245 @@
+= Upgrading
+:description: What needs acting on when upgrading
+
+This covers breaking changes and the highlights you may want to adopt.  Bug fixes, internal changes, and dependency updates are left out. Follow the release notes link under each version for the full change notes.
+
+NOTE: Releases before 1.0 do not follow the xref:compatibility.adoc[compatibility policy] and frequently include breaking changes.
+
+== Before you upgrade
+
+. Run xref:commands/config_check.adoc[config check] with the new version against your existing configuration.  Validation tends to get stricter between versions, so a configuration that starts today may be rejected after the upgrade
+. Check the breaking changes below for anything that applies to you, paying attention to any that change behavior without an error
+. If you write xref:extensibility.adoc#custom[custom] providers, authentication, or analytics, check for signature changes and test your scripts with the new version
+. After upgrading, check your logs for deprecation warnings at `warn` level
+
+== 0.14.0
+
+NOTE: Not yet released.
+
+link:https://github.com/Michad/tilegroxy/releases/tag/v0.14.0[Release notes]
+
+=== Breaking Changes
+
+* xref:tilejson.adoc[TileJSON] only uses the `X-Forwarded-Proto`, `X-Forwarded-Host`, and `X-Forwarded-Prefix` headers when the request comes from a proxy listed in xref:configuration/forwarded.adoc[`server.forwarded.trusted`].  Private, loopback, and link-local addresses are trusted by default.  If your proxy has a public address, add it to `trusted` or set `baseurls` in the xref:configuration/tilejson.adoc[TileJSON configuration], otherwise the `tiles` URLs are built from the request tilegroxy received
+* The client IP in logs and xref:analytics.adoc[analytics] now comes from the `X-Forwarded-For` header when the request is from a trusted proxy.  It used to always be the address of the connection, so a proxy on a private network would be recorded instead of the client
+
+=== Highlights
+
+* xref:configuration/forwarded.adoc[Forwarded] configures which proxies are trusted and which headers they report the original request in, for example `CF-Connecting-IP`
+* xref:ratelimit.adoc[Rate limiting] available.  Off by default
+** Configured in the new top-level xref:configuration/ratelimit/index.adoc[ratelimit] section, and each layer can pick a policy with `ratelimit` or opt out with `skipratelimit`.  
+** New xref:commands/ratelimit_status.adoc[ratelimit status], xref:commands/ratelimit_reset.adoc[ratelimit reset], and xref:commands/ratelimit_list.adoc[ratelimit list] commands
+** Rate limit rejections get their own xref:configuration/error.adoc[error] image, xref:configuration/log.adoc#audit-logs[audit log] event, and xref:telemetry.adoc[metrics]
+
+== 0.13.0
+
+link:https://github.com/Michad/tilegroxy/releases/tag/v0.13.0[Release notes]
+
+=== Breaking Changes
+
+* `SIGHUP` now reloads the configuration instead of shutting down.  Anything that relied on `SIGHUP` to stop the process should send `SIGTERM` or `SIGINT` instead.  See xref:reloading.adoc#reload-signal[Reloading]
+* Library use only: `pkg/` has been minimized to entity interfaces, `Deps` structs, registrations, and the types they reference.  See xref:extensibility.adoc#using-tilegroxy-as-a-library[Using tilegroxy as a library] for the supported approach
+
+=== Highlights
+
+* The xref:configuration/provider/pmtiles.adoc[pmtiles] provider serves tiles directly from a PMTiles archive
+* MapLibre Tiles (MLT) are supported alongside MVT, with new xref:configuration/provider/compositemlt.adoc[compositemlt] and xref:configuration/provider/cropmlt.adoc[cropmlt] providers
+* xref:configuration/authentication/bearer.adoc[Bearer] authentication validates API tokens stored in a PostgreSQL or Redis datastore
+* xref:configuration/authentication/passthrough.adoc[Passthrough] authentication forwards incoming credentials to an existing HTTP endpoint
+* Layers can pull TileJSON xref:configuration/layer.adoc#metadata[metadata] from their provider, for example from a PMTiles archive
+* The disk cache `filemode` accepts chmod-style values such as `"0644"`
+* Deprecated configuration now logs a warning.  The currently deprecated options are listed in xref:compatibility.adoc#currently-deprecated[Compatibility]
+
+== 0.12.0
+
+link:https://github.com/Michad/tilegroxy/releases/tag/v0.12.0[Release notes]
+
+=== Breaking Changes
+
+* Health moved from `server.health` to a top-level xref:configuration/health.adoc[health] section.  The `SERVER_HEALTH_*` environment variables are now `HEALTH_*` and the Helm chart values moved to match
+* xref:configuration/authentication/custom.adoc[Custom authentication] scripts now implement `func validate(string) tilegroxy.ValidationResult`, a struct carrying `Pass`, `Expiration`, `UserID`, `TenantID` and `AllowedLayers`, instead of returning four values.  See xref:extensibility.adoc#custom-authentication[Custom Authentication]
+* The xref:configuration/error.adoc[error] section is no longer partially reloadable.  Changes to it now require a restart
+* The `ttl` of the xref:configuration/secret/aws_secrets_manager.adoc[AWS Secrets Manager] secret source changed meaning.  It used to control a cache that had little effect.  It now triggers a reload of all secrets when it expires
+* Library use only: the `Cache` interface gained a `Remove` method and `ClientConfig.UnknownLength` is now a `*bool`
+
+=== Highlights
+
+* Authentication can attribute a request to a tenant as well as a user.  The new xref:configuration/cache/tenant.adoc[tenant] cache namespaces entries so one tenant is never served another's tile.  See xref:howto/multi-tenant.adoc[Multi-tenant]
+* The top-level `cache` can be a list of configurations identified by `id`, and each layer can pick one.  See xref:configuration/cache/index.adoc#overridable-caches[Overridable caches]
+* xref:configuration/cache_control.adoc[Cache-Control] and xref:configuration/cors.adoc[CORS] have dedicated sections.  If you set these through `server.headers`, consider moving to the new sections.  Both are off by default
+* An xref:configuration/log.adoc#audit-logs[audit log] records authentication failures and configuration reloads.  Off by default
+* xref:configuration/secret/index.adoc[Secrets] gained `watch` and `ttl` options so rotated credentials take effect without a restart
+* The disk cache supports a `layout` so entries aren't all written to one directory
+* New CLI options: xref:commands/config_diff.adoc[config diff], `seed --purge`, `seed --max-failures`, and `--user` and `--tenant` on xref:commands/seed.adoc[seed] and xref:commands/test.adoc[test]
+
+== 0.11.0
+
+link:https://github.com/Michad/tilegroxy/releases/tag/v0.11.0[Release notes]
+
+=== Breaking Changes
+
+* xref:configuration/server.adoc[server] `production` now defaults to `true`.  If your configuration doesn't set it, the splash page, documentation, and layer preview are no longer served.  Set `production: false` explicitly to keep the old behavior
+* Library use only: `Initialize` on provider, authentication, and analytics registrations now takes a single dependency struct.  Custom scripts are unaffected
+
+=== Highlights
+
+* Layers can serve xref:tilejson.adoc[TileJSON] documents describing their tiles
+* xref:configuration/layer.adoc[Layers] can declare a data type, zoom limits, and bounds, enforced before the request reaches a provider.  They also gained a cache invalidation version
+* The xref:configuration/provider/cropmvt.adoc[cropmvt] provider crops vector tiles to bounds
+* xref:configuration/authentication/jwt.adoc#jwks[JWT] authentication can fetch signing keys from a JWKS endpoint
+* A xref:preview.adoc[layer preview] page is available when `production` is `false`
+* Duplicate concurrent requests for the same tile are coalesced into a single upstream fetch
+* The xref:configuration/cache/ttl.adoc[ttl] cache bounds how long entries live in caches without native expiration
+* Timeout responses can be customized and most errors have a vector tile variant.  See xref:configuration/error.adoc[Error]
+* `seed` can resume an interrupted run and target a specific cache.  `test` gained JSON and file output
+* A xref:get-it.adoc#kubernetes[Helm chart] is available
+* Shutdown and reload now drain in-flight requests instead of dropping them
+* `memcache` was renamed `memcached` and the `postgres` analytics was renamed `postgresql`.  The old names still work but are deprecated
+
+== 0.10.0
+
+link:https://github.com/Michad/tilegroxy/releases/tag/v0.10.0[Release notes]
+
+=== Breaking Changes
+
+* Configuration validation is stricter.  Unknown keys, an invalid `error.mode`, invalid logging levels and formats, duplicate layer IDs, and datastore ID collisions are now errors.  Run xref:commands/config_check.adoc[config check] before upgrading
+* Special characters in layer names are replaced with an underscore when used in disk and S3 cache keys and telemetry metric names.  Layer names that differ only by special characters may now collide.  Existing cache entries for such layers will no longer be found.  See xref:configuration/layer.adoc#layer-names[Layer names]
+
+=== Highlights
+
+* xref:analytics.adoc[Analytics] records an event for each tile served, to PostgreSQL, ClickHouse, or a custom destination.  Off by default
+* `ETag` and `If-None-Match` support, so repeat requests for unchanged tiles return 304.  No configuration needed
+* Vector tile content types are allowed by default, so proxied MVT works without changing the xref:configuration/client.adoc[client] `contenttypes`
+
+== 0.9.2
+
+link:https://github.com/Michad/tilegroxy/releases/tag/v0.9.2[Release notes]
+
+Maintenance release updating dependencies.  Nothing to act on.
+
+== 0.9.1
+
+link:https://github.com/Michad/tilegroxy/releases/tag/v0.9.1[Release notes]
+
+=== Breaking Changes
+
+* Releases are signed with a new key.  If you verify release signatures, import the new public key from the release notes
+
+=== Highlights
+
+* The xref:configuration/provider/crop.adoc[crop] provider limits a layer to a geographic area
+
+== 0.9.0
+
+link:https://github.com/Michad/tilegroxy/releases/tag/v0.9.0[Release notes]
+
+=== Highlights
+
+* xref:reloading.adoc[Hot reloading] of configuration supplied by file, enabled with `--hot-reload`
+* The xref:configuration/provider/compositemvt.adoc[compositemvt] provider combines multiple MVT layers into a single tile
+
+== 0.8.0
+
+link:https://github.com/Michad/tilegroxy/releases/tag/v0.8.0[Release notes]
+
+=== Highlights
+
+* The xref:configuration/provider/postgismvt.adoc[postgismvt] provider generates MVT tiles from a PostGIS table
+* A xref:configuration/health.adoc[health] endpoint on a secondary port for load balancer and orchestrator probes
+
+== 0.7.0
+
+link:https://github.com/Michad/tilegroxy/releases/tag/v0.7.0[Release notes]
+
+=== Breaking Changes
+
+* xref:configuration/provider/custom.adoc[Custom provider] scripts now return an image struct instead of a byte array, so they can specify a content type.  See xref:extensibility.adoc#custom-providers[Custom Providers]
+
+=== Highlights
+
+* Documentation is published as a website and served by tilegroxy itself
+* Improved xref:content-type.adoc[content type] handling
+
+== 0.6.0
+
+link:https://github.com/Michad/tilegroxy/releases/tag/v0.6.0[Release notes]
+
+=== Highlights
+
+* xref:telemetry.adoc[OpenTelemetry] support for traces, metrics, and logs
+* Cache writes are asynchronous
+* The xref:configuration/provider/proxy.adoc[proxy] provider supports `{ctx.query-string}` and EPSG:3857
+
+== 0.5.1
+
+link:https://github.com/Michad/tilegroxy/releases/tag/v0.5.1[Release notes]
+
+Fixes a crash when using the xref:configuration/provider/blend.adoc[blend] provider.  Nothing to act on.
+
+== 0.5.0
+
+link:https://github.com/Michad/tilegroxy/releases/tag/v0.5.0[Release notes]
+
+=== Highlights
+
+* xref:configuration/secret/index.adoc[Secrets] can be read from an external store, starting with AWS Secrets Manager
+* The xref:configuration/provider/cgi.adoc[cgi] provider serves tiles from CGI applications such as MapServer
+* tilegroxy can be xref:extensibility.adoc#using-tilegroxy-as-a-library[used as a library]
+
+== 0.4.0
+
+link:https://github.com/Michad/tilegroxy/releases/tag/v0.4.0[Release notes]
+
+=== Breaking Changes
+
+* The per-layer `overrideclient` parameter is renamed `client`.  It now only overrides the values you set and inherits everything else from the top-level xref:configuration/client.adoc[client], where it previously replaced the whole client configuration
+
+=== Highlights
+
+* HTTPS, including Let's Encrypt.  See xref:configuration/encryption.adoc[Encryption]
+* JWT authentication can restrict access to an area using a geohash claim
+* Layers can match a xref:layer-patterns.adoc[pattern] instead of a fixed ID, and the xref:configuration/provider/ref.adoc[ref] provider points one layer at another
+
+== 0.3.0
+
+link:https://github.com/Michad/tilegroxy/releases/tag/v0.3.0[Release notes]
+
+=== Breaking Changes
+
+Many configuration keys were renamed for brevity:
+
+[cols="1,1m,1m"]
+|===
+| Section | Old Key | New Key
+
+| JWT | VerificationKey | Key
+| JWT | MaxExpirationDuration | MaxExpiration
+| JWT | LayerScopePrefix | ScopePrefix
+| JWT | UserIdentifierGrant | UserId
+| server | StaticHeaders | Headers
+| client | MaxResponseLength | MaxLength
+| client | AllowUnknownLength | UnknownLength
+| client | AllowedContentTypes | ContentTypes
+| client | AllowedStatusCodes | StatusCodes
+| client | StaticHeaders | Headers
+| logging | mainlog | main
+| logging | accesslog | access
+| logging.main | EnableStandardOut | Console
+| logging.main | IncludeRequestAttributes | Request
+| logging.main | IncludeHeaders | Headers
+| logging.access | EnableStandardOut | Console
+| error | SuppressStatusCode | AlwaysOk
+|===
+
+=== Highlights
+
+* Configuration can come from etcd or Consul and be overridden with environment variables.  See xref:configuration.adoc[Configuration]
+* Prebuilt binaries for several operating systems and architectures, with checksums and signatures
+
+== 0.2.0 and earlier
+
+link:https://github.com/Michad/tilegroxy/releases[All releases]
+
+* 0.2.1 is a maintenance release with no changes to act on
+* 0.2.0 added the xref:configuration/provider/blend.adoc[blend], xref:configuration/provider/effect.adoc[effect], xref:configuration/provider/fallback.adoc[fallback], xref:configuration/provider/static.adoc[static], and xref:configuration/provider/transform.adoc[transform] providers and xref:configuration/authentication/custom.adoc[custom authentication]
+* 0.1.0 added xref:configuration/provider/custom.adoc[custom providers]
