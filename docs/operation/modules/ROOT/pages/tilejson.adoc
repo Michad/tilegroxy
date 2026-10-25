@@ -25,7 +25,7 @@ If you have authentication configured with an authorization mechanism for limiti
 
 Most of a TileJSON document is derived from configuration that already exists for other purposes, rather than duplicated onto the layer:
 
-`name`:: Always the layer's `id`, or the resolved example string for a layer generated from `examples`.
+`name`:: Always the layer's `id`, or for a pattern layer, the name the document was requested with.
 
 `tiles`:: URLs built based on the path to reach each layer. The protocol/host/prefix are built from the incoming request, or from the forwarding headers sent by a proxy listed in xref:configuration/forwarded.adoc[`server.forwarded.trusted`]. For protection against bad reverse proxies, you can customize the URLs with the `BaseURLs` configuration. Configuring more than one entry populates the `tiles` array with one URL per entry, useful if tiles are reachable at multiple base URLs.
 
