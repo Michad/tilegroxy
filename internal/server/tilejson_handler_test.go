@@ -207,23 +207,64 @@ func Test_TileJSONHandler_Document_UnknownLayer_Returns401(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, res.StatusCode)
 }
 
-func Test_TileJSONHandler_Document_PatternLayerWithoutExamples_NotEligible(t *testing.T) {
+func serveTileJSONDocument(t *testing.T, cfg config.Config, name string) *http.Response {
+	t.Helper()
+
+	ent := buildTileJSONTestServing(t, cfg)
+	h := newTileJSONHandler(newGenerationHolder(ent), false)
+
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/tiles/"+name+".json", nil).WithContext(pkg.BackgroundContext())
+	req.SetPathValue("layerjson", name+".json")
+	w := httptest.NewRecorder()
+
+	h.ServeHTTP(w, req)
+
+	return w.Result()
+}
+
+func Test_TileJSONHandler_Document_PatternLayerWithoutExamples(t *testing.T) {
 	cfg := config.DefaultConfig()
 	cfg.Server.TileJSON.Enabled = true
 	cfg.Layers = []config.LayerConfig{
 		{ID: "id1", Pattern: "my_{name}", Provider: map[string]interface{}{"name": "static", "color": "FFF"}},
 	}
 
-	ent := buildTileJSONTestServing(t, cfg)
-	h := newTileJSONHandler(newGenerationHolder(ent), false)
+	res := serveTileJSONDocument(t, cfg, "my_foo")
+	defer func() { require.NoError(t, res.Body.Close()) }()
+	assert.Equal(t, http.StatusOK, res.StatusCode)
 
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/tiles/my_foo.json", nil).WithContext(pkg.BackgroundContext())
-	req.SetPathValue("layerjson", "my_foo.json")
-	w := httptest.NewRecorder()
+	var doc layers.TileJSONDocument
+	require.NoError(t, json.NewDecoder(res.Body).Decode(&doc))
 
-	h.ServeHTTP(w, req)
+	assert.Equal(t, "my_foo", doc.Name)
+	require.Len(t, doc.Tiles, 1)
+	assert.Equal(t, "http://example.com/tiles/my_foo/{z}/{x}/{y}", doc.Tiles[0])
+}
 
-	res := w.Result()
+func Test_TileJSONHandler_Document_PatternNameOutsideExamples(t *testing.T) {
+	cfg := config.DefaultConfig()
+	cfg.Server.TileJSON.Enabled = true
+	cfg.Layers = []config.LayerConfig{
+		{ID: "id1", Pattern: "my_{name}", Examples: []string{"my_foo"}, Provider: map[string]interface{}{"name": "static", "color": "FFF"}},
+	}
+
+	res := serveTileJSONDocument(t, cfg, "my_bar")
+	defer func() { require.NoError(t, res.Body.Close()) }()
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+
+	var doc layers.TileJSONDocument
+	require.NoError(t, json.NewDecoder(res.Body).Decode(&doc))
+	assert.Equal(t, "my_bar", doc.Name)
+}
+
+func Test_TileJSONHandler_Document_PatternParamValidatorRejects(t *testing.T) {
+	cfg := config.DefaultConfig()
+	cfg.Server.TileJSON.Enabled = true
+	cfg.Layers = []config.LayerConfig{
+		{ID: "id1", Pattern: "my_{name}", ParamValidator: map[string]string{"name": "^[a-z]+$"}, Provider: map[string]interface{}{"name": "static", "color": "FFF"}},
+	}
+
+	res := serveTileJSONDocument(t, cfg, "my_FOO1")
 	defer func() { require.NoError(t, res.Body.Close()) }()
 	assert.Equal(t, http.StatusUnauthorized, res.StatusCode)
 }

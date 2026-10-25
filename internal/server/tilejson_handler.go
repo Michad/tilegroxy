@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 
@@ -262,44 +261,27 @@ func serveDocument(ctx context.Context, w http.ResponseWriter, req *http.Request
 		return
 	}
 
-	l, foundName := findTileJSONLayer(cur.layerGroup(), name)
+	l := cur.layerGroup().FindLayer(ctx, name)
 	if l == nil {
 		writeError(ctx, w, &cur.errCfg, pkg.UnauthorizedError{Message: "Layer " + name + " does not exist"}, config.DataTypeUnknown)
 		return
 	}
 
-	if limitLayers && !layerNameAllowed(foundName, l.ID, allowed) {
+	if limitLayers && !layerNameAllowed(name, l.ID, allowed) {
 		writeError(ctx, w, &cur.errCfg, pkg.UnauthorizedError{Message: "Denying access to non-allowed layer"}, config.DataTypeUnknown)
 		return
 	}
 
 	tilesURLs := make([]string, len(publicURLs))
 	for i, publicURL := range publicURLs {
-		tilesURLs[i] = publicURL.build(tilePathPrefix + "/" + foundName + "/{z}/{x}/{y}")
+		tilesURLs[i] = publicURL.build(tilePathPrefix + "/" + name + "/{z}/{x}/{y}")
 	}
-	doc := l.BuildTileJSON(foundName, tilesURLs, allowedArea)
+	doc := l.BuildTileJSON(name, tilesURLs, allowedArea)
 
 	writeJSON(w, http.StatusOK, doc)
 }
 
-// Matches by ID or example list, returning the exact name it matched under
-func findTileJSONLayer(lg *layers.LayerGroup, name string) (*layers.Layer, string) {
-	for _, l := range lg.Layers() {
-		if !l.TileJSONEligible() {
-			continue
-		}
-
-		for _, candidate := range l.TileJSONNames() {
-			if candidate == name {
-				return l, candidate
-			}
-		}
-	}
-
-	return nil, ""
-}
-
-// Pattern examples aren't layer IDs, so scope checks fall back to the ID like tile requests do via MatchesName
+// Names matched by a pattern aren't layer IDs, so scope checks fall back to the ID like tile requests do
 func layerNameAllowed(name string, layerID string, allowed []string) bool {
 	for _, a := range allowed {
 		if a == name || a == layerID {
