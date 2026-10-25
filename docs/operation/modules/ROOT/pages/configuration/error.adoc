@@ -105,6 +105,24 @@ Most error conditions have three fields: a raster one, an `Mvt`-suffixed one for
 | No
 | embedded:unauthorized.png
 
+| RateLimited
+| The raster image to display for requests rejected by a xref:configuration/ratelimit/index.adoc[rate limit]
+| string
+| No
+| embedded:ratelimited.png
+
+| RateLimitedMvt
+| The vector tile to display for requests to an mvt layer rejected by a rate limit
+| string
+| No
+| embedded:empty.mvt
+
+| RateLimitedMlt
+| The vector tile to display for requests to an mlt layer rejected by a rate limit
+| string
+| No
+| embedded:empty.mlt
+
 | Provider
 | The raster image to display for errors returned by the layer's provider
 | string
@@ -159,6 +177,15 @@ Most error conditions have three fields: a raster one, an `Mvt`-suffixed one for
 | Authentication
 | ERROR_IMAGES_AUTHENTICATION
 
+| RateLimited
+| ERROR_IMAGES_RATELIMITED
+
+| RateLimitedMvt
+| ERROR_IMAGES_RATELIMITEDMVT
+
+| RateLimitedMlt
+| ERROR_IMAGES_RATELIMITEDMLT
+
 | Provider
 | ERROR_IMAGES_PROVIDER
 
@@ -182,7 +209,7 @@ Most error conditions have three fields: a raster one, an `Mvt`-suffixed one for
 
 In addition to an image on the filesystem you can refer to a static color or a built-in image.
 
-There are 4 built-in raster images available:
+There are 5 built-in raster images available:
 
 .Built-in raster images
 [cols="1m,3,1"]
@@ -204,6 +231,10 @@ There are 4 built-in raster images available:
 | unauthorized.png
 | A semi-transparent solid red image with the words "Not Authorized" in white
 | image:unauthorized.png[]
+
+| ratelimited.png
+| A semi-transparent solid red image with the words "Rate Limited" in white
+| image:ratelimited.png[]
 |===
 
 There are also 4 built-in vector tiles available, the `.mvt` ones for use with the `Mvt`-suffixed fields above and the `.mlt` ones for the `Mlt`-suffixed fields:
@@ -318,4 +349,7 @@ JSON::
 
 | TileNotFound
 | Tile %v is not available
+
+| RateLimited
+| Rate limit exceeded
 |===

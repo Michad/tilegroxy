@@ -36,6 +36,8 @@ const (
 	TypeOfErrorOther
 	// Exceeded the configured server timeout. Generally a 503
 	TypeOfErrorTimeout
+	// Rejected by a rate limit. Generally a 429
+	TypeOfErrorRateLimit
 )
 
 // Separates the localized external message from the internal Error() text used for logs

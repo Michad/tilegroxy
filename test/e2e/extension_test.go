@@ -51,7 +51,8 @@ func Test_Extension_TestsThenServesEverySampleEntity(t *testing.T) {
 	inst.Get("/tiles/color/3/2/1").ExpectStatus(http.StatusUnauthorized)
 	inst.GetWithHeader("/tiles/color/3/2/1", "X-Api-Key", "hunter2").
 		ExpectStatus(http.StatusOK).
-		ExpectHeader("Content-Type", "image/png")
+		ExpectHeader("Content-Type", "image/png").
+		ExpectHeader("RateLimit-Policy", `"standard.user.1s";q=100;w=1`)
 
 	Until(t, Scale(10*time.Second), "sample health check to pass", func() bool {
 		return inst.GetHealth().StatusCode == http.StatusOK

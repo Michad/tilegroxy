@@ -107,8 +107,11 @@ func TestDefaultConfigImageKeysMatchEmbeddedKeys(t *testing.T) {
 	assert.Equal(t, KeyImageUnauthorized, def.Error.Images.Authentication)
 	assert.Equal(t, KeyImageError, def.Error.Images.Provider)
 	assert.Equal(t, KeyImageError, def.Error.Images.Other)
+	assert.Equal(t, KeyImageRateLimited, def.Error.Images.RateLimited)
+	assert.Equal(t, KeyMvtEmpty, def.Error.Images.RateLimitedMvt)
+	assert.Equal(t, KeyMltEmpty, def.Error.Images.RateLimitedMlt)
 
-	for _, key := range []string{def.Error.Images.OutOfBounds, def.Error.Images.Authentication, def.Error.Images.Provider, def.Error.Images.Other} {
+	for _, key := range []string{def.Error.Images.OutOfBounds, def.Error.Images.Authentication, def.Error.Images.Provider, def.Error.Images.Other, def.Error.Images.RateLimited} {
 		img, err := GetStaticImage(key)
 		require.NoError(t, err)
 		assert.NotNil(t, img)

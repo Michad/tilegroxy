@@ -1,0 +1,270 @@
+= Rate Limit
+:description: Limits how many tiles can be requested in a period.
+:page-eyebrow: Rate Limit
+
+== Description
+
+More details on how policies and rules are evaluated and what users see can be found in xref:ratelimit.adoc[Rate Limiting].
+
+Like other entities, the rate limit configuration uses a parameter called `name` to dictate the store that holds the counters, but the policies and options below are shared by every store.  Rate limiting is disabled by default.
+
+Layers pick a policy with their own `ratelimit` parameter, or opt out with `skipratelimit`. See xref:configuration/layer.adoc[Layer]. Layers that don't pick one use the policy named by the top-level `defaultratelimit`, or the first policy if that isn't set.
+
+== Choosing a store
+
+[cols="2,1,3"]
+|===
+| Goal | Store | Notes
+
+| Develop or run a single instance
+| xref:configuration/ratelimit/memory.adoc[Memory]
+| Not shared between instances. Counts are lost on restart
+
+| Share limits between instances
+| xref:configuration/ratelimit/redis.adoc[Redis]
+| Recommended for production. Needs a matching xref:configuration/datastores/redis.adoc[datastore]
+
+| Keep long quotas in a database you already back up
+| xref:configuration/ratelimit/postgresql.adoc[PostgreSQL]
+| Updates a row per rule on every request, so only suits moderate traffic
+
+| Temporarily turn rate limiting off
+| xref:configuration/ratelimit/none.adoc[None]
+| Policies are still validated but never enforced
+|===
+
+== Example
+
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+ratelimit:
+  name: redis
+  datastore: redis-0
+  headers: standard
+  onError: allow
+  policies:
+    - id: standard
+      rules:
+        - segment:
+            - user
+          limit: 50
+          period: 1
+    - id: premium
+      extend:
+        - standard
+      rules:
+        - segment:
+            - tenant
+          limit: 100000
+          calendar: month
+          overrides:
+            - tenants:
+                - acme
+              limit: 5000000
+defaultratelimit: standard
+----
+
+JSON::
++
+[,json]
+----
+{
+  "ratelimit": {
+    "name": "redis",
+    "datastore": "redis-0",
+    "headers": "standard",
+    "onError": "allow",
+    "policies": [
+      {
+        "id": "standard",
+        "rules": [
+          {
+            "segment": [
+              "user"
+            ],
+            "limit": 50,
+            "period": 1
+          }
+        ]
+      },
+      {
+        "id": "premium",
+        "extend": [
+          "standard"
+        ],
+        "rules": [
+          {
+            "segment": [
+              "tenant"
+            ],
+            "limit": 100000,
+            "calendar": "month",
+            "overrides": [
+              {
+                "tenants": [
+                  "acme"
+                ],
+                "limit": 5000000
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "defaultratelimit": "standard"
+}
+----
+====
+
+== Configuration
+
+.Configuration options
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| Policies
+| The sets of limits layers can use. See <<policies>>
+| Policy[]
+| Yes, unless `name` is `none`
+| None
+
+| Headers
+| Which headers describe the limits on tile responses. One of `standard`, `min`, or `none`. See xref:ratelimit.adoc#headers[Headers]
+| string
+| No
+| standard
+
+| Timeout
+| How long (in milliseconds) to wait for the store before treating the check as failed
+| uint
+| No
+| 100
+
+| OnError
+| What to do when the store fails or times out. `allow` serves the request without limiting it. `deny` returns a 503 using the `Other` error image and `ServerError` message, which a load balancer or service mesh may read as the instance being unhealthy. Either way a warning is logged at most once a minute
+| string
+| No
+| allow
+
+| IPv6Prefix
+| How many leading bits of an IPv6 address identify a client when segmenting by `ip`. IPv4 addresses are always counted individually
+| uint
+| No
+| 64
+|===
+
+`defaultratelimit` sits at the top level of the configuration, beside `ratelimit`, and holds the ID of the policy used by layers that don't pick one. It defaults to the first policy.
+
+== Policies
+
+.Policy options
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| ID
+| A unique identifier for the policy, used by layers, `defaultratelimit`, and `extend`. Letters, digits, `-`, and `_` only. Changing it resets the counters of the policy's rules
+| string
+| Yes
+| None
+
+| Rules
+| The limits this policy enforces. See <<rules>>. No two rules in a policy may have the same segment and period
+| Rule[]
+| No
+| None
+
+| Extend
+| The IDs of other policies whose rules this policy also enforces. Their counters are shared, not copied. Loops are rejected
+| string[]
+| No
+| None
+|===
+
+== Rules
+
+.Rule options
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| Limit
+| How many requests are allowed per period. Must be at least 1
+| uint
+| Yes
+| None
+
+| Period
+| The length of a rolling window, in seconds. Mutually exclusive with Calendar
+| uint
+| No
+| None
+
+| Calendar
+| Reset at the start of each calendar period in UTC. One of `hour`, `day`, `week`, `month`, or `year`. Mutually exclusive with Period
+| string
+| No
+| None
+
+| Segment
+| What gets its own counter. Any of `user`, `tenant`, `ip`, and `layer`, each at most once. An empty list shares one counter between every request. Requests without a user or tenant ID all share the empty ID, and so one counter. `user` and `tenant` are an error when xref:configuration/authentication/index.adoc[authentication] is `none`. See xref:ratelimit.adoc#segments[Segments]
+| string[]
+| Yes
+| None
+
+| Overrides
+| Different limits for specific requests. The first match wins. See <<overrides>>
+| Override[]
+| No
+| None
+|===
+
+One of Period or Calendar is required.
+
+== Overrides
+
+An override matches a request if any of its conditions match.
+
+.Override options
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| Users
+| User IDs to match
+| string[]
+| No
+| None
+
+| Tenants
+| Tenant IDs to match
+| string[]
+| No
+| None
+
+| IPs
+| Client IP addresses or CIDR ranges to match, such as `10.0.0.0/8`
+| string[]
+| No
+| None
+
+| Anonymous
+| If true, match requests without a user or tenant ID for the values in the rule's `segment`. Only meaningful on rules segmented by `user` or `tenant`
+| bool
+| No
+| false
+
+| Limit
+| The limit to use instead of the rule's. 0 rejects every request and -1 removes the limit. Must be -1 or greater
+| int
+| Yes
+| None
+|===
+
+At least one of Users, Tenants, IPs, or Anonymous is required.

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package audit emits security-relevant events: auth/authz failures and configuration reloads
+// Package audit emits security-relevant events: auth/authz failures, rate limiting, and configuration reloads
 package audit
 
 import (
@@ -26,6 +26,7 @@ import (
 const (
 	EventAuthFailure  = "auth_failure"
 	EventConfigReload = "config_reload"
+	EventRateLimited  = "rate_limited"
 )
 
 // Outcomes of a config reload
@@ -77,6 +78,33 @@ func AuthFailure(ctx context.Context, reason string) {
 	}
 
 	log(ctx, "Authentication failure", attrs...)
+}
+
+// The caller limits how often this fires so a client hammering away doesn't flood the log
+func RateLimited(ctx context.Context, policy, rule, layer, user, tenant string) {
+	if !Enabled() {
+		return
+	}
+
+	attrs := []any{
+		slog.String("event", EventRateLimited),
+		slog.String("policy", policy),
+		slog.String("rule", rule),
+		slog.String("layer", layer),
+	}
+
+	attrs = appendNonEmpty(attrs, "user", user)
+	attrs = appendNonEmpty(attrs, "tenant", tenant)
+
+	log(ctx, "Rate limit exceeded", attrs...)
+}
+
+func appendNonEmpty(attrs []any, key, value string) []any {
+	if value == "" {
+		return attrs
+	}
+
+	return append(attrs, slog.String(key, value))
 }
 
 // Records a hot reload and the error that stopped it, if any. reason is one of the Reason constants

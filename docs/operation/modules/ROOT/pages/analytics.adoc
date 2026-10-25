@@ -55,7 +55,7 @@ The following can be included via `fields`:
 | The tenant identifier established during authentication, if any
 
 | ip
-| The client IP address
+| The client IP address, taking xref:configuration/forwarded.adoc[`server.forwarded.trusted`] into account
 
 | useragent
 | The User-Agent header

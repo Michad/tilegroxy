@@ -102,6 +102,7 @@ docker run --rm -p 8080:8080 -e SERVER_BINDHOST=0.0.0.0 -v ./tilegroxy.yml:/tile
 .Secure
 * Require authentication using xref:configuration/authentication/static_key.adoc[static key], xref:configuration/authentication/jwt.adoc[JWT], xref:configuration/authentication/passthrough.adoc[an existing HTTP endpoint], xref:configuration/authentication/bearer.adoc[API keys in a database], or xref:configuration/authentication/custom.adoc[custom] logic
 * xref:configuration/authentication/jwt.adoc[Restrict access] to a layer and/or geographic region by auth token
+* xref:ratelimit.adoc[Rate limit] users, tenants, or IP addresses, from per-second bursts to monthly quotas
 * Run as xref:configuration/encryption.adoc[HTTPS], including Let's Encrypt (ACME)
 * Minimal HTTP footprint to decrease security exposure
 

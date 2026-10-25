@@ -70,12 +70,6 @@
 | UnknownLength
 | CLIENT_UNKNOWNLENGTH
 
-| ContentTypes
-| CLIENT_CONTENTTYPES
-
-| StatusCodes
-| CLIENT_STATUSCODES
-
 | Timeout
 | CLIENT_TIMEOUT
 |===

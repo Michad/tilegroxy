@@ -96,6 +96,12 @@
 | xref:configuration/cache_control.adoc[Cache Control]
 | No
 | None
+
+| Forwarded
+| Configuration for trusting the client IP, host, protocol, port, and path prefix reported by a CDN, load balancer, or reverse proxy in front of tilegroxy
+| xref:configuration/forwarded.adoc[Forwarded]
+| No
+| None
 |===
 
 .Environment variables

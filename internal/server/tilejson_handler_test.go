@@ -353,19 +353,26 @@ func Test_TileJSONHandler_BaseURLs_Multiple(t *testing.T) {
 	assert.Equal(t, "https://tiles-b.example.com/maps/tiles/main/{z}/{x}/{y}", doc.Tiles[1])
 }
 
-func Test_TileJSONHandler_ForwardedHeaders(t *testing.T) {
+// httptest requests come from 192.0.2.1
+func forwardedTileJSON(t *testing.T, trusted []string, headers map[string]string) string {
+	t.Helper()
+
 	cfg := config.DefaultConfig()
 	cfg.Server.TileJSON.Enabled = true
+	cfg.Server.Forwarded.Trusted = trusted
 	cfg.Layers = []config.LayerConfig{staticLayerConfig("main")}
 
 	ent := buildTileJSONTestServing(t, cfg)
-	h := newTileJSONHandler(newGenerationHolder(ent), false)
+	prefixes, err := parseTrustedProxies(cfg.Server.Forwarded, cfg.Error.Messages)
+	require.NoError(t, err)
+
+	h := forwardedHandler{newTileJSONHandler(newGenerationHolder(ent), false), prefixes, cfg.Server.Forwarded.Headers}
 
 	req := httptest.NewRequest(http.MethodGet, "http://internal-host/tiles/main.json", nil).WithContext(pkg.BackgroundContext())
 	req.SetPathValue("layerjson", "main.json")
-	req.Header.Set("X-Forwarded-Proto", "https")
-	req.Header.Set("X-Forwarded-Host", "public.example.com")
-	req.Header.Set("X-Forwarded-Prefix", "/maps")
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
 	w := httptest.NewRecorder()
 
 	h.ServeHTTP(w, req)
@@ -376,7 +383,60 @@ func Test_TileJSONHandler_ForwardedHeaders(t *testing.T) {
 	var doc layers.TileJSONDocument
 	require.NoError(t, json.NewDecoder(res.Body).Decode(&doc))
 	require.Len(t, doc.Tiles, 1)
-	assert.Equal(t, "https://public.example.com/maps/tiles/main/{z}/{x}/{y}", doc.Tiles[0])
+
+	return doc.Tiles[0]
+}
+
+func Test_TileJSONHandler_ForwardedHeaders(t *testing.T) {
+	tile := forwardedTileJSON(t, []string{"192.0.2.0/24"}, map[string]string{
+		"X-Forwarded-Proto":  "https",
+		"X-Forwarded-Host":   "public.example.com",
+		"X-Forwarded-Prefix": "/maps",
+	})
+
+	assert.Equal(t, "https://public.example.com/maps/tiles/main/{z}/{x}/{y}", tile)
+}
+
+func Test_TileJSONHandler_ForwardedPort(t *testing.T) {
+	tile := forwardedTileJSON(t, []string{"192.0.2.1"}, map[string]string{
+		"X-Forwarded-Proto": "https",
+		"X-Forwarded-Host":  "public.example.com",
+		"X-Forwarded-Port":  "8443",
+	})
+	assert.Equal(t, "https://public.example.com:8443/tiles/main/{z}/{x}/{y}", tile)
+
+	tile = forwardedTileJSON(t, []string{"192.0.2.1"}, map[string]string{
+		"X-Forwarded-Proto": "https",
+		"X-Forwarded-Host":  "public.example.com",
+		"X-Forwarded-Port":  "443",
+	})
+	assert.Equal(t, "https://public.example.com/tiles/main/{z}/{x}/{y}", tile)
+
+	tile = forwardedTileJSON(t, []string{"192.0.2.1"}, map[string]string{
+		"X-Forwarded-Host": "public.example.com:9000",
+		"X-Forwarded-Port": "8443",
+	})
+	assert.Equal(t, "http://public.example.com:9000/tiles/main/{z}/{x}/{y}", tile)
+}
+
+func Test_TileJSONHandler_ForwardedHeadersIgnoredFromUntrusted(t *testing.T) {
+	headers := map[string]string{
+		"X-Forwarded-Proto":  "https",
+		"X-Forwarded-Host":   "public.example.com",
+		"X-Forwarded-Prefix": "/maps",
+	}
+
+	assert.Equal(t, "http://internal-host/tiles/main/{z}/{x}/{y}", forwardedTileJSON(t, nil, headers))
+	assert.Equal(t, "http://internal-host/tiles/main/{z}/{x}/{y}", forwardedTileJSON(t, []string{"10.0.0.0/8"}, headers))
+}
+
+func Test_TileJSONHandler_ForwardedInvalidValuesIgnored(t *testing.T) {
+	tile := forwardedTileJSON(t, []string{"192.0.2.1"}, map[string]string{
+		"X-Forwarded-Proto": "gopher",
+		"X-Forwarded-Host":  "evil.example.com/path",
+	})
+
+	assert.Equal(t, "http://internal-host/tiles/main/{z}/{x}/{y}", tile)
 }
 
 // Discards the reload and shutdown plumbing these tests don't exercise

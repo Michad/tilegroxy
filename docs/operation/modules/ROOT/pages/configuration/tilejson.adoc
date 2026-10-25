@@ -57,10 +57,10 @@ JSON::
 | tilejson.json
 
 | BaseURLs
-| Controls the base(s) used for the `tiles` field, instead of building it from headers. Useful if URLs are opaquely rewritten before reaching tilegroxy, or if tiles are served through multiple hosts. Each entry can include schema, host, and path prefix, and produces one entry in the `tiles` array.
+| Controls the base(s) used for the `tiles` field, instead of building it from the request. Useful if URLs are opaquely rewritten before reaching tilegroxy, or if tiles are served through multiple hosts. Each entry can include schema, host, and path prefix, and produces one entry in the `tiles` array.
 | string[]
 | No
-| Built from header inspection
+| The request's scheme and Host, or what a proxy listed in xref:configuration/forwarded.adoc[`server.forwarded.trusted`] reported
 |===
 
 .Environment variables
@@ -73,9 +73,6 @@ JSON::
 
 | IndexPath
 | SERVER_TILEJSON_INDEXPATH
-
-| BaseURLs
-| SERVER_TILEJSON_BASEURLS
 |===
 
 == Layer Metadata Examples

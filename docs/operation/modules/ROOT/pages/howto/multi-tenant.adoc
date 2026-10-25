@@ -51,6 +51,10 @@ Layers that look the same for every tenant, like a basemap, don't need this. Giv
 
 Every xref:analytics.adoc[analytics] event records the user ID. To also record the tenant, add `tenantid` to the analytics `fields`. With the xref:configuration/analytics/postgresql.adoc[postgresql] and xref:configuration/analytics/clickhouse.adoc[clickhouse] destinations it lands in the `extra` column.
 
+== Quotas
+
+A xref:configuration/ratelimit/index.adoc[rate limit] policy with a rule of `segment: [tenant]` gives each tenant its own allowance, and `calendar: month` lines it up with a billing cycle. Use `overrides` to give particular tenants a different limit. See xref:ratelimit.adoc[Rate Limiting].
+
 == Seeding
 
 The xref:commands/seed.adoc[seed] command has no incoming request, so it has no tenant ID unless you pass one with `--tenant`. That sets both the cache namespace and the `{ctx.tenant}` placeholder. Seed each tenant separately:

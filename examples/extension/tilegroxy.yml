@@ -26,6 +26,16 @@ authentication:
 analytics:
   name: sample
   path: analytics.log
+ratelimit:
+  name: sample
+  datastore: memory
+  policies:
+    - id: standard
+      rules:
+        - segment:
+            - user
+          limit: 100
+          period: 1
 layers:
   - id: color
     provider:

@@ -25,6 +25,7 @@ import (
 	"github.com/Michad/tilegroxy/internal/caches"
 	"github.com/Michad/tilegroxy/internal/datastores"
 	"github.com/Michad/tilegroxy/internal/layers"
+	"github.com/Michad/tilegroxy/internal/ratelimit"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
@@ -35,6 +36,7 @@ type Entities struct {
 	LayerGroup *layers.LayerGroup
 	Auth       authentication.Authentication
 	Analytics  *internalanalytics.AnalyticsWrapper
+	RateLimit  *ratelimit.Limiter
 	Caches     *caches.CacheRegistry
 	Datastores *datastores.Registry
 	Secreter   secret.Secreter
@@ -48,6 +50,7 @@ func (e *Entities) Close(ctx context.Context) error {
 	preFlushErr := errors.Join(
 		e.LayerGroup.Close(ctx),
 		lifecycle.CloseIfCloser(ctx, e.Auth),
+		e.RateLimit.Close(ctx),
 	)
 
 	analyticsErr := e.Analytics.Close(ctx)

@@ -1,0 +1,31 @@
+= None
+:description: Disables rate limiting.  Since rate limiting is off by default this is mainly useful for temporarily turning it off.
+:page-eyebrow: Rate Limit
+:page-config-name: none
+
+== Configuration
+
+None of its own.  The options common to every store, including `policies`, are still accepted and validated but have no effect.  Layers referring to a policy must still name one that exists.
+
+.Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+ratelimit:
+  name: none
+----
+
+JSON::
++
+[,json]
+----
+{
+  "ratelimit": {
+    "name": "none"
+  }
+}
+----
+====

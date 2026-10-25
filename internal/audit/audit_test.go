@@ -103,3 +103,21 @@ func Test_ConfigReloadFailureRecordsError(t *testing.T) {
 	assert.Contains(t, out, OutcomeFailure)
 	assert.Contains(t, out, "layer osm is invalid")
 }
+
+func Test_RateLimitedRecordsRule(t *testing.T) {
+	buf := capture(t)
+
+	RateLimited(pkg.BackgroundContext(), "premium", "premium.tenant.month", "satellite", "", "acme")
+
+	out := buf.String()
+	assert.Contains(t, out, `"event":"`+EventRateLimited+`"`)
+	assert.Contains(t, out, `"policy":"premium"`)
+	assert.Contains(t, out, `"rule":"premium.tenant.month"`)
+	assert.Contains(t, out, `"layer":"satellite"`)
+	assert.Contains(t, out, `"tenant":"acme"`)
+	assert.NotContains(t, out, `"user":`)
+}
+
+func Test_RateLimitEventsDisabled(_ *testing.T) {
+	RateLimited(context.Background(), "p", "r", "l", "", "")
+}

@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"net"
 	"net/http"
 	"strings"
 
@@ -111,7 +112,7 @@ func parsePublicURL(baseURL string) publicURLParts {
 	return publicURLParts{scheme: "https", host: trimmed}
 }
 
-// From the caller's perspective. BaseURLs wins when set, otherwise forwarding headers, then the request's own scheme and Host
+// From the caller's perspective. BaseURLs wins when set, otherwise what a trusted proxy reported, then the request's own scheme and Host
 func resolvePublicURLs(req *http.Request, baseURLs []string) []publicURLParts {
 	if len(baseURLs) > 0 {
 		parts := make([]publicURLParts, len(baseURLs))
@@ -121,7 +122,9 @@ func resolvePublicURLs(req *http.Request, baseURLs []string) []publicURLParts {
 		return parts
 	}
 
-	scheme := req.Header.Get("X-Forwarded-Proto")
+	fwd, _ := forwardedFromContext(req.Context())
+
+	scheme := fwd.proto
 	if scheme == "" {
 		if req.TLS != nil {
 			scheme = "https"
@@ -130,14 +133,23 @@ func resolvePublicURLs(req *http.Request, baseURLs []string) []publicURLParts {
 		}
 	}
 
-	host := req.Header.Get("X-Forwarded-Host")
+	host := fwd.host
 	if host == "" {
 		host = req.Host
 	}
 
-	prefix := strings.TrimSuffix(req.Header.Get("X-Forwarded-Prefix"), "/")
+	if fwd.port != "" && !hasPort(host) && fwd.port != defaultPorts[scheme] {
+		host = net.JoinHostPort(strings.Trim(host, "[]"), fwd.port)
+	}
 
-	return []publicURLParts{{scheme: scheme, host: host, prefix: prefix}}
+	return []publicURLParts{{scheme: scheme, host: host, prefix: fwd.prefix}}
+}
+
+var defaultPorts = map[string]string{"http": "80", "https": "443"}
+
+func hasPort(host string) bool {
+	_, _, err := net.SplitHostPort(host)
+	return err == nil
 }
 
 func (p publicURLParts) build(path string) string {

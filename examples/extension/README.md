@@ -16,6 +16,7 @@ This folder is a standalone Go module showing how to build your own tilegroxy ex
 * `secret.go` resolves `secret.` references from values held in its own configuration
 * `authentication.go` accepts requests carrying a fixed key in a header and records a user ID
 * `analytics.go` appends each event to a file as a line of JSON
+* `ratelimit.go` keeps rate limit counters in the sample datastore
 * `check.go` is a health check that renders a tile through a layer, bypassing the cache
 
 `tilegroxy.yml` is the configuration file, using only the sample entities

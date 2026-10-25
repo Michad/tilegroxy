@@ -61,6 +61,11 @@ var imageUnauthorized []byte
 
 const KeyImageUnauthorized = "embedded:unauthorized.png"
 
+//go:embed ratelimited.png
+var imageRateLimited []byte
+
+const KeyImageRateLimited = "embedded:ratelimited.png"
+
 //go:embed empty.mvt
 var mvtEmpty []byte
 
@@ -167,6 +172,10 @@ func GetStaticImage(path string) (*[]byte, error) {
 
 	if path == KeyImageUnauthorized {
 		return &imageUnauthorized, nil
+	}
+
+	if path == KeyImageRateLimited {
+		return &imageRateLimited, nil
 	}
 
 	if path == KeyMvtEmpty {
