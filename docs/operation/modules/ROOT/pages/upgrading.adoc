@@ -15,9 +15,9 @@ NOTE: Releases before 1.0 do not follow the xref:compatibility.adoc[compatibilit
 == 0.14.0
 
 [.release]
-Released:: Not yet released
+Released:: October 2026
 Risk:: [.risk.medium]#Medium#
-Commits:: link:https://github.com/Michad/tilegroxy/compare/v0.13.0...main[40 so far]
+Commits:: link:https://github.com/Michad/tilegroxy/compare/v0.13.0...v0.14.0[46]
 Release notes:: link:https://github.com/Michad/tilegroxy/releases/tag/v0.14.0[v0.14.0 on GitHub]
 
 === Breaking Changes
@@ -32,6 +32,7 @@ Release notes:: link:https://github.com/Michad/tilegroxy/releases/tag/v0.14.0[v0
 ** Configured in the new top-level xref:configuration/ratelimit/index.adoc[ratelimit] section, and each layer can pick a policy with `ratelimit` or opt out with `skipratelimit`.  
 ** New xref:commands/ratelimit_status.adoc[ratelimit status], xref:commands/ratelimit_reset.adoc[ratelimit reset], and xref:commands/ratelimit_list.adoc[ratelimit list] commands
 ** Rate limit rejections get their own xref:configuration/error.adoc[error] image, xref:configuration/log.adoc#audit-logs[audit log] event, and xref:telemetry.adoc[metrics]
+* The xref:tilejson.adoc[TileJSON] document endpoint works for any name a `pattern` layer matches, not only the names listed in its `examples`
 
 == 0.13.0
 
