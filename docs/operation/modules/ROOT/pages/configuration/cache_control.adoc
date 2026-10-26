@@ -1,5 +1,5 @@
 = Cache Control
-:description: Configuration for the `Cache-Control` header returned on tile responses. Disabled by default.
+:description: Configuration for the Cache-Control header returned on tile responses. Disabled by default.
 :page-config-key: server.cachecontrol
 
 == Description

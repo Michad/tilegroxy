@@ -2,7 +2,7 @@ antora:
   extensions:
   - '@antora/lunr-extension'
 site:
-  title: tilegroxy Docs
+  title: tilegroxy docs
   # url: https://tilegroxy.com
   start_page: operation::index.adoc
   keys:
@@ -37,5 +37,5 @@ asciidoc:
 
 ui:
   bundle:
-    url: https://github.com/tilegroxy/antora-ui/releases/download/v7/ui-bundle.zip
+    url: https://github.com/tilegroxy/antora-ui/releases/download/v8/ui-bundle.zip
     snapshot: true

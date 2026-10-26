@@ -110,5 +110,7 @@
 * xref:preview.adoc[]
 * xref:reloading.adoc[]
 * xref:security.adoc[]
+
+.Releases
 * xref:compatibility.adoc[]
 * xref:upgrading.adoc[]

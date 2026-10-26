@@ -58,6 +58,7 @@ func Test_PreviewHandler_ValidLayer_ReturnsHTMLWithTileURL(t *testing.T) {
 
 	assert.Contains(t, string(body), `tiles\/main\/{z}\/{x}\/{y}`)
 	assert.Contains(t, string(body), "maplibre")
+	assert.Contains(t, string(body), `href="/favicon.svg"`)
 }
 
 // A permissive ParamValidator like ".*" lets attackers pick the name, so the URL must not escape its JS string
