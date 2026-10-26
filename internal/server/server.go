@@ -151,6 +151,10 @@ func newRouter(cfg *config.Config, gens *generationHolder) (*http.ServeMux, erro
 
 		previewPath := cfg.Server.RootPath + "preview/{layer}"
 		r.Handle(previewPath, instrument(newPreviewHandler(gens), previewPath))
+
+		for _, faviconPath := range []string{cfg.Server.RootPath + "favicon.svg", cfg.Server.RootPath + "favicon.ico"} {
+			r.Handle(faviconPath, instrument(http.HandlerFunc(handleFavicon), faviconPath))
+		}
 	}
 
 	tileJSON := setupTileJSONHandlers(cfg, gens)

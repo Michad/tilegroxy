@@ -4,11 +4,19 @@
 
 [.hero]
 --
+[.masthead]
+====
+image::logo.svg[tilegroxy logo]
+
 [.eyebrow]
-Your Maptile gateway
+Map tile gateway
+
+[.name]
+tilegroxy
+====
 
 [discrete]
-== One tile API in front of every map source you use.
+== One unified gateway for accessing all of your map imagery.
 
 [.lead]
 Tilegroxy shines when your application consumes geospatial data from multiple sources.

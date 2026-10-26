@@ -36,6 +36,7 @@ func newPreviewHandler(gens *generationHolder) *previewHandler {
 // Fields are exported only because html/template requires it
 type previewTemplateData struct {
 	LayerName          string
+	FaviconURL         string
 	TileURL            string
 	HasBounds          bool
 	South              float64
@@ -141,6 +142,7 @@ func (h *previewHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	data := previewTemplateData{
 		LayerName:          name,
+		FaviconURL:         cur.serverCfg.RootPath + "favicon.svg",
 		TileURL:            tileURL,
 		HasBounds:          hasBounds,
 		South:              bounds.South,
