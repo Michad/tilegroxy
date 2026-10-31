@@ -24,7 +24,7 @@ When a feature needs to be replaced, it's deprecated first rather than removed w
 
 * Keeps working exactly as it did for the remainder of the major version
 * Logs a message at `warn` level on startup and on every reload for as long as it's used, naming the option and its replacement
-* Is marked as deprecated in the documentation, alongside its replacement
+* Is removed from the rest of the documentation to discourage its use, and listed under <<currently-deprecated,Currently Deprecated>> alongside its replacement
 * Is listed under a "Deprecations" heading in the release notes of the version that deprecated it
 
 The warning is logged at `warn` level so it shows up under the logging levels recommended in xref:howto/productionizing.adoc[Run in Production] and includes the targeted removal version.
@@ -57,6 +57,26 @@ If a vulnerability can only be fixed by changing or removing a feature, it may b
 | algorithms
 | 2.0
 | xref:configuration/authentication/jwt.adoc[JWT authentication]
+
+| server.encrypt.certificate
+| Use a xref:configuration/tls/index.adoc[TLS profile] and the certificatefile option in a pem type
+| 2.0
+| xref:configuration/encryption.adoc[Encryption]
+
+| server.encrypt.keyfile
+| Use a xref:configuration/tls/index.adoc[TLS profile] and the keyfile option in a pem type
+| 2.0
+| xref:configuration/encryption.adoc[Encryption]
+
+| server.encrypt.cache
+| Use a xref:configuration/tls/index.adoc[TLS profile] and the cache option in an acme type
+| 2.0
+| xref:configuration/encryption.adoc[Encryption]
+
+| server.encrypt.domain
+| Use a xref:configuration/tls/index.adoc[TLS profile] and the hosts option
+| 2.0
+| xref:configuration/encryption.adoc[Encryption]
 |===
 
 == What's Not Covered

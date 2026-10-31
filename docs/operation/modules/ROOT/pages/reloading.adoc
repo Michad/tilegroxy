@@ -42,10 +42,15 @@ The following sections of the configuration can be reloaded:
 * xref:configuration/datastores/index.adoc[datastores]
 * xref:configuration/analytics/index.adoc[analytics]
 * xref:configuration/ratelimit/index.adoc[ratelimit]
+* xref:configuration/tls/index.adoc[tls]
 * xref:configuration/layer.adoc[layers]
 * xref:configuration/health.adoc[health]
 
 Every other section, including xref:configuration/server.adoc[server], is fixed when the process starts. Changes to unsupported sections will be ignored. To check whether a pending configuration change can be reloaded, use xref:commands/config_diff.adoc[config diff].
+
+NOTE: External files referenced by the config aren't explicitly watched for changes. It is recommended you either trigger an explicit <<reload-signal,reload>> or restart tilegroxy when external files change.
+
+NOTE: A reload re-reads the certificates and CAs in xref:configuration/tls/pem.adoc[pem] profiles without interrupting the server. New connections use the new files while existing connections continue until they close, so removing a CA doesn't disconnect clients that are already connected. Which profiles `server.encrypt` references is part of the server section and requires a restart, as does any change to an xref:configuration/tls/acme.adoc[acme] profile. Certificates from an acme profile renew on their own.
 
 == Secrets
 

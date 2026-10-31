@@ -74,7 +74,7 @@
 | 5
 
 | Encrypt
-| Configuration for enabling TLS (HTTPS). Don't specify to operate without encryption (the default)
+| Configuration for enabling TLS (HTTPS) and optionally requiring client certificates. Don't specify to operate without encryption (the default)
 | xref:configuration/encryption.adoc[Encryption]
 | No
 | None

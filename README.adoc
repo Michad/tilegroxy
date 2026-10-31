@@ -39,6 +39,8 @@ Commands for link:https://tilegroxy.com/operation/commands/seed.html[seeding] an
 +++</li><li>+++
 Run as link:https://tilegroxy.com/operation/configuration/encryption.html[HTTPS] including Let's Encrypt (ACME) support
 +++</li><li>+++
+link:https://tilegroxy.com/operation/configuration/tls/index.html[Mutual TLS (mTLS)] support for both incoming and outgoing requests
++++</li><li>+++
 Configurable via file or etcd with link:https://tilegroxy.com/operation/configuration.html#conventions[environment variable] override,
 link:https://tilegroxy.com/operation/configuration/secret/index.html[externalizable secrets], and link:https://tilegroxy.com/operation/reloading.html[zero-downtime reload]
 +++</li><li>+++
