@@ -17,6 +17,7 @@ package pmtiles
 import (
 	"bytes"
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -102,7 +103,7 @@ func testClientConfig(headers map[string]string) config.ClientConfig {
 func Test_HTTPSource_ReadRange(t *testing.T) {
 	var seen http.Header
 	srv := rangeServer(t, sourceData, &seen)
-	src := NewHTTPSource(srv.URL, testClientConfig(map[string]string{"X-Provider": "p"}))
+	src := NewHTTPSource(srv.URL, testClientConfig(map[string]string{"X-Provider": "p"}), nil)
 	defer src.Close()
 
 	got, err := src.ReadRange(context.Background(), 2, 3)
@@ -117,7 +118,7 @@ func Test_HTTPSource_ReadRange(t *testing.T) {
 
 func Test_HTTPSource_ReadRange_PastEnd(t *testing.T) {
 	srv := rangeServer(t, sourceData, nil)
-	src := NewHTTPSource(srv.URL, testClientConfig(nil))
+	src := NewHTTPSource(srv.URL, testClientConfig(nil), nil)
 
 	got, err := src.ReadRange(context.Background(), 8, 100)
 
@@ -126,7 +127,7 @@ func Test_HTTPSource_ReadRange_PastEnd(t *testing.T) {
 }
 
 func Test_HTTPSource_ReadRange_ZeroLength(t *testing.T) {
-	src := NewHTTPSource("http://127.0.0.1:0", testClientConfig(nil))
+	src := NewHTTPSource("http://127.0.0.1:0", testClientConfig(nil), nil)
 
 	got, err := src.ReadRange(context.Background(), 5, 0)
 
@@ -139,7 +140,7 @@ func Test_HTTPSource_RangeIgnored(t *testing.T) {
 		_, _ = w.Write(sourceData)
 	}))
 	t.Cleanup(srv.Close)
-	src := NewHTTPSource(srv.URL, testClientConfig(nil))
+	src := NewHTTPSource(srv.URL, testClientConfig(nil), nil)
 
 	_, err := src.ReadRange(context.Background(), 0, 3)
 
@@ -151,7 +152,7 @@ func Test_HTTPSource_RangeIgnored_NonZeroOffset(t *testing.T) {
 		_, _ = w.Write(sourceData)
 	}))
 	t.Cleanup(srv.Close)
-	src := NewHTTPSource(srv.URL, testClientConfig(nil))
+	src := NewHTTPSource(srv.URL, testClientConfig(nil), nil)
 
 	_, err := src.ReadRange(context.Background(), 2, 3)
 
@@ -163,7 +164,7 @@ func Test_HTTPSource_RangeIgnored_OffsetZeroBodyFits(t *testing.T) {
 		_, _ = w.Write(sourceData)
 	}))
 	t.Cleanup(srv.Close)
-	src := NewHTTPSource(srv.URL, testClientConfig(nil))
+	src := NewHTTPSource(srv.URL, testClientConfig(nil), nil)
 
 	// Accepting this would let Open pass on small archives, then fail every tile read
 	_, err := src.ReadRange(context.Background(), 0, uint64(len(sourceData)))
@@ -174,7 +175,7 @@ func Test_HTTPSource_RangeIgnored_OffsetZeroBodyFits(t *testing.T) {
 func Test_HTTPSource_ErrorStatus(t *testing.T) {
 	srv := httptest.NewServer(http.NotFoundHandler())
 	t.Cleanup(srv.Close)
-	src := NewHTTPSource(srv.URL, testClientConfig(nil))
+	src := NewHTTPSource(srv.URL, testClientConfig(nil), nil)
 
 	_, err := src.ReadRange(context.Background(), 0, 3)
 
@@ -189,7 +190,7 @@ func Test_HTTPSource_BodyLongerThanRange(t *testing.T) {
 		_, _ = w.Write(sourceData)
 	}))
 	t.Cleanup(srv.Close)
-	src := NewHTTPSource(srv.URL, testClientConfig(nil))
+	src := NewHTTPSource(srv.URL, testClientConfig(nil), nil)
 
 	_, err := src.ReadRange(context.Background(), 0, 3)
 
@@ -197,7 +198,7 @@ func Test_HTTPSource_BodyLongerThanRange(t *testing.T) {
 }
 
 func Test_HTTPSource_Unreachable(t *testing.T) {
-	src := NewHTTPSource("http://127.0.0.1:1/a.pmtiles?key=SECRETKEY", testClientConfig(nil))
+	src := NewHTTPSource("http://127.0.0.1:1/a.pmtiles?key=SECRETKEY", testClientConfig(nil), nil)
 
 	_, err := src.ReadRange(context.Background(), 0, 3)
 
@@ -208,7 +209,7 @@ func Test_HTTPSource_Unreachable(t *testing.T) {
 }
 
 func Test_HTTPSource_Canceled(t *testing.T) {
-	src := NewHTTPSource("http://127.0.0.1:1/a.pmtiles?key=SECRETKEY", testClientConfig(nil))
+	src := NewHTTPSource("http://127.0.0.1:1/a.pmtiles?key=SECRETKEY", testClientConfig(nil), nil)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
@@ -216,4 +217,24 @@ func Test_HTTPSource_Canceled(t *testing.T) {
 
 	require.ErrorIs(t, err, context.Canceled)
 	assert.NotContains(t, err.Error(), "SECRETKEY")
+}
+
+func Test_NewHTTPSource_UsesClientTransport(t *testing.T) {
+	transport := &failingTransport{}
+
+	source := NewHTTPSource("http://example.invalid/a.pmtiles", config.ClientConfig{Timeout: 1}, transport)
+
+	_, err := source.ReadRange(context.Background(), 0, 1)
+
+	require.Error(t, err)
+	assert.True(t, transport.called)
+}
+
+type failingTransport struct {
+	called bool
+}
+
+func (f *failingTransport) RoundTrip(_ *http.Request) (*http.Response, error) {
+	f.called = true
+	return nil, errors.New("stop here")
 }

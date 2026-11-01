@@ -111,7 +111,7 @@ JSON::
 
 == Redirects
 
-When `HttpPort` is set, a request on that port is redirected to the host in its `Host` header only if that host is in the `Hosts` of the `TLS` profile. Any other host gets a 400 response, so a forged header can't redirect a user to another site.
+When `HttpPort` is set, we redirect requests to HTTPS. The redirect uses the `Host` header only if that host is in the `Hosts` of the `TLS` profile. As long as there's a non-wildcard host in `Hosts` we fallback on the first one, with a 400 being the last resort to avoid CSRF vectors. If the `Host` header uses the implicit port 80, we redirect to the implicit port 443. Otherwise we redirect to the main port in our config.
 
 == Client Certificates
 

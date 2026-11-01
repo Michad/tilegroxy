@@ -71,7 +71,7 @@ func rateLimitServer(t *testing.T, raw string) *httptest.Server {
 	reg, err := caches.ConstructCacheRegistry(context.Background(), cfg.Cache, cfg.DefaultCache, nil, cache.CacheDeps{ErrorMessages: cfg.Error.Messages})
 	require.NoError(t, err)
 
-	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, reg, nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, reg, nil, nil, nil)
 	require.NoError(t, err)
 
 	auth, err := authentications.ConstructAuth(cfg.Authentication, authentication.AuthenticationDeps{ErrorMessages: cfg.Error.Messages})
@@ -311,10 +311,10 @@ func Test_RateLimit_CORSExposedHeadersFollowReload(t *testing.T) {
 
 	nextCfg := cfg
 	nextCfg.RateLimit = map[string]interface{}{"name": "memory"}
-	require.NoError(t, routes.reload(&nextCfg, buildTileJSONTestServing(t, nextCfg).all))
+	require.NoError(t, routes.reload(&nextCfg, buildTileJSONTestServing(t, nextCfg).all, nil))
 	assert.Equal(t, "ETag, RateLimit, RateLimit-Policy, Retry-After", exposed())
 
-	require.NoError(t, routes.reload(&cfg, buildTileJSONTestServing(t, cfg).all))
+	require.NoError(t, routes.reload(&cfg, buildTileJSONTestServing(t, cfg).all, nil))
 	assert.Equal(t, "ETag", exposed())
 
 	require.NoError(t, routes.registry.closeAll(context.Background()))

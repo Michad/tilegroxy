@@ -206,7 +206,7 @@ func Test_PMTiles_LayerUsesArchiveMetadata(t *testing.T) {
 		Provider: map[string]any{"name": "pmtiles", "file": pmtilesMVTFixture},
 	}
 
-	l, err := layers.ConstructLayer(context.Background(), rawConfig, cfg.Client, nil, cfg.Error.Messages, nil, nil, nil)
+	l, err := layers.ConstructLayer(context.Background(), rawConfig, cfg.Client, nil, cfg.Error.Messages, nil, nil, nil, nil)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = l.Provider.(layers.ProviderWrapper).Close(context.Background()) })
 
@@ -226,7 +226,7 @@ func Test_PMTiles_LayerBoundsKeepsArchiveMetadata(t *testing.T) {
 		Provider:      map[string]any{"name": "pmtiles", "file": pmtilesPNGFixture},
 	}
 
-	l, err := layers.ConstructLayer(context.Background(), rawConfig, cfg.Client, nil, cfg.Error.Messages, nil, nil, nil)
+	l, err := layers.ConstructLayer(context.Background(), rawConfig, cfg.Client, nil, cfg.Error.Messages, nil, nil, nil, nil)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = l.Provider.(layers.ProviderWrapper).Close(context.Background()) })
 

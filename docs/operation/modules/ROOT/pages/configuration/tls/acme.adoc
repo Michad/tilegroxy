@@ -11,7 +11,7 @@ Using this profile means agreeing to the https://letsencrypt.org/repository/[Let
 
 When running more than one instance, point `Cache` at a directory they all share so each instance doesn't request its own certificate and run into Let's Encrypt rate limits.
 
-Certificates renew on their own, but changes to this profile's parameters require a restart.
+Certificates renew on their own. Changes to this profile's parameters can be xref:reloading.adoc#supported-configuration[reloaded]. Hosts that are added get their certificate on the first connection, and certificates for hosts that are removed stop renewing. Changing `Cache` starts from an empty directory unless you move its contents, which means requesting new certificates.
 
 == Example
 [tabs]

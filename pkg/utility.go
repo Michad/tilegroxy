@@ -132,8 +132,13 @@ func DecodeImage(b []byte) (*Image, error) {
 	return &i, nil
 }
 
-// Applies the standard Client config: headers, timeout, allowlists, content-type rewriting and length limits. Custom Go providers should use it too
+// Doesn't apply TLS profiles. Providers given a transport in their deps should use GetTileWithTransport
 func GetTile(ctx context.Context, clientConfig config.ClientConfig, url string, authHeaders map[string]string) (*Image, error) {
+	return GetTileWithTransport(ctx, clientConfig, nil, url, authHeaders)
+}
+
+// Applies the standard Client config: headers, timeout, allowlists, content-type rewriting and length limits. A nil transport means http.DefaultTransport. Custom Go providers should use it too
+func GetTileWithTransport(ctx context.Context, clientConfig config.ClientConfig, roundTripper http.RoundTripper, url string, authHeaders map[string]string) (*Image, error) {
 	slog.DebugContext(ctx, fmt.Sprintf("Calling url %v\n", util.RedactURLForLog(url)))
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -153,7 +158,7 @@ func GetTile(ctx context.Context, clientConfig config.ClientConfig, url string, 
 
 	timeout := min(clientConfig.Timeout, math.MaxInt32)
 
-	transport := otelhttp.NewTransport(http.DefaultTransport, otelhttp.WithMessageEvents(otelhttp.ReadEvents))
+	transport := otelhttp.NewTransport(roundTripper, otelhttp.WithMessageEvents(otelhttp.ReadEvents))
 	client := http.Client{Transport: transport, Timeout: time.Duration(timeout) * time.Second}
 
 	resp, err := client.Do(req)

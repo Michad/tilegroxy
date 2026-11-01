@@ -123,7 +123,7 @@ func writeErrorMessage(ctx context.Context, w http.ResponseWriter, cfg *config.E
 	case config.ModeErrorPlainText:
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(status)
-		_, err := w.Write([]byte(externalMessage))
+		_, err := w.Write([]byte(externalMessage)) // #nosec G705 -- sent as plain text, set by the handler above
 		if err != nil {
 			slog.WarnContext(ctx, fmt.Sprintf("error writing error %v", err))
 		}
@@ -141,7 +141,7 @@ func writeErrorMessage(ctx context.Context, w http.ResponseWriter, cfg *config.E
 		w.WriteHeader(status)
 
 		if img != nil && err2 == nil {
-			_, err2 = w.Write(*img)
+			_, err2 = w.Write(*img) // #nosec G705 -- generated error image, not markup
 		}
 
 		if err2 != nil {

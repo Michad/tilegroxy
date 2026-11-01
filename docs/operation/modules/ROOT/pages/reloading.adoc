@@ -50,11 +50,15 @@ Every other section, including xref:configuration/server.adoc[server], is fixed 
 
 NOTE: External files referenced by the config aren't explicitly watched for changes. It is recommended you either trigger an explicit <<reload-signal,reload>> or restart tilegroxy when external files change.
 
-NOTE: A reload re-reads the certificates and CAs in xref:configuration/tls/pem.adoc[pem] profiles without interrupting the server. New connections use the new files while existing connections continue until they close, so removing a CA doesn't disconnect clients that are already connected. Which profiles `server.encrypt` references is part of the server section and requires a restart, as does any change to an xref:configuration/tls/acme.adoc[acme] profile. Certificates from an acme profile renew on their own.
-
 == Secrets
 
 xref:configuration/secret/index.adoc[Secret] has a `watch` option that, when set, can trigger a reload using the same mechanism described here. One key exception is that when a secret changes, the configuration itself *will not* change, even if the configuration has changed on disk or remotely. If you are using both secret reloading and configuration reloading, you may want to consider the timing of your changes to avoid excessive reloads.
+
+== TLS
+
+A reload re-reads the certificates and CAs in xref:configuration/tls/pem.adoc[pem] profiles and applies changes to xref:configuration/tls/acme.adoc[acme] profiles without interrupting the server. 
+
+New connections use the new configuration while existing connections continue until they close, so removing a CA doesn't disconnect clients that are already connected. Which profiles `server.encrypt` references is part of the server section and requires a restart. Changing a referenced profile between `pem` and `acme` can be reloaded as long as `server.encrypt.httpport` is already set.
 
 == Reload signal
 
@@ -76,9 +80,9 @@ The phases run in this order:
 
 . Health readiness starts returning 503 while liveness keeps returning 204
 . Wait for `DrainDelay`
-. The HTTP server finishes the requests already in flight
+. The HTTP server, and the xref:configuration/encryption.adoc#redirects[redirect] server if there is one, finish the requests already in flight
 . The health server and its background checks stop
-. Entities close, which flushes analytics and releases caches, datastores, providers and the secret store
+. Entities close, which flushes analytics and releases caches, datastores, providers, TLS profiles and the secret store
 . OpenTelemetry shuts down
 . Log file handles close
 

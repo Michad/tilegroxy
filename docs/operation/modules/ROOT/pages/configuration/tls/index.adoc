@@ -38,7 +38,7 @@ Everything that uses the xref:configuration/client.adoc[client] configuration pi
 
 A layer's `client` overrides the top-level client piecemeal, so different layers can trust different CAs or present different certificates. Combine them in one layer using a xref:configuration/provider/ref.adoc[ref] provider, which keeps the client of the layer it refers to.
 
-Profiles can be reloaded without downtime, including the certificates and CAs in a `pem` profile. See xref:reloading.adoc#supported-configuration[Reloading].
+Profiles can be reloaded without downtime. See xref:reloading.adoc#supported-configuration[Reloading].
 
 == Example
 

@@ -62,7 +62,7 @@ func init() {
 
 func testLayerGroup(t *testing.T) *layers.LayerGroup {
 	t.Helper()
-	lg, err := layers.ConstructLayerGroup(context.Background(), config.Config{}, nil, nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), config.Config{}, nil, nil, nil, nil)
 	require.NoError(t, err)
 	return lg
 }

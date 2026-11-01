@@ -7,9 +7,14 @@ Server:
         Access-Control-Allow-Origin: "*"
     Timeout: 30
     Encrypt:
-      Domain: dev.local.io
-      Certificate: certs/dev.local.io.crt
-      Keyfile: certs/dev.local.io.key
+      TLS: main
+TLS:
+  - name: pem
+    id: main
+    certificateFile: certs/dev.local.io.crt
+    keyFile: certs/dev.local.io.key
+    hosts:
+      - dev.local.io
 Logging:
     Access:
         Console: false

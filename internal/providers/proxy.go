@@ -17,6 +17,7 @@ package providers
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -32,6 +33,7 @@ type ProxyConfig struct {
 type Proxy struct {
 	ProxyConfig
 	clientConfig config.ClientConfig
+	transport    http.RoundTripper
 }
 
 func init() {
@@ -66,7 +68,7 @@ func (s ProxyRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (laye
 		return nil, fmt.Errorf(deps.ErrorMessages.EnumError, "provider.proxy.srid", cfg.Srid, []int{pkg.SRIDPsuedoMercator, pkg.SRIDWGS84})
 	}
 
-	return &Proxy{cfg, deps.ClientConfig}, nil
+	return &Proxy{cfg, deps.ClientConfig, deps.Transport}, nil
 }
 
 func (t Proxy) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.ProviderContext, error) {
@@ -79,5 +81,5 @@ func (t Proxy) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRe
 		return nil, err
 	}
 
-	return getTile(ctx, t.clientConfig, url, make(map[string]string))
+	return getTile(ctx, t.clientConfig, t.transport, url, make(map[string]string))
 }

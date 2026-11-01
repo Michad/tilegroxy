@@ -320,7 +320,7 @@ func Test_ServeHTTPReleasesGenerationRef(t *testing.T) {
 	var auth authentication.Authentication = authentications.Noop{}
 	var c cache.Cache = caches.Noop{}
 
-	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(c), nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(c), nil, nil, nil)
 	require.NoError(t, err)
 
 	gen := newGeneration(&cfg, &entities.Entities{LayerGroup: lg, Auth: auth, Caches: caches.NewSingleCacheRegistry(c)})
@@ -373,7 +373,7 @@ func Test_SetupHandlers_ReloadSwapsEveryHandlerAtOnce(t *testing.T) {
 
 	nextCfg := cfg
 	nextCfg.Layers = []config.LayerConfig{staticLayerConfig("next")}
-	require.NoError(t, routes.reload(&nextCfg, buildTileJSONTestServing(t, nextCfg).all))
+	require.NoError(t, routes.reload(&nextCfg, buildTileJSONTestServing(t, nextCfg).all, nil))
 
 	// Every route must see the new layer as soon as reload returns
 	for _, path := range []string{"/tiles/next/8/12/32", "/tiles/next.json", "/preview/next"} {

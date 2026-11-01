@@ -32,6 +32,10 @@ type AuthenticationDeps struct {
 	ErrorMessages config.ErrorMessages
 	ClientConfig  config.ClientConfig
 	Datastores    datastore.DatastoreRegistry
+	// Built from the TLS profiles ClientConfig references. Nil means http.DefaultTransport
+	Transport http.RoundTripper
+	// Builds the transport for a client overriding ClientConfig, from the TLS profiles it references
+	ClientTransport func(config.ClientConfig) (http.RoundTripper, error)
 }
 
 type AuthenticationRegistration interface {

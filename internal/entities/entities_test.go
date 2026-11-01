@@ -102,7 +102,7 @@ func Test_Entities_ClosesLayerGroupProviders(t *testing.T) {
 	layer.RegisterProvider(closeCountingRegistration{})
 	cfg := config.DefaultConfig()
 	cfg.Layers = []config.LayerConfig{{ID: "l", Provider: map[string]any{"name": "close-counting"}}}
-	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil, nil)
 	require.NoError(t, err)
 
 	e := &Entities{LayerGroup: lg}
@@ -230,7 +230,7 @@ func Test_Entities_CacheWriteDrainDoesNotSpendTheAnalyticsReserve(t *testing.T) 
 	caches, err := caches.ConstructCacheRegistry(context.Background(), cfg.Cache, cfg.DefaultCache, nil, cache.CacheDeps{ErrorMessages: cfg.Error.Messages})
 	require.NoError(t, err)
 
-	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches, nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches, nil, nil, nil)
 	require.NoError(t, err)
 
 	// Leaves a cache write in flight for the drain to find

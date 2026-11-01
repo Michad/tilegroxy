@@ -76,6 +76,21 @@ func Test_CheckConfig_MiscRejects(t *testing.T) {
 		"encrypt without domain": func(c *config.Config) {
 			c.Server.Encrypt = &config.EncryptionConfig{Certificate: "cert"}
 		},
+		"encrypt with both formats": func(c *config.Config) {
+			c.Server.Encrypt = &config.EncryptionConfig{TLS: "a", Domain: "d"}
+		},
+		"encrypt unknown profile": func(c *config.Config) {
+			c.Server.Encrypt = &config.EncryptionConfig{TLS: "a"}
+		},
+		"client unknown profile": func(c *config.Config) {
+			c.Client.TLS = "a"
+		},
+		"layer client unknown profile": func(c *config.Config) {
+			c.Layers = append(c.Layers, config.LayerConfig{ID: "x", Client: &config.ClientConfig{MTLS: "a"}, Provider: map[string]any{"name": "static", "color": "FFFFFF"}})
+		},
+		"invalid profile": func(c *config.Config) {
+			c.TLS = []map[string]any{{"name": "pem", "id": "system"}}
+		},
 		"cors wildcard with credentials": func(c *config.Config) {
 			c.Server.CORS = config.CORSConfig{Enabled: true, WildcardOrigin: true, AllowCredentials: true}
 		},

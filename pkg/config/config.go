@@ -21,12 +21,22 @@ import (
 	"github.com/Michad/tilegroxy/internal/static"
 )
 
-// TLS is enabled when configured, using either a static certificate and keyfile or ACME/Let's Encrypt
+// How the server handles client certificates
+const (
+	MTLSModeRequired = "required" // Rejects connections without a valid certificate
+	MTLSModeOptional = "optional" // Validates a certificate if one is sent but also accepts connections without one
+	MTLSModeDisabled = "disabled" // Doesn't ask for a certificate
+)
+
+// TLS is enabled when configured, using a TLS profile
 type EncryptionConfig struct {
-	Domain      string // The domain name you're operating with (the domain end-users use). Required
-	Cache       string // The path to a directory to cache certificates in if using let's encrypt. Defaults to ./certs
-	Certificate string // The file path to get to the TLS certificate
-	KeyFile     string // The file path to get to the keyfile
+	TLS         string // The ID of the TLS profile supplying the certificate served to clients. Required
+	MTLS        string // The ID of the TLS profile holding the CA used to validate client certificates
+	MTLSMode    string // How client certificates are handled. Defaults to required if MTLS is set, otherwise disabled
+	Domain      string // Deprecated: use a TLS profile with Hosts
+	Cache       string // Deprecated: use an acme TLS profile with Cache
+	Certificate string // Deprecated: use a pem TLS profile with CertificateFile
+	KeyFile     string // Deprecated: use a pem TLS profile with KeyFile
 	HTTPPort    int    // The port used for non-encrypted traffic. Required if using Let's Encrypt for ACME challenge and needs to indirectly be 80 (that is, it could be 8080 if something else redirects 80 to 8080). Everything except .well-known will be redirected to the main port when set.
 }
 
@@ -130,7 +140,9 @@ type ClientConfig struct {
 	Headers             map[string]string // Include these headers in requests. Defaults to none
 	Timeout             uint              // How long (in seconds) a request can be in flight before we cancel it and return an error
 	RewriteContentTypes map[string]string // Replace ContentType's that match the key with the value. This is to handle servers returning a generic content type. Kicks in after the check that ContentType is in `ContentTypes`.
-
+	TLS                 string            // The ID of the TLS profile used to validate remote servers. Defaults to system
+	MTLS                string            // The ID of the TLS profile holding the certificate to present to remote servers
+	EnableMTLS          *bool             // Whether to present a certificate to remote servers. Defaults to true if MTLS is set
 }
 
 type TelemetryConfig struct {
@@ -280,6 +292,7 @@ type Config struct {
 	Telemetry        TelemetryConfig
 	Secret           map[string]interface{}
 	Datastores       []map[string]interface{}
+	TLS              []map[string]interface{} // Certificates, keys, and CAs referenced by ID from Client and Server.Encrypt
 	Authentication   map[string]interface{}
 	Cache            interface{} // Either a single cache or an array of caches.
 	DefaultCache     string      // The id of the cache layers use when they don't specify one. Defaults to the first entry
@@ -382,6 +395,7 @@ func DefaultConfig() Config {
 			"name": "none",
 		},
 		Datastores: []map[string]interface{}{},
+		TLS:        []map[string]interface{}{},
 		Authentication: map[string]interface{}{
 			"name": "none",
 		},

@@ -63,6 +63,7 @@ var reloadableSections = map[string]bool{
 	"authentication":   true,
 	"cache":            true,
 	"datastores":       true,
+	"tls":              true,
 	"analytics":        true,
 	"ratelimit":        true,
 	"defaultratelimit": true,
@@ -206,6 +207,7 @@ func mergeInto(existing, addition any) any {
 var keyedSections = map[string]bool{
 	"layers":     true,
 	"datastores": true,
+	"tls":        true,
 }
 
 func diffSection(section string, oldVal, newVal any) []diffEntry {

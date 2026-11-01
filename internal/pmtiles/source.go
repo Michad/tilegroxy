@@ -87,7 +87,7 @@ type HTTPSource struct {
 	client    *http.Client
 }
 
-func NewHTTPSource(url string, clientConfig config.ClientConfig) *HTTPSource {
+func NewHTTPSource(url string, clientConfig config.ClientConfig, transport http.RoundTripper) *HTTPSource {
 
 	timeout := min(clientConfig.Timeout, math.MaxInt32)
 
@@ -96,7 +96,7 @@ func NewHTTPSource(url string, clientConfig config.ClientConfig) *HTTPSource {
 		userAgent: clientConfig.UserAgent,
 		headers:   clientConfig.Headers,
 		client: &http.Client{
-			Transport: otelhttp.NewTransport(http.DefaultTransport),
+			Transport: otelhttp.NewTransport(transport),
 			Timeout:   time.Duration(timeout) * time.Second, // #nosec G115 -- timeout clamped to MaxInt32 above
 		},
 	}

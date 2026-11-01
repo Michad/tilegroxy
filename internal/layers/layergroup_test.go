@@ -100,7 +100,7 @@ func Test_ConstructLayerGroup_LayerIDWithSpaceDoesNotFailConstruction(t *testing
 		{ID: "my layer", Provider: map[string]any{"name": "sample-provider"}},
 	}
 
-	lg, err := ConstructLayerGroup(context.Background(), config.Config{Layers: layers}, nil, nil, nil)
+	lg, err := ConstructLayerGroup(context.Background(), config.Config{Layers: layers}, nil, nil, nil, nil)
 	require.NoError(t, err)
 	require.NotNil(t, lg)
 }
@@ -112,7 +112,7 @@ func Test_ConstructLayerGroup_LayerIDWithNonASCIIDoesNotFailConstruction(t *test
 		{ID: "层", Provider: map[string]any{"name": "sample-provider"}},
 	}
 
-	lg, err := ConstructLayerGroup(context.Background(), config.Config{Layers: layers}, nil, nil, nil)
+	lg, err := ConstructLayerGroup(context.Background(), config.Config{Layers: layers}, nil, nil, nil, nil)
 	require.NoError(t, err)
 	require.NotNil(t, lg)
 }
@@ -123,7 +123,7 @@ func Test_ConstructLayerGroup_DuplicateLayerIDErrors(t *testing.T) {
 		{ID: "dupe", Provider: staticProvider()},
 	}
 
-	_, err := ConstructLayerGroup(context.Background(), config.Config{Layers: layers}, nil, nil, nil)
+	_, err := ConstructLayerGroup(context.Background(), config.Config{Layers: layers}, nil, nil, nil, nil)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "duplicate layer id")
 }
@@ -259,7 +259,7 @@ func Test_ConstructLayerGroup_LayerUsesOverriddenCache(t *testing.T) {
 		{ID: "overridden", Provider: map[string]any{"name": "sample-provider"}, Cache: "special"},
 	}}
 
-	lg, err := ConstructLayerGroup(context.Background(), cfg, twoCacheRegistry(t), nil, nil)
+	lg, err := ConstructLayerGroup(context.Background(), cfg, twoCacheRegistry(t), nil, nil, nil)
 	require.NoError(t, err)
 
 	assert.Equal(t, "stub-layer-a", cacheName(t, lg.layers[0].Cache))
@@ -271,7 +271,7 @@ func Test_ConstructLayerGroup_UnknownLayerCacheErrors(t *testing.T) {
 		{ID: "bad", Provider: map[string]any{"name": "sample-provider"}, Cache: "nonexistent"},
 	}}
 
-	_, err := ConstructLayerGroup(context.Background(), cfg, twoCacheRegistry(t), nil, nil)
+	_, err := ConstructLayerGroup(context.Background(), cfg, twoCacheRegistry(t), nil, nil, nil)
 	require.ErrorContains(t, err, "nonexistent")
 }
 
@@ -292,7 +292,7 @@ func Test_ConstructLayerGroup_CoalesceFollowsLayerCache(t *testing.T) {
 		{ID: "cached", Provider: map[string]any{"name": "sample-provider"}, Cache: "on"},
 	}}
 
-	lg, err := ConstructLayerGroup(context.Background(), cfg, reg, nil, nil)
+	lg, err := ConstructLayerGroup(context.Background(), cfg, reg, nil, nil, nil)
 	require.NoError(t, err)
 
 	assert.False(t, lg.layers[0].allowCoalesce)
@@ -373,7 +373,7 @@ func Test_ConstructLayerGroup_CoalesceOffForTenantCache(t *testing.T) {
 		{ID: "override", Provider: map[string]any{"name": "sample-provider"}, Cache: "tenanted", AllowCoalesce: &allow},
 	}}
 
-	lg, err := ConstructLayerGroup(context.Background(), cfg, reg, nil, nil)
+	lg, err := ConstructLayerGroup(context.Background(), cfg, reg, nil, nil, nil)
 	require.NoError(t, err)
 
 	assert.True(t, lg.layers[0].allowCoalesce, "a plain cache should still auto-enable coalescing")
@@ -400,7 +400,7 @@ func Test_ConstructLayerGroup_CoalesceOffForBuiltinTenantCache(t *testing.T) {
 		{ID: "noop", Provider: staticProvider(), Cache: "noop"},
 	}}
 
-	lg, err := ConstructLayerGroup(context.Background(), cfg, reg, nil, nil)
+	lg, err := ConstructLayerGroup(context.Background(), cfg, reg, nil, nil, nil)
 	require.NoError(t, err)
 
 	assert.False(t, lg.layers[0].allowCoalesce)
@@ -479,7 +479,7 @@ func Test_ConstructLayerGroup_CoalesceOffForIdentityPlaceholder(t *testing.T) {
 		{ID: "override", Provider: map[string]any{"name": "stub-url", "url": "https://example.com/{z}/{x}/{y}?u={ctx.user}"}, AllowCoalesce: &allow},
 	}}
 
-	lg, err := ConstructLayerGroup(context.Background(), cfg, reg, nil, nil)
+	lg, err := ConstructLayerGroup(context.Background(), cfg, reg, nil, nil, nil)
 	require.NoError(t, err)
 
 	assert.True(t, lg.layers[0].allowCoalesce, "a provider with no identity placeholder should still auto-enable coalescing")

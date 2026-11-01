@@ -94,5 +94,5 @@ func (s URLTemplateRegistration) Initialize(cfgAny any, deps layer.ProviderDeps)
 		Srid: cfg.Srid,
 	}
 
-	return &URLTemplate{Proxy{proxyCfg, deps.ClientConfig}}, nil
+	return &URLTemplate{Proxy{proxyCfg, deps.ClientConfig, deps.Transport}}, nil
 }

@@ -17,6 +17,7 @@ package authentications
 import (
 	"bytes"
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -444,4 +445,90 @@ func Test_Passthrough_CachesResultsButNotErrors(t *testing.T) {
 	assert.False(t, p.CheckAuthentication(pkg.BackgroundContext(), failing))
 	assert.False(t, p.CheckAuthentication(pkg.BackgroundContext(), failing))
 	assert.Equal(t, int32(5), srv.calls.Load())
+}
+
+type recordingTransport struct {
+	called bool
+}
+
+func (r *recordingTransport) RoundTrip(_ *http.Request) (*http.Response, error) {
+	r.called = true
+	return nil, errors.New("stop here")
+}
+
+func assertSendsThrough(t *testing.T, auth authentication.Authentication, transport *recordingTransport) {
+	t.Helper()
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.invalid/", nil)
+	require.NoError(t, err)
+
+	resp, err := auth.(*Passthrough).httpClient.Do(req)
+	if resp != nil {
+		require.NoError(t, resp.Body.Close())
+	}
+
+	require.Error(t, err)
+	assert.True(t, transport.called)
+}
+
+func Test_Passthrough_ClientTLSProfile(t *testing.T) {
+	deps := authentication.AuthenticationDeps{ErrorMessages: config.DefaultConfig().Error.Messages, ClientConfig: config.DefaultConfig().Client}
+	cfg := PassthroughConfig{URL: "https://auth.example.com", Headers: []string{"Authorization"}, Client: &config.ClientConfig{TLS: "a"}}
+
+	_, err := PassthroughRegistration{}.Initialize(cfg, deps)
+	require.Error(t, err)
+
+	errResolve := errors.New("unknown")
+	deps.ClientTransport = func(config.ClientConfig) (http.RoundTripper, error) { return nil, errResolve }
+
+	_, err = PassthroughRegistration{}.Initialize(cfg, deps)
+	require.ErrorIs(t, err, errResolve)
+
+	var seen config.ClientConfig
+
+	transport := &recordingTransport{}
+	deps.ClientTransport = func(c config.ClientConfig) (http.RoundTripper, error) {
+		seen = c
+		return transport, nil
+	}
+	deps.ClientConfig.MTLS = "b"
+
+	auth, err := PassthroughRegistration{}.Initialize(cfg, deps)
+	require.NoError(t, err)
+
+	assert.Equal(t, "a", seen.TLS)
+	assert.Equal(t, "b", seen.MTLS)
+	assertSendsThrough(t, auth, transport)
+}
+
+func Test_Passthrough_InheritsTopLevelTransport(t *testing.T) {
+	transport := &recordingTransport{}
+	deps := authentication.AuthenticationDeps{ErrorMessages: config.DefaultConfig().Error.Messages, ClientConfig: config.DefaultConfig().Client, Transport: transport}
+
+	auth, err := PassthroughRegistration{}.Initialize(PassthroughConfig{URL: "https://auth.example.com", Headers: []string{"Authorization"}}, deps)
+	require.NoError(t, err)
+
+	assertSendsThrough(t, auth, transport)
+}
+
+func Test_Passthrough_OverrideWithoutResolverInheritsTransport(t *testing.T) {
+	transport := &recordingTransport{}
+	deps := authentication.AuthenticationDeps{ErrorMessages: config.DefaultConfig().Error.Messages, ClientConfig: config.DefaultConfig().Client, Transport: transport}
+	deps.ClientConfig.TLS = "corp"
+
+	cfg := PassthroughConfig{URL: "https://auth.example.com", Headers: []string{"Authorization"}, Client: &config.ClientConfig{Timeout: 3}}
+
+	auth, err := PassthroughRegistration{}.Initialize(cfg, deps)
+	require.NoError(t, err)
+	assertSendsThrough(t, auth, transport)
+
+	cfg.Client = &config.ClientConfig{MTLS: "other"}
+	_, err = PassthroughRegistration{}.Initialize(cfg, deps)
+	require.Error(t, err)
+
+	// Would otherwise keep presenting the certificate of the inherited transport
+	off := false
+	cfg.Client = &config.ClientConfig{EnableMTLS: &off}
+	_, err = PassthroughRegistration{}.Initialize(cfg, deps)
+	require.Error(t, err)
 }

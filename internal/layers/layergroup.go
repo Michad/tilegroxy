@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"runtime/debug"
 	"slices"
 	"sort"
@@ -50,7 +51,7 @@ type LayerGroup struct {
 	generateGroup singleflight.Group
 }
 
-func ConstructLayerGroup(ctx context.Context, cfg config.Config, cacheRegistry *caches.CacheRegistry, secreter secret.Secreter, datastoreRegistry *datastores.Registry) (*LayerGroup, error) {
+func ConstructLayerGroup(ctx context.Context, cfg config.Config, cacheRegistry *caches.CacheRegistry, secreter secret.Secreter, datastoreRegistry *datastores.Registry, clientTransport func(config.ClientConfig) (http.RoundTripper, error)) (*LayerGroup, error) {
 	var err1, err2 error
 	var layerGroup LayerGroup
 	layerObjects := make([]*Layer, len(cfg.Layers))
@@ -73,7 +74,7 @@ func ConstructLayerGroup(ctx context.Context, cfg config.Config, cacheRegistry *
 			return nil, errors.Join(fmt.Errorf("error constructing layer %v: %w", i, err), layerGroup.Close(ctx))
 		}
 
-		built, err := ConstructLayer(ctx, l, cfg.Client, layerCache, cfg.Error.Messages, &layerGroup, secreter, datastoreRegistry)
+		built, err := ConstructLayer(ctx, l, cfg.Client, layerCache, cfg.Error.Messages, &layerGroup, secreter, datastoreRegistry, clientTransport)
 		if err != nil {
 			return nil, errors.Join(fmt.Errorf("error constructing layer %v: %w", i, err), layerGroup.Close(ctx))
 		}

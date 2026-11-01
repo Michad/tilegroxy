@@ -26,6 +26,7 @@ import (
 	"github.com/Michad/tilegroxy/internal/datastores"
 	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/internal/ratelimit"
+	"github.com/Michad/tilegroxy/internal/tlsprofiles"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
 	"github.com/Michad/tilegroxy/pkg/entities/lifecycle"
 	"github.com/Michad/tilegroxy/pkg/entities/secret"
@@ -40,6 +41,7 @@ type Entities struct {
 	Caches     *caches.CacheRegistry
 	Datastores *datastores.Registry
 	Secreter   secret.Secreter
+	TLS        *tlsprofiles.Registry
 }
 
 func (e *Entities) Close(ctx context.Context) error {
@@ -59,7 +61,7 @@ func (e *Entities) Close(ctx context.Context) error {
 
 	if analyticsErr != nil {
 		slog.WarnContext(ctx, "Leaving datastore connections open because analytics did not finish flushing: "+analyticsErr.Error())
-		return errors.Join(preFlushErr, analyticsErr, cacheWriteErr, e.Caches.Close(ctx), lifecycle.CloseIfCloser(ctx, e.Secreter))
+		return errors.Join(preFlushErr, analyticsErr, cacheWriteErr, e.Caches.Close(ctx), e.TLS.Close(ctx), lifecycle.CloseIfCloser(ctx, e.Secreter))
 	}
 
 	return errors.Join(
@@ -67,6 +69,7 @@ func (e *Entities) Close(ctx context.Context) error {
 		cacheWriteErr,
 		e.Caches.Close(ctx),
 		e.Datastores.Close(ctx),
+		e.TLS.Close(ctx),
 		lifecycle.CloseIfCloser(ctx, e.Secreter),
 	)
 }

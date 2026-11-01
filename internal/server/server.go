@@ -34,14 +34,13 @@ import (
 	"github.com/Michad/tilegroxy/pkg/config"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/gorilla/handlers"
 )
 
 func ValidateConfig(cfg *config.Config) error {
-	if cfg.Server.Encrypt != nil && cfg.Server.Encrypt.Domain == "" {
-		return fmt.Errorf(cfg.Error.Messages.ParamRequired, "server.encrypt.domain")
+	if err := validateEncrypt(cfg.Server.Encrypt, cfg.Error.Messages); err != nil {
+		return err
 	}
 
 	if cfg.Server.Timeout > math.MaxInt16 {
@@ -79,7 +78,7 @@ type handlerSetup struct {
 }
 
 // Only rate limiting is read from the new config since every other handler-visible section is non-reloadable
-func (s handlerSetup) reload(cfg *config.Config, ent *entities.Entities) error {
+func (s handlerSetup) reload(cfg *config.Config, ent *entities.Entities, tlsState *serverTLSState) error {
 	slog.WarnContext(pkg.BackgroundContext(), "Requesting to refresh entities from configuration")
 
 	if cfg != nil {
@@ -87,6 +86,7 @@ func (s handlerSetup) reload(cfg *config.Config, ent *entities.Entities) error {
 	}
 
 	gen := s.first.succeededBy(ent)
+	gen.useTLS(tlsState)
 	s.registry.add(gen)
 	s.gens.reload(gen)
 
@@ -199,54 +199,6 @@ func wrapRootHandler(cfg *config.Config, mux *http.ServeMux, cors *corsSettings)
 	return rootHandler, closeAccessLog, nil
 }
 
-func listenAndServeTLS(cfg *config.Config, srvErr chan error, srv *http.Server) {
-	httpPort := cfg.Server.Encrypt.HTTPPort
-	httpHostPort := net.JoinHostPort(cfg.Server.BindHost, strconv.Itoa(httpPort))
-
-	if cfg.Server.Encrypt.Certificate != "" && cfg.Server.Encrypt.KeyFile != "" {
-		if httpPort != 0 {
-			srv := &http.Server{
-				Addr:              httpHostPort,
-				Handler:           httpRedirectHandler{host: cfg.Server.Encrypt.Domain},
-				ReadHeaderTimeout: time.Second,
-			}
-
-			go func() {
-				srvErr <- srv.ListenAndServe()
-			}()
-		}
-
-		srvErr <- srv.ListenAndServeTLS(cfg.Server.Encrypt.Certificate, cfg.Server.Encrypt.KeyFile)
-	} else {
-		// Let's Encrypt workflow
-
-		cacheDir := "certs"
-		if cfg.Server.Encrypt.Cache != "" {
-			cacheDir = cfg.Server.Encrypt.Cache
-		}
-
-		certManager := autocert.Manager{
-			Prompt:     autocert.AcceptTOS,
-			HostPolicy: autocert.HostWhitelist(cfg.Server.Encrypt.Domain),
-			Cache:      autocert.DirCache(cacheDir),
-		}
-
-		if httpPort != 0 {
-			srv := &http.Server{
-				Addr:              httpHostPort,
-				Handler:           certManager.HTTPHandler(nil),
-				ReadHeaderTimeout: time.Second,
-			}
-
-			go func() { srvErr <- srv.ListenAndServe() }()
-		}
-
-		srv.TLSConfig = certManager.TLSConfig()
-
-		srvErr <- srv.ListenAndServeTLS("", "")
-	}
-}
-
 // Returns closers in the order shutdown needs them. setupHandlers already sets up the access log
 func configureLogging(cfg *config.Config) (func() error, func() error, error) {
 	closeMainLog, err := configureMainLogging(cfg)
@@ -276,6 +228,28 @@ func newHTTPServer(rootCtx context.Context, cfg *config.Config, rootHandler http
 	}
 }
 
+func newReloadFunc(ctx context.Context, secure *serverTLS, health *healthSupervisor, routes handlerSetup) reloadEntitiesFunc {
+	return func(newCfg *config.Config, newEnt *entities.Entities) error {
+		nextTLS, err := secure.buildState(newEnt.TLS)
+		if err != nil {
+			return err
+		}
+
+		// Health rebuilds against the same entities so its checks aren't pinned to the startup LayerGroup
+		if err := health.Reload(ctx, newCfg, newEnt); err != nil {
+			return err
+		}
+
+		if err := routes.reload(newCfg, newEnt, nextTLS); err != nil {
+			return err
+		}
+
+		newEnt.TLS.WarnUnused(ctx)
+
+		return nil
+	}
+}
+
 // onReady, if set, receives the reload function once the server can accept reloads
 func ListenAndServe(cfg *config.Config, ent *entities.Entities, onReady func(reloadEntitiesFunc)) error {
 	if err := ValidateConfig(cfg); err != nil {
@@ -288,11 +262,22 @@ func ListenAndServe(cfg *config.Config, ent *entities.Entities, onReady func(rel
 		return err
 	}
 
-	closeMainLog, closeAuditLog, err := configureLogging(cfg)
-
+	secure, firstTLS, err := newServerTLS(cfg, ent)
 	if err != nil {
 		return err
 	}
+
+	routes.first.useTLS(firstTLS)
+	secure.attach(routes.gens)
+
+	closeMainLog, closeAuditLog, err := configureLogging(cfg)
+
+	if err != nil {
+		secure.releaseLegacy()
+		return err
+	}
+
+	ent.TLS.WarnUnused(pkg.BackgroundContext())
 
 	// Derived from the signal context, SIGTERM would cancel every in-flight request into a 503, defeating graceful drain
 	rootCtx := pkg.BackgroundContext()
@@ -303,18 +288,12 @@ func ListenAndServe(cfg *config.Config, ent *entities.Entities, onReady func(rel
 	health := &healthSupervisor{}
 
 	if err = health.Start(ctx, cfg, ent); err != nil {
+		secure.releaseLegacy()
 		return err
 	}
 
 	if onReady != nil {
-		// Health rebuilds against the same entities so its checks aren't pinned to the startup LayerGroup
-		onReady(func(newCfg *config.Config, newEnt *entities.Entities) error {
-			if err := health.Reload(ctx, newCfg, newEnt); err != nil {
-				return err
-			}
-
-			return routes.reload(newCfg, newEnt)
-		})
+		onReady(newReloadFunc(ctx, secure, health, routes))
 	}
 
 	var otelShutdown func(context.Context) error
@@ -322,13 +301,15 @@ func ListenAndServe(cfg *config.Config, ent *entities.Entities, onReady func(rel
 	if cfg.Telemetry.Enabled {
 		otelShutdown, err = setupOTELSDK(ctx)
 		if err != nil {
+			secure.releaseLegacy()
 			return err
 		}
 	}
 
 	srv := newHTTPServer(rootCtx, cfg, routes.root)
 
-	srvErr := make(chan error, 1)
+	// Room for the main and redirect listeners so neither blocks on exit
+	srvErr := make(chan error, 2) //nolint:mnd
 
 	go func() {
 		defer func() {
@@ -339,8 +320,8 @@ func ListenAndServe(cfg *config.Config, ent *entities.Entities, onReady func(rel
 
 		slog.InfoContext(context.Background(), "Binding...")
 
-		if cfg.Server.Encrypt != nil {
-			listenAndServeTLS(cfg, srvErr, srv)
+		if secure != nil {
+			secure.listenAndServe(srvErr, srv)
 		} else {
 			srvErr <- srv.ListenAndServe()
 		}
@@ -348,7 +329,10 @@ func ListenAndServe(cfg *config.Config, ent *entities.Entities, onReady func(rel
 
 	select {
 	case err = <-srvErr:
-		return err
+		// One listener failing mustn't leave the other serving
+		secure.releaseLegacy()
+
+		return errors.Join(err, srv.Close(), secure.closeRedirect())
 	case <-ctx.Done():
 		stop()
 	}
@@ -356,6 +340,7 @@ func ListenAndServe(cfg *config.Config, ent *entities.Entities, onReady func(rel
 	return runShutdown(context.Background(), newShutdownBudget(cfg), buildShutdownPhases(shutdownDeps{
 		health:         health,
 		srv:            srv,
+		secure:         secure,
 		registry:       routes.registry,
 		otelShutdown:   otelShutdown,
 		closeAccessLog: routes.closeAccessLog,
@@ -368,6 +353,7 @@ func ListenAndServe(cfg *config.Config, ent *entities.Entities, onReady func(rel
 type shutdownDeps struct {
 	health         *healthSupervisor
 	srv            *http.Server
+	secure         *serverTLS
 	registry       *generationRegistry
 	otelShutdown   func(context.Context) error
 	closeAccessLog func() error
@@ -377,10 +363,16 @@ type shutdownDeps struct {
 
 func buildShutdownPhases(d shutdownDeps) shutdownPhases {
 	return shutdownPhases{
-		drain:       d.health.Drain,
-		server:      d.srv.Shutdown,
-		generations: d.registry.closeAll,
-		health:      d.health.Shutdown,
+		drain: d.health.Drain,
+		server: func(shutdownCtx context.Context) error {
+			return errors.Join(d.srv.Shutdown(shutdownCtx), d.secure.shutdownRedirect(shutdownCtx))
+		},
+		generations: func(shutdownCtx context.Context) error {
+			defer d.secure.releaseLegacy()
+
+			return d.registry.closeAll(shutdownCtx)
+		},
+		health: d.health.Shutdown,
 		otel: func(shutdownCtx context.Context) error {
 			if d.otelShutdown == nil {
 				return nil

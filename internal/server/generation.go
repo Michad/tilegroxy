@@ -48,6 +48,9 @@ type generation struct {
 	// Sole owner. Requests hold the generation, so a reload can't release entities under one in flight
 	all *entities.Entities
 
+	// Nil without encryption
+	tls *serverTLSState
+
 	mu       sync.Mutex
 	refs     int
 	closing  bool
@@ -79,6 +82,17 @@ func (g *generation) succeededBy(ent *entities.Entities) *generation {
 	next.errCfg = g.errCfg
 
 	return next
+}
+
+func (g *generation) useTLS(state *serverTLSState) {
+	g.tls = state
+
+	if state == nil || state.manager == nil {
+		return
+	}
+
+	state.config.GetCertificate = state.manager.GetCertificate
+	state.challenge.GetCertificate = state.manager.GetCertificate
 }
 
 func (g *generation) entities() *entities.Entities {

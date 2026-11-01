@@ -41,7 +41,7 @@ import (
 func configToEntities(cfg config.Config) (*layers.LayerGroup, authentication.Authentication, error) {
 	caches, err1 := caches.ConstructCacheRegistry(context.Background(), cfg.Cache, cfg.DefaultCache, nil, cache.CacheDeps{ErrorMessages: cfg.Error.Messages})
 	auth, err2 := authentications.ConstructAuth(cfg.Authentication, authentication.AuthenticationDeps{ErrorMessages: cfg.Error.Messages})
-	layerGroup, err3 := layers.ConstructLayerGroup(context.Background(), cfg, caches, nil, nil)
+	layerGroup, err3 := layers.ConstructLayerGroup(context.Background(), cfg, caches, nil, nil, nil)
 
 	return layerGroup, auth, errors.Join(err1, err2, err3)
 }
@@ -56,7 +56,7 @@ func Test_TileHandler_AllowedArea(t *testing.T) {
 	var tileCache cache.Cache
 	auth = authentications.Noop{}
 	tileCache = caches.Noop{}
-	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(tileCache), nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(tileCache), nil, nil, nil)
 	require.NoError(t, err)
 
 	handler, err := newTileHandler(newGenerationHolder(testServing(&cfg, auth, lg)))
@@ -120,7 +120,7 @@ func Test_TileHandler_Proxy(t *testing.T) {
 	var tileCache cache.Cache
 	auth = authentications.Noop{}
 	tileCache = caches.Noop{}
-	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(tileCache), nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(tileCache), nil, nil, nil)
 	require.NoError(t, err)
 
 	handler, err := newTileHandler(newGenerationHolder(testServing(&cfg, auth, lg)))
@@ -161,7 +161,7 @@ func Test_TileHandler_RefToStatic(t *testing.T) {
 	var tileCache cache.Cache
 	auth = authentications.Noop{}
 	tileCache = caches.Noop{}
-	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(tileCache), nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(tileCache), nil, nil, nil)
 	require.NoError(t, err)
 
 	handler, err := newTileHandler(newGenerationHolder(testServing(&cfg, auth, lg)))
@@ -234,7 +234,7 @@ func Test_TileHandler_ExecuteCustom(t *testing.T) {
     }`
 
 	tileCache := caches.Noop{}
-	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(tileCache), nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(tileCache), nil, nil, nil)
 	require.NoError(t, err)
 
 	authO, err := authentications.ConstructAuth(auth, authentication.AuthenticationDeps{ErrorMessages: cfg.Error.Messages})
@@ -756,7 +756,7 @@ func Test_TileHandler_UnreachableUpstreamOmitsURL(t *testing.T) {
 				"name": "proxy",
 				"url":  "http://" + addr + "/{z}/{x}/{y}.png?key=SECRETKEY",
 			}})
-			lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(caches.Noop{}), nil, nil)
+			lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(caches.Noop{}), nil, nil, nil)
 			require.NoError(t, err)
 			handler, err := newTileHandler(newGenerationHolder(testServing(&cfg, authentications.Noop{}, lg)))
 			require.NoError(t, err)

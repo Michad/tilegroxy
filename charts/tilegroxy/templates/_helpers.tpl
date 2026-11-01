@@ -124,7 +124,8 @@ challenge and redirects on a second port.
 {{- end }}
 
 {{- define "tilegroxy.httpPort" -}}
-{{- dig "httpport" 0 (fromYaml (include "tilegroxy.encrypt" .)) -}}
+{{- $encrypt := fromYaml (include "tilegroxy.encrypt" .) -}}
+{{- dig "httpport" (dig "httpPort" 0 $encrypt) $encrypt -}}
 {{- end }}
 
 {{/*

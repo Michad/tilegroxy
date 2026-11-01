@@ -109,7 +109,7 @@ func openPMTilesSource(cfg PMTilesConfig, deps layer.ProviderDeps) (pmtiles.Sour
 		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
 			return nil, 0, fmt.Errorf(deps.ErrorMessages.InvalidParam, "provider.pmtiles.url", "")
 		}
-		return pmtiles.NewHTTPSource(cfg.URL, deps.ClientConfig), deps.ClientConfig.MaxLength, nil
+		return pmtiles.NewHTTPSource(cfg.URL, deps.ClientConfig, deps.Transport), deps.ClientConfig.MaxLength, nil
 	default:
 		return nil, 0, fmt.Errorf(deps.ErrorMessages.OneOfRequired, []string{"provider.pmtiles.file", "provider.pmtiles.url"})
 	}

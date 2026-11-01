@@ -270,7 +270,7 @@ func refFallbackLayerGroup(t *testing.T) *layers.LayerGroup {
 		},
 	}
 
-	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil, nil)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = lg.Close(context.Background()) })
 

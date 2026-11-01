@@ -2,20 +2,51 @@
 :description: Tilegroxy is designed to minimize downtime by supporting hot-reloading of configuration.
 :page-eyebrow: Development
 
-== Mechanism
+== Overview
 
-Entities (layers, caches, analytics, datastores) are grouped into a generation.  A hot reload constructs a second generation and swaps it in, therefore the old generation must be released without disturbing the requests still using it.
+Tilegroxy can reload its configuration without restarting.  Everything built from the configuration (layers, caches, analytics, datastores, and TLS profiles) is bundled into a single object called a generation.  A reload builds a new generation next to the current one and then swaps it in.
 
-=== Reference counting
+The hard part is the old generation.  Requests that started before the swap are still using it, so it can't be closed right away.  It has to be closed as soon as the last of those requests finishes, and no sooner.
 
-Each generation carries a reference count.  A tile request takes a hold on the generation it reads and drops it when the request finishes so a retired generation closes as soon as its last request returns.  This replaced a fixed sleep that waited out the request timeout before releasing; with a 60 second timeout, several config saves in a row would pin several full generations at once, each holding its own connection pools.
+== Reference counting
 
-The reference is taken inside the same lock that reads the generation pointer to avoid a race with the swap.  A request either increments before the swap occurs and is visible to the outgoing generation, or it blocks and reads the new pointer instead.  Taking the reference after releasing the lock would leave a window where a reload sees a count of zero and closes a generation that a request is about to use.
+Each generation has a reference count.  A tile request takes a reference on the generation it reads and drops it when the request finishes.  Once a generation has been replaced and its count reaches zero, it closes.
 
-A registry holds every live generation so shutdown can release all of them rather than only the one currently serving.  Without it, a reload landing shortly before shutdown would leave the previous generation's analytics batcher draining with nothing waiting on it.
+This replaced a fixed sleep that waited out the request timeout before closing the old generation.  With a 60 second timeout, saving the config several times in a row would keep several full generations alive at once, each holding its own connection pools.
 
-=== The Reloader
+=== Taking the reference
 
-A single `Reloader` in `internal/entry` owns every reload, whatever triggered it.  It holds one lock for the whole of a reload, from building the new generation through the swap, so two reloads can't finish out of order.  Reloads requested before `ListenAndServe` hands over its swap function are queued rather than dropped, and the latest one is applied once the server is ready.
+A request takes its reference while holding the same lock that guards the pointer to the current generation.  This closes a race with the swap:
 
-Secret watches request a reload without waiting for it.  Closing a generation waits for its secret pollers to stop, so a poller blocked on the reload lock could deadlock a reload that is closing that same generation.  Requests that arrive while one is already queued collapse into it, since the queued reload re-resolves every secret anyway.
+* If the request gets the lock first, it increments the old generation's count before the swap, so the old generation stays open until the request is done.
+* If the swap gets the lock first, the request reads the pointer to the new generation instead.
+
+Taking the reference after releasing the lock would leave a gap.  A reload could see a count of zero and close a generation that a request was about to use.
+
+=== The registry
+
+A registry tracks every live generation.  At shutdown, all of them are released, not only the one currently serving.  Without the registry, a reload shortly before shutdown would leave the previous generation's analytics batcher draining with nothing waiting on it.
+
+== TLS
+
+The listeners belong to the process, because the server section of the configuration can't be reloaded.  Everything a handshake reads belongs to a generation.  `GetConfigForClient` and the redirect server look up the current generation for each connection or request, so a TLS change takes effect at the same moment as every other entity.
+
+A handshake that needs a certificate from an ACME manager holds a reference on its generation.  Issuing a certificate can take minutes and the generation must stay open until it finishes.
+
+=== Sharing ACME managers
+
+autocert has no way to stop its renewal timers.  Creating a new manager on every reload would leak timers, so managers are shared between generations.  Two generations share a manager when they have the same hosts and cache.  A reference count tracks how many generations use each manager, so a reload that doesn't touch the ACME settings keeps the same manager.
+
+When the last generation using a manager closes, the manager's cache and ACME client start returning errors.  A leftover timer then can't renew a certificate for a host that was removed from the configuration.
+
+== The Reloader
+
+A single `Reloader` in `internal/entry` handles every reload, whatever triggered it.  It holds one lock for the whole reload, from building the new generation through the swap, so two reloads can't finish out of order.
+
+Reloads requested before `ListenAndServe` hands over its swap function are queued rather than dropped.  The latest one is applied once the server is ready.
+
+=== Secret watches
+
+A secret watch asks for a reload but doesn't wait for it.  Closing a generation waits for its secret pollers to stop.  If a poller blocked on the reload lock while a reload was closing that same generation, the two would deadlock.
+
+If a reload is already queued, further requests are folded into it.  This is safe because the queued reload re-resolves every secret anyway.

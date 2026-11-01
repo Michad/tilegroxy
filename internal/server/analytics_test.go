@@ -87,7 +87,7 @@ func setupAnalyticsHandler(t *testing.T, layerCfgs []config.LayerConfig, fields 
 	var auth authentication.Authentication = authentications.Noop{}
 	var c cache.Cache = caches.Noop{}
 
-	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(c), nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(c), nil, nil, nil)
 	require.NoError(t, err)
 
 	moduleCfg := map[string]interface{}{"name": "servertestrecorder"}
@@ -227,7 +227,7 @@ func Test_TileHandler_Analytics_NoModulesConfigured(t *testing.T) {
 	var auth authentication.Authentication = authentications.Noop{}
 	var c cache.Cache = caches.Noop{}
 
-	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(c), nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(c), nil, nil, nil)
 	require.NoError(t, err)
 
 	handler, err := newTileHandler(newGenerationHolder(testServing(&cfg, auth, lg)))
@@ -269,7 +269,7 @@ func generationFor(t *testing.T) (*config.Config, *entities.Entities) {
 
 	var c cache.Cache = caches.Noop{}
 
-	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(c), nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(c), nil, nil, nil)
 	require.NoError(t, err)
 
 	a, err := internalanalytics.ConstructAnalytics(context.Background(),

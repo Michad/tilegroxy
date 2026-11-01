@@ -620,3 +620,130 @@ layers:
 	// Viper lowercases every map key, including field names
 	assert.Equal(t, map[string]string{"name": "String"}, md.VectorLayers[0].Fields)
 }
+
+func Test_LoadConfig_ClientTLSFromFileAndEnv(t *testing.T) {
+	t.Setenv("CLIENT_MTLS", "from-env")
+	t.Setenv("CLIENT_ENABLEMTLS", "false")
+
+	cfg, err := LoadConfig(`
+client:
+  tls: from-file
+tls:
+  - name: pem
+    id: from-file
+    certificateFile: /x
+layers:
+  - id: a
+    client:
+      tls: layer-tls
+      mtls: layer-mtls
+      enableMTLS: true
+    provider:
+      name: static
+`)
+	require.NoError(t, err)
+
+	assert.Equal(t, "from-file", cfg.Client.TLS)
+	assert.Equal(t, "from-env", cfg.Client.MTLS)
+	require.NotNil(t, cfg.Client.EnableMTLS)
+	assert.False(t, *cfg.Client.EnableMTLS)
+	require.Len(t, cfg.TLS, 1)
+	assert.Equal(t, "from-file", cfg.TLS[0]["id"])
+	assert.Equal(t, "layer-tls", cfg.Layers[0].Client.TLS)
+	assert.True(t, *cfg.Layers[0].Client.EnableMTLS)
+}
+
+func Test_LoadConfig_EncryptNewAndDeprecatedFormats(t *testing.T) {
+	cfg, err := LoadConfig(`
+server:
+  encrypt:
+    tls: main
+    mtls: clients
+    mtlsMode: optional
+    httpPort: 8081
+`)
+	require.NoError(t, err)
+	assert.Equal(t, config.EncryptionConfig{TLS: "main", MTLS: "clients", MTLSMode: "optional", HTTPPort: 8081}, *cfg.Server.Encrypt)
+
+	cfg, err = LoadConfig(`
+Server:
+  Encrypt:
+    Domain: tiles.example.com
+    Cache: /c
+    Certificate: /a
+    Keyfile: /b
+`)
+	require.NoError(t, err)
+	assert.Equal(t, config.EncryptionConfig{Domain: "tiles.example.com", Cache: "/c", Certificate: "/a", KeyFile: "/b"}, *cfg.Server.Encrypt)
+}
+
+func Test_LoadConfig_EncryptFromEnv(t *testing.T) {
+	t.Setenv("SERVER_ENCRYPT_TLS", "main")
+	t.Setenv("SERVER_ENCRYPT_MTLS", "clients")
+	t.Setenv("SERVER_ENCRYPT_MTLSMODE", "required")
+
+	t.Setenv("SERVER_ENCRYPT_HTTPPORT", "8081")
+
+	cfg, err := LoadConfig("server:\n  port: 8443\n")
+	require.NoError(t, err)
+	require.NotNil(t, cfg.Server.Encrypt)
+	assert.Equal(t, config.EncryptionConfig{TLS: "main", MTLS: "clients", MTLSMode: "required", HTTPPort: 8081}, *cfg.Server.Encrypt)
+}
+
+func Test_LoadConfig_StaleEncryptEnvDoesNotEnableTLS(t *testing.T) {
+	t.Setenv("SERVER_ENCRYPT_DOMAIN", "tiles.example.com")
+	t.Setenv("SERVER_ENCRYPT_HTTPPORT", "8081")
+
+	cfg, err := LoadConfig("server:\n  port: 8443\n")
+	require.NoError(t, err)
+	assert.Nil(t, cfg.Server.Encrypt)
+}
+
+func Test_LoadConfig_DeprecatedEncryptReadsEnv(t *testing.T) {
+	t.Setenv("SERVER_ENCRYPT_DOMAIN", "from-env.example.com")
+	t.Setenv("SERVER_ENCRYPT_HTTPPORT", "8081")
+
+	cfg, err := LoadConfig("server:\n  encrypt:\n    domain: from-file.example.com\n")
+	require.NoError(t, err)
+	assert.Equal(t, config.EncryptionConfig{Domain: "from-env.example.com", HTTPPort: 8081}, *cfg.Server.Encrypt)
+}
+
+func Test_LoadConfig_EmptyEncryptIsKept(t *testing.T) {
+	cfg, err := LoadConfig("server:\n  encrypt: {}\n")
+	require.NoError(t, err)
+	assert.Equal(t, config.EncryptionConfig{}, *cfg.Server.Encrypt)
+}
+
+func Test_LoadConfig_ProfileInFileReadsHTTPPortFromEnv(t *testing.T) {
+	t.Setenv("SERVER_ENCRYPT_HTTPPORT", "8081")
+
+	for range 50 {
+		cfg, err := LoadConfig("server:\n  encrypt:\n    tls: main\n")
+		require.NoError(t, err)
+		assert.Equal(t, config.EncryptionConfig{TLS: "main", HTTPPort: 8081}, *cfg.Server.Encrypt)
+	}
+}
+
+func Test_LoadConfig_NoEncryptByDefault(t *testing.T) {
+	cfg, err := LoadConfig("server:\n  port: 8443\n")
+	require.NoError(t, err)
+	assert.Nil(t, cfg.Server.Encrypt)
+}
+
+func Test_MergeClientDefaults_TLSIsPiecemeal(t *testing.T) {
+	off := false
+	base := config.ClientConfig{TLS: "a", MTLS: "b", EnableMTLS: &off}
+
+	inherited := config.ClientConfig{}
+	MergeClientDefaults(&inherited, base)
+	assert.Equal(t, "a", inherited.TLS)
+	assert.Equal(t, "b", inherited.MTLS)
+	assert.Same(t, &off, inherited.EnableMTLS)
+
+	on := true
+	overridden := config.ClientConfig{TLS: "x", MTLS: "y", EnableMTLS: &on}
+	MergeClientDefaults(&overridden, base)
+	assert.Equal(t, "x", overridden.TLS)
+	assert.Equal(t, "y", overridden.MTLS)
+	assert.Same(t, &on, overridden.EnableMTLS)
+}
