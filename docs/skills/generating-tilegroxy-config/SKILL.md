@@ -28,9 +28,9 @@ fallback chain, in order, stopping at the first that succeeds:
    extension). For example `provider/proxy.adoc` becomes
    `https://tilegroxy.com/operation/configuration/provider/proxy.html`. Start from
    `https://tilegroxy.com/operation/configuration/index.html` and follow links from
-   there if unsure a page exists. Conceptual pages, such as the top-level structure in
-   `configuration.adoc`, are in `docs/operation/modules/ROOT/pages/` and at
-   `https://tilegroxy.com/operation/<X>.html`.
+   there if unsure a page exists. That `index.adoc` is also the top-level structure page.
+   Conceptual pages, such as the conventions and entities in `configuration.adoc`, are in
+   `docs/operation/modules/ROOT/pages/` and at `https://tilegroxy.com/operation/<X>.html`.
 3. **GitHub, as a last resort.** If tilegroxy.com is unreachable, fetch the same `.adoc`
    source directly from GitHub:
    `https://raw.githubusercontent.com/Michad/tilegroxy/main/docs/configuration/modules/ROOT/pages/<X>.adoc`.
