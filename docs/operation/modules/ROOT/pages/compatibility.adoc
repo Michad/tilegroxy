@@ -8,9 +8,9 @@ IMPORTANT: Releases before 1.0 made no such promise and frequently included brea
 The compatibility promise applies to four surfaces:
 
 Configuration::
-Every documented key in the xref:configuration/index.adoc[configuration], including entity names such as `memcached` and the matching environment variables
+Every documented key in the xref:configuration::index.adoc[configuration], including entity names such as `memcached` and the matching environment variables
 CLI::
-The xref:commands/index.adoc[commands] and their documented flags
+The xref:commands::serve.adoc[commands] and their documented flags
 Custom scripts::
 The function signatures that xref:extensibility.adoc[custom] providers, authentication, and analytics are compiled against
 Core Server Behaviour::
@@ -46,37 +46,37 @@ If a vulnerability can only be fixed by changing or removing a feature, it may b
 | memcache
 | memcached
 | 2.0
-| xref:configuration/cache/memcached.adoc[Memcached cache] and xref:configuration/datastores/memcached.adoc[datastore] name
+| xref:configuration::cache/memcached.adoc[Memcached cache] and xref:configuration::datastores/memcached.adoc[datastore] name
 
 | postgres
 | postgresql
 | 2.0
-| xref:configuration/analytics/postgresql.adoc[PostgreSQL analytics] name
+| xref:configuration::analytics/postgresql.adoc[PostgreSQL analytics] name
 
 | algorithm
 | algorithms
 | 2.0
-| xref:configuration/authentication/jwt.adoc[JWT authentication]
+| xref:configuration::authentication/jwt.adoc[JWT authentication]
 
 | server.encrypt.certificate
-| Use a xref:configuration/tls/index.adoc[TLS profile] and the certificatefile option in a pem type
+| Use a xref:configuration::tls/index.adoc[TLS profile] and the certificatefile option in a pem type
 | 2.0
-| xref:configuration/encryption.adoc[Encryption]
+| xref:configuration::encryption.adoc[Encryption]
 
 | server.encrypt.keyfile
-| Use a xref:configuration/tls/index.adoc[TLS profile] and the keyfile option in a pem type
+| Use a xref:configuration::tls/index.adoc[TLS profile] and the keyfile option in a pem type
 | 2.0
-| xref:configuration/encryption.adoc[Encryption]
+| xref:configuration::encryption.adoc[Encryption]
 
 | server.encrypt.cache
-| Use a xref:configuration/tls/index.adoc[TLS profile] and the cache option in an acme type
+| Use a xref:configuration::tls/index.adoc[TLS profile] and the cache option in an acme type
 | 2.0
-| xref:configuration/encryption.adoc[Encryption]
+| xref:configuration::encryption.adoc[Encryption]
 
 | server.encrypt.domain
-| Use a xref:configuration/tls/index.adoc[TLS profile] and the hosts option
+| Use a xref:configuration::tls/index.adoc[TLS profile] and the hosts option
 | 2.0
-| xref:configuration/encryption.adoc[Encryption]
+| xref:configuration::encryption.adoc[Encryption]
 |===
 
 == What's Not Covered
@@ -90,7 +90,7 @@ The format of tiles written to a cache has its own versioning system and new ver
 Seed progress files::
 A progress file written by `seed` might not be resumable after an upgrade
 Log messages::
-The wording, fields, and quantity of log messages, as described in xref:configuration/log.adoc[Log]
+The wording, fields, and quantity of log messages, as described in xref:configuration::log.adoc[Log]
 Undocumented behavior::
 Any configuration key, flag, or behavior not described in this documentation, even if it happens to work
 The Helm chart::

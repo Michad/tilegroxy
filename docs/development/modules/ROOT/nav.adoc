@@ -4,3 +4,7 @@
 * xref:documentation.adoc[]
 * xref:troubleshooting.adoc[]
 * xref:glossary.adoc[]
+
+.Decision Records
+* xref:decisions/index.adoc[Overview]
+* xref:decisions/0001-scripting-engine.adoc[]

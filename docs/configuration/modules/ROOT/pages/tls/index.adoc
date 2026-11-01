@@ -1,0 +1,200 @@
+= Overview
+:navtitle: TLS
+:reftext: TLS
+:page-aliases: operation::configuration/tls/index.adoc
+:description: TLS profiles hold the certificates, keys, and trusted CAs used for HTTPS.
+:page-eyebrow: TLS
+
+== Description
+
+They're defined once and referenced by ID wherever they're needed, both for requests to upstream servers and for the server itself.
+
+Like other entities, a profile uses a parameter called `name` to dictate its type which controls the list of parameters available. Every profile must also have an `id`, which can be any string except `system`.
+
+Profiles do nothing until they're referenced:
+
+.Where profiles are referenced
+[cols="1m,3,2"]
+|===
+| Parameter | Purpose | Profile parameters used
+
+| xref:client.adoc[client.tls]
+| Validating the certificates of upstream servers
+| CA, CAFile, SystemCAs, MinVersion
+
+| xref:client.adoc[client.mtls]
+| The certificate presented to upstream servers that require mutual TLS (mTLS)
+| Certificate, CertificateFile, Key, KeyFile, AllowedHosts
+
+| xref:encryption.adoc[server.encrypt.tls]
+| The certificate served to clients
+| Certificate, CertificateFile, Key, KeyFile, MinVersion, Hosts, or an `acme` profile
+
+| xref:encryption.adoc[server.encrypt.mtls]
+| Validating the certificates of incoming clients
+| CA, CAFile
+|===
+
+Parameters that don't apply to a reference are ignored, so a single profile can be used for several of these. Any parameter in a profile that isn't used by a reference is logged at `warn` level on startup. A reference to an unknown ID, or to a profile missing what that reference needs, prevents the application from starting up.
+
+The `client` and `server.encrypt` sections don't fall back to each other. A section only uses the profiles it references, so the server's certificate is never presented to an upstream unless `client` references that profile as well.
+
+Everything that uses the xref:client.adoc[client] configuration picks up its profiles: the xref:provider/proxy.adoc[proxy], xref:provider/url_template.adoc[url template], and xref:provider/pmtiles.adoc[pmtiles] providers, xref:operation::extensibility.adoc#custom[custom providers] calling `GetTile`, and xref:authentication/passthrough.adoc[passthrough authentication]. Datastores, caches, analytics, telemetry, and the JWKS download for xref:authentication/jwt.adoc[JWT authentication] make their own connections and don't use profiles.
+
+A layer's `client` overrides the top-level client piecemeal, so different layers can trust different CAs or present different certificates. Combine them in one layer using a xref:provider/ref.adoc[ref] provider, which keeps the client of the layer it refers to.
+
+Profiles can be reloaded without downtime. See xref:operation::reloading.adoc#supported-configuration[Reloading].
+
+== Choosing a profile
+
+[cols="2,1,3"]
+|===
+| Goal | Profile | Notes
+
+| Use certificates, keys, or CAs you already have
+| xref:tls/pem.adoc[PEM]
+| Supplied as file paths or text. Usable by every reference
+
+| Obtain and renew certificates automatically via Let's Encrypt
+| xref:tls/acme.adoc[ACME]
+| Only usable for xref:encryption.adoc[`server.encrypt.tls`]. Requires `server.encrypt.httpport`
+|===
+
+== Example
+
+The `mesh` profile is used by default, but its certificate is only presented to hosts matching its `allowedHosts`. The remaining layers override the client to validate the upstream a different way.
+
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+tls:
+  - name: pem
+    id: mesh
+    certificateFile: /var/run/certs/tls.crt
+    keyFile: /var/run/certs/tls.key
+    caFile: /var/run/certs/ca.crt
+    allowedHosts:
+      - "*.svc.cluster.local"
+  - name: pem
+    id: partner
+    certificate: secret.partner-cert
+    key: secret.partner-key
+    allowedHosts:
+      - wmts.partner.example.net
+  - name: pem
+    id: corp-ca
+    caFile: /etc/pki/corp-root.pem
+
+client:
+  tls: mesh
+  mtls: mesh
+
+layers:
+  - id: buildings
+    provider:
+      name: pmtiles
+      url: https://tiles.storage.svc.cluster.local/buildings.pmtiles
+  - id: partner_imagery
+    client:
+      tls: system
+      mtls: partner
+    provider:
+      name: proxy
+      url: https://wmts.partner.example.net/imagery/{z}/{x}/{y}.jpg
+  - id: archive
+    client:
+      tls: corp-ca
+    provider:
+      name: proxy
+      url: https://archive.corp.example.com/{z}/{x}/{y}.png
+  - id: osm
+    client:
+      tls: system
+    provider:
+      name: proxy
+      url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+----
+
+JSON::
++
+[,json]
+----
+{
+  "tls": [
+    {
+      "name": "pem",
+      "id": "mesh",
+      "certificateFile": "/var/run/certs/tls.crt",
+      "keyFile": "/var/run/certs/tls.key",
+      "caFile": "/var/run/certs/ca.crt",
+      "allowedHosts": [
+        "*.svc.cluster.local"
+      ]
+    },
+    {
+      "name": "pem",
+      "id": "partner",
+      "certificate": "secret.partner-cert",
+      "key": "secret.partner-key",
+      "allowedHosts": [
+        "wmts.partner.example.net"
+      ]
+    },
+    {
+      "name": "pem",
+      "id": "corp-ca",
+      "caFile": "/etc/pki/corp-root.pem"
+    }
+  ],
+  "client": {
+    "tls": "mesh",
+    "mtls": "mesh"
+  },
+  "layers": [
+    {
+      "id": "buildings",
+      "provider": {
+        "name": "pmtiles",
+        "url": "https://tiles.storage.svc.cluster.local/buildings.pmtiles"
+      }
+    },
+    {
+      "id": "partner_imagery",
+      "client": {
+        "tls": "system",
+        "mtls": "partner"
+      },
+      "provider": {
+        "name": "proxy",
+        "url": "https://wmts.partner.example.net/imagery/{z}/{x}/{y}.jpg"
+      }
+    },
+    {
+      "id": "archive",
+      "client": {
+        "tls": "corp-ca"
+      },
+      "provider": {
+        "name": "proxy",
+        "url": "https://archive.corp.example.com/{z}/{x}/{y}.png"
+      }
+    },
+    {
+      "id": "osm",
+      "client": {
+        "tls": "system"
+      },
+      "provider": {
+        "name": "proxy",
+        "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+      }
+    }
+  ]
+}
+----
+====
+
+See xref:encryption.adoc[Encryption] for an example of using profiles to serve HTTPS.

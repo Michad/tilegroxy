@@ -1,0 +1,46 @@
+= Static Key
+:page-aliases: operation::configuration/authentication/static_key.adoc
+:description: Requires incoming requests have a specific key supplied as a "Bearer" token in a "Authorization" Header.
+:page-eyebrow: Authentication
+:page-config-name: static key
+
+CAUTION: It is recommended you employ caution with this option. It should be regarded as a protection against casual web scrapers but not true security. It is recommended only for development and internal ("intranet") use-cases. Does not include any authz logic.
+
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+authentication:
+  name: static key
+  key: my-secret-key
+----
+
+JSON::
++
+[,json]
+----
+{
+  "authentication": {
+    "name": "static key",
+    "key": "my-secret-key"
+  }
+}
+----
+====
+
+== Configuration
+
+.Configuration options
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| key
+| The bearer token to require be supplied. If not specified `tilegroxy` will generate a random token at startup and output it in logs
+| string
+| No
+| Auto
+|===

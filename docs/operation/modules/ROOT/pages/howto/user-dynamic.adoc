@@ -4,7 +4,7 @@
 
 == Overview
 
-NOTE: Nothing here matters if you're not using xref:configuration/authentication/index.adoc[Authentication] to differentiate users. 
+NOTE: Nothing here matters if you're not using xref:configuration::authentication/index.adoc[Authentication] to differentiate users. 
 
 This doc provides a few things to consider to ensure you don't accidentally leak tiles between users.
 
@@ -12,7 +12,7 @@ CAUTION: Getting this right is the operator's responsibility.
 
 == Cache
 
-By default, a cache is keyed based on the layer and tile, not considering anything about the user.  We offer a xref:configuration/cache/tenant.adoc[tenant] cache, which injects the tenant ID into the cache key.  Tiles are still cached, just separately per tenant.  A request that arrives with no tenant ID falls back to the un-namespaced key, so this only protects you if every request is guaranteed to carry one.
+By default, a cache is keyed based on the layer and tile, not considering anything about the user.  We offer a xref:configuration::cache/tenant.adoc[tenant] cache, which injects the tenant ID into the cache key.  Tiles are still cached, just separately per tenant.  A request that arrives with no tenant ID falls back to the un-namespaced key, so this only protects you if every request is guaranteed to carry one.
 
 NOTE: Tilegroxy is architected assuming that you might have a multi-tenant environment with different "realms" of users who are grouped together. If that isn't the case, and you just have a flat list of users, it's recommended you set the tenant ID to be the user ID.
 
@@ -20,13 +20,13 @@ Alternatively, you can choose to completely avoid the risk of cached tiles leaki
 
 === Seed and test commands
 
-The xref:commands/seed.adoc[seed] and xref:commands/test.adoc[test] CLI commands operate against purely synthetic tile requests. If you run them by default, they will generate tiles that have no user or tenant ID assigned. These cache entries would be entirely inaccessible at runtime if you're using the tenant cache. 
+The xref:commands::seed.adoc[seed] and xref:commands::test.adoc[test] CLI commands operate against purely synthetic tile requests. If you run them by default, they will generate tiles that have no user or tenant ID assigned. These cache entries would be entirely inaccessible at runtime if you're using the tenant cache. 
 
-Both commands support `--user` and `--tenant` flags to allow overriding those fields, enabling you to seed/test for specific users.  See xref:configuration/cache/tenant.adoc[tenant].
+Both commands support `--user` and `--tenant` flags to allow overriding those fields, enabling you to seed/test for specific users.  See xref:configuration::cache/tenant.adoc[tenant].
 
 == Cache-Control
 
-As well as tilegroxy's cache, tiles may be cached in a browser (or CDN) cache as controlled by the Cache-Control header.  xref:configuration/cache_control.adoc[Cache-Control] is disabled by default, but if enabled it automatically detects the visibility directive to use via the same logic by which coalescing is determined (see <<coalesce>>). Therefore, if you utilize Cache-Control, it's recommended to ensure you explicitly set `visibility: private` or turn the header off for the layer in question. Even if you don't utilize a CDN, this can lead to different users on shared machines seeing each other's content.
+As well as tilegroxy's cache, tiles may be cached in a browser (or CDN) cache as controlled by the Cache-Control header.  xref:configuration::cache_control.adoc[Cache-Control] is disabled by default, but if enabled it automatically detects the visibility directive to use via the same logic by which coalescing is determined (see <<coalesce>>). Therefore, if you utilize Cache-Control, it's recommended to ensure you explicitly set `visibility: private` or turn the header off for the layer in question. Even if you don't utilize a CDN, this can lead to different users on shared machines seeing each other's content.
 
 == Coalesce
 

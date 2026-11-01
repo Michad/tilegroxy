@@ -105,7 +105,7 @@ enforces it. Copy it from a neighboring file but make sure the year is the curre
 
 ## Read the docs for details
 
-`docs/` is AsciiDoc built by Antora into three modules. Consult them rather than guessing, and
+`docs/` is AsciiDoc built by Antora into five modules. Consult them rather than guessing, and
 prefer them over this file when they conflict:
 
 - **`docs/development/modules/ROOT/pages/`** for contributor detail: `repository.adoc` (the
@@ -113,13 +113,15 @@ prefer them over this file when they conflict:
   target, where end-to-end tests belong), `documentation.adoc` (docs and README build),
   `glossary.adoc` (domain terms, including the Operator/User distinction above),
   `troubleshooting.adoc` (Docker and testcontainer problems).
-- **`docs/operation/modules/ROOT/pages/`** for user-facing behavior: `configuration/` for every
-  config option, `extensibility.adoc` for the custom Yaegi interfaces and library use,
-  `security.adoc`, `telemetry.adoc`.
-- **`docs/decisions/modules/ROOT/pages/`** for ADRs. Significant architectural choices get one,
+- **`docs/home/modules/ROOT/pages/`** for the root page of the site.
+- **`docs/configuration/modules/ROOT/pages/`** for every config option.
+- **`docs/commands/modules/ROOT/pages/`** for every CLI command.
+- **`docs/operation/modules/ROOT/pages/`** for user-facing behavior: `extensibility.adoc` for the
+  custom Yaegi interfaces and library use, `security.adoc`, `telemetry.adoc`.
+- **`docs/development/modules/ROOT/pages/decisions/`** for ADRs. Significant architectural choices get one,
   using `0000-template.adoc`.
 
-New config pages go under `docs/operation/modules/ROOT/pages/configuration/` and must be added
+New config pages go under `docs/configuration/modules/ROOT/pages/` and must be added
 to the matching `nav.adoc`. Links are checked in CI, so a broken `xref:` fails the build.
 
 Also worth knowing: `.golangci.yml` for the linter set and its exemptions, and `.github/workflows/`

@@ -1,5 +1,5 @@
 name: development
-title: Developer Manual
+title: Development
 version: ~
 nav:
 - modules/ROOT/nav.adoc

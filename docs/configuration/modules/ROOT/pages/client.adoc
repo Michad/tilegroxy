@@ -1,0 +1,142 @@
+= Client
+:page-aliases: operation::configuration/client.adoc
+:description: Configures how the HTTP client should operate for requests that require calling an external HTTP(s) server.
+:page-config-key: client
+
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+client:
+  userAgent: my_app/1.0
+  timeout: 30
+  statusCodes:
+    - 200
+    - 204
+  headers:
+    X-Api-Key: my-api-key
+----
+
+JSON::
++
+[,json]
+----
+{
+  "client": {
+    "userAgent": "my_app/1.0",
+    "timeout": 30,
+    "statusCodes": [
+      200,
+      204
+    ],
+    "headers": {
+      "X-Api-Key": "my-api-key"
+    }
+  }
+}
+----
+====
+
+== Configuration
+
+.Configuration options
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| UserAgent
+| The user agent to include in outgoing http requests.
+| string
+| No
+| tilegroxy/VERSION
+
+| MaxLength
+| The maximum Content-Length to allow incoming responses
+| int
+| No
+| 10 MiB
+
+| UnknownLength
+| Allow responses that are missing a Content-Length header
+| bool
+| No
+| false
+
+| ContentTypes
+| The content-types to allow remote servers to return. Anything else will be interpreted as an error. See xref:operation::content-type.adoc[Content Type] for details
+| string[]
+| No
+| image/png, image/jpg, image/jpeg, application/vnd.mapbox-vector-tile, application/x-protobuf, application/vnd.maplibre-tile, application/vnd.maplibre-vector-tile
+
+| StatusCodes
+| The status codes from the remote server to consider successful
+| int[]
+| No
+| 200
+
+| Timeout
+| How long (in seconds) to wait for a remote server to respond, including reading the body, before giving up and returning an error. 0 disables the timeout, in which case only the server `Timeout` applies
+| int
+| No
+| 10
+
+| Headers
+| Include these headers in requests
+| map[string]string
+| No
+| None
+
+| RewriteContentTypes
+| Replaces ``Content-Type``s that match the key with the value. This is to handle servers returning a generic content type. Mapping to an empty string that will cause tilegroxy to intuit the Content-Type by inspecting the contents - this may be inaccurate for MVT and MLT. This only applies after the check that Content-Type is valid according to the `ContentTypes` parameter meaning your original Content-Type will need to be in both parameters to be used
+| map[string]string
+| No
+| {"application/octet-stream": ""}
+
+| TLS
+| The ID of the xref:tls/index.adoc[TLS profile] used to validate the certificates of remote servers. `system` uses the default Go validation against the system CAs
+| string
+| No
+| system
+
+| MTLS
+| The ID of the xref:tls/index.adoc[TLS profile] holding the certificate to present to remote servers that require mutual TLS
+| string
+| No
+| The profile from `TLS`
+
+| EnableMTLS
+| Whether to present a certificate to remote servers. Set this to false in a layer to opt out of an `MTLS` set at the top-level. 
+| bool
+| No
+| true if `MTLS` is set, otherwise false
+|===
+
+.Environment variables
+[cols="1m,3m"]
+|===
+| Configuration Parameter | Environment Variable
+
+| UserAgent
+| CLIENT_USERAGENT
+
+| MaxLength
+| CLIENT_MAXLENGTH
+
+| UnknownLength
+| CLIENT_UNKNOWNLENGTH
+
+| Timeout
+| CLIENT_TIMEOUT
+
+| TLS
+| CLIENT_TLS
+
+| MTLS
+| CLIENT_MTLS
+
+| EnableMTLS
+| CLIENT_ENABLEMTLS
+|===

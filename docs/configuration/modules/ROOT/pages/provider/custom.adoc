@@ -1,0 +1,54 @@
+= Custom
+:page-aliases: operation::configuration/provider/custom.adoc
+:description: Custom providers implement your own custom logic for providing imagery from whatever source you can imagine.  They require a custom Go script file interpreted using Yaegi.  
+:page-eyebrow: Provider
+:page-config-name: custom
+
+NOTE: See xref:operation::extensibility.adoc[Extensibility] for more information
+
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+provider:
+  name: custom
+  file: /etc/tilegroxy/custom_proxy.go
+  url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+----
+
+JSON::
++
+[,json]
+----
+{
+  "provider": {
+    "name": "custom",
+    "file": "/etc/tilegroxy/custom_proxy.go",
+    "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+  }
+}
+----
+====
+
+== Configuration
+
+.Configuration options
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| file
+| An absolute file path to find the Go code implementing the provider
+| string
+| Yes
+| None
+
+| Any
+| Any additional parameter you include will be automatically supplied to your custom provider as-is
+| Any
+| No
+| None
+|===

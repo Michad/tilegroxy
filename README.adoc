@@ -1,7 +1,7 @@
 image::docs/operation/modules/ROOT/images/tilegroxy-readme-header.png[tilegroxy]
 
 image:https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml/badge.svg[Docker Image CI,link=https://github.com/Michad/tilegroxy/actions/workflows/docker-image.yml] image:https://img.shields.io/ossf-scorecard/github.com/Michad/tilegroxy?label=openssf%20scorecard&style=flat[OpenSSF Scorecard,link=https://scorecard.dev/viewer/?uri=github.com%2FMichad%2Ftilegroxy] image:https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/michad/d1b9e082f6608635494188d0f52bae69/raw/coverage.json[Coverage] image:https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/michad/d1b9e082f6608635494188d0f52bae69/raw/libyears.json[Libyears,link=https://libyear.com/]  +
-image:https://img.shields.io/github/go-mod/go-version/michad/tilegroxy[Go Version] image:https://img.shields.io/badge/License-Apache_2.0-blue.svg[License,link=https://opensource.org/licenses/Apache-2.0] xref:CODE_OF_CONDUCT.adoc[image:https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg[Contributor Covenant]]
+image:https://img.shields.io/github/go-mod/go-version/michad/tilegroxy[Go Version] image:https://img.shields.io/badge/License-Apache_2.0-blue.svg[License,link=https://opensource.org/licenses/Apache-2.0] link:CODE_OF_CONDUCT.md[image:https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg[Contributor Covenant]]
 
 Tilegroxy lives between your map and your mapping providers to deliver a consistent, cached API for all your layers.
 
@@ -102,7 +102,7 @@ See link:https://tilegroxy.com/development/tests.html[developer documentation] f
 
 Tilegroxy is available as a container image on the Github container repository.
 
-You can pull the most recent versioned release with the `latest` tag and the very latest (and maybe buggy) build with the `edge` tag. Tags are also available for version numbers.  https://github.com/Michad/tilegroxy/pkgs/container/tilegroxy[See here for a full list].  Tags for just the major version, such as `1`, pick up new releases without crossing a breaking change as described in xref:compatibility.adoc[Compatibility].
+You can pull the most recent versioned release with the `latest` tag and the very latest (and maybe buggy) build with the `edge` tag. Tags are also available for version numbers.  https://github.com/Michad/tilegroxy/pkgs/container/tilegroxy[See here for a full list].  Tags for just the major version, such as `1`, pick up new releases without crossing a breaking change as described in link:https://tilegroxy.com/operation/compatibility.html[Compatibility].
 
 .Pull the latest release
 [,shell]
@@ -135,7 +135,7 @@ A link:https://github.com/Michad/tilegroxy/tree/main/charts/tilegroxy[Helm chart
 helm install tilegroxy ./charts/tilegroxy -f my-values.yaml
 ----
 
-The chart takes the entire tilegroxy configuration under a single `config` key and renders it into a ConfigMap, so anything in the xref:configuration/index.adoc[configuration reference] can be used as-is:
+The chart takes the entire tilegroxy configuration under a single `config` key and renders it into a ConfigMap, so anything in the link:https://tilegroxy.com/operation/configuration/index.html[configuration reference] can be used as-is:
 
 [,yaml]
 ----
@@ -161,7 +161,7 @@ The values outside of `config` cover the usual deployment concerns such as repli
 
 WARNING: Avoid placing credentials in `config` since it becomes a ConfigMap.  Instead reference them as `env.VAR_NAME` in the configuration and supply the value using the chart's `secrets` or `existingSecretKeys` values.
 
-Probes are wired to the xref:configuration/health.adoc[health] endpoints when `config.health.enabled` is true, an init container validates the configuration before the server starts, and `tilegroxy seed` can be run as a Job after install and upgrade.  See the link:https://github.com/Michad/tilegroxy/blob/main/charts/tilegroxy/README.md[chart README] for the full list of values.
+Probes are wired to the link:https://tilegroxy.com/operation/configuration/health.html[health] endpoints when `config.health.enabled` is true, an init container validates the configuration before the server starts, and `tilegroxy seed` can be run as a Job after install and upgrade.  See the link:https://github.com/Michad/tilegroxy/blob/main/charts/tilegroxy/README.md[chart README] for the full list of values.
 
 :leveloffset!:
 

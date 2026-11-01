@@ -13,7 +13,7 @@ Tilegroxy draws a distinction between inputs provided by the Operator (probably 
 
 Tilegroxy supports parameterized layer names where each parameter is arbitrary user input. By default these parameters are not used for anything and merely provide flexibility in how one refers to a map layer. However, the Operator can configure these parameters to be used in a variety of ways, for instance placed inside of proxied URLs, inside of SQL as parameters in Prepared Statements, or as inputs in arbitrary code.  
 
-A `paramValidator` xref:configuration/layer.adoc[layer] option is available that allows defining a Regular Expression to validate the parameters specified. It is recommended the Operator defines restrictions as tight as possible, often allowing only alphanumeric values.
+A `paramValidator` xref:configuration::layer.adoc[layer] option is available that allows defining a Regular Expression to validate the parameters specified. It is recommended the Operator defines restrictions as tight as possible, often allowing only alphanumeric values.
 
 IMPORTANT: The configuration for tilegroxy should be treated the same as one would treat code, it should be carefully reviewed, kept in source control, and one should never trust complex configuration from third parties without vetting it for bugs and vulnerabilities.  
 
@@ -25,11 +25,11 @@ CAUTION: Use extreme caution in trusting incoming headers and query parameters.
 
 ==== X-Forwarded
 
-A few systems in tilegroxy identify incoming request information such as client IP or external request hostname/protocol/path. The standard mechanism for keeping these working behind proxies or WAFs is the `X-Forwarded-*` headers. Those headers are prone to forgery attacks so tilegroxy only trusts the headers on a limited basis and requires identifying the IP of trusted proxies via xref:configuration/forwarded.adoc[`server.forwarded.trusted`]. Every private network address is trusted by default, so make sure to add the CIDR block for any proxies outside your network, and narrow it if clients can reach tilegroxy without going through a proxy.
+A few systems in tilegroxy identify incoming request information such as client IP or external request hostname/protocol/path. The standard mechanism for keeping these working behind proxies or WAFs is the `X-Forwarded-*` headers. Those headers are prone to forgery attacks so tilegroxy only trusts the headers on a limited basis and requires identifying the IP of trusted proxies via xref:configuration::forwarded.adoc[`server.forwarded.trusted`]. Every private network address is trusted by default, so make sure to add the CIDR block for any proxies outside your network, and narrow it if clients can reach tilegroxy without going through a proxy.
 
 === Per-User Tiles
 
-An Operator can configure a layer whose tiles depend on who requested them, by interpolating the identity into the upstream request or by cropping to an area the requester's credentials allow. The cache key carries no identity, so such a layer leaks tiles between users unless it uses a xref:configuration/cache/tenant.adoc[tenant] cache or skips caching. See xref:howto/user-dynamic.adoc[User Dynamic Layers].
+An Operator can configure a layer whose tiles depend on who requested them, by interpolating the identity into the upstream request or by cropping to an area the requester's credentials allow. The cache key carries no identity, so such a layer leaks tiles between users unless it uses a xref:configuration::cache/tenant.adoc[tenant] cache or skips caching. See xref:howto/user-dynamic.adoc[User Dynamic Layers].
 
 == Upstream Responses
 
@@ -42,7 +42,7 @@ When returning a payload retrieved from a third party HTTP service tilegroxy wil
 Content Size validation::
 If the server fails to return a content size header or if the content size is greater than a limit (by default 10 MiB) then the request errors.  Tilegroxy will not allocate a buffer greater than the allowed size even if the server responds with a larger response than advertised
 TLS validation::
-If the URL configured includes an https protocol then standard TLS certificate validation occurs. Tilegroxy uses default Go settings for validation including a minimum version of TLS 1.2 and rejection of insecure ciphers. A xref:configuration/tls/index.adoc[TLS profile] can narrow which CAs are trusted for an upstream or raise the minimum version
+If the URL configured includes an https protocol then standard TLS certificate validation occurs. Tilegroxy uses default Go settings for validation including a minimum version of TLS 1.2 and rejection of insecure ciphers. A xref:configuration::tls/index.adoc[TLS profile] can narrow which CAs are trusted for an upstream or raise the minimum version
 
 Despite these protections it's important that operators only utilize trusted services to originate its maps. Tilegroxy cannot protect against a third party returning a valid result containing offensive imagery.
 
@@ -50,15 +50,15 @@ WARNING: Never allow user input to dictate the hostname used.
 
 == Authentication
 
-Tilegroxy provides a flexible capability for xref:configuration/authentication/index.adoc[auth] but defaults to operating unauthenticated.  The flagship mode is via JWTs provided via HTTP header, which provides a capability for both authentication and authorization by layer and geographic region. 
+Tilegroxy provides a flexible capability for xref:configuration::authentication/index.adoc[auth] but defaults to operating unauthenticated.  The flagship mode is via JWTs provided via HTTP header, which provides a capability for both authentication and authorization by layer and geographic region. 
 
 Tilegroxy is primarily intended to be used as a microservice within a broader application ecosystem so implementing the specifics of how authentication should work end-to-end is left up to the operator in conjunction with their needs.
 
-The server can also xref:configuration/encryption.adoc#client-certificates[require client certificates]. Every certificate from the configured CA is treated the same, so it controls who can connect but not what they can access.
+The server can also xref:configuration::encryption.adoc#client-certificates[require client certificates]. Every certificate from the configured CA is treated the same, so it controls who can connect but not what they can access.
 
 == Rate Limiting
 
-xref:configuration/ratelimit/index.adoc[Rate limiting] can stop one user from exhausting an upstream provider or a quota shared with everyone else. It isn't a defense against denial of service, since every rejected request is still received and checked. See xref:ratelimit.adoc[Rate Limiting].
+xref:configuration::ratelimit/index.adoc[Rate limiting] can stop one user from exhausting an upstream provider or a quota shared with everyone else. It isn't a defense against denial of service, since every rejected request is still received and checked. See xref:ratelimit.adoc[Rate Limiting].
 
 
 User IDs, tenant IDs, and IP addresses are hashed with SHA-256 before being used as store keys so any value is safe to store. The hash is unsalted, so anyone who can read the store can check whether a known IP or ID is being counted. Restrict access to the store accordingly.
@@ -67,4 +67,4 @@ User IDs, tenant IDs, and IP addresses are hashed with SHA-256 before being used
 
 Tilegroxy has a few separately configurable log streams available. Consider ingesting each of these into your SIEM or log aggregator if your system is security-sensitive. 
 
-Most notably from a security side, rejected requests, rate limit rejections, and configuration reloads can be recorded to a dedicated xref:configuration/log.adoc[audit log]. 
+Most notably from a security side, rejected requests, rate limit rejections, and configuration reloads can be recorded to a dedicated xref:configuration::log.adoc[audit log]. 

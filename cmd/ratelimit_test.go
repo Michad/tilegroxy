@@ -117,13 +117,13 @@ func Test_RateLimitCommands_HelpMatchesDocs(t *testing.T) {
 		out, err := runRateLimitCommand(t, sub, "-h")
 		require.NoError(t, err)
 
-		docs, err := os.ReadFile("../docs/operation/modules/ROOT/pages/commands/ratelimit_" + sub + ".adoc")
+		docs, err := os.ReadFile("../docs/commands/modules/ROOT/pages/ratelimit_" + sub + ".adoc")
 		require.NoError(t, err)
 
 		_, block, ok := strings.Cut(string(docs), ".Output of `tilegroxy ratelimit "+sub+" -h`\n[,text]\n----\n")
 		require.True(t, ok, sub)
 		block, _, _ = strings.Cut(block, "----")
 
-		assert.True(t, strings.HasPrefix(out, block), "update commands/ratelimit_%v.adoc to match:\n%v", sub, out)
+		assert.True(t, strings.HasPrefix(out, block), "update ratelimit_%v.adoc to match:\n%v", sub, out)
 	}
 }

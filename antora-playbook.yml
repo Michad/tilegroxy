@@ -4,23 +4,30 @@ antora:
 site:
   title: tilegroxy docs
   # url: https://tilegroxy.com
-  start_page: operation::index.adoc
   keys:
-    manual_order: operation, development, decisions
+    manual_order: ROOT, operation, configuration, commands, development
     footer_text: 'Copyright© individual contributors to tilegroxy. Tilegroxy licensed under <a href="http://www.apache.org/licenses/">Apache License, Version 2.0</a>'
 content:
   sources:
+  - url: .
+    branches: HEAD
+    start_path: docs/home
+    edit_url: '{web_url}/edit/main/{path}'
   - url: .
     branches: HEAD
     start_path: docs/operation
     edit_url: '{web_url}/edit/main/{path}'
   - url: .
     branches: HEAD
-    start_path: docs/development
+    start_path: docs/configuration
     edit_url: '{web_url}/edit/main/{path}'
   - url: .
     branches: HEAD
-    start_path: docs/decisions
+    start_path: docs/commands
+    edit_url: '{web_url}/edit/main/{path}'
+  - url: .
+    branches: HEAD
+    start_path: docs/development
     edit_url: '{web_url}/edit/main/{path}'
 asciidoc:
   attributes:
@@ -37,5 +44,5 @@ asciidoc:
 
 ui:
   bundle:
-    url: https://github.com/tilegroxy/antora-ui/releases/download/v8/ui-bundle.zip
+    url: https://github.com/tilegroxy/antora-ui/releases/download/v9/ui-bundle.zip
     snapshot: true

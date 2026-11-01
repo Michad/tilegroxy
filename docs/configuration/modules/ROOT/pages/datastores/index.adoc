@@ -1,0 +1,39 @@
+= Overview
+:navtitle: Datastores
+:reftext: Datastores
+:page-aliases: operation::configuration/datastores/index.adoc
+:description: Defines connections to shared resources, primarily databases.
+:page-eyebrow: Datastore
+
+== Description
+
+These connections are used by certain providers, analytics modules, caches, authentication, and rate limiting.  Each datastore definition creates a connection pool when the application is running.
+
+Like other entities, the datastores configuration uses a parameter called `name` to dictate the type of datastore which controls the specific list of configuration parameters available. Every datastore configuration must also have an `ID` defined which can be any string and is used by a corresponding provider, analytics, cache, authentication, or rate limit configuration, usually as a `datastore` parameter.
+
+== Choosing a datastore
+
+[cols="2,1,3"]
+|===
+| Goal | Datastore | Used by
+
+| Connect to a ClickHouse database
+| xref:datastores/clickhouse.adoc[ClickHouse]
+| xref:analytics/clickhouse.adoc[clickhouse analytics module]
+
+| Connect to a PostgreSQL database
+| xref:datastores/postgresql.adoc[PostgreSQL]
+| xref:provider/postgismvt.adoc[postgismvt provider], xref:analytics/postgresql.adoc[postgresql analytics], xref:authentication/bearer.adoc[bearer authentication], and xref:ratelimit/postgresql.adoc[postgresql rate limit]
+
+| Connect to redis or a redis-compatible store
+| xref:datastores/redis.adoc[Redis]
+| xref:cache/redis.adoc[redis cache], xref:authentication/bearer.adoc[bearer authentication], and xref:ratelimit/redis.adoc[redis rate limit]
+
+| Connect to memcached
+| xref:datastores/memcached.adoc[Memcached]
+| xref:cache/memcached.adoc[memcached cache]
+
+| Hold tiles in the memory of the tilegroxy process
+| xref:datastores/memory.adoc[Memory]
+| xref:cache/memory.adoc[memory cache]. Not recommended for production
+|===

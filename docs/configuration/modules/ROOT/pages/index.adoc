@@ -1,0 +1,47 @@
+= Configuration Reference
+:page-aliases: operation::configuration/index.adoc
+:description: These pages describe every configuration option tilegroxy supports.
+
+== Structure
+
+The following is the top-level configuration structure. All top-level keys are optional besides `layers`:
+
+[,yaml]
+----
+server: ... # <1>
+health: ... # <2>
+client: ... # <3>
+logging: ... # <4>
+telemetry: ... # <5>
+error: ... # <6>
+secret: ... # <7>
+authentication: ... # <8>
+cache: ... # <9>
+defaultcache: some-id # <10>
+datastores: # <11>
+  - ...
+tls: # <12>
+  - ...
+analytics: ... # <13>
+ratelimit: ... # <14>
+defaultratelimit: some-id # <15>
+layers: # <16>
+  - ...
+----
+<1> xref:configuration::server.adoc[Server]: how the HTTP server operates
+<2> xref:configuration::health.adoc[Health]: health check endpoints served on a separate port
+<3> xref:configuration::client.adoc[Client]: how requests to upstream HTTP servers are made
+<4> xref:configuration::log.adoc[Log]: application, access, and audit logs
+<5> xref:configuration::telemetry.adoc[Telemetry]: OpenTelemetry metrics, logs, and traces
+<6> xref:configuration::error.adoc[Error]: how errors are returned to users
+<7> xref:configuration::secret/index.adoc[Secret]: an external store for sensitive values
+<8> xref:configuration::authentication/index.adoc[Authentication]: how incoming requests are authenticated
+<9> xref:configuration::cache/index.adoc[Cache]: where tiles are stored, either a single cache or a list of them
+<10> xref:configuration::cache/index.adoc#overridable-caches[Default cache]: the ID of the cache layers use unless they specify another
+<11> xref:configuration::datastores/index.adoc[Datastores]: shared connections used by caches, providers, authentication, analytics, and rate limiting
+<12> xref:configuration::tls/index.adoc[TLS]: certificates, keys, and trusted CAs used by the client and server
+<13> xref:configuration::analytics/index.adoc[Analytics]: where usage events are recorded
+<14> xref:configuration::ratelimit/index.adoc[Rate Limit]: how many tiles can be requested in a period
+<15> xref:configuration::ratelimit/index.adoc[Default rate limit]: the ID of the policy layers use unless they specify another
+<16> xref:configuration::layer.adoc[Layers]: the layers to serve
+

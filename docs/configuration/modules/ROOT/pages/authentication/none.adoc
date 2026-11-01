@@ -1,0 +1,7 @@
+= None
+:page-aliases: operation::configuration/authentication/none.adoc
+:description: No incoming authentication, all requests are allowed.
+:page-eyebrow: Authentication
+:page-config-name: none
+
+WARNING: Ensure you have an external authentication solution before exposing this to the internet.

@@ -2,7 +2,7 @@
 :description: Tilegroxy can describe its layers using the TileJSON format. This allows TileJSON-aware clients, such as MapLibre, to discover layers.
 :page-tags: MVT · MLT
 
-NOTE: TileJSON support is disabled by default. Enabling it doesn't change how tiles themselves are served. See xref:configuration/tilejson.adoc[TileJSON configuration] for the configuration reference.
+NOTE: TileJSON support is disabled by default. Enabling it doesn't change how tiles themselves are served. See xref:configuration::tilejson.adoc[TileJSON configuration] for the configuration reference.
 
 == Endpoints
 
@@ -11,13 +11,13 @@ Two endpoints become available once TileJSON is enabled:
 `/tilejson.json`:: Returns the TileJSON document for all (eligible) layers.
 `/tiles/\{layer}.json`:: Returns the TileJSON document for a single layer, sitting alongside the existing `/tiles/\{layer}/\{z}/\{x}/\{y}` tile endpoint.
 
-Both endpoints are subject to the base paths configured in the xref:configuration/server.adoc[server configuration].
+Both endpoints are subject to the base paths configured in the xref:configuration::server.adoc[server configuration].
 
-For the listing call (the first one), a layer defined with a `pattern` has no specific layer name to use so is omitted by default. You can specify `examples` in the xref:configuration/layer.adoc[layer configuration] to control what entries appear. This obviously doesn't apply for the second endpoint, as that will simply use the layer name you use to retrieve the TileJSON.
+For the listing call (the first one), a layer defined with a `pattern` has no specific layer name to use so is omitted by default. You can specify `examples` in the xref:configuration::layer.adoc[layer configuration] to control what entries appear. This obviously doesn't apply for the second endpoint, as that will simply use the layer name you use to retrieve the TileJSON.
 
 == Security
 
-TileJSON endpoints go through the same xref:configuration/authentication/index.adoc[authentication] check as a tile request.
+TileJSON endpoints go through the same xref:configuration::authentication/index.adoc[authentication] check as a tile request.
 
 If you have authentication configured with an authorization mechanism for limiting layers (such as a JWT scope), that limitation will also apply to the tilejson listing endpoint. Similarly, the bounds returned will be limited if your authz limits bounds (such as the JWT geohash claim).
 
@@ -27,9 +27,9 @@ Most of a TileJSON document is derived from configuration that already exists fo
 
 `name`:: Always the layer's `id`, or for a pattern layer, the name the document was requested with.
 
-`tiles`:: URLs built based on the path to reach each layer. The protocol/host/prefix are built from the incoming request, or from the forwarding headers sent by a proxy listed in xref:configuration/forwarded.adoc[`server.forwarded.trusted`]. For protection against bad reverse proxies, you can customize the URLs with the `BaseURLs` configuration. Configuring more than one entry populates the `tiles` array with one URL per entry, useful if tiles are reachable at multiple base URLs.
+`tiles`:: URLs built based on the path to reach each layer. The protocol/host/prefix are built from the incoming request, or from the forwarding headers sent by a proxy listed in xref:configuration::forwarded.adoc[`server.forwarded.trusted`]. For protection against bad reverse proxies, you can customize the URLs with the `BaseURLs` configuration. Configuring more than one entry populates the `tiles` array with one URL per entry, useful if tiles are reachable at multiple base URLs.
 
-`minzoom`, `maxzoom`, `bounds`:: Reflect the layer's xref:configuration/layer.adoc#metadata[metadata]. They default to `0`, `21`, and the whole world unless the layer sets them explicitly or a provider passes them through from a datasource that defines it. 
+`minzoom`, `maxzoom`, `bounds`:: Reflect the layer's xref:configuration::layer.adoc#metadata[metadata]. They default to `0`, `21`, and the whole world unless the layer sets them explicitly or a provider passes them through from a datasource that defines it. 
 
 `description`, `center`, `vector_layers`, `attribution`:: Only populated when explicitly configured on the layer or through a provider that passes through metadata. They have no automatic value.
 

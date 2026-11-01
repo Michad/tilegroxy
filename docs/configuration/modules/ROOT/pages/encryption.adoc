@@ -1,0 +1,128 @@
+= Encryption
+:page-aliases: operation::configuration/encryption.adoc
+:description: Configures how encryption should be applied to the server.
+:page-config-key: server.encrypt
+
+
+== Example
+
+A certificate from Let's Encrypt, accepting only clients with a certificate from a partner's CA:
+
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+tls:
+  - name: acme
+    id: public
+    hosts:
+      - tiles.example.com
+  - name: pem
+    id: partner-clients
+    caFile: /etc/tilegroxy/tls/partner-client-ca.pem
+
+server:
+  encrypt:
+    httpPort: 80
+    tls: public
+    mtls: partner-clients
+----
+
+JSON::
++
+[,json]
+----
+{
+  "tls": [
+    {
+      "name": "acme",
+      "id": "public",
+      "hosts": [
+        "tiles.example.com"
+      ]
+    },
+    {
+      "name": "pem",
+      "id": "partner-clients",
+      "caFile": "/etc/tilegroxy/tls/partner-client-ca.pem"
+    }
+  ],
+  "server": {
+    "encrypt": {
+      "httpPort": 80,
+      "tls": "public",
+      "mtls": "partner-clients"
+    }
+  }
+}
+----
+====
+
+== Configuration
+
+.Configuration options
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| TLS
+| The ID of the xref:tls/index.adoc[TLS profile] supplying the certificate served to clients
+| string
+| Yes
+| None
+
+| MTLS
+| The ID of the xref:tls/index.adoc[TLS profile] holding the CA used to validate client certificates. Required to use client certificates with Let's Encrypt
+| string
+| No
+| None
+
+| MTLSMode
+| How client certificates are handled. `required` rejects connections without a valid certificate. `optional` validates a certificate if one is sent but also accepts connections without one, which is useful for testing. `disabled` doesn't ask for a certificate. If `required` or `optional` is set without `MTLS`, the CA from the `TLS` profile is used
+| string
+| No
+| `required` if `MTLS` is set, otherwise `disabled`
+
+| HttpPort
+| The port used for non-encrypted traffic. Required if using Let's Encrypt to provide for the ACME challenge, in which case this needs to indirectly be 80 (that is, this can be set to e.g. 8080 if something ahead of this redirects 80 to 8080). Everything except .well-known will be <<redirects,redirected>> to the main port when set.
+| int
+| No
+| None
+|===
+
+.Environment variables
+[cols="1m,3m"]
+|===
+| Configuration Parameter | Environment Variable
+
+| TLS
+| SERVER_ENCRYPT_TLS
+
+| MTLS
+| SERVER_ENCRYPT_MTLS
+
+| MTLSMode
+| SERVER_ENCRYPT_MTLSMODE
+
+| HttpPort
+| SERVER_ENCRYPT_HTTPPORT
+|===
+
+== Redirects
+
+When `HttpPort` is set, we redirect requests to HTTPS. The redirect uses the `Host` header only if that host is in the `Hosts` of the `TLS` profile. As long as there's a non-wildcard host in `Hosts` we fallback on the first one, with a 400 being the last resort to avoid CSRF vectors. If the `Host` header uses the implicit port 80, we redirect to the implicit port 443. Otherwise we redirect to the main port in our config.
+
+A `pem` profile with no `Hosts` and a certificate with no DNS names has nothing to redirect to, so every request gets the 400. A warning is logged when this happens. Set `Hosts` to fix it.
+
+== Client Certificates
+
+With `MTLSMode` set to `required`, Mutual TLS (mTLS) requires every client to present a certificate with incoming requests. mTLS operates at the protocol level, this has a couple implications:
+
+1. A connection without a valid certificate fails during the TLS handshake, without ever reaching tilegroxy's logging or error handling.
+2. mTLS does not automatically provide any facility for application-level xref:authentication/index.adoc[authentication]. Meaning it doesn't associate a request with a user, nor does it provide any means for authorization by layer or bounds.
+
+mTLS applies to the main port. The redirect served on `HttpPort` and the xref:health.adoc[health] port don't ask for a certificate. If a proxy terminates TLS in front of tilegroxy, the certificate being validated is the proxy's rather than the original client's.
+
+The CA comes only from the profiles referenced here. The xref:client.adoc[client] section's profiles are never used to validate incoming clients.

@@ -1,0 +1,228 @@
+= JWT
+:page-aliases: operation::configuration/authentication/jwt.adoc
+:description: Requires incoming requests include a JSON Web Token (JWT). The signature of the token is verified and grants are validated.
+:page-eyebrow: Authentication
+:page-config-name: jwt
+
+NOTE: The verification key can either be a single key stored in configuration or supplied via environment variable, or a set of keys fetched from a remote https://datatracker.ietf.org/doc/html/rfc7517[JWKS] endpoint. See <<JWKS>>.
+
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+authentication:
+  name: jwt
+  key: env.JWT_KEY
+  algorithms:
+    - HS256
+----
+
+JSON::
++
+[,json]
+----
+{
+  "authentication": {
+    "name": "jwt",
+    "key": "env.JWT_KEY",
+    "algorithms": [
+      "HS256"
+    ]
+  }
+}
+----
+====
+
+== Configuration
+
+.Supported claims
+[cols="1m,4"]
+|===
+| Claim | Implementation
+
+| exp
+| Ensure the JWT hasn't expired and it's no further than a certain amount of time from now
+
+| aud
+| Validate it matches a specific value
+
+| sub
+| Validate it matches a specific value
+
+| iss
+| Validate it matches a specific value
+
+| scope
+| Validate it contains a specific scope OR ensure a given prefix plus the layer in the current request is contained in scope
+
+| geohash
+| Validate the current tile being requested is partially contained in https://en.wikipedia.org/wiki/Geohash[the geohash]. See the xref:provider/crop.adoc[crop provider] to limit raster imagery layers to precise areas
+|===
+
+.Configuration options
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| Key
+| The key for verifying the signature. The public key if using asymmetric signing. If the value starts with `env.` the remainder is interpreted as the name of the Environment Variable to use to retrieve the verification key. Required unless JWKS is supplied
+| string
+| No
+| None
+
+| Algorithms
+| Algorithms to allow for JWT signatures. One or more of: `HS256`, `HS384`, `HS512`, `RS256`, `RS384`, `RS512`, `ES256`, `ES384`, `ES512`, `PS256`, `PS384`, `PS512`, `EdDSA`. When Key is used instead of JWKS, all listed algorithms must belong to the same key family since only one key is supplied - RS and PS count as the same family
+| string[]
+| Yes
+| None
+
+| JWKS
+| Fetch verification keys from a remote JWKS endpoint instead of Key. See <<JWKS>>
+| JWKS
+| No
+| None
+
+| HeaderName
+| The header to extract the JWT from. If this is `Authorization` it removes the `Bearer` prefix. Make sure this is in "canonical case" e.g. `X-Header`, otherwise auth will always fail
+| string
+| No
+| Authorization
+
+| MaxExpiration
+| How many seconds from now can the expiration be. JWTs more than X seconds from now will result in a 401
+| uint32
+| No
+| 1 day
+
+| ExpectedAudience
+| Require the `aud` claim to be this string
+| string
+| No
+| None
+
+| ExpectedSubject
+| Require the `sub` claim to be this string
+| string
+| No
+| None
+
+| ExpectedIssuer
+| Require the `iss` claim to be this string
+| string
+| No
+| None
+
+| ExpectedScope
+| Require the `scope` claim to contain this string
+| string
+| No
+| None
+
+| LayerScope
+| If true the `scope` claim is used to whitelist access to layers
+| bool
+| No
+| false
+
+| ScopePrefix
+| If true this prefix indicates scopes to use. For example a prefix of `tile/` will mean a scope of `tile/test` grants access to `test`. Doesn't impact ExpectedScope
+| string
+| No
+| Empty string
+
+| UserId
+| Use the specified claim as the user identifier. By default this primarily allows identifying who made a request in logs/analytics, however custom providers can use this for more bespoke use cases.
+| string
+| No
+| sub
+
+| TenantId
+| Use the specified claim as the tenant identifier. This is optional and generally only makes sense if you also use User ID. Useful if you have users grouped into some form of account system. It's possible to set this to the same claim as UserID.
+| string
+| No
+| tid
+|===
+
+== JWKS
+
+Instead of a single static Key, verification keys can be fetched from a remote https://datatracker.ietf.org/doc/html/rfc7517[JWKS] endpoint as commonly published by an OIDC issuer.  When JWKS is configured, Key must not be set.
+
+If a token references a key ID that isn't in the currently cached keyset then the keyset is refreshed, rate limited by `RefreshMinInterval`.  This allows an issuer to rotate its keys without any action from the Operator.  If the issuer becomes unreachable the last successfully fetched keyset continues to be used, so existing keys still verify and only tokens signed with a new key ID fail while the endpoint is down.
+
+=== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+authentication:
+  name: jwt
+  algorithms:
+    - RS256
+  jwks:
+    url: https://issuer.example.com/.well-known/jwks.json
+  expectedIssuer: https://issuer.example.com/
+  expectedAudience: tilegroxy
+----
+
+JSON::
++
+[,json]
+----
+{
+  "authentication": {
+    "name": "jwt",
+    "algorithms": [
+      "RS256"
+    ],
+    "jwks": {
+      "url": "https://issuer.example.com/.well-known/jwks.json"
+    },
+    "expectedIssuer": "https://issuer.example.com/",
+    "expectedAudience": "tilegroxy"
+  }
+}
+----
+====
+
+=== Configuration
+
+.Configuration options
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| URL
+| The HTTPS URL of the JWKS endpoint. Plain http is rejected
+| string
+| Yes
+| None
+
+| RefreshInterval
+| How many seconds between unconditional refreshes of the keyset
+| uint
+| No
+| 900
+
+| RefreshMinInterval
+| The minimum seconds between refreshes triggered by an unknown key ID
+| uint
+| No
+| 60
+
+| RequestTimeout
+| How many seconds before a fetch of the keyset is cancelled
+| uint
+| No
+| 10
+
+| AllowStartupFailure
+| If false, a failed fetch of the keyset at startup prevents the server from starting. If true, it logs a warning instead and the server starts anyway
+| bool
+| No
+| false
+|===
