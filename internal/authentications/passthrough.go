@@ -155,10 +155,9 @@ func (s PassthroughRegistration) Initialize(cfgAny any, deps authentication.Auth
 		return nil, fmt.Errorf(errorMessages.ParamsMutuallyExclusive, "authentication.method: HEAD", param)
 	}
 
-	p.clientConfig = deps.ClientConfig
-	if cfg.Client != nil {
-		p.clientConfig = *cfg.Client
-		configload.MergeClientDefaults(&p.clientConfig, deps.ClientConfig)
+	var transport http.RoundTripper
+	if p.clientConfig, transport, err = passthroughClient(cfg.Client, deps); err != nil {
+		return nil, err
 	}
 
 	// The default content types are all imagery, which would fail every request at runtime
@@ -167,7 +166,7 @@ func (s PassthroughRegistration) Initialize(cfgAny any, deps authentication.Auth
 	}
 
 	p.httpClient = &http.Client{
-		Transport: otelhttp.NewTransport(http.DefaultTransport),
+		Transport: otelhttp.NewTransport(transport),
 		Timeout:   time.Duration(min(p.clientConfig.Timeout, math.MaxInt32)) * time.Second,
 		// A login page reached by redirect would otherwise be mistaken for a successful check
 		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
@@ -180,6 +179,33 @@ func (s PassthroughRegistration) Initialize(cfgAny any, deps authentication.Auth
 	}
 
 	return &p, nil
+}
+
+func passthroughClient(override *config.ClientConfig, deps authentication.AuthenticationDeps) (config.ClientConfig, http.RoundTripper, error) {
+	if override == nil {
+		return deps.ClientConfig, deps.Transport, nil
+	}
+
+	client := *override
+	configload.MergeClientDefaults(&client, deps.ClientConfig)
+
+	// Without a resolver the only transport available is the one already built for the defaults
+	if deps.ClientTransport == nil {
+		switch {
+		case client.TLS != deps.ClientConfig.TLS:
+			return client, nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "authentication.client.tls", client.TLS)
+		case client.MTLS != deps.ClientConfig.MTLS:
+			return client, nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "authentication.client.mtls", client.MTLS)
+		case override.EnableMTLS != nil:
+			return client, nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "authentication.client.enablemtls", *override.EnableMTLS)
+		}
+
+		return client, deps.Transport, nil
+	}
+
+	transport, err := deps.ClientTransport(client)
+
+	return client, transport, err
 }
 
 func parsePassthroughPath(expr string, param string, errorMessages config.ErrorMessages) (*xpath.Expr, error) {

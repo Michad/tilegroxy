@@ -50,7 +50,7 @@ func Test_Ref_CycleViaPattern_HitsDepthBackstop(t *testing.T) {
 		{ID: "loop", Pattern: "loop_{n}", Provider: provider, Client: &cfg.Client, SkipCache: true},
 	}
 
-	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil, nil)
 	require.NoError(t, err)
 
 	ctx := pkg.BackgroundContext()
@@ -79,7 +79,7 @@ func buildRefChain(t *testing.T, n int) *layers.LayerGroup {
 
 	cfg.Layers = append(cfg.Layers, config.LayerConfig{ID: "chainEnd", Provider: map[string]any{"name": "static", "color": "FFF0"}, Client: &cfg.Client, SkipCache: true})
 
-	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil, nil)
 	require.NoError(t, err)
 
 	return lg
@@ -111,7 +111,7 @@ func Test_Ref_PropagatesAuthRestrictions(t *testing.T) {
 		}},
 	}
 
-	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil, nil)
 	require.NoError(t, err)
 
 	ctx := pkg.BackgroundContext()
@@ -140,7 +140,7 @@ func constructPMTilesRefGroup(t *testing.T, layerConfigs ...config.LayerConfig) 
 	cfg := config.DefaultConfig()
 	cfg.Layers = layerConfigs
 
-	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil, nil)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = lg.Close(context.Background()) })
 
@@ -202,7 +202,7 @@ func Test_Ref_Metadata_ContradictingDataTypeFails(t *testing.T) {
 		pmtilesLayer("target"),
 	}
 
-	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil, nil)
 
 	require.Error(t, err)
 	assert.Nil(t, lg)

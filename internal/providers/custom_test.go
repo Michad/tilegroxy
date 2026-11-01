@@ -15,11 +15,15 @@
 package providers
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/layer"
@@ -181,4 +185,66 @@ func generateTile() {}
 
 	assert.Nil(t, c)
 	require.Error(t, err)
+}
+
+type recordingTransport struct {
+	called bool
+}
+
+func (r *recordingTransport) RoundTrip(_ *http.Request) (*http.Response, error) {
+	r.called = true
+	return nil, errors.New("stop here")
+}
+
+func Test_CustomProviderGetTileUsesTransport(t *testing.T) {
+	script := `
+package custom
+
+import "tilegroxy/tilegroxy"
+
+func preAuth(ctx tilegroxy.Context, providerContext tilegroxy.ProviderContext, params map[string]interface{}, cientConfig tilegroxy.ClientConfig, errorMessages tilegroxy.ErrorMessages,
+)  (tilegroxy.ProviderContext, error) {
+	return tilegroxy.ProviderContext{AuthBypass: true}, nil
+}
+
+func generateTile(ctx tilegroxy.Context, providerContext tilegroxy.ProviderContext, tileRequest tilegroxy.TileRequest, params map[string]interface{}, clientConfig tilegroxy.ClientConfig, errorMessages tilegroxy.ErrorMessages ) (*tilegroxy.Image, error ) {
+	return tilegroxy.GetTile(ctx, clientConfig, "http://example.invalid/", nil)
+}
+`
+	transport := &recordingTransport{}
+
+	c, err := CustomRegistration{}.Initialize(CustomConfig{Script: script}, layer.ProviderDeps{ClientConfig: testClientConfig, ErrorMessages: testErrMessages, Transport: transport})
+	require.NoError(t, err)
+
+	_, err = c.GenerateTile(context.Background(), layer.ProviderContext{}, pkg.TileRequest{})
+
+	require.Error(t, err)
+	assert.True(t, transport.called)
+}
+
+func Test_ConstructLayer_GivesProviderResolvedTransport(t *testing.T) {
+	rawConfig := config.LayerConfig{ID: "proxied", Provider: map[string]any{"name": "proxy", "url": "http://example.invalid/{z}/{x}/{y}"}}
+	transport := &recordingTransport{}
+
+	var seen config.ClientConfig
+
+	resolve := func(c config.ClientConfig) (http.RoundTripper, error) {
+		seen = c
+		return transport, nil
+	}
+
+	l, err := layers.ConstructLayer(context.Background(), rawConfig, config.ClientConfig{TLS: "corp", Timeout: 1}, nil, testErrMessages, nil, nil, nil, resolve)
+	require.NoError(t, err)
+
+	_, err = l.Provider.GenerateTile(context.Background(), layer.ProviderContext{}, pkg.TileRequest{LayerName: "proxied", Z: 1})
+
+	require.Error(t, err)
+	assert.True(t, transport.called)
+	assert.Equal(t, "corp", seen.TLS)
+
+	errResolve := errors.New("unknown profile")
+	_, err = layers.ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, testErrMessages, nil, nil, nil, func(config.ClientConfig) (http.RoundTripper, error) {
+		return nil, errResolve
+	})
+	require.ErrorIs(t, err, errResolve)
 }

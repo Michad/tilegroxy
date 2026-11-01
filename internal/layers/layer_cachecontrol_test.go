@@ -41,7 +41,7 @@ func constructWithCache(t *testing.T, rawCache map[string]any, layerCfg config.L
 		layerCfg.Provider = map[string]any{"name": "static", "color": "FFFFFF"}
 	}
 
-	l, err := layers.ConstructLayer(pkg.BackgroundContext(), layerCfg, config.DefaultConfig().Client, builtCache, errorMessages, nil, nil, nil)
+	l, err := layers.ConstructLayer(pkg.BackgroundContext(), layerCfg, config.DefaultConfig().Client, builtCache, errorMessages, nil, nil, nil, nil)
 	require.NoError(t, err)
 
 	return l

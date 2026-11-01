@@ -38,7 +38,7 @@ The environment variable name is derived by joining the parameter's full key pat
 
 == Entities
 
-Some configuration sections (xref:configuration/authentication/index.adoc[authentication], xref:configuration/provider/index.adoc[provider], xref:configuration/cache/index.adoc[cache], xref:configuration/datastores/index.adoc[datastores], xref:configuration/analytics/index.adoc[analytics], xref:configuration/ratelimit/index.adoc[ratelimit] and xref:configuration/secret/index.adoc[secret]) support selecting different methods of operation that change the full list of parameters available. For example,  a "proxy" provider requires a `url` parameter to get a map tile from another server while a "static" provider takes in a `image` to return for every request. You select these operating modes using a parameter called `name`. 
+Some configuration sections (xref:configuration/authentication/index.adoc[authentication], xref:configuration/provider/index.adoc[provider], xref:configuration/cache/index.adoc[cache], xref:configuration/datastores/index.adoc[datastores], xref:configuration/analytics/index.adoc[analytics], xref:configuration/ratelimit/index.adoc[ratelimit], xref:configuration/tls/index.adoc[tls] and xref:configuration/secret/index.adoc[secret]) support selecting different methods of operation that change the full list of parameters available. For example,  a "proxy" provider requires a `url` parameter to get a map tile from another server while a "static" provider takes in a `image` to return for every request. You select these operating modes using a parameter called `name`. 
 
 Since these entities are too dynamic to have fixed environment variables and frequently may require a secret to operate, any string parameters can be made to use an environment variable by specifying a value in the format of `env.ENV_VAR_NAME`.  You can also use an external secret store xref:configuration/secret/index.adoc[if configured] by specifying a value in the format `secret.SECRET_NAME`. 
 
@@ -60,10 +60,12 @@ cache: ... # <9>
 defaultcache: some-id # <10>
 datastores: # <11>
   - ...
-analytics: ... # <12>
-ratelimit: ... # <13>
-defaultratelimit: some-id # <14>
-layers: # <15>
+tls: # <12>
+  - ...
+analytics: ... # <13>
+ratelimit: ... # <14>
+defaultratelimit: some-id # <15>
+layers: # <16>
   - ...
 ----
 <1> xref:configuration/server.adoc[Server]: how the HTTP server operates
@@ -77,7 +79,8 @@ layers: # <15>
 <9> xref:configuration/cache/index.adoc[Cache]: where tiles are stored, either a single cache or a list of them
 <10> xref:configuration/cache/index.adoc#overridable-caches[Default cache]: the ID of the cache layers use unless they specify another
 <11> xref:configuration/datastores/index.adoc[Datastores]: shared connections used by caches, providers, authentication, analytics, and rate limiting
-<12> xref:configuration/analytics/index.adoc[Analytics]: where usage events are recorded
-<13> xref:configuration/ratelimit/index.adoc[Rate Limit]: how many tiles can be requested in a period
-<14> xref:configuration/ratelimit/index.adoc[Default rate limit]: the ID of the policy layers use unless they specify another
-<15> xref:configuration/layer.adoc[Layers]: the layers to serve
+<12> xref:configuration/tls/index.adoc[TLS]: certificates, keys, and trusted CAs used by the client and server
+<13> xref:configuration/analytics/index.adoc[Analytics]: where usage events are recorded
+<14> xref:configuration/ratelimit/index.adoc[Rate Limit]: how many tiles can be requested in a period
+<15> xref:configuration/ratelimit/index.adoc[Default rate limit]: the ID of the policy layers use unless they specify another
+<16> xref:configuration/layer.adoc[Layers]: the layers to serve

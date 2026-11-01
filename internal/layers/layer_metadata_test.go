@@ -85,7 +85,7 @@ func constructMetadataLayer(t *testing.T, name string, md layer.Description, mut
 		mutate(&rawConfig)
 	}
 
-	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, metadataErrorMessages, nil, nil, nil)
+	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, metadataErrorMessages, nil, nil, nil, nil)
 	return l, closed, err
 }
 
@@ -126,7 +126,7 @@ func Test_ConstructLayer_BadPattern_NeverConstructsProvider(t *testing.T) {
 		Provider: map[string]any{"name": "md-pattern-1"},
 	}
 
-	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, metadataErrorMessages, nil, nil, nil)
+	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, metadataErrorMessages, nil, nil, nil, nil)
 
 	require.Error(t, err)
 	assert.Nil(t, l)

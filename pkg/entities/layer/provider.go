@@ -16,6 +16,7 @@ package layer
 
 import (
 	"context"
+	"net/http"
 	"sync"
 	"time"
 
@@ -52,6 +53,8 @@ type LayerGroup interface {
 type ProviderDeps struct {
 	ClientConfig  config.ClientConfig
 	ErrorMessages config.ErrorMessages
+	// Built from the TLS profiles ClientConfig references. Nil means http.DefaultTransport
+	Transport http.RoundTripper
 	// Lets nesting providers reach sibling layers
 	LayerGroup LayerGroup
 	Datastores datastore.DatastoreRegistry

@@ -13,8 +13,13 @@ config:
     port: 8443
     production: true
     encrypt:
-      domain: tiles.example.com
+      tls: public
       httpport: 8080
+  tls:
+    - name: acme
+      id: public
+      hosts:
+        - tiles.example.com
       cache: /tilegroxy/data/certs
   health:
     enabled: true

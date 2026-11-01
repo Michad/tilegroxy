@@ -13,6 +13,7 @@ See xref:configuration.adoc[Configuration] for the conventions shared by every s
 * xref:configuration/ratelimit/index.adoc[] for how many tiles can be requested in a period.
 * xref:configuration/datastores/index.adoc[] for shared connections used by caches, providers, authentication, analytics, and rate limiting.
 * xref:configuration/secret/index.adoc[] for pulling sensitive values from an external store.
+* xref:configuration/tls/index.adoc[] for the certificates, keys, and trusted CAs used by the client and server.
 * xref:configuration/server.adoc[] for how the HTTP server operates, including encryption, TileJSON, CORS, and cache control headers.
 * xref:configuration/health.adoc[] for health check endpoints served on a separate port.
 * xref:configuration/client.adoc[] for how requests to upstream HTTP servers are made.

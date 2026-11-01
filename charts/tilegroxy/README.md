@@ -130,9 +130,10 @@ Two options:
   own load balancer. The Service exposes a single `http` port.
 - **Terminate in tilegroxy**: set `config.server.encrypt`. The Service then exposes `https` on
   `service.tlsPort` targeting the main port, plus, when `server.encrypt.httpport` is set, an
-  `http` port for the ACME challenge and redirect. With Let's Encrypt, point
-  `server.encrypt.cache` at a directory on a persistent volume, and use a `ReadWriteMany` volume
-  if you run more than one replica so they share the certificate cache.
+  `http` port for the ACME challenge and redirect. With Let's Encrypt, point the `cache` of your
+  `acme` TLS profile at a directory
+  on a persistent volume, and use a `ReadWriteMany` volume if you run more than one replica so they
+  share the certificate cache.
 
 ## Storage
 

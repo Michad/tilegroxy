@@ -15,7 +15,7 @@ Any deletion/rename/signature changes to code in this folder constitutes a break
 This means `pkg` holds only what an extension needs to write its own entities:
 
 * The interface, `Deps` struct, registration interface, and `Register*` functions for each entity type
-* `TileRequest`, `Bounds`, `Image`, the error types, `GetTile`, and the request context accessors
+* `TileRequest`, `Bounds`, `Image`, the error types, `GetTile`, `GetTileWithTransport`, and the request context accessors
 * The configuration structs
 
 Anything that constructs, wraps, or runs entities belongs in `internal`, even when an entity implementation needs it. When a `Deps` struct has to expose something from `internal`, expose it through a small interface declared in `pkg` rather than the concrete type.

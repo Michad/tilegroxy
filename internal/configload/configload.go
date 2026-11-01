@@ -254,7 +254,10 @@ func initViper() *viper.Viper {
 
 // AutomaticEnv only reads env vars for keys viper already knows, which would otherwise be only those in the config file
 func registerDefaults(v *viper.Viper) {
-	b, err := json.Marshal(config.DefaultConfig())
+	defaults := config.DefaultConfig()
+	defaults.Server.Encrypt = &config.EncryptionConfig{}
+
+	b, err := json.Marshal(defaults)
 	if err != nil {
 		// DefaultConfig() is static, so a failure here is a programming error
 		panic(err)
@@ -305,7 +308,32 @@ func unmarshal(viper *viper.Viper) (config.Config, error) {
 		c.Cache = rawCaches
 	}
 
+	c.Server.Encrypt, err = unmarshalEncrypt(viper)
+	if err != nil {
+		return c, err
+	}
+
 	return c, nil
+}
+
+// Viper treats a nil pointer section as one key, whose file value shadows the environment overrides of its fields. Decoding a plain struct avoids that
+func unmarshalEncrypt(v *viper.Viper) (*config.EncryptionConfig, error) {
+	var wrapper struct {
+		Server struct{ Encrypt config.EncryptionConfig }
+	}
+
+	if err := v.Unmarshal(&wrapper); err != nil {
+		return nil, err
+	}
+
+	enc := wrapper.Server.Encrypt
+
+	// Leftover environment variables for the deprecated fields mustn't switch on TLS by themselves
+	if enc.TLS == "" && enc.MTLS == "" && enc.MTLSMode == "" && !v.InConfig("server_encrypt") {
+		return nil, nil
+	}
+
+	return &enc, nil
 }
 
 func LoadConfig(raw string) (config.Config, error) {

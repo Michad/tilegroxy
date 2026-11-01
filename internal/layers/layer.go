@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"regexp"
 	"slices"
 	"strings"
@@ -347,13 +348,21 @@ func constructLayerCounters(layerID string) (metric.Int64Counter, metric.Int64Co
 	return tileAllCounter, tileAuthCounter, tileErrorCounter, tileSuccessCounter, errors.Join(err1, err2, err3, err4)
 }
 
-func ConstructLayer(ctx context.Context, rawConfig config.LayerConfig, defaultClientConfig config.ClientConfig, layerCache cache.Cache, errorMessages config.ErrorMessages, layerGroup *LayerGroup, secreter secret.Secreter, datastoreRegistry *datastores.Registry) (*Layer, error) {
+func ConstructLayer(ctx context.Context, rawConfig config.LayerConfig, defaultClientConfig config.ClientConfig, layerCache cache.Cache, errorMessages config.ErrorMessages, layerGroup *LayerGroup, secreter secret.Secreter, datastoreRegistry *datastores.Registry, clientTransport func(config.ClientConfig) (http.RoundTripper, error)) (*Layer, error) {
 	var err error
 	if rawConfig.Client == nil {
 		rawConfig.Client = &defaultClientConfig
 	} else {
 		configload.MergeClientDefaults(rawConfig.Client, defaultClientConfig)
 
+	}
+
+	var transport http.RoundTripper
+	if clientTransport != nil {
+		transport, err = clientTransport(*rawConfig.Client)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	rawConfig.Provider = configload.ReplaceEnv(rawConfig.Provider)
@@ -375,6 +384,7 @@ func ConstructLayer(ctx context.Context, rawConfig config.LayerConfig, defaultCl
 	deps := layer.ProviderDeps{
 		ClientConfig:  *rawConfig.Client,
 		ErrorMessages: errorMessages,
+		Transport:     transport,
 		LayerGroup:    layerGroup,
 		Datastores:    datastoreRegistry,
 	}

@@ -1,0 +1,136 @@
+= PEM
+:description: Defines a TLS profile from PEM encoded certificates, keys, and CAs supplied as either file paths or text.
+:page-eyebrow: TLS
+:page-config-name: pem
+
+== Description
+
+Certificate, key, and CA can each be supplied as a file path or directly as PEM text, which is mostly useful with `env.ENV_VAR_NAME` or `secret.SECRET_NAME` values. Supplying both forms of the same value is an error, as is a certificate without a key or a key without a certificate.
+
+Every parameter besides `ID` is optional since what's needed depends on where the profile is xref:configuration/tls/index.adoc[referenced]. For instance, a profile that only has a CA is enough to trust a private CA for upstream requests.
+
+Supplying a CA replaces the system CAs rather than adding to them, unless `SystemCAs` is set. Without a CA the system CAs are used.
+
+`Hosts` limits which hosts the server will xref:configuration/encryption.adoc#redirects[redirect] to. Every entry must be covered by the certificate, otherwise it's a configuration error. `Hosts` applies to the server while `AllowedHosts` applies to upstreams.
+
+WARNING: Never place a private key directly in your configuration. Use `KeyFile` or a xref:configuration/secret/index.adoc[secret].
+
+TIP: Set `AllowedHosts` on profiles used for `client.mtls`. Otherwise the certificate is presented to any upstream that asks for one, which identifies you to servers that have no need to know who you are.
+
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+tls:
+  - name: pem
+    id: partner
+    certificateFile: /etc/tilegroxy/tls/partner.crt
+    key: secret.partner-key
+    caFile: /etc/tilegroxy/tls/partner-ca.pem
+    systemCAs: true
+    minVersion: "1.3"
+    allowedHosts:
+      - wmts.partner.example.net
+      - "*.tiles.partner.example.net"
+----
+
+JSON::
++
+[,json]
+----
+{
+  "tls": [
+    {
+      "name": "pem",
+      "id": "partner",
+      "certificateFile": "/etc/tilegroxy/tls/partner.crt",
+      "key": "secret.partner-key",
+      "caFile": "/etc/tilegroxy/tls/partner-ca.pem",
+      "systemCAs": true,
+      "minVersion": "1.3",
+      "allowedHosts": [
+        "wmts.partner.example.net",
+        "*.tiles.partner.example.net"
+      ]
+    }
+  ]
+}
+----
+====
+
+== Configuration
+
+.Configuration options
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| ID
+| The unique identifier of the profile used to reference this profile elsewhere in configuration. `system` is reserved
+| string
+| Yes
+| None
+
+| MinVersion
+| The minimum TLS version to allow. Can be `1.2` or `1.3`. Make sure to quote this in YAML so it isn't read as a number
+| string
+| No
+| 1.2
+
+| CertificateFile
+| The file path to the certificate chain
+| string
+| No
+| None
+
+| Certificate
+| The certificate chain as PEM text
+| string
+| No
+| None
+
+| KeyFile
+| The file path to the private key. Encrypted keys aren't supported
+| string
+| No
+| None
+
+| Key
+| The private key as PEM text. Encrypted keys aren't supported
+| string
+| No
+| None
+
+| CAFile
+| The file path to a bundle of CAs to trust
+| string
+| No
+| None
+
+| CA
+| A bundle of CAs to trust as PEM text
+| string
+| No
+| None
+
+| SystemCAs
+| Whether to also trust the system CAs when a CA is supplied. Doesn't apply when validating incoming clients
+| bool
+| No
+| false
+
+| Hosts
+| The hosts the server answers for when used as `server.encrypt.tls`. Each must be covered by the certificate. Wildcards aren't supported as entries, but an entry can be covered by a wildcard certificate
+| string[]
+| No
+| The DNS names in the certificate, with a wildcard name matching one subdomain level
+
+| AllowedHosts
+| The upstream hosts the certificate may be presented to. A leading `\*.` matches any number of subdomains, so `*.example.com` matches `a.b.example.com` but not `example.com`. Checked on every request, including after a redirect, against the hostname from the URL. Other hosts get the request without a certificate
+| string[]
+| No
+| Any
+|===

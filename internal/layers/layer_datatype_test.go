@@ -67,7 +67,7 @@ func Test_ConstructLayer_DataType_MatchingExplicitAndProviderType_Succeeds(t *te
 		Provider:      map[string]any{"name": "fixed-raster-1"},
 	}
 
-	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil)
+	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil, nil)
 
 	require.NoError(t, err)
 	require.NotNil(t, l)
@@ -83,7 +83,7 @@ func Test_ConstructLayer_DataType_ContradictoryExplicitAndProviderType_Fails(t *
 		Provider:      map[string]any{"name": "fixed-mvt-1"},
 	}
 
-	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil)
+	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil, nil)
 
 	require.Error(t, err)
 	require.Nil(t, l)
@@ -97,7 +97,7 @@ func Test_ConstructLayer_DataType_ProviderUnknownNoExplicitType_Succeeds(t *test
 		Provider: map[string]any{"name": "fixed-unknown-1"},
 	}
 
-	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil)
+	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil, nil)
 
 	require.NoError(t, err)
 	require.NotNil(t, l)
@@ -113,7 +113,7 @@ func Test_ConstructLayer_DataType_InferredFromProvider_IsExposedOnLayer(t *testi
 		Provider: map[string]any{"name": "fixed-mvt-inferred-1"},
 	}
 
-	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil)
+	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil, nil)
 
 	require.NoError(t, err)
 	require.NotNil(t, l)
@@ -129,7 +129,7 @@ func Test_ConstructLayer_Bounds_WithUnresolvableDataType_Fails(t *testing.T) {
 		Provider:      map[string]any{"name": "fixed-unknown-2"},
 	}
 
-	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil)
+	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil, nil)
 
 	require.Error(t, err)
 	require.Nil(t, l)
@@ -145,7 +145,7 @@ func Test_ConstructLayer_Bounds_WithExplicitDataType_Succeeds(t *testing.T) {
 		Provider:      map[string]any{"name": "fixed-unknown-3"},
 	}
 
-	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil)
+	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil, nil)
 
 	require.NoError(t, err)
 	require.NotNil(t, l)
@@ -161,7 +161,7 @@ func Test_ConstructLayer_Bounds_WithResolvableProviderType_Succeeds(t *testing.T
 		Provider:      map[string]any{"name": "fixed-mvt-2"},
 	}
 
-	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil)
+	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil, nil)
 
 	require.NoError(t, err)
 	require.NotNil(t, l)
@@ -224,7 +224,7 @@ func Test_ConstructLayer_Bounds_Raster_WrapsInCrop(t *testing.T) {
 		Provider:      map[string]any{"name": "fixed-raster-2"},
 	}
 
-	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil)
+	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil, nil)
 
 	require.NoError(t, err)
 	require.NotNil(t, l)
@@ -243,7 +243,7 @@ func Test_ConstructLayer_Bounds_MVT_WrapsInCropMvt(t *testing.T) {
 		Provider:      map[string]any{"name": "fixed-mvt-3"},
 	}
 
-	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil)
+	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil, nil)
 
 	require.NoError(t, err)
 	require.NotNil(t, l)
@@ -262,7 +262,7 @@ func Test_ConstructLayer_Bounds_MLT_WrapsInCropMlt(t *testing.T) {
 		Provider:      map[string]any{"name": "fixed-mlt-1"},
 	}
 
-	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil)
+	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil, nil)
 
 	require.NoError(t, err)
 	require.NotNil(t, l)
@@ -282,7 +282,7 @@ func Test_ConstructLayer_DataType_MltContradictsMvt_Fails(t *testing.T) {
 		Provider:      map[string]any{"name": "fixed-mlt-2"},
 	}
 
-	_, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil)
+	_, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil, nil)
 
 	require.Error(t, err)
 }
@@ -295,7 +295,7 @@ func Test_ConstructLayer_NoBounds_NoWrapping(t *testing.T) {
 		Provider: map[string]any{"name": "fixed-raster-3"},
 	}
 
-	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil)
+	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil, nil)
 
 	require.NoError(t, err)
 	require.NotNil(t, l)
@@ -357,7 +357,7 @@ func Test_ConstructLayer_Bounds_ConstructsProviderOnce(t *testing.T) {
 		Provider:      map[string]any{"name": "closable-raster-1"},
 	}
 
-	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil)
+	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil, nil)
 
 	require.NoError(t, err)
 	require.NotNil(t, l)
@@ -380,7 +380,7 @@ func Test_ConstructLayer_Bounds_WrapperNotRegistered_FailsAndCloses(t *testing.T
 		Provider:      map[string]any{"name": "closable-mvt-1"},
 	}
 
-	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{EnumError: "enum %v %v %v", InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil)
+	l, err := ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, config.ErrorMessages{EnumError: "enum %v %v %v", InvalidParam: "invalid %v: %v", ParamRequired: "required %v"}, nil, nil, nil, nil)
 
 	require.Error(t, err)
 	assert.Nil(t, l)

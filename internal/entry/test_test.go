@@ -281,7 +281,7 @@ func Test_PickTile_Center(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			cfg := config.LayerConfig{ID: "l", LayerMetadata: tc.metadata, Provider: map[string]interface{}{"name": "test-recording-provider"}}
-			l, err := layers.ConstructLayer(context.Background(), cfg, config.ClientConfig{}, nil, config.ErrorMessages{}, nil, nil, nil)
+			l, err := layers.ConstructLayer(context.Background(), cfg, config.ClientConfig{}, nil, config.ErrorMessages{}, nil, nil, nil, nil)
 			require.NoError(t, err)
 
 			tc.expected.LayerName = "l"

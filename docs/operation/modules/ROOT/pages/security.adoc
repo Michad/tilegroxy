@@ -42,7 +42,7 @@ When returning a payload retrieved from a third party HTTP service tilegroxy wil
 Content Size validation::
 If the server fails to return a content size header or if the content size is greater than a limit (by default 10 MiB) then the request errors.  Tilegroxy will not allocate a buffer greater than the allowed size even if the server responds with a larger response than advertised
 TLS validation::
-If the URL configured includes an https protocol then standard TLS certificate validation occurs. Tilegroxy uses default Go settings for validation including a minimum version of TLS 1.2 and rejection of insecure ciphers
+If the URL configured includes an https protocol then standard TLS certificate validation occurs. Tilegroxy uses default Go settings for validation including a minimum version of TLS 1.2 and rejection of insecure ciphers. A xref:configuration/tls/index.adoc[TLS profile] can narrow which CAs are trusted for an upstream or raise the minimum version
 
 Despite these protections it's important that operators only utilize trusted services to originate its maps. Tilegroxy cannot protect against a third party returning a valid result containing offensive imagery.
 
@@ -53,6 +53,8 @@ WARNING: Never allow user input to dictate the hostname used.
 Tilegroxy provides a flexible capability for xref:configuration/authentication/index.adoc[auth] but defaults to operating unauthenticated.  The flagship mode is via JWTs provided via HTTP header, which provides a capability for both authentication and authorization by layer and geographic region. 
 
 Tilegroxy is primarily intended to be used as a microservice within a broader application ecosystem so implementing the specifics of how authentication should work end-to-end is left up to the operator in conjunction with their needs.
+
+The server can also xref:configuration/encryption.adoc#client-certificates[require client certificates]. Every certificate from the configured CA is treated the same, so it controls who can connect but not what they can access.
 
 == Rate Limiting
 

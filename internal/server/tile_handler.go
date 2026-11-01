@@ -125,7 +125,7 @@ func writeTile(ctx context.Context, w http.ResponseWriter, req *http.Request, sp
 	w.Header().Set("Content-Length", strconv.Itoa(len(img.Content)))
 	w.WriteHeader(http.StatusOK)
 
-	_, err := w.Write(img.Content)
+	_, err := w.Write(img.Content) // #nosec G705 -- tile bytes from a provider, served with their own content type
 
 	if err == nil {
 		span.SetStatus(codes.Ok, "")

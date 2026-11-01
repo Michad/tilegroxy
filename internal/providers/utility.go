@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"net/http"
 	"net/url"
 	"os"
 	"reflect"
@@ -221,8 +222,8 @@ func replacePlaceholdersInString(ctx context.Context, tileRequest pkg.TileReques
 }
 
 // Lives in pkg so library consumers writing Go providers can call it too
-func getTile(ctx context.Context, clientConfig config.ClientConfig, url string, authHeaders map[string]string) (*pkg.Image, error) {
-	return pkg.GetTile(ctx, clientConfig, url, authHeaders)
+func getTile(ctx context.Context, clientConfig config.ClientConfig, transport http.RoundTripper, url string, authHeaders map[string]string) (*pkg.Image, error) {
+	return pkg.GetTileWithTransport(ctx, clientConfig, transport, url, authHeaders)
 }
 
 // Format `<zoom>|<zoom>-<zoom>[,<range>]`, e.g. `4`, `1-5` or `1-3,6`

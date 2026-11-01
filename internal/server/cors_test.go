@@ -381,7 +381,7 @@ func Test_SetupHandlers_CORSWrapsOutsideTimeout(t *testing.T) {
 	cfg.Logging.Access.Console = false
 	cfg.Server.Forwarded.Trusted = nil
 
-	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(caches.Noop{}), nil, nil)
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(caches.Noop{}), nil, nil, nil)
 	require.NoError(t, err)
 
 	rootHandler, err := setupTestRootHandler(&cfg, &entities.Entities{LayerGroup: lg, Auth: authentications.Noop{}})

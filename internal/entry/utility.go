@@ -17,6 +17,8 @@ package entry
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"slices"
 
 	internalanalytics "github.com/Michad/tilegroxy/internal/analytics"
 
@@ -29,6 +31,7 @@ import (
 	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/internal/ratelimit"
 	"github.com/Michad/tilegroxy/internal/secrets"
+	"github.com/Michad/tilegroxy/internal/tlsprofiles"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"github.com/Michad/tilegroxy/pkg/entities/analytics"
 	"github.com/Michad/tilegroxy/pkg/entities/authentication"
@@ -51,6 +54,16 @@ func configToEntities(ctx context.Context, cfg config.Config, reloadFunc func(re
 	}
 	built.Secreter = secreter
 
+	built.TLS, err = tlsprofiles.Construct(ctx, cfg.TLS, secreter, cfg.Error.Messages)
+	if err != nil {
+		return nil, closeAndReturn(built, fmt.Errorf("error constructing tls: %w", err))
+	}
+
+	transport, err := applyTLSProfiles(&cfg, built.TLS)
+	if err != nil {
+		return nil, closeAndReturn(built, err)
+	}
+
 	datastores, err := datastores.ConstructDatastoreRegistry(ctx, cfg.Datastores, secreter, cfg.Error.Messages)
 	if err != nil {
 		return nil, closeAndReturn(built, fmt.Errorf("error constructing datastores: %w", err))
@@ -72,7 +85,7 @@ func configToEntities(ctx context.Context, cfg config.Config, reloadFunc func(re
 		return nil, closeAndReturn(built, err)
 	}
 
-	auth, err := authentications.ConstructAuth(cfg.Authentication, authentication.AuthenticationDeps{ErrorMessages: cfg.Error.Messages, ClientConfig: cfg.Client, Datastores: datastores})
+	auth, err := authentications.ConstructAuth(cfg.Authentication, authentication.AuthenticationDeps{ErrorMessages: cfg.Error.Messages, ClientConfig: cfg.Client, Transport: transport, Datastores: datastores, ClientTransport: built.TLS.ClientTransport})
 	if err != nil {
 		return nil, closeAndReturn(built, fmt.Errorf("error constructing auth: %w", err))
 	}
@@ -90,7 +103,7 @@ func configToEntities(ctx context.Context, cfg config.Config, reloadFunc func(re
 	}
 	built.RateLimit = limiter
 
-	layerGroup, err := layers.ConstructLayerGroup(ctx, cfg, caches, secreter, datastores)
+	layerGroup, err := layers.ConstructLayerGroup(ctx, cfg, caches, secreter, datastores, built.TLS.ClientTransport)
 	if err != nil {
 		return nil, closeAndReturn(built, fmt.Errorf("error constructing layers: %w", err))
 	}
@@ -104,6 +117,39 @@ func configToEntities(ctx context.Context, cfg config.Config, reloadFunc func(re
 	}
 
 	return built, nil
+}
+
+// Rebuilds layer clients rather than editing them, since cfg shares them with the live config a later reload re-resolves.
+// Layer references are resolved here so a bad one fails before datastores connect.
+func applyTLSProfiles(cfg *config.Config, reg *tlsprofiles.Registry) (http.RoundTripper, error) {
+	// Pinned so a layer overriding only tls keeps presenting the top-level certificate
+	if cfg.Client.MTLS == "" && cfg.Client.EnableMTLS != nil && *cfg.Client.EnableMTLS {
+		cfg.Client.MTLS = cfg.Client.TLS
+	}
+
+	transport, err := reg.ClientTransport(cfg.Client)
+	if err != nil {
+		return nil, err
+	}
+
+	cfg.Layers = slices.Clone(cfg.Layers)
+
+	for i := range cfg.Layers {
+		if cfg.Layers[i].Client == nil {
+			continue
+		}
+
+		client := *cfg.Layers[i].Client
+		configload.MergeClientDefaults(&client, cfg.Client)
+
+		if _, err = reg.ClientTransport(client); err != nil {
+			return nil, fmt.Errorf("error constructing layers[%d].client: %w", i, err)
+		}
+
+		cfg.Layers[i].Client = &client
+	}
+
+	return transport, nil
 }
 
 // Releases everything built before a construction failure, joining any close error into err

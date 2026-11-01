@@ -53,6 +53,7 @@ secret: ...            # external secret store
 authentication: ...    # incoming request auth
 cache: ...             # tile cache
 datastores: [...]      # named DB connections, referenced by analytics, auth, ratelimit
+tls: [...]             # named certificates, keys, and CAs, referenced by client and server.encrypt
 analytics: ...         # usage event recording
 ratelimit: ...         # named policies of request limits per user/tenant/ip/layer
 defaultratelimit: ...  # policy id used by layers that don't set `ratelimit`

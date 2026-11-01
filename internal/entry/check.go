@@ -50,6 +50,10 @@ func CheckConfig(cfg *config.Config, opts CheckOptions, out io.Writer) error {
 		return err
 	}
 
+	if err := server.ValidateTLS(pkg.BackgroundContext(), cfg, ent.TLS); err != nil {
+		return err
+	}
+
 	if cfg != nil && opts.Echo {
 		enc := json.NewEncoder(out)
 		enc.SetIndent(" ", "  ")

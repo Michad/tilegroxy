@@ -54,6 +54,24 @@
 | map[string]string
 | No
 | {"application/octet-stream": ""}
+
+| TLS
+| The ID of the xref:configuration/tls/index.adoc[TLS profile] used to validate the certificates of remote servers. `system` uses the default Go validation against the system CAs
+| string
+| No
+| system
+
+| MTLS
+| The ID of the xref:configuration/tls/index.adoc[TLS profile] holding the certificate to present to remote servers that require mutual TLS
+| string
+| No
+| The profile from `TLS`
+
+| EnableMTLS
+| Whether to present a certificate to remote servers. Set this to false in a layer to opt out of an `MTLS` set at the top-level. 
+| bool
+| No
+| true if `MTLS` is set, otherwise false
 |===
 
 .Environment variables
@@ -72,4 +90,13 @@
 
 | Timeout
 | CLIENT_TIMEOUT
+
+| TLS
+| CLIENT_TLS
+
+| MTLS
+| CLIENT_MTLS
+
+| EnableMTLS
+| CLIENT_ENABLEMTLS
 |===

@@ -80,6 +80,11 @@ func (s CustomRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (lay
 		return nil, err
 	}
 
+	// Bound here because the signature scripts compile against has no transport parameter
+	scriptGetTile := func(ctx context.Context, clientConfig config.ClientConfig, url string, authHeaders map[string]string) (*pkg.Image, error) {
+		return getTile(ctx, clientConfig, deps.Transport, url, authHeaders)
+	}
+
 	err = i.Use(interp.Exports{
 		"tilegroxy/tilegroxy": map[string]reflect.Value{
 			"Context":         reflect.ValueOf((*context.Context)(nil)),
@@ -89,7 +94,7 @@ func (s CustomRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (lay
 			"ErrorMessages":   reflect.ValueOf((*config.ErrorMessages)(nil)),
 			"Image":           reflect.ValueOf((*pkg.Image)(nil)),
 			"AuthError":       reflect.ValueOf((*pkg.ProviderAuthError)(nil)),
-			"GetTile":         reflect.ValueOf(getTile),
+			"GetTile":         reflect.ValueOf(scriptGetTile),
 		}})
 	if err != nil {
 		return nil, err

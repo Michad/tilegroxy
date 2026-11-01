@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"math/rand/v2"
 	"net"
@@ -214,4 +215,22 @@ func Test_GetTile_ErrorsAreValues(t *testing.T) {
 	_, err = GetTile(context.Background(), clientConfig, server.URL+"/length", nil)
 	var lengthErr InvalidContentLengthError
 	require.ErrorAs(t, err, &lengthErr)
+}
+
+type recordingTransport struct {
+	called bool
+}
+
+func (r *recordingTransport) RoundTrip(_ *http.Request) (*http.Response, error) {
+	r.called = true
+	return nil, errors.New("stop here")
+}
+
+func Test_GetTile_UsesClientTransport(t *testing.T) {
+	transport := &recordingTransport{}
+
+	_, err := GetTileWithTransport(context.Background(), config.DefaultConfig().Client, transport, "http://example.invalid/", nil)
+
+	require.Error(t, err)
+	assert.True(t, transport.called)
 }

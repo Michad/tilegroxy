@@ -92,4 +92,13 @@ func MergeClientDefaults(c *config.ClientConfig, o config.ClientConfig) {
 	if len(c.RewriteContentTypes) == 0 {
 		c.RewriteContentTypes = o.RewriteContentTypes
 	}
+	if c.TLS == "" {
+		c.TLS = o.TLS
+	}
+	if c.MTLS == "" {
+		c.MTLS = o.MTLS
+	}
+	if c.EnableMTLS == nil {
+		c.EnableMTLS = o.EnableMTLS
+	}
 }

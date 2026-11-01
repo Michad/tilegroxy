@@ -256,7 +256,7 @@ func (s SampleRegistration) DataType(cfgAny any) config.DataType {
 }
 
 // This is called for every layer with a provider configured with a matching name at startup time. This should return your provider type with any initialization logic, the simplest case is just passing your config struct into your provider struct like shown here.
-// Everything the provider is given at construction arrives in the deps struct: deps.ClientConfig, deps.ErrorMessages, deps.LayerGroup and deps.Datastores.
+// Everything the provider is given at construction arrives in the deps struct: deps.ClientConfig, deps.ErrorMessages, deps.Transport, deps.LayerGroup and deps.Datastores.
 func (s SampleRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	config := cfgAny.(SampleConfig) //This will always be a mutated version of what's returned from InitializeConfig
 	return &Sample{config}, nil //An error returned here will prevent startup
@@ -287,7 +287,7 @@ The {url-repo}/tree/main/pkg[pkg package] contains everything available for writ
 | Package | Contents
 
 | pkg
-| `TileRequest`, `Bounds`, `Image`, the error types, `GetTile`, and the request context accessors
+| `TileRequest`, `Bounds`, `Image`, the error types, `GetTile`, `GetTileWithTransport`, and the request context accessors
 
 | pkg/config
 | The configuration structs, including `ClientConfig` and `ErrorMessages`

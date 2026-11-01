@@ -33,7 +33,7 @@ func Test_ConstructLayer_Bounds_Raster_WrapsInRealCrop(t *testing.T) {
 		},
 	}
 
-	l, err := layers.ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, testErrMessages, nil, nil, nil)
+	l, err := layers.ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, testErrMessages, nil, nil, nil, nil)
 
 	require.NoError(t, err)
 	require.NotNil(t, l)
@@ -52,7 +52,7 @@ func Test_ConstructLayer_Bounds_MVT_WrapsInRealCropMvt(t *testing.T) {
 		},
 	}
 
-	l, err := layers.ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, testErrMessages, nil, nil, nil)
+	l, err := layers.ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, testErrMessages, nil, nil, nil, nil)
 
 	require.NoError(t, err)
 	require.NotNil(t, l)
@@ -71,7 +71,7 @@ func Test_ConstructLayer_Bounds_MLT_WrapsInRealCropMlt(t *testing.T) {
 		},
 	}
 
-	l, err := layers.ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, testErrMessages, nil, nil, nil)
+	l, err := layers.ConstructLayer(context.Background(), rawConfig, config.ClientConfig{}, nil, testErrMessages, nil, nil, nil, nil)
 
 	require.NoError(t, err)
 	require.NotNil(t, l)
