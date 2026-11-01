@@ -131,7 +131,7 @@ Two options:
 - **Terminate in tilegroxy**: set `config.server.encrypt`. The Service then exposes `https` on
   `service.tlsPort` targeting the main port, plus, when `server.encrypt.httpport` is set, an
   `http` port for the ACME challenge and redirect. With Let's Encrypt, point the `cache` of your
-  `acme` [TLS profile](https://tilegroxy.com/operation/configuration/tls/acme.html) at a directory
+  `acme` TLS profile at a directory
   on a persistent volume, and use a `ReadWriteMany` volume if you run more than one replica so they
   share the certificate cache.
 
