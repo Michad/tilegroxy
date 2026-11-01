@@ -174,6 +174,48 @@ func Test_ResolveEncrypt(t *testing.T) {
 	}
 }
 
+func Test_ResolveEncrypt_WarnsWithoutRedirectHosts(t *testing.T) {
+	ca := testutil.NewCA(t, "ca")
+	ipOnly := ca.Issue(t, "10.0.0.1")
+	named := ca.Issue(t, "tiles.example.com")
+
+	reg, err := tlsprofiles.Construct(context.Background(), []map[string]any{
+		{"name": "pem", "id": "ip-only", "certificate": string(ipOnly.CertPEM), "key": string(ipOnly.KeyPEM)},
+		{"name": "pem", "id": "ip-explicit", "certificate": string(ipOnly.CertPEM), "key": string(ipOnly.KeyPEM), "hosts": []string{"10.0.0.1"}},
+		{"name": "pem", "id": "named", "certificate": string(named.CertPEM), "key": string(named.KeyPEM)},
+	}, noSecrets{}, config.DefaultConfig().Error.Messages)
+	require.NoError(t, err)
+	t.Cleanup(func() { assert.NoError(t, reg.Close(context.Background())) })
+
+	tests := map[string]struct {
+		enc  config.EncryptionConfig
+		warn bool
+	}{
+		"no hosts":       {enc: config.EncryptionConfig{TLS: "ip-only", HTTPPort: 80}, warn: true},
+		"no redirect":    {enc: config.EncryptionConfig{TLS: "ip-only"}},
+		"explicit hosts": {enc: config.EncryptionConfig{TLS: "ip-explicit", HTTPPort: 80}},
+		"dns names":      {enc: config.EncryptionConfig{TLS: "named", HTTPPort: 80}},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			var buf bytes.Buffer
+			prev := slog.Default()
+			slog.SetDefault(slog.New(slog.NewTextHandler(&buf, nil)))
+			t.Cleanup(func() { slog.SetDefault(prev) })
+
+			_, err := resolveEncrypt(encryptConfig(tc.enc), reg)
+			require.NoError(t, err)
+
+			if tc.warn {
+				assert.Contains(t, buf.String(), "TLS profile "+tc.enc.TLS+" has no hosts")
+			} else {
+				assert.Empty(t, buf.String())
+			}
+		})
+	}
+}
+
 func Test_NewServerTLS_States(t *testing.T) {
 	ca := testutil.NewCA(t, "ca")
 	reg := tlsRegistry(t, ca)

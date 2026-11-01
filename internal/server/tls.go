@@ -19,6 +19,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
@@ -31,6 +32,7 @@ import (
 	"github.com/Michad/tilegroxy/internal/deprecation"
 	"github.com/Michad/tilegroxy/internal/entities"
 	"github.com/Michad/tilegroxy/internal/tlsprofiles"
+	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
 	"golang.org/x/crypto/acme"
 )
@@ -116,6 +118,10 @@ func resolveEncrypt(cfg *config.Config, reg *tlsprofiles.Registry) (encryptRefer
 
 		if _, isACME := refs.profile.(*tlsprofiles.ACME); isACME && enc.HTTPPort == 0 {
 			return refs, fmt.Errorf(cfg.Error.Messages.ParamRequired, "server.encrypt.httpport")
+		}
+
+		if pem, isPEM := refs.profile.(*tlsprofiles.PEM); isPEM && enc.HTTPPort != 0 && len(pem.Hosts) == 0 {
+			slog.WarnContext(pkg.BackgroundContext(), fmt.Sprintf("TLS profile %v has no hosts or DNS names to redirect to, so server.encrypt.httpport will answer every request with a 400", enc.TLS))
 		}
 	}
 
