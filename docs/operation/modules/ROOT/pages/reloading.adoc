@@ -56,7 +56,7 @@ xref:configuration::secret/index.adoc[Secret] has a `watch` option that, when se
 
 == TLS
 
-A reload re-reads the certificates and CAs in xref:configuration::tls/pem.adoc[pem] profiles and applies changes to xref:configuration::tls/acme.adoc[acme] profiles without interrupting the server. 
+A reload re-reads the certificates and CAs in xref:configuration::tls/pem.adoc[pem] profiles and applies changes to xref:configuration::tls/acme.adoc[acme] profiles without interrupting the server. A xref:configuration::tls/selfsigned.adoc[selfsigned] profile generates a new certificate.
 
 New connections use the new configuration while existing connections continue until they close, so removing a CA doesn't disconnect clients that are already connected. Which profiles `server.encrypt` references is part of the server section and requires a restart. Changing a referenced profile between `pem` and `acme` can be reloaded as long as `server.encrypt.httpport` is already set.
 

@@ -28,7 +28,7 @@ Profiles do nothing until they're referenced:
 
 | xref:encryption.adoc[server.encrypt.tls]
 | The certificate served to clients
-| Certificate, CertificateFile, Key, KeyFile, MinVersion, Hosts, or an `acme` profile
+| Certificate, CertificateFile, Key, KeyFile, MinVersion, Hosts, or an `acme` or `selfsigned` profile
 
 | xref:encryption.adoc[server.encrypt.mtls]
 | Validating the certificates of incoming clients
@@ -58,6 +58,10 @@ Profiles can be reloaded without downtime. See xref:operation::reloading.adoc#su
 | Obtain and renew certificates automatically via Let's Encrypt
 | xref:tls/acme.adoc[ACME]
 | Only usable for xref:encryption.adoc[`server.encrypt.tls`]. Requires `server.encrypt.httpport`
+
+| Run HTTPS locally for development or testing
+| xref:tls/selfsigned.adoc[Self-Signed]
+| Only usable for xref:encryption.adoc[`server.encrypt.tls`]. Generates a certificate clients won't trust by default
 |===
 
 == Example
