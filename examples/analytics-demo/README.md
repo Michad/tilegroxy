@@ -26,7 +26,7 @@ Tear it down with `docker compose down -v`. The `-v` discards the recorded event
 
 ## What To Look At
 
-The batch settings in `tilegroxy.yml` are tuned for a demo, writing every 10 events or every 2 seconds so a tile you request appears almost immediately. Production values are much higher, see the [analytics documentation](../../docs/operation/modules/ROOT/pages/configuration/analytics/index.adoc) for the defaults.
+The batch settings in `tilegroxy.yml` are tuned for a demo, writing every 10 events or every 2 seconds so a tile you request appears almost immediately. Production values are much higher, see the [analytics documentation](https://tilegroxy.com/operation/configuration/analytics/index.html) for the defaults.
 
 Switching layers in the map's top right control changes which layer the events are attributed to. The `debug-grid` layer at `localhost:8080/tiles/debug-grid/1/1/1` never appears in the dashboard because it sets `skipAnalytics`.
 
@@ -43,4 +43,4 @@ docker compose exec postgres psql -U tilegroxy -d analytics \
   -c "SELECT layer, z, count(*) FROM tilegroxy_analytics GROUP BY layer, z ORDER BY 3 DESC"
 ```
 
-For higher volumes, the [ClickHouse module](../../docs/operation/modules/ROOT/pages/configuration/analytics/clickhouse.adoc) records the same events to a database better suited to it, and the [custom module](../../docs/operation/modules/ROOT/pages/configuration/analytics/custom.adoc) sends them wherever else you need.
+For higher volumes, the [ClickHouse module](https://tilegroxy.com/operation/configuration/analytics/clickhouse.html) records the same events to a database better suited to it, and the [custom module](https://tilegroxy.com/operation/configuration/analytics/custom.html) sends them wherever else you need.

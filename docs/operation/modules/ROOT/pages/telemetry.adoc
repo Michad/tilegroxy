@@ -5,7 +5,7 @@ NOTE: The supported telemetry data includes metrics, logs, and traces. These are
 
 == Logs
 
-The "main" application logs will be shipped to OTEL in addition to the destinations xref:configuration/log.adoc#main-logs[specified in the configuration]. Access logs are not shipped to OTEL.
+The "main" application logs will be shipped to OTEL in addition to the destinations xref:configuration::log.adoc#main-logs[specified in the configuration]. Access logs are not shipped to OTEL.
 
 == Metrics
 
@@ -47,7 +47,7 @@ Metrics are available for cache hit/miss and the number of tile requests broken 
 | The number of cache lookups that don't result in a tile
 
 | tilegroxy.analytics.recorded
-| The number of xref:configuration/analytics/index.adoc[analytics] events successfully written to a destination
+| The number of xref:configuration::analytics/index.adoc[analytics] events successfully written to a destination
 
 | tilegroxy.analytics.dropped
 | The number of analytics events discarded because a module's queue was full
@@ -56,7 +56,7 @@ Metrics are available for cache hit/miss and the number of tile requests broken 
 | The number of analytics events in batches that failed to write
 
 | tilegroxy.ratelimit.total.rejected
-| The number of tile requests rejected by any xref:configuration/ratelimit/index.adoc[rate limit] rule
+| The number of tile requests rejected by any xref:configuration::ratelimit/index.adoc[rate limit] rule
 
 | tilegroxy.ratelimit.policy.\{policyId}.rejected
 | The number of tile requests rejected by a rule defined in the indicated rate limit policy. The policy ID is sanitized the same way as a layer ID
@@ -87,7 +87,7 @@ When using patterns with layers, metrics are logged against the ID of the layer 
 
 The layer ID is sanitized to only alphanumeric characters, underscores, and hyphens; everything else is replaced with underscores.  It is also truncated to 200 characters to leave room for the metric name around it.  This keeps the instrument name valid for OTEL.  Either step can cause collisions, so usage for "my.layer" and "my_layer" will get written to the same metrics.
 
-The `tilegroxy.analytics.*` metrics are meant to help monitor the health of xref:configuration/analytics/index.adoc[Analytics] delivery.  A spike in `dropped` or `error` count means usage tracking is getting dropped, so it's worth alerting on these separately.
+The `tilegroxy.analytics.*` metrics are meant to help monitor the health of xref:configuration::analytics/index.adoc[Analytics] delivery.  A spike in `dropped` or `error` count means usage tracking is getting dropped, so it's worth alerting on these separately.
 
 Alerting on `tilegroxy.ratelimit.error` is recommended, see xref:ratelimit.adoc#auditing[Rate Limiting].
 

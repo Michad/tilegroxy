@@ -1,0 +1,54 @@
+= Static
+:page-aliases: operation::configuration/provider/static.adoc
+:description: Generates the same exact image for every single tile. This is most useful when used with either the Fallback or Blend providers.
+:page-eyebrow: Provider
+:page-config-name: static
+
+NOTE: The image's extension decides what kind of tile it is. Images ending in `.mvt` or `.pbf` are served as Mapbox Vector Tiles and images ending in `.mlt` as MapLibre Tiles, which also sets the layer's `datatype`. Anything else is served as a PNG.
+
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+provider:
+  name: static
+  color: "FF0000"
+----
+
+JSON::
++
+[,json]
+----
+{
+  "provider": {
+    "name": "static",
+    "color": "FF0000"
+  }
+}
+----
+====
+
+== Configuration
+
+.Configuration options
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| image
+| Either a filepath to an image on the local filesystem or one of the xref:error.adoc[built-in images]
+| string
+| No
+| None
+
+| color
+| A hexcode (RGB or RGBA) of a color to return. Equivalent to specifying `image` with this value with a prefix of "color:"
+| string
+| No
+| None
+|===
+
+One of either `image` or `color` is required.

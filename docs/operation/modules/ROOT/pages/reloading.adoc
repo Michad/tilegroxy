@@ -6,7 +6,7 @@
 Reloading can occur in a few different situations:
 
 . If `--hot-reload` is enabled via the CLI, any changes to configuration will be detected and the system will be reloaded with the new configuration. Hot reloading occurs automatically within a few seconds of the configuration changing on the filesystem.
-. If a xref:configuration/secret/index.adoc[Secret] configuration includes the `TTL` parameter, the system will be automatically reloaded *without any changes to configuration* when the TTL expires.
+. If a xref:configuration::secret/index.adoc[Secret] configuration includes the `TTL` parameter, the system will be automatically reloaded *without any changes to configuration* when the TTL expires.
 . If a `SIGHUP` signal is received, the configuration will be read and the system reloaded with the changes. See <<reload-signal>>.
 
 == Configuration Changes
@@ -19,11 +19,11 @@ Reloads never run at the same time, whether they come from a configuration chang
 
 IMPORTANT: Configuration changes that affect the core functionality of the service (for example changing the port of the HTTP server) still require a restart of the executable.
 
-When reloading occurs, new connections will be established for configured xref:configuration/datastores/index.adoc[datastores] and caches. The previous connections are closed once in-flight requests using them have had time to complete, therefore the number of connections returns to its steady state instead of growing with each reload. Expect a temporary period after each reload where both the old and new connections are open.
+When reloading occurs, new connections will be established for configured xref:configuration::datastores/index.adoc[datastores] and caches. The previous connections are closed once in-flight requests using them have had time to complete, therefore the number of connections returns to its steady state instead of growing with each reload. Expect a temporary period after each reload where both the old and new connections are open.
 
-Buffered xref:configuration/analytics/index.adoc[analytics] events are flushed before the previous configuration is released so a reload doesn't lose the current batch.
+Buffered xref:configuration::analytics/index.adoc[analytics] events are flushed before the previous configuration is released so a reload doesn't lose the current batch.
 
-xref:configuration/ratelimit/index.adoc[Rate limit] counts survive a reload unless a policy's `id`, a rule's `segment` or period, or the store's own settings changed. See xref:ratelimit.adoc#reloading[Rate Limiting].
+xref:configuration::ratelimit/index.adoc[Rate limit] counts survive a reload unless a policy's `id`, a rule's `segment` or period, or the store's own settings changed. See xref:ratelimit.adoc#reloading[Rate Limiting].
 
 Tilegroxy uses link:https://github.com/fsnotify/fsnotify[fsnotify] to detect when configuration has changed. It is possible for the file change event to reach tilegroxy before the file has finished being written. Tilegroxy waits 1 second before applying changes to avoid this but if you are using a filesystem with especially slow writes it is possible tilegroxy will attempt to read the configuration too early. This will usually result in an invalid configuration which will be ignored but could result in operating against incorrect configuration.
 
@@ -35,28 +35,28 @@ NOTE: Automatic configuration reloading will not work with remote providers (suc
 
 The following sections of the configuration can be reloaded:
 
-* xref:configuration/secret/index.adoc[secret]
-* xref:configuration/client.adoc[client]
-* xref:configuration/authentication/index.adoc[authentication]
-* xref:configuration/cache/index.adoc[cache]
-* xref:configuration/datastores/index.adoc[datastores]
-* xref:configuration/analytics/index.adoc[analytics]
-* xref:configuration/ratelimit/index.adoc[ratelimit]
-* xref:configuration/tls/index.adoc[tls]
-* xref:configuration/layer.adoc[layers]
-* xref:configuration/health.adoc[health]
+* xref:configuration::secret/index.adoc[secret]
+* xref:configuration::client.adoc[client]
+* xref:configuration::authentication/index.adoc[authentication]
+* xref:configuration::cache/index.adoc[cache]
+* xref:configuration::datastores/index.adoc[datastores]
+* xref:configuration::analytics/index.adoc[analytics]
+* xref:configuration::ratelimit/index.adoc[ratelimit]
+* xref:configuration::tls/index.adoc[tls]
+* xref:configuration::layer.adoc[layers]
+* xref:configuration::health.adoc[health]
 
-Every other section, including xref:configuration/server.adoc[server], is fixed when the process starts. Changes to unsupported sections will be ignored. To check whether a pending configuration change can be reloaded, use xref:commands/config_diff.adoc[config diff].
+Every other section, including xref:configuration::server.adoc[server], is fixed when the process starts. Changes to unsupported sections will be ignored. To check whether a pending configuration change can be reloaded, use xref:commands::config_diff.adoc[config diff].
 
 NOTE: External files referenced by the config aren't explicitly watched for changes. It is recommended you either trigger an explicit <<reload-signal,reload>> or restart tilegroxy when external files change.
 
 == Secrets
 
-xref:configuration/secret/index.adoc[Secret] has a `watch` option that, when set, can trigger a reload using the same mechanism described here. One key exception is that when a secret changes, the configuration itself *will not* change, even if the configuration has changed on disk or remotely. If you are using both secret reloading and configuration reloading, you may want to consider the timing of your changes to avoid excessive reloads.
+xref:configuration::secret/index.adoc[Secret] has a `watch` option that, when set, can trigger a reload using the same mechanism described here. One key exception is that when a secret changes, the configuration itself *will not* change, even if the configuration has changed on disk or remotely. If you are using both secret reloading and configuration reloading, you may want to consider the timing of your changes to avoid excessive reloads.
 
 == TLS
 
-A reload re-reads the certificates and CAs in xref:configuration/tls/pem.adoc[pem] profiles and applies changes to xref:configuration/tls/acme.adoc[acme] profiles without interrupting the server. 
+A reload re-reads the certificates and CAs in xref:configuration::tls/pem.adoc[pem] profiles and applies changes to xref:configuration::tls/acme.adoc[acme] profiles without interrupting the server. 
 
 New connections use the new configuration while existing connections continue until they close, so removing a CA doesn't disconnect clients that are already connected. Which profiles `server.encrypt` references is part of the server section and requires a restart. Changing a referenced profile between `pem` and `acme` can be reloaded as long as `server.encrypt.httpport` is already set.
 
@@ -80,7 +80,7 @@ The phases run in this order:
 
 . Health readiness starts returning 503 while liveness keeps returning 204
 . Wait for `DrainDelay`
-. The HTTP server, and the xref:configuration/encryption.adoc#redirects[redirect] server if there is one, finish the requests already in flight
+. The HTTP server, and the xref:configuration::encryption.adoc#redirects[redirect] server if there is one, finish the requests already in flight
 . The health server and its background checks stop
 . Entities close, which flushes analytics and releases caches, datastores, providers, TLS profiles and the secret store
 . OpenTelemetry shuts down

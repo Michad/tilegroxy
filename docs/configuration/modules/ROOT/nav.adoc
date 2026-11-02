@@ -1,0 +1,88 @@
+* xref:index.adoc[]
+
+.Top Level
+* xref:client.adoc[]
+* xref:error.adoc[]
+* xref:health.adoc[]
+* xref:layer.adoc[]
+* xref:log.adoc[]
+* xref:server.adoc[]
+** xref:cache_control.adoc[]
+** xref:cors.adoc[]
+** xref:encryption.adoc[]
+** xref:forwarded.adoc[]
+** xref:tilejson.adoc[]
+* xref:telemetry.adoc[]
+
+.Provider
+* xref:provider/index.adoc[Overview]
+* xref:provider/blend.adoc[]
+* xref:provider/cgi.adoc[]
+* xref:provider/compositemlt.adoc[]
+* xref:provider/compositemvt.adoc[]
+* xref:provider/crop.adoc[]
+* xref:provider/cropmlt.adoc[]
+* xref:provider/cropmvt.adoc[]
+* xref:provider/custom.adoc[]
+* xref:provider/effect.adoc[]
+* xref:provider/fallback.adoc[]
+* xref:provider/pmtiles.adoc[]
+* xref:provider/postgismvt.adoc[]
+* xref:provider/proxy.adoc[]
+* xref:provider/ref.adoc[]
+* xref:provider/static.adoc[]
+* xref:provider/transform.adoc[]
+* xref:provider/url_template.adoc[]
+
+.Cache
+* xref:cache/index.adoc[Overview]
+* xref:cache/disk.adoc[]
+* xref:cache/memcached.adoc[]
+* xref:cache/memory.adoc[]
+* xref:cache/multi.adoc[]
+* xref:cache/none.adoc[]
+* xref:cache/redis.adoc[]
+* xref:cache/s3.adoc[]
+* xref:cache/tenant.adoc[]
+* xref:cache/ttl.adoc[]
+
+.Authentication
+* xref:authentication/index.adoc[Overview]
+* xref:authentication/bearer.adoc[]
+* xref:authentication/custom.adoc[]
+* xref:authentication/jwt.adoc[]
+* xref:authentication/none.adoc[]
+* xref:authentication/passthrough.adoc[]
+* xref:authentication/static_key.adoc[]
+
+.Rate Limit
+* xref:ratelimit/index.adoc[Overview]
+* xref:ratelimit/memory.adoc[]
+* xref:ratelimit/none.adoc[]
+* xref:ratelimit/postgresql.adoc[]
+* xref:ratelimit/redis.adoc[]
+
+.Analytics
+* xref:analytics/index.adoc[Overview]
+* xref:analytics/clickhouse.adoc[]
+* xref:analytics/custom.adoc[]
+// * xref:analytics/google_analytics.adoc[]
+* xref:analytics/none.adoc[]
+* xref:analytics/postgresql.adoc[]
+
+.Datastores
+* xref:datastores/index.adoc[Overview]
+* xref:datastores/clickhouse.adoc[]
+* xref:datastores/memcached.adoc[]
+* xref:datastores/memory.adoc[]
+* xref:datastores/postgresql.adoc[]
+* xref:datastores/redis.adoc[]
+
+.Secret
+* xref:secret/index.adoc[Overview]
+* xref:secret/aws_secrets_manager.adoc[]
+
+.TLS
+* xref:tls/index.adoc[Overview]
+* xref:tls/acme.adoc[]
+* xref:tls/pem.adoc[]

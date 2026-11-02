@@ -1,0 +1,180 @@
+= Server
+:page-aliases: operation::configuration/server.adoc
+:description: Configures how the HTTP server should operate
+:page-config-key: server
+
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+server:
+  bindHost: 0.0.0.0
+  port: 8080
+  rootPath: /maps
+  timeout: 30
+  gzip: true
+  headers:
+    X-Served-By: tilegroxy
+----
+
+JSON::
++
+[,json]
+----
+{
+  "server": {
+    "bindHost": "0.0.0.0",
+    "port": 8080,
+    "rootPath": "/maps",
+    "timeout": 30,
+    "gzip": true,
+    "headers": {
+      "X-Served-By": "tilegroxy"
+    }
+  }
+}
+----
+====
+
+== Configuration
+
+.Configuration options
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| BindHost
+| IP address to bind HTTP server to
+| string
+| No
+| 127.0.0.1
+
+| Port
+| Port to bind HTTP server to
+| int
+| No
+| 8080
+
+| RootPath
+| The root HTTP Path to serve all requests under.
+| string
+| No
+| /
+
+| TilePath
+| The HTTP Path to serve tiles under in addition to RootPath. The defaults will result in a path that looks like /tiles/\{layer}/\{z}/\{x}/\{y}
+| string
+| No
+| tiles
+
+| DocsPath
+| The HTTP Path to serve the documentation website under in addition to RootPath. Supply an empty string to disable serving documentation. Ignored when Production is set
+| string
+| No
+| docs
+
+| Headers
+| Include these headers in all response from server. For cross-origin headers prefer xref:cors.adoc[CORS], which can vary the response by request origin. For `Cache-Control` prefer xref:cache_control.adoc[Cache Control], which derives the value from the layer
+| map[string]string
+| No
+| None
+
+| Production
+| Hardens operation for usage in production. For instance, controls serving splash page, documentation, the xref:operation::preview.adoc[layer preview] page, the default favicon, x-powered-by header.
+| bool
+| No
+| true
+
+| Timeout
+| How long (in seconds) a request can be in flight before we cancel it and return an error
+| uint
+| No
+| 60
+
+| Gzip
+| Whether to gzip compress HTTP responses
+| bool
+| No
+| false
+
+| ShutdownTimeout
+| How long (in seconds) the whole shutdown sequence gets. See xref:operation::reloading.adoc[Shutdown]
+| uint
+| No
+| Timeout plus DrainDelay
+
+| DrainDelay
+| How long (in seconds) to report unready before draining requests. See xref:operation::reloading.adoc[Shutdown]
+| uint
+| No
+| 5
+
+| Encrypt
+| Configuration for enabling TLS (HTTPS) and optionally requiring client certificates. Don't specify to operate without encryption (the default)
+| xref:encryption.adoc[Encryption]
+| No
+| None
+
+| TileJSON
+| Configuration to turn on endpoints that describe layers using the TileJSON format
+| xref:tilejson.adoc[TileJSON]
+| No
+| None
+
+| CORS
+| Configuration for returning cross-origin resource sharing headers so browsers on other origins can use the tiles
+| xref:cors.adoc[CORS]
+| No
+| None
+
+| CacheControl
+| Configuration for returning a `Cache-Control` header so browsers and CDNs can reuse a tile without asking again
+| xref:cache_control.adoc[Cache Control]
+| No
+| None
+
+| Forwarded
+| Configuration for trusting the client IP, host, protocol, port, and path prefix reported by a CDN, load balancer, or reverse proxy in front of tilegroxy
+| xref:forwarded.adoc[Forwarded]
+| No
+| None
+|===
+
+.Environment variables
+[cols="1m,3m"]
+|===
+| Configuration Parameter | Environment Variable
+
+| BindHost
+| SERVER_BINDHOST
+
+| Port
+| SERVER_PORT
+
+| RootPath
+| SERVER_ROOTPATH
+
+| TilePath
+| SERVER_TILEPATH
+
+| DocsPath
+| SERVER_DOCSPATH
+
+| Production
+| SERVER_PRODUCTION
+
+| Timeout
+| SERVER_TIMEOUT
+
+| Gzip
+| SERVER_GZIP
+
+| ShutdownTimeout
+| SERVER_SHUTDOWNTIMEOUT
+
+| DrainDelay
+| SERVER_DRAINDELAY
+|===

@@ -4,7 +4,7 @@
 
 == Overview
 
-The configuration in tilegroxy is meant to be highly compatible with the configuration of tilestache, however there are significant differences. The tilegroxy configuration supports a variety of options that are not available in tilestache and while we try to keep most parameters optional and have sane and safe defaults, it is highly advised you familiarize yourself with the various options in the xref:configuration/index.adoc[configuration reference].
+The configuration in tilegroxy is meant to be highly compatible with the configuration of tilestache, however there are significant differences. The tilegroxy configuration supports a variety of options that are not available in tilestache and while we try to keep most parameters optional and have sane and safe defaults, it is highly advised you familiarize yourself with the various options in the xref:configuration::index.adoc[configuration reference].
 
 The following are the known incompatibilities with tilestache configurations.
 
@@ -20,7 +20,7 @@ The following are the known incompatibilities with tilestache configurations.
 Providers::
 * Mapnik
 * Vector
-* MBTiles - consider converting the archive to PMTiles and using the xref:configuration/provider/pmtiles.adoc[pmtiles] provider
+* MBTiles - consider converting the archive to PMTiles and using the xref:configuration::provider/pmtiles.adoc[pmtiles] provider
 * Mapnik Grid
 * Goodies providers
 
@@ -29,45 +29,45 @@ Caches::
 
 == Differences by component
 
-xref:configuration/layer.adoc[Layers]::
+xref:configuration::layer.adoc[Layers]::
 * Layers are supplied as a flat array of layer objects with an `id` parameter for the URL-safe layer name instead of them being supplied as an Object with the id being a key.
 * Most parameters unavailable. Some have an equivalent in the `Client` configuration
 * The `write cache` parameter is replaced with `skipcache` with inverted value
 * No `pixel effects` parameter - instead use the `effect` provider
 
-xref:configuration/provider/url_template.adoc[URL Template provider]::
+xref:configuration::provider/url_template.adoc[URL Template provider]::
 * For the most part you should use the Proxy provider instead but URL Template is available for compatibility
 * No `referer` parameter - instead specify the referer header via the `Client` configuration
 * No `timeout` parameter - instead specify the timeout via the `Client` configuration
 * No `source projection` parameter - instead use `srid`, which supports 4326 and 3857
 
 Sandwich provider::
-* No direct equivalent to the sandwich provider is available but most if not all functionality is available by combining xref:configuration/provider/blend.adoc[Blend] and xref:configuration/provider/static.adoc[Static] providers
+* No direct equivalent to the sandwich provider is available but most if not all functionality is available by combining xref:configuration::provider/blend.adoc[Blend] and xref:configuration::provider/static.adoc[Static] providers
 
-xref:configuration/provider/proxy.adoc[Proxy provider]::
+xref:configuration::provider/proxy.adoc[Proxy provider]::
 * No `provider` parameter
 * No `timeout` parameter - instead specify the timeout via the `Client` configuration
 
-xref:configuration/cache/none.adoc[Test cache]::
+xref:configuration::cache/none.adoc[Test cache]::
 * It's recommended but not required to change the `name` to `none` instead of `test`
 * No `verbose` parameter - Instead use the `Logging` configuration to turn on debug logging if needed
 
-xref:configuration/cache/disk.adoc[Disk cache]::
+xref:configuration::cache/disk.adoc[Disk cache]::
 * No `umode` parameter - Instead use `filemode` with chmod style octal numerals, e.g. `"0755"`
 * No `dirs` parameter - Instead use `layout`, which offers `flat` and `coordinate`. There is no equivalent to the `safe` or `quadtile` structures
 * No `gzip` parameter - Tiles are stored uncompressed
 * The `path` parameter must be supplied as a file path, not a URI
 
-xref:configuration/cache/memcached.adoc[Memcached cache]::
+xref:configuration::cache/memcached.adoc[Memcached cache]::
 * No `revision` parameter - Put the revision inside the key prefix
 * The `key prefix` parameter is replaced with `keyprefix`
 * The `servers` array is now an array of objects containing `host` and `port` instead of an array of strings with those combined
 
-xref:configuration/cache/redis.adoc[Redis cache]::
+xref:configuration::cache/redis.adoc[Redis cache]::
 * Supports a wider variety of configuration options. It's recommended but not required that you consider utilizing a Cluster or Ring deployment if you previously used a single server.
 * The `key prefix` parameter is replaced with `keyprefix`
 
-xref:configuration/cache/s3.adoc[S3 cache]::
+xref:configuration::cache/s3.adoc[S3 cache]::
 * No `use_locks` parameter - Caches are lockless. Identical concurrent requests are coalesced within a single tilegroxy instance instead
 * No `reduced_redundancy` parameter - Instead use the more flexible `storageclass` parameter with the `REDUCED_REDUNDANCY` option
 * While supported, it's recommended you don't use the `access` and `secret` parameters. All standard methods of supplying AWS credentials are supported.

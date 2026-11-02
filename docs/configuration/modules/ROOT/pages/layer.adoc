@@ -1,0 +1,261 @@
+= Layer
+:page-aliases: operation::configuration/layer.adoc
+:description: A layer represents a distinct mapping layer as would be displayed in a typical web map application.  Each layer can be accessed independently from other map layers. The main thing that needs to be configured for a layer is its provider.
+:page-config-key: layers[]
+
+== Layer names
+
+The URLs of incoming requests follow a format like `+/tiles/{layerName}/{z}/{x}/{y}+`. The layer name can be one of two things:
+
+. The ID of the layer
+. A string that matches a pattern
+
+A pattern should include non-subsequent placeholder values wrapped in curly braces. Those placeholder values can be used in certain providers, such as the Proxy provider where they can be forwarded along to the upstream map layer. See xref:operation::layer-patterns.adoc[Layer Patterns] for a walkthrough of how to utilize them
+
+When using a pattern you can include https://regex101.com/[Regular Expressions] to validate the values that match against the placeholder.
+
+TIP: It is highly recommended that layer names be alphanumeric plus underscores. While other characters aren't forbidden, several mechanisms (some caches and telemetry) replace potentially dangerous characters with underscores. This can lead to collisions if you have layer names that differ only by special characters.
+
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+layers:
+- id: my_layer
+  pattern: my_{name}_{version}
+  examples:
+    - my_first_v2
+    - my_second_v9
+  paramValidator:
+    "*": "^[a-zA-Z0-9]+$"
+    "version": "v[0-9]{1,3}"
+  skipCache: true
+  client:
+    userAgent: my_app/1.0
+  minzoom: 4
+  maxzoom: 18
+  bounds:
+    south: 51
+    north: 63
+    west: -7
+    east: 0.1
+  provider:
+    ...
+----
+
+JSON::
++
+[,json]
+----
+[
+  {
+    "id": "my_layer",
+    "pattern": "my_{name}_{version}",
+    "examples": [
+      "my_first_v2",
+      "my_second_v9"
+    ],
+    "paramValidator": {
+      "*": "^[a-zA-Z0-9]+$",
+      "version": "v[0-9]{1,3}"
+    },
+    "skipCache": true,
+    "client": {
+      "userAgent": "my_app/1.0"
+    },
+    "minzoom": 4,
+    "maxzoom": 18,
+    "bounds": {
+      "south": 51,
+      "north": 63,
+      "west": -7,
+      "east": 0.1
+    },
+    "provider": { ... }
+  }
+]
+----
+====
+
+== Configuration
+
+.Configuration options
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| id
+| A url-safe identifier of the layer. Primarily used as the default path for incoming tile web requests
+| string
+| Yes
+| None
+
+| pattern
+| A url-safe pattern with non-subsequent placeholders
+| string
+| No
+| id
+
+| paramValidator
+| A mapping of regular expressions to use to validate the values that match against the placeholders. Each expression must match the full value (it's automatically anchored to start and end). Specify a key of "*" to apply it to all values
+| map[string]string
+| No
+| None
+
+| provider
+| The configuration that drives how tiles are generated
+| xref:provider/index.adoc[Provider]
+| Yes
+| None
+
+| client
+| A Client configuration to use for this layer specifically that overrides the Client from the top-level of the configuration
+| xref:client.adoc[Client]
+| No
+| None
+
+| skipcache
+| If true, skip reading and writing to cache
+| bool
+| No
+| false
+
+| skipanalytics
+| If true, skip recording xref:analytics/index.adoc[analytics] events for this layer. Useful for internal or debugging layers you don't want cluttering usage data
+| bool
+| No
+| false
+
+| ratelimit
+| The ID of the xref:ratelimit/index.adoc[rate limit] policy that limits this layer
+| string
+| No
+| The default policy
+
+| skipratelimit
+| If true, requests for this layer are never checked against or counted by any rate limit policy
+| bool
+| No
+| false
+
+| allowcoalesce
+| Whether to allow concurrent requests for the same tile to be combined into one tile generation call. This includes requests triggered by different users. If your tiles are customized per user/tenant, you will want to set this false. See xref:operation::howto/user-dynamic.adoc#coalesce[this how-to] for further information
+| bool
+| No
+| Auto (based on the layer's cache and provider)
+
+| cachecontrol
+| Overrides the `Cache-Control` block from xref:server.adoc[Server] for this layer. The override applies field by field, so a layer that specifies one directive keeps the rest of what the server configured
+| xref:cache_control.adoc[Cache Control]
+| No
+| None
+
+
+| description
+| Defines a description of this layer for metadata purposes. Currently has no effect unless TileJSON is enabled. See <<metadata>>
+| string
+| No
+| None
+
+| attribution
+| Defines an attribution of this layer for metadata purposes. Currently has no effect unless TileJSON is enabled. See <<metadata>>
+| string
+| No
+| None
+
+| center
+| Specified as a triplet of longitude, latitude, zoom. Defines a center (or representative) point of this layer. Also used by the xref:commands::test.adoc[test command] to pick a default tile. See <<metadata>>
+| float[]
+| No
+| None
+
+| vectorlayers
+| Only useful for vector data types. Defines the sub-layers inside the tiles matching the tilejson `vector_layers` format (`id`, `fields`, `description`, `minzoom`, and `maxzoom`). Currently only used for metadata purposes and has no effect unless TileJSON is enabled. See <<metadata>>
+| Object[]
+| No
+| None
+
+| datatype
+| Declares what type of tiles this layer returns: raster images, Mapbox Vector Tiles (mvt), or MapLibre Tiles (mlt). This is inferred from the provider when possible, including through a xref:provider/ref.adoc[ref] to another layer. If this contradicts the provider (for example datatype is raster but the provider always produces vector tiles) startup fails. Required if it can't be inferred and a feature relying on it (such as bounds) is used. Also determines the data type of xref:error.adoc[error responses] for this layer
+| string, one of: raster, mvt, mlt
+| No
+| Taken from the provider
+
+| minzoom
+| Requests for a zoom level below this are rejected as out of bounds. See <<metadata>>
+| int
+| No
+| No lower limit
+
+| maxzoom
+| Requests for a zoom level above this are rejected as out of bounds. See <<metadata>>
+| int
+| No
+| No upper limit
+
+| bounds
+| Restricts this layer to a geographic area. When set, the layer's provider is automatically cropped (via xref:provider/crop.adoc[crop], xref:provider/cropmvt.adoc[cropmvt], or xref:provider/cropmlt.adoc[cropmlt]). This requires the layer's data type to be resolvable. See <<metadata>>
+| Object with north, south, east, west
+| No
+| Whole world
+
+| examples
+| A list of example layer names that fulfill the pattern. Used for xref:tilejson.adoc[TileJSON] documents and the xref:commands::test.adoc[`tilegroxy test`] command. Only allowed on a layer with a `pattern`
+| string[]
+| No
+| None
+
+| cacheversion
+| A version identifier used to invalidate cache entries (does not delete the cache entries). Cache entries are prefixed with this identifier, so when this changes no pre-existing cache entries ever match. It's recommended to treat this as a serial version number.
+| string
+| No
+| None
+
+| cache
+| The ID of one of the xref:cache/index.adoc[caches] to use for this layer instead of the default.
+| string
+| No
+| The default cache
+|===
+
+== Metadata
+
+Several options above describe the layer's tiles. Most of them can also come from the provider, for instance a provider reading an archive that records its own zoom range. Providers only describe, they never restrict. Only values set on the layer are enforced on requests.
+
+.Metadata options
+[cols="1m,1,2,2"]
+|===
+| Parameter | Set by | Effect | Used by
+
+| minzoom, maxzoom
+| Layer or provider
+| Enforced when set on the layer. A provider's value is advertised only
+| Tile requests, TileJSON, preview, test command
+
+| bounds
+| Layer or provider
+| Enforced when set on the layer, by cropping tiles. A provider's value is advertised only, narrowed to the layer's bounds
+| Tile requests, TileJSON, preview, test command
+
+| datatype
+| Layer or provider
+| Must agree when both are known
+| Error responses, bounds cropping, preview
+
+| center
+| Layer or provider
+| Advertised
+| TileJSON, preview, test command
+
+| description, attribution, vectorlayers
+| Layer or provider
+| Advertised
+| TileJSON, preview
+|===
+
+A value set on the layer always replaces the provider's. A provider value that contradicts the layer, such as a minzoom above the layer's maxzoom or a center outside the layer's bounds, is ignored and logged as a warning. A provider's center zoom outside the zoom range is moved to the nearest zoom inside it.
+
+Nesting providers combine what their children report. A provider wrapping a single other provider, such as xref:provider/effect.adoc[effect], passes its child's values through. One with several children, such as xref:provider/fallback.adoc[fallback] or xref:provider/blend.adoc[blend], reports values covering all of them, leaving a value unset if any child doesn't report it. A xref:provider/ref.adoc[ref] reports the metadata of the layer it points to.

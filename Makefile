@@ -59,7 +59,10 @@ docs:
 readme:
 	@asciidoctor-reducer -v >/dev/null 2>&1 || gem install asciidoctor-reducer
 	@asciidoctor-reducer -o README.adoc README_source.adoc
-	@sed -i -E -e 's/^:description: (.*)/\n\1/' -e '/^:page-[a-z-]+:/d' README.adoc
+	@sed -i -E -e 's/^:description: (.*)/\n\1/' -e '/^:page-[a-z-]+:/d' \
+		-e 's|xref:(configuration\|commands)::([^[#]+)\.adoc|link:https://tilegroxy.com/operation/\1/\2.html|g' \
+		-e 's|xref:([a-z]+)::([^[#]+)\.adoc|link:https://tilegroxy.com/\1/\2.html|g' \
+		-e 's|xref:([^[#]+)\.adoc|link:https://tilegroxy.com/operation/\1.html|g' README.adoc
 	@echo Updated README.adoc
 
 examples:

@@ -37,7 +37,7 @@ Code specific for defining the CLI interface of tilegroxy go in here.  We should
 
 == docs
 
-Documentation lives here structured in Antora modules split into three separate sources: operation manual (user docs), development manual (these docs), and decisions (ADR record).  The UI itself is built from a separate repository, see xref:documentation.adoc[Documentation].
+Documentation lives here structured in Antora modules split into five separate sources: home (the root page of the site), operation (user docs), configuration (every configuration option), commands (every command), and development (these docs, including decision records).  Pages that move between sources keep a `page-aliases` attribute so their old URLs redirect.  The UI itself is built from a separate repository, see xref:documentation.adoc[Documentation].
 
 == examples
 

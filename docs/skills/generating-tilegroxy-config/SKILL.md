@@ -19,19 +19,21 @@ read the actual documentation pages before writing config, using the procedure b
 This skill may be used outside a tilegroxy git checkout, so locate the docs with this
 fallback chain, in order, stopping at the first that succeeds:
 
-1. **Local checkout.** If `docs/operation/modules/ROOT/pages/` exists relative to the
+1. **Local checkout.** If `docs/configuration/modules/ROOT/pages/` exists relative to the
    current working directory (or a parent of it), read `.adoc` files directly from
    there. This is the fastest path and always up to date with any local changes.
 2. **tilegroxy.com.** Otherwise fetch the rendered docs from `https://tilegroxy.com/`.
-   A local path `docs/operation/modules/ROOT/pages/<X>.adoc` corresponds to
-   `https://tilegroxy.com/operation/<X>.html` (drop the `pages/` segment, change the
-   extension). For example `configuration/provider/proxy.adoc` becomes
+   A local path `docs/configuration/modules/ROOT/pages/<X>.adoc` corresponds to
+   `https://tilegroxy.com/operation/configuration/<X>.html` (drop the `pages/` segment, change the
+   extension). For example `provider/proxy.adoc` becomes
    `https://tilegroxy.com/operation/configuration/provider/proxy.html`. Start from
    `https://tilegroxy.com/operation/configuration/index.html` and follow links from
-   there if unsure a page exists.
+   there if unsure a page exists. That `index.adoc` is also the top-level structure page.
+   Conceptual pages, such as the conventions and entities in `configuration.adoc`, are in
+   `docs/operation/modules/ROOT/pages/` and at `https://tilegroxy.com/operation/<X>.html`.
 3. **GitHub, as a last resort.** If tilegroxy.com is unreachable, fetch the same `.adoc`
    source directly from GitHub:
-   `https://raw.githubusercontent.com/Michad/tilegroxy/main/docs/operation/modules/ROOT/pages/<X>.adoc`.
+   `https://raw.githubusercontent.com/Michad/tilegroxy/main/docs/configuration/modules/ROOT/pages/<X>.adoc`.
 
 Read every page relevant to the config being generated - the top-level structure page
 plus one page per entity `name` actually used (each provider, cache, authentication
@@ -44,7 +46,7 @@ for that specific entity.
 All keys are optional except `layers`:
 
 ```yaml
-server: ...           # configuration/server.adoc
+server: ...           # server.adoc
 client: ...           # default HTTP client settings for outbound provider calls
 logging: ...          # main + access logs
 telemetry: ...        # tracing/metrics

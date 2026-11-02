@@ -88,7 +88,7 @@ docker run --rm -p 8080:8080 -e SERVER_BINDHOST=0.0.0.0 -v ./tilegroxy.yml:/tile
 ----
 ====
 
-The server listens on `127.0.0.1:8080` by default and runs in the foreground until you stop it with kbd:[Ctrl+C]. See xref:configuration/server.adoc[Server] to change the host or port.
+The server listens on `127.0.0.1:8080` by default and runs in the foreground until you stop it with kbd:[Ctrl+C]. See xref:configuration::server.adoc[Server] to change the host or port.
 
 == Request a tile
 
@@ -172,7 +172,7 @@ JSON::
 ----
 ====
 
-The xref:configuration/cache/disk.adoc[disk] cache writes tiles as files under `./tile_cache`. If you'd rather not touch the filesystem, the xref:configuration/cache/memory.adoc[memory] cache works too:
+The xref:configuration::cache/disk.adoc[disk] cache writes tiles as files under `./tile_cache`. If you'd rather not touch the filesystem, the xref:configuration::cache/memory.adoc[memory] cache works too:
 
 [tabs]
 ====
@@ -196,7 +196,7 @@ JSON::
 ----
 ====
 
-The new `osm_gray` layer uses the xref:configuration/provider/ref.adoc[ref] provider to pull tiles from the `osm` layer and the xref:configuration/provider/effect.adoc[effect] provider to turn them grayscale. Providers nest like this to build up more involved layers without repeating yourself.
+The new `osm_gray` layer uses the xref:configuration::provider/ref.adoc[ref] provider to pull tiles from the `osm` layer and the xref:configuration::provider/effect.adoc[effect] provider to turn them grayscale. Providers nest like this to build up more involved layers without repeating yourself.
 
 Stop the server and run:
 
@@ -217,7 +217,7 @@ docker run --rm -v ./tilegroxy.yml:/tilegroxy/tilegroxy.yml:Z ghcr.io/michad/til
 ----
 ====
 
-xref:commands/test.adoc[Test] goes further than `config check`. It actually generates a tile for each layer and confirms it can be written to and read back from the cache, printing a row per layer:
+xref:commands::test.adoc[Test] goes further than `config check`. It actually generates a tile for each layer and confirms it can be written to and read back from the cache, printing a row per layer:
 
 [,text]
 ----
@@ -232,6 +232,6 @@ Start `tilegroxy serve` again and try http://127.0.0.1:8080/preview/osm_gray. Ru
 == Next steps
 
 * xref:concepts.adoc[Concepts] for how layers, providers, and caches fit together
-* xref:configuration/index.adoc[Configuration] for every available option
+* xref:configuration::index.adoc[Configuration] for every available option
 * xref:howto/index.adoc[How To] for common tasks
 * xref:howto/productionizing.adoc[Run in Production] before exposing tilegroxy to the internet

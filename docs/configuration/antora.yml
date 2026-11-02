@@ -1,0 +1,5 @@
+name: configuration
+title: Configuration
+version: ~
+nav:
+- modules/ROOT/nav.adoc

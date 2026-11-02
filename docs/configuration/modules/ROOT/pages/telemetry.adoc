@@ -1,0 +1,52 @@
+= Telemetry
+:page-aliases: operation::configuration/telemetry.adoc
+:description: Configures telemetry using OpenTelemetry (OTEL). This configuration only turns telemetry on and off, you must use standard OTEL environment variables to point the HTTP exporter to your collector.
+:page-config-key: telemetry
+
+NOTE: More details on Telemetry capabilities can be found in xref:operation::telemetry.adoc[Telemetry].
+
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+telemetry:
+  enabled: true
+----
+
+JSON::
++
+[,json]
+----
+{
+  "telemetry": {
+    "enabled": true
+  }
+}
+----
+====
+
+== Configuration
+
+.Configuration options
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| Enabled
+| Turns on/off telemetry
+| bool
+| No
+| false
+|===
+
+.Environment variables
+[cols="1m,3m"]
+|===
+| Configuration Parameter | Environment Variable
+
+| Enabled
+| TELEMETRY_ENABLED
+|===

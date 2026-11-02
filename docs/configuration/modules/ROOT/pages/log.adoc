@@ -1,0 +1,237 @@
+= Log
+:page-aliases: operation::configuration/log.adoc
+:description: Configures how the application should log during operation.
+:page-config-key: logging
+
+NOTE: The `logging` section supports three keys: <<main-logs,`main`>>, <<access-logs,`access`>> and <<audit-logs,`audit`>>, which are objects described below.
+
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+logging:
+  access:
+    console: false
+    path: access.log
+  main:
+    level: debug
+    format: json
+  audit:
+    enabled: true
+    console: false
+    path: audit.log
+----
+
+JSON::
++
+[,json]
+----
+{
+  "logging": {
+    "access": {
+      "console": false,
+      "path": "access.log"
+    },
+    "main": {
+      "level": "debug",
+      "format": "json"
+    },
+    "audit": {
+      "enabled": true,
+      "console": false,
+      "path": "audit.log"
+    }
+  }
+}
+----
+====
+
+== Main Logs
+
+Configures application log messages.
+
+These log messages output in a structured log format, either with Key=Value attributes in plain (text) mode or as JSON.  In either mode attributes are available driven by the HTTP request that is being processed.  We try to avoid plain mode logs being overly verbose for readability, which means if you want all the attributes you'll need to explicitly enable them.  In JSON mode we assume you're ingesting them into a system that handles formatting so include more attributes by default.
+
+IMPORTANT: In order to avoid logging secrets you need to specify the headers to log. If you're including auth information via the URL (not recommended) you should make sure Request is false to avoid logging those.
+
+Level controls the verbosity of logs. There is no guarantee as to the specific log messages that will be outputted so you might see more or fewer log messages between versions of the application, especially at higher verbosity levels.  Here are the general rules of what to expect for each level (from least to most verbose):
+
+`error`:: Only messages for things that are definitely a problem with your setup or the application itself. It's recommended to configure alerts/notifications for error logs and if the issue is not User Error, please {url-repo}/issues[open a ticket] for it.
+`warn`:: Includes messages for things that _might_ be an issue but isn't critical to the core functioning of the system.  For example an issue talking to your configured cache will come through as a warning.
+`info`:: Includes messages that allow you to see what's happening in real time but without being overwhelmed with minutiae. Expect one or two log messages per request, including messages indicating requests with something unusual.
+`debug`:: Includes messages to help understand what's happening for a given request execution. Expect a few log messages per request. This is more than you probably want in prod but can be useful when first integrating with the system.
+`trace`:: Includes messages for every level of the application as a request flows between layers. Expect several log messages per request, more for complex setups/layers. Very noisy but shouldn't be a _huge_ performance impact.
+`absurd`:: Includes more information than you will probably ever need. In some cases this can produce thousands of messages per request and will have a substantial performance cost.
+
+.Configuration options
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| Console
+| Whether to write application logs to standard out
+| bool
+| No
+| true
+
+| Path
+| The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth
+| string
+| No
+| None
+
+| Format
+| The format to output application logs in. Applies to both standard out and file out. Possible values: `plain`, `json`
+| string
+| No
+| plain
+
+| Level
+| The most-detailed log level that should be included. Possible values: `debug`, `info`, `warn`, `error`, `trace`, `absurd`
+| string
+| No
+| info
+
+| Request
+| Whether to include any extra attributes based on request parameters (excluding explicitly requested). If `auto` (default) it defaults true if format is json, false otherwise. Possible values: `auto`, `true`, `false`
+| string
+| No
+| auto
+
+| Headers
+| Headers to include as attributes in structured log messages. Attribute key will be in all lowercase.
+| string[]
+| No
+| None
+|===
+
+.Environment variables
+[cols="1m,3m"]
+|===
+| Configuration Parameter | Environment Variable
+
+| Console
+| LOGGING_MAIN_CONSOLE
+
+| Path
+| LOGGING_MAIN_PATH
+
+| Format
+| LOGGING_MAIN_FORMAT
+
+| Level
+| LOGGING_MAIN_LEVEL
+
+| Request
+| LOGGING_MAIN_REQUEST
+|===
+
+== Access Logs
+
+Configures logs for incoming HTTP requests. Primarily outputs in standard Apache Access Log formats.
+
+.Configuration options
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| Console
+| Whether to write access logs to standard out
+| bool
+| No
+| true
+
+| Path
+| The file location to write logs to. Log rotation is not built-in, use an external tool to avoid excessive growth
+| string
+| No
+| None
+
+| Format
+| The format to output access logs in. Applies to both standard out and file out. Possible values: `common`, `combined`
+| string
+| No
+| combined
+|===
+
+.Environment variables
+[cols="1m,3m"]
+|===
+| Configuration Parameter | Environment Variable
+
+| Console
+| LOGGING_ACCESS_CONSOLE
+
+| Path
+| LOGGING_ACCESS_PATH
+
+| Format
+| LOGGING_ACCESS_FORMAT
+|===
+
+== Audit Logs
+
+Configures a log containing only security relevant events. Auditing is off by default.
+
+Three kinds of event are emitted, each identified by an `event` attribute:
+
+`auth_failure`:: A request was rejected for an authentication or authorization reason. This covers a failed check by the configured xref:authentication/index.adoc[authentication], a request for a layer the caller isn't allowed, and a request for a tile outside the caller's allowed geographic area. The `reason` attribute names which of these occurred. Standard request fields are always included (URI, path, protocol, IP, method, host, and user agent) and, when possible, `user` and `tenant` are included as well.
+`rate_limited`:: A request was rejected by a xref:ratelimit/index.adoc[rate limit]. Repeated rejections are only recorded about once per window, see xref:operation::ratelimit.adoc#auditing[Rate Limiting]. The `policy` attribute names the policy that defines the exceeded rule, `rule` names the rule as described in xref:operation::ratelimit.adoc#headers[Headers], and `layer` is the ID of the requested layer. The same standard request fields as `auth_failure` are included, as are `user` and `tenant` when present.
+`config_reload`:: The configuration was reloaded, which happens when xref:operation::reloading.adoc[hot reloading] is enabled or when a watched xref:secret/index.adoc[secret] rotates. The `outcome` attribute is either `success` or `failure`, and a failure carries the `error` that stopped it. The `reason` attribute says what triggered the reload: `config_file` for a change to the configuration file, `signal` for a `SIGHUP` reload signal, `secret_rotation` for a watched secret whose value changed, and `secret_ttl` for the periodic reload a secret `ttl` schedules.
+
+.Configuration options
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| Enabled
+| Whether to emit audit events at all
+| bool
+| No
+| false
+
+| Console
+| Whether to write audit events to standard out
+| bool
+| No
+| true
+
+| Path
+| The file location to write audit events to. Log rotation is not built-in, use an external tool to avoid excessive growth. Required if Console is false.
+| string
+| No
+| None
+
+| Format
+| The format to output audit events in. Applies to both standard out and file out. Possible values: `plain`, `json`
+| string
+| No
+| json
+
+| Headers
+| Headers to include as attributes on audit events. Attribute key will be in all lowercase.
+| string[]
+| No
+| None
+|===
+
+.Environment variables
+[cols="1m,3m"]
+|===
+| Configuration Parameter | Environment Variable
+
+| Enabled
+| LOGGING_AUDIT_ENABLED
+
+| Console
+| LOGGING_AUDIT_CONSOLE
+
+| Path
+| LOGGING_AUDIT_PATH
+
+| Format
+| LOGGING_AUDIT_FORMAT
+|===

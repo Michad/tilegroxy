@@ -1,0 +1,123 @@
+= Overview
+:navtitle: Analytics
+:reftext: Analytics
+:page-aliases: operation::configuration/analytics/index.adoc
+:description: Records usage events to a destination in batches for tracking purposes.
+:page-eyebrow: Analytics
+
+== Description
+
+More details on Analytics capabilities can be found in xref:operation::analytics.adoc[Analytics].
+
+Like other entities, the analytics configuration uses a parameter called `name` to dictate the type of analytics tracking to use, but the batching configuration below is shared by all options and goes under a `batch` parameter. Analytics is disabled by default.
+
+== Choosing a destination
+
+[cols="2,1,3"]
+|===
+| Goal | Destination | Notes
+
+| Record high event volumes
+| xref:analytics/clickhouse.adoc[ClickHouse]
+| Needs a matching xref:datastores/clickhouse.adoc[datastore]. You create the table yourself
+
+| Record moderate event volumes in a database you already run
+| xref:analytics/postgresql.adoc[PostgreSQL]
+| Needs a matching xref:datastores/postgresql.adoc[datastore]. You create the table yourself
+
+| Temporarily turn a destination off
+| xref:analytics/none.adoc[None]
+| Parameters are still validated but have no effect
+
+| Anything else
+| xref:analytics/custom.adoc[Custom]
+| Your own Go code interpreted with Yaegi. See xref:operation::extensibility.adoc[Extensibility]
+|===
+
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+analytics:
+  name: clickhouse
+  id: warehouse
+  datastore: ch-0
+  table: tile_events
+  fields:
+    - duration
+    - bytes
+  extraFields:
+    tenant: hdr.X-Tenant-Id
+    environment: production
+  batch:
+    maxSize: 5000
+    maxAge: 30
+----
+
+JSON::
++
+[,json]
+----
+{
+  "analytics": {
+    "name": "clickhouse",
+    "id": "warehouse",
+    "datastore": "ch-0",
+    "table": "tile_events",
+    "fields": [
+      "duration",
+      "bytes"
+    ],
+    "extraFields": {
+      "tenant": "hdr.X-Tenant-Id",
+      "environment": "production"
+    },
+    "batch": {
+      "maxSize": 5000,
+      "maxAge": 30
+    }
+  }
+}
+----
+====
+
+== Configuration
+
+.Batch configuration options
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| MaxSize
+| Write a batch once this many events have accumulated
+| uint
+| No
+| 1000
+
+| MaxAge
+| Write a partial batch after this many seconds so low-traffic layers still report promptly
+| uint
+| No
+| 10
+
+| QueueSize
+| The maximum number of events that can be held in memory. Raise this to absorb larger bursts at the cost of memory
+| uint
+| No
+| 10000
+
+| Workers
+| How many batches may be written concurrently
+| uint
+| No
+| 1
+
+| OnFull
+| What to do when the queue is full. Can be `drop` or `block`. Drop discards the event and logs a periodic warning. Block blocks (duh) incoming requests until there's room
+| string
+| No
+| drop
+|===

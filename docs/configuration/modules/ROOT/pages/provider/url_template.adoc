@@ -1,0 +1,66 @@
+= URL Template
+:page-aliases: operation::configuration/provider/url_template.adoc
+:description: The URL Template provider overlaps with the Proxy provider but is meant specifically for WMS endpoints. Instead of merely supplying tile coordinates, the URL Template provider will supply the bounding box. This provider is available mostly for compatibility, you generally should use Proxy instead.
+:page-eyebrow: Provider
+:page-config-name: url template
+
+NOTE: Only supports EPSG:4326 and EPSG:3857
+
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+provider:
+  name: url template
+  template: https://example.com/?bbox=$xmin,$ymin,$xmax,$ymax&srs=$srs&width=$width&height=$height
+  srid: 3857
+----
+
+JSON::
++
+[,json]
+----
+{
+  "provider": {
+    "name": "url template",
+    "template": "https://example.com/?bbox=$xmin,$ymin,$xmax,$ymax&srs=$srs&width=$width&height=$height",
+    "srid": 3857
+  }
+}
+----
+====
+
+== Configuration
+
+.Configuration options
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| template
+| A URL pointing to the tile server. Should contain placeholders `$xmin` `$xmax` `$ymin` and `$ymax` for tile bounds and can also contains `$srs` `$width` and `$height`
+| string
+| Yes
+| None
+
+| width
+| What to use for $width placeholder
+| uint
+| No
+| 256
+
+| height
+| What to use for $height placeholder
+| uint
+| No
+| 256
+
+| srid
+| What projection the bounds should be in and what to use for $srs placeholder. Can only be 4326 or 3857
+| uint
+| No
+| 4326
+|===
