@@ -10,6 +10,12 @@ cache:
   cache:
     name: disk
     path: ./imagery_cache
+x-shared:
+  colorado: &colorado
+    north: 41.0
+    south: 37.0
+    west: -109.05
+    east: -102.04
 layers:
   - id: osm_gray
     provider:
@@ -28,19 +34,11 @@ layers:
     provider:
       name: fallback
       zoom: 10-21
-      bounds:
-        north: 41.0
-        south: 37.0
-        west: -109.05
-        east: -102.04
+      bounds: *colorado
       cache: unless-fallback
       primary:
         name: crop
-        bounds:
-          north: 41.0
-          south: 37.0
-          west: -109.05
-          east: -102.04
+        bounds: *colorado
         primary:
           name: proxy
           srid: 3857

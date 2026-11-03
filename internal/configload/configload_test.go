@@ -61,6 +61,80 @@ server:
 	require.Error(t, err)
 }
 
+func TestLoadConfig_ExtensionKeyAnchorsResolve(t *testing.T) {
+	c, err := LoadConfig(`
+x-shared:
+  regionValidator: &regionValidator "(?:north|south|east)"
+  upstream: &upstream
+    name: proxy
+    url: "https://tiles.example.com/{layer.region}/{z}/{x}/{y}"
+layers:
+  - id: regional
+    pattern: "regional_{region}"
+    paramValidator:
+      region: *regionValidator
+    provider: *upstream
+  - id: regional_hd
+    pattern: "regional_{region}_hd"
+    paramValidator:
+      region: *regionValidator
+    provider:
+      <<: *upstream
+      url: "https://hd.example.com/{layer.region}/{z}/{x}/{y}"
+`)
+
+	require.NoError(t, err)
+	require.Len(t, c.Layers, 2)
+	assert.Equal(t, "(?:north|south|east)", c.Layers[0].ParamValidator["region"])
+	assert.Equal(t, "proxy", c.Layers[0].Provider["name"])
+	assert.Equal(t, "https://tiles.example.com/{layer.region}/{z}/{x}/{y}", c.Layers[0].Provider["url"])
+	assert.Equal(t, "proxy", c.Layers[1].Provider["name"])
+	assert.Equal(t, "https://hd.example.com/{layer.region}/{z}/{x}/{y}", c.Layers[1].Provider["url"])
+}
+
+func TestLoadConfig_ExtensionKeyForms(t *testing.T) {
+	for name, raw := range map[string]string{
+		"scalar":       "x-note: hello\nlayers: []\n",
+		"list":         "x-list:\n  - a\n  - b\nlayers: []\n",
+		"null":         "x-empty:\nlayers: []\n",
+		"uppercase":    "X-Shared:\n  a: 1\nlayers: []\n",
+		"underscore":   "x-my_shared:\n  some_key: 1\nlayers: []\n",
+		"multiple":     "x-one: 1\nx-two: 2\nlayers: []\n",
+		"only the key": "x-: 1\nlayers: []\n",
+		"json":         `{"x-shared": {"a": 1}, "layers": []}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := LoadConfig(raw)
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestLoadConfig_NonExtensionKeysStillError(t *testing.T) {
+	for name, raw := range map[string]string{
+		"no hyphen":    "xshared: 1\n",
+		"underscore":   "x_shared: 1\n",
+		"inner prefix": "ax-shared: 1\n",
+		"nested":       "server:\n  x-shared: 1\n",
+		"in a layer":   "layers:\n  - id: a\n    x-shared: 1\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := LoadConfig(raw)
+			require.Error(t, err)
+		})
+	}
+}
+
+func TestLoadConfigFromFile_ExtensionKey(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yml")
+	require.NoError(t, os.WriteFile(path, []byte("x-shared: &port 9999\nserver:\n  port: *port\nlayers: []\n"), 0o600))
+
+	c, err := LoadConfigFromFile(path)
+
+	require.NoError(t, err)
+	assert.Equal(t, 9999, c.Server.Port)
+}
+
 func TestLoadConfig_UnknownPortKeyErrors(t *testing.T) {
 	_, err := LoadConfig(`
 server:
