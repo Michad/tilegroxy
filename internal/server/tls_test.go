@@ -216,6 +216,31 @@ func Test_ResolveEncrypt_WarnsWithoutRedirectHosts(t *testing.T) {
 	}
 }
 
+func Test_NewServerTLS_SelfSigned(t *testing.T) {
+	reg, err := tlsprofiles.Construct(context.Background(), []map[string]any{
+		{"name": "selfsigned", "id": "dev", "minversion": "1.3"},
+	}, noSecrets{}, config.DefaultConfig().Error.Messages)
+	require.NoError(t, err)
+	t.Cleanup(func() { assert.NoError(t, reg.Close(context.Background())) })
+
+	var buf bytes.Buffer
+	prev := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, nil)))
+	t.Cleanup(func() { slog.SetDefault(prev) })
+
+	state := tlsState(t, encryptConfig(config.EncryptionConfig{TLS: "dev", HTTPPort: 80}), reg)
+
+	assert.Contains(t, buf.String(), "TLS profile dev serves a self-signed certificate")
+	assert.Equal(t, uint16(tls.VersionTLS13), state.config.MinVersion)
+	assert.Len(t, state.config.Certificates, 1)
+	assert.Nil(t, state.manager)
+	assert.Nil(t, state.challenge)
+
+	rw := httptest.NewRecorder()
+	state.redirect.ServeHTTP(rw, httptest.NewRequest(http.MethodGet, "http://evil.example.net/a", nil))
+	assert.Equal(t, "https://localhost/a", rw.Header().Get("Location"))
+}
+
 func Test_NewServerTLS_States(t *testing.T) {
 	ca := testutil.NewCA(t, "ca")
 	reg := tlsRegistry(t, ca)

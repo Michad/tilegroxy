@@ -123,6 +123,10 @@ func resolveEncrypt(cfg *config.Config, reg *tlsprofiles.Registry) (encryptRefer
 		if pem, isPEM := refs.profile.(*tlsprofiles.PEM); isPEM && enc.HTTPPort != 0 && len(pem.Hosts) == 0 {
 			slog.WarnContext(pkg.BackgroundContext(), fmt.Sprintf("TLS profile %v has no hosts or DNS names to redirect to, so server.encrypt.httpport will answer every request with a 400", enc.TLS))
 		}
+
+		if _, isSelfSigned := refs.profile.(*tlsprofiles.SelfSigned); isSelfSigned {
+			slog.WarnContext(pkg.BackgroundContext(), fmt.Sprintf("TLS profile %v serves a self-signed certificate that clients won't trust. This is only intended for development", enc.TLS))
+		}
 	}
 
 	caID := enc.MTLS
@@ -284,6 +288,10 @@ func (s *serverTLS) buildState(reg *tlsprofiles.Registry) (*serverTLSState, erro
 		state.manager = profile.Manager()
 		fallback = hostRedirectHandler{hosts: profile.Hosts, mainPort: s.cfg.Server.Port}
 	case *tlsprofiles.PEM:
+		state.config.MinVersion = profile.MinVersion
+		state.config.Certificates = []tls.Certificate{*profile.Certificate}
+		fallback = hostRedirectHandler{hosts: profile.Hosts, mainPort: s.cfg.Server.Port}
+	case *tlsprofiles.SelfSigned:
 		state.config.MinVersion = profile.MinVersion
 		state.config.Certificates = []tls.Certificate{*profile.Certificate}
 		fallback = hostRedirectHandler{hosts: profile.Hosts, mainPort: s.cfg.Server.Port}

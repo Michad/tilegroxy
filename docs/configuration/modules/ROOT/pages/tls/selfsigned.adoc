@@ -1,0 +1,76 @@
+= Self-Signed
+:description: Defines a TLS profile that generates a self-signed certificate for local development and testing.
+:page-eyebrow: TLS
+:page-config-name: selfsigned
+
+NOTE: Only usable for xref:encryption.adoc[`server.encrypt.tls`].
+
+== Description
+
+The certificate and its private key are generated on startup and kept in memory. Nothing is written to disk and no files are needed, which makes this the quickest way to run HTTPS locally.
+
+Clients won't trust the certificate, so they need to skip validation (such as `curl --insecure`) or trust the served certificate directly. A warning is logged whenever this profile is used for `server.encrypt.tls`.
+
+A new certificate is generated each time the application starts or xref:operation::reloading.adoc#supported-configuration[reloads]. Anything that trusted the previous certificate has to trust the new one. Each certificate is valid for one year.
+
+WARNING: Don't use this profile in production. Use a xref:tls/pem.adoc[PEM] or xref:tls/acme.adoc[ACME] profile instead.
+
+== Example
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+tls:
+  - name: selfsigned
+    id: dev
+    hosts:
+      - localhost
+      - tiles.test
+----
+
+JSON::
++
+[,json]
+----
+{
+  "tls": [
+    {
+      "name": "selfsigned",
+      "id": "dev",
+      "hosts": [
+        "localhost",
+        "tiles.test"
+      ]
+    }
+  ]
+}
+----
+====
+
+== Configuration
+
+.Configuration options
+[cols="1m,3,1,1,1"]
+|===
+| Parameter | Description | Type | Required | Default
+
+| ID
+| The unique identifier of the profile used to reference this profile elsewhere in configuration. `system` is reserved
+| string
+| Yes
+| None
+
+| MinVersion
+| The minimum TLS version to allow. Can be `1.2` or `1.3`. Make sure to quote this in YAML so it isn't read as a number
+| string
+| No
+| 1.2
+
+| Hosts
+| The hostnames and IP addresses the certificate covers and to xref:encryption.adoc#redirects[redirect] to. Wildcards aren't supported
+| string[]
+| No
+| `localhost`, `127.0.0.1`, `::1`
+|===

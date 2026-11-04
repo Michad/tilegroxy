@@ -98,6 +98,10 @@ func Test_Construct_Rejects(t *testing.T) {
 		"acme ip":             {"name": "acme", "id": "a", "hosts": []string{"10.0.0.1"}},
 		"acme pem param":      {"name": "acme", "id": "a", "hosts": []string{"a.example.com"}, "ca": "x"},
 		"acme bad minversion": {"name": "acme", "id": "a", "hosts": []string{"a.example.com"}, "minversion": "2"},
+		"selfsigned wildcard": {"name": "selfsigned", "id": "a", "hosts": []string{"*.example.com"}},
+		"selfsigned bad host": {"name": "selfsigned", "id": "a", "hosts": []string{"bad host"}},
+		"selfsigned ca param": {"name": "selfsigned", "id": "a", "ca": "x"},
+		"selfsigned version":  {"name": "selfsigned", "id": "a", "minversion": "2"},
 	}
 
 	for name, entry := range tests {

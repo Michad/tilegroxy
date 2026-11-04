@@ -19,6 +19,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"net"
@@ -399,6 +400,23 @@ tls:
 	assert.NotContains(t, inst.Output(), "deprecated")
 }
 
+func Test_TLS_Profile_SelfSigned(t *testing.T) {
+	inst := Start(t, Config{Raw: `
+tls:
+  - name: selfsigned
+    id: dev
+` + serverYAML("    tls: dev") + tlsColorLayer})
+
+	conn, err := tls.Dial("tcp", strings.TrimPrefix(inst.httpsURL(""), "https://"), &tls.Config{InsecureSkipVerify: true, MinVersion: tls.VersionTLS12}) // #nosec G402 -- fetching the certificate to trust below
+	require.NoError(t, err)
+
+	served := conn.ConnectionState().PeerCertificates[0]
+	require.NoError(t, conn.Close())
+
+	expectServed(t, inst, httpsClient(t, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: served.Raw})))
+	assert.Contains(t, inst.Output(), "self-signed")
+}
+
 func Test_TLS_Profile_ClientCertificateModes(t *testing.T) {
 	f := newTLSFiles(t)
 	strangerCA := testutil.NewCA(t, "stranger")
@@ -523,6 +541,7 @@ func Test_TLS_Profile_InvalidReferencesPreventStartup(t *testing.T) {
 		"unknown client profile": "client:\n  tls: nope\n",
 		"acme as client":         "client:\n  tls: public\ntls:\n  - name: acme\n    id: public\n    hosts: [a.example.com]\n",
 		"acme without http port": "server:\n  encrypt:\n    tls: public\ntls:\n  - name: acme\n    id: public\n    hosts: [a.example.com]\n",
+		"selfsigned as client":   "client:\n  tls: dev\ntls:\n  - name: selfsigned\n    id: dev\n",
 		"mtls without a cert":    fmt.Sprintf("client:\n  mtls: ca\ntls:\n  - name: pem\n    id: ca\n    caFile: %v\n", f.caFile),
 		"server mtls without ca": pemProfile(f) + "server:\n  encrypt:\n    tls: main\n    mtls: main\n",
 		"reserved id":            "tls:\n  - name: pem\n    id: system\n",

@@ -86,3 +86,4 @@
 * xref:tls/index.adoc[Overview]
 * xref:tls/acme.adoc[]
 * xref:tls/pem.adoc[]
+* xref:tls/selfsigned.adoc[]
