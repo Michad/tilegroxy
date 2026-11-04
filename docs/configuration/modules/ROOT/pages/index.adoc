@@ -44,4 +44,3 @@ layers: # <16>
 <14> xref:configuration::ratelimit/index.adoc[Rate Limit]: how many tiles can be requested in a period
 <15> xref:configuration::ratelimit/index.adoc[Default rate limit]: the ID of the policy layers use unless they specify another
 <16> xref:configuration::layer.adoc[Layers]: the layers to serve
-

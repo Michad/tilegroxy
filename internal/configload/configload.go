@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
+	"reflect"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -32,6 +33,8 @@ import (
 	"github.com/spf13/viper"
 	_ "github.com/spf13/viper/remote"
 )
+
+const extensionKeyPrefix = "x-"
 
 type ConfigWithID struct {
 	ID     string
@@ -286,6 +289,23 @@ func flattenDefaults(v *viper.Viper, prefix string, m map[string]interface{}) {
 	}
 }
 
+// Holds definitions like YAML anchors. Only exempt at the top level so typos elsewhere still fail
+func dropExtensionKeys(_, to reflect.Type, data any) (any, error) {
+	settings, ok := data.(map[string]any)
+	if !ok || to != reflect.TypeFor[config.Config]() {
+		return data, nil
+	}
+
+	kept := make(map[string]any, len(settings))
+	for k, v := range settings {
+		if !strings.HasPrefix(strings.ToLower(k), extensionKeyPrefix) {
+			kept[k] = v
+		}
+	}
+
+	return kept, nil
+}
+
 func unmarshal(viper *viper.Viper) (config.Config, error) {
 	c := config.DefaultConfig()
 
@@ -299,6 +319,7 @@ func unmarshal(viper *viper.Viper) (config.Config, error) {
 
 	err := viper.Unmarshal(&c, func(dc *mapstructure.DecoderConfig) {
 		dc.ErrorUnused = true
+		dc.DecodeHook = mapstructure.ComposeDecodeHookFunc(dropExtensionKeys, dc.DecodeHook)
 	})
 	if err != nil {
 		return c, err

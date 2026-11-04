@@ -67,6 +67,9 @@ layers:                # required, at least one entry
 Parameter names are case-insensitive. Keys are typically written lower camel-case in
 examples but any case works.
 
+Top-level keys starting with `x-` are ignored, so use one (such as `x-shared`) to define
+YAML anchors reused across layers. Any other unknown key is an error.
+
 ## The entity pattern
 
 `provider`, `cache`, `authentication`, `analytics`, `ratelimit`, `datastore`, and `secret` are all

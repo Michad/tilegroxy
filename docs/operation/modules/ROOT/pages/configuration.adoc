@@ -42,3 +42,33 @@ Some configuration sections (xref:configuration::authentication/index.adoc[authe
 
 Since these entities are too dynamic to have fixed environment variables and frequently may require a secret to operate, any string parameters can be made to use an environment variable by specifying a value in the format of `env.ENV_VAR_NAME`.  You can also use an external secret store xref:configuration::secret/index.adoc[if configured] by specifying a value in the format `secret.SECRET_NAME`. 
 
+
+== Extension Keys
+
+If you need to re-use a section of configuration, you can make use of a top level extension key starting with `x-`. Tilegroxy allows any such section at the top level of the configuration. From there, you can use YAML anchors to reuse bits of configuration wherever you need.
+
+For example:
+
+[,yaml]
+----
+x-shared:
+  regionValidator: &regionValidator "(?:north|south|east)"
+  upstream: &upstream
+    name: proxy
+    url: "https://tiles.example.com/{layer.region}/{z}/{x}/{y}"
+
+layers:
+  - id: regional
+    pattern: "regional_{region}"
+    paramValidator:
+      region: *regionValidator
+    provider: *upstream
+  - id: regional_hd
+    pattern: "regional_{region}_hd"
+    paramValidator:
+      region: *regionValidator
+    provider: *upstream
+----
+
+An anchor must be defined above its first use in the file. 
+
