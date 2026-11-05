@@ -55,7 +55,7 @@ Providers reference a placeholder value as `+{layer.NAME}+`, where `NAME` is the
 
 If a placeholder can't be resolved, such as a typo in the name, a warning is logged and the request continues. It's recommended to xref:commands::test.adoc[test] to detect issues such as this.
 
-Placeholder values are also available to xref:analytics.adoc[analytics] as the `layerparams` field.
+Placeholder values are also available to xref:analytics.adoc[analytics] as the `layerparams` field and to xref:extensibility.adoc#custom-providers[custom providers] through `LayerParams`.
 
 == Examples
 

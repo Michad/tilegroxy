@@ -17,6 +17,7 @@ package providers
 import (
 	"context"
 	"fmt"
+	"maps"
 	"os"
 	"reflect"
 
@@ -95,6 +96,7 @@ func (s CustomRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (lay
 			"Image":           reflect.ValueOf((*pkg.Image)(nil)),
 			"AuthError":       reflect.ValueOf((*pkg.ProviderAuthError)(nil)),
 			"GetTile":         reflect.ValueOf(scriptGetTile),
+			"LayerParams":     reflect.ValueOf(layerParams),
 		}})
 	if err != nil {
 		return nil, err
@@ -146,6 +148,16 @@ func (s CustomRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (lay
 	}
 
 	return &Custom{cfg, deps.ClientConfig, deps.ErrorMessages, i, preAuthFunc, generateTileFunc, closeFunc}, nil
+}
+
+// Copied so scripts can't alter the values other providers and analytics see
+func layerParams(ctx context.Context) map[string]string {
+	matches, ok := pkg.LayerPatternMatchesFromContext(ctx)
+	if !ok || matches == nil {
+		return map[string]string{}
+	}
+
+	return maps.Clone(*matches)
 }
 
 func (t Custom) PreAuth(ctx context.Context, providerContext layer.ProviderContext) (layer.ProviderContext, error) {

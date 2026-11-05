@@ -100,6 +100,9 @@ The following types are available for custom providers:
 
 | {url-repo}/blob/main/pkg/utility.go[GetTile]
 | A utility method that performs an HTTP GET request to a given URL. Use this when possible to ensure all standard Client configurations are honored
+
+| {url-repo}/blob/main/internal/providers/custom.go[LayerParams]
+| A utility method that returns the placeholder values matched by the layer's xref:layer-patterns.adoc[pattern]. These come from the User, so escape them yourself. Not meaningful in `preAuth`, which is shared by every value the pattern matches
 |===
 
 === Custom Authentication

@@ -248,3 +248,34 @@ func Test_ConstructLayer_GivesProviderResolvedTransport(t *testing.T) {
 	})
 	require.ErrorIs(t, err, errResolve)
 }
+
+func Test_CustomProviderLayerParams(t *testing.T) {
+	script := `
+func preAuth(ctx tilegroxy.Context, providerContext tilegroxy.ProviderContext, params map[string]interface{}, cientConfig tilegroxy.ClientConfig, errorMessages tilegroxy.ErrorMessages,
+)  (tilegroxy.ProviderContext, error) {
+	return tilegroxy.ProviderContext{AuthBypass: true}, nil
+}
+
+func generateTile(ctx tilegroxy.Context, providerContext tilegroxy.ProviderContext, tileRequest tilegroxy.TileRequest, params map[string]interface{}, clientConfig tilegroxy.ClientConfig, errorMessages tilegroxy.ErrorMessages ) (*tilegroxy.Image, error ) {
+	lp := tilegroxy.LayerParams(ctx)
+	service := lp["service"]
+	lp["service"] = "changed"
+	return &tilegroxy.Image{Content: []byte(service)}, nil
+}
+`
+	p := buildCustomProviderFromScript(t, script)
+
+	ctx := pkg.BackgroundContext()
+	matches, ok := pkg.LayerPatternMatchesFromContext(ctx)
+	require.True(t, ok)
+	(*matches)["service"] = "roads"
+
+	img, err := p.GenerateTile(ctx, layer.ProviderContext{}, pkg.TileRequest{LayerName: "svc_roads"})
+	require.NoError(t, err)
+	assert.Equal(t, "roads", string(img.Content))
+	assert.Equal(t, "roads", (*matches)["service"])
+
+	img, err = p.GenerateTile(context.Background(), layer.ProviderContext{}, pkg.TileRequest{LayerName: "svc_roads"})
+	require.NoError(t, err)
+	assert.Empty(t, img.Content)
+}
