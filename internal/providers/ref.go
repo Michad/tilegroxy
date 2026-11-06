@@ -17,6 +17,8 @@ package providers
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"strings"
 
 	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
@@ -61,7 +63,7 @@ func (s RefRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.
 	cfg := cfgAny.(RefConfig)
 	ref := &Ref{RefConfig: cfg, layerGroup: deps.LayerGroup}
 
-	if lg, ok := deps.LayerGroup.(*layers.LayerGroup); ok && lg != nil {
+	if lg, ok := deps.LayerGroup.(*layers.LayerGroup); ok && lg != nil && !strings.Contains(cfg.Layer, "{layer.") {
 		if target := lg.FindLayer(context.Background(), cfg.Layer); target != nil {
 			ref.target = target.Metadata().Advertised
 		}
@@ -75,11 +77,12 @@ func (t Ref) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.Provider
 }
 
 func (t Ref) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
-	newRequest := pkg.TileRequest{LayerName: t.Layer, Z: tileRequest.Z, X: tileRequest.X, Y: tileRequest.Y}
+	layerName := t.resolveLayerName(ctx, tileRequest)
+	newRequest := pkg.TileRequest{LayerName: layerName, Z: tileRequest.Z, X: tileRequest.X, Y: tileRequest.Y}
 
 	depth, _ := pkg.RefDepthFromContext(ctx)
 	if depth != nil && *depth >= maxRefDepth {
-		return nil, fmt.Errorf("ref: maximum reference depth (%v) exceeded, likely a cycle involving layer %v", maxRefDepth, t.Layer)
+		return nil, fmt.Errorf("ref: maximum reference depth (%v) exceeded, likely a cycle involving layer %v", maxRefDepth, layerName)
 	}
 
 	// A fresh context keeps the parent layer's placeholders from leaking into the child layer
@@ -96,6 +99,28 @@ func (t Ref) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequ
 	newCtx = trace.ContextWithSpan(newCtx, span)
 
 	return t.layerGroup.RenderTile(newCtx, newRequest)
+}
+
+// Values aren't escaped since the result is only matched against layer names, never spliced into a URL
+func (t Ref) resolveLayerName(ctx context.Context, tileRequest pkg.TileRequest) string {
+	if !strings.Contains(t.Layer, "{layer.") {
+		return t.Layer
+	}
+
+	lpm, _ := pkg.LayerPatternMatchesFromContext(ctx)
+
+	return lyrRegex.ReplaceAllStringFunc(t.Layer, func(match string) string {
+		layerVar := match[7 : len(match)-1]
+
+		if lpm != nil {
+			if val, ok := (*lpm)[layerVar]; ok {
+				return val
+			}
+		}
+
+		slog.Log(ctx, slog.LevelWarn, fmt.Sprintf("layer variable %v could not be resolved while serving layer %v", layerVar, tileRequest.LayerName))
+		return ""
+	})
 }
 
 // Built before this layer, so the target's metadata is final

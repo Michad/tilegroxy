@@ -214,3 +214,79 @@ func Test_Ref_Metadata_UnresolvedIsEmpty(t *testing.T) {
 	lg := constructPMTilesRefGroup(t, pmtilesLayer("only"))
 	assert.Equal(t, layer.Description{}, Ref{RefConfig: RefConfig{Layer: "missing"}, layerGroup: lg}.Metadata())
 }
+
+func constructTemplatedRefGroup(t *testing.T, provider map[string]any) *layers.LayerGroup {
+	t.Helper()
+
+	cfg := config.DefaultConfig()
+	cfg.Layers = []config.LayerConfig{
+		{ID: "combined", Pattern: "combined_{version}", Provider: provider, Client: &cfg.Client, SkipCache: true},
+		{ID: "detailed_v1", Provider: map[string]any{"name": "static", "color": "FF0000"}, Client: &cfg.Client, SkipCache: true},
+		{ID: "detailed_v2", Provider: map[string]any{"name": "static", "color": "0000FF"}, Client: &cfg.Client, SkipCache: true},
+	}
+
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil, nil)
+	require.NoError(t, err)
+
+	return lg
+}
+
+func Test_Ref_LayerPlaceholder_ResolvesFromPattern(t *testing.T) {
+	lg := constructTemplatedRefGroup(t, map[string]any{
+		"name":      "fallback",
+		"primary":   refProvider("detailed_{layer.version}"),
+		"secondary": map[string]any{"name": "static", "color": "00FF00"},
+	})
+
+	for _, version := range []string{"v1", "v2"} {
+		img, err := lg.RenderTile(pkg.BackgroundContext(), pkg.TileRequest{LayerName: "combined_" + version, Z: 1, X: 0, Y: 0})
+		require.NoError(t, err)
+
+		direct, err := lg.RenderTile(pkg.BackgroundContext(), pkg.TileRequest{LayerName: "detailed_" + version, Z: 1, X: 0, Y: 0})
+		require.NoError(t, err)
+
+		assert.Equal(t, direct.Content, img.Content, version)
+	}
+}
+
+func Test_Ref_LayerPlaceholder_InBlendPattern(t *testing.T) {
+	lg := constructTemplatedRefGroup(t, map[string]any{
+		"name": "blend",
+		"mode": "normal",
+		"layer": map[string]any{
+			"pattern": "{kind}_{layer.version}",
+			"values":  []any{map[string]any{"kind": "detailed"}, map[string]any{"kind": "detailed"}},
+		},
+	})
+
+	img, err := lg.RenderTile(pkg.BackgroundContext(), pkg.TileRequest{LayerName: "combined_v2", Z: 1, X: 0, Y: 0})
+	require.NoError(t, err)
+
+	direct, err := lg.RenderTile(pkg.BackgroundContext(), pkg.TileRequest{LayerName: "detailed_v2", Z: 1, X: 0, Y: 0})
+	require.NoError(t, err)
+
+	other, err := lg.RenderTile(pkg.BackgroundContext(), pkg.TileRequest{LayerName: "combined_v1", Z: 1, X: 0, Y: 0})
+	require.NoError(t, err)
+
+	assert.Equal(t, direct.Content, img.Content)
+	assert.NotEqual(t, img.Content, other.Content)
+}
+
+func Test_Ref_LayerPlaceholder_UnresolvedIsEmpty(t *testing.T) {
+	lg := constructTemplatedRefGroup(t, refProvider("detailed_{layer.typo}"))
+
+	_, err := lg.RenderTile(pkg.BackgroundContext(), pkg.TileRequest{LayerName: "combined_v1", Z: 1, X: 0, Y: 0})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "detailed_ does not exist")
+}
+
+func Test_Ref_LayerPlaceholder_NoStartupMetadata(t *testing.T) {
+	lg := constructPMTilesRefGroup(t,
+		config.LayerConfig{ID: "target", Pattern: "target_{n}", Provider: map[string]any{"name": "pmtiles", "file": pmtilesMVTFixture}},
+		config.LayerConfig{ID: "outer", Pattern: "outer_{n}", Provider: refProvider("target_{layer.n}")},
+	)
+
+	md := lg.FindLayer(context.Background(), "outer_1").Metadata().Advertised
+	assert.NotEqual(t, config.DataTypeMVT, md.DataType)
+	assert.Empty(t, md.VectorLayers)
+}
