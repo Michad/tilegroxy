@@ -52,6 +52,7 @@ Providers reference a placeholder value as `+{layer.NAME}+`, where `NAME` is the
 * xref:configuration::provider/proxy.adoc[Proxy] in `url`. Values are percent-encoded, so a `/` in a value becomes `%2F` rather than a path separator.
 * xref:configuration::provider/cgi.adoc[CGI] in `uri`, with the same escaping as Proxy.
 * xref:configuration::provider/postgismvt.adoc[PostGIS MVT] in `filter`. Values are passed as prepared statement parameters, not pasted into the SQL.
+* xref:configuration::provider/ref.adoc[Ref] in `layer`. This also works in refs nested inside other providers, such as fallback or blend, and in blend's `layer.pattern`.
 
 If a placeholder can't be resolved, such as a typo in the name, a warning is logged and the request continues. It's recommended to xref:commands::test.adoc[test] to detect issues such as this.
 

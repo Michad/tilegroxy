@@ -23,6 +23,7 @@ import (
 	"runtime/debug"
 	"slices"
 	"sort"
+	"strings"
 	"sync"
 
 	"github.com/Michad/tilegroxy/internal/caches"
@@ -137,12 +138,13 @@ func resolveLayerCache(l config.LayerConfig, cacheRegistry *caches.CacheRegistry
 	return layerCache, nil
 }
 
-// Collects the layer names `ref` entries target
+// Collects the literal layer names `ref` entries target
 func findRefTargets(node any, targets *[]string) {
 	switch v := node.(type) {
 	case map[string]any:
 		if name, ok := v["name"].(string); ok && name == "ref" {
-			if target, ok := v["layer"].(string); ok && target != "" {
+			// Templated targets depend on the request, so they can't be resolved at startup
+			if target, ok := v["layer"].(string); ok && target != "" && !strings.Contains(target, "{layer.") {
 				*targets = append(*targets, target)
 			}
 		}

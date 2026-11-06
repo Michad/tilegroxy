@@ -187,6 +187,16 @@ func Test_ValidateRefs_DanglingTargetSkippedWithPatternLayers(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func Test_ValidateRefs_TemplatedTargetSkipped(t *testing.T) {
+	layers := []config.LayerConfig{
+		{ID: "a", Provider: refProvider("detailed_{layer.version}")},
+		{ID: "b", Provider: refProvider("{layer.x}")},
+	}
+
+	err := validateRefs(layers)
+	require.NoError(t, err)
+}
+
 func Test_ValidateRefs_ValidChain(t *testing.T) {
 	layers := []config.LayerConfig{
 		{ID: "a", Provider: refProvider("b")},

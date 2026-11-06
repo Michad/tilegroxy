@@ -10,6 +10,8 @@ This is pointless by itself but can be useful when combined with other providers
 
 Ref has a recursion limit of 10. We attempt to detect chains that will violate this limit at startup, but not all cases can be statically detected. Any tiles generated at runtime that violate this limit will result in an error after the 10th hop. This protection only applies to recursive ref's in a single config, for example there is no protection against using a proxy provider between two separate instances of tilegroxy.
 
+If this provider is used from a layer utilizing xref:operation::layer-patterns.adoc[layer pattern], you can include `+{layer.NAME}+` placeholders in the `layer` field to fill in the matching pattern segments. If using this feature, datatype, bounds, and other metadata, as well as cyclical dependencies, can't be inferred. 
+
 == Example
 [tabs]
 ====
@@ -43,7 +45,7 @@ JSON::
 | Parameter | Description | Type | Required | Default
 
 | layer
-| The layername to refer towards, treated the same if it were supplied in an incoming request.
+| The layername to refer towards, treated the same if it were supplied in an incoming request. Can contain `+{layer.NAME}+` placeholders
 | string
 | Yes
 | None
