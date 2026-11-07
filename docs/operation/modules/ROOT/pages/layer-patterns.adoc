@@ -81,7 +81,7 @@ YAML::
 . `paramValidator` checks the value from the request before `paramMap` replaces it, so `latest` has to be allowed here. @/period"?: "\[/
 . `from` values must match exactly, including case. A `type` that isn't listed doesn't match the layer, which makes the list an exact allowlist. @/from"?: "?river/
 . Several values can map to the same upstream value. @/from"?: "?sea/
-. Clients can ask for `latest` without knowing the newest period. Changing `to` moves every client to a new period at once. @/from"?: "?latest/
+. Clients can ask for `latest` without knowing the newest period. Changing `to` moves every client to a new period at once. Tiles already cached for `latest` are kept, so change the layer's `cacheversion` at the same time. @/from"?: "?latest/
 . Any other period is used as is. With a `to` on this entry every other period would be replaced by that value instead. @/default"?: true/
 . Providers only see the mapped value, such as `RiverFlood_v2` rather than `river`. @/layer.type/
 // end::callouts[]

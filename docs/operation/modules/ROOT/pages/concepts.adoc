@@ -8,7 +8,7 @@ Tilegroxy distinguishes between two sources of input:
 * The *Operator* (probably you) writes the configuration. It's trusted, much like code. Tilegroxy prevents foot-guns but makes no attempt to stop deliberately harmful configuration.
 * The *User* makes tile requests. Anything on a request, including the layer name, pattern placeholder values, coordinates, headers, query string, and tokens, is treated as potentially hostile.
 
-Keep this in mind whenever configuration passes something from a request into a provider, such as placeholder values in a URL or SQL query. Restrict placeholders with `paramValidator` as tightly as you can. See xref:security.adoc[Security] for the full set of considerations.
+Keep this in mind whenever configuration passes something from a request into a provider, such as placeholder values in a URL or SQL query. Restrict placeholders with `paramValidator` or `paramMap` as tightly as you can. See xref:security.adoc[Security] for the full set of considerations.
 
 == Layers
 

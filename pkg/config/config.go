@@ -275,7 +275,7 @@ type LayerConfig struct {
 	ID             string                     // A distinct identifier for this layer. If no pattern is defined this is used to match against the layer name. Also used
 	Pattern        string                     // A pattern to match against for layer names in incoming requests. Includes placeholders from which values can be extracted when matching. Not regular expressions, placeholders are simply wrapped in curly braces
 	ParamValidator map[string]string          // A mapping of regular expressions to use for each value extracted from the pattern. Keys must match the placeholders in pattern. This is external from the pattern itself to keep parsing the pattern simple and less error prone. If a key of "*" is defined it applies to all placeholders
-	ParamMap       map[string][]ParamMapEntry // Optional. Replaces a placeholder's value before providers see it. Keyed by placeholder name. Values not listed don't match the layer unless there's a default entry
+	ParamMap       map[string][]ParamMapEntry // Optional. Rewrites placeholder values before providers see them. Unlisted values don't match unless a default entry exists
 	Provider       map[string]any             // Raw config parameters for the provider to use. Name determines the specific schema
 	SkipCache      bool                       // If true, don't use the cache
 	SkipAnalytics  bool                       // If true, successful requests for this layer don't produce analytics events
