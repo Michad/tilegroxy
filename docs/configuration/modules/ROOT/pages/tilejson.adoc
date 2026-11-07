@@ -1,7 +1,9 @@
 = TileJSON
 :page-aliases: operation::configuration/tilejson.adoc
-:description: Configuration for serving TileJSON documents describing configured layers. See that page for a full description of the endpoints, what goes into a document, and how authentication applies, including how a caller's own layer or geographic restrictions carry through to what's returned.
+:description: Configuration for serving TileJSON documents describing configured layers. 
 :page-config-key: server.tilejson
+
+NOTE: See xref:operation::tilejson.adoc[TileJSON operation] for a full description of the endpoints, document structure, and how authentication applies.
 
 == Example
 [tabs]
