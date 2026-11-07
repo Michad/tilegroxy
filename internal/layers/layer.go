@@ -298,6 +298,34 @@ func unprotectedPlaceholders(matching layerMatching) []string {
 	return res
 }
 
+var layerPlaceholderRegex = regexp.MustCompile(`{layer\.([^{}]*)}`)
+
+// Providers resolve unknown names to empty strings, which can silently route to an unrelated layer
+func validateLayerPlaceholders(value any, path string, segments []layerSegment, errorMessages config.ErrorMessages) error {
+	switch v := value.(type) {
+	case map[string]any:
+		errs := make([]error, 0, len(v))
+		for k, child := range v {
+			errs = append(errs, validateLayerPlaceholders(child, path+"."+k, segments, errorMessages))
+		}
+		return errors.Join(errs...)
+	case []any:
+		errs := make([]error, 0, len(v))
+		for i, child := range v {
+			errs = append(errs, validateLayerPlaceholders(child, fmt.Sprintf("%v[%v]", path, i), segments, errorMessages))
+		}
+		return errors.Join(errs...)
+	case string:
+		for _, m := range layerPlaceholderRegex.FindAllStringSubmatch(v, -1) {
+			if !slices.Contains(segments, layerSegment{value: m[1], placeholder: true}) {
+				return fmt.Errorf(errorMessages.InvalidParam, path, m[0])
+			}
+		}
+	}
+
+	return nil
+}
+
 func matchName(segments []layerSegment, validator map[string]*regexp.Regexp, paramMap map[string]paramMapping, layerName string) (bool, map[string]string) {
 	doesMatch, matches := match(segments, layerName)
 	if !doesMatch || !validateParamMatches(matches, validator) || !applyParamMap(matches, paramMap) {
@@ -465,7 +493,7 @@ func resolveMatching(rawConfig config.LayerConfig, errorMessages config.ErrorMes
 		}
 	}
 
-	return res, nil
+	return res, validateLayerPlaceholders(rawConfig.Provider, "layer.provider", res.segments, errorMessages)
 }
 
 func constructLayerCounters(layerID string) (metric.Int64Counter, metric.Int64Counter, metric.Int64Counter, metric.Int64Counter, error) {

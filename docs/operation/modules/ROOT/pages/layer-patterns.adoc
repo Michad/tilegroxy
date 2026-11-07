@@ -138,7 +138,7 @@ Providers reference a placeholder value as `+{layer.NAME}+`, where `NAME` is the
 * xref:configuration::provider/postgismvt.adoc[PostGIS MVT] in `filter`. Values are passed as prepared statement parameters, not pasted into the SQL.
 * xref:configuration::provider/ref.adoc[Ref] in `layer`. This also works in refs nested inside other providers, such as fallback or blend, and in blend's `layer.pattern`.
 
-If a placeholder can't be resolved, such as a typo in the name, a warning is logged and the request continues. It's recommended to xref:commands::test.adoc[test] to detect issues such as this.
+Startup fails if a `+{layer.NAME}+` anywhere in the provider configuration names a placeholder that isn't in the pattern, such as a typo. Names are case sensitive, so `+{layer.region}+` doesn't match a pattern of `+{Region}+`.
 
 Placeholder values are also available to xref:analytics.adoc[analytics] as the `layerparams` field and to xref:extensibility.adoc#custom-providers[custom providers] through `LayerParams`.
 
