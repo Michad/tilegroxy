@@ -129,7 +129,7 @@ func TenantIDFromContext(ctx context.Context) (*string, bool) {
 	return u, ok
 }
 
-// Maps each layer name parameter's configured key to its value from the URL
+// Maps each layer name parameter's configured key to its value from the URL, after any paramMap replacement
 func LayerPatternMatchesFromContext(ctx context.Context) (*map[string]string, bool) {
 	u, ok := ctx.Value(layerPatternMatchesKey).(*map[string]string)
 	return u, ok

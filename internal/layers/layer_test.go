@@ -142,61 +142,61 @@ func Test_ValidateMatches(t *testing.T) {
 
 	rules["*"] = "[a-zA-Z0-9]*"
 
-	regex, err := constructValidation(rules, testErrorMessages)
+	regex, err := constructValidation(rules, nil, testErrorMessages)
 	require.NoError(t, err)
 	assert.True(t, validateParamMatches(matches, regex))
 
 	rules["*"] = "^[a-zA-Z0-9]*$"
 
-	regex, err = constructValidation(rules, testErrorMessages)
+	regex, err = constructValidation(rules, nil, testErrorMessages)
 	require.NoError(t, err)
 	assert.True(t, validateParamMatches(matches, regex))
 
 	rules["*"] = "[a-zA-Z]*"
-	regex, err = constructValidation(rules, testErrorMessages)
+	regex, err = constructValidation(rules, nil, testErrorMessages)
 	require.NoError(t, err)
 	assert.False(t, validateParamMatches(matches, regex))
 
 	delete(rules, "*")
-	regex, err = constructValidation(rules, testErrorMessages)
+	regex, err = constructValidation(rules, nil, testErrorMessages)
 	require.NoError(t, err)
 	assert.True(t, validateParamMatches(matches, regex))
 
-	regex, err = constructValidation(nil, testErrorMessages)
+	regex, err = constructValidation(nil, nil, testErrorMessages)
 	require.NoError(t, err)
 	assert.True(t, validateParamMatches(matches, regex))
 
 	rules["test1"] = "[a-zA-Z]*"
-	regex, err = constructValidation(rules, testErrorMessages)
+	regex, err = constructValidation(rules, nil, testErrorMessages)
 	require.NoError(t, err)
 	assert.True(t, validateParamMatches(matches, regex))
 
 	rules["test1"] = "a"
-	regex, err = constructValidation(rules, testErrorMessages)
+	regex, err = constructValidation(rules, nil, testErrorMessages)
 	require.NoError(t, err)
 	assert.False(t, validateParamMatches(matches, regex))
 
 	rules["test1"] = "[a-zA-Z]*"
 	rules["test2"] = "[a-zA-Z0-9]*"
-	regex, err = constructValidation(rules, testErrorMessages)
+	regex, err = constructValidation(rules, nil, testErrorMessages)
 	require.NoError(t, err)
 	assert.True(t, validateParamMatches(matches, regex))
 
 	rules["*"] = "aaa"
-	regex, err = constructValidation(rules, testErrorMessages)
+	regex, err = constructValidation(rules, nil, testErrorMessages)
 	require.NoError(t, err)
 	assert.False(t, validateParamMatches(matches, regex))
 
 	delete(rules, "*")
 	rules["test3"] = ".+"
-	regex, err = constructValidation(rules, testErrorMessages)
+	regex, err = constructValidation(rules, nil, testErrorMessages)
 	require.NoError(t, err)
 	assert.False(t, validateParamMatches(matches, regex))
 }
 
 func Test_ConstructValidation_EmptyExpression(t *testing.T) {
 	require.NotPanics(t, func() {
-		regex, err := constructValidation(map[string]string{"name": ""}, testErrorMessages)
+		regex, err := constructValidation(map[string]string{"name": ""}, nil, testErrorMessages)
 		require.Error(t, err)
 		assert.Nil(t, regex)
 		assert.Contains(t, err.Error(), "layer.paramValidator.name")
@@ -205,7 +205,7 @@ func Test_ConstructValidation_EmptyExpression(t *testing.T) {
 
 func Test_ConstructValidation_AlternationIsFullyAnchored(t *testing.T) {
 	for _, rule := range []string{"1[6-9][0-9]{2}|20[0-9]{2}", "^1[6-9][0-9]{2}|20[0-9]{2}$"} {
-		regex, err := constructValidation(map[string]string{"year": rule}, testErrorMessages)
+		regex, err := constructValidation(map[string]string{"year": rule}, nil, testErrorMessages)
 		require.NoError(t, err)
 
 		for _, year := range []string{"1860", "2050"} {
@@ -215,4 +215,18 @@ func Test_ConstructValidation_AlternationIsFullyAnchored(t *testing.T) {
 			assert.False(t, validateParamMatches(map[string]string{"year": year}, regex), rule+" "+year)
 		}
 	}
+}
+
+func Test_ConstructValidation_MixedCasePlaceholder(t *testing.T) {
+	// Lowercase to mirror what the config loader produces
+	cfg := config.LayerConfig{ID: "a", Pattern: "a_{myYear}", ParamValidator: map[string]string{"myyear": "[0-9]{4}"}}
+	matching, err := resolveMatching(cfg, testErrorMessages)
+	require.NoError(t, err)
+
+	doesMatch, matches := matchName(matching.segments, matching.validator, matching.paramMap, "a_2024")
+	assert.True(t, doesMatch)
+	assert.Equal(t, map[string]string{"myYear": "2024"}, matches)
+
+	doesMatch, _ = matchName(matching.segments, matching.validator, matching.paramMap, "a_abcd")
+	assert.False(t, doesMatch)
 }

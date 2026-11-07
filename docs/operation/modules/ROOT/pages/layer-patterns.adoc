@@ -8,7 +8,7 @@ NOTE: This page explains how patterns behave. See xref:configuration::layer.adoc
 Incoming tile requests look like `+/tiles/{layerName}/{z}/{x}/{y}+`. Tilegroxy checks each configured layer in the order they appear in the configuration and uses the first one that matches `layerName`:
 
 * A layer without a `pattern` matches when `layerName` equals its `id`.
-* A layer with a `pattern` matches when `layerName` fits the pattern and every placeholder value passes its `paramValidator` expression. The `id` itself is not checked.
+* A layer with a `pattern` matches when `layerName` fits the pattern, every placeholder value passes its `paramValidator` expression, and every placeholder in `paramMap` has a listed value or a default. The `id` itself is not checked.
 
 Because the first match wins, put specific layers above broad patterns that could also match their names. A request that matches nothing is rejected as an unknown layer.
 
@@ -45,6 +45,84 @@ paramValidator:
 
 `paramValidator` only applies to layers that have a pattern.
 
+== Mapping values
+
+In some cases you might want to have different values in your URLs compared to what is needed for your upstream provider. In those cases you can use `paramMap` to perform simple replacements `from` one value `to` another. 
+
+[tabs]
+====
+YAML::
++
+[,yaml]
+----
+- id: flood
+  pattern: flood_{type}_{period}
+  paramValidator:
+    period: "[0-9]{6}|latest"
+  paramMap:
+    type:
+      - from: river
+        to: RiverFlood_v2
+      - from: coastal
+        to: CoastalFlood_v3
+      - from: sea
+        to: CoastalFlood_v3
+    period:
+      - from: latest
+        to: "202410"
+      - default: true
+  provider:
+    name: proxy
+    url: https://tiles.example.com/{layer.type}/{layer.period}/{z}/{x}/{y}
+----
++
+// tag::callouts[]
+. Since period allows defaults in `paramMap`, it needs an explicit validator to ensure dangerous values aren't injected. @/paramValidator"?:/
+. `paramValidator` checks the value from the request before `paramMap` replaces it, so `latest` has to be allowed here. @/period"?: "\[/
+. `from` values must match exactly, including case. A `type` that isn't listed doesn't match the layer, which makes the list an exact allowlist. @/from"?: "?river/
+. Several values can map to the same upstream value. @/from"?: "?sea/
+. Clients can ask for `latest` without knowing the newest period. Changing `to` moves every client to a new period at once. Tiles already cached for `latest` are kept, so change the layer's `cacheversion` at the same time. @/from"?: "?latest/
+. Any other period is used as is. With a `to` on this entry every other period would be replaced by that value instead. @/default"?: true/
+. Providers only see the mapped value, such as `RiverFlood_v2` rather than `river`. @/layer.type/
+// end::callouts[]
+
+JSON::
++
+[,json]
+----
+[
+  {
+    "id": "flood",
+    "pattern": "flood_{type}_{period}",
+    "paramValidator": {
+      "period": "[0-9]{6}|latest"
+    },
+    "paramMap": {
+      "type": [
+        { "from": "river", "to": "RiverFlood_v2" },
+        { "from": "coastal", "to": "CoastalFlood_v3" },
+        { "from": "sea", "to": "CoastalFlood_v3" }
+      ],
+      "period": [
+        { "from": "latest", "to": "202410" },
+        { "default": true }
+      ]
+    },
+    "provider": {
+      "name": "proxy",
+      "url": "https://tiles.example.com/{layer.type}/{layer.period}/{z}/{x}/{y}"
+    }
+  }
+]
+----
++
+include::layer-patterns.adoc[tag=callouts]
+====
+
+An entry with `default: true` applies to every value the other entries don't list. A default can optionally include the `to` option, if it's omitted then the default is a straight passthrough.
+
+Startup fails if a key isn't a placeholder in the pattern, a `from` value is listed twice, a placeholder has more than one default, or a default has a `from`. Providers, analytics, and custom providers all see the mapped value. Tiles are still cached under the layer name from the request (before mappings).
+
 == Using values in providers
 
 Providers reference a placeholder value as `+{layer.NAME}+`, where `NAME` is the placeholder name from the pattern. The following providers support it:
@@ -75,7 +153,9 @@ The xref:configuration::cache/disk.adoc[disk], xref:configuration::cache/s3.adoc
 
 Placeholder values come straight from the request, so they are User input and should be treated as hostile. Escaping in Proxy and CGI and prepared statements in PostGIS protect against the most direct injection, but they don't stop a User from asking your upstream for something you didn't intend to serve.
 
-IMPORTANT: Always configure `paramValidator` on a pattern layer whose values reach a provider, and make the expressions as tight as you can. Alphanumeric values of a known length are a good default. Never let a placeholder control the hostname of an upstream URL.
+IMPORTANT: Always configure `paramValidator` or `paramMap` on a pattern layer whose values reach a provider, and make the expressions as tight as you can. Alphanumeric values of a known length are a good default. Never let a placeholder control the hostname of an upstream URL.
+
+A warning is logged at startup and on every reload for each pattern layer with a placeholder that has no `paramValidator` expression (including `*`) and isn't in `paramMap`. A `paramMap` whose `default` passes values through unchanged doesn't count, since it accepts anything.
 
 See xref:security.adoc[Security] for more.
 

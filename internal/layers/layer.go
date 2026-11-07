@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"regexp"
 	"slices"
@@ -135,7 +136,18 @@ func match(segments []layerSegment, str string) (bool, map[string]string) {
 	return true, matches
 }
 
-func constructValidation(raw map[string]string, errorMessages config.ErrorMessages) (map[string]*regexp.Regexp, error) {
+// Keys are matched to placeholders ignoring case since the config loader lowercases them
+func placeholderName(segments []layerSegment, key string) string {
+	for _, seg := range segments {
+		if seg.placeholder && strings.EqualFold(seg.value, key) {
+			return seg.value
+		}
+	}
+
+	return ""
+}
+
+func constructValidation(raw map[string]string, segments []layerSegment, errorMessages config.ErrorMessages) (map[string]*regexp.Regexp, error) {
 	if raw == nil {
 		return nil, nil
 	}
@@ -151,8 +163,13 @@ func constructValidation(raw map[string]string, errorMessages config.ErrorMessag
 			continue
 		}
 
+		key := k
+		if name := placeholderName(segments, k); name != "" {
+			key = name
+		}
+
 		// Grouping makes the anchors apply to every alternative, not just the first and last
-		res[k], err = regexp.Compile("^(?:" + v + ")$")
+		res[key], err = regexp.Compile("^(?:" + v + ")$")
 
 		if err != nil {
 			errs = append(errs, err)
@@ -186,10 +203,110 @@ func validateParamMatches(values map[string]string, regexp map[string]*regexp.Re
 	return true
 }
 
+type paramMapping struct {
+	values     map[string]string
+	hasDefault bool
+	defaultTo  string // Empty passes unlisted values through unchanged
+}
+
+func constructParamMap(raw map[string][]config.ParamMapEntry, segments []layerSegment, errorMessages config.ErrorMessages) (map[string]paramMapping, error) {
+	if len(raw) == 0 {
+		return nil, nil
+	}
+
+	res := make(map[string]paramMapping, len(raw))
+	errs := make([]error, 0)
+
+	for k, entries := range raw {
+		placeholder := placeholderName(segments, k)
+		if placeholder == "" {
+			errs = append(errs, fmt.Errorf(errorMessages.InvalidParam, "layer.paramMap", k))
+			continue
+		}
+
+		mapping := paramMapping{values: make(map[string]string, len(entries))}
+		for _, entry := range entries {
+			if entry.Default {
+				if mapping.hasDefault || entry.From != "" {
+					errs = append(errs, fmt.Errorf(errorMessages.InvalidParam, "layer.paramMap."+k+".default", entry.From))
+				}
+				mapping.hasDefault = true
+				mapping.defaultTo = entry.To
+				continue
+			}
+
+			if _, dupe := mapping.values[entry.From]; dupe {
+				errs = append(errs, fmt.Errorf(errorMessages.InvalidParam, "layer.paramMap."+k+".from", entry.From))
+			}
+			mapping.values[entry.From] = entry.To
+		}
+
+		res[placeholder] = mapping
+	}
+
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+// Replaces values in place. False when a mapped placeholder's value isn't listed and there's no default
+func applyParamMap(values map[string]string, paramMap map[string]paramMapping) bool {
+	for k, mapping := range paramMap {
+		if to, ok := mapping.values[values[k]]; ok {
+			values[k] = to
+		} else if !mapping.hasDefault {
+			return false
+		} else if mapping.defaultTo != "" {
+			values[k] = mapping.defaultTo
+		}
+	}
+
+	return true
+}
+
+func unprotectedPlaceholders(matching layerMatching) []string {
+	res := make([]string, 0)
+
+	for _, seg := range matching.segments {
+		if !seg.placeholder {
+			continue
+		}
+
+		if mapping, ok := matching.paramMap[seg.value]; ok && (!mapping.hasDefault || mapping.defaultTo != "") {
+			continue
+		}
+
+		validated := false
+		for k := range matching.validator {
+			if k == "*" || k == seg.value {
+				validated = true
+			}
+		}
+
+		if !validated {
+			res = append(res, seg.value)
+		}
+	}
+
+	return res
+}
+
+func matchName(segments []layerSegment, validator map[string]*regexp.Regexp, paramMap map[string]paramMapping, layerName string) (bool, map[string]string) {
+	doesMatch, matches := match(segments, layerName)
+	if !doesMatch || !validateParamMatches(matches, validator) || !applyParamMap(matches, paramMap) {
+		return false, nil
+	}
+
+	return true, matches
+}
+
 type Layer struct {
 	ID                 string
 	Pattern            []layerSegment
 	ParamValidator     map[string]*regexp.Regexp
+	ParamMap           map[string]paramMapping // Keyed by placeholder name
 	Config             config.LayerConfig
 	Provider           layer.Provider
 	Cache              cache.Cache
@@ -301,39 +418,49 @@ func resolveCacheControlFacts(rawConfig config.LayerConfig, layerCache cache.Cac
 	return facts
 }
 
-func resolvePatternAndValidator(rawConfig config.LayerConfig, errorMessages config.ErrorMessages) ([]layerSegment, map[string]*regexp.Regexp, error) {
+type layerMatching struct {
+	segments  []layerSegment
+	validator map[string]*regexp.Regexp
+	paramMap  map[string]paramMapping
+}
+
+func resolveMatching(rawConfig config.LayerConfig, errorMessages config.ErrorMessages) (layerMatching, error) {
 	isPattern := rawConfig.Pattern != "" && rawConfig.Pattern != rawConfig.ID
 
-	var segments []layerSegment
+	var res layerMatching
 	var err error
 	if isPattern {
-		segments, err = parsePattern(rawConfig.Pattern)
+		res.segments, err = parsePattern(rawConfig.Pattern)
 		if err != nil {
-			return nil, nil, fmt.Errorf(errorMessages.InvalidParam, "layer.pattern", rawConfig.Pattern)
+			return res, fmt.Errorf(errorMessages.InvalidParam, "layer.pattern", rawConfig.Pattern)
 		}
 	} else {
-		segments = []layerSegment{{value: rawConfig.ID, placeholder: false}}
+		res.segments = []layerSegment{{value: rawConfig.ID, placeholder: false}}
 	}
 
-	var validator map[string]*regexp.Regexp
 	if isPattern && rawConfig.ParamValidator != nil {
-		validator, err = constructValidation(rawConfig.ParamValidator, errorMessages)
+		res.validator, err = constructValidation(rawConfig.ParamValidator, res.segments, errorMessages)
 		if err != nil {
-			return nil, nil, err
+			return res, err
 		}
+	}
+
+	res.paramMap, err = constructParamMap(rawConfig.ParamMap, res.segments, errorMessages)
+	if err != nil {
+		return res, err
 	}
 
 	for _, example := range rawConfig.Examples {
 		if !isPattern {
-			return nil, nil, fmt.Errorf(errorMessages.InvalidParam, "layer.examples", example)
+			return res, fmt.Errorf(errorMessages.InvalidParam, "layer.examples", example)
 		}
 
-		if doesMatch, matches := match(segments, example); !doesMatch || !validateParamMatches(matches, validator) {
-			return nil, nil, fmt.Errorf(errorMessages.InvalidParam, "layer.examples", example)
+		if doesMatch, _ := matchName(res.segments, res.validator, res.paramMap, example); !doesMatch {
+			return res, fmt.Errorf(errorMessages.InvalidParam, "layer.examples", example)
 		}
 	}
 
-	return segments, validator, nil
+	return res, nil
 }
 
 func constructLayerCounters(layerID string) (metric.Int64Counter, metric.Int64Counter, metric.Int64Counter, metric.Int64Counter, error) {
@@ -376,9 +503,13 @@ func ConstructLayer(ctx context.Context, rawConfig config.LayerConfig, defaultCl
 		}
 	}
 
-	segments, validator, err := resolvePatternAndValidator(rawConfig, errorMessages)
+	matching, err := resolveMatching(rawConfig, errorMessages)
 	if err != nil {
 		return nil, err
+	}
+
+	if unprotected := unprotectedPlaceholders(matching); len(unprotected) > 0 {
+		slog.WarnContext(ctx, fmt.Sprintf("Layer %v accepts any value for placeholders %v. Restrict them with paramValidator or paramMap", rawConfig.ID, unprotected))
 	}
 
 	deps := layer.ProviderDeps{
@@ -422,8 +553,9 @@ func ConstructLayer(ctx context.Context, rawConfig config.LayerConfig, defaultCl
 
 	return &Layer{
 		ID:                 rawConfig.ID,
-		Pattern:            segments,
-		ParamValidator:     validator,
+		Pattern:            matching.segments,
+		ParamValidator:     matching.validator,
+		ParamMap:           matching.paramMap,
 		Config:             rawConfig,
 		Provider:           provider,
 		Cache:              layerCache,
@@ -464,30 +596,29 @@ func (l *Layer) forceReauth(ctx context.Context) (layer.ProviderContext, error) 
 }
 
 func (l *Layer) MatchesName(ctx context.Context, layerName string) bool {
-
-	if doesMatch, matches := match(l.Pattern, layerName); doesMatch {
-		if validateParamMatches(matches, l.ParamValidator) {
-			layerPatternMatches, _ := pkg.LayerPatternMatchesFromContext(ctx)
-			if layerPatternMatches != nil {
-				*layerPatternMatches = matches
-			}
-			return true
-		}
+	doesMatch, matches := matchName(l.Pattern, l.ParamValidator, l.ParamMap, layerName)
+	if !doesMatch {
+		return false
 	}
 
-	return false
+	layerPatternMatches, _ := pkg.LayerPatternMatchesFromContext(ctx)
+	if layerPatternMatches != nil {
+		*layerPatternMatches = matches
+	}
+
+	return true
 }
 
 // For callers working from raw config before layers are built. An unparseable pattern matches nothing; construction reports it
 func ConfigMatchesName(rawConfig config.LayerConfig, errorMessages config.ErrorMessages, layerName string) bool {
-	segments, validator, err := resolvePatternAndValidator(rawConfig, errorMessages)
+	matching, err := resolveMatching(rawConfig, errorMessages)
 	if err != nil {
 		return false
 	}
 
-	doesMatch, matches := match(segments, layerName)
+	doesMatch, _ := matchName(matching.segments, matching.validator, matching.paramMap, layerName)
 
-	return doesMatch && validateParamMatches(matches, validator)
+	return doesMatch
 }
 
 // True when a pattern distinct from the ID means there's no single tile URL, so TileJSON needs Config.Examples
