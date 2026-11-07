@@ -136,7 +136,18 @@ func match(segments []layerSegment, str string) (bool, map[string]string) {
 	return true, matches
 }
 
-func constructValidation(raw map[string]string, errorMessages config.ErrorMessages) (map[string]*regexp.Regexp, error) {
+// Keys are matched to placeholders ignoring case since the config loader lowercases them
+func placeholderName(segments []layerSegment, key string) string {
+	for _, seg := range segments {
+		if seg.placeholder && strings.EqualFold(seg.value, key) {
+			return seg.value
+		}
+	}
+
+	return ""
+}
+
+func constructValidation(raw map[string]string, segments []layerSegment, errorMessages config.ErrorMessages) (map[string]*regexp.Regexp, error) {
 	if raw == nil {
 		return nil, nil
 	}
@@ -152,8 +163,13 @@ func constructValidation(raw map[string]string, errorMessages config.ErrorMessag
 			continue
 		}
 
+		key := k
+		if name := placeholderName(segments, k); name != "" {
+			key = name
+		}
+
 		// Grouping makes the anchors apply to every alternative, not just the first and last
-		res[k], err = regexp.Compile("^(?:" + v + ")$")
+		res[key], err = regexp.Compile("^(?:" + v + ")$")
 
 		if err != nil {
 			errs = append(errs, err)
@@ -187,7 +203,6 @@ func validateParamMatches(values map[string]string, regexp map[string]*regexp.Re
 	return true
 }
 
-// Keys are matched to placeholders ignoring case since the config loader lowercases them
 type paramMapping struct {
 	values     map[string]string
 	hasDefault bool
@@ -203,13 +218,7 @@ func constructParamMap(raw map[string][]config.ParamMapEntry, segments []layerSe
 	errs := make([]error, 0)
 
 	for k, entries := range raw {
-		placeholder := ""
-		for _, seg := range segments {
-			if seg.placeholder && strings.EqualFold(seg.value, k) {
-				placeholder = seg.value
-			}
-		}
-
+		placeholder := placeholderName(segments, k)
 		if placeholder == "" {
 			errs = append(errs, fmt.Errorf(errorMessages.InvalidParam, "layer.paramMap", k))
 			continue
@@ -257,7 +266,6 @@ func applyParamMap(values map[string]string, paramMap map[string]paramMapping) b
 	return true
 }
 
-// Validator keys are compared ignoring case since the config loader lowercases them
 func unprotectedPlaceholders(matching layerMatching) []string {
 	res := make([]string, 0)
 
@@ -272,7 +280,7 @@ func unprotectedPlaceholders(matching layerMatching) []string {
 
 		validated := false
 		for k := range matching.validator {
-			if k == "*" || strings.EqualFold(k, seg.value) {
+			if k == "*" || k == seg.value {
 				validated = true
 			}
 		}
@@ -431,7 +439,7 @@ func resolveMatching(rawConfig config.LayerConfig, errorMessages config.ErrorMes
 	}
 
 	if isPattern && rawConfig.ParamValidator != nil {
-		res.validator, err = constructValidation(rawConfig.ParamValidator, errorMessages)
+		res.validator, err = constructValidation(rawConfig.ParamValidator, res.segments, errorMessages)
 		if err != nil {
 			return res, err
 		}
