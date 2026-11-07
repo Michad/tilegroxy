@@ -109,7 +109,7 @@ JSON::
 | None
 
 | layer.pattern
-| A string with one or more placeholders present wrapped in curly brackets (`{NAME}`) that match the layer placeholder you want to refer towards. If the layer you're using this from also uses a pattern, you can refer to its placeholders with `+{layer.NAME}+`
+| A string with one or more placeholders present wrapped in curly brackets (`+{NAME}+`) that match the layer placeholder you want to refer towards. If the layer you're using this from also uses a pattern, you can refer to its placeholders with `+{layer.NAME}+`
 | string
 | Yes
 | None

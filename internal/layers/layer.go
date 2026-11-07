@@ -16,6 +16,9 @@ package layers
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -42,6 +45,8 @@ import (
 var packageName = static.GetPackage()
 
 var metricNameSafeChars = regexp.MustCompile(`[^A-Za-z0-9_-]`)
+
+const autoCacheVersion = "auto"
 
 // Leaves room for the "tilegroxy.tiles.layer." prefix and longest suffix within OTEL's 255 character limit
 const maxSanitizedMetricNameLen = 200
@@ -475,6 +480,38 @@ func constructLayerCounters(layerID string) (metric.Int64Counter, metric.Int64Co
 	return tileAllCounter, tileAuthCounter, tileErrorCounter, tileSuccessCounter, errors.Join(err1, err2, err3, err4)
 }
 
+type cacheVersionInputs struct {
+	Provider map[string]any
+	Pattern  string
+	ParamMap map[string][]config.ParamMapEntry
+	Bounds   config.BoundsConfig
+	DataType config.DataType
+}
+
+// Hashes before env and secret substitution so rotating a secret doesn't invalidate the cache
+func resolveCacheVersion(rawConfig config.LayerConfig, errorMessages config.ErrorMessages) (string, error) {
+	if !strings.EqualFold(rawConfig.CacheVersion, autoCacheVersion) {
+		return rawConfig.CacheVersion, nil
+	}
+
+	inputs := cacheVersionInputs{
+		Provider: rawConfig.Provider,
+		Pattern:  rawConfig.Pattern,
+		ParamMap: rawConfig.ParamMap,
+		Bounds:   rawConfig.Bounds,
+		DataType: rawConfig.DataType,
+	}
+
+	encoded, err := json.Marshal(inputs)
+	if err != nil {
+		return "", fmt.Errorf(errorMessages.InvalidParam, "layer.cacheversion", err.Error())
+	}
+
+	sum := sha256.Sum256(encoded)
+
+	return hex.EncodeToString(sum[:8]) + "-", nil
+}
+
 func ConstructLayer(ctx context.Context, rawConfig config.LayerConfig, defaultClientConfig config.ClientConfig, layerCache cache.Cache, errorMessages config.ErrorMessages, layerGroup *LayerGroup, secreter secret.Secreter, datastoreRegistry *datastores.Registry, clientTransport func(config.ClientConfig) (http.RoundTripper, error)) (*Layer, error) {
 	var err error
 	if rawConfig.Client == nil {
@@ -490,6 +527,11 @@ func ConstructLayer(ctx context.Context, rawConfig config.LayerConfig, defaultCl
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	rawConfig.CacheVersion, err = resolveCacheVersion(rawConfig, errorMessages)
+	if err != nil {
+		return nil, err
 	}
 
 	rawConfig.Provider = configload.ReplaceEnv(rawConfig.Provider)

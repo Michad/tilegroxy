@@ -122,6 +122,27 @@ When specifying a cache ensure you include the `name` parameter.
 | No
 |===
 
+[#cache-keys]
+== Cache keys
+
+Each tile is stored under a key built from the layer name and the tile coordinates. This is the layer name from the incoming request, not the layer's `id`, so each value of a xref:layer.adoc#layer-names[pattern] is cached separately.
+
+The key is built up in this order:
+
+. The layer name from the request, such as `osm`
+. The layer's `cacheversion`
+. If using the xref:cache/tenant.adoc[tenant] cache, the tenant ID.
+. The zoom, x, and y coordinates
+
+For example, a request for `osm` tile 3/1/2 with a `cacheversion` of `v2` is stored at `/cache/v2osm/3/1/2` by a disk cache with `path: /cache` and the `coordinate` layout.
+
+[#cache-version]
+=== Cache version
+
+Changing a layer's `cacheversion` changes every key for that layer, so no existing entry matches anymore. Old entries aren't deleted. Treat it as a serial version number, such as `v1` then `v2`.
+
+If `cacheversion` is set to `auto`, tilegroxy will calculate a hash of the layer's configuration to use as the version. Changing any of the following invalidates the layer's cache: `provider`, `pattern`, `paramMap`, `bounds`, and `datatype`. The hash is taken before `env.` and `secret.` values are replaced, so rotating a secret or changing an environment variable won't invalidate the cache.
+
 == Overridable caches
 
 Layer configurations have the ability to specify a `cache` parameter that overrides the default cache configuration.  The top-level `cache` definition can be an array for specifying multiple distinct caches.  This is different from the `multi` cache mentioned above. The `multi` cache allows combining multiple physical caches into a single cache config, but specifying an array under `cache` directly specifies multiple distinct cache configs.
