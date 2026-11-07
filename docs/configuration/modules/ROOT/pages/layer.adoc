@@ -105,6 +105,12 @@ JSON::
 | No
 | None
 
+| paramMap
+| Replaces placeholder values with different ones before providers see them. Keyed by placeholder name, each with a list of `from` and `to` pairs. A value with no matching `from` doesn't match the layer unless the list has a `default` entry. See xref:operation::layer-patterns.adoc#mapping-values[Mapping values]
+| map[string]Object[]
+| No
+| None
+
 | provider
 | The configuration that drives how tiles are generated
 | xref:provider/index.adoc[Provider]
