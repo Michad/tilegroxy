@@ -4,6 +4,7 @@
 :page-eyebrow: Provider
 :page-config-name: cropmvt
 :page-tags: MVT
+:page-related: provider/index.adoc[Provider Overview], provider/crop.adoc, provider/cropmlt.adoc, authentication/jwt.adoc
 
 == Description
 

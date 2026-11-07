@@ -1,9 +1,12 @@
 = Layer Patterns
-:description: Layers in tilegroxy can be matched to incoming requests in one of two ways. The default method is to match the incoming layer name (from the URL) with the layer's configured id. A layer can instead define a pattern, which lets one layer configuration answer for many layer names. Parts of the name become placeholder values that providers can use, for instance to pick which upstream layer to proxy to.
+:description: Lets one layer configuration answer for many layer names. Parts of the name become placeholder values providers can use, such as to pick an upstream layer.
+:page-related: configuration::layer.adoc, configuration::provider/ref.adoc, howto/user-dynamic.adoc, security.adoc
 
 NOTE: This page explains how patterns behave. See xref:configuration::layer.adoc[Layer] for the full list of layer options.
 
 == Matching a layer name
+
+Layers in tilegroxy can be matched to incoming requests in one of two ways. The default method is to match the incoming layer name (from the URL) with the layer's configured id. A layer can instead define a pattern.
 
 Incoming tile requests look like `+/tiles/{layerName}/{z}/{x}/{y}+`. Tilegroxy checks each configured layer in the order they appear in the configuration and uses the first one that matches `layerName`:
 

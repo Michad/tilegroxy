@@ -1,8 +1,13 @@
 = CGI
 :page-aliases: operation::configuration/provider/cgi.adoc
-:description: The CGI provider allows a call-out to an external executable on the local system that's responsible for generating the tile. This allows tilegroxy to act as the HTTP server for a CGI program like Apache httpd or nginx traditionally acts. The flagship use-case for this is to integrate with MapServer. A full example is available in examples/mapserver.
+:description: Calls out to an external CGI executable, such as MapServer, to generate the tile.
 :page-eyebrow: Provider
 :page-config-name: cgi
+:page-related: provider/index.adoc[Provider Overview], client.adoc, provider/custom.adoc[Custom Provider], operation::howto/migrate-tilestache.adoc
+
+== Description
+
+This provider allows tilegroxy to act as the HTTP server for a CGI program like Apache httpd or nginx traditionally acts. The flagship use-case for this is to integrate with MapServer. A full example is available in examples/mapserver.
 
 == Example
 [tabs]

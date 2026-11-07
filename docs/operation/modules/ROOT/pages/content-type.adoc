@@ -1,7 +1,10 @@
 = Content Type
-:description: Every tile returned by tilegroxy carries a Content-Type, either received from an upstream server or known to the provider that generated it.  Content types from upstream servers are validated against an allowlist before being used.
+:description: How tilegroxy decides and validates the Content-Type of each tile.
+:page-related: configuration::provider/index.adoc[Provider Overview], configuration::client.adoc, configuration::error.adoc, security.adoc
 
 == Where the Content Type comes from
+
+Every tile returned by tilegroxy carries a Content-Type, either received from an upstream server or known to the provider that generated it.
 
 Providers that call an external HTTP server, such as xref:configuration::provider/proxy.adoc[proxy] and xref:configuration::provider/url_template.adoc[url template], use the `Content-Type` returned by that server after it passes validation.  The xref:configuration::provider/cgi.adoc[cgi] provider uses the `Content-Type` header written by the CGI application.
 
@@ -12,6 +15,8 @@ Providers that wrap another provider, such as xref:configuration::provider/fallb
 A xref:extensibility.adoc[custom provider] sets the `ContentType` field on the `Image` it returns.  Custom providers using the `GetTile` utility method receive the same validation and rewriting as built-in providers, which is one reason to prefer it over making your own HTTP request.
 
 == Validation and rewriting
+
+Content types from upstream servers are validated against an allowlist before being used.
 
 Two xref:configuration::client.adoc[client] options control what an external server is allowed to return.
 

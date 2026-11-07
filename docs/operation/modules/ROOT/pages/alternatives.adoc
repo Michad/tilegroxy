@@ -1,6 +1,7 @@
 = Alternatives
-:description: There's no shortage of tile servers and tile caches out there. Tilegroxy overlaps with a few of them but it isn't really trying to replace them. Here's how it stacks up.
+:description: How tilegroxy compares to other tile servers and tile caches. Tilegroxy overlaps with a few of them but it isn't really trying to replace them.
 :page-eyebrow: Get started
+:page-related: concepts.adoc, howto/migrate-tilestache.adoc, get-it.adoc
 
 NOTE: This is far from definitive. Double check the documentation for the other projects before taking anything here as gospel.
 

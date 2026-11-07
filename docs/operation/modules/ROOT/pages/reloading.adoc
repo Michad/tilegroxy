@@ -1,5 +1,6 @@
 = Reloading
 :description: Tilegroxy supports automatic reloading without a restart or downtime when running as a server.
+:page-related: commands::serve.adoc, commands::config_diff.adoc, configuration::secret/index.adoc[Secret Overview], configuration::tls/index.adoc[TLS Overview]
 
 == Reload triggers
 

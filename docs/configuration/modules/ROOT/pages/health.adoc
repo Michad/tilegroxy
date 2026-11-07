@@ -1,13 +1,14 @@
 = Health
 :page-aliases: operation::configuration/health.adoc
-:description: Tilegroxy includes a facility for validating the health of the tilegroxy server.  This information is served from a separate port from the main endpoints; this is done for security reasons to avoid the risk of leaking internal details which could be used to create targeted attacks.  The intent is for the health endpoints to be used with load balancers, monitoring tools, or orchestration systems (such as kubernetes).
+:description: Serves health check endpoints on a separate port for load balancers, monitoring tools, or orchestration systems (such as kubernetes).
 :page-config-key: health
+:page-related: server.adoc, log.adoc, operation::howto/productionizing.adoc
+
+WARNING: This information is served from a separate port from the main endpoints; this is done for security reasons to avoid the risk of leaking internal details which could be used to create targeted attacks. The health port should not be exposed outside your local network.
 
 == Description
 
-WARNING: The health port should not be exposed outside your local network.
-
-There are two specific endpoints available:
+There are two health endpoints available:
 
 [horizontal]
 `/`:: Returns a 204 once the tilegroxy server is online.

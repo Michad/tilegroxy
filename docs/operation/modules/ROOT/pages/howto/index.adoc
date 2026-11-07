@@ -1,5 +1,6 @@
 = How To
 :description: These pages start from something you're trying to accomplish and work through the options it takes.
+:page-related: examples/index.adoc, concepts.adoc, configuration.adoc
 
 == Available guides
 

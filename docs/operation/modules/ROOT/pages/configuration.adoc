@@ -1,5 +1,6 @@
 = Building your config
 :description: Tilegroxy has a comprehensive declarative configuration schema that's critical to understand. 
+:page-related: configuration::index.adoc, examples/index.adoc, commands::config_check.adoc, reloading.adoc, concepts.adoc
 
 NOTE: See the xref:configuration::index.adoc[Configuration Reference] for every available option and xref:examples/index.adoc[Examples] for complete configurations explained line by line.  More link:https://github.com/Michad/tilegroxy/tree/main/examples/configurations[examples are available in the repository].
 

@@ -4,6 +4,7 @@
 :page-aliases: operation::configuration/cache/index.adoc
 :description: The cache configuration defines the datastores where tiles should be stored/retrieved.
 :page-eyebrow: Cache
+:page-related: datastores/index.adoc[Datastores Overview], cache_control.adoc, commands::seed.adoc, operation::concepts.adoc
 
 == Description
 

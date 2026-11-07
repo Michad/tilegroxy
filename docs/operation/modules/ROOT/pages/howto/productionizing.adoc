@@ -1,8 +1,11 @@
 = Run in Production
-:description: Tilegroxy puts a lot of trust and responsibility in its operator to deploy it securely, in accordance to the operator's use case. It is heavily recommended you fully read through the documentation before deploying this in a production (i.e. internet facing) deployment. The following is a non-exhaustive checklist of things to consider:
+:description: A checklist of things to consider before deploying tilegroxy to production.
 :page-eyebrow: Guide
+:page-related: howto/index.adoc, security.adoc, telemetry.adoc, examples/production.adoc, configuration::health.adoc
 
 == Checklist
+
+Tilegroxy puts a lot of trust and responsibility in its operator to deploy it securely, in accordance to the operator's use case. It is heavily recommended you fully read through the documentation before deploying this in a production (i.e. internet facing) deployment. The following is a non-exhaustive checklist of things to consider:
 
 [%interactive]
 .Production checklist

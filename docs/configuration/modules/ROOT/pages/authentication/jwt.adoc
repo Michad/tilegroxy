@@ -3,6 +3,7 @@
 :description: Requires incoming requests include a JSON Web Token (JWT). The signature of the token is verified and grants are validated.
 :page-eyebrow: Authentication
 :page-config-name: jwt
+:page-related: authentication/index.adoc[Authentication Overview], provider/crop.adoc, operation::howto/user-dynamic.adoc, operation::examples/production.adoc
 
 NOTE: The verification key can either be a single key stored in configuration or supplied via environment variable, or a set of keys fetched from a remote https://datatracker.ietf.org/doc/html/rfc7517[JWKS] endpoint. See <<JWKS>>.
 

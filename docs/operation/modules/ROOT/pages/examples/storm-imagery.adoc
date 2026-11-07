@@ -1,6 +1,7 @@
 = Storm Imagery Mosaic
-:description: After a major storm, NOAA publishes aerial imagery of the affected area, with each flight as a separate tile set.  This configuration defines all of them with a single pattern layer and then blends the flights for one storm into a single layer.
+:description: NOAA publishes post-storm aerial imagery as one tile set per flight. This defines them all with one pattern layer and blends the flights for one storm.
 :page-eyebrow: Example
+:page-related: examples/index.adoc, layer-patterns.adoc, configuration::provider/blend.adoc, tilejson.adoc
 
 NOTE: See xref:layer-patterns.adoc[Layer Patterns] for more on how patterns work.
 

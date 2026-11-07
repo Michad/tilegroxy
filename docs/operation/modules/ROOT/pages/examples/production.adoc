@@ -1,8 +1,11 @@
 = Production Deployment
-:description: This configuration serves a single basemap layer behind JWT authentication, in a form suitable for an internet facing deployment.  It touches most top-level sections, so it's a good starting point to trim down from.  Read Run in Production alongside it for the parts of a deployment that live outside the configuration.
+:description: Serves a single basemap layer behind JWT authentication, in a form suitable for an internet facing deployment.
 :page-eyebrow: Example
+:page-related: examples/index.adoc, howto/productionizing.adoc, security.adoc, configuration::authentication/jwt.adoc
 
 == Configuration
+
+It touches most top-level sections, so it's a good starting point to trim down from.  Read xref:howto/productionizing.adoc[Run in Production] alongside it for the parts of a deployment that live outside the configuration.
 
 [tabs]
 ====

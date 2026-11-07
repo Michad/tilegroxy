@@ -1,7 +1,8 @@
 = Upgrading
-:description: What needs acting on when upgrading
+:description: Breaking changes and highlights you may want to adopt when upgrading.
+:page-related: compatibility.adoc, get-it.adoc, commands::config_check.adoc, commands::config_diff.adoc
 
-This covers breaking changes and the highlights you may want to adopt. Follow the release notes link under each version for the full change notes.
+TIP: Follow the release notes link under each version for the full change notes.
 
 NOTE: Releases before 1.0 do not follow the xref:compatibility.adoc[compatibility policy] and frequently include breaking changes.
 

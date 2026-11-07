@@ -2,6 +2,7 @@
 :page-aliases: operation::configuration/client.adoc
 :description: Configures how the HTTP client should operate for requests that require calling an external HTTP(s) server.
 :page-config-key: client
+:page-related: tls/index.adoc[TLS Overview], provider/proxy.adoc, server.adoc, operation::content-type.adoc
 
 == Example
 [tabs]

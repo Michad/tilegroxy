@@ -4,6 +4,7 @@
 :page-aliases: operation::configuration/datastores/index.adoc
 :description: Defines connections to shared resources, primarily databases.
 :page-eyebrow: Datastore
+:page-related: secret/index.adoc[Secret Overview], cache/index.adoc[Cache Overview], operation::reloading.adoc, operation::concepts.adoc
 
 == Description
 

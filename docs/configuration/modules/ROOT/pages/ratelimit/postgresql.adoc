@@ -1,10 +1,13 @@
 = PostgreSQL
 :page-aliases: operation::configuration/ratelimit/postgresql.adoc
-:description: Keeps rate limit counters in a PostgreSQL table, shared by every instance of tilegroxy.  This is a reasonable choice if you already run PostgreSQL, want quotas kept in a database you back up, and your traffic is moderate.  For high traffic use redis instead.
+:description: Keeps rate limit counters in a PostgreSQL table, shared by every instance of tilegroxy.
 :page-eyebrow: Rate Limit
 :page-config-name: postgresql
+:page-related: ratelimit/index.adoc[Rate Limit Overview], datastores/postgresql.adoc[PostgreSQL Datastore], ratelimit/redis.adoc[Redis Rate Limit], operation::ratelimit.adoc
 
 NOTE: Requires a xref:datastores/postgresql.adoc[postgresql datastore] to supply the connection.
+
+TIP: This is a reasonable choice if you already run PostgreSQL, want quotas kept in a database you back up, and your traffic is moderate.  For high traffic use redis instead.
 
 == Description
 

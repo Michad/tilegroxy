@@ -1,6 +1,7 @@
 = Configuration Reference
 :page-aliases: operation::configuration/index.adoc
 :description: These pages describe every configuration option tilegroxy supports.
+:page-related: operation::configuration.adoc, operation::concepts.adoc, operation::examples/index.adoc, commands::config_check.adoc
 
 == Structure
 

@@ -3,3 +3,4 @@
 :description: Disables the cache.
 :page-eyebrow: Cache
 :page-config-name: none
+:page-related: cache/index.adoc[Cache Overview], cache_control.adoc

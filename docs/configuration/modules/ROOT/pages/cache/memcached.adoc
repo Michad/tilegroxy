@@ -3,6 +3,7 @@
 :description: Cache tiles using memcached.
 :page-eyebrow: Cache
 :page-config-name: memcached
+:page-related: cache/index.adoc[Cache Overview], datastores/memcached.adoc[Memcached Datastore], cache/redis.adoc[Redis Cache]
 
 NOTE: Requires a xref:datastores/memcached.adoc[memcached datastore] to supply the connection.
 

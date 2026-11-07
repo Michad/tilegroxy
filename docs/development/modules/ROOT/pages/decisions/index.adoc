@@ -1,4 +1,5 @@
 = Decision Records
 :page-aliases: decisions::index.adoc
+:description: Architectural and other important design decisions reached during the development of tilegroxy.
 
-The documentation in this section describes architectural or otherwise important design decisions reached during the development of tilegroxy.  These documents lend insight into the philosophy, history, and design of tilegroxy. If you're a casual user of tilegroxy you can most likely ignore this section.
+NOTE: These documents lend insight into the philosophy, history, and design of tilegroxy. If you're a casual user of tilegroxy you can most likely ignore this section.

@@ -4,6 +4,7 @@
 :page-aliases: operation::configuration/ratelimit/index.adoc
 :description: Limits how many tiles can be requested in a period.
 :page-eyebrow: Rate Limit
+:page-related: operation::ratelimit.adoc, authentication/index.adoc[Authentication Overview], datastores/index.adoc[Datastores Overview], forwarded.adoc, commands::ratelimit_status.adoc
 
 == Description
 

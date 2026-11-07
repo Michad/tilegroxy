@@ -3,8 +3,11 @@
 :description: Crops raster tiles from a primary provider to a specific geographic area and displays tiles from a secondary provider in the remaining areas.
 :page-eyebrow: Provider
 :page-config-name: crop
+:page-related: provider/index.adoc[Provider Overview], provider/fallback.adoc, provider/cropmvt.adoc, authentication/jwt.adoc, operation::examples/regional-imagery.adoc
 
-NOTE: This is similar to the bounds parameter in the xref:provider/fallback.adoc[] provider but specific to raster tiles.  This provides a cleaner edge when zooming in and out but has greater overhead due to the image processing that occurs.
+== Description
+
+This provider is similar to the bounds parameter in the xref:provider/fallback.adoc[] provider but specific to raster tiles. It provides a cleaner edge when zooming in and out but has greater overhead due to the image processing that occurs. 
 
 == Example
 [tabs]

@@ -4,6 +4,7 @@
 :page-aliases: operation::configuration/provider/index.adoc
 :description: A provider represents the underlying functionality that "provides" the tiles that make up the mapping layer.
 :page-eyebrow: Provider
+:page-related: layer.adoc, operation::concepts.adoc, operation::content-type.adoc, operation::extensibility.adoc
 
 == Description
 

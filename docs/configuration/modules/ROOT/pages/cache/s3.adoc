@@ -3,6 +3,7 @@
 :description: Cache tiles as objects in an AWS S3 bucket, or some other S3 compatible object storage.
 :page-eyebrow: Cache
 :page-config-name: s3
+:page-related: cache/index.adoc[Cache Overview], cache/ttl.adoc, cache/multi.adoc
 
 == AWS specific notes
 

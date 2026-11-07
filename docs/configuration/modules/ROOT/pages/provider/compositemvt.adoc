@@ -1,9 +1,14 @@
 = Composite MVT
 :page-aliases: operation::configuration/provider/compositemvt.adoc
-:description: Allows you to combine MVTs. If given one child provider that returns an MVT with layer "a" and another that returns an MVT with layer "b", this will return an MVT with layers "a" and "b".  The contents of the MVTs are not changed in any way.
+:description: Combines the layers of MVTs from multiple providers into one tile.
 :page-eyebrow: Provider
 :page-config-name: compositemvt
 :page-tags: MVT
+:page-related: provider/index.adoc[Provider Overview], provider/compositemlt.adoc, provider/cropmvt.adoc, provider/blend.adoc, operation::examples/vector-basemap.adoc
+
+== Description
+
+If given one child provider that returns an MVT with layer "a" and another that returns an MVT with layer "b", this provider will return an MVT with layers "a" and "b".  The contents of the MVTs are not changed in any way.
 
 == Example
 [tabs]

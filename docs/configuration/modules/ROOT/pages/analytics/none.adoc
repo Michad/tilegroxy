@@ -3,5 +3,6 @@
 :description: Disables analytics.  Since analytics is off by default this is mainly useful for temporarily disabling a destination without removing its configuration.
 :page-eyebrow: Analytics
 :page-config-name: none
+:page-related: analytics/index.adoc[Analytics Overview], operation::analytics.adoc
 
 NOTE: The `id`, `fields`, `extraFields` and `batch` parameters common to every analytics module are still accepted and validated but have no effect.

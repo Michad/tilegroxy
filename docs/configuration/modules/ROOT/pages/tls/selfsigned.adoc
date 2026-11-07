@@ -2,6 +2,7 @@
 :description: Defines a TLS profile that generates a self-signed certificate for local development and testing.
 :page-eyebrow: TLS
 :page-config-name: selfsigned
+:page-related: tls/index.adoc[TLS Overview], encryption.adoc, tls/pem.adoc, operation::reloading.adoc
 
 NOTE: Only usable for xref:encryption.adoc[`server.encrypt.tls`].
 

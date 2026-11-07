@@ -1,5 +1,6 @@
 = Examples
 :description: These pages walk through a complete configuration, explaining how the pieces work together.
+:page-related: howto/index.adoc, configuration.adoc, quickstart.adoc
 
 == Available examples
 

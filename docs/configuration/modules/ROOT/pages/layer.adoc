@@ -1,7 +1,8 @@
 = Layer
 :page-aliases: operation::configuration/layer.adoc
-:description: A layer represents a distinct mapping layer as would be displayed in a typical web map application.  Each layer can be accessed independently from other map layers. The main thing that needs to be configured for a layer is its provider.
+:description: Defines a distinct layer as would be displayed on a typical map application.  
 :page-config-key: layers[]
+:page-related: provider/index.adoc[Provider Overview], cache/index.adoc[Cache Overview], operation::layer-patterns.adoc, operation::concepts.adoc
 
 == Layer names
 

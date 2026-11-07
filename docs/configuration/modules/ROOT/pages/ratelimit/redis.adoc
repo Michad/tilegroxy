@@ -3,6 +3,7 @@
 :description: Keeps rate limit counters in redis or another redis-compatible key-value store, shared by every instance of tilegroxy.
 :page-eyebrow: Rate Limit
 :page-config-name: redis
+:page-related: ratelimit/index.adoc[Rate Limit Overview], datastores/redis.adoc[Redis Datastore], ratelimit/postgresql.adoc[PostgreSQL Rate Limit], operation::ratelimit.adoc
 
 NOTE: Requires a xref:datastores/redis.adoc[redis datastore] to supply the connection.
 

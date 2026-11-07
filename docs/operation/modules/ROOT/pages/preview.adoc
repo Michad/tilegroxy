@@ -1,5 +1,6 @@
 = Layer Preview
-:description: Tilegroxy can generate a standalone HTML page previewing a single layer on a MapLibre map, so you can visually confirm that a layer works without a separate GIS client.
+:description: Generates an HTML page previewing a single layer on a MapLibre map, to visually check it without a GIS client.
+:page-related: tilejson.adoc, configuration::server.adoc, quickstart.adoc
 
 NOTE: The preview page is a development aid and is only available when xref:configuration::server.adoc[Server.Production] is `false`.
 

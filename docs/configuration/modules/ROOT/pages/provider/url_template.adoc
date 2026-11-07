@@ -1,8 +1,11 @@
 = URL Template
 :page-aliases: operation::configuration/provider/url_template.adoc
-:description: The URL Template provider overlaps with the Proxy provider but is meant specifically for WMS endpoints. Instead of merely supplying tile coordinates, the URL Template provider will supply the bounding box. This provider is available mostly for compatibility, you generally should use Proxy instead.
+:description: Supplies the bounding box of each tile to a WMS endpoint through a URL template.
 :page-eyebrow: Provider
 :page-config-name: url template
+:page-related: provider/index.adoc[Provider Overview], provider/proxy.adoc, client.adoc, operation::howto/migrate-tilestache.adoc
+
+TIP: This provider overlaps with the xref:provider/proxy.adoc[Proxy] provider and is available mostly for compatibility, you generally should use Proxy instead.
 
 NOTE: Only supports EPSG:4326 and EPSG:3857
 

@@ -3,6 +3,7 @@
 :description: Wraps another cache to enforce an expiration on top of it. This is useful if your cache doesn't support a native time-to-live but your layer changes over time.
 :page-eyebrow: Cache
 :page-config-name: ttl
+:page-related: cache/index.adoc[Cache Overview], cache_control.adoc, cache/s3.adoc, cache/disk.adoc
 
 IMPORTANT: This does not actually delete data from your cache, it merely turns a cache hit into a miss when the data is old. If your concern is legal compliance, disk usage, or cloud cost, you will still need an external solution.
 

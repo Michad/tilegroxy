@@ -1,6 +1,6 @@
 = Rate Limit Status
 :page-aliases: operation::commands/ratelimit_status.adoc
-:description: Checks whether a tile request from a given user, tenant, or IP address would be rate limited and which rules are blocking it. Useful for answering support questions and checking how close a customer is to their quota.
+:description: Checks whether a request from a given user, tenant, or IP address would be rate limited and why. Useful for support questions and quota checks.
 :page-eyebrow: Command
 :page-command: tilegroxy ratelimit status
 

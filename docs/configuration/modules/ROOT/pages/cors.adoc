@@ -2,6 +2,7 @@
 :page-aliases: operation::configuration/cors.adoc
 :description: Configuration for returning cross-origin resource sharing (CORS) headers on all endpoints (healthcheck excluded). Disabled by default.
 :page-config-key: server.cors
+:page-related: server.adoc, forwarded.adoc, operation::security.adoc
 
 == Description
 

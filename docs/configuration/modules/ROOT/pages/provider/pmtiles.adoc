@@ -1,10 +1,13 @@
 = PMTiles
 :page-aliases: operation::configuration/provider/pmtiles.adoc
-:description: Serves tiles out of a PMTiles archive. A PMTiles archive contains a pre-rendered tileset. This provider works either with a local file or via HTTP(s) (using range requests).
+:description: Serves tiles out of a PMTiles archive, either from a local file or via HTTP(s).
 :page-eyebrow: Provider
 :page-config-name: pmtiles
+:page-related: provider/index.adoc[Provider Overview], client.adoc, provider/compositemvt.adoc, operation::examples/vector-basemap.adoc
 
 == Description
+
+A PMTiles archive contains a pre-rendered tileset. 
 
 NOTE: The archive is treated as immutable and static, the file and URL won't work with request-time parameters.
 
@@ -13,6 +16,8 @@ Brotli or zstd compression are *not* supported. The `Content-Type` of every tile
 We pull metadata fields (including zoom range, bounds, and datatype) from the archive and make them available as defaults for the xref:layer.adoc[layer]. If you set `bounds` on the layer you must also set `datatype`, since the layer decides how to crop before the archive is opened.
 
 When using a URL the xref:client.adoc[client] `MaxLength` limits the size of every section/tile after any decompression. Archives with dense vector tiles may need a higher limit, but be mindful that increasing the size too much could leave you vulnerable to supply-side attacks. Local files have no such limit as those are under your control. The client configured `StatusCodes`, `ContentTypes`, and `UnknownLength` checks aren't enforced for this provider due the peculiarities of HTTP range requests.
+
+NOTE: Access via HTTP(s) uses range requests.
 
 A request for a tile that isn't in the archive is treated as out of bounds and returns the xref:error.adoc[out of bounds error]. Wrap this provider in a xref:provider/fallback.adoc[fallback] if you want another provider to fill those gaps. 
 

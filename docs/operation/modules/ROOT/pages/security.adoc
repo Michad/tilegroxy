@@ -1,5 +1,6 @@
 = Security
 :description: This document describes the considerations one should have when deploying tilegroxy inside a security sensitive environment.
+:page-related: howto/productionizing.adoc, layer-patterns.adoc, configuration::authentication/index.adoc[Authentication Overview], configuration::encryption.adoc
 
 == Philosophy
 

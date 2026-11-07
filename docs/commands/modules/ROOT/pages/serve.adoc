@@ -1,6 +1,6 @@
 = Serve
 :page-aliases: operation::commands/serve.adoc, operation::commands/index.adoc
-:description: The main operating mode of tilegroxy. Starts up an HTTP server and responds to incoming web requests. The process runs blocking in the foreground until terminated.
+:description: The main operating mode of tilegroxy. Starts up an HTTP server and responds to incoming web requests.
 :page-eyebrow: Command
 :page-command: tilegroxy serve
 
@@ -69,4 +69,4 @@ Use xref:config_check.adoc[config check] to validate the configuration without s
 
 The `--hot-reload` flag watches the configuration file and applies changes without a restart. It requires a file, therefore it cannot be combined with `--raw-config` or the `--remote-*` flags. Independent of that flag, the `SIGHUP` signal always reloads the configuration from wherever it was originally loaded, including the `--remote-*` flags. See xref:operation::reloading.adoc[Reloading Configuration] for details.
 
-The `SIGINT` or `SIGTERM` signals cause the server to gracefully shut down, allowing in-flight requests to finish and buffered analytics to flush. See xref:operation::reloading.adoc[Shutdown] for more on that.
+The process runs blocking in the foreground until terminated. The `SIGINT` or `SIGTERM` signals cause the server to gracefully shut down, allowing in-flight requests to finish and buffered analytics to flush. See xref:operation::reloading.adoc[Shutdown] for more on that.

@@ -1,7 +1,8 @@
 = Operation
 :description: These pages cover getting tilegroxy running, configuring it for your maps, and operating it in production.
+:page-related: concepts.adoc, quickstart.adoc, configuration::index.adoc, commands::serve.adoc
 
-See xref:configuration::index.adoc[Configuration] for every configuration option and xref:commands::serve.adoc[Commands] for every command.
+NOTE: See xref:configuration::index.adoc[Configuration] for every configuration option and xref:commands::serve.adoc[Commands] for every command.
 
 == Get started
 

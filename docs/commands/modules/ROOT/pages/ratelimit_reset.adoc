@@ -1,6 +1,6 @@
 = Rate Limit Reset
 :page-aliases: operation::commands/ratelimit_reset.adoc
-:description: Sets one rate limit counter back to zero, such as the monthly quota of a single tenant. Useful for granting a customer more requests after a mistake or a support request.
+:description: Sets one rate limit counter back to zero, such as a tenant's monthly quota. Useful for granting more requests after a mistake or a support request.
 :page-eyebrow: Command
 :page-command: tilegroxy ratelimit reset
 

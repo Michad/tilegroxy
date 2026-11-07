@@ -2,6 +2,7 @@
 :page-aliases: operation::configuration/cache_control.adoc
 :description: Configuration for the Cache-Control header returned on tile responses. Disabled by default.
 :page-config-key: server.cachecontrol
+:page-related: server.adoc, cache/ttl.adoc, layer.adoc, operation::howto/user-dynamic.adoc
 
 == Description
 

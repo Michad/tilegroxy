@@ -3,6 +3,7 @@
 :description: Cache tiles using redis or another redis-compatible key-value store.
 :page-eyebrow: Cache
 :page-config-name: redis
+:page-related: cache/index.adoc[Cache Overview], datastores/redis.adoc[Redis Datastore], cache/memcached.adoc[Memcached Cache]
 
 NOTE: Requires a xref:datastores/redis.adoc[redis datastore] to supply the connection.
 
