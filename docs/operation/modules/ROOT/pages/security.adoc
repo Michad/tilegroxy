@@ -13,7 +13,7 @@ Tilegroxy draws a distinction between inputs provided by the Operator (probably 
 
 Tilegroxy supports parameterized layer names where each parameter is arbitrary user input. By default these parameters are not used for anything and merely provide flexibility in how one refers to a map layer. However, the Operator can configure these parameters to be used in a variety of ways, for instance placed inside of proxied URLs, inside of SQL as parameters in Prepared Statements, or as inputs in arbitrary code.  
 
-A `paramValidator` xref:configuration::layer.adoc[layer] option is available that allows defining a Regular Expression to validate the parameters specified. It is recommended the Operator defines restrictions as tight as possible, often allowing only alphanumeric values.
+The possible values can be constrained in two ways: a `paramValidator` that applies a Regular Expression to validate the parameters specified, and a `paramMap` that allows restricting to a static set of possible values. It is recommended the Operator defines restrictions as tightly as possible.
 
 IMPORTANT: The configuration for tilegroxy should be treated the same as one would treat code, it should be carefully reviewed, kept in source control, and one should never trust complex configuration from third parties without vetting it for bugs and vulnerabilities.  
 

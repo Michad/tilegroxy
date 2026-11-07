@@ -92,6 +92,37 @@ layers:
 	assert.Equal(t, "https://hd.example.com/{layer.region}/{z}/{x}/{y}", c.Layers[1].Provider["url"])
 }
 
+func TestLoadConfig_ParamMap(t *testing.T) {
+	c, err := LoadConfig(`
+layers:
+  - id: flood
+    pattern: "flood_{type}"
+    paramMap:
+      type:
+        - from: River_Flood
+          to: RiverFlood_v2
+    provider:
+      name: static
+      color: FFF
+  - id: dated
+    pattern: "dated_{version}"
+    paramMap:
+      version:
+        - from: 2012
+          to: 2012a
+        - default: true
+          to: 1900
+    provider:
+      name: static
+      color: FFF
+`)
+
+	require.NoError(t, err)
+	require.Len(t, c.Layers, 2)
+	assert.Equal(t, []config.ParamMapEntry{{From: "River_Flood", To: "RiverFlood_v2"}}, c.Layers[0].ParamMap["type"])
+	assert.Equal(t, []config.ParamMapEntry{{From: "2012", To: "2012a"}, {Default: true, To: "1900"}}, c.Layers[1].ParamMap["version"])
+}
+
 func TestLoadConfig_ExtensionKeyForms(t *testing.T) {
 	for name, raw := range map[string]string{
 		"scalar":       "x-note: hello\nlayers: []\n",

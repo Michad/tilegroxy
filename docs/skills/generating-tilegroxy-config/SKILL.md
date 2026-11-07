@@ -129,7 +129,7 @@ materially changes which entity or page to read next.
    for real deployments, `multi` to tier a fast cache in front of a slow one, `ttl` to wrap
    any cache with expiration.
 2. **Define layers.** Each layer needs `id` and `provider`. Start with one provider per
-   layer; add `pattern`/`paramValidator`/`examples` only when the layer needs
+   layer; add `pattern`/`paramValidator`/`paramMap`/`examples` only when the layer needs
    placeholder-based matching (see `layer.adoc`).
 3. **Pick a provider per layer.** `proxy` (ZXY/TMS tile server) and `url_template` (WMS)
    are the common leaves. `ref`, `fallback`, `blend`, `crop`/`cropmvt`/`cropmlt`, `transform`,

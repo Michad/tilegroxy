@@ -265,16 +265,23 @@ type LogConfig struct {
 	Audit  AuditConfig
 }
 
+type ParamMapEntry struct {
+	From    string // A value accepted from the incoming layer name
+	To      string // The value providers see in its place. On a default entry, leave empty to pass the value through unchanged
+	Default bool   // If true, applies to every value no other entry lists. Only one per placeholder and it must not have From
+}
+
 type LayerConfig struct {
-	ID             string            // A distinct identifier for this layer. If no pattern is defined this is used to match against the layer name. Also used
-	Pattern        string            // A pattern to match against for layer names in incoming requests. Includes placeholders from which values can be extracted when matching. Not regular expressions, placeholders are simply wrapped in curly braces
-	ParamValidator map[string]string // A mapping of regular expressions to use for each value extracted from the pattern. Keys must match the placeholders in pattern. This is external from the pattern itself to keep parsing the pattern simple and less error prone. If a key of "*" is defined it applies to all placeholders
-	Provider       map[string]any    // Raw config parameters for the provider to use. Name determines the specific schema
-	SkipCache      bool              // If true, don't use the cache
-	SkipAnalytics  bool              // If true, successful requests for this layer don't produce analytics events
-	RateLimit      string            // Optional. The ID of the rate limit policy for this layer instead of the default
-	SkipRateLimit  bool              // If true, requests for this layer are never checked against or counted by a rate limit
-	Client         *ClientConfig     // If specified, the default Client is overridden.
+	ID             string                     // A distinct identifier for this layer. If no pattern is defined this is used to match against the layer name. Also used
+	Pattern        string                     // A pattern to match against for layer names in incoming requests. Includes placeholders from which values can be extracted when matching. Not regular expressions, placeholders are simply wrapped in curly braces
+	ParamValidator map[string]string          // A mapping of regular expressions to use for each value extracted from the pattern. Keys must match the placeholders in pattern. This is external from the pattern itself to keep parsing the pattern simple and less error prone. If a key of "*" is defined it applies to all placeholders
+	ParamMap       map[string][]ParamMapEntry // Optional. Replaces a placeholder's value before providers see it. Keyed by placeholder name. Values not listed don't match the layer unless there's a default entry
+	Provider       map[string]any             // Raw config parameters for the provider to use. Name determines the specific schema
+	SkipCache      bool                       // If true, don't use the cache
+	SkipAnalytics  bool                       // If true, successful requests for this layer don't produce analytics events
+	RateLimit      string                     // Optional. The ID of the rate limit policy for this layer instead of the default
+	SkipRateLimit  bool                       // If true, requests for this layer are never checked against or counted by a rate limit
+	Client         *ClientConfig              // If specified, the default Client is overridden.
 	LayerMetadata  `mapstructure:",squash" yaml:",inline"`
 	Examples       []string            // Optional. Concrete layer names used to generate TileJSON documents for a `pattern` layer. Has no effect on a layer identified by a plain id
 	CacheVersion   string              // Optional. Allows invalidating cache entries when changed. Prefixed into cache keys but not he actual layer name
