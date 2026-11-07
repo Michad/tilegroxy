@@ -159,7 +159,7 @@ func ValidateTLS(ctx context.Context, cfg *config.Config, reg *tlsprofiles.Regis
 		}
 	}
 
-	reg.WarnUnused(ctx)
+	reg.LogWarnings(ctx)
 
 	return nil
 }

@@ -360,11 +360,11 @@ func Test_NilRegistry(t *testing.T) {
 	require.NoError(t, err)
 	assert.Nil(t, transport)
 
-	r.WarnUnused(context.Background())
+	r.LogWarnings(context.Background())
 	require.NoError(t, r.Close(context.Background()))
 }
 
-func Test_WarnUnused(t *testing.T) {
+func Test_LogWarnings(t *testing.T) {
 	var buf bytes.Buffer
 	prev := slog.Default()
 	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, nil)))
@@ -384,10 +384,43 @@ func Test_WarnUnused(t *testing.T) {
 	_, err = r.ClientTransport(config.ClientConfig{TLS: "clean"})
 	require.NoError(t, err)
 
-	r.WarnUnused(context.Background())
+	r.LogWarnings(context.Background())
 
 	out := buf.String()
 	assert.Contains(t, out, "TLS profile orphan is not referenced")
 	assert.Contains(t, out, "TLS profile partial sets parameters no reference uses: allowedhosts, certificate, key")
 	assert.NotContains(t, out, "clean")
+}
+
+func Test_LogWarnings_ProxyWithMTLS(t *testing.T) {
+	var buf bytes.Buffer
+	prev := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, nil)))
+	t.Cleanup(func() { slog.SetDefault(prev) })
+
+	ca := testutil.NewCA(t, "ca")
+	leaf := ca.Issue(t, "a.example.com")
+
+	r := mustBuild(t,
+		map[string]any{"name": "pem", "id": "mtls", "certificate": string(leaf.CertPEM), "key": string(leaf.KeyPEM)},
+		map[string]any{"name": "pem", "id": "plain", "ca": string(ca.CertPEM)},
+	)
+
+	_, err := r.ClientTransport(config.ClientConfig{TLS: "plain"})
+	require.NoError(t, err)
+
+	t.Setenv("HTTPS_PROXY", "https://proxy.example.com")
+	r.LogWarnings(context.Background())
+	assert.NotContains(t, buf.String(), "HTTPS_PROXY", "no warning without a client certificate in use")
+
+	_, err = r.ClientTransport(config.ClientConfig{MTLS: "mtls"})
+	require.NoError(t, err)
+
+	t.Setenv("HTTPS_PROXY", "")
+	r.LogWarnings(context.Background())
+	assert.NotContains(t, buf.String(), "HTTPS_PROXY", "no warning without a proxy")
+
+	t.Setenv("https_proxy", "https://proxy.example.com")
+	r.LogWarnings(context.Background())
+	assert.Contains(t, buf.String(), "HTTPS_PROXY is set while TLS profiles mtls present client certificates")
 }
