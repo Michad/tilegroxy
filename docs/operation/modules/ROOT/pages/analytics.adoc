@@ -1,5 +1,6 @@
 = Analytics
 :description: Analytics defines where tilegroxy records lightweight events describing successful tile usage.  
+:page-related: configuration::analytics/index.adoc[Analytics Overview], telemetry.adoc, ratelimit.adoc, configuration::forwarded.adoc
 
 == Overview
 

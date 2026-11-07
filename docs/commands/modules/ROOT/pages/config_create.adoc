@@ -1,8 +1,10 @@
 = Config Create
 :page-aliases: operation::commands/config_create.adoc
-:description: Outputs a valid configuration value containing all default values. Provided as a maybe-useful helper, not necessarily a good starting point. Consider using the Skill to help get started if you're struggling with following the docs.
+:description: Outputs a valid configuration value containing all default values.
 :page-eyebrow: Command
 :page-command: tilegroxy config create
+
+TIP: This is provided as a maybe-useful helper, not necessarily a good starting point. Consider using the xref:operation::configuration.adoc#ai-lazy-button[Skill] to help get started if you're struggling with following the docs.
 
 == Usage
 

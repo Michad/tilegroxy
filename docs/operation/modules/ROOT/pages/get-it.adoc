@@ -1,6 +1,9 @@
 = How to get it
-:description: Tilegroxy is available as a standalone executable or a container image. It's recommended you utilize a container for any serious deployment while the standalone executable can be useful to run locally while building your configuration.
+:description: Tilegroxy is available as a standalone executable or a container image.
 :page-eyebrow: Get started
+:page-related: quickstart.adoc, compatibility.adoc, commands::serve.adoc
+
+TIP: It's recommended you utilize a container for any serious deployment while the standalone executable can be useful to run locally while building your configuration.
 
 == Building
 

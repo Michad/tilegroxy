@@ -3,6 +3,7 @@
 :description: Validates incoming requests by passing its auth token to an existing HTTP endpoint 
 :page-eyebrow: Authentication
 :page-config-name: passthrough
+:page-related: authentication/index.adoc[Authentication Overview], client.adoc, tls/index.adoc[TLS Overview], operation::howto/multi-tenant.adoc
 
 NOTE: This authentication method can associate a user ID and tenant ID to the request, but does not support authorization options (allowed layers or bounding box).
 

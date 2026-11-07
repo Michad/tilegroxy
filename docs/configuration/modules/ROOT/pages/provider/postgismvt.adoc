@@ -1,11 +1,12 @@
 = Postgis Vector (MVT)
 :page-aliases: operation::configuration/provider/postgismvt.adoc
-:description: This provider pulls from a table/view in a PostgreSQL database with a Postgis Geometry column and outputs in MVT format.  This requires Postgis 3.X with a corresponding version of PostgreSQL.  This provider does not support raster or geography data.
+:description: Pulls from a table/view in a PostgreSQL database with a Postgis Geometry column and outputs in MVT format.
 :page-eyebrow: Provider
 :page-config-name: postgismvt
 :page-tags: MVT
+:page-related: provider/index.adoc[Provider Overview], datastores/postgresql.adoc[PostgreSQL Datastore], provider/compositemvt.adoc, operation::security.adoc, operation::examples/historical-boundaries.adoc
 
-NOTE: Requires a xref:datastores/postgresql.adoc[postgresql datastore] to supply the connection.
+NOTE: Requires a xref:datastores/postgresql.adoc[postgresql datastore] to supply the connection.  This requires Postgis 3.X with a corresponding version of PostgreSQL.  This provider does not support raster or geography data.
 
 NOTE: The intent of this provider is to avoid needing to install and operate a separate server for light use-cases with standard table structures. The data is pulled from postgis using built-in functions and a fixed format.  If you need a highly customized query to pull the data from PG then it's recommended you use a dedicated server for this such as link:https://mapserver.org/[Mapserver] (see the xref:provider/cgi.adoc[CGI provider]) or link:https://martin.maplibre.org/[Martin] (see the xref:provider/proxy.adoc[Proxy provider]).
 

@@ -3,6 +3,7 @@
 :description: Defines a connection pool to a PostgreSQL database.  Utilizes pgx under the hood which supports PostgreSQL 12 and higher.
 :page-eyebrow: Datastore
 :page-config-name: postgresql
+:page-related: datastores/index.adoc[Datastores Overview], provider/postgismvt.adoc, analytics/postgresql.adoc[PostgreSQL Analytics], ratelimit/postgresql.adoc[PostgreSQL Rate Limit], authentication/bearer.adoc
 
 NOTE: Used by the xref:provider/postgismvt.adoc[postgismvt provider], xref:analytics/postgresql.adoc[postgresql analytics], xref:authentication/bearer.adoc[bearer authentication], and xref:ratelimit/postgresql.adoc[postgresql rate limit].
 

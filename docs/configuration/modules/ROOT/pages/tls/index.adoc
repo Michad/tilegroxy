@@ -4,6 +4,7 @@
 :page-aliases: operation::configuration/tls/index.adoc
 :description: TLS profiles hold the certificates, keys, and trusted CAs used for HTTPS.
 :page-eyebrow: TLS
+:page-related: encryption.adoc, client.adoc, secret/index.adoc[Secret Overview], operation::reloading.adoc
 
 == Description
 

@@ -3,6 +3,7 @@
 :description: Stores the cache entries as files in a location on the filesystem.
 :page-eyebrow: Cache
 :page-config-name: disk
+:page-related: cache/index.adoc[Cache Overview], cache/multi.adoc, cache/ttl.adoc, commands::seed.adoc
 
 == Description
 

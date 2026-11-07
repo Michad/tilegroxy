@@ -1,7 +1,10 @@
 = Rate Limiting
-:description: Rate limiting caps how many tiles can be requested in a period, anything from a burst over a few seconds to a quota over a month. Limits can apply per user, per tenant, per IP address, per layer, or any combination.
+:description: Caps how many tiles can be requested in a period, per user, tenant, IP address, layer, or any combination.
+:page-related: configuration::ratelimit/index.adoc[Rate Limit Overview], commands::ratelimit_status.adoc, analytics.adoc, security.adoc
 
 == Overview
+
+Limits can cover anything from a burst over a few seconds to a quota over a month.
 
 This is useful for keeping one user from starving everyone else, keeping the total traffic to an expensive layer within what you're willing to serve, and enforcing usage quotas on a tenant.  Rate limiting is disabled by default.
 

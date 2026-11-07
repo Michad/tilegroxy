@@ -3,6 +3,7 @@
 :description: Defines a connection to memcached. Utilizes gomemcache under the hood.
 :page-eyebrow: Datastore
 :page-config-name: memcached
+:page-related: datastores/index.adoc[Datastores Overview], cache/memcached.adoc[Memcached Cache]
 
 NOTE: Used by the xref:cache/memcached.adoc[memcached cache].
 

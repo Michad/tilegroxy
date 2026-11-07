@@ -2,6 +2,7 @@
 :page-aliases: operation::configuration/server.adoc
 :description: Configures how the HTTP server should operate
 :page-config-key: server
+:page-related: encryption.adoc, cors.adoc, forwarded.adoc, cache_control.adoc, health.adoc
 
 == Example
 [tabs]

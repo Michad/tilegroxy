@@ -2,6 +2,7 @@
 :page-aliases: operation::configuration/log.adoc
 :description: Configures how the application should log during operation.
 :page-config-key: logging
+:page-related: telemetry.adoc[Telemetry Configuration], error.adoc, operation::telemetry.adoc, operation::security.adoc
 
 NOTE: The `logging` section supports three keys: <<main-logs,`main`>>, <<access-logs,`access`>> and <<audit-logs,`audit`>>, which are objects described below.
 

@@ -3,6 +3,7 @@
 :description: Requires incoming requests include an API token that is looked up in a datastore. Requests without a valid token are rejected.
 :page-eyebrow: Authentication
 :page-config-name: bearer
+:page-related: authentication/index.adoc[Authentication Overview], datastores/index.adoc[Datastores Overview], authentication/static_key.adoc, operation::howto/multi-tenant.adoc
 
 NOTE: Requires a xref:datastores/postgresql.adoc[postgresql] or xref:datastores/redis.adoc[redis] datastore to supply the connection.
 

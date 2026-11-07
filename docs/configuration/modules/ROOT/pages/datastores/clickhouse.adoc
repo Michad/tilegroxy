@@ -3,6 +3,7 @@
 :description: Defines a connection pool to a ClickHouse database.  Utilizes clickhouse-go under the hood.
 :page-eyebrow: Datastore
 :page-config-name: clickhouse
+:page-related: datastores/index.adoc[Datastores Overview], analytics/clickhouse.adoc[ClickHouse Analytics]
 
 NOTE: Used by the xref:analytics/clickhouse.adoc[clickhouse analytics module].
 

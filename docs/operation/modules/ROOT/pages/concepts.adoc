@@ -1,5 +1,6 @@
 = Concepts
 :description: Tilegroxy has a few key concepts to understand.
+:page-related: configuration.adoc, configuration::layer.adoc, configuration::provider/index.adoc[Provider Overview], configuration::cache/index.adoc[Cache Overview], quickstart.adoc
 
 == Operators and Users
 

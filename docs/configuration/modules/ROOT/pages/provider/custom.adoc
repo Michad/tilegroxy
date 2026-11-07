@@ -1,10 +1,11 @@
 = Custom
 :page-aliases: operation::configuration/provider/custom.adoc
-:description: Custom providers implement your own custom logic for providing imagery from whatever source you can imagine.  They require a custom Go script file interpreted using Yaegi.  
+:description: Custom providers implement your own custom logic for providing imagery from whatever source you can imagine.
 :page-eyebrow: Provider
 :page-config-name: custom
+:page-related: provider/index.adoc[Provider Overview], provider/transform.adoc, operation::extensibility.adoc, operation::layer-patterns.adoc
 
-NOTE: See xref:operation::extensibility.adoc[Extensibility] for more information
+NOTE: Custom providers require a Go script file interpreted using Yaegi. See xref:operation::extensibility.adoc[Extensibility] for more information
 
 == Example
 [tabs]

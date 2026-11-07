@@ -1,8 +1,11 @@
 = PostgreSQL
 :page-aliases: operation::configuration/analytics/postgresql.adoc
-:description: Writes events to a PostgreSQL table.  This is a reasonable choice if you already run PostgreSQL and your event volume is moderate.  For high volume analytics it's recommended you use ClickHouse instead.
+:description: Writes events to a PostgreSQL table.
 :page-eyebrow: Analytics
 :page-config-name: postgresql
+:page-related: analytics/index.adoc[Analytics Overview], datastores/postgresql.adoc[PostgreSQL Datastore], analytics/clickhouse.adoc[ClickHouse Analytics], operation::analytics.adoc
+
+TIP: This is a reasonable choice if you already run PostgreSQL and your event volume is moderate.  For high volume analytics it's recommended you use ClickHouse instead.
 
 NOTE: Requires a xref:datastores/postgresql.adoc[postgresql datastore] to supply the connection.  
 

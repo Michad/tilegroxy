@@ -3,6 +3,7 @@
 :description: Defines a TLS profile that obtains and renews certificates automatically via Let's Encrypt (ACME). Utilizes Go's built-in autocert module under the hood.
 :page-eyebrow: TLS
 :page-config-name: acme
+:page-related: tls/index.adoc[TLS Overview], encryption.adoc, tls/pem.adoc, operation::reloading.adoc
 
 NOTE: Only usable for xref:encryption.adoc[`server.encrypt.tls`].
 

@@ -2,6 +2,7 @@
 :page-aliases: operation::configuration/tilejson.adoc
 :description: Configuration for serving TileJSON documents describing configured layers. 
 :page-config-key: server.tilejson
+:page-related: operation::tilejson.adoc, forwarded.adoc, server.adoc, layer.adoc
 
 NOTE: See xref:operation::tilejson.adoc[TileJSON operation] for a full description of the endpoints, document structure, and how authentication applies.
 

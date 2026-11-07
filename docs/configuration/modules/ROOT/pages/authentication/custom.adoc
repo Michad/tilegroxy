@@ -1,10 +1,13 @@
 = Custom
 :page-aliases: operation::configuration/authentication/custom.adoc
-:description: Allows you to specify your own logic controlling how auth tokens should be extracted and validated. This, like the custom provider, utilizes Yaegi to allow you to supply your own custom code.
+:description: Allows you to specify your own logic controlling how auth tokens should be extracted and validated.
 :page-eyebrow: Authentication
 :page-config-name: custom
+:page-related: authentication/index.adoc[Authentication Overview], operation::extensibility.adoc, provider/custom.adoc[Custom Provider], operation::howto/multi-tenant.adoc
 
 == Description
+
+This, like the custom provider, utilizes Yaegi to allow you to supply your own custom code.
 
 To help mitigate the performance impact of calling the interpreted `validate` method, a cache is utilized by default. In turn, to avoid concurrent requests that utilize the same token from causing repetitive calls to `validate`, a pool of locks are utilized when the cache is enabled. The size of the lock pool is equal to the number of CPUs.
 

@@ -2,6 +2,7 @@
 :page-aliases: operation::configuration/error.adoc
 :description: Configures how errors are returned to users.
 :page-config-key: error
+:page-related: layer.adoc, log.adoc, provider/static.adoc, operation::content-type.adoc
 
 == Operating modes
 

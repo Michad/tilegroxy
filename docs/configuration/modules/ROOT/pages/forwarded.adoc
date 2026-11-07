@@ -2,6 +2,7 @@
 :page-aliases: operation::configuration/forwarded.adoc
 :description: Configures which proxies in front of tilegroxy are trusted to report the original client IP, host, protocol, port, and path prefix.
 :page-config-key: server.forwarded
+:page-related: server.adoc, ratelimit/index.adoc[Rate Limit Overview], operation::security.adoc, operation::tilejson.adoc
 
 == Description
 

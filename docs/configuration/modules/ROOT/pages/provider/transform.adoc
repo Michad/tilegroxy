@@ -1,10 +1,13 @@
 = Transform
 :page-aliases: operation::configuration/provider/transform.adoc
-:description: This provider allows you to implement a function to change the RGBA value of each individual pixel in imagery from another provider.  Like the "Custom" provider this is implemented using Yaegi and requires you to include your own Go code.  The interface for this is however much simpler, it requires just a single function:
+:description: Changes the RGBA value of each individual pixel in imagery from another provider.
 :page-eyebrow: Provider
 :page-config-name: transform
+:page-related: provider/index.adoc[Provider Overview], provider/custom.adoc[Custom Provider], provider/effect.adoc, operation::extensibility.adoc, operation::examples/terrain.adoc
 
 == Description
+
+Like the xref:provider/custom.adoc[Custom Provider], this is implemented using Yaegi and requires you to include your own Go code.  The interface for this is however much simpler, it requires just a single function:
 
 [,go]
 ----

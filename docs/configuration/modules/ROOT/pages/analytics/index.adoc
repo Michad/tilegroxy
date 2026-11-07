@@ -4,6 +4,7 @@
 :page-aliases: operation::configuration/analytics/index.adoc
 :description: Records usage events to a destination in batches for tracking purposes.
 :page-eyebrow: Analytics
+:page-related: operation::analytics.adoc, datastores/index.adoc[Datastores Overview], forwarded.adoc, operation::telemetry.adoc
 
 == Description
 

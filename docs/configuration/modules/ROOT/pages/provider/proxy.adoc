@@ -1,9 +1,12 @@
 = Proxy
 :page-aliases: operation::configuration/provider/proxy.adoc
-:description: The Proxy provider is the simplest option that simply forwards tile requests to another HTTP(s) endpoint. This provider can be used for mapping services that operate in tiles (ZXY, TMS, or WMTS) or against bounds (i.e. WMS). TMS inverts the y coordinate compared to ZXY and WMTS formats, which is handled by the InvertY parameter.
+:description: The simplest provider, forwarding tile requests to another HTTP(s) endpoint such as a ZXY, TMS, WMTS, or WMS service.
 :page-eyebrow: Provider
 :page-config-name: proxy
 :page-tags: ZXY · TMS · WMTS · WMS
+:page-related: provider/index.adoc[Provider Overview], provider/url_template.adoc, client.adoc, operation::layer-patterns.adoc
+
+NOTE: TMS inverts the y coordinate compared to ZXY and WMTS formats, which is handled by the `invertY` parameter.
 
 == Example
 [tabs]

@@ -3,6 +3,7 @@
 :description: Defines a TLS profile from PEM encoded certificates, keys, and CAs supplied as either file paths or text.
 :page-eyebrow: TLS
 :page-config-name: pem
+:page-related: tls/index.adoc[TLS Overview], encryption.adoc, secret/index.adoc[Secret Overview], tls/acme.adoc
 
 == Description
 

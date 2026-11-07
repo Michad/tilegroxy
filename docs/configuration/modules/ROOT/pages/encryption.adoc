@@ -2,6 +2,7 @@
 :page-aliases: operation::configuration/encryption.adoc
 :description: Configures how encryption should be applied to the server.
 :page-config-key: server.encrypt
+:page-related: tls/index.adoc[TLS Overview], server.adoc, tls/acme.adoc, operation::security.adoc
 
 
 == Example

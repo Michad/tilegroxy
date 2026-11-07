@@ -3,6 +3,7 @@
 :description: Writes events to a ClickHouse table using its native batch insert.
 :page-eyebrow: Analytics
 :page-config-name: clickhouse
+:page-related: analytics/index.adoc[Analytics Overview], datastores/clickhouse.adoc[ClickHouse Datastore], analytics/postgresql.adoc[PostgreSQL Analytics], operation::analytics.adoc
 
 NOTE: Requires a xref:datastores/clickhouse.adoc[clickhouse datastore] to supply the connection.
 

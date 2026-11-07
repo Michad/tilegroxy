@@ -1,10 +1,11 @@
 = Memory
 :page-aliases: operation::configuration/datastores/memory.adoc
-:description: Defines an in-process store of tiles held in the memory of the tilegroxy daemon itself. Unlike the other datastores this is not a connection to anything external, it is the storage itself. Utilizes otter under the hood.
+:description: Defines an in-process store of tiles held in the memory of the tilegroxy daemon itself. Utilizes otter under the hood.
 :page-eyebrow: Datastore
 :page-config-name: memory
+:page-related: datastores/index.adoc[Datastores Overview], cache/memory.adoc[Memory Cache]
 
-NOTE: Only used by the xref:cache/memory.adoc[memory cache].
+NOTE: Unlike the other datastores this is not a connection to anything external, it is the storage itself. Only used by the xref:cache/memory.adoc[memory cache].
 
 WARNING: This is not recommended for production use. The same caveats as the xref:cache/memory.adoc[memory cache] apply.
 

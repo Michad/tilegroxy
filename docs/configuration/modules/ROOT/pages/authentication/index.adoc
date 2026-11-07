@@ -4,6 +4,7 @@
 :page-aliases: operation::configuration/authentication/index.adoc
 :description: Implements incoming auth schemes.
 :page-eyebrow: Authentication
+:page-related: operation::security.adoc, operation::howto/user-dynamic.adoc, operation::howto/multi-tenant.adoc, cache/tenant.adoc, ratelimit/index.adoc[Rate Limit Overview]
 
 == Description
 

@@ -3,6 +3,7 @@
 :description: Keeps rate limit counters in the memory of the tilegroxy daemon itself.
 :page-eyebrow: Rate Limit
 :page-config-name: memory
+:page-related: ratelimit/index.adoc[Rate Limit Overview], ratelimit/redis.adoc[Redis Rate Limit], operation::ratelimit.adoc, commands::ratelimit_reset.adoc
 
 WARNING: Counters aren't shared between instances, so a deployment of N instances lets through N times each limit, and that multiple changes whenever an autoscaler adds or removes instances. Counts are also lost on restart, which makes this unsuitable for long periods. Use xref:ratelimit/redis.adoc[redis] in production.
 
