@@ -127,7 +127,7 @@ include::layer-patterns.adoc[tag=callouts]
 
 An entry with `default: true` applies to every value the other entries don't list. A default can optionally include the `to` option, if it's omitted then the default is a straight passthrough.
 
-Startup fails if a key isn't a placeholder in the pattern, a `from` value is listed twice, a placeholder has more than one default, or a default has a `from`. Providers, analytics, and custom providers all see the mapped value. Tiles are still cached under the layer name from the request (before mappings).
+Startup fails if a key isn't a placeholder in the pattern, a `from` value is listed twice, a placeholder has more than one default, or a default has a `from`. Providers, including custom ones, and analytics see the mapped value. Tiles are still cached under the layer name from the request (before mappings).
 
 == Using values in providers
 

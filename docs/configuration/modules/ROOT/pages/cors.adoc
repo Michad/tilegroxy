@@ -8,7 +8,7 @@
 
 When enabled, overwrites any CORS headers specified via xref:server.adoc[Server.Headers].
 
-CORS headers being returned is contingent on an origin match. If neither `WildcardOrigin` or `Origins` are specified, CORS headers will never be triggered. When `WildcardOrigin` is true, CORS headers are always returned. Otherwise, CORS is triggered if the incoming origin matches one of the entries in `Origins` (including wildcard evaluation).  
+CORS headers being returned is contingent on an origin match. If neither `WildcardOrigin` nor `Origins` are specified, CORS headers will never be triggered. When `WildcardOrigin` is true, CORS headers are always returned. Otherwise, CORS is triggered if the incoming origin matches one of the entries in `Origins` (including wildcard evaluation).  
 
 NOTE: While `WildcardOrigin` will cause the Access-Control-Allow-Origin header to come back with a '\*', wildcard evaluation against the explicit `Origins` array happens server-side, resulting in the incoming origin being echoed back when there is a match. This has implications on browser behaviour.
 

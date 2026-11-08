@@ -50,7 +50,7 @@ JSON::
 | Parameter | Description | Type | Required | Default
 
 | ID
-| The unique identifier of the datastore used to reference this datastore in a provider
+| The unique identifier of the datastore used to reference this datastore elsewhere in configuration
 | string
 | Yes
 | None

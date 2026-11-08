@@ -18,7 +18,7 @@ The intent with auto mode is to infer the appropriate header based on how the la
 
 === Freshness
 
-When the layer's cache chain includes a xref:cache/ttl.adoc[TTL cache], `max-age` will be returned using the amount of time that particular tile has left. A tile generated 50 minutes ago under a one hour TTL returns `max-age=600`, so it falls out of both browser's and tilegroxy's caches in 10 minutes.
+When the layer's cache chain includes a xref:cache/ttl.adoc[TTL cache], `max-age` will be returned using the amount of time that particular tile has left. A tile generated 50 minutes ago under a one hour TTL returns `max-age=600`, so it falls out of both the browser's and tilegroxy's cache in 10 minutes.
 
 When the layer's cache has no TTL to read, tilegroxy has nothing to say about how long the tile stays good and no `max-age` is returned. Set `MaxAge` explicitly for those layers.
 

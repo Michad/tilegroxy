@@ -230,7 +230,7 @@ JSON::
 
 == Metadata
 
-Several options above describe the layer's tiles. Most of them can also come from the provider, for instance a provider reading an archive that records its own zoom range. Providers only describe, they never restrict. Only values set on the layer are enforced on requests.
+Several options above describe the layer's tiles. Most of them can also come from the provider, for instance a provider reading an archive that records its own zoom range. Only values set on the layer are enforced on requests. A provider's values are only advertised.
 
 .Metadata options
 [cols="1m,1,2,2"]

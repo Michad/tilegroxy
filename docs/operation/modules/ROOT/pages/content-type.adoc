@@ -16,8 +16,6 @@ A xref:extensibility.adoc[custom provider] sets the `ContentType` field on the `
 
 == Validation and rewriting
 
-Content types from upstream servers are validated against an allowlist before being used.
-
 Two xref:configuration::client.adoc[client] options control what an external server is allowed to return.
 
 `ContentTypes` is an allowlist.  A response with a `Content-Type` outside this list is treated as an error and no tile is returned, even if the status code indicates success.  The default allows `image/png`, `image/jpg`, `image/jpeg`, `application/vnd.mapbox-vector-tile`, `application/x-protobuf`, `application/vnd.maplibre-tile`, and `application/vnd.maplibre-vector-tile`.  Matching is exact, so a server sending `image/png; charset=binary` requires that full string be added to the list.

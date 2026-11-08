@@ -9,7 +9,7 @@ NOTE: Requires a xref:datastores/redis.adoc[redis datastore] to supply the conne
 
 == Description
 
-Each counter is a key that expires on its own once its period is over, so no cleanup is needed.  Each counter is updated atomically on the server using the server's clock, so concurrent requests from several instances never lose a count.  In `cluster` mode the counters for one request can live on different servers, which costs a round trip to each of them in parallel.
+Each counter is a key that expires on its own once its period is over, so no cleanup is needed.  Counters are updated atomically on the server using the server's clock, so concurrent requests from several instances never lose a count.  In `cluster` mode the counters for one request can live on different servers, which costs a round trip to each of them in parallel.
 
 Also accepts the xref:ratelimit/index.adoc[policies and options] shared by every store.
 

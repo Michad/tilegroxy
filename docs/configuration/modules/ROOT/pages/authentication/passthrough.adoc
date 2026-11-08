@@ -11,7 +11,7 @@ NOTE: This authentication method can associate a user ID and tenant ID to the re
 
 This allows you to reuse authentication your ecosystem already has without tilegroxy needing to understand the credentials.
 
-The outgoing is made using the xref:client.adoc[client] configuration. You can override the client piecemeal (like you can with a xref:layer.adoc[layer]), including its `tls`, `mtls`, and `enableMTLS` settings if the endpoint needs different xref:tls/index.adoc[TLS profiles]. Only values (header, cookie, or query params) you configure are forwarded from the original request. Redirects are not followed.
+The outgoing request is made using the xref:client.adoc[client] configuration. You can override the client piecemeal (like you can with a xref:layer.adoc[layer]), including its `tls`, `mtls`, and `enableMTLS` settings if the endpoint needs different xref:tls/index.adoc[TLS profiles]. Only the headers, cookies, and query params you configure are forwarded from the original request. Redirects are not followed.
 
 See xref:operation::howto/multi-tenant.adoc[How to: Serve Multiple Tenants] for more information on using a tenant ID.
 

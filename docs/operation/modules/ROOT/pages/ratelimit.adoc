@@ -135,7 +135,7 @@ A policy may have no rules.  Make an empty policy the default if only a few laye
 
 Policies that extend each other in a loop are rejected at startup.  A policy reached through more than one `extend` is only checked once.
 
-WARNING: If a layer has its own policy, any layer that reaches it through xref:configuration::provider/ref.adoc[ref] or xref:configuration::provider/blend.adoc[blend] providers need that policy too.
+WARNING: If a layer has its own policy, any layer that reaches it through xref:configuration::provider/ref.adoc[ref] or xref:configuration::provider/blend.adoc[blend] providers needs that policy too.
 
 == Rules
 

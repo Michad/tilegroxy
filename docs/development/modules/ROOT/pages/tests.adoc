@@ -43,5 +43,5 @@ Code coverage can be calculated using the Makefile:
 
 We use a tool called link:https://github.com/dave/courtney[Courtney] to calculate code coverage.  Courtney is built on the standard go coverage tool but excludes lines that don't make sense to count against coverage (such as a line like `return nil, err` after a function call returns an error).
 
-We try to keep coverage above 85%. Having a coverage of 100% isn't necessarily the goal as it can infer a false sense of security and for non-trivial projects there are diminishing returns to coverage compared to the maintenance cost of the tests.
+We try to keep coverage above 85%. Having a coverage of 100% isn't necessarily the goal as it can give a false sense of security and for non-trivial projects there are diminishing returns to coverage compared to the maintenance cost of the tests.
 

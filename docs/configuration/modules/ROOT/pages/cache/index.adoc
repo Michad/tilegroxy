@@ -34,7 +34,7 @@ When specifying a cache ensure you include the `name` parameter.
 
 | Store a large or long-lived cache cheaply
 | xref:cache/s3.adoc[S3]
-| Shared and durable, but slower and billed by usage. Expiration requires external lifecycle configuration. 
+| Shared and durable, but slower and billed by usage. Expiration requires external lifecycle configuration
 
 | Combine a small fast cache with a large slow one
 | xref:cache/multi.adoc[Multi]
@@ -128,12 +128,12 @@ When specifying a cache ensure you include the `name` parameter.
 
 Each tile is stored under a key built from the layer name and the tile coordinates. This is the layer name from the incoming request, not the layer's `id`, so each value of a xref:layer.adoc#layer-names[pattern] is cached separately.
 
-The key is built up in this order:
+The key is built from:
 
-. The layer name from the request, such as `osm`
-. The layer's `cacheversion`
-. If using the xref:cache/tenant.adoc[tenant] cache, the tenant ID.
-. The zoom, x, and y coordinates
+* The layer name from the request, such as `osm`
+* The layer's `cacheversion`
+* If using the xref:cache/tenant.adoc[tenant] cache, the tenant ID
+* The zoom, x, and y coordinates
 
 For example, a request for `osm` tile 3/1/2 with a `cacheversion` of `v2` is stored at `/cache/v2osm/3/1/2` by a disk cache with `path: /cache` and the `coordinate` layout.
 
@@ -143,6 +143,8 @@ For example, a request for `osm` tile 3/1/2 with a `cacheversion` of `v2` is sto
 Changing a layer's `cacheversion` changes every key for that layer, so no existing entry matches anymore. Old entries aren't deleted. Treat it as a serial version number, such as `v1` then `v2`.
 
 If `cacheversion` is set to `auto`, tilegroxy will calculate a hash of the layer's configuration to use as the version. Changing any of the following invalidates the layer's cache: `provider`, `pattern`, `paramMap`, `bounds`, and `datatype`. The hash is taken before `env.` and `secret.` values are replaced, so rotating a secret or changing an environment variable won't invalidate the cache.
+
+Only the layer's own configuration is hashed. A layer that uses a xref:provider/ref.adoc[ref] provider, including one nested inside another provider such as blend or fallback, isn't invalidated when the layer it refers to changes. Set an explicit `cacheversion` on those layers and change it when the referenced layer changes.
 
 == Overridable caches
 
