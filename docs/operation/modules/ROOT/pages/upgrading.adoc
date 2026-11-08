@@ -26,6 +26,7 @@ Release notes:: link:https://github.com/Michad/tilegroxy/releases/tag/v0.15.0[v0
 * The xref:configuration::cache/tenant.adoc[tenant] cache now hashes the tenant ID.  This will invalidate tiles cached in previous versions.
 * Startup now fails if a provider references a `+{layer.NAME}+` placeholder that isn't in the layer's xref:layer-patterns.adoc[pattern].  This was previously a warning.
 * xref:tilejson.adoc[TileJSON] and the xref:preview.adoc[preview] page now use the right-most value of the `X-Forwarded-Host`, `X-Forwarded-Proto`, `X-Forwarded-Port`, and `X-Forwarded-Prefix` headers instead of the left-most. Consider setting xref:configuration::forwarded.adoc[`server.forwarded.depth`] or xref:configuration::tilejson.adoc[`baseurls`].
+* xref:configuration::authentication/bearer.adoc[Bearer] authentication with a Redis datastore now requires `redis.keyPrefix` to avoid irrelevant keys being accepted as auth token.
 
 === Highlights
 

@@ -71,7 +71,7 @@ type TileCheckRegistration struct {
 }
 
 func (s TileCheckRegistration) InitializeConfig() health.HealthCheckConfig {
-	return TileCheckConfig{}
+	return TileCheckConfig{Z: DefaultZ, X: DefaultX, Y: DefaultY}
 }
 
 func (s TileCheckRegistration) Name() string {
@@ -83,15 +83,6 @@ func (s TileCheckRegistration) Initialize(checkConfig health.HealthCheckConfig, 
 
 	if cfg.Delay == 0 {
 		cfg.Delay = 60
-	}
-	if cfg.Z == 0 {
-		cfg.Z = DefaultZ
-	}
-	if cfg.X == 0 {
-		cfg.X = DefaultX
-	}
-	if cfg.Y == 0 {
-		cfg.Y = DefaultY
 	}
 
 	if cfg.Validation == "" {

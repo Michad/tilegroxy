@@ -76,7 +76,7 @@ func (t Proxy) PreAuth(_ context.Context, _ layer.ProviderContext) (layer.Provid
 }
 
 func (t Proxy) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequest pkg.TileRequest) (*pkg.Image, error) {
-	url, err := replaceURLPlaceholders(ctx, tileRequest, t.URL, t.InvertY, t.Srid)
+	url, err := replaceURLPlaceholders(ctx, tileRequest, t.URL, t.InvertY, t.Srid, false)
 	if err != nil {
 		return nil, err
 	}
