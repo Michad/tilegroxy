@@ -52,6 +52,7 @@ func Test_PreviewHandler_ValidLayer_ReturnsHTMLWithTileURL(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 	assert.Contains(t, res.Header.Get("Content-Type"), "text/html")
+	assert.Contains(t, res.Header.Values("Vary"), "X-Forwarded-Host")
 
 	body, err := io.ReadAll(res.Body)
 	require.NoError(t, err)

@@ -26,7 +26,7 @@ CAUTION: Use extreme caution in trusting incoming headers and query parameters.
 
 ==== X-Forwarded
 
-A few systems in tilegroxy identify incoming request information such as client IP or external request hostname/protocol/path. The standard mechanism for keeping these working behind proxies or WAFs is the `X-Forwarded-*` headers. Those headers are prone to forgery attacks so tilegroxy only trusts the headers on a limited basis and requires identifying the IP of trusted proxies via xref:configuration::forwarded.adoc[`server.forwarded.trusted`]. Every private network address is trusted by default, so make sure to add the CIDR block for any proxies outside your network, and narrow it if clients can reach tilegroxy without going through a proxy.
+A few systems in tilegroxy identify incoming request information such as client IP or external request hostname/protocol/path. The standard mechanism for keeping these working behind proxies or WAFs is the `X-Forwarded-*` headers. Those headers are prone to forgery attacks so tilegroxy only trusts the headers on a limited basis and requires identifying the IP of trusted proxies via xref:configuration::forwarded.adoc[`server.forwarded.trusted`]. Every private network address is trusted by default, so make sure to add the CIDR block for any proxies outside your network, and narrow it if clients can reach tilegroxy without going through a proxy. Set xref:configuration::tilejson.adoc[`server.tilejson.baseurls`] if any proxy passes `X-Forwarded-Host` through unchanged.
 
 === Per-User Tiles
 

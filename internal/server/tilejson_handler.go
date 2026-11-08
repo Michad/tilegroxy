@@ -112,13 +112,22 @@ func parsePublicURL(baseURL string) publicURLParts {
 }
 
 // From the caller's perspective. BaseURLs wins when set, otherwise what a trusted proxy reported, then the request's own scheme and Host
-func resolvePublicURLs(req *http.Request, baseURLs []string) []publicURLParts {
+func resolvePublicURLs(w http.ResponseWriter, req *http.Request, serverCfg config.ServerConfig) []publicURLParts {
+	baseURLs := serverCfg.TileJSON.BaseURLs
 	if len(baseURLs) > 0 {
 		parts := make([]publicURLParts, len(baseURLs))
 		for i, baseURL := range baseURLs {
 			parts[i] = parsePublicURL(baseURL)
 		}
 		return parts
+	}
+
+	// Stops a shared cache serving URLs built from one client's headers to everyone
+	fwdHeaders := serverCfg.Forwarded.Headers
+	for _, name := range []string{fwdHeaders.Host, fwdHeaders.Proto, fwdHeaders.Port, fwdHeaders.Prefix} {
+		if name != "" {
+			addVary(w, name)
+		}
 	}
 
 	fwd, _ := forwardedFromContext(req.Context())
@@ -219,7 +228,7 @@ func (h *tileJSONHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	limitLayers, allowed := layerRestriction(ctx)
 	allowedArea := areaRestriction(ctx)
 
-	publicURLs := resolvePublicURLs(req, cur.serverCfg.TileJSON.BaseURLs)
+	publicURLs := resolvePublicURLs(w, req, cur.serverCfg)
 	tilePathPrefix := cur.tilePathPrefix()
 
 	if h.index {

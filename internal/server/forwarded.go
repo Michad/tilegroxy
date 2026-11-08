@@ -64,6 +64,7 @@ type forwardedHandler struct {
 	http.Handler
 	trusted []netip.Prefix
 	headers config.ForwardedHeadersConfig
+	depth   uint
 }
 
 func (h forwardedHandler) isTrusted(addr netip.Addr) bool {
@@ -88,10 +89,10 @@ func (h forwardedHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	fwd := forwardedRequest{
-		proto:  strings.ToLower(firstValue(req, h.headers.Proto)),
-		host:   firstValue(req, h.headers.Host),
-		port:   firstValue(req, h.headers.Port),
-		prefix: strings.TrimSuffix(firstValue(req, h.headers.Prefix), "/"),
+		proto:  strings.ToLower(h.value(req, h.headers.Proto)),
+		host:   h.value(req, h.headers.Host),
+		port:   h.value(req, h.headers.Port),
+		prefix: strings.TrimSuffix(h.value(req, h.headers.Prefix), "/"),
 	}
 
 	if fwd.proto != "http" && fwd.proto != "https" {
@@ -166,15 +167,23 @@ func parseAddr(raw string) (netip.Addr, bool) {
 	return addr.Unmap().WithZone(""), true
 }
 
-// Proxies chaining onto an existing header append to it, so the first is the original
-func firstValue(req *http.Request, header string) string {
+// Appending proxies leave the client's value in front, so count back one value per trusted proxy
+func (h forwardedHandler) value(req *http.Request, header string) string {
 	if header == "" {
 		return ""
 	}
 
-	v, _, _ := strings.Cut(req.Header.Get(header), ",")
+	var values []string
+	for _, v := range req.Header.Values(header) {
+		values = append(values, strings.Split(v, ",")...)
+	}
 
-	return strings.TrimSpace(v)
+	depth := max(h.depth, 1)
+	if uint(len(values)) < depth {
+		return ""
+	}
+
+	return strings.TrimSpace(values[uint(len(values))-depth])
 }
 
 func sanitizePort(raw string) string {

@@ -193,7 +193,7 @@ func wrapRootHandler(cfg *config.Config, mux *http.ServeMux, cors *corsSettings)
 	}
 
 	if len(trusted) > 0 {
-		rootHandler = forwardedHandler{rootHandler, trusted, cfg.Server.Forwarded.Headers}
+		rootHandler = forwardedHandler{rootHandler, trusted, cfg.Server.Forwarded.Headers, cfg.Server.Forwarded.Depth}
 	}
 
 	return rootHandler, closeAccessLog, nil

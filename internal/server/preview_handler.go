@@ -115,7 +115,7 @@ func (h *previewHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	publicURL := resolvePublicURLs(req, cur.serverCfg.TileJSON.BaseURLs)[0]
+	publicURL := resolvePublicURLs(w, req, cur.serverCfg)[0]
 	tilePathPrefix := cur.tilePathPrefix()
 	tileURL := publicURL.build(tilePathPrefix + "/" + name + "/{z}/{x}/{y}")
 
