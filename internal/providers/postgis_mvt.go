@@ -86,6 +86,9 @@ func (s PostgisMvtRegistration) DataType(_ any) config.DataType {
 func (s PostgisMvtRegistration) Initialize(cfgAny any, deps layer.ProviderDeps) (layer.Provider, error) {
 	cfg := cfgAny.(PostgisMvtConfig)
 
+	if cfg.Table == "" {
+		return nil, fmt.Errorf(deps.ErrorMessages.ParamRequired, "postgismvt.table")
+	}
 	if cfg.GID != "" {
 		if !columnRegex.MatchString(cfg.GID) {
 			return nil, fmt.Errorf(deps.ErrorMessages.InvalidParam, "postgismvt.gid", cfg.GID)
@@ -172,7 +175,7 @@ func (t PostgisMvt) GenerateTile(ctx context.Context, _ layer.ProviderContext, r
 	query += ` WHERE "` + t.Geometry + `" && ST_Transform($5::geometry, $1::integer) AND ST_Intersects("` + t.Geometry + `", ST_Transform($5::geometry, $1::integer))`
 
 	if t.Filter != "" {
-		preparedFilter, replacements, err := replacePlaceholdersInString(ctx, req, t.Filter, len(params)+1, false, t.SourceSRID)
+		preparedFilter, replacements, err := replacePlaceholdersInString(ctx, req, t.Filter, len(params)+1, false, pkg.SRIDWGS84)
 		if err != nil {
 			return nil, err
 		}
