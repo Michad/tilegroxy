@@ -132,7 +132,7 @@ The key is built from:
 
 * The layer name from the request, such as `osm`
 * The layer's `cacheversion`
-* If using the xref:cache/tenant.adoc[tenant] cache, the tenant ID
+* If using the xref:cache/tenant.adoc[tenant] cache, the SHA-256 hash of the tenant ID
 * The zoom, x, and y coordinates
 
 For example, a request for `osm` tile 3/1/2 with a `cacheversion` of `v2` is stored at `/cache/v2osm/3/1/2` by a disk cache with `path: /cache` and the `coordinate` layout.

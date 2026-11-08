@@ -195,8 +195,8 @@ func Test_Seed_TenantReachesCacheNamespace(t *testing.T) {
 		return err == nil && len(entries) > 0
 	}, 5*time.Second, 10*time.Millisecond)
 
-	// The disk cache re-sanitizes the tenant separator "~" into "_" in filenames
+	// The tenant is hashed and the disk cache re-sanitizes the "~" separator into "_"
 	for _, entry := range entries {
-		require.True(t, strings.HasPrefix(entry.Name(), "tenant_a_identity_layer"), "cached tile %v isn't namespaced to the tenant", entry.Name())
+		require.True(t, strings.HasPrefix(entry.Name(), "ea7c68e607dbd8ae6cf6b58db6206acc_identity_layer"), "cached tile %v isn't namespaced to the tenant", entry.Name())
 	}
 }

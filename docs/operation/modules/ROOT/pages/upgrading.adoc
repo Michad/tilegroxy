@@ -13,6 +13,26 @@ NOTE: Releases before 1.0 do not follow the xref:compatibility.adoc[compatibilit
 . If you write xref:extensibility.adoc#custom[custom] providers, authentication, or analytics, check for signature changes and test your scripts with the new version
 . After upgrading, check your logs for deprecation warnings at `warn` level
 
+== 0.15.0
+
+[.release]
+Released:: Not yet released
+Risk:: [.risk.medium]#Medium#
+Commits:: link:https://github.com/Michad/tilegroxy/compare/v0.14.0...v0.15.0[49]
+Release notes:: link:https://github.com/Michad/tilegroxy/releases/tag/v0.15.0[v0.15.0 on GitHub]
+
+=== Breaking Changes
+
+* The xref:configuration::cache/tenant.adoc[tenant] cache now hashes the tenant ID.  This will invalidate tiles cached in previous versions.
+* Startup now fails if a provider references a `+{layer.NAME}+` placeholder that isn't in the layer's xref:layer-patterns.adoc[pattern].  This was previously a warning.
+
+=== Highlights
+
+* xref:configuration::tls/index.adoc[TLS profiles] available to configure certificates, CAs, and mTLS for both incoming and outgoing requests.  The old `server.encrypt` certificate options are deprecated
+* `paramMap` on a layer replaces placeholder values before providers see them.  See xref:layer-patterns.adoc#mapping-values[Mapping values]
+* `cacheversion: auto` computes a layer's cache version from its configuration.  See xref:configuration::cache/index.adoc#cache-version[Cache version]
+* Top-level keys starting with `x-` are ignored, so they can hold YAML anchors for reuse.  See xref:configuration.adoc#extension-keys[Extension Keys]
+
 == 0.14.0
 
 [.release]
