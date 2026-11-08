@@ -154,7 +154,7 @@ func TestGoodJwtClaimsWithCache(t *testing.T) {
 	assert.True(t, jwt.CheckAuthentication(pkg.BackgroundContext(), req))
 
 	assert.Equal(t, 1, jwt.cache.cache.Size())
-	result, ok := jwt.cache.cache.Get(req.Header["Authorization"][0])
+	result, ok := jwt.cache.cache.Get(lookupCacheKey(req.Header["Authorization"][0]))
 	assert.True(t, ok)
 	assert.Equal(t, int64(4294967295), result.expiration.Unix())
 }

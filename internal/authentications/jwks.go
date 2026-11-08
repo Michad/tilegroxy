@@ -148,7 +148,10 @@ func (k *keySet) keyFor(ctx context.Context, kid string) (crypto.PublicKey, erro
 
 // Skipped until RefreshMinInterval has elapsed so attackers can't make us spam the JWKS server
 func (k *keySet) tryForceRefresh(ctx context.Context, cached jwk.Set) (jwk.Set, error) {
-	k.forcedRefreshMu.Lock()
+	// Waiting on an in-flight refresh would let a slow JWKS server stall every request
+	if !k.forcedRefreshMu.TryLock() {
+		return cached, nil
+	}
 	defer k.forcedRefreshMu.Unlock()
 
 	minInterval := time.Duration(k.cfg.RefreshMinInterval) * time.Second // #nosec G115 -- operator-supplied interval in seconds, far below int64 overflow range
@@ -156,14 +159,10 @@ func (k *keySet) tryForceRefresh(ctx context.Context, cached jwk.Set) (jwk.Set, 
 		return cached, nil
 	}
 
-	refreshed, err := k.cache.Refresh(ctx, k.cfg.URL)
-	if err != nil {
-		return nil, err
-	}
-
+	// Set before fetching so a failing JWKS server is throttled too
 	k.lastForcedRefresh = time.Now()
 
-	return refreshed, nil
+	return k.cache.Refresh(ctx, k.cfg.URL)
 }
 
 // Falls back to the only key when the token has no kid. Multiple candidates are ambiguous and rejected

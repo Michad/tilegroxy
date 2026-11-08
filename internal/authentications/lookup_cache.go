@@ -16,19 +16,28 @@ package authentications
 
 import (
 	"context"
-	"log/slog"
+	"crypto/sha256"
+	"sync"
 	"time"
 
 	"github.com/maypok86/otter"
-	"k8s.io/utils/keymutex"
 )
 
 // A nil lookupCache is valid and calls the lookup every time. A zero TTL never expires entries
 type lookupCache[T any] struct {
 	cache otter.Cache[string, T]
 	// So a page of tiles sharing a credential does one lookup
-	locks   keymutex.KeyMutex
+	mu      sync.Mutex
+	flights map[string]*lookupFlight[T]
 	isStale func(T) bool
+}
+
+type lookupFlight[T any] struct {
+	done   chan struct{}
+	result T
+	err    error
+	// The leader's own cancellation or panic says nothing about the credential, so waiters retry
+	abandoned bool
 }
 
 func newLookupCache[T any](size int, ttlSeconds uint32) (*lookupCache[T], error) {
@@ -49,7 +58,7 @@ func newLookupCache[T any](size int, ttlSeconds uint32) (*lookupCache[T], error)
 		return nil, err
 	}
 
-	return &lookupCache[T]{cache: cache, locks: keymutex.NewHashed(-1)}, nil
+	return &lookupCache[T]{cache: cache, flights: make(map[string]*lookupFlight[T])}, nil
 }
 
 // For entries whose lifetime comes from the cached value itself rather than a fixed TTL
@@ -62,30 +71,80 @@ func (c *lookupCache[T]) withStaleCheck(isStale func(T) bool) *lookupCache[T] {
 }
 
 // Errors aren't cached, so an outage doesn't lock out valid credentials once it recovers
-func (c *lookupCache[T]) get(ctx context.Context, key string, lookup func() (T, error)) (T, error) {
+func (c *lookupCache[T]) get(ctx context.Context, rawKey string, lookup func() (T, error)) (T, error) {
 	if c == nil {
 		return lookup()
 	}
 
-	c.locks.LockKey(key)
-	defer func() {
-		if err := c.locks.UnlockKey(key); err != nil {
-			slog.ErrorContext(ctx, "Unable to release auth lock - this credential might encounter issues going forward", "error", err)
+	key := lookupCacheKey(rawKey)
+
+	for {
+		if result, ok := c.cached(key); ok {
+			return result, nil
 		}
+
+		c.mu.Lock()
+		f, inFlight := c.flights[key]
+		if !inFlight {
+			f = &lookupFlight[T]{done: make(chan struct{}), abandoned: true}
+			c.flights[key] = f
+		}
+		c.mu.Unlock()
+
+		if !inFlight {
+			return c.lead(ctx, key, f, lookup)
+		}
+
+		select {
+		case <-f.done:
+			if !f.abandoned {
+				return f.result, f.err
+			}
+		case <-ctx.Done():
+			var zero T
+			return zero, ctx.Err()
+		}
+	}
+}
+
+// Runs on the caller's goroutine so lookups that write to the request context only touch the leader's
+func (c *lookupCache[T]) lead(ctx context.Context, key string, f *lookupFlight[T], lookup func() (T, error)) (T, error) {
+	defer func() {
+		c.mu.Lock()
+		delete(c.flights, key)
+		c.mu.Unlock()
+		close(f.done)
 	}()
 
-	if result, ok := c.cache.Get(key); ok && (c.isStale == nil || !c.isStale(result)) {
+	// A flight may have finished between the caller's cache check and claiming this one
+	if result, ok := c.cached(key); ok {
+		f.result, f.abandoned = result, false
 		return result, nil
 	}
 
-	result, err := lookup()
-	if err != nil {
-		return result, err
+	f.result, f.err = lookup()
+	f.abandoned = f.err != nil && ctx.Err() != nil
+	if f.err == nil {
+		c.cache.Set(key, f.result)
 	}
 
-	c.cache.Set(key, result)
+	return f.result, f.err
+}
 
-	return result, nil
+// Hashed to bound the memory hostile credentials can make the cache hold
+func lookupCacheKey(rawKey string) string {
+	sum := sha256.Sum256([]byte(rawKey))
+	return string(sum[:])
+}
+
+func (c *lookupCache[T]) cached(key string) (T, bool) {
+	result, ok := c.cache.Get(key)
+	if !ok || (c.isStale != nil && c.isStale(result)) {
+		var zero T
+		return zero, false
+	}
+
+	return result, true
 }
 
 // A TTL cache runs a cleanup goroutine that would otherwise leak on every reload

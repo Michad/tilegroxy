@@ -17,8 +17,6 @@ package authentications
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -313,10 +311,8 @@ func (p Passthrough) collect(req *http.Request) (passthroughForward, bool) {
 		return fwd, false
 	}
 
-	// Hashed to bound the memory a hostile request can make the cache hold
 	encoded, _ := json.Marshal(keyParts)
-	sum := sha256.Sum256(encoded)
-	fwd.key = hex.EncodeToString(sum[:])
+	fwd.key = string(encoded)
 
 	return fwd, true
 }

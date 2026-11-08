@@ -228,6 +228,45 @@ func Test_KeyFor_UnknownKeyIDRateLimitsRefresh(t *testing.T) {
 	assert.LessOrEqual(t, server.requestCount(), requestsAfterStartup+1)
 }
 
+func Test_KeyFor_UnknownKeyIDRateLimitsFailedRefresh(t *testing.T) {
+	_, doc := rsaJWKS(t, "key-1", "RS256")
+	server := newJWKSServer(t, doc)
+
+	ks, err := testKeySet(t, JWKSConfig{URL: server.URL, RefreshMinInterval: 60}, []string{"RS256"})
+	require.NoError(t, err)
+
+	server.setFailing(true)
+	requestsBeforeOutage := server.requestCount()
+
+	for i := range 20 {
+		_, err = ks.keyFor(context.Background(), fmt.Sprintf("bogus-%d", i))
+		require.Error(t, err)
+	}
+
+	assert.LessOrEqual(t, server.requestCount(), requestsBeforeOutage+1)
+}
+
+func Test_TryForceRefresh_ServesCachedWhileRefreshInFlight(t *testing.T) {
+	_, doc := rsaJWKS(t, "key-1", "RS256")
+	server := newJWKSServer(t, doc)
+
+	ks, err := testKeySet(t, JWKSConfig{URL: server.URL}, []string{"RS256"})
+	require.NoError(t, err)
+
+	cached, err := ks.cache.Lookup(context.Background(), server.URL)
+	require.NoError(t, err)
+
+	ks.forcedRefreshMu.Lock()
+	defer ks.forcedRefreshMu.Unlock()
+	requestsBefore := server.requestCount()
+
+	set, err := ks.tryForceRefresh(context.Background(), cached)
+
+	require.NoError(t, err)
+	assert.Same(t, cached, set)
+	assert.Equal(t, requestsBefore, server.requestCount())
+}
+
 func Test_KeyFor_RotationRefetches(t *testing.T) {
 	_, doc := rsaJWKS(t, "key-1", "RS256")
 	server := newJWKSServer(t, doc)
