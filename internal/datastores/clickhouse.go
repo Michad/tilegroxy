@@ -43,7 +43,6 @@ type ClickhouseWrapperConfig struct {
 	Database       string
 	MaxConnections int
 	MinConnections int
-	IdleTimeout    int32 // In seconds
 	Lifetime       int32 // In seconds
 	Secure         bool  // Connect over TLS
 	Protocol       string
@@ -72,7 +71,6 @@ func (s ClickhouseWrapperRegistration) InitializeConfig() any {
 	cfg.Database = "default"
 	cfg.MinConnections = 5
 	cfg.MaxConnections = 10
-	cfg.IdleTimeout = 60 * 10
 	cfg.Lifetime = 60 * 60
 	cfg.Protocol = ClickhouseProtocolNative
 
