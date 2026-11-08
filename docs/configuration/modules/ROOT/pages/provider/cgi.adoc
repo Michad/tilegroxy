@@ -81,7 +81,7 @@ JSON::
 | None
 
 | Env
-| Extra environment variables to supply to the CGI invocations. If the value is an empty string it passes along the value from the main tilegroxy invocation
+| Extra environment variables to supply to the CGI invocations. Variable names are converted to uppercase. If the value is an empty string it passes along the value from the main tilegroxy invocation
 | map[string]string
 | No
 | None
