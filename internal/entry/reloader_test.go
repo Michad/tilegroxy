@@ -17,6 +17,7 @@ package entry
 import (
 	"bytes"
 	"log/slog"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -336,4 +337,31 @@ func Test_Reloader_StopDropsScheduledReload(t *testing.T) {
 
 	settle(t, r)
 	assert.Empty(t, entered)
+}
+
+func Test_Reloader_RepeatsDeprecationWarningOnEachReload(t *testing.T) {
+	var logs lockedBuffer
+	prev := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, nil)))
+	t.Cleanup(func() { slog.SetDefault(prev) })
+
+	deprecatedConfig := func(port int) *config.Config {
+		cfg := portConfig(port)
+		cfg.Authentication = map[string]any{"name": "jwt", "key": "hunter2hunter2hunter2hunter2hunter2", "algorithm": "HS256"}
+
+		return cfg
+	}
+
+	_, err := configToEntities(t.Context(), *deprecatedConfig(1), nil)
+	require.NoError(t, err)
+
+	swap, seen := recordingSwap()
+	r := readyReloader(deprecatedConfig(1), swap)
+
+	require.NoError(t, r.Reload(deprecatedConfig(2)))
+	expectPort(t, seen, 2)
+	require.NoError(t, r.Reload(deprecatedConfig(3)))
+	expectPort(t, seen, 3)
+
+	assert.Equal(t, 3, strings.Count(logs.String(), "authentication.algorithm is deprecated"))
 }

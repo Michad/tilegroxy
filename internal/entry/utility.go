@@ -27,6 +27,7 @@ import (
 	"github.com/Michad/tilegroxy/internal/checks"
 	"github.com/Michad/tilegroxy/internal/configload"
 	"github.com/Michad/tilegroxy/internal/datastores"
+	"github.com/Michad/tilegroxy/internal/deprecation"
 	"github.com/Michad/tilegroxy/internal/entities"
 	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/internal/ratelimit"
@@ -44,6 +45,8 @@ func configToEntities(ctx context.Context, cfg config.Config, reloadFunc func(re
 	if err := configload.Validate(cfg); err != nil {
 		return nil, err
 	}
+
+	deprecation.Reset()
 
 	built := &entities.Entities{}
 
