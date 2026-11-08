@@ -40,6 +40,8 @@ const (
 
 var AllLookupEncodings = []string{LookupEncodingNone, LookupEncodingBase64, LookupEncodingBase64URLSafe, LookupEncodingBase36}
 
+var AllBearerRedisTypes = []string{"string", "hash", "list", "set", "zset", "stream"}
+
 const (
 	bearerDefaultCacheTTL    = 600
 	bearerBase36             = 36
@@ -66,9 +68,10 @@ type BearerPostgresqlConfig struct {
 }
 
 type BearerRedisConfig struct {
-	KeyPrefix   string // Prepended to the token to form the key
+	KeyPrefix   string // Prepended to the token to form the key. Required
 	UserField   string // The hash field holding the user ID. Defaults to "user"
 	TenantField string // The hash field holding the tenant ID. Defaults to "tenant"
+	AllowedType string // The key type accepted as a token. One of AllBearerRedisTypes. Defaults to any type
 }
 
 type bearerLookupResult struct {
@@ -255,8 +258,9 @@ func newBearerRedisLookup(cfg *BearerConfig, client redis.UniversalClient, error
 		return nil, fmt.Errorf(errorMessages.ParamRequiresParam, "authentication.postgresql", "a postgresql datastore")
 	}
 
-	if cfg.Redis == nil {
-		cfg.Redis = &BearerRedisConfig{}
+	// Without a prefix any key in the database, such as a cached tile, is accepted as a token
+	if cfg.Redis == nil || cfg.Redis.KeyPrefix == "" {
+		return nil, fmt.Errorf(errorMessages.ParamRequired, "authentication.redis.keyprefix")
 	}
 	if cfg.Redis.UserField == "" {
 		cfg.Redis.UserField = bearerDefaultUserField
@@ -265,7 +269,11 @@ func newBearerRedisLookup(cfg *BearerConfig, client redis.UniversalClient, error
 		cfg.Redis.TenantField = bearerDefaultTenantField
 	}
 
-	prefix, userField, tenantField := cfg.Redis.KeyPrefix, cfg.Redis.UserField, cfg.Redis.TenantField
+	if cfg.Redis.AllowedType != "" && !slices.Contains(AllBearerRedisTypes, cfg.Redis.AllowedType) {
+		return nil, fmt.Errorf(errorMessages.EnumError, "authentication.redis.allowedtype", cfg.Redis.AllowedType, AllBearerRedisTypes)
+	}
+
+	prefix, userField, tenantField, allowedType := cfg.Redis.KeyPrefix, cfg.Redis.UserField, cfg.Redis.TenantField, cfg.Redis.AllowedType
 
 	return func(ctx context.Context, token string) (bearerLookupResult, error) {
 		key := prefix + token
@@ -280,9 +288,15 @@ func newBearerRedisLookup(cfg *BearerConfig, client redis.UniversalClient, error
 			return bearerLookupResult{}, err
 		}
 
-		switch keyType.Val() {
-		case "none":
+		if keyType.Val() == "none" {
 			return bearerLookupResult{}, nil
+		}
+		if allowedType != "" && keyType.Val() != allowedType {
+			slog.Log(ctx, config.LevelTrace, "Bearer token key has a disallowed type", "type", keyType.Val())
+			return bearerLookupResult{}, nil
+		}
+
+		switch keyType.Val() {
 		case "hash":
 			vals, err := fields.Result()
 			if err != nil {

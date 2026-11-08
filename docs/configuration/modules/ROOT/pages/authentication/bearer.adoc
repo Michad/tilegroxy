@@ -57,9 +57,9 @@ Lookup results can optionally be cached in memory to decrease database load. Use
 | None
 
 | redis
-| Options for a redis datastore. Must not be set for a postgresql datastore. See <<Redis>>
+| Options for a redis datastore. Required with a redis datastore and must not be set for a postgresql datastore. See <<Redis>>
 | Redis
-| No
+| Conditional
 | None
 |===
 
@@ -148,7 +148,7 @@ JSON::
 
 == Redis
 
-The auth token is used as a key, with an optional prefix. Authentication passes if the key exists. Setting a user ID and tenant ID requires the entry to be a Hash.
+The auth token is used as a key, with a required prefix. Authentication passes if the key exists and is of the right data type. Setting a user ID and tenant ID requires the entry to be a Hash.
 
 === Example
 [tabs]
@@ -167,6 +167,7 @@ authentication:
   datastore: auth_redis
   redis:
     keyPrefix: "apikey:"
+    allowedType: hash
 ----
 
 JSON::
@@ -185,7 +186,8 @@ JSON::
     "name": "bearer",
     "datastore": "auth_redis",
     "redis": {
-      "keyPrefix": "apikey:"
+      "keyPrefix": "apikey:",
+      "allowedType": "hash"
     }
   }
 }
@@ -202,10 +204,10 @@ A matching token can be created with `HSET apikey:abc123 user alice tenant acme`
 | Parameter | Description | Type | Required | Default
 
 | keyPrefix
-| Prepended to the token to form the key
+| Prepended to the token to form the key. Only keys starting with this prefix can be used as tokens, so use one that nothing else in the database shares
 | string
-| No
-| Empty string
+| Yes
+| None
 
 | userField
 | The hash field containing the user ID
@@ -218,4 +220,10 @@ A matching token can be created with `HSET apikey:abc123 user alice tenant acme`
 | string
 | No
 | tenant
+
+| allowedType
+| The type of key that is accepted as a token. One of `string`, `hash`, `list`, `set`, `zset`, or `stream`. A key of any other type is rejected
+| string
+| No
+| Any type
 |===

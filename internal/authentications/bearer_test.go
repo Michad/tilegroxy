@@ -92,6 +92,9 @@ func Test_Bearer_InitializeValidation(t *testing.T) {
 		{"postgres query without bind", map[string]interface{}{"datastore": "pg", "postgresql": map[string]interface{}{"query": "SELECT 'u'"}}, "authentication.postgresql.query"},
 		{"postgres with redis block", map[string]interface{}{"datastore": "pg", "postgresql": map[string]interface{}{"query": "SELECT $1"}, "redis": map[string]interface{}{"keyprefix": "k:"}}, "authentication.redis can only be set when a redis datastore"},
 		{"redis with postgres block", map[string]interface{}{"datastore": "redis", "postgresql": map[string]interface{}{"query": "SELECT $1"}}, "authentication.postgresql can only be set when a postgresql datastore"},
+		{"redis without block", map[string]interface{}{"datastore": "redis"}, "authentication.redis.keyprefix is required"},
+		{"redis without prefix", map[string]interface{}{"datastore": "redis", "redis": map[string]interface{}{"userfield": "u"}}, "authentication.redis.keyprefix is required"},
+		{"redis bad allowed type", map[string]interface{}{"datastore": "redis", "redis": map[string]interface{}{"keyprefix": "k:", "allowedtype": "blob"}}, "authentication.redis.allowedtype"},
 		{"misplaced redis key", map[string]interface{}{"datastore": "redis", "keyprefix": "k:"}, "keyprefix"},
 	}
 
@@ -111,7 +114,7 @@ func Test_Bearer_InitializeWithoutDatastoreRegistryErrors(t *testing.T) {
 }
 
 func Test_Bearer_InitializeDefaults(t *testing.T) {
-	auth, err := BearerRegistration{}.Initialize(BearerConfig{Datastore: "redis"}, bearerTestDeps(t))
+	auth, err := BearerRegistration{}.Initialize(BearerConfig{Datastore: "redis", Redis: &BearerRedisConfig{KeyPrefix: "k:"}}, bearerTestDeps(t))
 	require.NoError(t, err)
 
 	b := auth.(*Bearer)
@@ -160,7 +163,7 @@ func Test_Bearer_EncodeToken(t *testing.T) {
 func newFakeBearer(t *testing.T, cacheSize int, lookup bearerLookup) *Bearer {
 	t.Helper()
 
-	auth, err := BearerRegistration{}.Initialize(BearerConfig{Datastore: "redis", CacheSize: cacheSize}, bearerTestDeps(t))
+	auth, err := BearerRegistration{}.Initialize(BearerConfig{Datastore: "redis", Redis: &BearerRedisConfig{KeyPrefix: "k:"}, CacheSize: cacheSize}, bearerTestDeps(t))
 	require.NoError(t, err)
 
 	b := auth.(*Bearer)
@@ -241,7 +244,7 @@ func Test_Bearer_ConcurrentRequestsShareOneLookup(t *testing.T) {
 }
 
 func Test_Bearer_Close(t *testing.T) {
-	auth, err := ConstructAuth(map[string]interface{}{"name": "bearer", "datastore": "redis", "cachesize": 10}, bearerTestDeps(t))
+	auth, err := ConstructAuth(map[string]interface{}{"name": "bearer", "datastore": "redis", "redis": map[string]interface{}{"keyprefix": "k:"}, "cachesize": 10}, bearerTestDeps(t))
 	require.NoError(t, err)
 	assert.NoError(t, lifecycle.CloseIfCloser(context.Background(), auth))
 
