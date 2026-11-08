@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
 	"slices"
 	"strings"
 
@@ -239,10 +240,12 @@ func (r *Registry) CheckServerClientReference(id string) error {
 	return err
 }
 
-func (r *Registry) WarnUnused(ctx context.Context) {
+func (r *Registry) LogWarnings(ctx context.Context) {
 	if r == nil {
 		return
 	}
+
+	r.warnProxyWithMTLS(ctx)
 
 	for _, id := range r.order {
 		profile := r.profiles[id].base()
@@ -265,6 +268,28 @@ func (r *Registry) WarnUnused(ctx context.Context) {
 			slog.WarnContext(ctx, fmt.Sprintf("TLS profile %v sets parameters no reference uses: %v", id, strings.Join(unused, ", ")))
 		}
 	}
+}
+
+// Go handshakes with an https:// proxy using the target's TLS config, client certificate included
+func (r *Registry) warnProxyWithMTLS(ctx context.Context) {
+	if os.Getenv("HTTPS_PROXY") == "" && os.Getenv("https_proxy") == "" {
+		return
+	}
+
+	var ids []string
+
+	for key := range r.transports {
+		if key.mtls != "" && !slices.Contains(ids, key.mtls) {
+			ids = append(ids, key.mtls)
+		}
+	}
+
+	if len(ids) == 0 {
+		return
+	}
+
+	slices.Sort(ids)
+	slog.WarnContext(ctx, fmt.Sprintf("HTTPS_PROXY is set while TLS profiles %v present client certificates. An https:// proxy is sent the certificate regardless of allowedHosts and is validated against the profile's CAs", strings.Join(ids, ", ")))
 }
 
 func (r *Registry) Close(ctx context.Context) error {

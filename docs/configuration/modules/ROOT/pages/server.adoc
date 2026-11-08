@@ -78,7 +78,7 @@ JSON::
 | docs
 
 | Headers
-| Include these headers in all response from server. For cross-origin headers prefer xref:cors.adoc[CORS], which can vary the response by request origin. For `Cache-Control` prefer xref:cache_control.adoc[Cache Control], which derives the value from the layer
+| Include these headers in all responses from the server. For cross-origin headers prefer xref:cors.adoc[CORS], which can vary the response by request origin. For `Cache-Control` prefer xref:cache_control.adoc[Cache Control], which derives the value from the layer
 | map[string]string
 | No
 | None

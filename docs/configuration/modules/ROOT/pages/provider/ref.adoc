@@ -9,9 +9,9 @@
 
 This provider allows you to re-use layers to avoid repeating yourself, most useful in advanced/complex use cases in conjunction with layer patterns.
 
-Ref has a recursion limit of 10. We attempt to detect chains that will violate this limit at startup, but not all cases can be statically detected. Any tiles generated at runtime that violate this limit will result in an error after the 10th hop. This protection only applies to recursive ref's in a single config, for example there is no protection against using a proxy provider between two separate instances of tilegroxy.
+Ref has a recursion limit of 10. We attempt to detect cycles and chains that will violate this limit at startup, but not all cases can be statically detected. At runtime, a request that reaches the same layer name twice results in an error as soon as it repeats, and any other chain results in an error after the 10th hop. This protection only applies to recursive ref's in a single config, for example there is no protection against using a proxy provider between two separate instances of tilegroxy.
 
-If this provider is used from a layer utilizing xref:operation::layer-patterns.adoc[layer pattern], you can include `+{layer.NAME}+` placeholders in the `layer` field to fill in the matching pattern segments. If using this feature, datatype, bounds, and other metadata, as well as cyclical dependencies, can't be inferred. 
+If this provider is used from a layer with a xref:operation::layer-patterns.adoc[layer pattern], you can include `+{layer.NAME}+` placeholders in the `layer` field to fill in the matching pattern segments. When using placeholders the datatype, bounds, and other metadata can't be inferred, and cycles can't be detected at startup. 
 
 == Example
 [tabs]

@@ -17,8 +17,11 @@ package providers
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"testing"
+	"time"
 
+	"github.com/Michad/tilegroxy/internal/caches"
 	"github.com/Michad/tilegroxy/internal/layers"
 	"github.com/Michad/tilegroxy/pkg"
 	"github.com/Michad/tilegroxy/pkg/config"
@@ -40,8 +43,8 @@ func Test_Ref_IsNotACloser(t *testing.T) {
 	assert.False(t, ok, "Ref must not implement Closer: it references another layer's provider rather than owning one")
 }
 
-// validateRefs can't catch cycles through patterned names, so the depth counter must stop them before stack overflow
-func Test_Ref_CycleViaPattern_HitsDepthBackstop(t *testing.T) {
+// validateRefs can't catch cycles through patterned names, so a repeated name must fail before stack overflow
+func Test_Ref_CycleViaPattern_DetectsRepeat(t *testing.T) {
 	cfg := config.DefaultConfig()
 
 	provider := map[string]any{"name": "ref", "layer": "loop_{n}"}
@@ -56,6 +59,45 @@ func Test_Ref_CycleViaPattern_HitsDepthBackstop(t *testing.T) {
 	ctx := pkg.BackgroundContext()
 
 	_, err = lg.RenderTile(ctx, pkg.TileRequest{LayerName: "loop_1", Z: 1, X: 0, Y: 0})
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "cycle detected: loop_1 -> loop_{n} -> loop_{n}")
+}
+
+// A coalesced hop back to an in-flight name would otherwise wait on itself until the deadline
+func Test_Ref_CycleViaPlaceholder_Coalesced_FailsFast(t *testing.T) {
+	cfg := config.DefaultConfig()
+	cfg.Layers = []config.LayerConfig{
+		{ID: "a", Pattern: "a_{x}", Provider: refProvider("b_{layer.x}"), Client: &cfg.Client, AllowCoalesce: new(true), ParamValidator: map[string]string{"x": "[0-9]+"}},
+		{ID: "b", Pattern: "b_{y}", Provider: refProvider("a_{layer.y}"), Client: &cfg.Client, AllowCoalesce: new(true), ParamValidator: map[string]string{"y": "[0-9]+"}},
+	}
+
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, caches.NewSingleCacheRegistry(caches.Noop{}), nil, nil, nil)
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "/", nil)
+	require.NoError(t, err)
+
+	_, err = lg.RenderTile(pkg.NewRequestContext(req), pkg.TileRequest{LayerName: "a_1", Z: 1, X: 0, Y: 0})
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "cycle detected: a_1 -> b_1 -> a_1")
+	require.NoError(t, ctx.Err(), "cycle should be reported before the deadline")
+}
+
+// Names that grow every hop never repeat, so only the depth counter stops them
+func Test_Ref_GrowingNames_HitsDepthBackstop(t *testing.T) {
+	cfg := config.DefaultConfig()
+	cfg.Layers = []config.LayerConfig{
+		{ID: "grow", Pattern: "grow_{n}", Provider: refProvider("grow_{layer.n}x"), Client: &cfg.Client, SkipCache: true},
+	}
+
+	lg, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil, nil)
+	require.NoError(t, err)
+
+	_, err = lg.RenderTile(pkg.BackgroundContext(), pkg.TileRequest{LayerName: "grow_1", Z: 1, X: 0, Y: 0})
 
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "maximum reference depth")
@@ -272,12 +314,20 @@ func Test_Ref_LayerPlaceholder_InBlendPattern(t *testing.T) {
 	assert.NotEqual(t, img.Content, other.Content)
 }
 
-func Test_Ref_LayerPlaceholder_UnresolvedIsEmpty(t *testing.T) {
-	lg := constructTemplatedRefGroup(t, refProvider("detailed_{layer.typo}"))
+func Test_Ref_LayerPlaceholder_UnknownFailsStartup(t *testing.T) {
+	cfg := config.DefaultConfig()
+	cfg.Layers = []config.LayerConfig{
+		{ID: "combined", Pattern: "combined_{version}", Provider: map[string]any{
+			"name":      "fallback",
+			"primary":   refProvider("detailed_{layer.typo}"),
+			"secondary": map[string]any{"name": "static", "color": "00FF00"},
+		}, Client: &cfg.Client, SkipCache: true},
+	}
 
-	_, err := lg.RenderTile(pkg.BackgroundContext(), pkg.TileRequest{LayerName: "combined_v1", Z: 1, X: 0, Y: 0})
+	_, err := layers.ConstructLayerGroup(context.Background(), cfg, nil, nil, nil, nil)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "detailed_ does not exist")
+	assert.Contains(t, err.Error(), "layer.provider.primary.layer")
+	assert.Contains(t, err.Error(), "{layer.typo}")
 }
 
 func Test_Ref_LayerPlaceholder_NoStartupMetadata(t *testing.T) {

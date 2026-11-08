@@ -27,7 +27,7 @@ Metrics are available for cache hit/miss and the number of tile requests broken 
 | The number of tile requests that result in an error excluding validation, authentication, and rate limits
 
 | tilegroxy.tiles.total.success
-| The number of tiles requests that result in a successful response - this includes when a fallback kicks in
+| The number of tile requests that result in a successful response - this includes when a fallback kicks in
 
 | tilegroxy.tiles.layer.\{layerId}.request
 | The number of requests processed against the indicated layer
@@ -36,7 +36,7 @@ Metrics are available for cache hit/miss and the number of tile requests broken 
 | The number of errors that occur trying to generate a tile for the indicated layer
 
 | tilegroxy.tiles.layer.\{layerId}.success
-| The number of tile successfully generated for the indicated layer
+| The number of tiles successfully generated for the indicated layer
 
 | tilegroxy.tiles.layer.\{layerId}.auth
 | The number of outgoing authentication checks performed for the indicated layer
@@ -72,7 +72,7 @@ Metrics are available for cache hit/miss and the number of tile requests broken 
 | Provided by otelhttp. Reflects the size of request bodies sent to tilegroxy in bytes
 
 | http.server.response.body.size
-| Provided by otelhttp. Reflects the size of responses bodies returned from tilegroxy in bytes
+| Provided by otelhttp. Reflects the size of response bodies returned from tilegroxy in bytes
 
 | http.client.request.duration
 | Provided by otelhttp. Reflects the time tilegroxy waits on requests to external APIs
@@ -81,10 +81,10 @@ Metrics are available for cache hit/miss and the number of tile requests broken 
 | Provided by otelhttp. Reflects the size of request bodies sent to external APIs by tilegroxy in bytes
 
 | http.client.response.body.size
-| Provided by otelhttp. Reflects the size of responses bodies from external APIs called by tilegroxy in bytes
+| Provided by otelhttp. Reflects the size of response bodies from external APIs called by tilegroxy in bytes
 |===
 
-When using patterns with layers, metrics are logged against the ID of the layer not the name passed into the URL.  If using a Ref provider (including indirectly via the  Blend provider), the "child" layer requests are recorded in the layer-specific metrics *but not* the total metrics.
+When using patterns with layers, metrics are logged against the ID of the layer not the name passed into the URL.  If using a Ref provider (including indirectly via the Blend provider), the "child" layer requests are recorded in the layer-specific metrics *but not* the total metrics.
 
 The layer ID is sanitized to only alphanumeric characters, underscores, and hyphens; everything else is replaced with underscores.  It is also truncated to 200 characters to leave room for the metric name around it.  This keeps the instrument name valid for OTEL.  Either step can cause collisions, so usage for "my.layer" and "my_layer" will get written to the same metrics.
 

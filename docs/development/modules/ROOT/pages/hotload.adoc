@@ -6,7 +6,7 @@
 
 Tilegroxy can reload its configuration without restarting.  Everything built from the configuration (layers, caches, analytics, datastores, and TLS profiles) is bundled into a single object called a generation.  A reload builds a new generation next to the current one and then swaps it in.
 
-The hard part is the old generation.  Requests that started before the swap are still using it, so it can't be closed right away.  It has to be closed as soon as the last of those requests finishes, and no sooner.
+Requests that started before the swap may still be using the old generation, so it can't be closed right away.  It needs to close once the last of those requests finishes.
 
 == Reference counting
 

@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 
 	"github.com/Michad/tilegroxy/internal/layers"
@@ -27,8 +28,10 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// Backstop for cycles through patterned names, which startup validation can't resolve. The root request is hop 0
+// Backstop for chains of names that never repeat, such as ones that grow each hop. The root request is hop 0
 const maxRefDepth = 10
+
+type refChainKey struct{}
 
 type RefConfig struct {
 	Layer string
@@ -85,9 +88,19 @@ func (t Ref) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequ
 		return nil, fmt.Errorf("ref: maximum reference depth (%v) exceeded, likely a cycle involving layer %v", maxRefDepth, layerName)
 	}
 
+	// Coalescing makes a repeated name wait on itself until timeout instead of reaching the depth limit
+	chain, _ := ctx.Value(refChainKey{}).([]string)
+	if len(chain) == 0 {
+		chain = []string{tileRequest.LayerName}
+	}
+	chain = append(slices.Clone(chain), layerName)
+	if slices.Contains(chain[:len(chain)-1], layerName) {
+		return nil, fmt.Errorf("ref: cycle detected: %v", strings.Join(chain, " -> "))
+	}
+
 	// A fresh context keeps the parent layer's placeholders from leaking into the child layer
 	req, _ := pkg.ReqFromContext(ctx)
-	newCtx := pkg.NewRequestContext(req)
+	newCtx := context.WithValue(pkg.NewRequestContext(req), refChainKey{}, chain)
 
 	pkg.CopyAuthRestrictions(ctx, newCtx)
 

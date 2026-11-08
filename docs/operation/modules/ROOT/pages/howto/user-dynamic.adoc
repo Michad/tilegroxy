@@ -35,7 +35,7 @@ As well as tilegroxy's cache, tiles may be cached in a browser (or CDN) cache as
 
 Even if you entirely disable caching, there is still a risk that tiles can leak between users: coalescing.
 
-Tilegroxy has a mechanism to "coalesce" or combine identical requests that come in concurrently.  This helps protect against cases where e.g. 20 people load the exact same map at once and overwhelm your upstream tileserver (since the tiles aren't yet cached).  Of course, this mechanism works by serving the exact same tile to the user.  
+Tilegroxy has a mechanism to "coalesce" or combine identical requests that come in concurrently.  This helps protect against cases where e.g. 20 people load the exact same map at once and overwhelm your upstream tileserver (since the tiles aren't yet cached).  Of course, this mechanism works by serving the exact same tile to every user who asked for it.  
 
 Tilegroxy has a degree of "smarts" to control when to coalesce or not based on whether the configuration has a cache and whether the provider refers to the user or tenant ID, but this can not catch all cases (especially if you are using a custom provider).
 

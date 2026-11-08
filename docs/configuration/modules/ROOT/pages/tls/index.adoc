@@ -42,7 +42,7 @@ The `client` and `server.encrypt` sections don't fall back to each other. A sect
 
 Everything that uses the xref:client.adoc[client] configuration picks up its profiles: the xref:provider/proxy.adoc[proxy], xref:provider/url_template.adoc[url template], and xref:provider/pmtiles.adoc[pmtiles] providers, xref:operation::extensibility.adoc#custom[custom providers] calling `GetTile`, and xref:authentication/passthrough.adoc[passthrough authentication]. Datastores, caches, analytics, telemetry, and the JWKS download for xref:authentication/jwt.adoc[JWT authentication] make their own connections and don't use profiles.
 
-A layer's `client` overrides the top-level client piecemeal, so different layers can trust different CAs or present different certificates. Combine them in one layer using a xref:provider/ref.adoc[ref] provider, which keeps the client of the layer it refers to.
+A layer's `client` overrides the top-level client piecemeal, so different layers can trust different CAs or present different certificates. To combine upstreams that need different profiles, give each its own layer and pull them together with xref:provider/ref.adoc[ref] providers, since a ref uses the client of the layer it refers to.
 
 Profiles can be reloaded without downtime. See xref:operation::reloading.adoc#supported-configuration[Reloading].
 

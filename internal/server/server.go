@@ -244,7 +244,7 @@ func newReloadFunc(ctx context.Context, secure *serverTLS, health *healthSupervi
 			return err
 		}
 
-		newEnt.TLS.WarnUnused(ctx)
+		newEnt.TLS.LogWarnings(ctx)
 
 		return nil
 	}
@@ -277,7 +277,7 @@ func ListenAndServe(cfg *config.Config, ent *entities.Entities, onReady func(rel
 		return err
 	}
 
-	ent.TLS.WarnUnused(pkg.BackgroundContext())
+	ent.TLS.LogWarnings(pkg.BackgroundContext())
 
 	// Derived from the signal context, SIGTERM would cancel every in-flight request into a 503, defeating graceful drain
 	rootCtx := pkg.BackgroundContext()

@@ -230,3 +230,40 @@ func Test_ConstructValidation_MixedCasePlaceholder(t *testing.T) {
 	doesMatch, _ = matchName(matching.segments, matching.validator, matching.paramMap, "a_abcd")
 	assert.False(t, doesMatch)
 }
+
+func Test_ValidateLayerPlaceholders(t *testing.T) {
+	segments, err := parsePattern("tiles_{Region}_{year}")
+	require.NoError(t, err)
+
+	valid := map[string]any{
+		"name":      "fallback",
+		"primary":   map[string]any{"name": "proxy", "url": "https://example.com/{layer.Region}/{layer.year}/{z}"},
+		"secondary": map[string]any{"name": "static", "color": "FFF"},
+		"providers": []any{map[string]any{"name": "ref", "layer": "other_{layer.year}"}, 5},
+	}
+	require.NoError(t, validateLayerPlaceholders(valid, "layer.provider", segments, testErrorMessages))
+
+	tests := map[string]struct {
+		provider map[string]any
+		path     string
+	}{
+		"typo":         {map[string]any{"url": "https://example.com/{layer.Regoin}"}, "layer.provider.url"},
+		"case differs": {map[string]any{"url": "https://example.com/{layer.region}"}, "layer.provider.url"},
+		"nested list":  {map[string]any{"providers": []any{map[string]any{"layer": "x_{layer.nope}"}}}, "layer.provider.providers[0].layer"},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := validateLayerPlaceholders(tc.provider, "layer.provider", segments, testErrorMessages)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tc.path)
+		})
+	}
+}
+
+func Test_ValidateLayerPlaceholders_NoPattern(t *testing.T) {
+	segments := []layerSegment{{value: "plain"}}
+
+	err := validateLayerPlaceholders(map[string]any{"layer": "x_{layer.plain}"}, "layer.provider", segments, testErrorMessages)
+	require.Error(t, err)
+}

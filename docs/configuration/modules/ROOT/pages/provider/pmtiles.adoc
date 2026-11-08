@@ -15,9 +15,7 @@ Brotli or zstd compression are *not* supported. The `Content-Type` of every tile
 
 We pull metadata fields (including zoom range, bounds, and datatype) from the archive and make them available as defaults for the xref:layer.adoc[layer]. If you set `bounds` on the layer you must also set `datatype`, since the layer decides how to crop before the archive is opened.
 
-When using a URL the xref:client.adoc[client] `MaxLength` limits the size of every section/tile after any decompression. Archives with dense vector tiles may need a higher limit, but be mindful that increasing the size too much could leave you vulnerable to supply-side attacks. Local files have no such limit as those are under your control. The client configured `StatusCodes`, `ContentTypes`, and `UnknownLength` checks aren't enforced for this provider due the peculiarities of HTTP range requests.
-
-NOTE: Access via HTTP(s) uses range requests.
+When using a URL the xref:client.adoc[client] `MaxLength` limits the size of every section/tile after any decompression. Archives with dense vector tiles may need a higher limit, but be mindful that increasing the size too much could leave you vulnerable to supply-side attacks. Local files have no such limit as those are under your control. The client configured `StatusCodes`, `ContentTypes`, and `UnknownLength` checks aren't enforced for this provider due to the peculiarities of HTTP range requests.
 
 A request for a tile that isn't in the archive is treated as out of bounds and returns the xref:error.adoc[out of bounds error]. Wrap this provider in a xref:provider/fallback.adoc[fallback] if you want another provider to fill those gaps. 
 

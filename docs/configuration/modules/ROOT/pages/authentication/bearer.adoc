@@ -9,7 +9,7 @@ NOTE: Requires a xref:datastores/postgresql.adoc[postgresql] or xref:datastores/
 
 == Description
 
-This lets you validate API keys you already manage in your own database. It can associate a user ID and tenant ID with the request, but does not support authorization options (allowed layers or bounding box). Supported datastores are xref:datastores/postgresql.adoc[postgresql] and xref:datastores/redis.adoc[redis].
+This lets you validate API keys you already manage in your own database. It can associate a user ID and tenant ID with the request, but does not support authorization options (allowed layers or bounding box).
 
 Lookup results can optionally be cached in memory to decrease database load. Use this with caution since a revoked token can keep working until the cache entry expires. Rejections are cached too, but outright errors (such as an inability to connect to the database) are not.
 
@@ -65,7 +65,7 @@ Lookup results can optionally be cached in memory to decrease database load. Use
 
 == PostgreSQL
 
-The `query` is executed with the auth token passed in as the `$1` bind parameter. It must be a SELECT that returns zero or one rows. If zero or more than one rows are returned, authentication fails.
+The `query` is executed with the auth token passed in as the `$1` bind parameter. It should be a SELECT that returns a single row. If no rows or more than one row are returned, authentication fails.
 
 The returned row should have a mix of the columns in the following table. Any other columns are ignored. A column that is present but has the wrong data type causes a warning to be logged and authentication to fail.
 

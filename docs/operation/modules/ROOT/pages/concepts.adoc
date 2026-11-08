@@ -21,7 +21,7 @@ Clients request tiles by layer name, which is matched against each layer's patte
 
 A xref:configuration::provider/index.adoc[provider] is what actually produces a tile for a layer. Some providers fetch or render data themselves, such as xref:configuration::provider/proxy.adoc[proxy]. Others wrap one or more child providers, such as xref:configuration::provider/fallback.adoc[fallback].
 
-Every level of nesting costs some performance, especially the image processing ones.
+Every level of nesting costs some performance, especially providers that process images.
 
 == Caches
 
@@ -33,7 +33,7 @@ Some caches wrap others. xref:configuration::cache/multi.adoc[multi] chains seve
 
 == Datastores
 
-xref:configuration::datastores/index.adoc[Datastores] are shared connections, mostly to databases, defined once with an ID. Providers, caches, and analytics refer to them by that ID, usually through a `datastore` parameter. This avoids opening a separate connection pool, or other resources, for every entity that needs one.
+xref:configuration::datastores/index.adoc[Datastores] are shared connections, mostly to databases, defined once with an ID. Providers, caches, authentication, analytics, and rate limits refer to them by that ID, usually through a `datastore` parameter. This avoids opening a separate connection pool, or other resources, for every entity that needs one.
 
 == Authentication
 

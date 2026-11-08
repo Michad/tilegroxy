@@ -6,7 +6,7 @@ NOTE: If possible, please consider contributing back whatever functionality you 
 
 == Overview
 
-Is tilegroxy's out of the box capabilities not sufficing for your use-case?  Luckily tilegroxy is designed to be highly extensible so you can add whatever functionality yourself!
+Are tilegroxy's out of the box capabilities not sufficing for your use-case?  Luckily tilegroxy is designed to be highly extensible so you can add whatever functionality yourself!
 
 There are three ways to extend tilegroxy. The first is to use the various "custom" options to provide interpreted Go code to implement a provider, authentication scheme, or analytics destination. The second is to use tilegroxy as a library and create your own executable with whatever tweaks you need. The last is to fork the repository and change the code directly.
 
@@ -277,7 +277,7 @@ func (t Sample) GenerateTile(ctx context.Context, providerContext layer.Provider
 }
 ----
 
-A provider that can describe its own tiles can also implement the optional `layer.MetadataProvider` interface, returning a `layer.Description`. Providers describe, they never restrict. See xref:configuration::layer.adoc#metadata[layer metadata] for how the layer uses it. A provider that nests other providers should implement `layer.Parent` so its children are described and closed along with it.
+A provider that can describe its own tiles can also implement the optional `layer.MetadataProvider` interface, returning a `layer.Description`. The layer advertises these values but never enforces them. See xref:configuration::layer.adoc#metadata[layer metadata] for how the layer uses it. A provider that nests other providers should implement `layer.Parent` so its children are described and closed along with it.
 
 From here, implementing the provider is the same as implementing a Custom provider.  The other entities can be specified in the same way.
 

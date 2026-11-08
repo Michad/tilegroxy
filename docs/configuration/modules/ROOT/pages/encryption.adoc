@@ -113,7 +113,7 @@ JSON::
 
 == Redirects
 
-When `HttpPort` is set, we redirect requests to HTTPS. The redirect uses the `Host` header only if that host is in the `Hosts` of the `TLS` profile. As long as there's a non-wildcard host in `Hosts` we fallback on the first one, with a 400 being the last resort to avoid CSRF vectors. If the `Host` header uses the implicit port 80, we redirect to the implicit port 443. Otherwise we redirect to the main port in our config.
+When `HttpPort` is set, we redirect requests to HTTPS. The redirect uses the `Host` header only if that host is in the `Hosts` of the `TLS` profile. As long as there's a non-wildcard host in `Hosts` we fall back to the first one, with a 400 being the last resort to avoid CSRF vectors. If the `Host` header uses the implicit port 80, we redirect to the implicit port 443. Otherwise we redirect to the main port in our config.
 
 A `pem` profile with no `Hosts` and a certificate with no DNS names has nothing to redirect to, so every request gets the 400. A warning is logged when this happens. Set `Hosts` to fix it.
 

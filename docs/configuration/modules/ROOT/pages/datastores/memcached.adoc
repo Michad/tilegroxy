@@ -64,7 +64,7 @@ JSON::
 | 11211
 
 | Servers
-| The list of servers to connect to supplied as an array of objects, each with a host and key parameter. This should only have a single entry when operating in standalone mode. If this is unspecified it uses the standalone `host` and `port` parameters as a default, therefore this shouldn't be specified at the same time as those
+| The list of servers to connect to supplied as an array of objects, each with a host and port parameter. If this is unspecified it uses the standalone `host` and `port` parameters as a default, therefore this shouldn't be specified at the same time as those
 | Array of `host` and `port`
 | No
 | host and port
