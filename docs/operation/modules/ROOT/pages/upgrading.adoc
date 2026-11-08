@@ -16,9 +16,9 @@ NOTE: Releases before 1.0 do not follow the xref:compatibility.adoc[compatibilit
 == 0.15.0
 
 [.release]
-Released:: Not yet released
+Released:: November 2026
 Risk:: [.risk.medium]#Medium#
-Commits:: link:https://github.com/Michad/tilegroxy/compare/v0.14.0...v0.15.0[49]
+Commits:: link:https://github.com/Michad/tilegroxy/compare/v0.14.0...v0.15.0[46]
 Release notes:: link:https://github.com/Michad/tilegroxy/releases/tag/v0.15.0[v0.15.0 on GitHub]
 
 === Breaking Changes
@@ -34,6 +34,7 @@ Release notes:: link:https://github.com/Michad/tilegroxy/releases/tag/v0.15.0[v0
 * `paramMap` on a layer replaces placeholder values before providers see them.  See xref:layer-patterns.adoc#mapping-values[Mapping values]
 * `cacheversion: auto` computes a layer's cache version from its configuration.  See xref:configuration::cache/index.adoc#cache-version[Cache version]
 * Top-level keys starting with `x-` are ignored, so they can hold YAML anchors for reuse.  See xref:configuration.adoc#extension-keys[Extension Keys]
+* Documentation has been restructured for easier navigation with configuration reference now a dedicated module
 
 == 0.14.0
 
