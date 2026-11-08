@@ -226,6 +226,51 @@ func (r *recordingTransport) RoundTrip(_ *http.Request) (*http.Response, error) 
 	return nil, errors.New("stop here")
 }
 
+type endlessReader struct {
+	read int
+}
+
+func (e *endlessReader) Read(p []byte) (int, error) {
+	e.read += len(p)
+	return len(p), nil
+}
+
+func (e *endlessReader) Close() error {
+	return nil
+}
+
+type unknownLengthTransport struct {
+	body *endlessReader
+}
+
+func (u unknownLengthTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	return &http.Response{
+		StatusCode:    http.StatusOK,
+		Header:        http.Header{"Content-Type": []string{"image/png"}},
+		ContentLength: -1,
+		Body:          u.body,
+		Request:       r,
+	}, nil
+}
+
+func Test_GetTile_UnknownLengthIsBounded(t *testing.T) {
+	body := &endlessReader{}
+	unknownLength := true
+	clientConfig := config.ClientConfig{
+		StatusCodes:   []int{http.StatusOK},
+		ContentTypes:  []string{"image/png"},
+		MaxLength:     1024,
+		UnknownLength: &unknownLength,
+		Timeout:       5,
+	}
+
+	_, err := GetTileWithTransport(context.Background(), clientConfig, unknownLengthTransport{body}, "http://example.invalid/", nil)
+
+	var lengthErr InvalidContentLengthError
+	require.ErrorAs(t, err, &lengthErr)
+	assert.LessOrEqual(t, body.read, 64*1024)
+}
+
 func Test_GetTile_UsesClientTransport(t *testing.T) {
 	transport := &recordingTransport{}
 

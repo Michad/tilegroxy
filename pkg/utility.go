@@ -200,7 +200,7 @@ func GetTileWithTransport(ctx context.Context, clientConfig config.ClientConfig,
 		}
 	}
 
-	img, err := io.ReadAll(resp.Body)
+	img, err := io.ReadAll(io.LimitReader(resp.Body, int64(clientConfig.MaxLength)+1))
 
 	if err != nil {
 		return nil, RemoteServerError{StatusCode: resp.StatusCode}
