@@ -183,6 +183,16 @@ func Test_Bearer_Redis(t *testing.T) {
 	})
 	assertBearer(t, cached, "Bearer good", true, "alice", "globex")
 
+	hashOnly := constructBearerWithDatastore(ctx, t, dsCfg, map[string]interface{}{
+		"name":      "bearer",
+		"datastore": "auth_redis",
+		"redis":     map[string]interface{}{"keyprefix": "apikey:", "allowedtype": "hash"},
+	})
+	assertBearer(t, hashOnly, "Bearer good", true, "alice", "acme")
+	assertBearer(t, hashOnly, "Bearer string", false, "", "")
+	assertBearer(t, hashOnly, "Bearer set", false, "", "")
+	assertBearer(t, hashOnly, "Bearer missing", false, "", "")
+
 	require.NoError(t, client.Del(ctx, "apikey:good").Err())
 	assertBearer(t, cached, "Bearer good", true, "alice", "globex")
 	assertBearer(t, auth, "Bearer good", false, "", "")
