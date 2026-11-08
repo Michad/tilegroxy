@@ -27,6 +27,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/Michad/tilegroxy/internal/images"
 	"github.com/Michad/tilegroxy/pkg"
@@ -55,7 +56,8 @@ const (
 	sourceLayer
 )
 
-func replaceURLPlaceholders(ctx context.Context, tileRequest pkg.TileRequest, rawURL string, invertY bool, srid uint) (string, error) {
+// decodedPath is for a consumer that decodes the path before use, e.g. CGI's PATH_INFO, so escaping a separator isn't enough
+func replaceURLPlaceholders(ctx context.Context, tileRequest pkg.TileRequest, rawURL string, invertY bool, srid uint, decodedPath bool) (string, error) {
 	// $N is assigned in a fixed source order, so counts are enough to classify each. postgis needs only plain values
 	envCount := len(envRegex.FindAllString(rawURL, -1))
 	ctxCount := len(ctxRegex.FindAllString(rawURL, -1))
@@ -79,10 +81,11 @@ func replaceURLPlaceholders(ctx context.Context, tileRequest pkg.TileRequest, ra
 
 	// One scan so substituted text is never re-examined. Repeated passes could splice a "$0" from User input into a secret
 	var out strings.Builder
-	queryStart := strings.Index(rawURL, "?")
+	inQuery := false
 
 	for i := 0; i < len(rawURL); {
 		if rawURL[i] != '$' {
+			inQuery = inQuery || rawURL[i] == '?'
 			out.WriteByte(rawURL[i])
 			i++
 			continue
@@ -105,21 +108,39 @@ func replaceURLPlaceholders(ctx context.Context, tileRequest pkg.TileRequest, ra
 		value := fmt.Sprint(replacements[idx])
 
 		// {env.*} may inject a whole base URL. Request-derived values are escaped so "?", "#" or "/" can't alter the URL
-		if sourceFor(idx) == sourceEnv {
+		switch {
+		case sourceFor(idx) == sourceEnv:
+			inQuery = inQuery || strings.Contains(value, "?")
 			out.WriteString(value)
-		} else {
-			// Measured against the template so a "?" inside an {env.*} value can't change how later values are escaped
-			if queryStart >= 0 && i > queryStart {
-				out.WriteString(url.QueryEscape(value))
-			} else {
-				out.WriteString(url.PathEscape(value))
+		case inQuery:
+			out.WriteString(url.QueryEscape(value))
+		default:
+			if !isSafePathValue(value, decodedPath) {
+				return "", pkg.InvalidArgumentError{Name: "placeholder", Value: value}
 			}
+
+			out.WriteString(url.PathEscape(value))
 		}
 
 		i = j
 	}
 
 	return out.String(), nil
+}
+
+// PathEscape leaves "." alone, so a whole-segment "." or ".." would still traverse
+func isSafePathValue(value string, decodedPath bool) bool {
+	if value == "." || value == ".." {
+		return false
+	}
+
+	if !decodedPath {
+		return true
+	}
+
+	return !strings.ContainsFunc(value, func(r rune) bool {
+		return r == '/' || r == '\\' || unicode.IsControl(r)
+	})
 }
 
 // E.g. "a {env.foo}" -> "a $1" with {"$1": "bar"}. Coordinates are inlined. $N follows env, ctx, then layer order

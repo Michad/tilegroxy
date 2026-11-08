@@ -31,7 +31,7 @@ func Test_ReplaceURLPlaceholders_EscapesInjectionInPath(t *testing.T) {
 	lpm, _ := pkg.LayerPatternMatchesFromContext(ctx)
 	(*lpm)["v"] = "evil?extra=param"
 
-	result, err := replaceURLPlaceholders(ctx, pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com/tiles/{layer.v}/{z}/{x}/{y}.png", false, pkg.SRIDWGS84)
+	result, err := replaceURLPlaceholders(ctx, pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com/tiles/{layer.v}/{z}/{x}/{y}.png", false, pkg.SRIDWGS84, false)
 
 	require.NoError(t, err)
 	require.NotContains(t, result, "?extra=param")
@@ -43,7 +43,7 @@ func Test_ReplaceURLPlaceholders_EscapesPathTraversal(t *testing.T) {
 	lpm, _ := pkg.LayerPatternMatchesFromContext(ctx)
 	(*lpm)["v"] = "../../escaped"
 
-	result, err := replaceURLPlaceholders(ctx, pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com/tiles/{layer.v}/{z}/{x}/{y}.png", false, pkg.SRIDWGS84)
+	result, err := replaceURLPlaceholders(ctx, pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com/tiles/{layer.v}/{z}/{x}/{y}.png", false, pkg.SRIDWGS84, false)
 
 	require.NoError(t, err)
 	require.NotContains(t, result, "/../../escaped/")
@@ -55,7 +55,7 @@ func Test_ReplaceURLPlaceholders_EscapesFragmentInjection(t *testing.T) {
 	lpm, _ := pkg.LayerPatternMatchesFromContext(ctx)
 	(*lpm)["v"] = "evil#fragment"
 
-	result, err := replaceURLPlaceholders(ctx, pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com/tiles/{layer.v}/{z}/{x}/{y}.png", false, pkg.SRIDWGS84)
+	result, err := replaceURLPlaceholders(ctx, pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com/tiles/{layer.v}/{z}/{x}/{y}.png", false, pkg.SRIDWGS84, false)
 
 	require.NoError(t, err)
 	require.NotContains(t, result, "#fragment")
@@ -67,7 +67,7 @@ func Test_ReplaceURLPlaceholders_EscapesInQueryPosition(t *testing.T) {
 	lpm, _ := pkg.LayerPatternMatchesFromContext(ctx)
 	(*lpm)["v"] = "value&injected=1"
 
-	result, err := replaceURLPlaceholders(ctx, pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com/tiles?layer={layer.v}&z={z}", false, pkg.SRIDWGS84)
+	result, err := replaceURLPlaceholders(ctx, pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com/tiles?layer={layer.v}&z={z}", false, pkg.SRIDWGS84, false)
 
 	require.NoError(t, err)
 	require.NotContains(t, result, "&injected=1")
@@ -79,7 +79,7 @@ func Test_ReplaceURLPlaceholders_NormalValuesStillWork(t *testing.T) {
 	lpm, _ := pkg.LayerPatternMatchesFromContext(ctx)
 	(*lpm)["v"] = "20230917a"
 
-	result, err := replaceURLPlaceholders(ctx, pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com/tiles/{layer.v}/{z}/{x}/{y}.png", false, pkg.SRIDWGS84)
+	result, err := replaceURLPlaceholders(ctx, pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com/tiles/{layer.v}/{z}/{x}/{y}.png", false, pkg.SRIDWGS84, false)
 
 	require.NoError(t, err)
 	require.Equal(t, "https://example.com/tiles/20230917a/1/1/0.png", result)
@@ -91,7 +91,7 @@ func Test_ReplaceURLPlaceholders_EnvValuePassesThroughUnescaped(t *testing.T) {
 
 	ctx := pkg.BackgroundContext()
 
-	result, err := replaceURLPlaceholders(ctx, pkg.TileRequest{Z: 1, X: 1, Y: 0}, "{env.TILEGROXY_TEST_BASEURL}/{z}/{x}/{y}.png", false, pkg.SRIDWGS84)
+	result, err := replaceURLPlaceholders(ctx, pkg.TileRequest{Z: 1, X: 1, Y: 0}, "{env.TILEGROXY_TEST_BASEURL}/{z}/{x}/{y}.png", false, pkg.SRIDWGS84, false)
 
 	require.NoError(t, err)
 	require.Equal(t, "https://tiles.example.com/v1/1/1/0.png", result)
@@ -103,7 +103,7 @@ func Test_ReplaceURLPlaceholders_EnvValueWithQueryStringPassesThroughUnescaped(t
 
 	ctx := pkg.BackgroundContext()
 
-	result, err := replaceURLPlaceholders(ctx, pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com/tiles/{z}/{x}/{y}{env.TILEGROXY_TEST_SUFFIX}", false, pkg.SRIDWGS84)
+	result, err := replaceURLPlaceholders(ctx, pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com/tiles/{z}/{x}/{y}{env.TILEGROXY_TEST_SUFFIX}", false, pkg.SRIDWGS84, false)
 
 	require.NoError(t, err)
 	require.Equal(t, "https://example.com/tiles/1/1/0?key=abc&fmt=png", result)
@@ -117,7 +117,7 @@ func Test_ReplaceURLPlaceholders_CtxValueIsEscaped(t *testing.T) {
 
 	ctx := pkg.NewRequestContext(req)
 
-	result, err := replaceURLPlaceholders(ctx, pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com/tiles/{ctx.User-Agent}/{z}/{x}/{y}.png", false, pkg.SRIDWGS84)
+	result, err := replaceURLPlaceholders(ctx, pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com/tiles/{ctx.User-Agent}/{z}/{x}/{y}.png", false, pkg.SRIDWGS84, false)
 
 	require.NoError(t, err)
 	require.NotContains(t, result, "?extra=param")
@@ -132,7 +132,7 @@ func Test_ReplaceURLPlaceholders_CtxValueNormalStillWorks(t *testing.T) {
 
 	ctx := pkg.NewRequestContext(req)
 
-	result, err := replaceURLPlaceholders(ctx, pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com/tiles/{z}/{x}/{y}.png?agent={ctx.User-Agent}", false, pkg.SRIDWGS84)
+	result, err := replaceURLPlaceholders(ctx, pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com/tiles/{z}/{x}/{y}.png?agent={ctx.User-Agent}", false, pkg.SRIDWGS84, false)
 
 	require.NoError(t, err)
 	require.Equal(t, "https://example.com/tiles/1/1/0.png?agent=my-agent", result)
@@ -146,7 +146,7 @@ func Test_ReplaceURLPlaceholders_MixedEnvAndLayerOnlyEscapesLayer(t *testing.T) 
 	lpm, _ := pkg.LayerPatternMatchesFromContext(ctx)
 	(*lpm)["v"] = "evil?x=1"
 
-	result, err := replaceURLPlaceholders(ctx, pkg.TileRequest{Z: 1, X: 1, Y: 0}, "{env.TILEGROXY_TEST_HOST}/tiles/{layer.v}/{z}/{x}/{y}.png", false, pkg.SRIDWGS84)
+	result, err := replaceURLPlaceholders(ctx, pkg.TileRequest{Z: 1, X: 1, Y: 0}, "{env.TILEGROXY_TEST_HOST}/tiles/{layer.v}/{z}/{x}/{y}.png", false, pkg.SRIDWGS84, false)
 
 	require.NoError(t, err)
 	require.NotEmpty(t, result)
@@ -165,7 +165,7 @@ func Test_ReplaceURLPlaceholders_CtxValueCannotReinjectPlaceholder(t *testing.T)
 
 	ctx := pkg.NewRequestContext(req)
 
-	result, err := replaceURLPlaceholders(ctx, pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com/{env.TILEGROXY_TEST_SECRET}/{ctx.User-Agent}/{z}/{x}/{y}.png", false, pkg.SRIDWGS84)
+	result, err := replaceURLPlaceholders(ctx, pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com/{env.TILEGROXY_TEST_SECRET}/{ctx.User-Agent}/{z}/{x}/{y}.png", false, pkg.SRIDWGS84, false)
 
 	require.NoError(t, err)
 	require.NotContains(t, result, "super-secret-value/super-secret-value")
@@ -182,7 +182,7 @@ func Test_ReplaceURLPlaceholders_CtxValueCannotReinjectPlaceholderInQuery(t *tes
 
 	ctx := pkg.NewRequestContext(req)
 
-	result, err := replaceURLPlaceholders(ctx, pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com/{env.TILEGROXY_TEST_SECRET}/{z}/{x}/{y}.png?agent={ctx.User-Agent}", false, pkg.SRIDWGS84)
+	result, err := replaceURLPlaceholders(ctx, pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com/{env.TILEGROXY_TEST_SECRET}/{z}/{x}/{y}.png?agent={ctx.User-Agent}", false, pkg.SRIDWGS84, false)
 
 	require.NoError(t, err)
 	require.NotContains(t, result, "agent=super-secret-value")
@@ -200,7 +200,7 @@ func Test_ReplaceURLPlaceholders_DoubleDigitIndices(t *testing.T) {
 	}
 	template += templateSb200.String()
 
-	result, err := replaceURLPlaceholders(pkg.BackgroundContext(), pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com"+template, false, pkg.SRIDWGS84)
+	result, err := replaceURLPlaceholders(pkg.BackgroundContext(), pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com"+template, false, pkg.SRIDWGS84, false)
 
 	require.NoError(t, err)
 	require.NotContains(t, result, "$")
@@ -211,10 +211,74 @@ func Test_ReplaceURLPlaceholders_DoubleDigitIndices(t *testing.T) {
 
 // A literal "$" that isn't a generated placeholder passes through untouched
 func Test_ReplaceURLPlaceholders_LiteralDollarPreserved(t *testing.T) {
-	result, err := replaceURLPlaceholders(pkg.BackgroundContext(), pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com/a$b/c$/{z}/{x}/{y}.png", false, pkg.SRIDWGS84)
+	result, err := replaceURLPlaceholders(pkg.BackgroundContext(), pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com/a$b/c$/{z}/{x}/{y}.png", false, pkg.SRIDWGS84, false)
 
 	require.NoError(t, err)
 	require.Equal(t, "https://example.com/a$b/c$/1/1/0.png", result)
+}
+
+// The "?" arrives via {env.*}, so values after it are in the query and must not add parameters
+func Test_ReplaceURLPlaceholders_EnvSuppliedQueryStartQueryEscapesLaterValues(t *testing.T) {
+	t.Setenv("TILEGROXY_TEST_WMS", "https://wms.example.com/wms?SERVICE=WMS&KEY=s3cret")
+
+	ctx := pkg.BackgroundContext()
+	lpm, _ := pkg.LayerPatternMatchesFromContext(ctx)
+	(*lpm)["l"] = "roads&SLD=http://evil/x.sld"
+
+	result, err := replaceURLPlaceholders(ctx, pkg.TileRequest{Z: 1, X: 1, Y: 0}, "{env.TILEGROXY_TEST_WMS}&LAYERS={layer.l}", false, pkg.SRIDWGS84, false)
+
+	require.NoError(t, err)
+	require.Equal(t, "https://wms.example.com/wms?SERVICE=WMS&KEY=s3cret&LAYERS=roads%26SLD%3Dhttp%3A%2F%2Fevil%2Fx.sld", result)
+}
+
+func Test_ReplaceURLPlaceholders_RejectsDotSegmentsInPath(t *testing.T) {
+	for _, v := range []string{".", ".."} {
+		ctx := pkg.BackgroundContext()
+		lpm, _ := pkg.LayerPatternMatchesFromContext(ctx)
+		(*lpm)["v"] = v
+
+		_, err := replaceURLPlaceholders(ctx, pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com/tiles/{layer.v}/{z}/{x}/{y}.png", false, pkg.SRIDWGS84, false)
+
+		var argErr pkg.InvalidArgumentError
+		require.ErrorAs(t, err, &argErr, v)
+	}
+}
+
+// Dot segments are harmless in the query
+func Test_ReplaceURLPlaceholders_AllowsDotSegmentsInQuery(t *testing.T) {
+	ctx := pkg.BackgroundContext()
+	lpm, _ := pkg.LayerPatternMatchesFromContext(ctx)
+	(*lpm)["v"] = ".."
+
+	result, err := replaceURLPlaceholders(ctx, pkg.TileRequest{Z: 1, X: 1, Y: 0}, "https://example.com/tiles?style={layer.v}", false, pkg.SRIDWGS84, false)
+
+	require.NoError(t, err)
+	require.Equal(t, "https://example.com/tiles?style=..", result)
+}
+
+// CGI decodes the path into PATH_INFO, so an escaped separator would still become one
+func Test_ReplaceURLPlaceholders_DecodedPathRejectsSeparators(t *testing.T) {
+	for _, v := range []string{"../../admin", "a/b", `a\b`, "a\nb"} {
+		ctx := pkg.BackgroundContext()
+		lpm, _ := pkg.LayerPatternMatchesFromContext(ctx)
+		(*lpm)["v"] = v
+
+		_, err := replaceURLPlaceholders(ctx, pkg.TileRequest{Z: 1, X: 1, Y: 0}, "/tiles/{layer.v}/{z}/{x}/{y}.png", false, pkg.SRIDWGS84, true)
+
+		var argErr pkg.InvalidArgumentError
+		require.ErrorAs(t, err, &argErr, v)
+	}
+}
+
+func Test_ReplaceURLPlaceholders_DecodedPathAllowsSeparatorsInQuery(t *testing.T) {
+	ctx := pkg.BackgroundContext()
+	lpm, _ := pkg.LayerPatternMatchesFromContext(ctx)
+	(*lpm)["v"] = "a/b"
+
+	result, err := replaceURLPlaceholders(ctx, pkg.TileRequest{Z: 1, X: 1, Y: 0}, "/tiles?map={layer.v}", false, pkg.SRIDWGS84, true)
+
+	require.NoError(t, err)
+	require.Equal(t, "/tiles?map=a%2Fb", result)
 }
 
 func TestParseZoom(t *testing.T) {
