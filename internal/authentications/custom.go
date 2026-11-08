@@ -192,7 +192,14 @@ func (s CustomRegistration) Initialize(cfgAny any, deps authentication.Authentic
 		return nil, err
 	}
 
+	cache = cache.withStaleCheck(isValidationResultStale)
+
 	return &Custom{cfg, cache, validationFunc, closeFunc}, nil
+}
+
+// A zero Expiration keeps the result until eviction so a rejected token isn't re-validated on every request
+func isValidationResultStale(v authentication.ValidationResult) bool {
+	return !v.Expiration.IsZero() && v.Expiration.Before(time.Now())
 }
 
 func (c Custom) CheckAuthentication(ctx context.Context, req *http.Request) bool {
