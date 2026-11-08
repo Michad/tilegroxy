@@ -10,9 +10,9 @@ A CDN, load balancer, or reverse proxy replaces the details of the original requ
 
 By default every private, loopback, and link-local address is trusted, which covers a proxy running on the same host or network as tilegroxy. A CDN or load balancer with a public address needs to be added. Setting `Trusted` replaces the default rather than adding to it, and an empty list trusts nothing.
 
-The client IP is used for xref:ratelimit/index.adoc[rate limiting], xref:operation::analytics.adoc[analytics], and every log. The host, protocol, port, and path prefix are used to build the URLs in xref:operation::tilejson.adoc[TileJSON] documents.
+The client IP is used for xref:ratelimit/index.adoc[rate limiting], xref:operation::analytics.adoc[analytics], and every log. The host, protocol, port, and path prefix are used to build the URLs in xref:operation::tilejson.adoc[TileJSON] documents and the xref:operation::preview.adoc[preview] page.
 
-For the `X-Forwarded-For` header, the right-most address that isn't itself a trusted proxy is used. Any other `For` header, such as `CF-Connecting-IP` or `True-Client-IP`, must hold a single address.
+For the `X-Forwarded-For` header, the right-most address that isn't itself a trusted proxy is used by default. Any other `For` header, such as `CF-Connecting-IP` or `True-Client-IP`, must hold a single address. `Depth` allows selecting a value N positions from the right instead of right-most. Set this if several proxies append to these headers, such as Apache `mod_proxy`. 
 
 WARNING: Never include addresses outside your own infrastructure in `Trusted`. Anyone sending requests from a trusted address can pick their own IP and get a fresh rate limit allowance on every request. If clients can reach tilegroxy directly from a private network, narrow `Trusted` to just your proxies.
 
@@ -68,6 +68,12 @@ JSON::
 | <<headers,Headers>>
 | No
 | See below
+
+| Depth
+| How many proxies set or append the host, protocol, port, and prefix headers
+| uint
+| No
+| 1
 |===
 
 [#headers]
@@ -126,4 +132,7 @@ JSON::
 
 | Headers.Prefix
 | SERVER_FORWARDED_HEADERS_PREFIX
+
+| Depth
+| SERVER_FORWARDED_DEPTH
 |===

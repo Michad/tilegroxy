@@ -37,6 +37,12 @@ type forwardedResult struct {
 func runForwarded(t *testing.T, trusted []string, headers config.ForwardedHeadersConfig, peer string, reqHeaders http.Header) forwardedResult {
 	t.Helper()
 
+	return runForwardedDepth(t, trusted, headers, 0, peer, reqHeaders)
+}
+
+func runForwardedDepth(t *testing.T, trusted []string, headers config.ForwardedHeadersConfig, depth uint, peer string, reqHeaders http.Header) forwardedResult {
+	t.Helper()
+
 	cfg := config.ForwardedConfig{Trusted: trusted, Headers: headers}
 	prefixes, err := parseTrustedProxies(cfg, config.DefaultConfig().Error.Messages)
 	require.NoError(t, err)
@@ -47,7 +53,7 @@ func runForwarded(t *testing.T, trusted []string, headers config.ForwardedHeader
 		got.remoteAddr = req.RemoteAddr
 		got.ip, _ = req.Context().Value("ip").(string)
 		got.fwd, got.hasFwd = forwardedFromContext(req.Context())
-	}), config.DefaultConfig().Error}, prefixes, headers}
+	}), config.DefaultConfig().Error}, prefixes, headers, depth}
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.RemoteAddr = peer
@@ -127,15 +133,36 @@ func Test_Forwarded_UntrustedPeerIsIgnored(t *testing.T) {
 	assert.False(t, got.hasFwd)
 }
 
+func Test_Forwarded_Depth(t *testing.T) {
+	h := http.Header{}
+	h.Set("X-Forwarded-Host", "evil.example.com, tiles.example.com")
+	h.Add("X-Forwarded-Host", "origin.internal")
+	h.Set("X-Forwarded-Proto", "https, http")
+
+	got := runForwardedDepth(t, []string{"10.0.0.1"}, defaultForwardedHeaders, 2, "10.0.0.1:1", h)
+	assert.Equal(t, forwardedRequest{proto: "https", host: "tiles.example.com"}, got.fwd)
+
+	got = runForwardedDepth(t, []string{"10.0.0.1"}, defaultForwardedHeaders, 4, "10.0.0.1:1", h)
+	assert.Equal(t, forwardedRequest{}, got.fwd, "too few values means a proxy didn't add one")
+
+	got = runForwardedDepth(t, []string{"10.0.0.1"}, defaultForwardedHeaders, 1, "10.0.0.1:1", h)
+	assert.Equal(t, forwardedRequest{proto: "http", host: "origin.internal"}, got.fwd)
+}
+
 func Test_Forwarded_HostProtoPort(t *testing.T) {
 	h := http.Header{}
-	h.Set("X-Forwarded-Proto", "HTTPS, http")
-	h.Set("X-Forwarded-Host", "tiles.example.com, proxy.internal")
+	h.Set("X-Forwarded-Proto", "http, HTTPS")
+	h.Set("X-Forwarded-Host", "evil.example.com, tiles.example.com")
 	h.Set("X-Forwarded-Port", "8443")
 	h.Set("X-Forwarded-Prefix", "/maps/")
 
 	got := runForwarded(t, []string{"10.0.0.1"}, defaultForwardedHeaders, "10.0.0.1:1", h)
 	assert.Equal(t, forwardedRequest{proto: "https", host: "tiles.example.com", port: "8443", prefix: "/maps"}, got.fwd)
+
+	h.Set("X-Forwarded-Host", "evil.example.com")
+	h.Add("X-Forwarded-Host", "tiles.example.com")
+	got = runForwarded(t, []string{"10.0.0.1"}, defaultForwardedHeaders, "10.0.0.1:1", h)
+	assert.Equal(t, "tiles.example.com", got.fwd.host, "the last header line wins")
 
 	headers := config.ForwardedHeadersConfig{For: "X-Forwarded-For"}
 	got = runForwarded(t, []string{"10.0.0.1"}, headers, "10.0.0.1:1", h)

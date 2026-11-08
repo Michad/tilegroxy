@@ -109,6 +109,7 @@ type ForwardedHeadersConfig struct {
 type ForwardedConfig struct {
 	Trusted []string               // IPs or CIDR ranges of proxies whose forwarding headers are believed. Defaults to private, loopback, and link-local ranges
 	Headers ForwardedHeadersConfig // Which headers to read from a trusted proxy
+	Depth   uint                   // How many proxies set or append the Host, Proto, Port, and Prefix headers. Defaults to 1
 }
 
 type ServerConfig struct {
@@ -355,6 +356,7 @@ func DefaultConfig() Config {
 					Port:   "X-Forwarded-Port",
 					Prefix: "X-Forwarded-Prefix",
 				},
+				Depth: 1,
 			},
 		},
 		Health: HealthConfig{

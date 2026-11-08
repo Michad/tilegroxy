@@ -367,6 +367,7 @@ func Test_TileJSONHandler_BaseURLs_Override(t *testing.T) {
 	require.NoError(t, json.NewDecoder(res.Body).Decode(&doc))
 	require.Len(t, doc.Tiles, 1)
 	assert.Equal(t, "https://tiles.example.com/maps/tiles/main/{z}/{x}/{y}", doc.Tiles[0])
+	assert.Empty(t, res.Header.Values("Vary"), "the URLs don't depend on the request")
 }
 
 func Test_TileJSONHandler_BaseURLs_Multiple(t *testing.T) {
@@ -407,7 +408,7 @@ func forwardedTileJSON(t *testing.T, trusted []string, headers map[string]string
 	prefixes, err := parseTrustedProxies(cfg.Server.Forwarded, cfg.Error.Messages)
 	require.NoError(t, err)
 
-	h := forwardedHandler{newTileJSONHandler(newGenerationHolder(ent), false), prefixes, cfg.Server.Forwarded.Headers}
+	h := forwardedHandler{newTileJSONHandler(newGenerationHolder(ent), false), prefixes, cfg.Server.Forwarded.Headers, cfg.Server.Forwarded.Depth}
 
 	req := httptest.NewRequest(http.MethodGet, "http://internal-host/tiles/main.json", nil).WithContext(pkg.BackgroundContext())
 	req.SetPathValue("layerjson", "main.json")
@@ -436,6 +437,36 @@ func Test_TileJSONHandler_ForwardedHeaders(t *testing.T) {
 	})
 
 	assert.Equal(t, "https://public.example.com/maps/tiles/main/{z}/{x}/{y}", tile)
+}
+
+func Test_TileJSONHandler_ForwardedClientValueIgnored(t *testing.T) {
+	tile := forwardedTileJSON(t, []string{"192.0.2.1"}, map[string]string{
+		"X-Forwarded-Proto": "http, https",
+		"X-Forwarded-Host":  "evil.example.com, public.example.com",
+	})
+
+	assert.Equal(t, "https://public.example.com/tiles/main/{z}/{x}/{y}", tile)
+}
+
+func Test_TileJSONHandler_VaryOnForwardedHeaders(t *testing.T) {
+	cfg := config.DefaultConfig()
+	cfg.Server.TileJSON.Enabled = true
+	cfg.Server.Forwarded.Headers.Port = ""
+	cfg.Layers = []config.LayerConfig{staticLayerConfig("main")}
+
+	ent := buildTileJSONTestServing(t, cfg)
+
+	for _, index := range []bool{false, true} {
+		h := newTileJSONHandler(newGenerationHolder(ent), index)
+
+		req := httptest.NewRequest(http.MethodGet, "http://internal-host/tiles/main.json", nil).WithContext(pkg.BackgroundContext())
+		req.SetPathValue("layerjson", "main.json")
+		w := httptest.NewRecorder()
+
+		h.ServeHTTP(w, req)
+
+		assert.Equal(t, []string{"X-Forwarded-Host", "X-Forwarded-Proto", "X-Forwarded-Prefix"}, w.Result().Header.Values("Vary"))
+	}
 }
 
 func Test_TileJSONHandler_ForwardedPort(t *testing.T) {
