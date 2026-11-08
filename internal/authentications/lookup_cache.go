@@ -27,7 +27,8 @@ import (
 type lookupCache[T any] struct {
 	cache otter.Cache[string, T]
 	// So a page of tiles sharing a credential does one lookup
-	locks keymutex.KeyMutex
+	locks   keymutex.KeyMutex
+	isStale func(T) bool
 }
 
 func newLookupCache[T any](size int, ttlSeconds uint32) (*lookupCache[T], error) {
@@ -51,6 +52,15 @@ func newLookupCache[T any](size int, ttlSeconds uint32) (*lookupCache[T], error)
 	return &lookupCache[T]{cache: cache, locks: keymutex.NewHashed(-1)}, nil
 }
 
+// For entries whose lifetime comes from the cached value itself rather than a fixed TTL
+func (c *lookupCache[T]) withStaleCheck(isStale func(T) bool) *lookupCache[T] {
+	if c != nil {
+		c.isStale = isStale
+	}
+
+	return c
+}
+
 // Errors aren't cached, so an outage doesn't lock out valid credentials once it recovers
 func (c *lookupCache[T]) get(ctx context.Context, key string, lookup func() (T, error)) (T, error) {
 	if c == nil {
@@ -64,7 +74,7 @@ func (c *lookupCache[T]) get(ctx context.Context, key string, lookup func() (T, 
 		}
 	}()
 
-	if result, ok := c.cache.Get(key); ok {
+	if result, ok := c.cache.Get(key); ok && (c.isStale == nil || !c.isStale(result)) {
 		return result, nil
 	}
 

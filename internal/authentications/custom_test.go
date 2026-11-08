@@ -143,6 +143,55 @@ func validate(token string) tilegroxy.ValidationResult {
 	assert.Empty(t, *tenantID)
 }
 
+func Test_CustomAuthValidate_RevalidatesAfterExpiration(t *testing.T) {
+	script := `
+var calls = 0
+
+func validate(token string) tilegroxy.ValidationResult {
+	calls++
+	if calls == 1 {
+		return tilegroxy.ValidationResult{Pass: true, Expiration: time.Now().Add(-time.Second), UserID: "stale"}
+	}
+	return tilegroxy.ValidationResult{Pass: true, Expiration: time.Now().Add(time.Hour), UserID: "fresh"}
+}
+`
+	a := buildCustomAuthFromScript(t, script)
+
+	req, err := http.NewRequest(http.MethodGet, "http://127.0.0.1/tiles/layer/0/0/0", nil)
+	require.NoError(t, err)
+	req.Header["Authorization"] = []string{"sometoken"}
+
+	assert.False(t, a.CheckAuthentication(pkg.BackgroundContext(), req))
+
+	ctx := pkg.BackgroundContext()
+	require.True(t, a.CheckAuthentication(ctx, req))
+
+	userID, _ := pkg.UserIDFromContext(ctx)
+	assert.Equal(t, "fresh", *userID)
+}
+
+func Test_CustomAuthValidate_CachesRejectionWithoutExpiration(t *testing.T) {
+	script := `
+var calls = 0
+
+func validate(token string) tilegroxy.ValidationResult {
+	calls++
+	if calls == 1 {
+		return tilegroxy.ValidationResult{Pass: false}
+	}
+	return tilegroxy.ValidationResult{Pass: true, Expiration: time.Now().Add(time.Hour)}
+}
+`
+	a := buildCustomAuthFromScript(t, script)
+
+	req, err := http.NewRequest(http.MethodGet, "http://127.0.0.1/tiles/layer/0/0/0", nil)
+	require.NoError(t, err)
+	req.Header["Authorization"] = []string{"sometoken"}
+
+	assert.False(t, a.CheckAuthentication(pkg.BackgroundContext(), req))
+	assert.False(t, a.CheckAuthentication(pkg.BackgroundContext(), req))
+}
+
 func Test_CustomAuthValidate_WrongSignatureFailsAtInitialize(t *testing.T) {
 	// The old tuple-return signature must fail clearly at startup, not miscompile or panic per request
 	script := `
