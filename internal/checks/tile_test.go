@@ -56,6 +56,27 @@ func Test_Validate(t *testing.T) {
 	require.Error(t, err)
 }
 
+func Test_ExplicitZeroCoordinates(t *testing.T) {
+	cfgAll, lg, _, _ := initialize(t, false)
+
+	cases := []struct{ z, x, y int }{{0, 0, 0}, {1, 1, 1}, {5, 0, 7}, {3, 2, 0}}
+	for _, c := range cases {
+		raw := map[string]interface{}{"name": "tile", "layer": "test", "z": c.z, "x": c.x, "y": c.y}
+		hc, err := ConstructHealthCheck(raw, lg, nil, &cfgAll)
+		require.NoError(t, err)
+
+		tc := hc.(*TileCheck)
+		assert.Equal(t, pkg.TileRequest{LayerName: "test", Z: c.z, X: c.x, Y: c.y}, tc.req)
+	}
+
+	_, err := ConstructHealthCheck(map[string]interface{}{"name": "tile", "layer": "test", "z": 0, "x": 1, "y": 1}, lg, nil, &cfgAll)
+	require.Error(t, err)
+
+	hc, err := ConstructHealthCheck(map[string]interface{}{"name": "tile", "layer": "test"}, lg, nil, &cfgAll)
+	require.NoError(t, err)
+	assert.Equal(t, pkg.TileRequest{LayerName: "test", Z: DefaultZ, X: DefaultX, Y: DefaultY}, hc.(*TileCheck).req)
+}
+
 // Disabled: the hardcoded Result no longer matches the bytes the static provider renders, so the
 // expected value needs regenerating before this can run again.
 // func Test_Base64(t *testing.T) {
