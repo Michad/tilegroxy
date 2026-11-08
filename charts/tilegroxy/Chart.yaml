@@ -2,8 +2,8 @@ apiVersion: v2
 name: tilegroxy
 description: A map tile proxy, cache and server
 type: application
-version: 0.3.0
-appVersion: "0.14.0"
+version: 0.4.0
+appVersion: "0.15.0"
 keywords:
   - tilegroxy
   - tiles
