@@ -13,7 +13,7 @@ The tenant ID is populated by xref:authentication/index.adoc[authentication]. A 
 
 The xref:commands::seed.adoc[seed] and xref:commands::test.adoc[test] commands have no incoming request to take a tenant from, so pass one with their `--tenant` flag. Without it they act on the un-namespaced key rather than any tenant's.
 
-NOTE: Tenant IDs are subject to the same sanitization as layer names. That is, non-alphanumeric characters will be replaced with an underscore in some cases. If your tenant IDs differ by only special characters, rethink your tenant IDs.
+NOTE: Tenant IDs are hashed with SHA-256 before being added to the cache key. 
 
 == Example
 [tabs]

@@ -16,6 +16,8 @@ package caches
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/Michad/tilegroxy/pkg"
@@ -24,6 +26,8 @@ import (
 )
 
 const tenantKeySeparator = "~"
+
+const tenantHashBytes = 16
 
 // Namespaces keys by tenant so per-tenant provider output can't poison other tenants. No tenant uses the plain key
 type TenantCache struct {
@@ -64,14 +68,19 @@ func (s TenantRegistration) Initialize(configAny any, deps cache.CacheDeps) (cac
 	return NewTenantCache(inner), nil
 }
 
-// Tenant ID comes from a User's auth token, so it's sanitized like LayerName before joining the key
+// Hashed since sanitizing merges distinct IDs. Fixed length stops the layer name shifting the boundary
+func tenantKey(tenantID string) string {
+	sum := sha256.Sum256([]byte(tenantID))
+	return hex.EncodeToString(sum[:tenantHashBytes])
+}
+
 func namespace(ctx context.Context, t pkg.TileRequest) pkg.TileRequest {
 	tenantID, ok := pkg.TenantIDFromContext(ctx)
 	if !ok || tenantID == nil || *tenantID == "" {
 		return t
 	}
 
-	t.LayerName = fmt.Sprintf("%s%s%s", safeLayerName(*tenantID), tenantKeySeparator, t.LayerName)
+	t.LayerName = fmt.Sprintf("%s%s%s", tenantKey(*tenantID), tenantKeySeparator, t.LayerName)
 	return t
 }
 

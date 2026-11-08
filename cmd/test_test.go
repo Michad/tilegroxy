@@ -366,8 +366,8 @@ layers:
 	require.NoError(t, err)
 	require.NotEmpty(t, entries)
 
-	// The disk cache re-sanitizes the tenant separator "~" into "_" in filenames
+	// The tenant is hashed and the disk cache re-sanitizes the "~" separator into "_"
 	for _, entry := range entries {
-		assert.True(t, strings.HasPrefix(entry.Name(), "tenant_a_osm"), "cached tile %v isn't namespaced to the tenant", entry.Name())
+		assert.True(t, strings.HasPrefix(entry.Name(), "ea7c68e607dbd8ae6cf6b58db6206acc_osm"), "cached tile %v isn't namespaced to the tenant", entry.Name())
 	}
 }

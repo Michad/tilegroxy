@@ -110,6 +110,36 @@ func Test_TenantCache_SanitizesTenantIDForCacheKey(t *testing.T) {
 	}
 }
 
+func Test_TenantCache_TenantsDifferingInUnsafeCharsDoNotCollide(t *testing.T) {
+	inner := newMemCache()
+	c := NewTenantCache(inner)
+	req := testTileRequest()
+
+	ctxA := contextWithTenant(t, "alice@x.com")
+	ctxB := contextWithTenant(t, "alice_x.com")
+
+	require.NoError(t, c.Save(ctxA, req, &pkg.Image{Content: []byte("a-data")}))
+
+	img, err := c.Lookup(ctxB, req)
+	require.NoError(t, err)
+	require.Nil(t, img)
+}
+
+func Test_TenantCache_InnerSanitizerCannotMergeTenantAndLayer(t *testing.T) {
+	diskAny, err := DiskRegistration{}.Initialize(DiskConfig{Path: t.TempDir()}, cache.CacheDeps{ErrorMessages: config.ErrorMessages{}})
+	require.NoError(t, err)
+	c := NewTenantCache(diskAny)
+
+	ctxA := contextWithTenant(t, "acme")
+	ctxB := contextWithTenant(t, "acme_x")
+
+	require.NoError(t, c.Save(ctxA, pkg.TileRequest{LayerName: "x_roads", Z: 1, X: 2, Y: 3}, &pkg.Image{Content: []byte("a-data")}))
+
+	img, err := c.Lookup(ctxB, pkg.TileRequest{LayerName: "roads", Z: 1, X: 2, Y: 3})
+	require.NoError(t, err)
+	require.Nil(t, img)
+}
+
 func Test_TenantCache_MissPropagatesFromInner(t *testing.T) {
 	inner := newMemCache()
 	c := NewTenantCache(inner)
