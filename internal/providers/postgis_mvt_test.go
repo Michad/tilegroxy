@@ -110,8 +110,13 @@ func Test_Validate(t *testing.T) {
 	require.Error(t, err)
 	cfg.Attributes = []string{"str"}
 
+	cfg.Table = ""
 	_, err = reg.Initialize(cfg, layer.ProviderDeps{ClientConfig: config.DefaultConfig().Client, ErrorMessages: config.DefaultConfig().Error.Messages, Datastores: &datastores.Registry{}})
-	require.Error(t, err)
+	require.ErrorContains(t, err, "postgismvt.table")
+	cfg.Table = "test"
+
+	_, err = reg.Initialize(cfg, layer.ProviderDeps{ClientConfig: config.DefaultConfig().Client, ErrorMessages: config.DefaultConfig().Error.Messages, Datastores: &datastores.Registry{}})
+	require.ErrorContains(t, err, "postgismvt.datastore")
 
 }
 
@@ -163,6 +168,8 @@ func Test_GenerateTile(t *testing.T) {
 	require.NoError(t, err)
 	_, err = conn.Exec(ctx, "CREATE TABLE test AS SELECT ST_SetSRID(ST_MakePoint(10, 10), 4326) AS \"GEOM\", 0 AS gid, 'hello' AS str")
 	require.NoError(t, err)
+	_, err = conn.Exec(ctx, "CREATE TABLE test2263 AS SELECT ST_Transform(ST_SetSRID(ST_MakePoint(-74.0, 40.7), 4326), 2263) AS \"GEOM\", 0 AS gid, 'hello' AS str")
+	require.NoError(t, err)
 	_, err = conn.Exec(ctx, "totally invalid query")
 	require.Error(t, err)
 	conn.Release()
@@ -190,4 +197,15 @@ func Test_GenerateTile(t *testing.T) {
 	img, err = prov.GenerateTile(ctx, provCtx, pkg.TileRequest{LayerName: "test", X: 0, Y: 0, Z: 1})
 	require.NoError(t, err)
 	assert.Empty(t, img.Content)
+
+	cfg.Table = "test2263"
+	cfg.SourceSRID = 2263
+	cfg.Filter = "str = 'hello' AND {z} >= 0 AND \"GEOM\" && ST_Transform(ST_MakeEnvelope({xmin}, {ymin}, {xmax}, {ymax}, 4326), 2263)"
+
+	prov, err = reg.Initialize(cfg, layer.ProviderDeps{ClientConfig: config.DefaultConfig().Client, ErrorMessages: config.DefaultConfig().Error.Messages, Datastores: datastore})
+	require.NoError(t, err)
+
+	img, err = prov.GenerateTile(ctx, provCtx, pkg.TileRequest{LayerName: "test", X: 301, Y: 385, Z: 10})
+	require.NoError(t, err)
+	assert.NotEmpty(t, img.Content)
 }
