@@ -166,7 +166,7 @@ func (t CGI) GenerateTile(ctx context.Context, _ layer.ProviderContext, tileRequ
 		uri = "/" + uri
 	}
 
-	uri, err = replaceURLPlaceholders(ctx, tileRequest, uri, false, pkg.SRIDWGS84)
+	uri, err = replaceURLPlaceholders(ctx, tileRequest, uri, false, pkg.SRIDWGS84, true)
 	if err != nil {
 		return nil, err
 	}
